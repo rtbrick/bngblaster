@@ -1,0 +1,15 @@
+digraph "pppoe-fsm" {
+  "idle";
+    "idle" -> "discovery_init" [label="send_padi"];
+  "discovery_init";
+    "discovery_init" -> "discovery_offer" [label="pado received"];
+    "discovery_init" -> "idle" [label="timeout 5s"];
+  "discovery_offer";
+    "discovery_offer" -> "discovery_request" [label="send padr"];
+    "discovery_offer" -> "idle" [label="3x timeout"];
+  "discovery_request";
+    "discovery_request" -> "discovery_confirmed" [label="pads received"];
+    "discovery_request" -> "discovery_offer" [label="timeout 5s"];
+  "discovery_confirmed";
+    "discovery_confirmed" -> "idle" [label="padt received"];
+}
