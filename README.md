@@ -1,5 +1,7 @@
 # RtBrick BNG Blaster
 
+![Build](https://github.com/rtbrick/bngblaster/workflows/Build/badge.svg?branch=main)
+
 The BNG Blaster is a test tool to simulate thousands of PPPoE or IPoE subscribers including IPTV, 
 traffic verification and convergence testing capabilities.
 

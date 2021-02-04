@@ -1,0 +1,103 @@
+name: Build
+
+on: [push]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build1804:
+    name: Build Ubuntu 18.04
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+  
+    - name: Download libdict
+      shell: bash
+      run: wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
+      
+    - name: Install libdict
+      shell: bash
+      run: unzip libdict-debian.zip; sudo dpkg -i libdict_1.0.1_amd64.deb; sudo dpkg -i libdict-dev_1.0.1_amd64.deb
+  
+    - name: Install dependencies
+      shell: bash
+      run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: ctest -C $BUILD_TYPE
+
+    - name: Package
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cpack -G DEB
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: Ubuntu18.04
+        path: ${{ github.workspace }}/build/*.deb
+
+  build2004:
+    name: Build Ubuntu 20.04
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+  
+    - name: Download libdict
+      shell: bash
+      run: wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
+      
+    - name: Install libdict
+      shell: bash
+      run: unzip libdict-debian.zip; sudo dpkg -i libdict_1.0.1_amd64.deb; sudo dpkg -i libdict-dev_1.0.1_amd64.deb
+  
+    - name: Install dependencies
+      shell: bash
+      run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: ctest -C $BUILD_TYPE
+
+    - name: Package
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cpack -G DEB
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: Ubuntu20.04
+        path: ${{ github.workspace }}/build/*.deb
