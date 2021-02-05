@@ -3,9 +3,12 @@
 
 /* CMake Project Details */
 #define PROJECT_NAME "bngblaster"
-#define PROJECT_VER  "0.3.0"
+#define PROJECT_VER  "0.0.0"
 #define PROJECT_VER_MAJOR "0"
-#define PROJECT_VER_MINOR "3"
+#define PROJECT_VER_MINOR "0"
 #define PTOJECT_VER_PATCH "0"
+
+#define GIT_REF ""
+#define GIT_SHA ""
 
 #endif

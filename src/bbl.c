@@ -522,6 +522,11 @@ void
 bbl_print_version (void)
 {
     printf("Version: %s\n", PROJECT_VER);
+    if(strlen(GIT_REF) + strlen(GIT_SHA)) {
+        printf("\nGIT:\n");
+        printf("  REF: %s\n", GIT_REF);
+        printf("  SHA: %s\n", GIT_SHA);
+    }
 }
 
 void

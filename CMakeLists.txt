@@ -10,6 +10,9 @@ configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in"
 
 option(BNGBLASTER_TESTS "Built unit tests (requires cmocka)" OFF)
 
+set(GIT_REF "")
+set(GIT_SHA "")
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug Build")
     set(CMAKE_BUILD_TYPE Debug)
@@ -44,4 +47,5 @@ set(CPACK_DEBIAN_LIB_PACKAGE_NAME "bngblaster")
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_PACKAGE_CONTACT "RtBrick <bngblaster@rtbrick.com>")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/rtbrick/bngblaster")
 include(CPack)
