@@ -3,15 +3,12 @@
 # For Debug Build Try below command 
 #cmake -DCMAKE_BUILD_TYPE=Debug .
 cmake_minimum_required (VERSION 3.0)
-project(bngblaster LANGUAGES C VERSION 0.3.0)
+project(bngblaster LANGUAGES C VERSION 0.0.0)
+
+option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
 
 configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in"
                 "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
-
-option(BNGBLASTER_TESTS "Built unit tests (requires cmocka)" OFF)
-
-set(GIT_REF "")
-set(GIT_SHA "")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug Build")
@@ -46,6 +43,10 @@ set(CPACK_DEBIAN_LIB_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")
 set(CPACK_DEBIAN_LIB_PACKAGE_NAME "bngblaster")
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_PACKAGE_CONTACT "RtBrick <bngblaster@rtbrick.com>")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/rtbrick/bngblaster")
+if (NOT DEFINED BNGBLASTER_VERSION)
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+else()
+    set(CPACK_PACKAGE_VERSION ${BNGBLASTER_VERSION})
+endif()
 include(CPack)
