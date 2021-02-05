@@ -1,5 +1,19 @@
 # Installation
 
+## Install Ubuntu
+
+Install dependencies:
+```
+sudo apt install -y libssl1.1 libncurses5 libjansson4
+```
+
+Download and install debian package:
+https://github.com/rtbrick/bngblaster/releases
+
+```
+sudo dpkg -i <package>
+```
+
 ## Build from Sources
 
 ### Dependencies
@@ -8,11 +22,11 @@ The BNG Blaster has dependencies to the RtBrick libdict fork
 (https://github.com/rtbrick/libdict) and the following standard 
 dependencies: 
 ```
-sudo apt install -y cmake 
-sudo apt install -y libcunit1-dev
-sudo apt install -y libncurses5-dev
-sudo apt install -y libssl-dev
-sudo apt install -y libjansson-dev
+sudo apt install -y cmake \
+    libcunit1-dev \
+    libncurses5-dev \
+    libssl-dev \
+    libjansson-dev
 ```
 
 ### Build
