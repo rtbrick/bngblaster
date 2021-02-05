@@ -521,9 +521,11 @@ bbl_print_usage_arg (struct option *option)
 void
 bbl_print_version (void)
 {
-    printf("Version: %s\n", PROJECT_VER);
+    if(strlen(BNGBLASTER_VERSION)) {
+        printf("Version: %s\n", BNGBLASTER_VERSION);
+    }
     if(strlen(GIT_REF) + strlen(GIT_SHA)) {
-        printf("\nGIT:\n");
+        printf("GIT:\n");
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
     }
