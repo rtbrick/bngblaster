@@ -8,22 +8,28 @@ on:
 jobs:
   release:
     name: Create Release
-    
+    runs-on: ubuntu-latest
+
     steps:
+    - name: Get Ref Names
+      id: ref_name
+      run: |
+          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
+          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
+          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: Release ${{ github.ref }}
-        draft: true # need to manually publish
-        prerelease: false
+        tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
+        release_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
+        body: RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }}
 
   build:
-    name: Build Release
+    name: Build Release ${{matrix.os}}
     needs: [release]
     runs-on: ubuntu-latest
     strategy:
@@ -33,6 +39,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
   
+    - name: Get Ref Names
+      id: ref_name
+      run: |
+        echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
+        echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
+        echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+
     - name: Download RtBrick libdict
       shell: bash
       run: wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
@@ -46,20 +59,20 @@ jobs:
       run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
 
     - name: Create Build Environment
-      run: cmake -E make_directory ${{github.workspace}}/build
+      run: cmake -E make_directory ${{ github.workspace }}/build
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{github.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_VERSION=${{ github.ref }} -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      working-directory: ${{ github.workspace }}/build
+      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_VERSION=${{ steps.ref_name.outputs.SOURCE_TAG }} -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
-      working-directory: ${{github.workspace}}/build
+      working-directory: ${{ github.workspace }}/build
       shell: bash
       run: cmake --build . --config $BUILD_TYPE
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
+      working-directory: ${{ github.workspace }}/build
       shell: bash
       run: ctest -C $BUILD_TYPE
 
@@ -69,10 +82,12 @@ jobs:
       run: cpack -G DEB
 
     - name: Get Release
-      uses: pdamianik/release-tag-to-upload-url-action@v1.0.1
+      id: get_release
+      uses: leahlundqvist/get-release@v1.3.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag: ${{ github.ref }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
 
     - name: Upload Debian Package
       id: upload-release-asset
@@ -80,6 +95,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.get_release.outputs.uploadUrl }}
-        asset_path: build/bngblaster_${{ github.ref }}_amd64.deb
-        asset_name: bngblaster-${{matrix.os}-${{ github.ref }}_amd64.deb
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: build/bngblaster_${{ steps.ref_name.outputs.SOURCE_TAG }}_amd64.deb
+        asset_name: bngblaster-${{ steps.ref_name.outputs.SOURCE_TAG }}-${{ matrix.os }}_amd64.deb
+        asset_content_type: application/gzip
