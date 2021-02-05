@@ -8,13 +8,14 @@ simple CLI tool (`cli.py`) for interactive communication with the BNG Blaster.
 The control socket will be optionally enabled by providing the path to the socket file 
 using the argument `-S` (`bngblaster -S test.socket`).
 
+`$ cat command.json | jq .`
 ```json
-$ cat command.json | jq .
 {
   "command": "session-counters"
 }
-
-$ cat command.json | sudo nc -U test.socket | jq .
+```
+`$ cat command.json | sudo nc -U test.socket | jq .`
+```json
 {
     "status": "ok",
     "code": 200,
@@ -30,8 +31,8 @@ $ cat command.json | sudo nc -U test.socket | jq .
 Each request must contain at least the `command` element which carries 
 the actual command which is invoked with optional arguments. 
 
+`$ cat command.json | jq .`
 ```json
-$ cat command.json | jq .
 {
     "command": "session-info",
     "arguments": {
@@ -39,8 +40,10 @@ $ cat command.json | jq .
         "inner-vlan": 1
     }
 }
+```
 
-$ cat command.json | sudo nc -U test.socket | jq .
+`$ cat command.json | sudo nc -U test.socket | jq .`
+```json
 {
     "status": "ok",
     "code": 200,
@@ -89,8 +92,8 @@ The response contains at least the status element with the value `ok` and status
 if request was successfully. The status can be also set to `warning` or
 `error` with corresponding error code and an optional error message. 
 
+`$ cat command.json | sudo nc -U test.socket | jq .`
 ```json
-$ cat command.json | sudo nc -U test.socket | jq .
 {
     "status": "warning",
     "code": 404,
@@ -119,8 +122,8 @@ for which the command is executed. The interface index (`ifindex`) can be reques
 the `interfaces` command or skipped. The first access interface is automatically used if 
 the argument `ifindex` is not present in the command. 
 
+`$ cat command.json | jq .`
 ```json
-$ cat command.json | jq .
 {
     "command": "session-info",
     "arguments": {
@@ -130,16 +133,17 @@ $ cat command.json | jq .
     }
 }
 ```
-Attribute | Description | Mandatory Arguments | Optional Arguments 
+
+Attribute | Description | Mandatory Arguments | Optional Arguments
 --------- | ----------- | ------------------- | ------------------ 
-`session-info` | Session information
-`terminate` | Terminate session
-`ipcp-open`| Open IPCP 
-`ipcp-close` |Close IPCP
-`ip6cp-open`| Open IP6CP 
-`ip6cp-close` |Close IP6CP
-`session-traffic-enabled` | Enable session traffic
-`session-traffic-disabled` | Disable session traffic
+`session-info` | Session information | |
+`terminate` | Terminate session | |
+`ipcp-open`| Open IPCP | |
+`ipcp-close` |Close IPCP | |
+`ip6cp-open`| Open IP6CP | |
+`ip6cp-close` |Close IP6CP | |
+`session-traffic-enabled` | Enable session traffic | |
+`session-traffic-disabled` | Disable session traffic | |
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
-`igmp-leave` | Leave group | `group` |  
-`igmp-info` | IGMP information
+`igmp-leave` | Leave group | `group` |
+`igmp-info` | IGMP information | |

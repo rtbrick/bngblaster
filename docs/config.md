@@ -159,93 +159,102 @@ tags on the access interface as shown below.
 
 With untagged only one session is possible. 
 ```json
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 0,
-            "outer-vlan-max": 0,
-            "inner-vlan-min": 0,
-            "inner-vlan-max": 0
-        }
+{
+    "access": {
+        "interface": "eth1",
+        "outer-vlan-min": 0,
+        "outer-vlan-max": 0,
+        "inner-vlan-min": 0,
+        "inner-vlan-max": 0
+    }
+}
 ```
 
 **Single Tagged**
 ```json
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 1,
-            "outer-vlan-max": 4049,
-            "inner-vlan-min": 0,
-            "inner-vlan-max": 0
-        }
+{
+    "access": {
+        "interface": "eth1",
+        "outer-vlan-min": 1,
+        "outer-vlan-max": 4049,
+        "inner-vlan-min": 0,
+        "inner-vlan-max": 0
+    }
+}
 ```
 
 **Double Tagged**
 ```json
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 1,
-            "outer-vlan-max": 4049,
-            "inner-vlan-min": 7,
-            "inner-vlan-max": 7
-        }
+{
+    "access": {
+        "interface": "eth1",
+        "outer-vlan-min": 1,
+        "outer-vlan-max": 4049,
+        "inner-vlan-min": 7,
+        "inner-vlan-max": 7
+    }
+}
 ```
 
 **Triple Tagged**
 ```json
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 10,
-            "outer-vlan-max": 20,
-            "inner-vlan-min": 128,
-            "inner-vlan-max": 4000,
-            "third-vlan": 7
-        }
+{
+    "access": {
+        "interface": "eth1",
+        "outer-vlan-min": 10,
+        "outer-vlan-max": 20,
+        "inner-vlan-min": 128,
+        "inner-vlan-max": 4000,
+        "third-vlan": 7
+    }
+}
 ```
 
 The BNG Blaster supports also multiple access interfaces
 or VLAN ranges as shown in the example below. 
 
 ```json
-        "access": [
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "username": "pta@rtbrick.com",
-                "outer-vlan-min": 1000,
-                "outer-vlan-max": 1999,
-                "inner-vlan-min": 7,
-                "inner-vlan-max": 7
-            },
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "username": "l2tp@rtbrick.com",
-                "outer-vlan-min": 2000,
-                "outer-vlan-max": 2999,
-                "inner-vlan-min": 7,
-                "inner-vlan-max": 7
-            },
-            {
-                "interface": "eth3",
-                "type": "pppoe",
-                "username": "test@rtbrick.com",
-                "outer-vlan-min": 128,
-                "outer-vlan-max": 4000,
-                "inner-vlan-min": 7,
-                "inner-vlan-max": 7
-            },
-            {
-                "interface": "eth4",
-                "type": "ipoe",
-                "outer-vlan-min": 8,
-                "outer-vlan-max": 9,
-                "address": "200.0.0.1",
-                "address-iter": "0.0.0.4",
-                "gateway": "200.0.0.2",
-                "gateway-iter": "0.0.0.4"
-            }
-        ]
-    },
+{
+    "access": [
+        {
+            "interface": "eth1",
+            "type": "pppoe",
+            "username": "pta@rtbrick.com",
+            "outer-vlan-min": 1000,
+            "outer-vlan-max": 1999,
+            "inner-vlan-min": 7,
+            "inner-vlan-max": 7
+        },
+        {
+            "interface": "eth1",
+            "type": "pppoe",
+            "username": "l2tp@rtbrick.com",
+            "outer-vlan-min": 2000,
+            "outer-vlan-max": 2999,
+            "inner-vlan-min": 7,
+            "inner-vlan-max": 7
+        },
+        {
+            "interface": "eth3",
+            "type": "pppoe",
+            "username": "test@rtbrick.com",
+            "outer-vlan-min": 128,
+            "outer-vlan-max": 4000,
+            "inner-vlan-min": 7,
+            "inner-vlan-max": 7
+        },
+        {
+            "interface": "eth4",
+            "type": "ipoe",
+            "outer-vlan-min": 8,
+            "outer-vlan-max": 9,
+            "address": "200.0.0.1",
+            "address-iter": "0.0.0.4",
+            "gateway": "200.0.0.2",
+            "gateway-iter": "0.0.0.4"
+        }
+    ]
+}
 ```
 
 There is actually no hard limit in the amount of access interfaces but

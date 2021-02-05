@@ -50,12 +50,15 @@ delay in milliseconds.
 It is possible to join and leave multicast groups manually using the <<Control Socket>> as 
 shown in the example below.
 
+`$ sudo ./cli.py run.sock igmp-join outer-vlan 1 inner-vlan 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103`
 ```json
-$ sudo ./cli.py run.sock igmp-join outer-vlan 1 inner-vlan 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103
 {
     "status": "ok"
 }
-$ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1
+```
+
+`$ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1`
+```json
 {
     "status": "ok",
     "igmp-groups": [
@@ -75,12 +78,15 @@ $ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1
 }
 ```
 
+`$ sudo ./cli.py run.sock igmp-leave outer-vlan 1 inner-vlan 1 group 232.1.1.1 `
 ```json
-$ sudo ./cli.py run.sock igmp-leave outer-vlan 1 inner-vlan 1 group 232.1.1.1 
 {
     "status": "ok"
 }
-$ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1
+```
+
+`$ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1`
+```json
 {
     "status": "ok",
     "igmp-groups": [
@@ -122,6 +128,7 @@ The following <<Configuration>> output shows an example for the `igmp` section
 for a typical zapping test.
 
 ```json
+{
     "igmp": {
         "version": 3,
         "start-delay": 10,
@@ -135,7 +142,8 @@ for a typical zapping test.
         "zapping-wait": false,
         "combined-leave-join": true,
         "send-multicast-traffic": true
-    },
+    }
+}
 ```
 
 ## Multicast Limitations
