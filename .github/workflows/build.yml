@@ -7,7 +7,7 @@ env:
 
 jobs:
   build:
-    name: Build Ubuntu ${{matrix.os}}
+    name: Build ${{matrix.os}}
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
@@ -34,7 +34,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake $GITHUB_WORKSPACE -DGIT_REF=$GITHUB_REF -DGIT_SHA=$GITHUB_SHA -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
       working-directory: ${{github.workspace}}/build
