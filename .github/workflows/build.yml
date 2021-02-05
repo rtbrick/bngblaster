@@ -54,5 +54,5 @@ jobs:
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v2
       with:
-        name: ${{matrix.os}}
+        name: bngblaster-${{matrix.os}}
         path: ${{ github.workspace }}/build/*.deb
