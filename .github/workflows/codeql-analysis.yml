@@ -10,7 +10,7 @@
 # supported CodeQL languages.
 #
 name: "CodeQL"
-
+ 
 on:
   push:
     branches: [ main ]
@@ -19,6 +19,9 @@ on:
     branches: [ main ]
   schedule:
     - cron: '31 12 * * 6'
+
+env:
+  BUILD_TYPE: Debug
 
 jobs:
   analyze:
@@ -29,9 +32,6 @@ jobs:
       fail-fast: false
       matrix:
         language: [ 'cpp', 'python' ]
-        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
-        # Learn more:
-        # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
 
     steps:
     - name: Checkout repository
@@ -47,21 +47,30 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+    - name: Download RtBrick libdict
+      shell: bash
+      run: wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
+      
+    - name: Install RtBrick libdict
+      shell: bash
+      run: unzip libdict-debian.zip; sudo dpkg -i libdict_1.0.1_amd64.deb; sudo dpkg -i libdict-dev_1.0.1_amd64.deb
+  
+    - name: Install Dependencies
+      shell: bash
+      run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
 
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 https://git.io/JvXDl
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
 
-    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-    #    and modify them (or add more) to build your code if your project
-    #    uses a compiled language
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DGIT_REF=$GITHUB_REF -DGIT_SHA=$GITHUB_SHA -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
-    #- run: |
-    #   make bootstrap
-    #   make release
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
