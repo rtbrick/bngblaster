@@ -369,10 +369,12 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      *          increased drops when network device transmit queues are busy;
      *          therefore, use at your own risk.
      */
-    qdisc_bypass = 1;
-    if (setsockopt(interface->fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
-        LOG(ERROR, "Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
+    if(ctx->config.qdisc_bypass) {
+        qdisc_bypass = 1;
+        if (setsockopt(interface->fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
+            LOG(ERROR, "Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+            return NULL;
+        }
     }
 
     /*
