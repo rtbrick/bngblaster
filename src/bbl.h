@@ -408,6 +408,7 @@ typedef struct bbl_ctx_
         uint32_t sessions_max_outstanding;
         uint16_t sessions_start_rate;
         uint16_t sessions_stop_rate;
+        bool iterate_outer_vlan;
 
         /* Static */
         uint32_t static_ip;
