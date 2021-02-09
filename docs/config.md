@@ -96,9 +96,10 @@ Attribute | Description | Default
 --------- | ----------- | -------
 `tx-interval` | TX ring polling interval in milliseconds | 5
 `rx-interval` | RX ring polling interval in milliseconds | 5
-`qdisc-bypass` | Bypass the kernel's qdisc layer | false
+`qdisc-bypass` | Bypass the kernel's qdisc layer | true
 
-WARNING: The BNG Blaster may not work if `qdisc-bypass` is enabled!
+WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
+This issue was frequently seen on Ubuntu 20.04. 
 
 ### Network Interface
 
