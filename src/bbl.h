@@ -389,6 +389,8 @@ typedef struct bbl_ctx_
     struct {
         uint16_t tx_interval;
         uint16_t rx_interval;
+        
+        bool qdisc_bypass;
 
         char *json_report_filename;
 

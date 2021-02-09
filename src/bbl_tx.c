@@ -1506,6 +1506,7 @@ bbl_tx_job (timer_s *timer)
 
     /* Notify kernel. */
     if (sendto(interface->fd_tx, NULL, 0 , 0, NULL, 0) == -1) {
+        LOG(IO, "Sendto failed with errno: %i\n", errno);
         interface->stats.sendto_failed++;
         return;
     }

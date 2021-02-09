@@ -557,6 +557,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.rx_interval = json_number_value(value);
         }
+        value = json_object_get(section, "qdisc-bypass");
+        if (json_is_boolean(value)) {
+            ctx->config.qdisc_bypass = json_boolean_value(value);
+        }
         sub = json_object_get(section, "network");
         if (json_is_object(sub)) {
             if (json_unpack(sub, "{s:s}", "interface", &s) == 0) {

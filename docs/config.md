@@ -96,6 +96,9 @@ Attribute | Description | Default
 --------- | ----------- | -------
 `tx-interval` | TX ring polling interval in milliseconds | 5
 `rx-interval` | RX ring polling interval in milliseconds | 5
+`qdisc-bypass` | Bypass the kernel's qdisc layer | false
+
+WARNING: The BNG Blaster may not work if `qdisc-bypass` is enabled!
 
 ### Network Interface
 
