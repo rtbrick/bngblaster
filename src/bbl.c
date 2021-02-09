@@ -756,8 +756,8 @@ bbl_init_sessions (bbl_ctx_s *ctx)
     access_config = ctx->config.access_config;
 
     /* For equal distribution of sessions over access configurations 
-     * and outer VLAN's, we loop first over all configurations,
-     * second over all outer VLAN's and last over all inner VLAN's. */
+     * and outer VLAN's, we loop first over all configurations and
+     * second over VLAN ranges as per configration. */
     while(i <= ctx->config.sessions) {
         if(access_config->exhausted) goto Next;
         if(access_config->access_outer_vlan == 0) {
@@ -765,15 +765,28 @@ bbl_init_sessions (bbl_ctx_s *ctx)
             access_config->access_outer_vlan = access_config->access_outer_vlan_min;
             access_config->access_inner_vlan = access_config->access_inner_vlan_min;
         } else {
-            access_config->access_outer_vlan++;
-            if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
-                access_config->access_outer_vlan = access_config->access_outer_vlan_min;
-                if(access_config->access_inner_vlan <= access_config->access_inner_vlan_max) {
+            if(ctx->config.iterate_outer_vlan) {
+                /* Iterate over outer VLAN first and inner VLAN second */
+                access_config->access_outer_vlan++;
+                if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
+                    access_config->access_outer_vlan = access_config->access_outer_vlan_min;
                     access_config->access_inner_vlan++;
+                }
+            } else {
+                /* Iterate over inner VLAN first and outer VLAN second (default) */
+                access_config->access_inner_vlan++;
+                if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+                    access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+                    access_config->access_outer_vlan++;
                 }
             }
         }
-        if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+        if(access_config->access_outer_vlan == 0) {
+            /* This is required to handle untagged interafaces */
+            access_config->exhausted = true;
+        }
+        if(access_config->access_outer_vlan > access_config->access_outer_vlan_max || 
+           access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
             /* VLAN range exhausted */
             access_config->exhausted = true;
             goto Next;
