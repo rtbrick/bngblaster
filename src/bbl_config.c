@@ -671,6 +671,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     snprintf(ctx->config.agent_circuit_id, ACI_LEN, "%s", g_default_aci);
     ctx->config.tx_interval = 5;
     ctx->config.rx_interval = 5;
+    ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
     ctx->config.sessions_max_outstanding = 800;
     ctx->config.sessions_start_rate = 400,
