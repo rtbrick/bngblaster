@@ -482,20 +482,18 @@ Next:
 /*
  * Command line options.
  */
-const char *optstring = "vhC:l:L:a:n:u:p:P:J:c:g:s:r:z:S:I";
+const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:I";
 static struct option long_options[] = {
     { "version",                no_argument,        NULL, 'v' },
     { "help",                   no_argument,        NULL, 'h' },
     { "config",                 required_argument,  NULL, 'C' },
     { "logging",                required_argument,  NULL, 'l' },
     { "log-file",               required_argument,  NULL, 'L' },
-    { "access-interface",       required_argument,  NULL, 'a' },
-    { "network-interface",      required_argument,  NULL, 'n' },
     { "username",               required_argument,  NULL, 'u' },
     { "password",               required_argument,  NULL, 'p' },
     { "pcap-capture",           required_argument,  NULL, 'P' },
     { "json-report",            required_argument,  NULL, 'J' },
-    { "pppoe-session-count",    required_argument,  NULL, 'c' },
+    { "session-count",          required_argument,  NULL, 'c' },
     { "mc-group",               required_argument,  NULL, 'g' },
     { "mc-source",              required_argument,  NULL, 's' },
     { "mc-group-count",         required_argument,  NULL, 'r' },
@@ -836,6 +834,8 @@ bbl_init_sessions (bbl_ctx_s *ctx)
         if(bbl_add_session(ctx, access_config->access_if, &session_template, access_config) == NULL) {
             LOG(ERROR, "Failed to create session (%s Q-in-Q %u:%u)\n", access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
             return false;
+        } else {
+            LOG(DEBUG, "Session created (%s Q-in-Q %u:%u)\n", access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         }
         i++;
 Next:
