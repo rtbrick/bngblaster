@@ -1195,12 +1195,12 @@ bbl_encode_packet (bbl_session_s *session, u_char *frame_ptr)
     }
 
     if(result == PROTOCOL_SUCCESS) {
-        session->interface->stats.encode_errors++;
         tphdr = (struct tpacket2_hdr *)frame_ptr;
         tphdr->tp_len = session->write_idx;
         tphdr->tp_status = TP_STATUS_SEND_REQUEST;
         return true;
     }
+    session->interface->stats.encode_errors++;
     return false;
 }
 
