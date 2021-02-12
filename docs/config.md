@@ -115,7 +115,7 @@ Attribute | Description | Default
 `vlan` | Network interface VLAN | 0 (untagged)
 
 
-### Network Interface
+### Access Interfaces
 
 `"interfaces": { "access": { ... } }`
 

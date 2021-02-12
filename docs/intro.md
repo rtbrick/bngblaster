@@ -38,8 +38,6 @@ Usage: bngblaster [OPTIONS]
   -C --config <args>
   -l --logging error|igmp|io|lcp|ncp|normal|pcap|timer|timer-detail|ip
   -L --log-file <args>
-  -a --access-interface <args>
-  -n --network-interface <args>
   -u --username <args>
   -p --password <args>
   -P --pcap-capture <args>
