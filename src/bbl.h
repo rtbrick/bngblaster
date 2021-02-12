@@ -48,7 +48,7 @@
 #define SCRATCHPAD_LEN              1514
 #define PPPOE_AC_COOKIE_LEN         32
 
-#define USERNAME_LEN                65
+#define USERNAME_LEN                251
 #define PASSWORD_LEN                65
 #define ARI_LEN                     65
 #define ACI_LEN                     65

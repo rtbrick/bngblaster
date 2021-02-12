@@ -10,7 +10,7 @@
 #ifndef __BBL_UTILS_H__
 #define __BBL_UTILS_H__
 
-#define STRLEN_MAX                  128
+#define STRLEN_MAX                  256
 #define IPV4_DOTTED_STR_LEN         sizeof("255.255.255.255")
 #define IPV6_STR_LEN                sizeof("0000:0000:0000:0000:0000:0000:0000:0000")
 #define IPV6_PREFIX_STR_LEN         sizeof("0000:0000:0000:0000:0000:0000:0000:0000/128")
