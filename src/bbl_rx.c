@@ -1731,6 +1731,8 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
 void
 bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    bbl_secondary_ip_s *secondary_ip;
+
     bbl_arp_t *arp = (bbl_arp_t*)eth->next;
     if(arp->sender_ip == interface->gateway) {
         interface->arp_resolved = true;
@@ -1738,7 +1740,20 @@ bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
         }
         if(arp->code == ARP_REQUEST) {
-            interface->send_requests |= BBL_IF_SEND_ARP_REPLY;
+            if(arp->target_ip == interface->ip) {
+                interface->arp_reply_ip = interface->ip;
+                interface->send_requests |= BBL_IF_SEND_ARP_REPLY;
+            } else {
+                secondary_ip = interface->ctx->config.secondary_ip_addresses;
+                while(secondary_ip) {
+                    if(arp->target_ip == secondary_ip->ip) {
+                        secondary_ip->arp_reply = true;
+                        interface->send_requests |= BBL_IF_SEND_SEC_ARP_REPLY;
+                        return;
+                    }
+                    secondary_ip = secondary_ip->next;
+                }
+            }
         }
     }
 }
@@ -1764,6 +1779,8 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         }
     }
 }
+
+
 
 void
 bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
@@ -1794,6 +1811,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
                     bbl = (bbl_bbl_t*)udp->next;
+                } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
+                    return bbl_l2tp_handler_rx(eth, (bbl_l2tp_t*)udp->next, interface);
                 }
             }
             break;

@@ -223,8 +223,9 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     const char *s;
     uint32_t ipv4;
     int i, size;
-
     bbl_access_config_s *access_config = NULL;
+    bbl_l2tp_server_t *l2tp_server = NULL;
+    bbl_secondary_ip_s *secondary_ip;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -546,6 +547,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         }
     }
 
+
     /* Interface Configuration */
     section = json_object_get(root, "interfaces");
     if (json_is_object(section)) {
@@ -578,7 +580,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                     fprintf(stderr, "JSON config error: Invalid value for network->gateway\n");
                     return false;
                 }
-                ctx->config.network_gateway= ipv4;
+                ctx->config.network_gateway = ipv4;
             }
             if (json_unpack(sub, "{s:s}", "address-ipv6", &s) == 0) {
                 if(!inet_pton(AF_INET6, s, &ctx->config.network_ip6.address)) {
@@ -632,6 +634,78 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         fprintf(stderr, "JSON config error: Missing interfaces section\n");
         return false;
     }
+
+    /* L2TP Server Configuration (LNS) */
+    section = json_object_get(root, "l2tp-server");
+    if (json_is_array(section)) {
+        if(!ctx->config.network_gateway || !ctx->config.network_ip) {
+            fprintf(stderr, "JSON config error: Failed to add L2TP server because of missing or incomplete network interface config\n");
+            return false;
+        }
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            sub = json_array_get(section, i);
+            if(!l2tp_server) {
+                ctx->config.l2tp_server = malloc(sizeof(bbl_l2tp_server_t));
+                l2tp_server = ctx->config.l2tp_server;
+            } else {
+                l2tp_server->next = malloc(sizeof(bbl_l2tp_server_t));
+                l2tp_server = l2tp_server->next;
+            }
+            memset(l2tp_server, 0x0, sizeof(bbl_l2tp_server_t));
+            if (json_unpack(sub, "{s:s}", "name", &s) == 0) {
+                l2tp_server->host_name = strdup(s);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
+                return false;
+            }
+            if (json_unpack(sub, "{s:s}", "secret", &s) == 0) {
+                l2tp_server->secret = strdup(s);
+            }
+            if (json_unpack(sub, "{s:s}", "address", &s) == 0) {
+                if(!inet_pton(AF_INET, s, &ipv4)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
+                    return false;
+                }
+                l2tp_server->ip = ipv4;
+                CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
+
+                if(ipv4 != ctx->config.network_ip) {
+                    /* Add secondary IP address to be served by ARP */
+                    secondary_ip = ctx->config.secondary_ip_addresses;
+                    if(secondary_ip) {
+                        while(secondary_ip) {
+                            if(secondary_ip->ip == ipv4) {
+                                /* Address is already known ... */
+                                break;
+                            }
+                            if(secondary_ip->next) {
+                                /* Check next address ... */
+                                secondary_ip = secondary_ip->next;
+                            } else {
+                                /* Append secondary address ... */
+                                secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
+                                memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
+                                secondary_ip = secondary_ip->next;
+                                secondary_ip->ip = ipv4;
+                                break;
+                            }
+                        }                        
+                    } else {
+                        /* Add first secondary address */
+                        ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
+                        memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
+                        ctx->config.secondary_ip_addresses->ip = ipv4;
+                    }
+                }
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
+            }
+        }   
+    } else if (json_is_object(sub)) {
+        fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+    }
+
     return true;
 }
 

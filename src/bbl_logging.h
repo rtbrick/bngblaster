@@ -32,6 +32,7 @@ enum {
     PCAP,
     IP,
     LOSS,
+    L2TP,
     LOG_ID_MAX
 };
 
