@@ -447,7 +447,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      * List for sessions who want to transmit.
      */
     CIRCLEQ_INIT(&interface->session_tx_qhead);
-
+    CIRCLEQ_INIT(&interface->l2tp_tx_qhead);
     return interface;
 }
 
@@ -632,6 +632,10 @@ bbl_add_ctx (void)
     ctx->session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session,
                                             bbl_session_hash,
                                             BBL_SESSION_HASHTABLE_SIZE);
+
+    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session,
+                                                 bbl_session_hash,
+                                                 BBL_SESSION_HASHTABLE_SIZE);
 
     return ctx;
 }

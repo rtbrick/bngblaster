@@ -365,17 +365,16 @@ timer_add (timer_root_s *root,
      */
     if (timer) {
         timer_requeue(timer, sec, nsec);
-
-	/*
-	 * Update data and cb if there was a change.
-	 * Do the reformatting of name only during a change due to snprintf() being expensive.
-	 */
-	if (timer->data != data || timer->cb != cb) {
-	    snprintf(timer->name, sizeof(timer->name), "%s", name);
-	    timer->data = data;
-	    timer->cb = cb;
-	}
-	return;
+        /*
+        * Update data and cb if there was a change.
+        * Do the reformatting of name only during a change due to snprintf() being expensive.
+        */
+        if (timer->data != data || timer->cb != cb) {
+            snprintf(timer->name, sizeof(timer->name), "%s", name);
+            timer->data = data;
+            timer->cb = cb;
+        }
+	    return;
     }
 
     if (CIRCLEQ_EMPTY(&root->timer_gc_qhead)) {
@@ -392,7 +391,7 @@ timer_add (timer_root_s *root,
         timer = CIRCLEQ_FIRST(&root->timer_gc_qhead);
         CIRCLEQ_REMOVE(&root->timer_gc_qhead, timer, timer_qnode);
         root->gc--;
-	memset(timer, 0, sizeof(timer_s));
+	    memset(timer, 0, sizeof(timer_s));
     }
 
     if (!timer) {

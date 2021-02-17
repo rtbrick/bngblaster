@@ -27,6 +27,7 @@ struct keyval_ log_names[] = {
     { TIMER_DETAIL,  "timer-detail" },
     { IP,            "ip" },
     { LOSS,          "loss" },
+    { L2TP,          "l2tp" },
     { 0, NULL}
 };
 
