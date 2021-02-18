@@ -20,14 +20,16 @@
     (((_a) > (_b) && (_a) - (_b) < 32768) || ((_a) < (_b) && (_b) - (_a) > 32768))
 
 typedef struct bbl_interface_ bbl_interface_s;
+typedef struct bbl_ctx_ bbl_ctx_s;
 
 /* L2TP Tunnel State */
 typedef enum {
-    BBL_L2TP_TUNNEL_IDLE            = 0,
-    BBL_L2TP_TUNNEL_WAIT_CTR_CONN   = 1,
-    BBL_L2TP_TUNNEL_ESTABLISHED     = 2,
-    BBL_L2TP_TUNNEL_SEND_STOPCCN    = 3,
-    BBL_L2TP_TUNNEL_TERMINATED      = 4,
+    BBL_L2TP_TUNNEL_IDLE             = 0,
+    BBL_L2TP_TUNNEL_WAIT_CTR_CONN    = 1,
+    BBL_L2TP_TUNNEL_ESTABLISHED      = 2,
+    BBL_L2TP_TUNNEL_SEND_STOPCCN     = 3,
+    BBL_L2TP_TUNNEL_RCVD_STOPCCN     = 4,
+    BBL_L2TP_TUNNEL_TERMINATED       = 5,
     BBL_L2TP_TUNNEL_MAX
 } __attribute__ ((__packed__)) l2tp_tunnel_state_t;
 
@@ -43,27 +45,20 @@ typedef enum {
 /* L2TP Server Configuration (LNS) */
 typedef struct bbl_l2tp_server_
 {
-    struct bbl_interface_ *interface;
-    l2tp_tunnel_state_t state;
-
+    /* Filled by configuration ...*/
     uint32_t ip;
-    uint32_t framing;
-    uint32_t bearer;
     uint16_t idle_timeout;
     uint16_t hello_interval;
     uint16_t session_limit;
     uint16_t receive_window;
     uint16_t max_retry;
-    uint16_t next_tunnel_id;
-
-    void *next; /* pointer to next L2TP server element */
-
-    /* The following members must be freed 
-     * if server is destroyed! */
-
     char *secret;
     char *host_name;
-    char *vendor;
+
+    /* Pointer to next L2TP server 
+     * configuration (simple list). */
+    uint16_t next_tunnel_id;
+    void *next; 
 
     /* List of L2TP tunnel instances 
      * for the corresponding server. */
@@ -97,12 +92,23 @@ typedef struct bbl_l2tp_tunnel_
 {
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
 
-    bbl_l2tp_server_t *server;    
-    l2tp_tunnel_state_t state;
+    /* Pointer to corresponding network interface */
+    struct bbl_interface_ *interface;
 
+    /* Pointer to L2TP server configuration */
+    bbl_l2tp_server_t *server;
+
+    /* L2TP tunnel state */
+    l2tp_tunnel_state_t state;
+    uint32_t state_seconds;
+    
     uint16_t tunnel_id;
     uint16_t peer_tunnel_id;
     uint16_t next_session_id;
+
+    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_session_) session_qhead; 
+
+    bool initial_packet_send;
 
     uint16_t ns;
     uint16_t nr;
@@ -120,7 +126,6 @@ typedef struct bbl_l2tp_tunnel_
     struct timer_ *timer_tx;
     struct timer_ *timer_ctrl;
 
-
     uint16_t retry;
     uint16_t cwnd;
     uint16_t ssthresh;
@@ -129,6 +134,7 @@ typedef struct bbl_l2tp_tunnel_
 
     bool zlb;
     bbl_l2tp_queue_t *zlb_qnode;
+    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_queue_) txq_qhead; 
 
     struct {
         uint32_t control_rx;
@@ -156,13 +162,12 @@ typedef struct bbl_l2tp_tunnel_
     char *peer_name;
     char *peer_vendor;
 
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_queue_) txq_qhead; 
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_session_) session_qhead; 
 } bbl_l2tp_tunnel_t;
 
 /* L2TP Session Instance */
 typedef struct bbl_l2tp_session_
 {
+
     CIRCLEQ_ENTRY(bbl_l2tp_session_) session_qnode;
 
     bbl_l2tp_tunnel_t *tunnel;
@@ -209,5 +214,7 @@ const char*
 l2tp_message_string(l2tp_message_type type);
 
 void bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface);
+void bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx);
+uint16_t bbl_l2tp_tunnel_count(bbl_ctx_s *ctx);
 
 #endif

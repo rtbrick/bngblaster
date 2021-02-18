@@ -949,13 +949,24 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions) { 
         if(ctx->sessions_terminated >= ctx->sessions) {
-            CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            /* Now also close all L2TP tunnels ... */
+            if(bbl_l2tp_tunnel_count(ctx) == 0) {
+                /* Stop event loop to close application! */
+                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            } else {
+                bbl_l2tp_stop_all_tunnel(ctx);
+            }
             return;
         }
     } else {
         /* Network interface only... */
         if(g_teardown) {
-            CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            if(bbl_l2tp_tunnel_count(ctx) == 0) {
+                /* Stop event loop to close application! */
+                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            } else {
+                bbl_l2tp_stop_all_tunnel(ctx);
+            }
             return;
         }
         return;
