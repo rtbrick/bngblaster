@@ -813,7 +813,7 @@ encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp) {
     protocol_error_t result;
     uint16_t *l2tp_len_field = NULL;
     uint16_t  l2tp_len = *len;
-
+    *(uint64_t*)buf = 0;
     /* Set flags */
     if(l2tp->type) {
         /* L2TP control packet */

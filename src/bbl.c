@@ -587,6 +587,14 @@ bbl_compare_session (void *key1, void *key2)
     return (a > b) - (a < b);
 }
 
+int
+bbl_compare_l2tp_session (void *key1, void *key2)
+{
+    const uint32_t a = *(const uint32_t*)key1;
+    const uint32_t b = *(const uint32_t*)key2;
+    return (a > b) - (a < b);
+}
+
 uint
 bbl_session_hash (const void* k)
 {
@@ -596,6 +604,14 @@ bbl_session_hash (const void* k)
     hash ^= *(uint16_t *)(k+4) << 12;
     hash ^= *(uint16_t *)(k+6);
 
+    return hash;
+}
+
+uint
+bbl_l2tp_session_hash (const void* k)
+{
+    uint hash = 2166136261U;
+    hash ^= *(uint32_t *)k;
     return hash;
 }
 
@@ -633,8 +649,8 @@ bbl_add_ctx (void)
                                             bbl_session_hash,
                                             BBL_SESSION_HASHTABLE_SIZE);
 
-    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session,
-                                                 bbl_session_hash,
+    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
+                                                 bbl_l2tp_session_hash,
                                                  BBL_SESSION_HASHTABLE_SIZE);
 
     return ctx;

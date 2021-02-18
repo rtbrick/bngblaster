@@ -1524,6 +1524,10 @@ bbl_tx_job (timer_s *timer)
                             frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll),
                             tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
             }
+            if(q->data) {
+                free(q->packet);
+                free(q);
+            }
         }
         /* Generate Multicast Traffic */
         g = ctx->config.igmp_group_count;
