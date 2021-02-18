@@ -174,6 +174,9 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel, bb
             }
             if(avp.vendor == 0) {
                 switch(avp.type) {
+                    case L2TP_AVP_RESULT_CODE:
+                        /* Currently not needed! */
+                        break;
                     case L2TP_AVP_ASSIGNED_SESSION_ID:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP assigned session id AVP in %s from %s\n",
@@ -384,6 +387,9 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
             }
             if(avp.vendor == 0) {
                 switch(avp.type) {
+                    case L2TP_AVP_RESULT_CODE:
+                        /* Currently not needed! */
+                        break;
                     case L2TP_AVP_PROTOCOL_VERSION: 
                         if(avp.len != 2 || be16toh(*(uint16_t*)avp.value) != 256) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP protocol version AVP in %s from %s\n",

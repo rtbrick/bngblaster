@@ -363,6 +363,7 @@ typedef struct bbl_ctx_
 
     dict *session_dict; /* hashtable for sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
+    uint16_t next_tunnel_id;
 
     uint64_t flow_id;
 

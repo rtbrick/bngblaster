@@ -13,6 +13,10 @@
 #define L2TP_MAX_PACKET_SIZE        1500
 #define L2TP_MAX_AVP_SIZE           1024
 
+#define L2TP_IPCP_IP_LOCAL          168495882
+#define L2TP_IPCP_IP_REMOTE         168430090
+
+
 #define L2TP_SEQ_LT(_a, _b)\
     (((_a) < (_b) && (_b) - (_a) < 32768) || ((_a) > (_b) && (_a) - (_b) > 32768))
 
@@ -57,7 +61,6 @@ typedef struct bbl_l2tp_server_
 
     /* Pointer to next L2TP server 
      * configuration (simple list). */
-    uint16_t next_tunnel_id;
     void *next; 
 
     /* List of L2TP tunnel instances 
@@ -67,14 +70,14 @@ typedef struct bbl_l2tp_server_
 
 /* L2TP Session Key */
 typedef struct l2tp_key_ {
-    uint32_t ip;
     uint16_t tunnel_id;
     uint16_t session_id;
 } __attribute__ ((__packed__)) l2tp_key_t;
 
-/* L2TP TX Queue Entry */
+/* L2TP Control TX Queue Entry */
 typedef struct bbl_l2tp_queue_
 {
+    bool data; /* l2tp data packets */
     uint16_t ns;
     uint8_t  ns_offset;
     uint8_t  nr_offset;
@@ -87,10 +90,21 @@ typedef struct bbl_l2tp_queue_
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) tx_qnode; /* TX request */
 } bbl_l2tp_queue_t;
 
+/* L2TP Data TX Queue Entry */
+typedef struct bbl_l2tp_data_queue_
+{
+    uint8_t *packet;
+    uint16_t packet_len;
+    CIRCLEQ_ENTRY(bbl_l2tp_data_queue_) tx_qnode; /* TX request */
+} bbl_l2tp_data_queue_t;
+
 /* L2TP Tunnel Instance */
 typedef struct bbl_l2tp_tunnel_
 {
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
+
+    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_session_) session_qhead; 
+    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_queue_) txq_qhead; 
 
     /* Pointer to corresponding network interface */
     struct bbl_interface_ *interface;
@@ -105,8 +119,6 @@ typedef struct bbl_l2tp_tunnel_
     uint16_t tunnel_id;
     uint16_t peer_tunnel_id;
     uint16_t next_session_id;
-
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_session_) session_qhead; 
 
     bool initial_packet_send;
 
@@ -134,7 +146,6 @@ typedef struct bbl_l2tp_tunnel_
 
     bool zlb;
     bbl_l2tp_queue_t *zlb_qnode;
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_queue_) txq_qhead; 
 
     struct {
         uint32_t control_rx;
@@ -174,7 +185,6 @@ typedef struct bbl_l2tp_session_
     l2tp_session_state_t state;
 
     struct {
-        uint32_t ip;
         uint16_t tunnel_id;
         uint16_t session_id;
     } key;
@@ -196,6 +206,9 @@ typedef struct bbl_l2tp_session_
     uint16_t proxy_auth_name_len;
     uint16_t proxy_auth_challenge_len;
     uint16_t proxy_auth_response_len;
+
+    uint8_t ipcp_state;
+    uint8_t ip6cp_state;
 
     /* The following members must be freed 
      * if session is destroyed! */

@@ -153,7 +153,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
     }       
 
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_SEND_STOPCCN) {
-        if(!CIRCLEQ_EMPTY(&l2tp_tunnel->txq_qhead)) {
+        if(CIRCLEQ_EMPTY(&l2tp_tunnel->txq_qhead)) {
             l2tp_tunnel->state = BBL_L2TP_TUNNEL_TERMINATED;
             l2tp_tunnel->state_seconds = 0;
         }
@@ -182,6 +182,8 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
                 }
             }
             CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
+            l2tp_tunnel->stats.control_tx++;
+            interface->stats.l2tp_control_tx++;
             l2tp_tunnel->zlb = false;
             q->last_tx_time.tv_sec = timestamp.tv_sec;
             q->last_tx_time.tv_nsec = timestamp.tv_nsec;
@@ -209,6 +211,8 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
         /* Update Nr. ... */
         *(uint16_t*)(q->packet + q->nr_offset) = htobe16(l2tp_tunnel->nr);
         CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, l2tp_tunnel->zlb_qnode, tx_qnode);
+        l2tp_tunnel->stats.control_tx++;
+        interface->stats.l2tp_control_tx++;
         *(uint16_t*)(l2tp_tunnel->zlb_qnode->packet + l2tp_tunnel->zlb_qnode->ns_offset) = htobe16(l2tp_tunnel->ns);
         *(uint16_t*)(l2tp_tunnel->zlb_qnode->packet + l2tp_tunnel->zlb_qnode->nr_offset) = htobe16(l2tp_tunnel->nr);
     }
@@ -259,7 +263,6 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
     }
 }
 
-
 /** 
  * bbl_l2tp_send 
  *
@@ -289,7 +292,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
-    eth.vlan_outer = interface->ctx->config.network_vlan;
+    eth.vlan_outer = ctx->config.network_vlan;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.dst = l2tp_tunnel->peer_ip;
@@ -356,6 +359,61 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
     }
 }
 
+/** 
+ * bbl_l2tp_send_data 
+ *
+ * This function ...
+ * 
+ * @param l2tp_tunnel Mandatory pointer to L2TP tunnel object. 
+ * @param l2tp_session Mandatory pointer to L2TP session object. 
+ * @param protocol ...
+ * @param next ...
+ */
+static void
+bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *next) {
+
+    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_interface_s *interface = l2tp_tunnel->interface;
+    bbl_l2tp_queue_t *q = calloc(1, sizeof(bbl_l2tp_queue_t));
+    bbl_ethernet_header_t eth = {0};
+    bbl_ipv4_t ipv4 = {0};
+    bbl_udp_t udp = {0};
+    bbl_l2tp_t l2tp = {0};
+    uint len = 0;
+    eth.dst = interface->gateway_mac;
+    eth.src = interface->mac;
+    eth.vlan_outer = interface->ctx->config.network_vlan;
+    eth.type = ETH_TYPE_IPV4;
+    eth.next = &ipv4;
+    ipv4.dst = l2tp_tunnel->peer_ip;
+    ipv4.src = l2tp_tunnel->server->ip;
+    ipv4.ttl = 64;
+    ipv4.protocol = PROTOCOL_IPV4_UDP;
+    ipv4.next = &udp;
+    udp.src = L2TP_UDP_PORT;
+    udp.dst = L2TP_UDP_PORT;
+    udp.protocol = UDP_PROTOCOL_L2TP;
+    udp.next = &l2tp;
+    l2tp.type = L2TP_MESSAGE_DATA;
+    l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
+    l2tp.session_id = l2tp_session->peer_session_id;
+    l2tp.protocol = protocol;
+    l2tp.next = next;
+    q->data = true;
+    q->packet = malloc(L2TP_MAX_PACKET_SIZE);
+    if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
+        q->packet_len = len;
+        CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
+        l2tp_tunnel->stats.data_tx++;
+        interface->stats.l2tp_data_tx++;
+    } else {
+        /* Encode error.... */
+        LOG(ERROR, "L2TP Data Encode Error!\n");
+        free(q->packet);
+        free(q);
+    }
+}
+
 static void
 bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface) {
     MD5_CTX md5_ctx;
@@ -368,8 +426,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
     bbl_l2tp_tunnel_t *l2tp_tunnel2;
     bbl_l2tp_session_t *l2tp_session;
 
-    l2tp_key_t key = {0};
-    dict_insert_result result = {0};
+    dict_insert_result result;
     void **search = NULL;
 
     uint8_t l2tp_type;
@@ -388,11 +445,12 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             l2tp_tunnel->peer_receive_window = 4;
             l2tp_tunnel->ssthresh = 4;
             l2tp_tunnel->cwnd = 1;
-            l2tp_tunnel->peer_tunnel_id = 1;
             l2tp_tunnel->peer_ip = ipv4->src;
             l2tp_tunnel->peer_ns = l2tp->ns;
             l2tp_tunnel->nr = (l2tp->ns + 1);
             l2tp_tunnel->state = BBL_L2TP_TUNNEL_WAIT_CTR_CONN;
+            l2tp_tunnel->stats.control_rx++;
+            interface->stats.l2tp_control_rx++;
             /* Decode received attributes and store in tunnel */
             if(!bbl_l2tp_avp_decode_tunnel(l2tp, l2tp_tunnel)) {
                 return bbl_l2tp_tunnel_delete(l2tp_tunnel);
@@ -414,31 +472,26 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                 }
             }
 
-            /* Assign tunnel id ... */
-            while(true) {
-                key.ip = l2tp_server->ip;
-                key.tunnel_id = l2tp_server->next_tunnel_id++;
-                key.session_id = 0;
-                if(key.tunnel_id == 0) continue; /* skip tunnel 0 */
-                search = dict_search(ctx->l2tp_session_dict, &key);
-                if(search) {
-                    /* Used, try next ... */
-                    key.tunnel_id = l2tp_server->next_tunnel_id++;
-                } else {
-                    break;
-                }
-            }
-            l2tp_tunnel->tunnel_id = key.tunnel_id;
-            l2tp_tunnel->stats.control_rx++;
-            interface->stats.l2tp_control_rx++;
-
             /* Add dummy tunnel session, this session is only used 
              * to search for tunnel using the same dictionary. */
             l2tp_session = calloc(1, sizeof(bbl_l2tp_session_t));
             l2tp_session->state = BBL_L2TP_SESSION_MAX;
             l2tp_session->tunnel = l2tp_tunnel;
-            l2tp_session->key.ip = key.ip;
-            l2tp_session->key.tunnel_id = key.tunnel_id;
+            l2tp_session->key.session_id = 0;
+    
+            /* Assign tunnel id ... */
+            while(true) {
+                l2tp_session->key.tunnel_id = ctx->next_tunnel_id++;
+                if(l2tp_session->key.tunnel_id == 0) continue; /* skip tunnel 0 */
+                search = dict_search(ctx->l2tp_session_dict, &l2tp_session->key);
+                if(search) {
+                    /* Used, try next ... */
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            l2tp_tunnel->tunnel_id = l2tp_session->key.tunnel_id;
             result = dict_insert(ctx->l2tp_session_dict, &l2tp_session->key);
             if (!result.inserted) {
                 LOG(ERROR, "L2TP Error (%s) Failed to add tunnel session\n",
@@ -448,7 +501,6 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             }
             *result.datum_ptr = l2tp_session;
             CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
-
             /* L2TP Challenge/Response */
             if(l2tp_server->secret) {
                 l2tp_tunnel->challenge = malloc(L2TP_MD5_DIGEST_LEN);
@@ -570,7 +622,6 @@ static void
 bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
     bbl_ctx_s *ctx = interface->ctx;
 
-    l2tp_key_t key;
     dict_insert_result result;
     void **search;
 
@@ -588,33 +639,29 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
         return bbl_l2tp_session_delete(l2tp_session);
     }
 
+    l2tp_session->key.tunnel_id = l2tp_tunnel->tunnel_id;
+
     /* Assign session id ... */
     while(true) {
-        key.ip = l2tp_tunnel->server->ip;
-        key.tunnel_id = l2tp_tunnel->tunnel_id;
-        key.session_id = l2tp_tunnel->next_session_id++;
-        search = dict_search(ctx->l2tp_session_dict, &key);
+        l2tp_session->key.session_id = l2tp_tunnel->next_session_id++;
+        if(l2tp_session->key.session_id == 0) continue; /* skip tunnel 0 */
+        search = dict_search(ctx->l2tp_session_dict, &l2tp_session->key);
         if(search) {
             /* Used, try next ... */
-            key.session_id = l2tp_tunnel->next_session_id++;
+            continue;
         } else {
             break;
         }
     }
-    l2tp_session->key.ip = key.ip;
-    l2tp_session->key.tunnel_id = key.tunnel_id;
-    l2tp_session->key.session_id = key.session_id;
-
-    result = dict_insert(ctx->l2tp_session_dict, &key);
+    result = dict_insert(ctx->l2tp_session_dict, &l2tp_session->key);
     if (!result.inserted) {
-        /* TODO: Here we need to handle this properly but actually 
-         * this should not happen. */
+        LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
+                    l2tp_tunnel->server->host_name); 
         free(l2tp_session);
-        return;
+        return ;
     }
     *result.datum_ptr = l2tp_session;
     CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
-
     bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICRP);
 }
 
@@ -666,10 +713,109 @@ static void
 bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_session_t *l2tp_session) {
     bbl_ctx_s *ctx = interface->ctx;
 
+    bbl_lcp_t   *lcp_rx;
+    bbl_pap_t   *pap_rx;
+    bbl_pap_t    pap_tx;
+    bbl_ipcp_t  *ipcp_rx;
+    bbl_ipcp_t   ipcp_tx;
+    bbl_ip6cp_t *ip6cp_rx;
+    bbl_ip6cp_t  ip6cp_tx;
+
     UNUSED(ctx);
     UNUSED(eth);
-    UNUSED(l2tp);
-    UNUSED(l2tp_session);
+
+    if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
+        return;
+    }
+
+    switch (l2tp->protocol) {
+        case PROTOCOL_LCP:
+            lcp_rx = (bbl_lcp_t*)l2tp->next;
+            if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
+                bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+                return bbl_l2tp_session_delete(l2tp_session);
+            }
+            if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
+                lcp_rx->code = PPP_CODE_ECHO_REPLY;
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+            }
+            break;
+        case PROTOCOL_PAP:
+            memset(&pap_tx, 0x0, sizeof(bbl_pap_t));
+            pap_rx = (bbl_pap_t*)l2tp->next;
+            pap_tx.code = PAP_CODE_ACK;
+            pap_tx.identifier = pap_rx->identifier;
+            bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
+            break;
+        case PROTOCOL_IPCP:
+            ipcp_rx = (bbl_ipcp_t*)l2tp->next;
+            memset(&ipcp_tx, 0x0, sizeof(bbl_ipcp_t));
+            if(ipcp_rx->code == PPP_CODE_CONF_REQUEST) {
+                ipcp_rx->options = NULL;
+                ipcp_rx->options_len = 0;
+                if(ipcp_rx->address == L2TP_IPCP_IP_REMOTE) {
+                    ipcp_rx->code = PPP_CODE_CONF_ACK;
+                    if(l2tp_session->ipcp_state == BBL_PPP_LOCAL_ACK) {
+                        l2tp_session->ipcp_state = BBL_PPP_OPENED;
+                    } else {
+                        l2tp_session->ipcp_state = BBL_PPP_PEER_ACK;
+                        ipcp_tx.code = PPP_CODE_CONF_REQUEST;
+                        ipcp_tx.identifier = 1;
+                        ipcp_tx.address = L2TP_IPCP_IP_LOCAL;
+                        ipcp_tx.option_address = true;
+                        bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ipcp_tx);
+                    }
+                } else {
+                    ipcp_rx->code = PPP_CODE_CONF_NAK;
+                    ipcp_rx->address = L2TP_IPCP_IP_REMOTE;
+                    ipcp_rx->option_address = true;
+                    ipcp_rx->option_dns1 = false;
+                    ipcp_rx->option_dns2 = false;
+                }
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, ipcp_rx);
+            } else if (ipcp_rx->code == PPP_CODE_CONF_ACK) {
+                if(l2tp_session->ipcp_state == BBL_PPP_PEER_ACK) {
+                    l2tp_session->ipcp_state = BBL_PPP_OPENED;
+                } else {
+                    l2tp_session->ipcp_state = BBL_PPP_LOCAL_ACK;
+                    ipcp_tx.code = PPP_CODE_CONF_REQUEST;
+                    ipcp_tx.identifier = 1;
+                    ipcp_tx.address = L2TP_IPCP_IP_LOCAL;
+                    ipcp_tx.option_address = true;
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ipcp_tx);
+                }
+            }
+            break;
+        case PROTOCOL_IP6CP:
+            ip6cp_rx = (bbl_ip6cp_t*)l2tp->next;
+            memset(&ip6cp_tx, 0x0, sizeof(bbl_ip6cp_t));
+            if(ip6cp_rx->code == PPP_CODE_CONF_REQUEST) {
+                ip6cp_rx->code = PPP_CODE_CONF_ACK;
+                if(l2tp_session->ip6cp_state == BBL_PPP_LOCAL_ACK) {
+                    l2tp_session->ip6cp_state = BBL_PPP_OPENED;
+                } else {
+                    l2tp_session->ip6cp_state = BBL_PPP_PEER_ACK;
+                    ip6cp_tx.code = PPP_CODE_CONF_REQUEST;
+                    ip6cp_tx.identifier = 1;
+                    ip6cp_tx.ipv6_identifier = 1;
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ip6cp_tx);
+                }
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, ip6cp_rx);
+            } else if (ip6cp_rx->code == PPP_CODE_CONF_ACK) {
+                if(l2tp_session->ip6cp_state == BBL_PPP_PEER_ACK) {
+                    l2tp_session->ip6cp_state = BBL_PPP_OPENED;
+                } else {
+                    l2tp_session->ip6cp_state = BBL_PPP_LOCAL_ACK;
+                    ip6cp_tx.code = PPP_CODE_CONF_REQUEST;
+                    ip6cp_tx.identifier = 1;
+                    ip6cp_tx.ipv6_identifier = 1;
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ip6cp_tx);
+                }
+            }
+            break;
+        default:
+            break;
+    }
 
 }
 
@@ -696,12 +842,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
         return bbl_l2tp_sccrq_rx(eth, l2tp, interface);
     }
 
-    LOG(DEBUG, "L2TP Debug %s received from %s\n", l2tp_message_string(l2tp->type), format_ipv4_address(&ipv4->src));
-
-    key.ip = ipv4->dst;
     key.tunnel_id = l2tp->tunnel_id;
     key.session_id = l2tp->session_id;
-
     search = dict_search(ctx->l2tp_session_dict, &key);
     if(search) {
         l2tp_session = *search;
@@ -728,6 +870,9 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
             if(l2tp->type != L2TP_MESSAGE_ZLB) {
                 l2tp_tunnel->zlb = true;
             }
+            if(l2tp_tunnel->cwnd < l2tp_tunnel->peer_receive_window) {
+                l2tp_tunnel->cwnd++;
+            }
             l2tp_tunnel->stats.control_rx++;
             interface->stats.l2tp_control_rx++;
             if(!l2tp_tunnel->timer_tx_active) {
@@ -753,7 +898,6 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
         } else {
             if (L2TP_SEQ_LT(l2tp->ns, l2tp_tunnel->nr)) {
                 /* Duplicate packet received */
-                LOG(DEBUG, "L2TP Debug duplicate received\n");
                 l2tp_tunnel->zlb = true;
                 l2tp_tunnel->stats.control_rx_dup++;
                 interface->stats.l2tp_control_rx_dup++;
@@ -763,7 +907,6 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                 }
             } else {
                 /* Out-of-Order packet received */
-                LOG(DEBUG, "L2TP Debug out of order received\n");
                 l2tp_tunnel->stats.control_rx_ooo++;
                 interface->stats.l2tp_control_rx_ooo++;
             }
@@ -799,6 +942,7 @@ bbl_l2tp_tunnel_count(bbl_ctx_s *ctx) {
         }
         l2tp_server = l2tp_server->next;
     }
+    LOG(DEBUG, "TUNNEL %u\n", active); 
     return active;
 }
 
