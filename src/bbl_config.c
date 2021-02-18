@@ -701,6 +701,18 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
             }
+            value = json_object_get(sub, "receive-window-size");
+            if (json_is_number(value)) {
+                l2tp_server->receive_window = json_number_value(value);
+            } else {
+                l2tp_server->receive_window = 4;
+            }
+            value = json_object_get(sub, "max-retry");
+            if (json_is_number(value)) {
+                l2tp_server->max_retry = json_number_value(value);
+            } else {
+                l2tp_server->max_retry = 30;
+            }
         }   
     } else if (json_is_object(sub)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");

@@ -55,14 +55,15 @@ bbl_l2tp_avp_decode(uint8_t **_buf, uint16_t *_len, bbl_l2tp_avp_t *avp) {
 
 /* bbl_l2tp_avp_encode */
 static void
-bbl_l2tp_avp_encode(uint8_t *buf, uint16_t *len, bbl_l2tp_avp_t *avp) {
+bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp) {
     uint16_t avp_len_field;
+    uint8_t *buf = *_buf;
 
     /* TODO: Currently we do not support to hide (H) AVP values! */
 
     avp_len_field = avp->len + L2TP_AVP_HDR_LEN;
     if(avp->m) avp_len_field |= L2TP_AVP_M_BIT_MASK;
-    *(uint16_t*)buf = htobe16(len);
+    *(uint16_t*)buf = htobe16(avp_len_field);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint16_t*)buf = htobe16(avp->vendor);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -86,6 +87,7 @@ bbl_l2tp_avp_encode(uint8_t *buf, uint16_t *len, bbl_l2tp_avp_t *avp) {
             BUMP_WRITE_BUFFER(buf, len, avp->len);
             break;
     }
+    *_buf = buf;
 }
 
 /* bbl_l2tp_avp_unhide */
@@ -454,10 +456,12 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
                             return false;
                         }
                         l2tp_tunnel->peer_receive_window = be16toh(*(uint16_t*)avp.value);
+                        l2tp_tunnel->ssthresh = l2tp_tunnel->peer_receive_window;
                         break;
                     case L2TP_AVP_CHALLENGE:
                         if(!l2tp_tunnel->peer_challenge && avp.len) {
                             l2tp_tunnel->peer_challenge = malloc(avp.len);
+                            l2tp_tunnel->peer_challenge_len = avp.len;
                             memcpy(l2tp_tunnel->peer_challenge, avp.value, avp.len);
                         }
                         break;
@@ -471,6 +475,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
                         }
                         if(!l2tp_tunnel->peer_challenge_response) {
                             l2tp_tunnel->peer_challenge_response = malloc(avp.len);
+                            l2tp_tunnel->peer_challenge_response_len = avp.len;
                             memcpy(l2tp_tunnel->peer_challenge_response, avp.value, avp.len);
                         }
                         break;
@@ -510,7 +515,7 @@ void
 bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
                                l2tp_message_type l2tp_type, uint8_t *buf, uint16_t *len) {
 
-    bbl_l2tp_avp_t avp;
+    bbl_l2tp_avp_t avp = {0};
 
     uint16_t v16;
     uint32_t v32;
@@ -529,7 +534,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
     avp.len = 2;
     avp.value_type = L2TP_AVP_VALUE_UINT16;
     avp.value = (void*)&v16;
-    bbl_l2tp_avp_encode(buf, len, &avp);
+    bbl_l2tp_avp_encode(&buf, len, &avp);
 
     switch (l2tp_type) {
         case L2TP_MESSAGE_SCCRP:
@@ -540,7 +545,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
             avp.len = 2;
             avp.value_type = L2TP_AVP_VALUE_UINT16;
             avp.value = (void*)&v16;
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Framing Capabilities */
             v32 = 3; /* A + S */
             avp.m = true;
@@ -549,67 +554,71 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
             avp.value_type = L2TP_AVP_VALUE_UINT32;
             avp.value = (void*)&v32;
             /* Bearer Capabilities */
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             v32 = 1; /* D */
             avp.m = true;
             avp.type = L2TP_AVP_BEARER_CAPABILITIES;
             avp.len = 4;
             avp.value_type = L2TP_AVP_VALUE_UINT32;
             avp.value = (void*)&v32;
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Firmware Revision */
             v16 = 1;
             avp.m = false;
-            avp.type = L2TP_AVP_BEARER_CAPABILITIES;
+            avp.type = L2TP_AVP_FIRMWARE_REVISION;
             avp.len = 2;
             avp.value_type = L2TP_AVP_VALUE_UINT16;
             avp.value = (void*)&v16;
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Host Name */
             avp.m = true;
             avp.type = L2TP_AVP_HOST_NAME;
             avp.len = strlen(l2tp_tunnel->server->host_name);
             avp.value_type = L2TP_AVP_VALUE_BYTES;
             avp.value = (void*)(l2tp_tunnel->server->host_name);
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Vendor Name */
             avp.m = false;
             avp.type = L2TP_AVP_VENDOR_NAME;
-            avp.len = strlen(l2tp_tunnel->server->vendor);
+            avp.len = sizeof("bngblaster") - 1;
             avp.value_type = L2TP_AVP_VALUE_BYTES;
-            avp.value = (void*)(l2tp_tunnel->server->vendor);
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            avp.value = (void*)"bngblaster";
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Assigned Tunnel ID  */
             avp.m = true;
             avp.type = L2TP_AVP_ASSIGNED_TUNNEL_ID;
             avp.len = 2;
             avp.value_type = L2TP_AVP_VALUE_UINT16;
             avp.value = (void*)(&l2tp_tunnel->tunnel_id);
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Receive Window Size  */
+            v16 = 4;
+            if(l2tp_tunnel->server->receive_window) {
+                v16 = l2tp_tunnel->server->receive_window;
+            }
             avp.m = true;
             avp.type = L2TP_AVP_RECEIVE_WINDOW_SIZE;
             avp.len = 2;
             avp.value_type = L2TP_AVP_VALUE_UINT16;
-            avp.value = (void*)(&l2tp_tunnel->server->receive_window);
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            avp.value = (void*)&v16;
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Challenge */
             if(l2tp_tunnel->challenge_len) {
-                avp.m = false;
+                avp.m = true;
                 avp.type = L2TP_AVP_CHALLENGE;
                 avp.len = l2tp_tunnel->challenge_len;
                 avp.value_type = L2TP_AVP_VALUE_BYTES;
                 avp.value = l2tp_tunnel->challenge;
-                bbl_l2tp_avp_encode(buf, len, &avp);
+                bbl_l2tp_avp_encode(&buf, len, &avp);
             }
             /* Challenge Response */
             if(l2tp_tunnel->challenge_response_len) {
-                avp.m = false;
+                avp.m = true;
                 avp.type = L2TP_AVP_CHALLENGE_RESPONSE;
                 avp.len = l2tp_tunnel->challenge_response_len;
                 avp.value_type = L2TP_AVP_VALUE_BYTES;
                 avp.value = l2tp_tunnel->challenge_response;
-                bbl_l2tp_avp_encode(buf, len, &avp);
+                bbl_l2tp_avp_encode(&buf, len, &avp);
             }
             break;
         case L2TP_MESSAGE_STOPCCN:
@@ -619,7 +628,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
             avp.len = 2;
             avp.value_type = L2TP_AVP_VALUE_UINT16;
             avp.value = (void*)(&l2tp_tunnel->tunnel_id);
-            bbl_l2tp_avp_encode(buf, len, &avp);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
             break;
         case L2TP_MESSAGE_ICRP:
             /* Assigned Session ID  */
@@ -629,7 +638,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
                 avp.len = 2;
                 avp.value_type = L2TP_AVP_VALUE_UINT16;
                 avp.value = (void*)(&l2tp_session->key.session_id);
-                bbl_l2tp_avp_encode(buf, len, &avp);
+                bbl_l2tp_avp_encode(&buf, len, &avp);
             }
             break;
         case L2TP_MESSAGE_CDN:
@@ -640,7 +649,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
                 avp.len = 2;
                 avp.value_type = L2TP_AVP_VALUE_UINT16;
                 avp.value = (void*)(&l2tp_session->key.session_id);
-                bbl_l2tp_avp_encode(buf, len, &avp);
+                bbl_l2tp_avp_encode(&buf, len, &avp);
             }
             break;
         default:

@@ -1214,7 +1214,6 @@ bbl_encode_network_packet (bbl_interface_s *interface, bbl_session_s *session, u
     session->write_buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
     session->write_idx = 0;
 
-
     if (session->network_send_requests & BBL_SEND_SESSION_IPV4) {
         result = bbl_encode_packet_network_session_ipv4(interface, session);
         session->network_send_requests &= ~BBL_SEND_SESSION_IPV4;
@@ -1500,21 +1499,22 @@ bbl_tx_job (timer_s *timer)
     if(!interface->access) {
         /* Send L2TP Packets */
         while (!CIRCLEQ_EMPTY(&interface->l2tp_tx_qhead)) {
+            frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
+            tphdr = (struct tpacket2_hdr *)frame_ptr;
             /* Check if this slot available for writing. */
             if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
                 interface->stats.no_tx_buffer++;
                 goto Send;
             }
+
             /* Pop element from queue */
             q = CIRCLEQ_FIRST(&interface->l2tp_tx_qhead);
             CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
             CIRCLEQ_NEXT(q, tx_qnode) = NULL;
             CIRCLEQ_PREV(q, tx_qnode) = NULL;
             /* Copy packet from queue to ring buffer */
-            frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
-            tphdr = (struct tpacket2_hdr *)frame_ptr;
-            memcpy(frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll) , q->packet, q->packet_len);
-            tphdr->tp_len = interface->mc_packet_len;
+            memcpy((frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll)), q->packet, q->packet_len);
+            tphdr->tp_len = q->packet_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
             interface->stats.packets_tx++;
             interface->cursor_tx = (interface->cursor_tx + 1) % interface->req_tx.tp_frame_nr;
@@ -1525,7 +1525,6 @@ bbl_tx_job (timer_s *timer)
                             tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
             }
         }
-
         /* Generate Multicast Traffic */
         g = ctx->config.igmp_group_count;
         if(ctx->config.send_multicast_traffic && ctx->multicast_traffic && g) {

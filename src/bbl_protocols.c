@@ -854,15 +854,7 @@ encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp) {
     }
     if(l2tp->type) {
         /* L2TP control packet */
-        *buf = 0x80;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-        *buf = 0x08;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-        *(uint32_t*)buf = 0;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint16_t*)buf = htobe16(l2tp->type);
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        if(l2tp->payload_len) {
+        if(l2tp->payload && l2tp->payload_len) {
             memcpy(buf, l2tp->payload, l2tp->payload_len);
             BUMP_WRITE_BUFFER(buf, len, l2tp->payload_len);
         }

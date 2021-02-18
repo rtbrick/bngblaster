@@ -260,6 +260,14 @@ typedef struct bbl_interface_
         uint64_t session_ipv4_wrong_session;
         uint64_t session_ipv6_wrong_session;
         uint64_t session_ipv6pd_wrong_session;
+
+        uint32_t l2tp_control_rx;
+        uint32_t l2tp_control_rx_dup;
+        uint32_t l2tp_control_rx_ooo;
+        uint32_t l2tp_control_tx;
+        uint32_t l2tp_control_retry;
+        uint64_t l2tp_data_rx;
+        uint64_t l2tp_data_tx;
     } stats;
 
     struct timer_ *tx_job;
