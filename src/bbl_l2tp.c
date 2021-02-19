@@ -131,7 +131,7 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
 
         /* Delete timer */
         timer_del(l2tp_tunnel->timer_tx);
-        timer_del(l2tp_tunnel->timer_ctrl);
+
         /* Delete all remaining sessions */
         while (!CIRCLEQ_EMPTY(&l2tp_tunnel->session_qhead)) {
             bbl_l2tp_session_delete(CIRCLEQ_FIRST(&l2tp_tunnel->session_qhead));
@@ -150,11 +150,9 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
                 CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
                 CIRCLEQ_NEXT(q, tx_qnode) = NULL;
             }
-            free(q->packet);
             free(q);
         }
         if(l2tp_tunnel->zlb_qnode) {
-            free(l2tp_tunnel->zlb_qnode->packet);
             free(l2tp_tunnel->zlb_qnode);
         }
         /* Free tunnel memory */
@@ -245,7 +243,6 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
             q_del = q;
             q = CIRCLEQ_NEXT(q, txq_qnode);
             CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
-            free(q_del->packet);
             free(q_del);
             continue;
         }
@@ -411,12 +408,10 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
     }
     q->ns = l2tp.ns;
     q->tunnel = l2tp_tunnel;
-    q->packet = malloc(L2TP_MAX_PACKET_SIZE);
     if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
         q->packet_len = len;
         if(l2tp_type == L2TP_MESSAGE_ZLB) {
             if(l2tp_tunnel->zlb_qnode) {
-                free(q->packet);
                 free(q);
             } else {
                 l2tp_tunnel->zlb_qnode = q;
@@ -431,7 +426,6 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
     } else {
         /* Encode error.... */
         LOG(ERROR, "L2TP Encode Error!\n");
-        free(q->packet);
         free(q);
     }
 }
@@ -477,7 +471,6 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
     l2tp.protocol = protocol;
     l2tp.next = next;
     q->data = true;
-    q->packet = malloc(L2TP_MAX_PACKET_SIZE);
     if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
         q->packet_len = len;
         CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
@@ -486,7 +479,6 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
     } else {
         /* Encode error.... */
         LOG(ERROR, "L2TP Data Encode Error!\n");
-        free(q->packet);
         free(q);
     }
 }

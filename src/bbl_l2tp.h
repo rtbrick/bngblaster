@@ -93,7 +93,7 @@ typedef struct bbl_l2tp_queue_
     uint8_t  ns_offset;
     uint8_t  nr_offset;
     uint8_t  retries;
-    uint8_t *packet;
+    uint8_t  packet[L2TP_MAX_PACKET_SIZE];
     uint16_t packet_len;
     struct timespec last_tx_time;
     struct bbl_l2tp_tunnel_ *tunnel;
