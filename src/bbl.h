@@ -268,6 +268,8 @@ typedef struct bbl_interface_
         uint32_t l2tp_control_retry;
         uint64_t l2tp_data_rx;
         uint64_t l2tp_data_tx;
+        bbl_rate_s rate_l2tp_data_rx;
+        bbl_rate_s rate_l2tp_data_tx;
     } stats;
 
     struct timer_ *tx_job;
@@ -356,6 +358,13 @@ typedef struct bbl_ctx_
     uint32_t dhcpv6_requested;
     uint32_t dhcpv6_established;
     uint32_t dhcpv6_established_max;
+
+    uint32_t l2tp_sessions;
+    uint32_t l2tp_sessions_max;
+    uint32_t l2tp_tunnels;
+    uint32_t l2tp_tunnels_max;
+    uint32_t l2tp_tunnels_established;
+    uint32_t l2tp_tunnels_established_max;
 
     CIRCLEQ_HEAD(bbl_ctx_idle_, bbl_session_ ) sessions_idle_qhead;
     CIRCLEQ_HEAD(bbl_ctx_teardown_, bbl_session_ ) sessions_teardown_qhead;

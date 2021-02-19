@@ -223,11 +223,11 @@ typedef struct bbl_l2tp_session_
 
 } bbl_l2tp_session_t;
 
-const char*
-l2tp_message_string(l2tp_message_type type);
+const char* l2tp_message_string(l2tp_message_type type);
+const char* l2tp_tunnel_state_string(l2tp_tunnel_state_t state);
+const char* l2tp_session_state_string(l2tp_session_state_t state);
 
 void bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface);
 void bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx);
-uint16_t bbl_l2tp_tunnel_count(bbl_ctx_s *ctx);
 
 #endif

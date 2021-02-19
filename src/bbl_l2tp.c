@@ -39,6 +39,32 @@ l2tp_message_string(l2tp_message_type type)
     }
 }
 
+const char*
+l2tp_tunnel_state_string(l2tp_tunnel_state_t state)
+{
+    switch(state) {
+        case BBL_L2TP_TUNNEL_IDLE: return "Idle";
+        case BBL_L2TP_TUNNEL_WAIT_CTR_CONN: return "Wait-Control-Connection";
+        case BBL_L2TP_TUNNEL_ESTABLISHED: return "Established";
+        case BBL_L2TP_TUNNEL_SEND_STOPCCN: return "Send-StopCCN";
+        case BBL_L2TP_TUNNEL_RCVD_STOPCCN: return "Received-StopCCN";
+        case BBL_L2TP_TUNNEL_TERMINATED: return "Terminated";
+        default: return "UNKNOWN";
+    }
+}
+
+const char*
+l2tp_session_state_string(l2tp_session_state_t state)
+{
+    switch(state) {
+        case BBL_L2TP_SESSION_IDLE: return "Idle";
+        case BBL_L2TP_SESSION_WAIT_CONN: return "Wait-Control-Connection";
+        case BBL_L2TP_SESSION_ESTABLISHED: return "Established";
+        case BBL_L2TP_SESSION_TERMINATED: return "Terminated";
+        default: return "UNKNOWN";
+    }
+}
+
 /** 
  * bbl_l2tp_session_delete 
  *
@@ -50,9 +76,19 @@ l2tp_message_string(l2tp_message_type type)
 void
 bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
     bbl_ctx_s *ctx;
-    
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+
     if(l2tp_session) {
-        ctx = l2tp_session->tunnel->interface->ctx;
+        l2tp_tunnel = l2tp_session->tunnel;
+        ctx = l2tp_tunnel->interface->ctx;
+
+        if(l2tp_session->key.session_id) {
+            /* Here we skip the session with ID zero which is the tunnel session. */
+            LOG(DEBUG, "L2TP Debug (%s) Tunnel %u Session %u deleted\n",
+                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, l2tp_session->key.session_id);
+
+            if(ctx->l2tp_sessions) ctx->l2tp_sessions--;
+        }
         /* Remove session from tunnel object */
         if(CIRCLEQ_NEXT(l2tp_session, session_qnode) != NULL) {
             CIRCLEQ_REMOVE(&l2tp_session->tunnel->session_qhead, l2tp_session, session_qnode);
@@ -81,14 +117,17 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
  */
 void
 bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
-    bbl_l2tp_queue_t *q = NULL;
-    bbl_interface_s *interface = l2tp_tunnel->interface;
+    bbl_l2tp_queue_t *q;
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
 
     if(l2tp_tunnel) {
-        LOG(L2TP, "L2TP DEBUG (%s) Tunnel (%u) from %s (%s) deleted\n",
-                  l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
-                  l2tp_tunnel->peer_name, 
-                  format_ipv4_address(&l2tp_tunnel->peer_ip));   
+        LOG(DEBUG, "L2TP Debug (%s) Tunnel %u deleted\n",
+                   l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id);
+
+        interface = l2tp_tunnel->interface;
+        ctx = interface->ctx;
+        if(ctx->l2tp_tunnels) ctx->l2tp_tunnels--;
 
         /* Delete timer */
         timer_del(l2tp_tunnel->timer_tx);
@@ -130,6 +169,45 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
 }
 
 /** 
+ * bbl_l2tp_tunnel_update_state 
+ * 
+ * @param l2tp_tunnel Mandatory pointer to L2TP tunnel object.
+ * @param state New L2TP tunnel state.
+ */
+void
+bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t state) {
+    bbl_ctx_s *ctx;
+    if(l2tp_tunnel->state != state) {
+        /* State has changed */
+        ctx = l2tp_tunnel->interface->ctx;
+
+        LOG(DEBUG, "L2TP Debug (%s) Tunnel %u state changed from %s to %s\n",
+                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
+                    l2tp_tunnel_state_string(l2tp_tunnel->state),
+                    l2tp_tunnel_state_string(state));
+
+        if(state == BBL_L2TP_TUNNEL_ESTABLISHED) {
+            /* New state established */
+            ctx->l2tp_tunnels_established++;
+            if(ctx->l2tp_tunnels_established > ctx->l2tp_tunnels_established_max) {
+                ctx->l2tp_tunnels_established_max = ctx->l2tp_tunnels_established;
+            }
+            LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) estbalished\n",
+                      l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
+                      l2tp_tunnel->peer_name, 
+                      format_ipv4_address(&l2tp_tunnel->peer_ip));
+        } else if (l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
+            if(ctx->l2tp_tunnels_established) {
+                ctx->l2tp_tunnels_established--;
+            }
+        }
+        /* Set new state and reset state seconds */
+        l2tp_tunnel->state = state;
+        l2tp_tunnel->state_seconds = 0;
+    }
+}
+
+/** 
  * bbl_l2tp_tunnel_tx_job 
  *
  * This function ...
@@ -154,8 +232,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
 
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_SEND_STOPCCN) {
         if(CIRCLEQ_EMPTY(&l2tp_tunnel->txq_qhead)) {
-            l2tp_tunnel->state = BBL_L2TP_TUNNEL_TERMINATED;
-            l2tp_tunnel->state_seconds = 0;
+            bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_TERMINATED);
         }
     }
 
@@ -193,8 +270,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
                 l2tp_tunnel->stats.control_retry++;
                 interface->stats.l2tp_control_retry++;
                 if(q->retries > l2tp_tunnel->server->max_retry) {
-                    l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
-                    l2tp_tunnel->state_seconds = 0;
+                    bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
                 }
             }
@@ -232,8 +308,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
     switch(l2tp_tunnel->state) {
         case BBL_L2TP_TUNNEL_WAIT_CTR_CONN:
             if(l2tp_tunnel->state_seconds > 30) {
-                l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
-                l2tp_tunnel->state_seconds = 0;
+                bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
             break;
@@ -247,8 +322,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
         case BBL_L2TP_TUNNEL_SEND_STOPCCN:
         case BBL_L2TP_TUNNEL_RCVD_STOPCCN:
             if(l2tp_tunnel->state_seconds > 5) {
-                l2tp_tunnel->state = BBL_L2TP_TUNNEL_TERMINATED;
-                l2tp_tunnel->state_seconds = 0;
+                bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_TERMINATED);
             }
             break;
         case BBL_L2TP_TUNNEL_TERMINATED:
@@ -438,6 +512,8 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                        format_ipv4_address(&ipv4->src));
             /* Init tunnel ... */
             l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_t));
+            ctx->l2tp_tunnels++;
+            if(ctx->l2tp_tunnels > ctx->l2tp_tunnels_max) ctx->l2tp_tunnels_max = ctx->l2tp_tunnels;
             CIRCLEQ_INIT(&l2tp_tunnel->txq_qhead);
             CIRCLEQ_INIT(&l2tp_tunnel->session_qhead);
             l2tp_tunnel->interface = interface;
@@ -568,8 +644,7 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             LOG(ERROR, "L2TP Error (%s) Invalid SCCCN received from %s\n",
                        l2tp_tunnel->server->host_name, 
                        format_ipv4_address(&l2tp_tunnel->peer_ip));
-            l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
-            l2tp_tunnel->state_seconds = 0;
+            bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
             return bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
         }
         /* Check challenge response ... */
@@ -584,38 +659,29 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                     LOG(ERROR, "L2TP Error (%s) Wrong challenge response in SCCCN from %s\n",
                                l2tp_tunnel->server->host_name, 
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
-                    l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
-                    l2tp_tunnel->state_seconds = 0;
+                    bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                     return bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
                 }
             } else {
                 LOG(ERROR, "L2TP Error (%s) Missing challenge response in SCCCN from %s\n",
                            l2tp_tunnel->server->host_name, 
                            format_ipv4_address(&l2tp_tunnel->peer_ip));
-                l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
-                l2tp_tunnel->state_seconds = 0;
+                bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 return bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
         }
-        l2tp_tunnel->state = BBL_L2TP_TUNNEL_ESTABLISHED;
-        l2tp_tunnel->state_seconds = 0;
-        LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) estbalished\n",
-                  l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
-                  l2tp_tunnel->peer_name, 
-                  format_ipv4_address(&l2tp_tunnel->peer_ip));    
+        bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_ESTABLISHED);
     }
 }
 
 static void
 bbl_l2tp_stopccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-    bbl_ctx_s *ctx = interface->ctx;
 
-    UNUSED(ctx);
     UNUSED(eth);
     UNUSED(l2tp);
+    UNUSED(interface);
 
-    l2tp_tunnel->state = BBL_L2TP_TUNNEL_RCVD_STOPCCN;
-    l2tp_tunnel->state_seconds = 0;
+    bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_RCVD_STOPCCN);
 }
 
 static void
@@ -632,6 +698,8 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     }
 
     bbl_l2tp_session_t *l2tp_session = calloc(1, sizeof(bbl_l2tp_session_t));
+    ctx->l2tp_sessions++;
+    if(ctx->l2tp_sessions > ctx->l2tp_sessions_max) ctx->l2tp_sessions_max = ctx->l2tp_sessions;
     l2tp_session->tunnel = l2tp_tunnel;
     l2tp_session->state = BBL_L2TP_SESSION_WAIT_CONN;
 
@@ -914,6 +982,13 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
     }
 }
 
+/** 
+ * bbl_l2tp_stop_all_tunnel 
+ *
+ * This function greacefully teardowns all L2TP tunnels. 
+ * 
+ * @param ctx ... 
+ */
 void
 bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {
     bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
@@ -921,28 +996,10 @@ bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {
     while(l2tp_server) {
         CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
             if(l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
-                l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
-                l2tp_tunnel->state_seconds = 0;
+                bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
         }
         l2tp_server = l2tp_server->next;
     }
 }
-
-uint16_t
-bbl_l2tp_tunnel_count(bbl_ctx_s *ctx) {
-    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-    uint16_t active = 0;
-
-    while(l2tp_server) {
-        CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
-            active++;
-        }
-        l2tp_server = l2tp_server->next;
-    }
-    LOG(DEBUG, "TUNNEL %u\n", active); 
-    return active;
-}
-
