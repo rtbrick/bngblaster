@@ -965,8 +965,8 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions) { 
         if(ctx->sessions_terminated >= ctx->sessions) {
-            /* Now also close all L2TP tunnels ... */
-            if(bbl_l2tp_tunnel_count(ctx) == 0) {
+            /* Now close all L2TP tunnels ... */
+            if(ctx->l2tp_tunnels == 0) {
                 /* Stop event loop to close application! */
                 CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
             } else {
@@ -977,7 +977,7 @@ bbl_ctrl_job (timer_s *timer)
     } else {
         /* Network interface only... */
         if(g_teardown) {
-            if(bbl_l2tp_tunnel_count(ctx) == 0) {
+            if(ctx->l2tp_tunnels == 0) {
                 /* Stop event loop to close application! */
                 CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
             } else {
