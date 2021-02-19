@@ -253,7 +253,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
             if(q->last_tx_time.tv_sec) {
                 timespec_sub(&time_diff, &timestamp, &q->last_tx_time);
                 time_diff_ms = round(time_diff.tv_nsec / 1.0e6) * (time_diff.tv_sec * 1000);
-                if(time_diff_ms < 1000) {
+                if(time_diff_ms < (q->retries * 1000)) {
                     q = CIRCLEQ_NEXT(q, txq_qnode);
                     continue;
                 }
@@ -273,6 +273,14 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
                     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
                 }
+                /* When congestion occurs (indicated by the triggering of a
+                 * retransmission) one half of the congestion window (CWND) 
+                 * is saved in SSTHRESH, and CWND is set to one. The sender 
+                 * then reenters the slow start phase. */
+                l2tp_tunnel->ssthresh = l2tp_tunnel->cwnd/2;
+                if(!l2tp_tunnel->ssthresh) l2tp_tunnel->ssthresh = 1;
+                l2tp_tunnel->cwnd = 1;
+                l2tp_tunnel->cwcount = 0;
             }
             q->retries++;
             q = CIRCLEQ_NEXT(q, txq_qnode);
@@ -332,7 +340,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
             break;
     }
     if(!l2tp_tunnel->timer_tx_active) {
-        timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, 10 * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+        timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
         l2tp_tunnel->timer_tx_active = true;
     }
 }
@@ -396,12 +404,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
         q->nr_offset = 52;
     }
     if(l2tp_type != L2TP_MESSAGE_ZLB) {
-        if(l2tp_tunnel->initial_packet_send) {
-            l2tp_tunnel->ns++;
-        } else{
-            l2tp_tunnel->initial_packet_send = true;
-        }
-        l2tp.ns = l2tp_tunnel->ns;
+        l2tp.ns = l2tp_tunnel->ns++;
         bbl_l2tp_avp_encode_attributes(l2tp_tunnel, l2tp_session, l2tp_type, sp, &sp_len);
         l2tp.payload = sp;
         l2tp.payload_len = sp_len;
@@ -421,7 +424,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
         } else {
             CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->txq_qhead, q, txq_qnode);
             if(!l2tp_tunnel->timer_tx_active) {
-                timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, 10 * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+                timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
                 l2tp_tunnel->timer_tx_active = true;
             }
         }
@@ -742,6 +745,10 @@ bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     UNUSED(eth);
     UNUSED(l2tp);
 
+    if(!l2tp_session) {
+        return;
+    }
+
     if(!bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, l2tp_session)) {
         bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
         return bbl_l2tp_session_delete(l2tp_session);
@@ -764,6 +771,10 @@ bbl_l2tp_cdn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *i
     UNUSED(ctx);
     UNUSED(eth);
     UNUSED(l2tp);
+
+    if(!l2tp_session) {
+        return;
+    }
 
     bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, l2tp_session);
 
@@ -913,15 +924,26 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
     key.tunnel_id = l2tp->tunnel_id;
     key.session_id = l2tp->session_id;
     search = dict_search(ctx->l2tp_session_dict, &key);
+    if(!search && l2tp->type && key.session_id != 0) {
+        /* Try with session zero (tunnel session) in case
+         * the corresponding session was already deleted.
+         * This is required for reliable delivery of control
+         * messages. */
+        key.session_id = 0;
+        search = dict_search(ctx->l2tp_session_dict, &key);
+    }
     if(search) {
         l2tp_session = *search;
         l2tp_tunnel = l2tp_session->tunnel;
-
         if(l2tp->type == L2TP_MESSAGE_DATA) {
+            /* L2TP Data Packet */
             l2tp_tunnel->stats.data_rx++;
             interface->stats.l2tp_data_rx++;
             return bbl_l2tp_data_rx(eth, l2tp, interface, l2tp_session);
         }
+        /* L2TP Control Packet */
+        l2tp_tunnel->stats.control_rx++;
+        interface->stats.l2tp_control_rx++;
         if (L2TP_SEQ_GT(l2tp->nr, l2tp_tunnel->peer_nr)) {
             l2tp_tunnel->peer_nr = l2tp->nr;
         }
@@ -931,22 +953,58 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                        l2tp_tunnel->server->host_name, 
                        l2tp_message_string(l2tp->type), 
                        format_ipv4_address(&ipv4->src));
-
             /* Update tunnel */
             l2tp_tunnel->peer_ns = l2tp->ns;
-            l2tp_tunnel->nr = (l2tp->ns + 1);
             if(l2tp->type != L2TP_MESSAGE_ZLB) {
+                l2tp_tunnel->nr = (l2tp->ns + 1);
                 l2tp_tunnel->zlb = true;
+                /* Start tx timer */
+                if(!l2tp_tunnel->timer_tx_active) {
+                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+                    l2tp_tunnel->timer_tx_active = true;
+                }
             }
-            if(l2tp_tunnel->cwnd < l2tp_tunnel->peer_receive_window) {
-                l2tp_tunnel->cwnd++;
+            /* Reliable Delivery of Control Messages */
+            switch (l2tp_tunnel->server->congestion_mode) {
+                case BBL_L2TP_CONGESTION_AGGRESSIVE:
+                    l2tp_tunnel->cwnd = l2tp_tunnel->peer_receive_window;
+                    break;
+                case BBL_L2TP_CONGESTION_SLOW:
+                    l2tp_tunnel->cwnd = 1;
+                    break;                
+                default:
+                    /* Adjust tunnel congestion window as defined
+                    * in RFC 2661 Appendix A */
+                    if(l2tp_tunnel->cwnd < l2tp_tunnel->peer_receive_window) {
+                        if(l2tp_tunnel->cwnd < l2tp_tunnel->ssthresh) {
+                            /* Slow Start Phase 
+                            * 
+                            * The congestion window (CWND) increases by 1
+                            * for every new ACK received resulting in an
+                            * exponential increase.
+                            */
+                            l2tp_tunnel->cwcount = 0;
+                            l2tp_tunnel->cwnd++;
+                        } else {
+                            /* Congestion Avoidance Phase
+                            *
+                            * The congestion window (CWND) increases by 1/CWND
+                            * for every new ACK received. resulting in an
+                            * linear increase. The variable cwcount is used 
+                            * track when to increment the congestion window. 
+                            */
+                            l2tp_tunnel->cwcount++;
+                            if(l2tp_tunnel->cwcount >= l2tp_tunnel->cwnd) {
+                                l2tp_tunnel->cwcount = 0;
+                                l2tp_tunnel->cwnd++;
+                            }
+                        }
+                    } else {
+                        l2tp_tunnel->ssthresh = l2tp_tunnel->peer_receive_window;
+                    }
+                    break;
             }
-            l2tp_tunnel->stats.control_rx++;
-            interface->stats.l2tp_control_rx++;
-            if(!l2tp_tunnel->timer_tx_active) {
-                timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, 10 * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
-                l2tp_tunnel->timer_tx_active = true;
-            }
+            /* Handle received packet */
             if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_TERMINATED) {
                 switch (l2tp->type) {
                     case L2TP_MESSAGE_SCCCN:
@@ -956,9 +1014,15 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                     case L2TP_MESSAGE_ICRQ:
                         return bbl_l2tp_icrq_rx(eth, l2tp, interface, l2tp_tunnel);
                     case L2TP_MESSAGE_ICCN:
-                        return bbl_l2tp_iccn_rx(eth, l2tp, interface, l2tp_session);
+                        if(l2tp_session->key.session_id) {
+                            return bbl_l2tp_iccn_rx(eth, l2tp, interface, l2tp_session);
+                        }
+                        break;
                     case L2TP_MESSAGE_CDN:
-                        return bbl_l2tp_cdn_rx(eth, l2tp, interface, l2tp_session);
+                        if(l2tp_session->key.session_id) {
+                            return bbl_l2tp_cdn_rx(eth, l2tp, interface, l2tp_session);
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -966,19 +1030,34 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
         } else {
             if (L2TP_SEQ_LT(l2tp->ns, l2tp_tunnel->nr)) {
                 /* Duplicate packet received */
+                LOG(DEBUG, "L2TP Debug (%s) Duplicate %s received with Ns. %u (expected %u) from %s\n",
+                           l2tp_tunnel->server->host_name, 
+                           l2tp_message_string(l2tp->type), 
+                           l2tp->ns, l2tp_tunnel->nr,
+                           format_ipv4_address(&ipv4->src));
+
                 l2tp_tunnel->zlb = true;
                 l2tp_tunnel->stats.control_rx_dup++;
                 interface->stats.l2tp_control_rx_dup++;
                 if(!l2tp_tunnel->timer_tx_active) {
-                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, 10 * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
                     l2tp_tunnel->timer_tx_active = true;
                 }
             } else {
                 /* Out-of-Order packet received */
+                LOG(DEBUG, "L2TP Debug (%s) Out-of-Order %s received with Ns. %u (expected %u) from %s\n",
+                           l2tp_tunnel->server->host_name, 
+                           l2tp_message_string(l2tp->type), 
+                           l2tp->ns, l2tp_tunnel->nr,
+                           format_ipv4_address(&ipv4->src));
+
                 l2tp_tunnel->stats.control_rx_ooo++;
                 interface->stats.l2tp_control_rx_ooo++;
             }
         }
+    } else {
+        /* Corresponding tunnel or session not found */
+        interface->stats.l2tp_control_rx_nf++;
     }
 }
 

@@ -262,8 +262,9 @@ typedef struct bbl_interface_
         uint64_t session_ipv6pd_wrong_session;
 
         uint32_t l2tp_control_rx;
-        uint32_t l2tp_control_rx_dup;
-        uint32_t l2tp_control_rx_ooo;
+        uint32_t l2tp_control_rx_dup; /* duplicate */
+        uint32_t l2tp_control_rx_ooo; /* out of order */
+        uint32_t l2tp_control_rx_nf;  /* session not found */
         uint32_t l2tp_control_tx;
         uint32_t l2tp_control_retry;
         uint64_t l2tp_data_rx;

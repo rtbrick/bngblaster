@@ -15,7 +15,7 @@
 
 #define L2TP_IPCP_IP_LOCAL          168495882
 #define L2TP_IPCP_IP_REMOTE         168430090
-
+#define L2TP_TX_WAIT_MS             10
 
 #define L2TP_SEQ_LT(_a, _b)\
     (((_a) < (_b) && (_b) - (_a) < 32768) || ((_a) > (_b) && (_a) - (_b) > 32768))
@@ -46,6 +46,14 @@ typedef enum {
     BBL_L2TP_SESSION_MAX
 } __attribute__ ((__packed__)) l2tp_session_state_t;
 
+typedef enum {
+    BBL_L2TP_CONGESTION_DEFAULT     = 0,
+    BBL_L2TP_CONGESTION_SLOW        = 1,
+    BBL_L2TP_CONGESTION_AGGRESSIVE  = 2,
+    BBL_L2TP_CONGESTION_MAX
+} l2tp_congestion_mode_t;
+
+
 /* L2TP Server Configuration (LNS) */
 typedef struct bbl_l2tp_server_
 {
@@ -56,6 +64,9 @@ typedef struct bbl_l2tp_server_
     uint16_t session_limit;
     uint16_t receive_window;
     uint16_t max_retry;
+
+    l2tp_congestion_mode_t congestion_mode;
+
     char *secret;
     char *host_name;
 
@@ -119,8 +130,6 @@ typedef struct bbl_l2tp_tunnel_
     uint16_t tunnel_id;
     uint16_t peer_tunnel_id;
     uint16_t next_session_id;
-
-    bool initial_packet_send;
 
     uint16_t ns;
     uint16_t nr;
