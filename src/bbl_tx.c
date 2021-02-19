@@ -1525,7 +1525,6 @@ bbl_tx_job (timer_s *timer)
                             tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
             }
             if(q->data) {
-                free(q->packet);
                 free(q);
             }
         }
