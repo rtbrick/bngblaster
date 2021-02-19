@@ -872,9 +872,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     ip6cp_tx.code = PPP_CODE_CONF_REQUEST;
                     ip6cp_tx.identifier = 1;
                     ip6cp_tx.ipv6_identifier = 1;
-                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ip6cp_tx);
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IP6CP, &ip6cp_tx);
                 }
-                bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, ip6cp_rx);
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_IP6CP, ip6cp_rx);
             } else if (ip6cp_rx->code == PPP_CODE_CONF_ACK) {
                 if(l2tp_session->ip6cp_state == BBL_PPP_PEER_ACK) {
                     l2tp_session->ip6cp_state = BBL_PPP_OPENED;
@@ -883,7 +883,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     ip6cp_tx.code = PPP_CODE_CONF_REQUEST;
                     ip6cp_tx.identifier = 1;
                     ip6cp_tx.ipv6_identifier = 1;
-                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ip6cp_tx);
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IP6CP, &ip6cp_tx);
                 }
             }
             break;
