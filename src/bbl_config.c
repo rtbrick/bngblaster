@@ -713,6 +713,20 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             } else {
                 l2tp_server->max_retry = 30;
             }
+            if (json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
+                if (strcmp(s, "default") == 0) {
+                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+                } else if (strcmp(s, "slow") == 0) {
+                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
+                } else if (strcmp(s, "aggressive") == 0) {
+                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
+                } else {
+                    fprintf(stderr, "Config error: Invalid value for l2tp-server->congestion-mode\n");
+                    return false;
+                }
+            } else {
+                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+            }
         }   
     } else if (json_is_object(sub)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
