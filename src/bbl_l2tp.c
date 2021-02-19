@@ -324,9 +324,13 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
                 }
             }
             break;
-        case BBL_L2TP_TUNNEL_SEND_STOPCCN:
         case BBL_L2TP_TUNNEL_RCVD_STOPCCN:
             if(l2tp_tunnel->state_seconds > 5) {
+                bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_TERMINATED);
+            }
+            break;
+        case BBL_L2TP_TUNNEL_SEND_STOPCCN:
+            if(l2tp_tunnel->state_seconds > 30) {
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_TERMINATED);
             }
             break;
