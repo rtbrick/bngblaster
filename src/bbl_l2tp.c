@@ -790,6 +790,8 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     bbl_lcp_t   *lcp_rx;
     bbl_pap_t   *pap_rx;
     bbl_pap_t    pap_tx;
+    bbl_chap_t  *chap_rx;
+    bbl_chap_t   chap_tx;
     bbl_ipcp_t  *ipcp_rx;
     bbl_ipcp_t   ipcp_tx;
     bbl_ip6cp_t *ip6cp_rx;
@@ -819,7 +821,18 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             pap_rx = (bbl_pap_t*)l2tp->next;
             pap_tx.code = PAP_CODE_ACK;
             pap_tx.identifier = pap_rx->identifier;
+            pap_tx.reply_message = (void*)L2TP_REPLY_MESSAGE;
+            pap_tx.reply_message_len = sizeof(L2TP_REPLY_MESSAGE) - 1;
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
+            break;
+        case PROTOCOL_CHAP:
+            memset(&chap_tx, 0x0, sizeof(bbl_chap_t));
+            chap_rx = (bbl_chap_t*)l2tp->next;
+            chap_tx.code = CHAP_CODE_SUCCESS;
+            chap_tx.identifier = chap_rx->identifier;
+            chap_tx.reply_message = (void*)L2TP_REPLY_MESSAGE;
+            chap_tx.reply_message_len = sizeof(L2TP_REPLY_MESSAGE) - 1;
+            bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
             break;
         case PROTOCOL_IPCP:
             ipcp_rx = (bbl_ipcp_t*)l2tp->next;

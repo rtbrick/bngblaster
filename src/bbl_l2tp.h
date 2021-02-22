@@ -17,6 +17,8 @@
 #define L2TP_IPCP_IP_REMOTE         168430090
 #define L2TP_TX_WAIT_MS             10
 
+#define L2TP_REPLY_MESSAGE          "BNG Blaster L2TP LNS"
+
 #define L2TP_SEQ_LT(_a, _b)\
     (((_a) < (_b) && (_b) - (_a) < 32768) || ((_a) > (_b) && (_a) - (_b) > 32768))
 
