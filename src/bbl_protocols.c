@@ -601,42 +601,67 @@ protocol_error_t
 encode_ppp_pap(uint8_t *buf, uint *len,
                bbl_pap_t *pap) {
 
+    uint16_t *pap_len_field = NULL;
+    uint16_t  pap_len = *len;
+
     *buf = pap->code;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = pap->identifier;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    *buf = 6 + pap->username_len + pap->password_len;
+    pap_len_field = (uint16_t*)buf;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *buf = pap->username_len;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    memcpy(buf, pap->username, pap->username_len);
-    BUMP_WRITE_BUFFER(buf, len, pap->username_len);
-    *buf = pap->password_len;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    memcpy(buf, pap->password, pap->password_len);
-    BUMP_WRITE_BUFFER(buf, len, pap->password_len);
+    if(pap->username) {
+        *buf = pap->username_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, pap->username, pap->username_len);
+        BUMP_WRITE_BUFFER(buf, len, pap->username_len);
+    }
+    if(pap->password) {
+        *buf = pap->password_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, pap->password, pap->password_len);
+        BUMP_WRITE_BUFFER(buf, len, pap->password_len);
+    }
+    if(pap->reply_message) {
+        *buf = pap->reply_message_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, pap->reply_message, pap->reply_message_len);
+        BUMP_WRITE_BUFFER(buf, len, pap->reply_message_len);
+    }
+    pap_len = *len - pap_len;
+    *pap_len_field = htobe16(pap_len);
     return PROTOCOL_SUCCESS;
 }
 
 protocol_error_t
 encode_ppp_chap(uint8_t *buf, uint *len,
                 bbl_chap_t *chap) {
-    uint16_t chap_len;
 
-    chap_len = 5 + chap->challenge_len + chap->name_len;
+    uint16_t *chap_len_field = NULL;
+    uint16_t  chap_len = *len;
 
     *buf = chap->code;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = chap->identifier;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    *(uint16_t*)buf = htobe16(chap_len);
+    chap_len_field = (uint16_t*)buf;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *buf = chap->challenge_len;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    memcpy(buf, chap->challenge, chap->challenge_len);
-    BUMP_WRITE_BUFFER(buf, len, chap->challenge_len);
-    memcpy(buf, chap->name, chap->name_len);
-    BUMP_WRITE_BUFFER(buf, len, chap->name_len);
+    if(chap->challenge) {
+        *buf = chap->challenge_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, chap->challenge, chap->challenge_len);
+        BUMP_WRITE_BUFFER(buf, len, chap->challenge_len);
+    }
+    if(chap->name) {
+        memcpy(buf, chap->name, chap->name_len);
+        BUMP_WRITE_BUFFER(buf, len, chap->name_len);
+    }
+    if(chap->reply_message) {
+        memcpy(buf, chap->reply_message, chap->reply_message_len);
+        BUMP_WRITE_BUFFER(buf, len, chap->reply_message_len);
+    }
+    chap_len = *len - chap_len;
+    *chap_len_field = htobe16(chap_len);
     return PROTOCOL_SUCCESS;
 }
 
@@ -1598,6 +1623,7 @@ decode_ppp_pap(uint8_t *buf, uint len,
                bbl_pap_t **ppp_pap) {
 
     bbl_pap_t *pap;
+    uint16_t   pap_len;
 
     if(len < 4 || sp_len < sizeof(bbl_pap_t)) {
         return DECODE_ERROR;
@@ -1608,7 +1634,33 @@ decode_ppp_pap(uint8_t *buf, uint len,
     memset(pap, 0x0, sizeof(bbl_pap_t));
 
     pap->code = *buf;
-
+    pap->identifier = *(buf+1);
+    pap_len = be16toh(*(uint16_t*)(buf+2));
+    if(pap->code == PAP_CODE_REQUEST) {
+        if(pap_len < 6 || pap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        pap->username_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        pap->username = (char*)buf;
+        BUMP_BUFFER(buf, len, pap->username_len);
+        pap->password_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        pap->password = (char*)buf;
+        BUMP_BUFFER(buf, len, pap->password_len);
+    } else {
+        if(pap_len < 5 || pap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        pap->reply_message_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(pap->reply_message_len) {
+            pap->reply_message = (char*)buf;
+            BUMP_BUFFER(buf, len, pap->reply_message_len);
+        }
+    }
     *ppp_pap = pap;
     return PROTOCOL_SUCCESS;
 }
@@ -1632,14 +1684,12 @@ decode_ppp_chap(uint8_t *buf, uint len,
     chap->code = *buf;
     chap->identifier = *(buf+1);
     chap_len = be16toh(*(uint16_t*)(buf+2));
-
-    if(chap_len < 4 || chap_len > len) {
-        return DECODE_ERROR;
-
-    }
-    BUMP_BUFFER(buf, len, sizeof(uint32_t));
-
     if(chap->code == CHAP_CODE_CHALLENGE) {
+        if(chap_len < 5 || chap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+
         chap->challenge_len = *buf;
         if(chap->challenge_len > len) {
             return DECODE_ERROR;
@@ -1647,6 +1697,16 @@ decode_ppp_chap(uint8_t *buf, uint len,
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         chap->challenge = buf;
         BUMP_BUFFER(buf, len, chap->challenge_len);
+    } else {
+        if(chap_len < 4 || chap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        chap->reply_message_len = chap_len - 4;
+        if(chap->reply_message_len) {
+            chap->reply_message = (char*)buf;
+            BUMP_BUFFER(buf, len, chap->reply_message_len);
+        }
     }
     *ppp_chap = chap;
     return PROTOCOL_SUCCESS;

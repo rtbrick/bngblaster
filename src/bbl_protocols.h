@@ -428,6 +428,8 @@ typedef struct bbl_ppp_pap_ {
     uint8_t     username_len;
     char       *password;
     uint8_t     password_len;
+    char       *reply_message;
+    uint8_t     reply_message_len;
 } bbl_pap_t;
 
 /*
@@ -440,6 +442,8 @@ typedef struct bbl_ppp_chap_ {
     uint8_t     name_len;
     uint8_t    *challenge;
     uint8_t     challenge_len;
+    char       *reply_message;
+    uint8_t     reply_message_len;
 } bbl_chap_t;
 
 /*

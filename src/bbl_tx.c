@@ -175,6 +175,48 @@ bbl_encode_packet_network_session_ipv6pd (bbl_interface_s *interface, bbl_sessio
     return PROTOCOL_SUCCESS;
 }
 
+void
+bbl_igmp_timeout(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    bbl_igmp_group_s *group = NULL;
+    int i;
+    bool send = false;
+
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(session->session_state != BBL_ESTABLISHED ||
+        session->ipcp_state != BBL_PPP_OPENED) {
+            return;
+        }
+    }
+
+    for(i=0; i < IGMP_MAX_GROUPS; i++) {
+        group = &session->igmp_groups[i];
+        if(group->state == IGMP_GROUP_JOINING) {
+            if(group->robustness_count) {
+                session->send_requests |= BBL_SEND_IGMP;
+                group->send = true;
+                send = true;
+            } else {
+                group->state = IGMP_GROUP_ACTIVE;
+            }
+        } else if(group->state == IGMP_GROUP_LEAVING) {
+            if(group->robustness_count) {
+                session->send_requests |= BBL_SEND_IGMP;
+                group->send = true;
+                send = true;
+            } else {
+                group->state = IGMP_GROUP_IDLE;
+            }
+        }
+    }
+    if(send) {
+        session->send_requests |= BBL_SEND_IGMP;
+        bbl_session_tx_qnode_insert(session);
+    }
+    return;
+}
+
 protocol_error_t
 bbl_encode_packet_igmp (bbl_session_s *session)
 {

@@ -565,48 +565,6 @@ bbl_igmp_initial_join(timer_s *timer)
 }
 
 void
-bbl_igmp_timeout(timer_s *timer)
-{
-    bbl_session_s *session = timer->data;
-    bbl_igmp_group_s *group = NULL;
-    int i;
-    bool send = false;
-
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-        session->ipcp_state != BBL_PPP_OPENED) {
-            return;
-        }
-    }
-
-    for(i=0; i < IGMP_MAX_GROUPS; i++) {
-        group = &session->igmp_groups[i];
-        if(group->state == IGMP_GROUP_JOINING) {
-            if(group->robustness_count) {
-                session->send_requests |= BBL_SEND_IGMP;
-                group->send = true;
-                send = true;
-            } else {
-                group->state = IGMP_GROUP_ACTIVE;
-            }
-        } else if(group->state == IGMP_GROUP_LEAVING) {
-            if(group->robustness_count) {
-                session->send_requests |= BBL_SEND_IGMP;
-                group->send = true;
-                send = true;
-            } else {
-                group->state = IGMP_GROUP_IDLE;
-            }
-        }
-    }
-    if(send) {
-        session->send_requests |= BBL_SEND_IGMP;
-        bbl_session_tx_qnode_insert(session);
-    }
-    return;
-}
-
-void
 bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
@@ -628,7 +586,8 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                     LOG(IP, "IPv6 (Q-in-Q %u:%u) DHCPv6 PD prefix %s/%d\n",
                             session->key.outer_vlan_id, session->key.inner_vlan_id,
                             format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
-                    if(ctx->config.session_traffic_ipv6pd_pps && ctx->op.network_if && ctx->op.network_if->ip6.len) {
+                    if(session->l2tp == false && ctx->config.session_traffic_ipv6pd_pps && 
+                       ctx->op.network_if && ctx->op.network_if->ip6.len) {
                         /* Start IPv6 PD Session Traffic */
                         if(bbl_add_session_packets_ipv6(ctx, session, true)) {
                             if(ctx->config.session_traffic_ipv6pd_pps > 1) {
@@ -780,7 +739,8 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                 LOG(IP, "IPv6 (Q-in-Q %u:%u) ICMPv6 RA prefix %s/%d\n",
                         session->key.outer_vlan_id, session->key.inner_vlan_id,
                         format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
-                if(ctx->config.session_traffic_ipv6_pps && ctx->op.network_if && ctx->op.network_if->ip6.len) {
+                if(session->l2tp == false &&  ctx->config.session_traffic_ipv6_pps && 
+                   ctx->op.network_if && ctx->op.network_if->ip6.len) {
                     /* Start IPv6 Session Traffic */
                     if(bbl_add_session_packets_ipv6(ctx, session, false)) {
                         if(ctx->config.session_traffic_ipv6_pps > 1) {
@@ -849,11 +809,13 @@ bbl_rx_igmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
     int i;
     bool send = false;
 
-    //LOG(IGMP, "IGMPv%d (Q-in-Q %u:%u) type %s received\n",
-    //    igmp->version,
-    //    session->key.outer_vlan_id,
-    //    session->key.inner_vlan_id,
-    //    val2key(igmp_msg_names, igmp->type));
+#if 0
+    LOG(IGMP, "IGMPv%d (Q-in-Q %u:%u) type %s received\n",
+        igmp->version,
+        session->key.outer_vlan_id,
+        session->key.inner_vlan_id,
+        val2key(igmp_msg_names, igmp->type));
+#endif
 
     if(igmp->type == IGMP_TYPE_QUERY) {
 
@@ -1036,6 +998,13 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     if(session->session_state == BBL_PPP_AUTH) {
         switch(pap->code) {
             case PAP_CODE_ACK:
+                if(pap->reply_message_len) {
+                    if(strncmp(pap->reply_message, L2TP_REPLY_MESSAGE, pap->reply_message_len) == 0) {
+                        session->l2tp = true;
+                        LOG(L2TP, "L2TP (Q-in-Q %u:%u) Session with BNG Blaster LNS\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    }
+                }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
                 if(ctx->config.ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
@@ -1093,6 +1062,13 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 }
                 break;
             case CHAP_CODE_SUCCESS:
+                if(chap->reply_message_len) {
+                    if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, chap->reply_message_len) == 0) {
+                        session->l2tp = true;
+                        LOG(L2TP, "L2TP (Q-in-Q %u:%u) Session with BNG Blaster LNS\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    }
+                }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
                 if(ctx->config.ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
@@ -1169,7 +1145,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 /* Start Session Timer */
                 timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, bbl_session_timeout);
             }
-            if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
+            if(session->l2tp == false && ctx->config.session_traffic_ipv4_pps && session->ip_address &&
                ctx->op.network_if && ctx->op.network_if->ip) {
                 /* Start IPv4 Session Traffic */
                 if(bbl_add_session_packets_ipv4(ctx, session)) {

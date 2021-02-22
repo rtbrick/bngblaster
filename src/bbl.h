@@ -629,6 +629,9 @@ typedef struct bbl_session_
     bbl_access_type_t access_type;
     uint16_t access_third_vlan;
     
+    /* Set to true if session is tunnelled via L2TP. */
+    bool l2tp;
+
     /* Authentication */
     char username[USERNAME_LEN];
     char password[PASSWORD_LEN];
