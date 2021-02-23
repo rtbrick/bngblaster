@@ -7,6 +7,8 @@
 - [Traffic](traffic)
 - [Control Socket](ctrl)
 - [Multicast](multicast)
+- [L2TPv2](li)
+- [Legal Interception](li)
 
 A short introduction can be found on [YouTube](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster").
 

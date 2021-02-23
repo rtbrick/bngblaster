@@ -114,6 +114,7 @@ Attribute | Description
 `session-traffic-disabled` | Disable session traffic for all sessions
 `multicast-traffic-start` | Start sending multicast traffic from network interface 
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
+`li-flows` | List all LI flows with detailed statistics
 
 ### Session Commands
 
