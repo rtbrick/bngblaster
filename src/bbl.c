@@ -653,6 +653,10 @@ bbl_add_ctx (void)
                                                  bbl_l2tp_session_hash,
                                                  BBL_SESSION_HASHTABLE_SIZE);
 
+    ctx->li_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
+                                            bbl_l2tp_session_hash,
+                                            BBL_SESSION_HASHTABLE_SIZE);
+
     return ctx;
 }
 

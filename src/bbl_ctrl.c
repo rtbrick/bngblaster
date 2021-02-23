@@ -650,6 +650,46 @@ bbl_ctrl_session_ip6cp_close(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t*
     return bbl_ctrl_session_ncp_open_close(fd, ctx, key, false, false);
 }
 
+ssize_t
+bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root, *flows, *flow;
+    bbl_li_flow_t *li_flow;
+    struct dict_itor *itor;
+
+    flows = json_array();
+    itor = dict_itor_new(ctx->li_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
+        if(li_flow) {
+            flow = json_pack("{si si si si si si si si si si}", 
+                                "direction", li_flow->direction, 
+                                "packet-type", li_flow->packet_type, 
+                                "sub-packet-type", li_flow->sub_packet_type,
+                                "liid", li_flow->liid,
+                                "bytes-rx", li_flow->bytes_rx,
+                                "packets-rx", li_flow->packets_rx,
+                                "packets-rx-ipv4", li_flow->packets_rx_ipv4,
+                                "packets-rx-ipv4-tcp", li_flow->packets_rx_ipv4_tcp,
+                                "packets-rx-ipv4-udp", li_flow->packets_rx_ipv4_udp,
+                                "packets-rx-ipv4-host-internal", li_flow->packets_rx_ipv4_internal);
+            json_array_append(flows, flow);
+        }
+    }
+    root = json_pack("{ss si so}", 
+                    "status", "ok", 
+                    "code", 200,
+                    "li-flows", flows);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(flows);
+    }
+    return result;
+}
 struct action {
     char *name;
     callback_function *fn;
@@ -673,6 +713,7 @@ struct action actions[] = {
     {"igmp-join", bbl_ctrl_igmp_join},
     {"igmp-leave", bbl_ctrl_igmp_leave},
     {"igmp-info", bbl_ctrl_igmp_info},
+    {"li-flows", bbl_ctrl_li_flows},
     {NULL, NULL},
 };
 

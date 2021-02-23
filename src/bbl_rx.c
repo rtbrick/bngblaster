@@ -1793,6 +1793,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
                     bbl = (bbl_bbl_t*)udp->next;
+                } else if(udp->protocol == UDP_PROTOCOL_QMX_LI) {
+                    return bbl_qmx_li_handler_rx(eth, (bbl_qmx_li_t*)udp->next, interface);
                 } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
                     return bbl_l2tp_handler_rx(eth, (bbl_l2tp_t*)udp->next, interface);
                 }

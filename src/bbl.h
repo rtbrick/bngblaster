@@ -45,6 +45,7 @@
 #include "bbl_tx.h"
 #include "bbl_l2tp.h"
 #include "bbl_l2tp_avp.h"
+#include "bbl_li.h"
 
 #define WRITE_BUF_LEN               1514
 #define SCRATCHPAD_LEN              1514
@@ -271,6 +272,9 @@ typedef struct bbl_interface_
         uint64_t l2tp_data_tx;
         bbl_rate_s rate_l2tp_data_rx;
         bbl_rate_s rate_l2tp_data_tx;
+
+        uint64_t li_rx;
+        bbl_rate_s rate_li_rx;
     } stats;
 
     struct timer_ *tx_job;
@@ -373,6 +377,8 @@ typedef struct bbl_ctx_
 
     dict *session_dict; /* hashtable for sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
+    dict *li_flow_dict; /* hashtable for LI flows */
+
     uint16_t next_tunnel_id;
 
     uint64_t flow_id;
