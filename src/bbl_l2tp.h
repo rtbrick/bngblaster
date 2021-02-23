@@ -67,6 +67,10 @@ typedef struct bbl_l2tp_server_
     uint16_t receive_window;
     uint16_t max_retry;
 
+    bool data_control_priority;
+    bool data_lenght;
+    bool data_offset;
+
     l2tp_congestion_mode_t congestion_mode;
 
     char *secret;

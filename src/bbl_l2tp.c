@@ -446,6 +446,7 @@ static void
 bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *next) {
 
     bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_server_t *l2tp_server = l2tp_tunnel->server;
     bbl_interface_s *interface = l2tp_tunnel->interface;
     bbl_l2tp_queue_t *q = calloc(1, sizeof(bbl_l2tp_queue_t));
     bbl_ethernet_header_t eth = {0};
@@ -471,6 +472,13 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
     l2tp.protocol = protocol;
+    l2tp.with_length = l2tp_server->data_lenght;
+    l2tp.with_offset = l2tp_server->data_offset;
+    if(l2tp_server->data_control_priority) {
+        if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
+            l2tp.with_priority = true;
+        }
+    }
     l2tp.next = next;
     q->data = true;
     if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
@@ -479,7 +487,6 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
         l2tp_tunnel->stats.data_tx++;
         interface->stats.l2tp_data_tx++;
     } else {
-        /* Encode error.... */
         LOG(ERROR, "L2TP Data Encode Error!\n");
         free(q);
     }

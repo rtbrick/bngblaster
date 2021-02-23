@@ -727,6 +727,18 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             } else {
                 l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
             }
+            value = json_object_get(sub, "data-control-priority");
+            if (json_is_boolean(value)) {
+                l2tp_server->data_control_priority = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "data-length");
+            if (json_is_boolean(value)) {
+                l2tp_server->data_lenght = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "data-offset");
+            if (json_is_boolean(value)) {
+                l2tp_server->data_offset = json_boolean_value(value);
+            }
         }   
     } else if (json_is_object(sub)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
