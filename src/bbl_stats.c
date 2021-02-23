@@ -165,6 +165,11 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     printf("Flapped: %u\n", ctx->sessions_flapped);
 
     if(ctx->op.network_if) {
+        if(dict_count(ctx->li_flow_dict)) {
+            printf("\nLI Statistics:\n");
+            printf("  Flows:        %10lu\n", dict_count(ctx->li_flow_dict));
+            printf("  RX Packets:   %10lu\n", ctx->op.network_if->stats.li_rx);
+        }
         if(ctx->config.l2tp_server) {
             printf("\nL2TP LNS Statistics:\n");
             printf("  Tunnels:      %10u\n", ctx->l2tp_tunnels_max);
@@ -312,6 +317,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     json_t *jobj_access_if     = NULL;
     json_t *jobj_network_if    = NULL;
     json_t *jobj_l2tp          = NULL;
+    json_t *jobj_li            = NULL;
     json_t *jobj_straffic      = NULL;
     json_t *jobj_multicast     = NULL;
     json_t *jobj_protocols     = NULL;
@@ -335,6 +341,12 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
     jobj_array = json_array();
     if (ctx->op.network_if) {
+        if(dict_count(ctx->li_flow_dict)) {
+            jobj_li = json_object();
+            json_object_set(jobj_li, "flows", json_integer(dict_count(ctx->li_flow_dict)));
+            json_object_set(jobj_li, "rx-packets", json_integer(ctx->op.network_if->stats.li_rx));
+            json_object_set(jobj, "li-statistics", jobj_li);
+        }
         if(ctx->config.l2tp_server) {
             jobj_l2tp = json_object();
             json_object_set(jobj_l2tp, "tunnels", json_integer(ctx->l2tp_tunnels_max));
@@ -505,6 +517,8 @@ bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
     uint idx, div;
     uint64_t sum;
 
+    if(current_value == 0) return;
+
     rate->diff_value[rate->cursor] = current_value - rate->last_value;
 
     sum = 0;
@@ -547,5 +561,6 @@ bbl_compute_interface_rate_job (timer_s *timer)
         bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx);
     }
 }
