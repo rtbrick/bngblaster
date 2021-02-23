@@ -165,6 +165,21 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     printf("Flapped: %u\n", ctx->sessions_flapped);
 
     if(ctx->op.network_if) {
+        if(ctx->config.l2tp_server) {
+            printf("\nL2TP LNS Statistics:\n");
+            printf("  Tunnels:      %10u\n", ctx->l2tp_tunnels_max);
+            printf("  Established:  %10u\n", ctx->l2tp_tunnels_established_max);
+            printf("  Sessions:     %10u\n", ctx->l2tp_sessions_max);
+            printf("  Packets:\n");
+            printf("    TX Control:      %10u packets (%u retries)\n", 
+                ctx->op.network_if->stats.l2tp_control_tx, ctx->op.network_if->stats.l2tp_control_retry);
+            printf("    RX Control:      %10u packets (%u duplicate %u out-of-order)\n", 
+                ctx->op.network_if->stats.l2tp_control_rx, 
+                ctx->op.network_if->stats.l2tp_control_rx_dup, 
+                ctx->op.network_if->stats.l2tp_control_rx_ooo);
+            printf("    TX Data:         %10lu packets\n", ctx->op.network_if->stats.l2tp_data_tx);
+            printf("    RX Data:         %10lu packets\n", ctx->op.network_if->stats.l2tp_data_rx);
+        }
         printf("\nNetwork Interface ( %s ):\n", ctx->op.network_if->name);
         printf("  TX:                %10lu packets\n", ctx->op.network_if->stats.packets_tx);
         printf("  RX:                %10lu packets\n", ctx->op.network_if->stats.packets_rx);
@@ -296,6 +311,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     json_t *jobj_array         = NULL;
     json_t *jobj_access_if     = NULL;
     json_t *jobj_network_if    = NULL;
+    json_t *jobj_l2tp          = NULL;
     json_t *jobj_straffic      = NULL;
     json_t *jobj_multicast     = NULL;
     json_t *jobj_protocols     = NULL;
@@ -319,6 +335,20 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
     jobj_array = json_array();
     if (ctx->op.network_if) {
+        if(ctx->config.l2tp_server) {
+            jobj_l2tp = json_object();
+            json_object_set(jobj_l2tp, "tunnels", json_integer(ctx->l2tp_tunnels_max));
+            json_object_set(jobj_l2tp, "tunnels-established", json_integer(ctx->l2tp_tunnels_established_max));
+            json_object_set(jobj_l2tp, "sessions", json_integer(ctx->l2tp_sessions_max));
+            json_object_set(jobj_l2tp, "tx-control-packets", json_integer(ctx->op.network_if->stats.l2tp_control_tx));
+            json_object_set(jobj_l2tp, "tx-control-packets-retry", json_integer(ctx->op.network_if->stats.l2tp_control_retry));
+            json_object_set(jobj_l2tp, "rx-control-packets", json_integer(ctx->op.network_if->stats.l2tp_control_rx));
+            json_object_set(jobj_l2tp, "rx-control-packets-duplicate", json_integer(ctx->op.network_if->stats.l2tp_control_rx_dup));
+            json_object_set(jobj_l2tp, "rx-control-packets-out-of-order", json_integer(ctx->op.network_if->stats.l2tp_control_rx_ooo));
+            json_object_set(jobj_l2tp, "tx-data-packets", json_integer(ctx->op.network_if->stats.l2tp_data_tx));
+            json_object_set(jobj_l2tp, "rx-data-packets", json_integer(ctx->op.network_if->stats.l2tp_data_rx));
+            json_object_set(jobj, "l2tp", jobj_l2tp);
+        }
         jobj_network_if = json_object();
         json_object_set(jobj_network_if, "name", json_string(ctx->op.network_if->name));
         json_object_set(jobj_network_if, "tx-packets", json_integer(ctx->op.network_if->stats.packets_tx));
@@ -506,12 +536,16 @@ bbl_compute_interface_rate_job (timer_s *timer)
 
     bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
     bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
+    if(!interface->access) {
+        bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
+        bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
+    }
 }

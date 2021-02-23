@@ -133,6 +133,7 @@
 
 #define UDP_PROTOCOL_DHCPV6             1
 #define UDP_PROTOCOL_BBL                2
+#define UDP_PROTOCOL_L2TP               3
 
 #define IPV6_NEXT_HEADER_UDP            17
 #define IPV6_NEXT_HEADER_ICMPV6         58
@@ -152,6 +153,28 @@
 #define DHCPV6_ORO_OPTION_LEN           2
 #define DHCPV6_UDP_CLIENT               546
 #define DHCPV6_UDP_SERVER               547
+
+#define L2TP_UDP_PORT                   1701
+#define L2TP_HDR_VERSION_MASK           0x0f
+#define L2TP_HDR_CTRL_BIT_MASK          0x80
+#define L2TP_HDR_LEN_BIT_MASK           0x40
+#define L2TP_HDR_SEQ_BIT_MASK           0x08
+#define L2TP_HDR_OFFSET_BIT_MASK        0x02
+#define L2TP_HDR_PRIORITY_BIT_MASK      0x01
+#define L2TP_HDR_LEN_MIN_WITH_LEN       8
+#define L2TP_AVP_M_BIT_SHIFT            15
+#define L2TP_AVP_H_BIT_SHIFT            14
+#define L2TP_AVP_LEN_MASK               0x03FF
+#define L2TP_AVP_HDR_LEN                6
+#define L2TP_AVP_M_BIT_MASK             0x8000
+#define L2TP_AVP_H_BIT_MASK             0x4000
+#define L2TP_AVP_TYPE_LEN               2
+#define L2TP_AVP_TYPE_LEN               2
+#define L2TP_AVP_HIDDEN_FIXED_LEN       2
+#define L2TP_AVP_MAX_LEN                1024
+
+#define L2TP_NH_TYPE_VALUE              18
+
 
 #define MAX_VLANS                       3
 
@@ -211,6 +234,27 @@ typedef enum dhcpv6_message_type_ {
     DHCPV6_MESSAGE_RELAY_REPL           = 13,
     DHCPV6_MESSAGE_MAX,
 } dhcpv6_message_type;
+
+typedef enum l2tp_message_type_ {
+    L2TP_MESSAGE_DATA          = 0,
+    L2TP_MESSAGE_SCCRQ         = 1,
+    L2TP_MESSAGE_SCCRP         = 2,
+    L2TP_MESSAGE_SCCCN         = 3,
+    L2TP_MESSAGE_STOPCCN       = 4,
+    L2TP_MESSAGE_HELLO         = 6,
+    L2TP_MESSAGE_OCRQ          = 7,
+    L2TP_MESSAGE_OCRP          = 8,
+    L2TP_MESSAGE_OCCN          = 9,
+    L2TP_MESSAGE_ICRQ          = 10,
+    L2TP_MESSAGE_ICRP          = 11,
+    L2TP_MESSAGE_ICCN          = 12,
+    L2TP_MESSAGE_CDN           = 14,
+    L2TP_MESSAGE_WEN           = 15,
+    L2TP_MESSAGE_CSUN          = 28,
+    L2TP_MESSAGE_CSURQ         = 29,
+    L2TP_MESSAGE_ZLB           = 32767,
+    L2TP_MESSAGE_MAX,
+} l2tp_message_type;
 
 typedef enum dhcpv6_option_code_ {
     DHCPV6_OPTION_CLIENTID              = 1,
@@ -384,6 +428,8 @@ typedef struct bbl_ppp_pap_ {
     uint8_t     username_len;
     char       *password;
     uint8_t     password_len;
+    char       *reply_message;
+    uint8_t     reply_message_len;
 } bbl_pap_t;
 
 /*
@@ -396,10 +442,12 @@ typedef struct bbl_ppp_chap_ {
     uint8_t     name_len;
     uint8_t    *challenge;
     uint8_t     challenge_len;
+    char       *reply_message;
+    uint8_t     reply_message_len;
 } bbl_chap_t;
 
 /*
- * PPP IPv4 Structure
+ * IPv4 Structure
  */
 typedef struct bbl_ipv4_ {
     uint32_t    src;
@@ -414,7 +462,7 @@ typedef struct bbl_ipv4_ {
 } bbl_ipv4_t;
 
 /*
- * PPP IPv6 Structure
+ * IPv6 Structure
  */
 typedef struct bbl_ipv6_ {
     uint8_t    *src;
@@ -428,7 +476,7 @@ typedef struct bbl_ipv6_ {
 } bbl_ipv6_t;
 
 /*
- * PPP UDP Structure
+ * UDP Structure
  */
 typedef struct bbl_udp_ {
     uint16_t    src;
@@ -440,7 +488,7 @@ typedef struct bbl_udp_ {
 } bbl_udp_t;
 
 /*
- * PPP IGMP Structure
+ * IGMP Structure
  */
 typedef struct bbl_igmp_group_record_ {
     uint8_t     type;
@@ -498,6 +546,24 @@ typedef struct bbl_dhcpv6_ {
     uint8_t     *ia_pd_option;
     uint8_t      ia_pd_option_len;
 } bbl_dhcpv6_t;
+
+typedef struct bbl_l2tp_ {
+    bool        with_length;     // L Bit
+    bool        with_sequence;   // S Bit
+    bool        with_offset;     // O Bit
+    bool        with_priority;   // P Bit
+    uint16_t    type;
+    uint16_t    length;
+    uint16_t    tunnel_id;
+    uint16_t    session_id;
+    uint16_t    ns;
+    uint16_t    nr;
+    uint16_t    offset;
+    uint16_t    protocol;
+    void       *next; // next header
+    void       *payload; // l2tp payload
+    uint16_t    payload_len; // l2tp payload length
+} bbl_l2tp_t;
 
 typedef struct bbl_bbl_ {
     uint8_t      type;

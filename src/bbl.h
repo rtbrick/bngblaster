@@ -43,6 +43,8 @@
 #include "bbl_utils.h"
 #include "bbl_rx.h"
 #include "bbl_tx.h"
+#include "bbl_l2tp.h"
+#include "bbl_l2tp_avp.h"
 
 #define WRITE_BUF_LEN               1514
 #define SCRATCHPAD_LEN              1514
@@ -83,6 +85,7 @@
 #define BBL_IF_SEND_ARP_REPLY       0x00000002
 #define BBL_IF_SEND_ICMPV6_NS       0x00000004
 #define BBL_IF_SEND_ICMPV6_NA       0x00000008
+#define BBL_IF_SEND_SEC_ARP_REPLY   0x00000010
 
 #define DUID_LEN                    10
 
@@ -92,6 +95,9 @@
 #define BBL_AVG_SAMPLES             5
 #define DATA_TRAFFIC_MAX_LEN        1500
 
+#define UNUSED(x)    (void)x
+
+
 typedef struct bbl_rate_
 {
     uint32_t diff_value[BBL_AVG_SAMPLES];
@@ -99,7 +105,6 @@ typedef struct bbl_rate_
     uint64_t last_value;
     uint64_t avg;
     uint64_t avg_max;
-
 } bbl_rate_s;
 
 typedef enum {
@@ -131,6 +136,13 @@ typedef struct bbl_igmp_group_
     struct timespec last_mc_rx_time;
 } bbl_igmp_group_s;
 
+typedef struct bbl_secondary_ip_
+{
+    uint32_t ip;
+    bool arp_reply;
+    void *next;
+} bbl_secondary_ip_s;
+
 typedef struct bbl_interface_
 {
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
@@ -157,6 +169,7 @@ typedef struct bbl_interface_
 
     uint32_t send_requests;
     bool     arp_resolved;
+    uint32_t arp_reply_ip;
     uint32_t ip;
     uint32_t gateway;
     uint8_t  mac[ETH_ADDR_LEN];
@@ -247,6 +260,17 @@ typedef struct bbl_interface_
         uint64_t session_ipv4_wrong_session;
         uint64_t session_ipv6_wrong_session;
         uint64_t session_ipv6pd_wrong_session;
+
+        uint32_t l2tp_control_rx;
+        uint32_t l2tp_control_rx_dup; /* duplicate */
+        uint32_t l2tp_control_rx_ooo; /* out of order */
+        uint32_t l2tp_control_rx_nf;  /* session not found */
+        uint32_t l2tp_control_tx;
+        uint32_t l2tp_control_retry;
+        uint64_t l2tp_data_rx;
+        uint64_t l2tp_data_tx;
+        bbl_rate_s rate_l2tp_data_rx;
+        bbl_rate_s rate_l2tp_data_tx;
     } stats;
 
     struct timer_ *tx_job;
@@ -256,6 +280,7 @@ typedef struct bbl_interface_
     struct timespec tx_timestamp; /* user space timestamps */
     struct timespec rx_timestamp; /* user space timestamps */
     CIRCLEQ_HEAD(bbl_interface__, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
+    CIRCLEQ_HEAD(bbl_interface___, bbl_l2tp_queue_ ) l2tp_tx_qhead; /* list of messages that want to transmit */
 } bbl_interface_s;
 
 typedef struct bbl_access_config_
@@ -335,11 +360,20 @@ typedef struct bbl_ctx_
     uint32_t dhcpv6_established;
     uint32_t dhcpv6_established_max;
 
+    uint32_t l2tp_sessions;
+    uint32_t l2tp_sessions_max;
+    uint32_t l2tp_tunnels;
+    uint32_t l2tp_tunnels_max;
+    uint32_t l2tp_tunnels_established;
+    uint32_t l2tp_tunnels_established_max;
+
     CIRCLEQ_HEAD(bbl_ctx_idle_, bbl_session_ ) sessions_idle_qhead;
     CIRCLEQ_HEAD(bbl_ctx_teardown_, bbl_session_ ) sessions_teardown_qhead;
     CIRCLEQ_HEAD(bbl_ctx__, bbl_interface_ ) interface_qhead; /* list of interfaces */
 
     dict *session_dict; /* hashtable for sessions */
+    dict *l2tp_session_dict; /* hashtable for L2TP sessions */
+    uint16_t next_tunnel_id;
 
     uint64_t flow_id;
 
@@ -401,6 +435,8 @@ typedef struct bbl_ctx_
         ipv6_prefix network_ip6;
         ipv6_prefix network_gateway6;
         uint16_t network_vlan;
+
+        bbl_secondary_ip_s *secondary_ip_addresses;
 
         /* Access Interfaces  */
         bbl_access_config_s *access_config;
@@ -496,6 +532,9 @@ typedef struct bbl_ctx_
         uint16_t session_traffic_ipv4_pps;
         uint16_t session_traffic_ipv6_pps;
         uint16_t session_traffic_ipv6pd_pps;
+
+        /* L2TP Server Config (LNS) */
+        bbl_l2tp_server_t *l2tp_server;
     } config;
 } bbl_ctx_s;
 
@@ -538,7 +577,6 @@ typedef struct session_key_ {
     uint16_t outer_vlan_id;
     uint16_t inner_vlan_id;
 } __attribute__ ((__packed__)) session_key_t;
-
 
 #define BBL_SESSION_HASHTABLE_SIZE 32771 /* is a prime number */
 
@@ -591,6 +629,9 @@ typedef struct bbl_session_
     bbl_access_type_t access_type;
     uint16_t access_third_vlan;
     
+    /* Set to true if session is tunnelled via L2TP. */
+    bool l2tp;
+
     /* Authentication */
     char username[USERNAME_LEN];
     char password[PASSWORD_LEN];
