@@ -11,7 +11,7 @@
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
-static void
+void
 bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type);
 
 const char*
@@ -354,7 +354,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
  *        This parameter is only required of L2TP session packets.
  * @param l2tp_type L2TP message type (SCCRP, ICRP, ...).
  */
-static void
+void
 bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type) {
 
     bbl_interface_s *interface = l2tp_tunnel->interface;
@@ -678,6 +678,15 @@ bbl_l2tp_stopccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
     UNUSED(interface);
 
     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_RCVD_STOPCCN);
+}
+
+static void
+bbl_l2tp_csun_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
+
+    UNUSED(eth);
+    UNUSED(interface);
+
+    bbl_l2tp_avp_decode_csun(l2tp, l2tp_tunnel);
 }
 
 static void
@@ -1044,6 +1053,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                             return bbl_l2tp_iccn_rx(eth, l2tp, interface, l2tp_session);
                         }
                         break;
+                    case L2TP_MESSAGE_CSUN:
+                        return bbl_l2tp_csun_rx(eth, l2tp, interface, l2tp_tunnel);
                     case L2TP_MESSAGE_CDN:
                         if(l2tp_session->key.session_id) {
                             return bbl_l2tp_cdn_rx(eth, l2tp, interface, l2tp_session);

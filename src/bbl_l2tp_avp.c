@@ -329,18 +329,48 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel, bb
                             l2tp_session->proxy_auth_response_len = avp.len;
                         }
                         break;
+                    case L2TP_AVP_CONNECT_SPEED_UPDATE_ENABLE:
+                        /* See RFC5515 */
+                        l2tp_session->connect_speed_update_enabled = true;
+                        break;                        
                     default:
                         if(avp.m) {
                             LOG(L2TP, "L2TP Error (%s) Mandatory standard AVP with unknown type %u in %s from %s\n",
-                                    l2tp_tunnel->server->host_name, avp.type, 
-                                    l2tp_message_string(l2tp->type), 
-                                    format_ipv4_address(&l2tp_tunnel->peer_ip));
+                                      l2tp_tunnel->server->host_name, avp.type, 
+                                      l2tp_message_string(l2tp->type), 
+                                      format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
                         } else {
                             LOG(L2TP, "L2TP Warning (%s) Optional standard AVP with unknown type %u in %s from %s\n",
-                                    l2tp_tunnel->server->host_name, avp.type, 
-                                    l2tp_message_string(l2tp->type), 
-                                    format_ipv4_address(&l2tp_tunnel->peer_ip));
+                                      l2tp_tunnel->server->host_name, avp.type, 
+                                      l2tp_message_string(l2tp->type), 
+                                      format_ipv4_address(&l2tp_tunnel->peer_ip));
+                        }
+                        break;
+                }
+            } else if(avp.vendor == BROADBAND_FORUM_VENDOR_ID) {
+                switch(avp.type) {
+                    case ACCESS_LINE_ACI:
+                        if(!l2tp_session->peer_aci && avp.len) {
+                            l2tp_session->peer_aci = malloc(avp.len + 1);
+                            memcpy(l2tp_session->peer_aci, avp.value, avp.len);
+                            *(l2tp_session->peer_aci + avp.len) = '\0';
+                        }
+                        break;
+                    case ACCESS_LINE_ARI:
+                        if(!l2tp_session->peer_ari && avp.len) {
+                            l2tp_session->peer_ari = malloc(avp.len + 1);
+                            memcpy(l2tp_session->peer_ari, avp.value, avp.len);
+                            *(l2tp_session->peer_ari + avp.len) = '\0';
+                        }
+                        break;
+                    default:
+                        if(avp.m) {
+                            LOG(L2TP, "L2TP Error (%s) Mandatory Broadband Forum AVP with unknown type %u in %s from %s\n",
+                                      l2tp_tunnel->server->host_name, avp.type, 
+                                      l2tp_message_string(l2tp->type), 
+                                      format_ipv4_address(&l2tp_tunnel->peer_ip));
+                            return false;
                         }
                         break;
                 }
@@ -516,6 +546,77 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
     return true;
 }
 
+bool
+bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
+
+    bbl_ctx_s *ctx = l2tp_tunnel->interface->ctx;
+
+    uint8_t *buf = l2tp->payload;
+    uint16_t len = l2tp->payload_len;
+    bbl_l2tp_avp_t avp = {0};
+    
+    bbl_l2tp_session_t *l2tp_session; 
+    l2tp_key_t key = {0};
+    void **search = NULL;
+
+    key.tunnel_id = l2tp_tunnel->tunnel_id;
+
+    while(len) {
+        if(bbl_l2tp_avp_decode(&buf, &len, &avp)) {
+            if(avp.h) {
+                return false;
+            }
+            if(avp.vendor == 0) {
+                switch(avp.type) {
+                    case L2TP_AVP_CONNECT_SPEED_UPDATE:
+                        if(avp.len != 12) {
+                            LOG(L2TP, "L2TP Error (%s) Invalid L2TP connect speed update AVP in %s from %s\n",
+                                      l2tp_tunnel->server->host_name, 
+                                      l2tp_message_string(l2tp->type), 
+                                      format_ipv4_address(&l2tp_tunnel->peer_ip));
+                            return false;
+                        }
+                        key.session_id = be16toh(*(uint16_t*)(avp.value+2));
+                        search = dict_search(ctx->l2tp_session_dict, &key);
+                        if(search) {
+                            l2tp_session = *search;
+                            if(l2tp_session->connect_speed_update_enabled && l2tp_session->state == BBL_L2TP_SESSION_ESTABLISHED) {
+                                l2tp_session->peer_tx_bps = be32toh(*(uint32_t*)(avp.value+4));
+                                l2tp_session->peer_rx_bps = be32toh(*(uint32_t*)(avp.value+8));
+                            }
+                        }
+                        break;
+                    default:
+                        if(avp.m) {
+                            LOG(L2TP, "L2TP Error (%s) Mandatory standard AVP with unknown type %u in %s from %s\n",
+                                    l2tp_tunnel->server->host_name, avp.type, 
+                                    l2tp_message_string(l2tp->type), 
+                                    format_ipv4_address(&l2tp_tunnel->peer_ip));
+                            return false;
+                        } else {
+                            LOG(L2TP, "L2TP Warning (%s) Optional standard AVP with unknown type %u in %s from %s\n",
+                                    l2tp_tunnel->server->host_name, avp.type, 
+                                    l2tp_message_string(l2tp->type), 
+                                    format_ipv4_address(&l2tp_tunnel->peer_ip));
+                            return false;
+                        }
+                        break;
+                }
+            } else {
+                if(avp.m) {
+                    LOG(L2TP, "L2TP (%s) Mandatory AVP with unknown vendor %u received from %s\n",
+                              l2tp_tunnel->server->host_name, avp.vendor, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                    return false;
+                }
+            }
+        } else {
+            LOG(L2TP, "L2TP (%s) Failed to decdoe tunnel attributes from %s\n",
+                      l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+            return false;
+        }
+    }
+    return true;
+}
 
 void
 bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
@@ -525,6 +626,9 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
 
     uint16_t v16;
     uint32_t v32;
+    uint8_t update[12] = {0};
+
+    int i;
 
     if(l2tp_type == L2TP_MESSAGE_ZLB) {
         return;
@@ -656,6 +760,22 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
                 avp.value_type = L2TP_AVP_VALUE_UINT16;
                 avp.value = (void*)(&l2tp_session->key.session_id);
                 bbl_l2tp_avp_encode(&buf, len, &avp);
+            }
+            break;
+        case L2TP_MESSAGE_CSURQ:
+            if(l2tp_tunnel->csurq_requests_len) {
+                for(i = 0; i < l2tp_tunnel->csurq_requests_len; i++) {
+                    /* Connect Speed Update */
+                    avp.m = false;
+                    avp.type = L2TP_AVP_CONNECT_SPEED_UPDATE;
+                    avp.len = 12;
+                    avp.value_type = L2TP_AVP_VALUE_BYTES;
+                    *(uint16_t*)(update +2) = htobe16(l2tp_tunnel->csurq_requests[i]);
+                    avp.value = update;
+                    bbl_l2tp_avp_encode(&buf, len, &avp);
+                }
+                l2tp_tunnel->csurq_requests_len = 0;
+                free(l2tp_tunnel->csurq_requests);
             }
             break;
         default:

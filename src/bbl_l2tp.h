@@ -125,6 +125,10 @@ typedef struct bbl_l2tp_tunnel_
     /* Pointer to L2TP server configuration */
     bbl_l2tp_server_t *server;
 
+    /* RFC5515 CSURQ */
+    uint16_t *csurq_requests;
+    uint16_t  csurq_requests_len;
+
     /* L2TP tunnel state */
     l2tp_tunnel_state_t state;
     uint32_t state_seconds;
@@ -203,6 +207,7 @@ typedef struct bbl_l2tp_session_
     uint16_t peer_session_id;
 
     bool data_sequencing;
+    bool connect_speed_update_enabled;
 
     uint32_t peer_tx_bps;
     uint32_t peer_rx_bps;
@@ -224,20 +229,22 @@ typedef struct bbl_l2tp_session_
     /* The following members must be freed 
      * if session is destroyed! */
 
-    uint8_t *proxy_auth_name;
+    char *proxy_auth_name;
     uint8_t *proxy_auth_challenge;
     uint8_t *proxy_auth_response;
 
     char *peer_called_number;
     char *peer_calling_number;
     char *peer_sub_address;
-
+    char *peer_ari;
+    char *peer_aci;
 } bbl_l2tp_session_t;
 
 const char* l2tp_message_string(l2tp_message_type type);
 const char* l2tp_tunnel_state_string(l2tp_tunnel_state_t state);
 const char* l2tp_session_state_string(l2tp_session_state_t state);
 
+void bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type);
 void bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface);
 void bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx);
 

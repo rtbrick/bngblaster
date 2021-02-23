@@ -63,6 +63,16 @@ ppp_state_string(uint32_t state) {
     }
 }
 
+static char *
+string_or_na(char *string) {
+    if(string) {
+        return string;
+    } else {
+        return "N/A";
+    }
+}
+
+
 ssize_t
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) {
     ssize_t result = 0;
@@ -343,7 +353,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments
             result = json_dumpfd(root, fd, 0);
             json_decref(root);
         } else {
-            bbl_ctrl_status(fd, "error", 500, "internal error");
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
             json_decref(groups);
         }        
         return result;
@@ -458,7 +468,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
             result = json_dumpfd(root, fd, 0);
             json_decref(root);
         } else {
-            bbl_ctrl_status(fd, "error", 500, "internal error");
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
             json_decref(session_traffic);
         }
         return result;
@@ -494,7 +504,7 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((un
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
     } else {
-        bbl_ctrl_status(fd, "error", 500, "internal error");
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
         json_decref(interfaces);
     }
     return result;
@@ -689,11 +699,197 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unus
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
     } else {
-        bbl_ctrl_status(fd, "error", 500, "internal error");
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
         json_decref(flows);
     }
     return result;
 }
+
+ssize_t
+bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root, *tunnels, *tunnel;
+    
+    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+
+    tunnels = json_array();
+
+    while(l2tp_server) {
+        CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
+            
+            tunnel = json_pack("{ss ss ss si si ss ss ss ss si si si si si si si}",
+                                "state", l2tp_tunnel_state_string(l2tp_tunnel->state),
+                                "server-name", l2tp_server->host_name,
+                                "server-address", format_ipv4_address(&l2tp_server->ip), 
+                                "tunnel-id", l2tp_tunnel->tunnel_id,
+                                "peer-tunnel-id", l2tp_tunnel->peer_tunnel_id,
+                                "peer-name", string_or_na(l2tp_tunnel->peer_name),      
+                                "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip), 
+                                "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
+                                "secret", string_or_na(l2tp_server->secret),
+                                "control-packets-rx", l2tp_tunnel->stats.control_rx,
+                                "control-packets-rx-dup", l2tp_tunnel->stats.control_rx_dup,
+                                "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
+                                "control-packets-tx", l2tp_tunnel->stats.control_tx,
+                                "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
+                                "control-data-rx", l2tp_tunnel->stats.data_rx,
+                                "control-data-tx", l2tp_tunnel->stats.data_tx);
+            json_array_append(tunnels, tunnel);
+        }
+        l2tp_server = l2tp_server->next;
+    }
+
+    root = json_pack("{ss si so}", 
+                     "status", "ok", 
+                     "code", 200,
+                     "l2tp-tunnels", tunnels);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(tunnels);
+    }
+    return result;
+}
+
+json_t * 
+l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
+    return json_pack("{ss si si si si ss ss ss ss si si ss ss}", 
+                     "state", l2tp_session_state_string(l2tp_session->state),
+                     "tunnel-id", l2tp_session->key.tunnel_id,
+                     "session-id", l2tp_session->key.session_id,
+                     "peer-tunnel-id", l2tp_session->tunnel->peer_tunnel_id,
+                     "peer-session-id", l2tp_session->peer_session_id,
+                     "peer-proxy-auth-name", string_or_na(l2tp_session->proxy_auth_name),
+                     "peer-called-number", string_or_na(l2tp_session->peer_called_number),
+                     "peer-calling-number", string_or_na(l2tp_session->peer_calling_number),
+                     "peer-sub-address", string_or_na(l2tp_session->peer_sub_address),
+                     "peer-tx-bps", l2tp_session->peer_tx_bps,
+                     "peer-rx-bps", l2tp_session->peer_rx_bps,
+                     "peer-ari", string_or_na(l2tp_session->peer_ari),
+                     "peer-aci", string_or_na(l2tp_session->peer_aci));
+}
+
+ssize_t
+bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments) {
+    ssize_t result = 0;
+    json_t *root, *sessions;
+
+    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_t *l2tp_session;
+    l2tp_key_t l2tp_key = {0};
+    void **search = NULL;
+
+    int tunnel_id = 0;
+    int session_id = 0;
+
+    json_unpack(arguments, "{s:i}", "tunnel-id", &tunnel_id);
+    json_unpack(arguments, "{s:i}", "session-id", &session_id);
+
+    sessions = json_array();
+
+    if(tunnel_id && session_id) {
+        l2tp_key.tunnel_id = tunnel_id;
+        l2tp_key.session_id = session_id;
+        search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+        if(search) {
+            l2tp_session = *search;
+            json_array_append(sessions, l2tp_session_json(l2tp_session));
+        } else {
+            result = bbl_ctrl_status(fd, "warning", 404, "session not found");
+            json_decref(sessions);
+            return result;
+        }
+    } else if (tunnel_id) {
+        l2tp_key.tunnel_id = tunnel_id;
+        search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+        if(search) {
+            l2tp_session = *search;
+            l2tp_tunnel = l2tp_session->tunnel;
+            CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
+                if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
+                json_array_append(sessions, l2tp_session_json(l2tp_session));
+            }
+        } else {
+            result = bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+            json_decref(sessions);
+            return result;
+        }
+    } else {
+        while(l2tp_server) {
+            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
+                CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
+                    if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
+                    json_array_append(sessions, l2tp_session_json(l2tp_session));
+                }
+            }
+            l2tp_server = l2tp_server->next;
+        }
+    }
+    root = json_pack("{ss si so}", 
+                     "status", "ok", 
+                     "code", 200,
+                     "l2tp-sessions", sessions);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(sessions);
+    }
+    return result;
+}
+
+ssize_t
+bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments) {
+    json_t *sessions, *number;
+
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_t *l2tp_session;
+    l2tp_key_t l2tp_key = {0};
+    void **search = NULL;
+
+    uint16_t session_id = 0;
+    int tunnel_id = 0;
+    int size, i;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "tunnel-id", &tunnel_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
+    }
+    l2tp_key.tunnel_id = tunnel_id;
+    search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+    if(search) {
+        l2tp_session = *search;
+        l2tp_tunnel = l2tp_session->tunnel;
+        if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+        }
+        sessions = json_object_get(arguments, "sessions");
+        if (json_is_array(sessions)) {
+            size = json_array_size(sessions);
+            l2tp_tunnel->csurq_requests_len = size;
+            l2tp_tunnel->csurq_requests = malloc(size * sizeof(uint16_t));
+            for (i = 0; i < size; i++) {
+                number = json_array_get(sessions, i);
+                if(json_is_number(number)) {
+                    session_id = json_number_value(number);
+                    l2tp_tunnel->csurq_requests[i] = session_id;
+                }
+            }
+            bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_CSURQ);
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "error", 400, "invalid request");
+        }
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+    }
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -718,6 +914,9 @@ struct action actions[] = {
     {"igmp-leave", bbl_ctrl_igmp_leave},
     {"igmp-info", bbl_ctrl_igmp_info},
     {"li-flows", bbl_ctrl_li_flows},
+    {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
+    {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
+    {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
     {NULL, NULL},
 };
 
