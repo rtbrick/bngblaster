@@ -54,11 +54,11 @@ void
 bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_interface_s *interface) {
     bbl_ctx_s *ctx = interface->ctx;
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
-    bbl_li_flow_t *li_flow; 
-
+    bbl_udp_t *udp = (bbl_udp_t*)ipv4->next;
     bbl_ethernet_header_t *inner_eth;
     bbl_pppoe_session_t *inner_pppoe;
     bbl_ipv4_t *inner_ipv4 = NULL;
+    bbl_li_flow_t *li_flow; 
 
     dict_insert_result result;
     void **search = NULL;
@@ -71,6 +71,10 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
     } else {
         /* New flow ... */
         li_flow = calloc(1, sizeof(bbl_li_flow_t));
+        li_flow->src_ipv4 = ipv4->src;
+        li_flow->dst_ipv4 = ipv4->dst;
+        li_flow->src_port = udp->src;
+        li_flow->dst_port = udp->dst;
         li_flow->direction = qmx_li->direction;
         li_flow->packet_type = qmx_li->packet_type;
         li_flow->sub_packet_type = qmx_li->sub_packet_type;
@@ -100,7 +104,7 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
 
     if(inner_ipv4) {
         li_flow->packets_rx_ipv4++;
-        switch(ipv4->protocol) {
+        switch(inner_ipv4->protocol) {
             case PROTOCOL_IPV4_TCP:
                 li_flow->packets_rx_ipv4_tcp++;
                 break;

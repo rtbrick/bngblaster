@@ -13,6 +13,11 @@ typedef struct bbl_interface_ bbl_interface_s;
 
 typedef struct bbl_li_flow_
 {
+    uint32_t     src_ipv4;
+    uint32_t     dst_ipv4;
+    uint32_t     src_port;
+    uint32_t     dst_port;
+
     uint8_t      direction;
     uint8_t      packet_type;
     uint8_t      sub_packet_type;
