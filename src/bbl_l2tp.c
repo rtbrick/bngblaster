@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - L2TPv2 Functions
  *
- * Christian Giese, February 2022
+ * Christian Giese, February 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
@@ -71,7 +71,7 @@ l2tp_session_state_string(l2tp_session_state_t state)
  * This function will free all dynamic memory for the given 
  * l2tp session instance.
  * 
- * @param l2tp_session Pointer to L2TP session object to be deleted. 
+ * @param l2tp_session L2TP session structure to be deleted. 
  */
 void
 bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
@@ -113,7 +113,7 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
  * This function will free all dynamic memory for the given 
  * l2tp tunnel instance including corresponding send queues.
  * 
- * @param l2tp_tunnel Pointer to L2TP tunnel object to be deleted. 
+ * @param l2tp_tunnel L2TP tunnel structure to be deleted. 
  */
 void
 bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
@@ -170,7 +170,7 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
 /** 
  * bbl_l2tp_tunnel_update_state 
  * 
- * @param l2tp_tunnel Mandatory pointer to L2TP tunnel object.
+ * @param l2tp_tunnel L2TP tunnel structure.
  * @param state New L2TP tunnel state.
  */
 void
@@ -208,8 +208,6 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
 
 /** 
  * bbl_l2tp_tunnel_tx_job 
- *
- * This function ...
  */
 void
 bbl_l2tp_tunnel_tx_job (timer_s *timer) {
@@ -349,12 +347,12 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
 /** 
  * bbl_l2tp_send 
  *
- * This function ...
+ * This function send control packets for a given L2TP tunnel. 
  * 
- * @param l2tp_tunnel Mandatory pointer to L2TP tunnel object. 
- * @param l2tp_session Optional pointer to L2TP session object. 
+ * @param l2tp_tunnel L2TP tunnel structure. 
+ * @param l2tp_session Optional L2TP session structure. 
  *        This parameter is only required of L2TP session packets.
- * @param l2tp_type L2TP message type (SCCRP, ICRP, ...)
+ * @param l2tp_type L2TP message type (SCCRP, ICRP, ...).
  */
 static void
 bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type) {
@@ -437,12 +435,12 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
 /** 
  * bbl_l2tp_send_data 
  *
- * This function ...
+ * This function send data packets for a given L2TP session. 
  * 
- * @param l2tp_tunnel Mandatory pointer to L2TP tunnel object. 
- * @param l2tp_session Mandatory pointer to L2TP session object. 
- * @param protocol ...
- * @param next ...
+ * @param l2tp_tunnel L2TP tunnel structure. 
+ * @param l2tp_session L2TP session structure. 
+ * @param protocol Payload type (IPCP, IPv4, ...).
+ * @param next Payload structure.
  */
 static void
 bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *next) {
@@ -929,11 +927,11 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 /** 
  * bbl_l2tp_handler_rx 
  *
- * This function ...
+ * This function handles all received L2TPv2 traffic. 
  * 
- * @param eth ... 
- * @param l2tp ...
- * @param interface ...
+ * @param eth Received ethernet packet. 
+ * @param l2tp L2TP header of received ethernet packet. 
+ * @param interface Receiving interface. 
  */
 void
 bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface) {
@@ -1093,8 +1091,6 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
  * bbl_l2tp_stop_all_tunnel 
  *
  * This function greacefully teardowns all L2TP tunnels. 
- * 
- * @param ctx ... 
  */
 void
 bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {

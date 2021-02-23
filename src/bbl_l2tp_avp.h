@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - L2TPv2 Functions (RFC2661)
  *
- * Christian Giese, February 2022
+ * Christian Giese, February 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
