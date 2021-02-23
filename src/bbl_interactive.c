@@ -178,6 +178,12 @@ bbl_stats_job (timer_s *timer)
     }
     
     if (ctx->op.network_if) {
+        if(dict_count(ctx->li_flow_dict)) {
+            wprintw(stats_win, "\nLI Statistics\n");
+            wprintw(stats_win, "  Flows                     %10lu\n", dict_count(ctx->li_flow_dict));
+            wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",  
+                ctx->op.network_if->stats.li_rx, ctx->op.network_if->stats.rate_li_rx.avg);
+        }
         if(ctx->config.l2tp_server) {
             wprintw(stats_win, "\nL2TP LNS Statistics\n");
             wprintw(stats_win, "  Tunnels     %10lu\n", ctx->l2tp_tunnels);
