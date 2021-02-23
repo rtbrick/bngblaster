@@ -663,10 +663,10 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unus
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
         if(li_flow) {
-            flow = json_pack("{si si si si si si si si si si}", 
-                                "direction", li_flow->direction, 
-                                "packet-type", li_flow->packet_type, 
-                                "sub-packet-type", li_flow->sub_packet_type,
+            flow = json_pack("{ss ss ss si si si si si si si}", 
+                                "direction", bbl_li_direction_string(li_flow->direction), 
+                                "packet-type", bbl_li_packet_type_string(li_flow->packet_type), 
+                                "sub-packet-type", bbl_li_sub_packet_type_string(li_flow->sub_packet_type),
                                 "liid", li_flow->liid,
                                 "bytes-rx", li_flow->bytes_rx,
                                 "packets-rx", li_flow->packets_rx,

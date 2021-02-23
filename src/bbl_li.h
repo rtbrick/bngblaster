@@ -26,6 +26,9 @@ typedef struct bbl_li_flow_
     uint64_t     packets_rx_ipv4_internal;
 } bbl_li_flow_t;
 
+const char* bbl_li_direction_string(uint8_t direction);
+const char* bbl_li_packet_type_string(uint8_t packet_type);
+const char* bbl_li_sub_packet_type_string(uint8_t sub_packet_type);
 
 void bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_interface_s *interface);
 

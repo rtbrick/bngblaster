@@ -9,6 +9,38 @@
 #include "bbl.h"
 #include "bbl_logging.h"
 
+const char*
+bbl_li_direction_string(uint8_t direction)
+{
+    switch(direction) {
+        case 2: return "downstream";
+        case 3: return "upstream";
+        default: return "invlid";
+    }
+}
+
+const char*
+bbl_li_packet_type_string(uint8_t packet_type)
+{
+    switch(packet_type) {
+        case 5: return "ipv4";
+        case 6: return "ipv6";
+        case 7: return "ethernet";
+        default: return "unkown";
+    }
+}
+
+const char*
+bbl_li_sub_packet_type_string(uint8_t sub_packet_type)
+{
+    switch(sub_packet_type) {
+        case 1: return "single-tagged";
+        case 2: return "double-tagged";
+        case 3: return "untagged";
+        default: return "unkown";
+    }
+}
+
 /** 
  * bbl_l2tp_handler_rx 
  *
