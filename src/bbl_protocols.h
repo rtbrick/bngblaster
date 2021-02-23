@@ -65,6 +65,7 @@
 #define PROTOCOL_IPV4_IGMP              0x02
 #define PROTOCOL_IPV4_TCP               0x06
 #define PROTOCOL_IPV4_UDP               0x11
+#define PROTOCOL_IPV4_INTERNAL          0x3D
 
 #define ICMP_TYPE_ECHO_REPLY            0x00
 #define ICMP_TYPE_ECHO_REQUEST          0x08
@@ -134,6 +135,7 @@
 #define UDP_PROTOCOL_DHCPV6             1
 #define UDP_PROTOCOL_BBL                2
 #define UDP_PROTOCOL_L2TP               3
+#define UDP_PROTOCOL_QMX_LI             4
 
 #define IPV6_NEXT_HEADER_UDP            17
 #define IPV6_NEXT_HEADER_ICMPV6         58
@@ -175,6 +177,7 @@
 
 #define L2TP_NH_TYPE_VALUE              18
 
+#define QMX_LI_UDP_PORT                 49152
 
 #define MAX_VLANS                       3
 
@@ -579,6 +582,17 @@ typedef struct bbl_bbl_ {
     uint64_t     flow_seq;
     uint64_t     timestamp;
 } bbl_bbl_t;
+
+typedef struct bbl_qmx_li_ {
+    uint32_t     header;
+    uint8_t      direction;
+    uint8_t      packet_type;
+    uint8_t      sub_packet_type;
+    uint32_t     liid;
+    void        *next; // next header
+    void        *payload; // LI payload
+    uint16_t     payload_len; // LI payload length
+} bbl_qmx_li_t;
 
 /*
  * decode_ethernet

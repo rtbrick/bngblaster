@@ -1423,6 +1423,30 @@ decode_bbl(uint8_t *buf, uint len,
 }
 
 protocol_error_t
+decode_qmx_li(uint8_t *buf, uint len,
+              uint8_t *sp, uint sp_len,
+              bbl_qmx_li_t **_qmx_li) {
+
+    bbl_qmx_li_t *qmx_li;
+
+    if(len < 4 || sp_len < sizeof(bbl_qmx_li_t)) {
+        return DECODE_ERROR;
+    }
+    /* Init QMX LI header */
+    qmx_li = (bbl_qmx_li_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_qmx_li_t));
+    qmx_li->header = *(uint32_t*)buf;
+    qmx_li->direction = (*buf >> 5) & 0x7;
+    qmx_li->packet_type = (*buf >> 1) & 0xf;
+    qmx_li->sub_packet_type =(*(uint16_t*)buf >> 6) & 0x0f;
+    qmx_li->liid =*(uint32_t*)buf & 0x3FFFFF;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    qmx_li->payload = buf;
+    qmx_li->payload_len = len;
+    *_qmx_li = qmx_li;
+    return decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_t**)&qmx_li->next);
+}
+
+protocol_error_t
 decode_udp(uint8_t *buf, uint len,
            uint8_t *sp, uint sp_len,
            bbl_udp_t **_udp) {
@@ -1467,8 +1491,17 @@ decode_udp(uint8_t *buf, uint len,
             udp->protocol = UDP_PROTOCOL_L2TP;
             ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
             break;
+        case QMX_LI_UDP_PORT:
+            udp->protocol = UDP_PROTOCOL_QMX_LI;
+            ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_t**)&udp->next);
+            break;
         default:
-            udp->next = NULL;
+            if(udp->src == QMX_LI_UDP_PORT) {
+                udp->protocol = UDP_PROTOCOL_QMX_LI;
+                ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_t**)&udp->next);
+            } else {
+                udp->next = NULL;
+            }
             break;
     }
 
