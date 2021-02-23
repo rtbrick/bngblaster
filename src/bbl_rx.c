@@ -83,6 +83,10 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     }
     session->access_ipv4_tx_packet_len = len;
 
+    if(session->l2tp) {
+        return true;
+    }
+
     /* Prepare Network to Access (Session) Packet */
     len = 0;
     if(!session->network_ipv4_tx_packet_template) {
@@ -262,9 +266,11 @@ bbl_session_traffic_ipv4(timer_s *timer)
     }
     if(session->session_traffic) {
         session->send_requests |= BBL_SEND_SESSION_IPV4;
-        session->network_send_requests |= BBL_SEND_SESSION_IPV4;
         bbl_session_tx_qnode_insert(session);
-        bbl_session_network_tx_qnode_insert(session);
+        if(session->l2tp == false) {
+            session->network_send_requests |= BBL_SEND_SESSION_IPV4;
+            bbl_session_network_tx_qnode_insert(session);
+        }
     }
 }
 
@@ -1145,7 +1151,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 /* Start Session Timer */
                 timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, bbl_session_timeout);
             }
-            if(session->l2tp == false && ctx->config.session_traffic_ipv4_pps && session->ip_address &&
+            if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
                ctx->op.network_if && ctx->op.network_if->ip) {
                 /* Start IPv4 Session Traffic */
                 if(bbl_add_session_packets_ipv4(ctx, session)) {

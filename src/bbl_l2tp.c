@@ -796,6 +796,11 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     bbl_ipcp_t   ipcp_tx;
     bbl_ip6cp_t *ip6cp_rx;
     bbl_ip6cp_t  ip6cp_tx;
+    bbl_ipv4_t  *ipv4;
+    bbl_udp_t   *udp;
+    bbl_bbl_t   *bbl;
+
+    uint32_t tmp;
 
     UNUSED(ctx);
     UNUSED(eth);
@@ -900,6 +905,21 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                 }
             }
             break;
+        case PROTOCOL_IPV4:
+            ipv4 = (bbl_ipv4_t*)l2tp->next;
+            if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
+                udp = (bbl_udp_t*)ipv4->next;
+                if(udp->protocol == UDP_PROTOCOL_BBL) {
+                    /* Send BNG Blaster session traffic back by swapping 
+                     * IP address and set direction to downstream. */
+                    bbl = (bbl_bbl_t*)udp->next;
+                    tmp = ipv4->dst; 
+                    ipv4->dst = ipv4->src;
+                    ipv4->src = tmp;
+                    bbl->direction = BBL_DIRECTION_DOWN;
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV4, ipv4);
+                }
+            }
         default:
             break;
     }
