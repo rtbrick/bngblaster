@@ -1435,10 +1435,10 @@ decode_qmx_li(uint8_t *buf, uint len,
     /* Init QMX LI header */
     qmx_li = (bbl_qmx_li_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_qmx_li_t));
     qmx_li->header = *(uint32_t*)buf;
-    qmx_li->liid = *(uint32_t*)buf & 0x003fffff;
+    qmx_li->liid = be32toh(*(uint32_t*)buf) & 0x003fffff;
     qmx_li->direction = (*buf >> 5) & 0x7;
     qmx_li->packet_type = (*buf >> 1) & 0xf;
-    qmx_li->sub_packet_type =(*(uint16_t*)buf >> 6) & 0x07;
+    qmx_li->sub_packet_type =(be16toh(*(uint16_t*)buf) >> 6) & 0x07;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
     qmx_li->payload = buf;
     qmx_li->payload_len = len;
