@@ -447,7 +447,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      * List for sessions who want to transmit.
      */
     CIRCLEQ_INIT(&interface->session_tx_qhead);
-
+    CIRCLEQ_INIT(&interface->l2tp_tx_qhead);
     return interface;
 }
 
@@ -587,6 +587,14 @@ bbl_compare_session (void *key1, void *key2)
     return (a > b) - (a < b);
 }
 
+int
+bbl_compare_l2tp_session (void *key1, void *key2)
+{
+    const uint32_t a = *(const uint32_t*)key1;
+    const uint32_t b = *(const uint32_t*)key2;
+    return (a > b) - (a < b);
+}
+
 uint
 bbl_session_hash (const void* k)
 {
@@ -596,6 +604,14 @@ bbl_session_hash (const void* k)
     hash ^= *(uint16_t *)(k+4) << 12;
     hash ^= *(uint16_t *)(k+6);
 
+    return hash;
+}
+
+uint
+bbl_l2tp_session_hash (const void* k)
+{
+    uint hash = 2166136261U;
+    hash ^= *(uint32_t *)k;
     return hash;
 }
 
@@ -632,6 +648,10 @@ bbl_add_ctx (void)
     ctx->session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session,
                                             bbl_session_hash,
                                             BBL_SESSION_HASHTABLE_SIZE);
+
+    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
+                                                 bbl_l2tp_session_hash,
+                                                 BBL_SESSION_HASHTABLE_SIZE);
 
     return ctx;
 }
@@ -945,13 +965,24 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions) { 
         if(ctx->sessions_terminated >= ctx->sessions) {
-            CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            /* Now close all L2TP tunnels ... */
+            if(ctx->l2tp_tunnels == 0) {
+                /* Stop event loop to close application! */
+                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            } else {
+                bbl_l2tp_stop_all_tunnel(ctx);
+            }
             return;
         }
     } else {
         /* Network interface only... */
         if(g_teardown) {
-            CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            if(ctx->l2tp_tunnels == 0) {
+                /* Stop event loop to close application! */
+                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            } else {
+                bbl_l2tp_stop_all_tunnel(ctx);
+            }
             return;
         }
         return;

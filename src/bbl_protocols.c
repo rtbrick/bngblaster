@@ -7,6 +7,10 @@
  */
 #include "bbl_protocols.h"
 
+
+protocol_error_t decode_l2tp(uint8_t *buf, uint len, uint8_t *sp, uint sp_len, bbl_l2tp_t **_l2tp);
+protocol_error_t encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp);
+
 uint16_t
 checksum(uint16_t *buf, uint16_t len) {
          uint32_t sum = 0;
@@ -220,7 +224,6 @@ encode_bbl(uint8_t *buf, uint *len,
     return PROTOCOL_SUCCESS;
 }
 
-
 /*
  * encode_icmp
  */
@@ -244,6 +247,9 @@ encode_udp(uint8_t *buf, uint *len,
             break;
         case UDP_PROTOCOL_BBL:
             result = encode_bbl(buf, len, (bbl_bbl_t*)udp->next);
+            break;
+        case UDP_PROTOCOL_L2TP:
+            result = encode_l2tp(buf, len, (bbl_l2tp_t*)udp->next);
             break;
         default:
             result = PROTOCOL_SUCCESS;
@@ -595,42 +601,67 @@ protocol_error_t
 encode_ppp_pap(uint8_t *buf, uint *len,
                bbl_pap_t *pap) {
 
+    uint16_t *pap_len_field = NULL;
+    uint16_t  pap_len = *len;
+
     *buf = pap->code;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = pap->identifier;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    *buf = 6 + pap->username_len + pap->password_len;
+    pap_len_field = (uint16_t*)buf;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *buf = pap->username_len;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    memcpy(buf, pap->username, pap->username_len);
-    BUMP_WRITE_BUFFER(buf, len, pap->username_len);
-    *buf = pap->password_len;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    memcpy(buf, pap->password, pap->password_len);
-    BUMP_WRITE_BUFFER(buf, len, pap->password_len);
+    if(pap->username) {
+        *buf = pap->username_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, pap->username, pap->username_len);
+        BUMP_WRITE_BUFFER(buf, len, pap->username_len);
+    }
+    if(pap->password) {
+        *buf = pap->password_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, pap->password, pap->password_len);
+        BUMP_WRITE_BUFFER(buf, len, pap->password_len);
+    }
+    if(pap->reply_message) {
+        *buf = pap->reply_message_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, pap->reply_message, pap->reply_message_len);
+        BUMP_WRITE_BUFFER(buf, len, pap->reply_message_len);
+    }
+    pap_len = *len - pap_len;
+    *pap_len_field = htobe16(pap_len);
     return PROTOCOL_SUCCESS;
 }
 
 protocol_error_t
 encode_ppp_chap(uint8_t *buf, uint *len,
                 bbl_chap_t *chap) {
-    uint16_t chap_len;
 
-    chap_len = 5 + chap->challenge_len + chap->name_len;
+    uint16_t *chap_len_field = NULL;
+    uint16_t  chap_len = *len;
 
     *buf = chap->code;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = chap->identifier;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    *(uint16_t*)buf = htobe16(chap_len);
+    chap_len_field = (uint16_t*)buf;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *buf = chap->challenge_len;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    memcpy(buf, chap->challenge, chap->challenge_len);
-    BUMP_WRITE_BUFFER(buf, len, chap->challenge_len);
-    memcpy(buf, chap->name, chap->name_len);
-    BUMP_WRITE_BUFFER(buf, len, chap->name_len);
+    if(chap->challenge) {
+        *buf = chap->challenge_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, chap->challenge, chap->challenge_len);
+        BUMP_WRITE_BUFFER(buf, len, chap->challenge_len);
+    }
+    if(chap->name) {
+        memcpy(buf, chap->name, chap->name_len);
+        BUMP_WRITE_BUFFER(buf, len, chap->name_len);
+    }
+    if(chap->reply_message) {
+        memcpy(buf, chap->reply_message, chap->reply_message_len);
+        BUMP_WRITE_BUFFER(buf, len, chap->reply_message_len);
+    }
+    chap_len = *len - chap_len;
+    *chap_len_field = htobe16(chap_len);
     return PROTOCOL_SUCCESS;
 }
 
@@ -799,6 +830,101 @@ encode_ppp_lcp(uint8_t *buf, uint *len,
         }
     }
     return PROTOCOL_SUCCESS;
+}
+
+protocol_error_t
+encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp) {
+
+    protocol_error_t result;
+    uint16_t *l2tp_len_field = NULL;
+    uint16_t  l2tp_len = *len;
+    *(uint64_t*)buf = 0;
+    /* Set flags */
+    if(l2tp->type) {
+        /* L2TP control packet */
+        *buf |= L2TP_HDR_CTRL_BIT_MASK;
+        *buf |= L2TP_HDR_LEN_BIT_MASK;
+        *buf |= L2TP_HDR_SEQ_BIT_MASK;
+        l2tp->with_length = true;
+        l2tp->with_sequence = true;
+    } else {
+        if(l2tp->with_length) *buf |= L2TP_HDR_LEN_BIT_MASK;
+    }
+    if(l2tp->with_offset) *buf |= L2TP_HDR_OFFSET_BIT_MASK;
+    if(l2tp->with_priority) *buf |= L2TP_HDR_PRIORITY_BIT_MASK;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 2; /* Set L2TP version */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    if(l2tp->with_length) {
+        /* Remember L2TP length field position */
+        l2tp_len_field = (uint16_t*)buf;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    }
+    *(uint16_t*)buf = htobe16(l2tp->tunnel_id);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(l2tp->session_id);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    if(l2tp->with_sequence) {
+        *(uint16_t*)buf = htobe16(l2tp->ns);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(l2tp->nr);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    }
+    if(l2tp->with_offset) {
+        *(uint16_t*)buf = htobe16(l2tp->offset);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        if(l2tp->offset) { 
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        }
+    }
+    if(l2tp->type) {
+        /* L2TP control packet */
+        if(l2tp->payload && l2tp->payload_len) {
+            memcpy(buf, l2tp->payload, l2tp->payload_len);
+            BUMP_WRITE_BUFFER(buf, len, l2tp->payload_len);
+        }
+        result = PROTOCOL_SUCCESS;
+    } else {
+        /* L2TP data packet */
+        *buf = 0xff;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = 0x03;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *(uint16_t*)buf = htobe16(l2tp->protocol);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        /* Add protocol */
+        switch(l2tp->protocol) {
+            case PROTOCOL_LCP:
+                result = encode_ppp_lcp(buf, len, (bbl_lcp_t*)l2tp->next);
+                break;
+            case PROTOCOL_IPCP:
+                result = encode_ppp_ipcp(buf, len, (bbl_ipcp_t*)l2tp->next);
+                break;
+            case PROTOCOL_IP6CP:
+                result = encode_ppp_ip6cp(buf, len, (bbl_ip6cp_t*)l2tp->next);
+                break;
+            case PROTOCOL_PAP:
+                result = encode_ppp_pap(buf, len, (bbl_pap_t*)l2tp->next);
+                break;
+            case PROTOCOL_CHAP:
+                result = encode_ppp_chap(buf, len, (bbl_chap_t*)l2tp->next);
+                break;
+            case PROTOCOL_IPV4:
+                result = encode_ipv4(buf, len, (bbl_ipv4_t*)l2tp->next);
+                break;
+            case PROTOCOL_IPV6:
+                result = encode_ipv6(buf, len, (bbl_ipv6_t*)l2tp->next);
+                break;
+            default:
+                result = UNKNOWN_PROTOCOL;
+                break;
+        }
+    }
+    if(l2tp->with_length && l2tp_len_field) {
+        l2tp_len = *len - l2tp_len;
+        *l2tp_len_field = htobe16(l2tp_len);
+    }
+    return result;
 }
 
 /*
@@ -1337,6 +1463,10 @@ decode_udp(uint8_t *buf, uint len,
             udp->protocol = UDP_PROTOCOL_BBL;
             ret_val = decode_bbl(buf, len, sp, sp_len, (bbl_bbl_t**)&udp->next);
             break;
+        case L2TP_UDP_PORT:
+            udp->protocol = UDP_PROTOCOL_L2TP;
+            ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
+            break;
         default:
             udp->next = NULL;
             break;
@@ -1493,6 +1623,7 @@ decode_ppp_pap(uint8_t *buf, uint len,
                bbl_pap_t **ppp_pap) {
 
     bbl_pap_t *pap;
+    uint16_t   pap_len;
 
     if(len < 4 || sp_len < sizeof(bbl_pap_t)) {
         return DECODE_ERROR;
@@ -1503,7 +1634,33 @@ decode_ppp_pap(uint8_t *buf, uint len,
     memset(pap, 0x0, sizeof(bbl_pap_t));
 
     pap->code = *buf;
-
+    pap->identifier = *(buf+1);
+    pap_len = be16toh(*(uint16_t*)(buf+2));
+    if(pap->code == PAP_CODE_REQUEST) {
+        if(pap_len < 6 || pap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        pap->username_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        pap->username = (char*)buf;
+        BUMP_BUFFER(buf, len, pap->username_len);
+        pap->password_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        pap->password = (char*)buf;
+        BUMP_BUFFER(buf, len, pap->password_len);
+    } else {
+        if(pap_len < 5 || pap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        pap->reply_message_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(pap->reply_message_len) {
+            pap->reply_message = (char*)buf;
+            BUMP_BUFFER(buf, len, pap->reply_message_len);
+        }
+    }
     *ppp_pap = pap;
     return PROTOCOL_SUCCESS;
 }
@@ -1527,14 +1684,12 @@ decode_ppp_chap(uint8_t *buf, uint len,
     chap->code = *buf;
     chap->identifier = *(buf+1);
     chap_len = be16toh(*(uint16_t*)(buf+2));
-
-    if(chap_len < 4 || chap_len > len) {
-        return DECODE_ERROR;
-
-    }
-    BUMP_BUFFER(buf, len, sizeof(uint32_t));
-
     if(chap->code == CHAP_CODE_CHALLENGE) {
+        if(chap_len < 5 || chap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+
         chap->challenge_len = *buf;
         if(chap->challenge_len > len) {
             return DECODE_ERROR;
@@ -1542,6 +1697,16 @@ decode_ppp_chap(uint8_t *buf, uint len,
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         chap->challenge = buf;
         BUMP_BUFFER(buf, len, chap->challenge_len);
+    } else {
+        if(chap_len < 4 || chap_len > len) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        chap->reply_message_len = chap_len - 4;
+        if(chap->reply_message_len) {
+            chap->reply_message = (char*)buf;
+            BUMP_BUFFER(buf, len, chap->reply_message_len);
+        }
     }
     *ppp_chap = chap;
     return PROTOCOL_SUCCESS;
@@ -1808,6 +1973,150 @@ decode_ppp_lcp(uint8_t *buf, uint len,
 
     *ppp_lcp = lcp;
     return PROTOCOL_SUCCESS;
+}
+
+protocol_error_t
+decode_l2tp(uint8_t *buf, uint len,
+            uint8_t *sp, uint sp_len,
+            bbl_l2tp_t **_l2tp) {
+
+    protocol_error_t ret_val = UNKNOWN_PROTOCOL;
+    bbl_l2tp_t *l2tp;
+
+    uint16_t l2tp_len = 0;
+
+    if(len < 8 || sp_len < sizeof(bbl_l2tp_t)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init L2TP header */
+    l2tp = (bbl_l2tp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_l2tp_t));
+    memset(l2tp, 0x0, sizeof(bbl_l2tp_t));
+
+    /*  0                   1                   2                   3
+     *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |T|L|x|x|S|x|O|P|x|x|x|x|  Ver  |          Length (opt)         |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |           Tunnel ID           |           Session ID          |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |             Ns (opt)          |             Nr (opt)          |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |      Offset Size (opt)        |    Offset pad... (opt)
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
+
+    if(*buf & L2TP_HDR_CTRL_BIT_MASK) {
+        l2tp->type = L2TP_MESSAGE_ZLB;
+    }
+
+    l2tp->with_length = *buf & L2TP_HDR_LEN_BIT_MASK;
+    l2tp->with_sequence = *buf & L2TP_HDR_SEQ_BIT_MASK;
+    l2tp->with_offset = *buf & L2TP_HDR_OFFSET_BIT_MASK;
+    l2tp->with_priority = *buf & L2TP_HDR_PRIORITY_BIT_MASK;
+
+    BUMP_BUFFER(buf, len, sizeof(uint8_t));
+
+    if((*buf & L2TP_HDR_VERSION_MASK) != 2) { /* Check L2TP version */
+        return DECODE_ERROR;
+    }
+    BUMP_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* L2TP length */
+    if(l2tp->with_length) {
+        l2tp->length = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        l2tp_len = l2tp->length - 4;
+        if(l2tp_len > len) {
+            return DECODE_ERROR;
+        }
+        len = l2tp_len;
+    } else if(l2tp->type) {
+        /* Length is mandatory for control packets */
+        return DECODE_ERROR;
+    }
+    l2tp->tunnel_id = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    l2tp->session_id = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    
+    if(l2tp->with_sequence) {
+        if(len < 4) return DECODE_ERROR;
+        l2tp->ns = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        l2tp->nr = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    } else if(l2tp->type) {
+        /* Sequence is mandatory for control packets */
+        return DECODE_ERROR;
+    }
+
+    if(l2tp->with_offset) {
+        if(len < 2) return DECODE_ERROR;
+        l2tp->offset = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(l2tp->offset) {
+            if(len < l2tp->offset) return DECODE_ERROR;
+            /* Actually never seen a BNG sending offset
+             * different than zero... */
+            BUMP_BUFFER(buf, len, l2tp->offset);
+        }
+    }
+
+    if(l2tp->type) {
+        /* L2TP control packet */
+        if(len) {
+            if(len < 8) return DECODE_ERROR;
+            BUMP_BUFFER(buf, len, sizeof(uint16_t));
+            if(*(uint32_t*)buf != 0) return DECODE_ERROR;
+            BUMP_BUFFER(buf, len, sizeof(uint32_t));
+            l2tp->type = be16toh(*(uint16_t*)buf);
+            BUMP_BUFFER(buf, len, sizeof(uint16_t));
+            if(len) {
+                l2tp->payload = buf;
+                l2tp->payload_len = len;
+            }
+        }
+        ret_val = PROTOCOL_SUCCESS;
+    } else {
+        /* L2TP data packet */
+        if(len < 4) return DECODE_ERROR;
+        
+        l2tp->payload = buf;
+        l2tp->payload_len = len;
+
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        l2tp->protocol = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+
+        /* Decode protocol */
+        switch(l2tp->protocol) {
+            case PROTOCOL_IPV4:
+                ret_val = decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&l2tp->next);
+                break;
+            case PROTOCOL_IPV6:
+                ret_val = decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&l2tp->next);
+                break;
+            case PROTOCOL_LCP:
+                ret_val = decode_ppp_lcp(buf, len, sp, sp_len, (bbl_lcp_t**)&l2tp->next);
+                break;
+            case PROTOCOL_IPCP:
+                ret_val = decode_ppp_ipcp(buf, len, sp, sp_len, (bbl_ipcp_t**)&l2tp->next);
+                break;
+            case PROTOCOL_IP6CP:
+                ret_val = decode_ppp_ip6cp(buf, len, sp, sp_len, (bbl_ip6cp_t**)&l2tp->next);
+                break;
+            case PROTOCOL_PAP:
+                ret_val = decode_ppp_pap(buf, len, sp, sp_len, (bbl_pap_t**)&l2tp->next);
+                break;
+            case PROTOCOL_CHAP:
+                ret_val = decode_ppp_chap(buf, len, sp, sp_len, (bbl_chap_t**)&l2tp->next);
+                break;
+            default:
+                break;
+        }
+    }
+    *_l2tp = l2tp;
+    return ret_val;
 }
 
 /*
