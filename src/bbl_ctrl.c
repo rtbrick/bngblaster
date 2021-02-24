@@ -390,6 +390,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
     void **search;
 
     const char *ipv4 = NULL;
+    const char *dns1 = NULL;
+    const char *dns2 = NULL;
     const char *ipv6 = NULL;
     const char *ipv6pd = NULL;
     const char *type = NULL;
@@ -403,6 +405,12 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
         session = *search;
         if(session->ip_address) {
             ipv4 = format_ipv4_address(&session->ip_address);
+        }
+        if(session->dns1) {
+            dns1 = format_ipv4_address(&session->dns1);
+        }
+        if(session->dns2) {
+            dns2 = format_ipv4_address(&session->dns2);
         }
         if(session->ipv6_prefix.len) {
             ipv6 = format_ipv6_prefix(&session->ipv6_prefix);
@@ -448,7 +456,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* so*}}", 
+        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -460,7 +468,9 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "lcp-state", lcp,
                         "ipcp-state", ipcp,
                         "ip6cp-state", ip6cp,
-                        "ipv4-address",ipv4,
+                        "ipv4-address", ipv4,
+                        "ipv4-dns1", dns1,
+                        "ipv4-dns2", dns2,
                         "ipv6-prefix", ipv6,
                         "ipv6-delegated-prefix", ipv6pd,
                         "session-traffic", session_traffic);
