@@ -163,6 +163,10 @@ typedef struct bbl_l2tp_tunnel_
     uint16_t cwcount;
     uint32_t send_timestamp;
 
+    uint16_t result_code;
+    uint16_t error_code;
+    char* error_message;
+
     bool zlb;
     bbl_l2tp_queue_t *zlb_qnode;
 
@@ -229,6 +233,10 @@ typedef struct bbl_l2tp_session_
 
     uint8_t ipcp_state;
     uint8_t ip6cp_state;
+
+    uint16_t result_code;
+    uint16_t error_code;
+    char* error_message;
 
     /* The following members must be freed 
      * if session is destroyed! */
