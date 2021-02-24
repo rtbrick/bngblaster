@@ -45,6 +45,8 @@
 #define IPV6_ADDR_LEN                   16
 #define IPV6_IDENTIFER_LEN              8
 
+#define PPPOE_TAG_SERVICE_NAME          0x0101
+#define PPPOE_TAG_HOST_UNIQ             0x0103
 #define PPPOE_TAG_AC_COOKIE             0x0104
 #define PPPOE_TAG_VENDOR                0x0105
 
@@ -352,8 +354,12 @@ typedef struct bbl_ethernet_header_ {
 typedef struct bbl_pppoe_discovery_ {
     uint8_t        code;
     uint16_t       session_id;
+    uint8_t       *service_name;
+    uint16_t       service_name_len;
     uint8_t       *ac_cookie;
     uint16_t       ac_cookie_len;
+    uint8_t       *host_uniq;
+    uint16_t       host_uniq_len;
     access_line_t *access_line;
 } bbl_pppoe_discovery_t;
 

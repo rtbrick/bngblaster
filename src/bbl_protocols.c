@@ -958,66 +958,89 @@ encode_pppoe_discovery(uint8_t *buf, uint *len,
     pppoe_len_field = (uint16_t*)buf;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
-    if(pppoe->ac_cookie) {
-        *(uint16_t*)buf = htobe16(PPPOE_TAG_AC_COOKIE);
+    if(pppoe->code != PPPOE_PADT) {
+        *(uint16_t*)buf = htobe16(PPPOE_TAG_SERVICE_NAME);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint16_t*)buf = htobe16(pppoe->ac_cookie_len);
+        *(uint16_t*)buf = htobe16(pppoe->service_name_len);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         pppoe_len += 4;
-        memcpy(buf, pppoe->ac_cookie, pppoe->ac_cookie_len);
-        BUMP_WRITE_BUFFER(buf, len, pppoe->ac_cookie_len);
-        pppoe_len += pppoe->ac_cookie_len;
-    }
-    if(pppoe->access_line) {
-        *(uint16_t*)buf = htobe16(PPPOE_TAG_VENDOR);
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        vendor_len_field = (uint16_t*)buf;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = htobe32(BROADBAND_FORUM_VENDOR_ID);
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        vendor_len = 4;
-        if(pppoe->access_line->aci) {
-            *buf = ACCESS_LINE_ACI;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            str_len = strnlen(pppoe->access_line->aci, 128);
-            *buf = str_len;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            memcpy(buf, pppoe->access_line->aci, str_len);
-            BUMP_WRITE_BUFFER(buf, len, str_len);
-            vendor_len += 2 + str_len;
+        /* When the tag length is zero this tag is used to indicate that
+         * any service is acceptable. */
+        if(pppoe->service_name_len) {
+            memcpy(buf, pppoe->service_name, pppoe->service_name_len);
+            BUMP_WRITE_BUFFER(buf, len, pppoe->service_name_len);
+            pppoe_len += pppoe->service_name_len;
         }
-        if(pppoe->access_line->ari) {
-            *buf = ACCESS_LINE_ARI;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            str_len = strnlen(pppoe->access_line->ari, 128);
-            *buf = str_len;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            memcpy(buf, pppoe->access_line->ari, str_len);
-            BUMP_WRITE_BUFFER(buf, len, str_len);
-            vendor_len += 2 + str_len;
+        if(pppoe->host_uniq_len) {
+            *(uint16_t*)buf = htobe16(PPPOE_TAG_HOST_UNIQ);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(pppoe->host_uniq_len);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            pppoe_len += 4;
+            memcpy(buf, pppoe->host_uniq, pppoe->host_uniq_len);
+            BUMP_WRITE_BUFFER(buf, len, pppoe->host_uniq_len);
+            pppoe_len += pppoe->host_uniq_len;
         }
-        if(pppoe->access_line->up) {
-            *buf = ACCESS_LINE_ACT_UP;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            *buf = 4;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            *(uint32_t*)buf = htobe32(pppoe->access_line->up);
+        if(pppoe->ac_cookie) {
+            *(uint16_t*)buf = htobe16(PPPOE_TAG_AC_COOKIE);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(pppoe->ac_cookie_len);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            pppoe_len += 4;
+            memcpy(buf, pppoe->ac_cookie, pppoe->ac_cookie_len);
+            BUMP_WRITE_BUFFER(buf, len, pppoe->ac_cookie_len);
+            pppoe_len += pppoe->ac_cookie_len;
+        }
+        if(pppoe->access_line) {
+            *(uint16_t*)buf = htobe16(PPPOE_TAG_VENDOR);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            vendor_len_field = (uint16_t*)buf;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint32_t*)buf = htobe32(BROADBAND_FORUM_VENDOR_ID);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-            vendor_len += 6;
+            vendor_len = 4;
+            if(pppoe->access_line->aci) {
+                *buf = ACCESS_LINE_ACI;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                str_len = strnlen(pppoe->access_line->aci, 128);
+                *buf = str_len;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                memcpy(buf, pppoe->access_line->aci, str_len);
+                BUMP_WRITE_BUFFER(buf, len, str_len);
+                vendor_len += 2 + str_len;
+            }
+            if(pppoe->access_line->ari) {
+                *buf = ACCESS_LINE_ARI;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                str_len = strnlen(pppoe->access_line->ari, 128);
+                *buf = str_len;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                memcpy(buf, pppoe->access_line->ari, str_len);
+                BUMP_WRITE_BUFFER(buf, len, str_len);
+                vendor_len += 2 + str_len;
+            }
+            if(pppoe->access_line->up) {
+                *buf = ACCESS_LINE_ACT_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(pppoe->access_line->up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(pppoe->access_line->down) {
+                *buf = ACCESS_LINE_ACT_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(pppoe->access_line->down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            *vendor_len_field = htobe16(vendor_len);
+            pppoe_len += 4 + vendor_len;
         }
-        if(pppoe->access_line->down) {
-            *buf = ACCESS_LINE_ACT_DOWN;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            *buf = 4;
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            *(uint32_t*)buf = htobe32(pppoe->access_line->down);
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-            vendor_len += 6;
-        }
-        *vendor_len_field = htobe16(vendor_len);
-        pppoe_len += 4 + vendor_len;
     }
-
     *pppoe_len_field = htobe16(pppoe_len);
     return PROTOCOL_SUCCESS;
 }
@@ -2206,6 +2229,14 @@ decode_pppoe_discovery(uint8_t *buf, uint len,
             return DECODE_ERROR;
         }
         switch (pppoe_tag_type) {
+            case PPPOE_TAG_SERVICE_NAME:
+                pppoe->service_name = buf;
+                pppoe->service_name_len = pppoe_tag_len;
+                break;
+            case PPPOE_TAG_HOST_UNIQ:
+                pppoe->host_uniq = buf;
+                pppoe->host_uniq_len = pppoe_tag_len;
+                break;
             case PPPOE_TAG_AC_COOKIE:
                 pppoe->ac_cookie = buf;
                 pppoe->ac_cookie_len = pppoe_tag_len;
