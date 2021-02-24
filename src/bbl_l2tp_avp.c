@@ -90,6 +90,41 @@ bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp) {
     *_buf = buf;
 }
 
+static void
+bbl_l2tp_avp_encode_result_code(uint8_t **_buf, uint16_t *len, 
+                                uint16_t result_code, uint16_t error_code, 
+                                char *error_message) {
+    uint8_t *avp_len_field;
+    uint16_t avp_len = L2TP_AVP_HDR_LEN;
+    uint8_t *buf = *_buf;
+
+    avp_len_field = buf;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(L2TP_AVP_RESULT_CODE);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    *(uint16_t*)buf = htobe16(result_code);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t)); 
+    avp_len += 2;
+
+    if(error_code) {
+        *(uint16_t*)buf = htobe16(error_code);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t)); 
+        avp_len += 2;
+        if(error_message) {
+            memcpy(buf, error_message, strlen(error_message));
+            BUMP_WRITE_BUFFER(buf, len, strlen(error_message));
+            avp_len += strlen(error_message);
+        }
+    }
+
+    avp_len |= L2TP_AVP_M_BIT_MASK;
+    *(uint16_t*)avp_len_field = htobe16(avp_len);
+    *_buf = buf;
+}
+
 /* bbl_l2tp_avp_unhide */
 static bool
 bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t 
@@ -329,6 +364,10 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel, bb
                             l2tp_session->proxy_auth_response_len = avp.len;
                         }
                         break;
+                    case L2TP_AVP_RANDOM_VECTOR:
+                        random_vector = avp.value;
+                        random_vector_len = avp.len;
+                        break;
                     case L2TP_AVP_CONNECT_SPEED_UPDATE_ENABLE:
                         /* See RFC5515 */
                         l2tp_session->connect_speed_update_enabled = true;
@@ -514,6 +553,10 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
                             l2tp_tunnel->peer_challenge_response_len = avp.len;
                             memcpy(l2tp_tunnel->peer_challenge_response, avp.value, avp.len);
                         }
+                        break;
+                    case L2TP_AVP_RANDOM_VECTOR:
+                        random_vector = avp.value;
+                        random_vector_len = avp.len;
                         break;
                     default:
                         if(avp.m) {
@@ -739,6 +782,11 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
             avp.value_type = L2TP_AVP_VALUE_UINT16;
             avp.value = (void*)(&l2tp_tunnel->tunnel_id);
             bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Result Code */
+            bbl_l2tp_avp_encode_result_code(&buf, len, 
+                                            l2tp_tunnel->result_code,
+                                            l2tp_tunnel->error_code,
+                                            l2tp_tunnel->error_message);
             break;
         case L2TP_MESSAGE_ICRP:
             /* Assigned Session ID  */
@@ -760,6 +808,11 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
                 avp.value_type = L2TP_AVP_VALUE_UINT16;
                 avp.value = (void*)(&l2tp_session->key.session_id);
                 bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* Result Code */
+                bbl_l2tp_avp_encode_result_code(&buf, len, 
+                                                l2tp_session->result_code,
+                                                l2tp_session->error_code,
+                                                l2tp_session->error_message);
             }
             break;
         case L2TP_MESSAGE_CSURQ:

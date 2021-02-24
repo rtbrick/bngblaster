@@ -265,6 +265,9 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
                 l2tp_tunnel->stats.control_retry++;
                 interface->stats.l2tp_control_retry++;
                 if(q->retries > l2tp_tunnel->server->max_retry) {
+                    l2tp_tunnel->result_code = 2;
+                    l2tp_tunnel->error_code = 6;
+                    l2tp_tunnel->error_message = "max retry";
                     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
                 }
@@ -311,6 +314,9 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
     switch(l2tp_tunnel->state) {
         case BBL_L2TP_TUNNEL_WAIT_CTR_CONN:
             if(l2tp_tunnel->state_seconds > 30) {
+                l2tp_tunnel->result_code = 2;
+                l2tp_tunnel->error_code = 6;
+                l2tp_tunnel->error_message = "timeout";
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
@@ -600,6 +606,9 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                     LOG(ERROR, "L2TP Error (%s) Missing challenge in SCCRQ from %s\n",
                                l2tp_tunnel->server->host_name, 
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
+                    l2tp_tunnel->result_code = 2;
+                    l2tp_tunnel->error_code = 6;
+                    l2tp_tunnel->error_message = "missing challenge";
                     l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
                 }
             } else {
@@ -609,6 +618,9 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                     LOG(ERROR, "L2TP Error (%s) No secret found but challenge received in SCCRQ from %s\n",
                                l2tp_tunnel->server->host_name, 
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
+                    l2tp_tunnel->result_code = 2;
+                    l2tp_tunnel->error_code = 6;
+                    l2tp_tunnel->error_message = "no challenge expected";
                     l2tp_tunnel->state = BBL_L2TP_TUNNEL_SEND_STOPCCN;
                 }
             }
@@ -648,6 +660,9 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                        l2tp_tunnel->server->host_name, 
                        format_ipv4_address(&l2tp_tunnel->peer_ip));
             bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+            l2tp_tunnel->result_code = 2;
+            l2tp_tunnel->error_code = 6;
+            l2tp_tunnel->error_message = "decode error";
             return bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
         }
         /* Check challenge response ... */
@@ -663,6 +678,9 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                                l2tp_tunnel->server->host_name, 
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
                     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+                    l2tp_tunnel->result_code = 2;
+                    l2tp_tunnel->error_code = 6;
+                    l2tp_tunnel->error_message = "challenge authentication failed";
                     return bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
                 }
             } else {
@@ -670,6 +688,9 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                            l2tp_tunnel->server->host_name, 
                            format_ipv4_address(&l2tp_tunnel->peer_ip));
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+                l2tp_tunnel->result_code = 2;
+                l2tp_tunnel->error_code = 6;
+                l2tp_tunnel->error_message = "missing challenge response";
                 return bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
         }
@@ -759,6 +780,9 @@ bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     }
 
     if(!bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, l2tp_session)) {
+        l2tp_session->result_code = 2;
+        l2tp_session->error_code = 6;
+        l2tp_session->error_message = "decode error";
         bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
         return bbl_l2tp_session_delete(l2tp_session);
     }
@@ -1118,6 +1142,7 @@ bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {
         CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
             if(l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+                l2tp_tunnel->result_code = 6;
                 bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
         }
