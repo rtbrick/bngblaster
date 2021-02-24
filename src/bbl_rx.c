@@ -344,7 +344,7 @@ bbl_lcp_echo(timer_s *timer)
             interface->stats.lcp_echo_timeout++;
         }
         if(session->lcp_retries > ctx->config.lcp_keepalive_retry) {
-            LOG(LCP, "LCP ECHO TIMEOUT (Q-in-Q %u:%u)\n",
+            LOG(PPPOE, "LCP ECHO TIMEOUT (Q-in-Q %u:%u)\n",
                 session->key.outer_vlan_id, session->key.inner_vlan_id);
             /* Force terminate session after timeout. */
             session->send_requests = BBL_SEND_DISCOVERY;
@@ -1606,10 +1606,42 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
         case PPPOE_PADO:
             interface->stats.pado_rx++;
             if(session->session_state == BBL_PPPOE_INIT) {
+                /* Store server MAC address */
                 memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
-                if(pppoed->ac_cookie_len && pppoed->ac_cookie_len <= PPPOE_AC_COOKIE_LEN) {
+                if(pppoed->ac_cookie_len) {
+                    /* Store AC cookie */
+                    if(session->pppoe_ac_cookie) free(session->pppoe_ac_cookie);
+                    session->pppoe_ac_cookie = malloc(pppoed->ac_cookie_len);
                     session->pppoe_ac_cookie_len = pppoed->ac_cookie_len;
                     memcpy(session->pppoe_ac_cookie, pppoed->ac_cookie, pppoed->ac_cookie_len);
+                }
+                if(pppoed->service_name_len) {
+                    if(session->pppoe_service_name_len) {
+                        /* Compare service name */
+                        if(pppoed->service_name_len != session->pppoe_service_name_len || 
+                           memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
+                            LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong service name in PADO\n",
+                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            return;
+                        }
+                    } else {
+                        /* Store service name */
+                        session->pppoe_service_name = malloc(pppoed->service_name_len);
+                        session->pppoe_service_name_len = pppoed->service_name_len;
+                        memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
+                    }
+                } else {
+                    LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Missing service name in PADO\n",
+                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    return;
+                }
+                if(session->pppoe_host_uniq) {
+                    if(pppoed->host_uniq_len != sizeof(uint64_t) || 
+                       *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
+                        LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong host-uniq in PADO\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        return;
+                    }
                 }
                 bbl_session_update_state(ctx, session, BBL_PPPOE_REQUEST);
                 session->send_requests = BBL_SEND_DISCOVERY;
@@ -1619,12 +1651,32 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
         case PPPOE_PADS:
             interface->stats.pads_rx++;
             if(session->session_state == BBL_PPPOE_REQUEST) {
-                session->pppoe_session_id = pppoed->session_id;
-                bbl_session_update_state(ctx, session, BBL_PPP_LINK);
-                session->send_requests = BBL_SEND_LCP_REQUEST;
-                session->lcp_request_code = PPP_CODE_CONF_REQUEST;
-                session->lcp_state = BBL_PPP_INIT;
-                bbl_session_tx_qnode_insert(session);
+                if(pppoed->session_id) {
+                    if(session->pppoe_host_uniq) {
+                        if(pppoed->host_uniq_len != sizeof(uint64_t) || 
+                           *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
+                            LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong host-uniq in PADS\n",
+                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            return;
+                        }
+                    }
+                    if(pppoed->service_name_len != session->pppoe_service_name_len || 
+                        memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
+                        LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong service name in PADS\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        return;
+                    }
+                    session->pppoe_session_id = pppoed->session_id;
+                    bbl_session_update_state(ctx, session, BBL_PPP_LINK);
+                    session->send_requests = BBL_SEND_LCP_REQUEST;
+                    session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+                    session->lcp_state = BBL_PPP_INIT;
+                    bbl_session_tx_qnode_insert(session);
+                } else {
+                    LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Invalid PADS\n",
+                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    return;
+                }
             }
             break;
         case PPPOE_PADT:

@@ -318,6 +318,8 @@ Attribute | Description | Default
 `reconnect` | Automatically reconnect sessions if terminated | false
 `discovery-timeout` | PPPoE discovery (PADI and PADR) timeout in seconds | 5
 `discovery-retry` | PPPoE discovery (PADI and PADR) max retry | 10
+`service-name` | PPPoE discovery service name | 
+`host-uniq` | PPPoE discovery host-uniq | false
 
 ## PPP
 

@@ -678,7 +678,7 @@ bbl_ip6cp_timeout (timer_s *timer)
         }
         if(session->ip6cp_retries > ctx->config.ip6cp_conf_request_retry) {
             session->ip6cp_state = BBL_PPP_CLOSED;
-            LOG(NCP, "IP6CP TIMEOUT (Q-in-Q %u:%u)\n",
+            LOG(PPPOE, "IP6CP TIMEOUT (Q-in-Q %u:%u)\n",
                 session->key.outer_vlan_id, session->key.inner_vlan_id);
             if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
                 bbl_session_clear(ctx, session);
@@ -773,7 +773,7 @@ bbl_ipcp_timeout (timer_s *timer)
         }
         if(session->ipcp_retries > ctx->config.ipcp_conf_request_retry) {
             session->ipcp_state = BBL_PPP_CLOSED;
-            LOG(NCP, "IPCP TIMEOUT (Q-in-Q %u:%u)\n",
+            LOG(PPPOE, "IPCP TIMEOUT (Q-in-Q %u:%u)\n",
                 session->key.outer_vlan_id, session->key.inner_vlan_id);
             if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
                 bbl_session_clear(ctx, session);
@@ -1007,7 +1007,14 @@ bbl_encode_padi (bbl_session_s *session)
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
     pppoe.code = PPPOE_PADI;
-
+    if(session->pppoe_service_name) {
+        pppoe.service_name = (uint8_t*)session->pppoe_service_name;
+        pppoe.service_name_len = session->pppoe_service_name_len;
+    }
+    if(session->pppoe_host_uniq) {
+        pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
+        pppoe.host_uniq_len = sizeof(uint64_t);
+    }
     if(strlen(session->agent_circuit_id) || strlen(session->agent_remote_id)) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
@@ -1035,7 +1042,14 @@ bbl_encode_padr (bbl_session_s *session)
     pppoe.code = PPPOE_PADR;
     pppoe.ac_cookie = session->pppoe_ac_cookie;
     pppoe.ac_cookie_len = session->pppoe_ac_cookie_len;
-
+    if(session->pppoe_service_name) {
+        pppoe.service_name = (uint8_t*)session->pppoe_service_name;
+        pppoe.service_name_len = session->pppoe_service_name_len;
+    }
+    if(session->pppoe_host_uniq) {
+        pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
+        pppoe.host_uniq_len = sizeof(uint64_t);
+    }
     if(strlen(session->agent_circuit_id) || strlen(session->agent_remote_id)) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;

@@ -102,15 +102,15 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 
     /* Optionally overload some settings per range */
     if (json_unpack(access_interface, "{s:s}", "username", &s) == 0) {
-        snprintf(access_config->username, USERNAME_LEN, "%s", s);
+        access_config->username = strdup(s);
     } else {
-        snprintf(access_config->username, USERNAME_LEN, "%s", ctx->config.username);
+        access_config->username = strdup(ctx->config.username);
     }
 
     if (json_unpack(access_interface, "{s:s}", "password", &s) == 0) {
-        snprintf(access_config->password, PASSWORD_LEN, "%s", s);
+        access_config->password = strdup(s);
     } else {
-        snprintf(access_config->password, PASSWORD_LEN, "%s", ctx->config.password);
+        access_config->password = strdup(ctx->config.password);
     }
 
     if (json_unpack(access_interface, "{s:s}", "authentication-protocol", &s) == 0) {
@@ -128,15 +128,15 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 
     /* Access Line */
     if (json_unpack(access_interface, "{s:s}", "agent-circuit-id", &s) == 0) {
-        snprintf(access_config->agent_circuit_id, ACI_LEN, "%s", s);
+        access_config->agent_circuit_id = strdup(s);
     } else {
-        snprintf(access_config->agent_circuit_id, ACI_LEN, "%s", ctx->config.agent_circuit_id);
+        access_config->agent_circuit_id = strdup(ctx->config.agent_circuit_id);
     }
 
     if (json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
-        snprintf(access_config->agent_remote_id, ARI_LEN, "%s", s);
+        access_config->agent_remote_id = strdup(s);
     } else {
-        snprintf(access_config->agent_remote_id, ARI_LEN, "%s", ctx->config.agent_remote_id);
+        access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
     }
 
     value = json_object_get(access_interface, "rate-up");
@@ -297,7 +297,6 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             ctx->config.sessions_stop_rate = json_number_value(value);
         }
         /* ... Deprecated */
-
         value = json_object_get(section, "session-time");
         if (json_is_number(value)) {
             ctx->config.pppoe_session_time = json_number_value(value);
@@ -314,6 +313,13 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.pppoe_discovery_retry = json_number_value(value);
         }
+        if (json_unpack(section, "{s:s}", "service-name", &s) == 0) {
+            ctx->config.pppoe_service_name = strdup(s);
+        }
+        value = json_object_get(section, "host-uniq");
+        if (json_is_boolean(value)) {
+            ctx->config.pppoe_host_uniq = json_boolean_value(value);
+        }
     }
 
     /* PPP Configuration */
@@ -326,10 +332,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         sub = json_object_get(section, "authentication");
         if (json_is_object(sub)) {
             if (json_unpack(sub, "{s:s}", "username", &s) == 0) {
-                snprintf(ctx->config.username, USERNAME_LEN, "%s", s);   
+                ctx->config.username = strdup(s);   
             }
             if (json_unpack(sub, "{s:s}", "password", &s) == 0) {
-                snprintf(ctx->config.password, PASSWORD_LEN, "%s", s);
+                ctx->config.password = strdup(s);
             }
             value = json_object_get(sub, "timeout");
             if (json_is_number(value)) {
@@ -511,10 +517,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     section = json_object_get(root, "access-line");
     if (json_is_object(section)) {
         if (json_unpack(section, "{s:s}", "agent-circuit-id", &s) == 0) {
-            snprintf(ctx->config.agent_circuit_id, ACI_LEN, "%s", s );
+            ctx->config.agent_circuit_id = strdup(s);
         }
         if (json_unpack(section, "{s:s}", "agent-remote-id", &s) == 0) {
-            snprintf(ctx->config.agent_remote_id, ARI_LEN, "%s", s );
+            ctx->config.agent_remote_id = strdup(s);
         }
         value = json_object_get(section, "rate-up");
         if (json_is_number(value)) {
@@ -777,10 +783,10 @@ bbl_config_load_json (char *filename, bbl_ctx_s *ctx) {
  */
 void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {
-    snprintf(ctx->config.username, USERNAME_LEN, "%s", g_default_user);
-    snprintf(ctx->config.password,  PASSWORD_LEN, "%s", g_default_pass);
-    snprintf(ctx->config.agent_remote_id, ARI_LEN, "%s", g_default_ari);
-    snprintf(ctx->config.agent_circuit_id, ACI_LEN, "%s", g_default_aci);
+    ctx->config.username = (char *)g_default_user;
+    ctx->config.password = (char *)g_default_pass;
+    ctx->config.agent_remote_id = (char *)g_default_ari;
+    ctx->config.agent_circuit_id = (char *)g_default_aci;
     ctx->config.tx_interval = 5;
     ctx->config.rx_interval = 5;
     ctx->config.qdisc_bypass = true;

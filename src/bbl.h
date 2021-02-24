@@ -49,12 +49,6 @@
 
 #define WRITE_BUF_LEN               1514
 #define SCRATCHPAD_LEN              1514
-#define PPPOE_AC_COOKIE_LEN         32
-
-#define USERNAME_LEN                251
-#define PASSWORD_LEN                65
-#define ARI_LEN                     65
-#define ACI_LEN                     65
 #define CHALLENGE_LEN               16
 
 /* Access Interface */
@@ -312,13 +306,13 @@ typedef struct bbl_access_config_
         uint32_t static_gateway_iter;
 
         /* Authentication */
-        char username[USERNAME_LEN];
-        char password[PASSWORD_LEN];
+        char *username;
+        char *password;
         uint16_t authentication_protocol;
 
         /* Access Line */
-        char agent_remote_id[ARI_LEN];
-        char agent_circuit_id[ACI_LEN];
+        char *agent_remote_id;
+        char *agent_circuit_id;
         uint32_t rate_up;
         uint32_t rate_down;
 
@@ -461,12 +455,12 @@ typedef struct bbl_ctx_
         uint32_t static_gateway_iter;
 
         /* Authentication */
-        char username[USERNAME_LEN];
-        char password[PASSWORD_LEN];
+        char *username;
+        char *password;
 
         /* Access Line */
-        char agent_remote_id[ARI_LEN];
-        char agent_circuit_id[ACI_LEN];
+        char *agent_remote_id;
+        char *agent_circuit_id;
         uint32_t rate_up;
         uint32_t rate_down;
 
@@ -474,7 +468,9 @@ typedef struct bbl_ctx_
         uint32_t pppoe_session_time;
         uint16_t pppoe_discovery_timeout;
         uint16_t pppoe_discovery_retry;
-        bool pppoe_reconnect;
+        char    *pppoe_service_name;
+        bool     pppoe_reconnect;
+        bool     pppoe_host_uniq;
 
         /* PPP */
         uint16_t ppp_mru;
@@ -639,15 +635,15 @@ typedef struct bbl_session_
     bool l2tp;
 
     /* Authentication */
-    char username[USERNAME_LEN];
-    char password[PASSWORD_LEN];
+    char *username;
+    char *password;
 
     uint8_t chap_identifier;
     uint8_t chap_response[CHALLENGE_LEN];
 
     /* Access Line */
-    char agent_circuit_id[ACI_LEN];
-    char agent_remote_id[ARI_LEN];
+    char *agent_circuit_id;
+    char *agent_remote_id;
     uint32_t rate_up;
     uint32_t rate_down;
 
@@ -657,8 +653,11 @@ typedef struct bbl_session_
 
     /* PPPoE */
     uint16_t pppoe_session_id;
-    uint8_t  pppoe_ac_cookie[PPPOE_AC_COOKIE_LEN];
+    uint8_t *pppoe_ac_cookie;
     uint16_t pppoe_ac_cookie_len;
+    uint8_t *pppoe_service_name;
+    uint16_t pppoe_service_name_len;
+    uint64_t pppoe_host_uniq;
 
     /* LCP */
     ppp_state_t lcp_state;

@@ -151,7 +151,18 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
                         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
                         session->pppoe_session_id = 0;
+                        if(session->pppoe_ac_cookie) {
+                            free(session->pppoe_ac_cookie);
+                            session->pppoe_ac_cookie = NULL;
+                        }
                         session->pppoe_ac_cookie_len = 0;
+                        if(!session->interface->ctx->config.pppoe_service_name) {
+                            if(session->pppoe_service_name) {
+                                free(session->pppoe_service_name);
+                                session->pppoe_service_name = NULL;
+                            }
+                            session->pppoe_service_name_len = 0;
+                        }
                         session->ip_address = 0;
                         session->peer_ip_address = 0;
                         session->dns1 = 0;
@@ -711,10 +722,10 @@ bbl_add_session (bbl_ctx_s *ctx, bbl_interface_s *interface, bbl_session_s *sess
     memcpy(session->client_mac, session_template->client_mac, ETH_ADDR_LEN);
     session->mru = session_template->mru;
     session->magic_number = session_template->magic_number;
-    snprintf(session->username, USERNAME_LEN, "%s", session_template->username);
-    snprintf(session->password, PASSWORD_LEN, "%s", session_template->password);
-    snprintf(session->agent_circuit_id, ACI_LEN, "%s", session_template->agent_circuit_id);
-    snprintf(session->agent_remote_id, ARI_LEN, "%s", session_template->agent_remote_id);
+    session->username = session_template->username;
+    session->password = session_template->password;
+    session->agent_circuit_id = session_template->agent_circuit_id;
+    session->agent_remote_id = session_template->agent_remote_id;
     session->rate_up = session_template->rate_up;
     session->rate_down = session_template->rate_down;
     session->duid[1] = 3;
@@ -725,7 +736,13 @@ bbl_add_session (bbl_ctx_s *ctx, bbl_interface_s *interface, bbl_session_s *sess
     session->igmp_robustness = 2; /* init robustness with 2 */
     session->zapping_group_max = be32toh(ctx->config.igmp_group) + ((ctx->config.igmp_group_count - 1) * be32toh(ctx->config.igmp_group_iter));
     session->session_traffic = access_config->session_traffic_autostart;
-    if(session->access_type == ACCESS_TYPE_IPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(ctx->config.pppoe_service_name) {
+            session->pppoe_service_name = (uint8_t*)ctx->config.pppoe_service_name;
+            session->pppoe_service_name_len = strlen(ctx->config.pppoe_service_name);
+        }
+        session->pppoe_host_uniq = session_template->pppoe_host_uniq;
+    } else if(session->access_type == ACCESS_TYPE_IPOE) {
         if(access_config->static_ip && access_config->static_gateway) {
             session->ip_address = access_config->static_ip;
             session->peer_ip_address = access_config->static_gateway;
@@ -830,30 +847,38 @@ bbl_init_sessions (bbl_ctx_s *ctx)
         session_template.client_mac[3] = i>>16;
         session_template.client_mac[4] = i>>8;
         session_template.client_mac[5] = i;
-        session_template.magic_number = i;
+        session_template.magic_number = htobe32(i);
+        if(ctx->config.pppoe_host_uniq) {
+            session_template.pppoe_host_uniq = htobe64(i);
+        }
         /* Populate session identifiaction attributes */
         snprintf(snum1, 6, "%d", i);
         snprintf(snum2, 6, "%d", access_config->sessions);
+    
         /* Update username */
         s = replace_substring(access_config->username, "{session-global}", snum1);
-        snprintf(session_template.username, USERNAME_LEN, "%s", s);
+        session_template.username = s;
         s = replace_substring(session_template.username, "{session}", snum2);
-        snprintf(session_template.username, USERNAME_LEN, "%s", s);
+        session_template.username = strdup(s);
+
         /* Update password */
         s = replace_substring(access_config->password, "{session-global}", snum1);
-        snprintf(session_template.password, PASSWORD_LEN, "%s", s);
+        session_template.password = s;
         s = replace_substring(session_template.password, "{session}", snum2);
-        snprintf(session_template.password, PASSWORD_LEN, "%s", s);
+        session_template.password = strdup(s);
+
         /* Update ACI */
         s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
-        snprintf(session_template.agent_circuit_id, ACI_LEN, "%s", s);
+        session_template.agent_circuit_id = s;
         s = replace_substring(session_template.agent_circuit_id, "{session}", snum2);
-        snprintf(session_template.agent_circuit_id, ACI_LEN, "%s", s);
+        session_template.agent_circuit_id = strdup(s);
+
         /* Update ARI */
         s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
-        snprintf(session_template.agent_remote_id, ARI_LEN, "%s", s);
+        session_template.agent_remote_id = s;
         s = replace_substring(session_template.agent_remote_id, "{session}", snum2);
-        snprintf(session_template.agent_remote_id, ARI_LEN, "%s", s);
+        session_template.agent_remote_id = strdup(s);
+        
         /* Update rates ... */
         session_template.rate_up = access_config->rate_up;
         session_template.rate_down = access_config->rate_down;
@@ -1200,8 +1225,8 @@ main (int argc, char *argv[])
         fprintf(stderr, "Error: Failed to load configuration file %s\n", config_file);
         exit(1);
     }
-    if(username) snprintf(ctx->config.username, USERNAME_LEN, "%s", username);
-    if(password) snprintf(ctx->config.password, PASSWORD_LEN, "%s", password);
+    if(username) ctx->config.username = username;
+    if(password) ctx->config.password = password;
     if(sessions) ctx->config.sessions = atoi(sessions);
     if(igmp_group) {
         inet_pton(AF_INET, igmp_group, &ipv4);
