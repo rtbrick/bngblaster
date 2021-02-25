@@ -990,7 +990,9 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                 }
                             } else {
                                 /* Use first interface as default. */
-                                key.ifindex = ctx->op.access_if[0]->addr.sll_ifindex;
+                                if(ctx->op.access_if[0]) {
+                                    key.ifindex = ctx->op.access_if[0]->addr.sll_ifindex;
+                                }
                             }
                             value = json_object_get(arguments, "outer-vlan");
                             if (value) {
