@@ -394,6 +394,10 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
     const char *dns2 = NULL;
     const char *ipv6 = NULL;
     const char *ipv6pd = NULL;
+    const char *ipv6_dns1 = NULL;
+    const char *ipv6_dns2 = NULL;
+    const char *dhcpv6_dns1 = NULL;
+    const char *dhcpv6_dns2 = NULL;
     const char *type = NULL;
     const char *username = NULL;
     const char *lcp = NULL;
@@ -417,6 +421,18 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
         }
         if(session->delegated_ipv6_prefix.len) {
             ipv6pd = format_ipv6_prefix(&session->delegated_ipv6_prefix);
+        }
+        if(*(uint64_t*)session->ipv6_dns1) {
+            ipv6_dns1 = format_ipv6_address(&session->ipv6_dns1);
+        }
+        if(*(uint64_t*)session->ipv6_dns2) {
+            ipv6_dns2 = format_ipv6_address(&session->ipv6_dns2);
+        }
+        if(*(uint64_t*)session->dhcpv6_dns1) {
+            dhcpv6_dns1 = format_ipv6_address(&session->dhcpv6_dns1);
+        }
+        if(*(uint64_t*)session->dhcpv6_dns2) {
+            dhcpv6_dns2 = format_ipv6_address(&session->dhcpv6_dns2);
         }
 
         if(session->access_type == ACCESS_TYPE_PPPOE) {
@@ -456,7 +472,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
+        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -473,6 +489,10 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "ipv4-dns2", dns2,
                         "ipv6-prefix", ipv6,
                         "ipv6-delegated-prefix", ipv6pd,
+                        "ipv6-dns1", ipv6_dns1,
+                        "ipv6-dns2", ipv6_dns2,
+                        "dhcpv6-dns1", dhcpv6_dns1,
+                        "dhcpv6-dns2", dhcpv6_dns2,
                         "session-traffic", session_traffic);
         if(root) {
             result = json_dumpfd(root, fd, 0);

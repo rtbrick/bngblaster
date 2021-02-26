@@ -592,6 +592,12 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                     LOG(IP, "IPv6 (Q-in-Q %u:%u) DHCPv6 PD prefix %s/%d\n",
                             session->key.outer_vlan_id, session->key.inner_vlan_id,
                             format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
+                    if(dhcpv6->dns1) {
+                        memcpy(&session->dhcpv6_dns1, dhcpv6->dns1, IPV6_ADDR_LEN);
+                        if(dhcpv6->dns2) {
+                            memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
+                        }
+                    }
                     if(session->l2tp == false && ctx->config.session_traffic_ipv6pd_pps && 
                        ctx->op.network_if && ctx->op.network_if->ip6.len) {
                         /* Start IPv6 PD Session Traffic */
@@ -745,6 +751,12 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                 LOG(IP, "IPv6 (Q-in-Q %u:%u) ICMPv6 RA prefix %s/%d\n",
                         session->key.outer_vlan_id, session->key.inner_vlan_id,
                         format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
+                if(icmpv6->dns1) {
+                    memcpy(&session->ipv6_dns1, icmpv6->dns1, IPV6_ADDR_LEN);
+                    if(icmpv6->dns2) {
+                        memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
+                    }
+                }
                 if(session->l2tp == false &&  ctx->config.session_traffic_ipv6_pps && 
                    ctx->op.network_if && ctx->op.network_if->ip6.len) {
                     /* Start IPv6 Session Traffic */

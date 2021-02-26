@@ -710,18 +710,22 @@ typedef struct bbl_session_
     ipv6addr_t  link_local_ipv6_address;
     ipv6_prefix ipv6_prefix;
     ipv6addr_t  ipv6_address;
+    ipv6addr_t  ipv6_dns1; /* DNS learned via RA */
+    ipv6addr_t  ipv6_dns2; /* DNS learned via RA */
+
+    /* DHCPv6 */
     ipv6_prefix delegated_ipv6_prefix;
     ipv6addr_t  delegated_ipv6_address;
     uint8_t     duid[DUID_LEN];
     uint8_t     server_duid[DHCPV6_BUFFER];
     uint8_t     server_duid_len;
-
-    /* DHCPv6 */
     bool        dhcpv6_requested;
     bool        dhcpv6_received;
     uint8_t     dhcpv6_type;
     uint8_t     dhcpv6_ia_pd_option[DHCPV6_BUFFER];
     uint8_t     dhcpv6_ia_pd_option_len;
+    ipv6addr_t  dhcpv6_dns1;
+    ipv6addr_t  dhcpv6_dns2;
 
     /* IGMP */
     bool     igmp_autostart;

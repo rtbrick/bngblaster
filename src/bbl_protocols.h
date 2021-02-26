@@ -144,6 +144,7 @@
 
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
 #define ICMPV6_OPTION_PREFIX            3
+#define ICMPV6_OPTION_DNS               25
 
 #define DHCPV6_TRANS_ID_LEN             3
 #define DHCPV6_TYPE_MASK                0x00ffffff
@@ -539,6 +540,8 @@ typedef struct bbl_icmpv6_ {
     uint8_t     *mac;
     uint8_t     *data;
     uint16_t     data_len;
+    ipv6addr_t  *dns1;
+    ipv6addr_t  *dns2;
 } bbl_icmpv6_t;
 
 typedef struct bbl_dhcpv6_ {
@@ -554,6 +557,8 @@ typedef struct bbl_dhcpv6_ {
     ipv6_prefix *delegated_prefix;
     uint8_t     *ia_pd_option;
     uint8_t      ia_pd_option_len;
+    ipv6addr_t  *dns1;
+    ipv6addr_t  *dns2;
 } bbl_dhcpv6_t;
 
 typedef struct bbl_l2tp_ {

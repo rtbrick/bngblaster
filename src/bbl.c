@@ -170,10 +170,14 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->ipv6_prefix.len = 0;
                         session->delegated_ipv6_prefix.len = 0;
                         session->icmpv6_ra_received = false;
+                        memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
+                        memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
                         session->dhcpv6_requested = false;
                         session->dhcpv6_received = false;
                         session->dhcpv6_type = DHCPV6_MESSAGE_SOLICIT;
                         session->dhcpv6_ia_pd_option_len = 0;
+                        memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
+                        memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
                         session->zapping_joined_group = NULL;
                         session->zapping_leaved_group = NULL;
                         session->zapping_count = 0;
