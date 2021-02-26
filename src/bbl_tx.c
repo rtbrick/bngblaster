@@ -1315,7 +1315,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
     bbl_arp_t arp = {0};
     bbl_ipv6_t ipv6 = {0};
     bbl_icmpv6_t icmpv6 = {0};
-    uint len = 0;
+    uint16_t len = 0;
     uint8_t *buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
 
     bbl_secondary_ip_s *secondary_ip;

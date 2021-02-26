@@ -607,8 +607,8 @@ typedef struct bbl_session_
     struct bbl_interface_ *interface; /* where this session is attached to */
     struct bbl_access_config_ *access_config;
 
-    u_char *write_buf; /* pointer to the slot in the tx_ring */
-    uint write_idx;
+    uint8_t *write_buf; /* pointer to the slot in the tx_ring */
+    uint16_t write_idx;
 
     /* Session timer */
     struct timer_ *timer_arp;
@@ -850,6 +850,7 @@ void bbl_session_network_tx_qnode_insert(struct bbl_session_ *session);
 void bbl_session_network_tx_qnode_remove(struct bbl_session_ *session);
 void bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t state);
 void bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session);
+bbl_ctx_s * bbl_add_ctx (void);
 
 WINDOW *log_win;
 WINDOW *stats_win;

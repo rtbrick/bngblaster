@@ -30,7 +30,7 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
     uint8_t *buf;
-    uint len = 0;
+    uint16_t len = 0;
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -127,7 +127,7 @@ bbl_add_session_packets_ipv6 (bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
     uint8_t *buf;
-    uint len = 0;
+    uint16_t len = 0;
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;

@@ -8,8 +8,8 @@
 #include "bbl_protocols.h"
 
 
-protocol_error_t decode_l2tp(uint8_t *buf, uint len, uint8_t *sp, uint sp_len, bbl_l2tp_t **_l2tp);
-protocol_error_t encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp);
+protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_l2tp_t **_l2tp);
+protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
 
 uint16_t
 checksum(uint16_t *buf, uint16_t len) {
@@ -116,7 +116,7 @@ bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *buf, uint16_t 
  * encode_dhcpv6
  */
 protocol_error_t
-encode_dhcpv6(uint8_t *buf, uint *len,
+encode_dhcpv6(uint8_t *buf, uint16_t *len,
               bbl_dhcpv6_t *dhcpv6) {
 
     *(uint32_t*)buf = dhcpv6->transaction_id;
@@ -188,7 +188,7 @@ encode_dhcpv6(uint8_t *buf, uint *len,
  * encode_icmp
  */
 protocol_error_t
-encode_bbl(uint8_t *buf, uint *len,
+encode_bbl(uint8_t *buf, uint16_t *len,
            bbl_bbl_t *bbl) {
 
     *(uint64_t*)buf = BBL_MAGIC_NUMBER;
@@ -228,7 +228,7 @@ encode_bbl(uint8_t *buf, uint *len,
  * encode_icmp
  */
 protocol_error_t
-encode_udp(uint8_t *buf, uint *len,
+encode_udp(uint8_t *buf, uint16_t *len,
            bbl_udp_t *udp) {
 
     protocol_error_t result;
@@ -259,7 +259,7 @@ encode_udp(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_icmpv6(uint8_t *buf, uint *len,
+encode_icmpv6(uint8_t *buf, uint16_t *len,
               bbl_icmpv6_t *icmp) {
 
 
@@ -323,7 +323,7 @@ encode_icmpv6(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_arp(uint8_t *buf, uint *len,
+encode_arp(uint8_t *buf, uint16_t *len,
            bbl_arp_t *arp) {
 
     *(uint16_t*)buf = 0x0100;
@@ -359,7 +359,7 @@ encode_arp(uint8_t *buf, uint *len,
  * encode_icmp
  */
 protocol_error_t
-encode_icmp(uint8_t *buf, uint *len,
+encode_icmp(uint8_t *buf, uint16_t *len,
             bbl_icmp_t *icmp) {
 
     uint8_t *start = buf;
@@ -389,7 +389,7 @@ encode_icmp(uint8_t *buf, uint *len,
  * encode_igmp
  */
 protocol_error_t
-encode_igmp(uint8_t *buf, uint *len,
+encode_igmp(uint8_t *buf, uint16_t *len,
             bbl_igmp_t *igmp) {
 
     uint8_t *start = buf;
@@ -459,7 +459,7 @@ encode_igmp(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_ipv6(uint8_t *buf, uint *len,
+encode_ipv6(uint8_t *buf, uint16_t *len,
              bbl_ipv6_t *ipv6) {
 
     protocol_error_t result;
@@ -516,8 +516,8 @@ encode_ipv6(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_ipv4(uint8_t *buf, uint *len,
-             bbl_ipv4_t *ipv4) {
+encode_ipv4(uint8_t *buf, uint16_t *len,
+            bbl_ipv4_t *ipv4) {
 
     protocol_error_t result;
 
@@ -598,7 +598,7 @@ encode_ipv4(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_ppp_pap(uint8_t *buf, uint *len,
+encode_ppp_pap(uint8_t *buf, uint16_t *len,
                bbl_pap_t *pap) {
 
     uint16_t *pap_len_field = NULL;
@@ -634,7 +634,7 @@ encode_ppp_pap(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_ppp_chap(uint8_t *buf, uint *len,
+encode_ppp_chap(uint8_t *buf, uint16_t *len,
                 bbl_chap_t *chap) {
 
     uint16_t *chap_len_field = NULL;
@@ -666,7 +666,7 @@ encode_ppp_chap(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_ppp_ip6cp(uint8_t *buf, uint *len,
+encode_ppp_ip6cp(uint8_t *buf, uint16_t *len,
                  bbl_ip6cp_t *ip6cp) {
 
     uint16_t *ip6cp_len_field;
@@ -703,7 +703,7 @@ encode_ppp_ip6cp(uint8_t *buf, uint *len,
 
 
 protocol_error_t
-encode_ppp_ipcp(uint8_t *buf, uint *len,
+encode_ppp_ipcp(uint8_t *buf, uint16_t *len,
                 bbl_ipcp_t *ipcp) {
 
     uint16_t *ipcp_len_field;
@@ -770,7 +770,7 @@ encode_ppp_ipcp(uint8_t *buf, uint *len,
  *  +-+-+-+-+
  */
 protocol_error_t
-encode_ppp_lcp(uint8_t *buf, uint *len,
+encode_ppp_lcp(uint8_t *buf, uint16_t *len,
                bbl_lcp_t *lcp) {
 
     uint16_t *lcp_len_field;
@@ -833,7 +833,7 @@ encode_ppp_lcp(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp) {
+encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp) {
 
     protocol_error_t result;
     uint16_t *l2tp_len_field = NULL;
@@ -938,7 +938,7 @@ encode_l2tp(uint8_t *buf, uint *len, bbl_l2tp_t *l2tp) {
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 protocol_error_t
-encode_pppoe_discovery(uint8_t *buf, uint *len,
+encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                        bbl_pppoe_discovery_t *pppoe) {
 
     uint16_t *pppoe_len_field;
@@ -1046,7 +1046,7 @@ encode_pppoe_discovery(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_pppoe_session(uint8_t *buf, uint *len,
+encode_pppoe_session(uint8_t *buf, uint16_t *len,
                      bbl_pppoe_session_t *pppoe) {
 
     protocol_error_t result;
@@ -1104,7 +1104,7 @@ encode_pppoe_session(uint8_t *buf, uint *len,
 }
 
 protocol_error_t
-encode_ethernet(uint8_t *buf, uint *len,
+encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_t *eth) {
 
     if(eth->dst) {
@@ -1167,8 +1167,8 @@ encode_ethernet(uint8_t *buf, uint *len,
  * decode_icmp
  */
 protocol_error_t
-decode_icmp(uint8_t *buf, uint len,
-            uint8_t *sp, uint sp_len,
+decode_icmp(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
             bbl_icmp_t **_icmp) {
 
     bbl_icmp_t *icmp;
@@ -1199,8 +1199,8 @@ decode_icmp(uint8_t *buf, uint len,
  * decode_icmpv6
  */
 protocol_error_t
-decode_icmpv6(uint8_t *buf, uint len,
-              uint8_t *sp, uint sp_len,
+decode_icmpv6(uint8_t *buf, uint16_t len,
+              uint8_t *sp, uint16_t sp_len,
               bbl_icmpv6_t **_icmpv6) {
 
     bbl_icmpv6_t *icmpv6;
@@ -1230,6 +1230,9 @@ decode_icmpv6(uint8_t *buf, uint len,
 
     switch(icmpv6->type) {
         case IPV6_ICMPV6_ROUTER_ADVERTISEMENT:
+            if(len < 12) {
+                return DECODE_ERROR;
+            }
             BUMP_BUFFER(buf, len, sizeof(uint8_t)); // hop limit
             flags = *buf;
             if(flags & ICMPV6_FLAGS_OTHER_CONFIG) icmpv6->other = true;
@@ -1240,6 +1243,9 @@ decode_icmpv6(uint8_t *buf, uint len,
                 option_len = *buf;
                 option_len = option_len * 8;
                 BUMP_BUFFER(buf, len, sizeof(uint8_t));
+                if(option_len < 2 || len < option_len-2) {
+                    return DECODE_ERROR;
+                }
                 if(option == ICMPV6_OPTION_PREFIX) {
                     icmpv6->prefix.len = *buf;
                     memcpy(&icmpv6->prefix.address, buf+14, IPV6_ADDR_LEN);
@@ -1249,6 +1255,9 @@ decode_icmpv6(uint8_t *buf, uint len,
             break;
         case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
         case IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT:
+            if(len < 20) {
+                return DECODE_ERROR;
+            }
             BUMP_BUFFER(buf, len, sizeof(uint32_t)); // flags / reserved
             memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
             break;
@@ -1270,8 +1279,8 @@ decode_icmpv6(uint8_t *buf, uint len,
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 protocol_error_t
-decode_igmp(uint8_t *buf, uint len,
-            uint8_t *sp, uint sp_len,
+decode_igmp(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
             bbl_igmp_t **_igmp) {
 
     bbl_igmp_t *igmp;
@@ -1282,7 +1291,7 @@ decode_igmp(uint8_t *buf, uint len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init IGMP header */
     igmp = (bbl_igmp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_igmp_t));
     memset(igmp, 0x0, sizeof(bbl_igmp_t));
 
@@ -1342,8 +1351,8 @@ decode_igmp(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_dhcpv6(uint8_t *buf, uint len,
-              uint8_t *sp, uint sp_len,
+decode_dhcpv6(uint8_t *buf, uint16_t len,
+              uint8_t *sp, uint16_t sp_len,
               bbl_dhcpv6_t **_dhcpv6) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -1396,8 +1405,8 @@ decode_dhcpv6(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_bbl(uint8_t *buf, uint len,
-           uint8_t *sp, uint sp_len,
+decode_bbl(uint8_t *buf, uint16_t len,
+           uint8_t *sp, uint16_t sp_len,
            bbl_bbl_t **_bbl) {
 
     bbl_bbl_t *bbl;
@@ -1446,8 +1455,8 @@ decode_bbl(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_qmx_li(uint8_t *buf, uint len,
-              uint8_t *sp, uint sp_len,
+decode_qmx_li(uint8_t *buf, uint16_t len,
+              uint8_t *sp, uint16_t sp_len,
               bbl_qmx_li_t **_qmx_li) {
 
     bbl_qmx_li_t *qmx_li;
@@ -1470,8 +1479,8 @@ decode_qmx_li(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_udp(uint8_t *buf, uint len,
-           uint8_t *sp, uint sp_len,
+decode_udp(uint8_t *buf, uint16_t len,
+           uint8_t *sp, uint16_t sp_len,
            bbl_udp_t **_udp) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -1533,8 +1542,8 @@ decode_udp(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_ipv6(uint8_t *buf, uint len,
-            uint8_t *sp, uint sp_len,
+decode_ipv6(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
             bbl_ipv6_t **_ipv6) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -1560,6 +1569,11 @@ decode_ipv6(uint8_t *buf, uint len,
     BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
     ipv6->dst = buf;
     BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
+
+    if(ipv6->payload_len > len) { 
+        return DECODE_ERROR;
+    }
+    len = ipv6->payload_len;
 
      /* Decode protocol */
     switch(ipv6->protocol) {
@@ -1599,8 +1613,8 @@ decode_ipv6(uint8_t *buf, uint len,
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 protocol_error_t
-decode_ipv4(uint8_t *buf, uint len,
-            uint8_t *sp, uint sp_len,
+decode_ipv4(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
             bbl_ipv4_t **_ipv4) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -1635,7 +1649,8 @@ decode_ipv4(uint8_t *buf, uint len,
 
     ipv4->tos = header->ip_tos;
     ipv4_total_len = be16toh(header->ip_len);
-    if(ipv4_header_len > ipv4_total_len) {
+    if(ipv4_header_len > ipv4_total_len || 
+       ipv4_total_len > len)  {
         return DECODE_ERROR;
     }
 
@@ -1674,8 +1689,8 @@ decode_ipv4(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_ppp_pap(uint8_t *buf, uint len,
-               uint8_t *sp, uint sp_len,
+decode_ppp_pap(uint8_t *buf, uint16_t len,
+               uint8_t *sp, uint16_t sp_len,
                bbl_pap_t **ppp_pap) {
 
     bbl_pap_t *pap;
@@ -1699,10 +1714,16 @@ decode_ppp_pap(uint8_t *buf, uint len,
         BUMP_BUFFER(buf, len, sizeof(uint32_t));
         pap->username_len = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(pap->username_len >= len) {
+            return DECODE_ERROR;
+        }
         pap->username = (char*)buf;
         BUMP_BUFFER(buf, len, pap->username_len);
         pap->password_len = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(pap->password_len > len) {
+            return DECODE_ERROR;
+        }
         pap->password = (char*)buf;
         BUMP_BUFFER(buf, len, pap->password_len);
     } else {
@@ -1713,6 +1734,9 @@ decode_ppp_pap(uint8_t *buf, uint len,
         pap->reply_message_len = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         if(pap->reply_message_len) {
+            if(pap->reply_message_len > len) {
+                return DECODE_ERROR;
+            }
             pap->reply_message = (char*)buf;
             BUMP_BUFFER(buf, len, pap->reply_message_len);
         }
@@ -1722,8 +1746,8 @@ decode_ppp_pap(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_ppp_chap(uint8_t *buf, uint len,
-                uint8_t *sp, uint sp_len,
+decode_ppp_chap(uint8_t *buf, uint16_t len,
+                uint8_t *sp, uint16_t sp_len,
                 bbl_chap_t **ppp_chap) {
 
     bbl_chap_t *chap;
@@ -1745,12 +1769,11 @@ decode_ppp_chap(uint8_t *buf, uint len,
             return DECODE_ERROR;
         }
         BUMP_BUFFER(buf, len, sizeof(uint32_t));
-
         chap->challenge_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
         if(chap->challenge_len > len) {
             return DECODE_ERROR;
         }
-        BUMP_BUFFER(buf, len, sizeof(uint8_t));
         chap->challenge = buf;
         BUMP_BUFFER(buf, len, chap->challenge_len);
     } else {
@@ -1760,6 +1783,9 @@ decode_ppp_chap(uint8_t *buf, uint len,
         BUMP_BUFFER(buf, len, sizeof(uint32_t));
         chap->reply_message_len = chap_len - 4;
         if(chap->reply_message_len) {
+            if(chap->reply_message_len > len) {
+                return DECODE_ERROR;
+            }
             chap->reply_message = (char*)buf;
             BUMP_BUFFER(buf, len, chap->reply_message_len);
         }
@@ -1769,8 +1795,8 @@ decode_ppp_chap(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_ppp_ip6cp(uint8_t *buf, uint len,
-                 uint8_t *sp, uint sp_len,
+decode_ppp_ip6cp(uint8_t *buf, uint16_t len,
+                 uint8_t *sp, uint16_t sp_len,
                  bbl_ip6cp_t **ppp_ip6cp) {
 
     bbl_ip6cp_t *ip6cp;
@@ -1798,7 +1824,7 @@ decode_ppp_ip6cp(uint8_t *buf, uint len,
     }
     ip6cp_len -= 4;
 
-    if(ip6cp_len < len) {
+    if(ip6cp_len > len) {
         return DECODE_ERROR;
     }
 
@@ -1847,8 +1873,8 @@ decode_ppp_ip6cp(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_ppp_ipcp(uint8_t *buf, uint len,
-                uint8_t *sp, uint sp_len,
+decode_ppp_ipcp(uint8_t *buf, uint16_t len,
+                uint8_t *sp, uint16_t sp_len,
                 bbl_ipcp_t **ppp_ipcp) {
 
     bbl_ipcp_t *ipcp;
@@ -1876,7 +1902,7 @@ decode_ppp_ipcp(uint8_t *buf, uint len,
     }
     ipcp_len -= 4;
 
-    if(ipcp_len < len) {
+    if(ipcp_len > len) {
         return DECODE_ERROR;
     }
 
@@ -1942,8 +1968,8 @@ decode_ppp_ipcp(uint8_t *buf, uint len,
  *  +-+-+-+-+
  */
 protocol_error_t
-decode_ppp_lcp(uint8_t *buf, uint len,
-               uint8_t *sp, uint sp_len,
+decode_ppp_lcp(uint8_t *buf, uint16_t len,
+               uint8_t *sp, uint16_t sp_len,
                bbl_lcp_t **ppp_lcp) {
 
     bbl_lcp_t *lcp;
@@ -1971,7 +1997,7 @@ decode_ppp_lcp(uint8_t *buf, uint len,
     }
     lcp_len -= 4;
 
-    if(lcp_len < len) {
+    if(lcp_len > len) {
         return DECODE_ERROR;
     }
 
@@ -2032,8 +2058,8 @@ decode_ppp_lcp(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_l2tp(uint8_t *buf, uint len,
-            uint8_t *sp, uint sp_len,
+decode_l2tp(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
             bbl_l2tp_t **_l2tp) {
 
     protocol_error_t ret_val = UNKNOWN_PROTOCOL;
@@ -2186,8 +2212,8 @@ decode_l2tp(uint8_t *buf, uint len,
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 protocol_error_t
-decode_pppoe_discovery(uint8_t *buf, uint len,
-                       uint8_t *sp, uint sp_len,
+decode_pppoe_discovery(uint8_t *buf, uint16_t len,
+                       uint8_t *sp, uint16_t sp_len,
                        bbl_pppoe_discovery_t **pppoe_discovery) {
     bbl_pppoe_discovery_t *pppoe;
     uint16_t pppoe_len = 0;
@@ -2252,8 +2278,8 @@ decode_pppoe_discovery(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_pppoe_session(uint8_t *buf, uint len,
-                     uint8_t *sp, uint sp_len,
+decode_pppoe_session(uint8_t *buf, uint16_t len,
+                     uint8_t *sp, uint16_t sp_len,
                      bbl_pppoe_session_t **pppoe_session) {
 
     protocol_error_t ret_val = UNKNOWN_PROTOCOL;
@@ -2318,8 +2344,8 @@ decode_pppoe_session(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_arp(uint8_t *buf, uint len,
-           uint8_t *sp, uint sp_len,
+decode_arp(uint8_t *buf, uint16_t len,
+           uint8_t *sp, uint16_t sp_len,
            bbl_arp_t **_arp) {
 
     bbl_arp_t *arp;
@@ -2349,8 +2375,8 @@ decode_arp(uint8_t *buf, uint len,
 }
 
 protocol_error_t
-decode_ethernet(uint8_t *buf, uint len,
-                uint8_t *sp, uint sp_len,
+decode_ethernet(uint8_t *buf, uint16_t len,
+                uint8_t *sp, uint16_t sp_len,
                 bbl_ethernet_header_t **ethernet) {
 
     bbl_ethernet_header_t *eth;

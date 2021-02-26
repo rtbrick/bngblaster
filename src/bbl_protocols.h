@@ -189,7 +189,7 @@
 
 #define BUMP_WRITE_BUFFER(_buf, _len, _size) \
     (_buf) += _size; \
-    *(uint*)(_len) += _size;
+    *(uint16_t*)(_len) += _size;
 
 typedef uint8_t ipv6addr_t[IPV6_ADDR_LEN];
 
@@ -604,15 +604,15 @@ typedef struct bbl_qmx_li_ {
  * decode_ethernet
  */
 protocol_error_t
-decode_ethernet(uint8_t *buf, uint len,
-                uint8_t *sp, uint sp_len,
+decode_ethernet(uint8_t *buf, uint16_t len,
+                uint8_t *sp, uint16_t sp_len,
                 bbl_ethernet_header_t **ethernet);
 
 /*
  * encode_ethernet
  */
 protocol_error_t
-encode_ethernet(uint8_t *buf, uint *len,
+encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_t *eth);
 
 #endif
