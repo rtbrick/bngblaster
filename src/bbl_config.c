@@ -102,15 +102,15 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 
     /* Optionally overload some settings per range */
     if (json_unpack(access_interface, "{s:s}", "username", &s) == 0) {
-        snprintf(access_config->username, USERNAME_LEN, "%s", s);
+        access_config->username = strdup(s);
     } else {
-        snprintf(access_config->username, USERNAME_LEN, "%s", ctx->config.username);
+        access_config->username = strdup(ctx->config.username);
     }
 
     if (json_unpack(access_interface, "{s:s}", "password", &s) == 0) {
-        snprintf(access_config->password, PASSWORD_LEN, "%s", s);
+        access_config->password = strdup(s);
     } else {
-        snprintf(access_config->password, PASSWORD_LEN, "%s", ctx->config.password);
+        access_config->password = strdup(ctx->config.password);
     }
 
     if (json_unpack(access_interface, "{s:s}", "authentication-protocol", &s) == 0) {
@@ -128,15 +128,15 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 
     /* Access Line */
     if (json_unpack(access_interface, "{s:s}", "agent-circuit-id", &s) == 0) {
-        snprintf(access_config->agent_circuit_id, ACI_LEN, "%s", s);
+        access_config->agent_circuit_id = strdup(s);
     } else {
-        snprintf(access_config->agent_circuit_id, ACI_LEN, "%s", ctx->config.agent_circuit_id);
+        access_config->agent_circuit_id = strdup(ctx->config.agent_circuit_id);
     }
 
     if (json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
-        snprintf(access_config->agent_remote_id, ARI_LEN, "%s", s);
+        access_config->agent_remote_id = strdup(s);
     } else {
-        snprintf(access_config->agent_remote_id, ARI_LEN, "%s", ctx->config.agent_remote_id);
+        access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
     }
 
     value = json_object_get(access_interface, "rate-up");
@@ -223,8 +223,9 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     const char *s;
     uint32_t ipv4;
     int i, size;
-
     bbl_access_config_s *access_config = NULL;
+    bbl_l2tp_server_t *l2tp_server = NULL;
+    bbl_secondary_ip_s *secondary_ip;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -296,7 +297,6 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             ctx->config.sessions_stop_rate = json_number_value(value);
         }
         /* ... Deprecated */
-
         value = json_object_get(section, "session-time");
         if (json_is_number(value)) {
             ctx->config.pppoe_session_time = json_number_value(value);
@@ -313,6 +313,13 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.pppoe_discovery_retry = json_number_value(value);
         }
+        if (json_unpack(section, "{s:s}", "service-name", &s) == 0) {
+            ctx->config.pppoe_service_name = strdup(s);
+        }
+        value = json_object_get(section, "host-uniq");
+        if (json_is_boolean(value)) {
+            ctx->config.pppoe_host_uniq = json_boolean_value(value);
+        }
     }
 
     /* PPP Configuration */
@@ -325,10 +332,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         sub = json_object_get(section, "authentication");
         if (json_is_object(sub)) {
             if (json_unpack(sub, "{s:s}", "username", &s) == 0) {
-                snprintf(ctx->config.username, USERNAME_LEN, "%s", s);   
+                ctx->config.username = strdup(s);   
             }
             if (json_unpack(sub, "{s:s}", "password", &s) == 0) {
-                snprintf(ctx->config.password, PASSWORD_LEN, "%s", s);
+                ctx->config.password = strdup(s);
             }
             value = json_object_get(sub, "timeout");
             if (json_is_number(value)) {
@@ -510,10 +517,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     section = json_object_get(root, "access-line");
     if (json_is_object(section)) {
         if (json_unpack(section, "{s:s}", "agent-circuit-id", &s) == 0) {
-            snprintf(ctx->config.agent_circuit_id, ACI_LEN, "%s", s );
+            ctx->config.agent_circuit_id = strdup(s);
         }
         if (json_unpack(section, "{s:s}", "agent-remote-id", &s) == 0) {
-            snprintf(ctx->config.agent_remote_id, ARI_LEN, "%s", s );
+            ctx->config.agent_remote_id = strdup(s);
         }
         value = json_object_get(section, "rate-up");
         if (json_is_number(value)) {
@@ -545,6 +552,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
         }
     }
+
 
     /* Interface Configuration */
     section = json_object_get(root, "interfaces");
@@ -578,7 +586,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                     fprintf(stderr, "JSON config error: Invalid value for network->gateway\n");
                     return false;
                 }
-                ctx->config.network_gateway= ipv4;
+                ctx->config.network_gateway = ipv4;
             }
             if (json_unpack(sub, "{s:s}", "address-ipv6", &s) == 0) {
                 if(!inet_pton(AF_INET6, s, &ctx->config.network_ip6.address)) {
@@ -632,6 +640,116 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         fprintf(stderr, "JSON config error: Missing interfaces section\n");
         return false;
     }
+
+    /* L2TP Server Configuration (LNS) */
+    section = json_object_get(root, "l2tp-server");
+    if (json_is_array(section)) {
+        if(!ctx->config.network_gateway || !ctx->config.network_ip) {
+            fprintf(stderr, "JSON config error: Failed to add L2TP server because of missing or incomplete network interface config\n");
+            return false;
+        }
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            sub = json_array_get(section, i);
+            if(!l2tp_server) {
+                ctx->config.l2tp_server = malloc(sizeof(bbl_l2tp_server_t));
+                l2tp_server = ctx->config.l2tp_server;
+            } else {
+                l2tp_server->next = malloc(sizeof(bbl_l2tp_server_t));
+                l2tp_server = l2tp_server->next;
+            }
+            memset(l2tp_server, 0x0, sizeof(bbl_l2tp_server_t));
+            if (json_unpack(sub, "{s:s}", "name", &s) == 0) {
+                l2tp_server->host_name = strdup(s);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
+                return false;
+            }
+            if (json_unpack(sub, "{s:s}", "secret", &s) == 0) {
+                l2tp_server->secret = strdup(s);
+            }
+            if (json_unpack(sub, "{s:s}", "address", &s) == 0) {
+                if(!inet_pton(AF_INET, s, &ipv4)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
+                    return false;
+                }
+                l2tp_server->ip = ipv4;
+                CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
+
+                if(ipv4 != ctx->config.network_ip) {
+                    /* Add secondary IP address to be served by ARP */
+                    secondary_ip = ctx->config.secondary_ip_addresses;
+                    if(secondary_ip) {
+                        while(secondary_ip) {
+                            if(secondary_ip->ip == ipv4) {
+                                /* Address is already known ... */
+                                break;
+                            }
+                            if(secondary_ip->next) {
+                                /* Check next address ... */
+                                secondary_ip = secondary_ip->next;
+                            } else {
+                                /* Append secondary address ... */
+                                secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
+                                memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
+                                secondary_ip = secondary_ip->next;
+                                secondary_ip->ip = ipv4;
+                                break;
+                            }
+                        }                        
+                    } else {
+                        /* Add first secondary address */
+                        ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
+                        memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
+                        ctx->config.secondary_ip_addresses->ip = ipv4;
+                    }
+                }
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
+            }
+            value = json_object_get(sub, "receive-window-size");
+            if (json_is_number(value)) {
+                l2tp_server->receive_window = json_number_value(value);
+            } else {
+                l2tp_server->receive_window = 4;
+            }
+            value = json_object_get(sub, "max-retry");
+            if (json_is_number(value)) {
+                l2tp_server->max_retry = json_number_value(value);
+            } else {
+                l2tp_server->max_retry = 30;
+            }
+            if (json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
+                if (strcmp(s, "default") == 0) {
+                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+                } else if (strcmp(s, "slow") == 0) {
+                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
+                } else if (strcmp(s, "aggressive") == 0) {
+                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
+                } else {
+                    fprintf(stderr, "Config error: Invalid value for l2tp-server->congestion-mode\n");
+                    return false;
+                }
+            } else {
+                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+            }
+            value = json_object_get(sub, "data-control-priority");
+            if (json_is_boolean(value)) {
+                l2tp_server->data_control_priority = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "data-length");
+            if (json_is_boolean(value)) {
+                l2tp_server->data_lenght = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "data-offset");
+            if (json_is_boolean(value)) {
+                l2tp_server->data_offset = json_boolean_value(value);
+            }
+        }   
+    } else if (json_is_object(sub)) {
+        fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+    }
+
     return true;
 }
 
@@ -665,10 +783,10 @@ bbl_config_load_json (char *filename, bbl_ctx_s *ctx) {
  */
 void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {
-    snprintf(ctx->config.username, USERNAME_LEN, "%s", g_default_user);
-    snprintf(ctx->config.password,  PASSWORD_LEN, "%s", g_default_pass);
-    snprintf(ctx->config.agent_remote_id, ARI_LEN, "%s", g_default_ari);
-    snprintf(ctx->config.agent_circuit_id, ACI_LEN, "%s", g_default_aci);
+    ctx->config.username = (char *)g_default_user;
+    ctx->config.password = (char *)g_default_pass;
+    ctx->config.agent_remote_id = (char *)g_default_ari;
+    ctx->config.agent_circuit_id = (char *)g_default_aci;
     ctx->config.tx_interval = 5;
     ctx->config.rx_interval = 5;
     ctx->config.qdisc_bypass = true;

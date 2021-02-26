@@ -318,6 +318,8 @@ Attribute | Description | Default
 `reconnect` | Automatically reconnect sessions if terminated | false
 `discovery-timeout` | PPPoE discovery (PADI and PADR) timeout in seconds | 5
 `discovery-retry` | PPPoE discovery (PADI and PADR) max retry | 10
+`service-name` | PPPoE discovery service name | 
+`host-uniq` | PPPoE discovery host-uniq | false
 
 ## PPP
 
@@ -442,3 +444,55 @@ Attribute | Description | Default
 `ipv4-pps` | Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses | 0 (disabled)
 `ipv6-pps` | Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses | 0 (disabled)
 `ipv6pd-pps` | Generate bidirectional Ipv6 traffic between network interface and all session delegated IPv6 addresses | 0 (disabled)
+
+## l2TP Server
+
+This section describes all attributes of the `l2tp-server` (LNS) hierarchy. 
+
+The BNG Blaster supports multiple L2TPv2 servers (LNS) over the network interface
+as shown in the example below. 
+
+```json
+{
+    "interfaces": {
+        "network": {
+            "interface": "eth2",
+            "address": "10.0.0.1",
+            "gateway": "10.0.0.2"
+        }
+    },
+    "l2tp-server": [
+         {
+            "name": "LNS1",
+            "address": "10.0.0.10",
+            "secret": "test1",
+        },
+        {
+            "name": "LNS2",
+            "address": "10.0.0.11",
+            "secret": "test2",
+        },
+    ]
+}
+```
+
+There is actually no hard limit in the amount of L2TP servers. 
+
+Attribute | Description | Default 
+--------- | ----------- | -------
+`name` | Mandatory L2TP LNS server hostname (AVP 7) | 
+`address` | Mandatory L2TP server address |
+`secret` | Tunnel secret |
+`receive-window-size` | Control messages receive window size | 4
+`max-retry` | Control messages max retry | 30
+`congestion-mode` | Control messages congestion mode | default
+`data-control-priority` | Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, ...) | false
+`data-length` | Set length bit for all data packets | false
+`data-offset` | Set offset bit with offset zero for all data packets | false
+
+The BNG Blaster supports different congestion modes for the 
+reliable delivery of control messages. The `default` mode
+is described in RFC2661 appendix A (Control Channel Slow Start and 
+Congestion Avoidance). The mode `slow` uses a fixed control window
+size of 1 where `aggressive` sticks to max permitted based on peer 
+received window size. 

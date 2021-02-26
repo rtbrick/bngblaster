@@ -114,6 +114,7 @@ Attribute | Description
 `session-traffic-disabled` | Disable session traffic for all sessions
 `multicast-traffic-start` | Start sending multicast traffic from network interface 
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
+`li-flows` | List all LI flows with detailed statistics
 
 ### Session Commands
 
@@ -147,3 +148,34 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
 `igmp-leave` | Leave group | `group` |
 `igmp-info` | IGMP information | |
+
+### L2TP Commands
+
+Attribute | Description | Mandatory Arguments | Optional Arguments
+--------- | ----------- | ------------------- | ------------------ 
+`l2tp-tunnels` | L2TP tunnel information | |
+`l2tp-sessions` | L2TP session information | | `tunnel-id`, `session-id`
+`l2tp-csurq`| Send L2TP CSURQ | `tunnel-id` | `sessions`
+
+The L2TP CSURQ command expects the local tunnel-id and a list of remote 
+session-id for which a connect speed update is requested.
+
+`$ cat command.json | jq .`
+```json
+{
+    "command": "l2tp-csurq",
+    "arguments": {
+        "tunnel-id": 1,
+        "sessions": [
+            1,
+            2,
+            3,
+            4
+        ]
+    }
+}
+```
+
+This command can be executed as shown below using the CLI tool. 
+
+`$ sudo ./cli.py run.sock l2tp-csurq tunnel-id 1 sessions [1,2,3,4]` 

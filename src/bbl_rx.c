@@ -30,7 +30,7 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
     uint8_t *buf;
-    uint len = 0;
+    uint16_t len = 0;
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -83,6 +83,10 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     }
     session->access_ipv4_tx_packet_len = len;
 
+    if(session->l2tp) {
+        return true;
+    }
+
     /* Prepare Network to Access (Session) Packet */
     len = 0;
     if(!session->network_ipv4_tx_packet_template) {
@@ -123,7 +127,7 @@ bbl_add_session_packets_ipv6 (bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
     uint8_t *buf;
-    uint len = 0;
+    uint16_t len = 0;
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -262,9 +266,11 @@ bbl_session_traffic_ipv4(timer_s *timer)
     }
     if(session->session_traffic) {
         session->send_requests |= BBL_SEND_SESSION_IPV4;
-        session->network_send_requests |= BBL_SEND_SESSION_IPV4;
         bbl_session_tx_qnode_insert(session);
-        bbl_session_network_tx_qnode_insert(session);
+        if(session->l2tp == false) {
+            session->network_send_requests |= BBL_SEND_SESSION_IPV4;
+            bbl_session_network_tx_qnode_insert(session);
+        }
     }
 }
 
@@ -338,7 +344,7 @@ bbl_lcp_echo(timer_s *timer)
             interface->stats.lcp_echo_timeout++;
         }
         if(session->lcp_retries > ctx->config.lcp_keepalive_retry) {
-            LOG(LCP, "LCP ECHO TIMEOUT (Q-in-Q %u:%u)\n",
+            LOG(PPPOE, "LCP ECHO TIMEOUT (Q-in-Q %u:%u)\n",
                 session->key.outer_vlan_id, session->key.inner_vlan_id);
             /* Force terminate session after timeout. */
             session->send_requests = BBL_SEND_DISCOVERY;
@@ -565,48 +571,6 @@ bbl_igmp_initial_join(timer_s *timer)
 }
 
 void
-bbl_igmp_timeout(timer_s *timer)
-{
-    bbl_session_s *session = timer->data;
-    bbl_igmp_group_s *group = NULL;
-    int i;
-    bool send = false;
-
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-        session->ipcp_state != BBL_PPP_OPENED) {
-            return;
-        }
-    }
-
-    for(i=0; i < IGMP_MAX_GROUPS; i++) {
-        group = &session->igmp_groups[i];
-        if(group->state == IGMP_GROUP_JOINING) {
-            if(group->robustness_count) {
-                session->send_requests |= BBL_SEND_IGMP;
-                group->send = true;
-                send = true;
-            } else {
-                group->state = IGMP_GROUP_ACTIVE;
-            }
-        } else if(group->state == IGMP_GROUP_LEAVING) {
-            if(group->robustness_count) {
-                session->send_requests |= BBL_SEND_IGMP;
-                group->send = true;
-                send = true;
-            } else {
-                group->state = IGMP_GROUP_IDLE;
-            }
-        }
-    }
-    if(send) {
-        session->send_requests |= BBL_SEND_IGMP;
-        bbl_session_tx_qnode_insert(session);
-    }
-    return;
-}
-
-void
 bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
@@ -628,7 +592,14 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                     LOG(IP, "IPv6 (Q-in-Q %u:%u) DHCPv6 PD prefix %s/%d\n",
                             session->key.outer_vlan_id, session->key.inner_vlan_id,
                             format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
-                    if(ctx->config.session_traffic_ipv6pd_pps && ctx->op.network_if && ctx->op.network_if->ip6.len) {
+                    if(dhcpv6->dns1) {
+                        memcpy(&session->dhcpv6_dns1, dhcpv6->dns1, IPV6_ADDR_LEN);
+                        if(dhcpv6->dns2) {
+                            memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
+                        }
+                    }
+                    if(session->l2tp == false && ctx->config.session_traffic_ipv6pd_pps && 
+                       ctx->op.network_if && ctx->op.network_if->ip6.len) {
                         /* Start IPv6 PD Session Traffic */
                         if(bbl_add_session_packets_ipv6(ctx, session, true)) {
                             if(ctx->config.session_traffic_ipv6pd_pps > 1) {
@@ -780,7 +751,14 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                 LOG(IP, "IPv6 (Q-in-Q %u:%u) ICMPv6 RA prefix %s/%d\n",
                         session->key.outer_vlan_id, session->key.inner_vlan_id,
                         format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
-                if(ctx->config.session_traffic_ipv6_pps && ctx->op.network_if && ctx->op.network_if->ip6.len) {
+                if(icmpv6->dns1) {
+                    memcpy(&session->ipv6_dns1, icmpv6->dns1, IPV6_ADDR_LEN);
+                    if(icmpv6->dns2) {
+                        memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
+                    }
+                }
+                if(session->l2tp == false &&  ctx->config.session_traffic_ipv6_pps && 
+                   ctx->op.network_if && ctx->op.network_if->ip6.len) {
                     /* Start IPv6 Session Traffic */
                     if(bbl_add_session_packets_ipv6(ctx, session, false)) {
                         if(ctx->config.session_traffic_ipv6_pps > 1) {
@@ -849,11 +827,13 @@ bbl_rx_igmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
     int i;
     bool send = false;
 
-    //LOG(IGMP, "IGMPv%d (Q-in-Q %u:%u) type %s received\n",
-    //    igmp->version,
-    //    session->key.outer_vlan_id,
-    //    session->key.inner_vlan_id,
-    //    val2key(igmp_msg_names, igmp->type));
+#if 0
+    LOG(IGMP, "IGMPv%d (Q-in-Q %u:%u) type %s received\n",
+        igmp->version,
+        session->key.outer_vlan_id,
+        session->key.inner_vlan_id,
+        val2key(igmp_msg_names, igmp->type));
+#endif
 
     if(igmp->type == IGMP_TYPE_QUERY) {
 
@@ -1036,6 +1016,13 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     if(session->session_state == BBL_PPP_AUTH) {
         switch(pap->code) {
             case PAP_CODE_ACK:
+                if(pap->reply_message_len) {
+                    if(strncmp(pap->reply_message, L2TP_REPLY_MESSAGE, pap->reply_message_len) == 0) {
+                        session->l2tp = true;
+                        LOG(L2TP, "L2TP (Q-in-Q %u:%u) Session with BNG Blaster LNS\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    }
+                }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
                 if(ctx->config.ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
@@ -1093,6 +1080,13 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 }
                 break;
             case CHAP_CODE_SUCCESS:
+                if(chap->reply_message_len) {
+                    if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, chap->reply_message_len) == 0) {
+                        session->l2tp = true;
+                        LOG(L2TP, "L2TP (Q-in-Q %u:%u) Session with BNG Blaster LNS\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    }
+                }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
                 if(ctx->config.ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
@@ -1161,7 +1155,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 /* Start LCP echo request / keep alive */
                 timer_add_periodic(&ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", ctx->config.lcp_keepalive_interval, 0, session, bbl_lcp_echo);
             }
-            if(ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
+            if(session->l2tp == false && ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
                 /* Start IGMP */
                 timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, bbl_igmp_initial_join);
             }
@@ -1624,10 +1618,42 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
         case PPPOE_PADO:
             interface->stats.pado_rx++;
             if(session->session_state == BBL_PPPOE_INIT) {
+                /* Store server MAC address */
                 memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
-                if(pppoed->ac_cookie_len && pppoed->ac_cookie_len <= PPPOE_AC_COOKIE_LEN) {
+                if(pppoed->ac_cookie_len) {
+                    /* Store AC cookie */
+                    if(session->pppoe_ac_cookie) free(session->pppoe_ac_cookie);
+                    session->pppoe_ac_cookie = malloc(pppoed->ac_cookie_len);
                     session->pppoe_ac_cookie_len = pppoed->ac_cookie_len;
                     memcpy(session->pppoe_ac_cookie, pppoed->ac_cookie, pppoed->ac_cookie_len);
+                }
+                if(pppoed->service_name_len) {
+                    if(session->pppoe_service_name_len) {
+                        /* Compare service name */
+                        if(pppoed->service_name_len != session->pppoe_service_name_len || 
+                           memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
+                            LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong service name in PADO\n",
+                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            return;
+                        }
+                    } else {
+                        /* Store service name */
+                        session->pppoe_service_name = malloc(pppoed->service_name_len);
+                        session->pppoe_service_name_len = pppoed->service_name_len;
+                        memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
+                    }
+                } else {
+                    LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Missing service name in PADO\n",
+                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    return;
+                }
+                if(session->pppoe_host_uniq) {
+                    if(pppoed->host_uniq_len != sizeof(uint64_t) || 
+                       *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
+                        LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong host-uniq in PADO\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        return;
+                    }
                 }
                 bbl_session_update_state(ctx, session, BBL_PPPOE_REQUEST);
                 session->send_requests = BBL_SEND_DISCOVERY;
@@ -1637,12 +1663,32 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
         case PPPOE_PADS:
             interface->stats.pads_rx++;
             if(session->session_state == BBL_PPPOE_REQUEST) {
-                session->pppoe_session_id = pppoed->session_id;
-                bbl_session_update_state(ctx, session, BBL_PPP_LINK);
-                session->send_requests = BBL_SEND_LCP_REQUEST;
-                session->lcp_request_code = PPP_CODE_CONF_REQUEST;
-                session->lcp_state = BBL_PPP_INIT;
-                bbl_session_tx_qnode_insert(session);
+                if(pppoed->session_id) {
+                    if(session->pppoe_host_uniq) {
+                        if(pppoed->host_uniq_len != sizeof(uint64_t) || 
+                           *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
+                            LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong host-uniq in PADS\n",
+                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            return;
+                        }
+                    }
+                    if(pppoed->service_name_len != session->pppoe_service_name_len || 
+                        memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
+                        LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong service name in PADS\n",
+                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        return;
+                    }
+                    session->pppoe_session_id = pppoed->session_id;
+                    bbl_session_update_state(ctx, session, BBL_PPP_LINK);
+                    session->send_requests = BBL_SEND_LCP_REQUEST;
+                    session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+                    session->lcp_state = BBL_PPP_INIT;
+                    bbl_session_tx_qnode_insert(session);
+                } else {
+                    LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Invalid PADS\n",
+                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    return;
+                }
             }
             break;
         case PPPOE_PADT:
@@ -1731,6 +1777,8 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
 void
 bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    bbl_secondary_ip_s *secondary_ip;
+
     bbl_arp_t *arp = (bbl_arp_t*)eth->next;
     if(arp->sender_ip == interface->gateway) {
         interface->arp_resolved = true;
@@ -1738,7 +1786,20 @@ bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
         }
         if(arp->code == ARP_REQUEST) {
-            interface->send_requests |= BBL_IF_SEND_ARP_REPLY;
+            if(arp->target_ip == interface->ip) {
+                interface->arp_reply_ip = interface->ip;
+                interface->send_requests |= BBL_IF_SEND_ARP_REPLY;
+            } else {
+                secondary_ip = interface->ctx->config.secondary_ip_addresses;
+                while(secondary_ip) {
+                    if(arp->target_ip == secondary_ip->ip) {
+                        secondary_ip->arp_reply = true;
+                        interface->send_requests |= BBL_IF_SEND_SEC_ARP_REPLY;
+                        return;
+                    }
+                    secondary_ip = secondary_ip->next;
+                }
+            }
         }
     }
 }
@@ -1764,6 +1825,8 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         }
     }
 }
+
+
 
 void
 bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
@@ -1794,6 +1857,10 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
                     bbl = (bbl_bbl_t*)udp->next;
+                } else if(udp->protocol == UDP_PROTOCOL_QMX_LI) {
+                    return bbl_qmx_li_handler_rx(eth, (bbl_qmx_li_t*)udp->next, interface);
+                } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
+                    return bbl_l2tp_handler_rx(eth, (bbl_l2tp_t*)udp->next, interface);
                 }
             }
             break;

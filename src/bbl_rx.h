@@ -11,9 +11,6 @@
 #define __BBL_RX_H__
 
 void
-bbl_igmp_timeout(timer_s *timer);
-
-void
 bbl_rx_job (timer_s *timer);
 
 #endif
