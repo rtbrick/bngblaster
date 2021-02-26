@@ -375,7 +375,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
 
     uint8_t sp[L2TP_MAX_AVP_SIZE]; /* scratchpad memory to craft the AVP attributes */
     uint16_t sp_len = 0;
-    uint len = 0;
+    uint16_t len = 0;
 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
@@ -459,7 +459,7 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
     bbl_ipv4_t ipv4 = {0};
     bbl_udp_t udp = {0};
     bbl_l2tp_t l2tp = {0};
-    uint len = 0;
+    uint16_t len = 0;
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->ctx->config.network_vlan;

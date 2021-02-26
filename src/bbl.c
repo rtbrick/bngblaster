@@ -208,7 +208,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     uint32_t source;
 
     int i;
-    uint len = 0;
+    uint16_t len = 0;
 
     if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
         interface->mc_packets = malloc(ctx->config.igmp_group_count * 1500);
