@@ -1247,8 +1247,18 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                     return DECODE_ERROR;
                 }
                 if(option == ICMPV6_OPTION_PREFIX) {
+                    if(option_len < 32) {
+                        return DECODE_ERROR;
+                    }
                     icmpv6->prefix.len = *buf;
                     memcpy(&icmpv6->prefix.address, buf+14, IPV6_ADDR_LEN);
+                } else if(option == ICMPV6_OPTION_DNS) {
+                    if(option_len >= 24) {
+                        icmpv6->dns1 = (ipv6addr_t*)(buf+6);
+                        if(option_len >= 40) {
+                            icmpv6->dns2 = (ipv6addr_t*)(buf+22);
+                        }
+                    }
                 }
                 BUMP_BUFFER(buf, len, option_len-2);
             }
@@ -1379,11 +1389,17 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
         option_len = be16toh(*(uint16_t*)buf);
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(option_len > len) {
+            return DECODE_ERROR;
+        }
         switch(option) {
             case DHCPV6_OPTION_RAPID_COMMIT:
                 dhcpv6->rapid = true;
                 break;
             case DHCPV6_OPTION_IA_PD:
+                if(option_len < 41) {
+                    return DECODE_ERROR;
+                }
                 dhcpv6->ia_pd_option = buf;
                 dhcpv6->ia_pd_option_len = option_len;
                 option = be16toh(*(uint16_t*)(buf+12));
@@ -1392,9 +1408,19 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 }
                 break;
             case DHCPV6_OPTION_SERVERID:
+                if(option_len < 2) {
+                    return DECODE_ERROR;
+                }
                 dhcpv6->server_duid = buf;
                 dhcpv6->server_duid_len = option_len;
                 break;
+            case DHCPV6_OPTION_DNS_SERVERS:
+                if(option_len >= 16) {
+                    dhcpv6->dns1 = (ipv6addr_t*)(buf);
+                    if(option_len >= 32) {
+                        dhcpv6->dns2 = (ipv6addr_t*)(buf+16);
+                    }
+                }
             default:
                 break;
         }
