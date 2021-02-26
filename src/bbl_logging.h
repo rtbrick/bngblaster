@@ -25,13 +25,13 @@ enum {
     TIMER,
     TIMER_DETAIL,
     IO,
-    LCP,
-    NCP,
+    PPPOE,
     NORMAL,
     ERROR,
     PCAP,
     IP,
     LOSS,
+    L2TP,
     LOG_ID_MAX
 };
 

@@ -63,6 +63,16 @@ ppp_state_string(uint32_t state) {
     }
 }
 
+static char *
+string_or_na(char *string) {
+    if(string) {
+        return string;
+    } else {
+        return "N/A";
+    }
+}
+
+
 ssize_t
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) {
     ssize_t result = 0;
@@ -343,7 +353,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments
             result = json_dumpfd(root, fd, 0);
             json_decref(root);
         } else {
-            bbl_ctrl_status(fd, "error", 500, "internal error");
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
             json_decref(groups);
         }        
         return result;
@@ -380,8 +390,14 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
     void **search;
 
     const char *ipv4 = NULL;
+    const char *dns1 = NULL;
+    const char *dns2 = NULL;
     const char *ipv6 = NULL;
     const char *ipv6pd = NULL;
+    const char *ipv6_dns1 = NULL;
+    const char *ipv6_dns2 = NULL;
+    const char *dhcpv6_dns1 = NULL;
+    const char *dhcpv6_dns2 = NULL;
     const char *type = NULL;
     const char *username = NULL;
     const char *lcp = NULL;
@@ -394,11 +410,29 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
         if(session->ip_address) {
             ipv4 = format_ipv4_address(&session->ip_address);
         }
+        if(session->dns1) {
+            dns1 = format_ipv4_address(&session->dns1);
+        }
+        if(session->dns2) {
+            dns2 = format_ipv4_address(&session->dns2);
+        }
         if(session->ipv6_prefix.len) {
             ipv6 = format_ipv6_prefix(&session->ipv6_prefix);
         }
         if(session->delegated_ipv6_prefix.len) {
             ipv6pd = format_ipv6_prefix(&session->delegated_ipv6_prefix);
+        }
+        if(*(uint64_t*)session->ipv6_dns1) {
+            ipv6_dns1 = format_ipv6_address(&session->ipv6_dns1);
+        }
+        if(*(uint64_t*)session->ipv6_dns2) {
+            ipv6_dns2 = format_ipv6_address(&session->ipv6_dns2);
+        }
+        if(*(uint64_t*)session->dhcpv6_dns1) {
+            dhcpv6_dns1 = format_ipv6_address(&session->dhcpv6_dns1);
+        }
+        if(*(uint64_t*)session->dhcpv6_dns2) {
+            dhcpv6_dns2 = format_ipv6_address(&session->dhcpv6_dns2);
         }
 
         if(session->access_type == ACCESS_TYPE_PPPOE) {
@@ -438,7 +472,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* so*}}", 
+        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -450,15 +484,21 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "lcp-state", lcp,
                         "ipcp-state", ipcp,
                         "ip6cp-state", ip6cp,
-                        "ipv4-address",ipv4,
+                        "ipv4-address", ipv4,
+                        "ipv4-dns1", dns1,
+                        "ipv4-dns2", dns2,
                         "ipv6-prefix", ipv6,
                         "ipv6-delegated-prefix", ipv6pd,
+                        "ipv6-dns1", ipv6_dns1,
+                        "ipv6-dns2", ipv6_dns2,
+                        "dhcpv6-dns1", dhcpv6_dns1,
+                        "dhcpv6-dns2", dhcpv6_dns2,
                         "session-traffic", session_traffic);
         if(root) {
             result = json_dumpfd(root, fd, 0);
             json_decref(root);
         } else {
-            bbl_ctrl_status(fd, "error", 500, "internal error");
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
             json_decref(session_traffic);
         }
         return result;
@@ -494,7 +534,7 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((un
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
     } else {
-        bbl_ctrl_status(fd, "error", 500, "internal error");
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
         json_decref(interfaces);
     }
     return result;
@@ -650,6 +690,236 @@ bbl_ctrl_session_ip6cp_close(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t*
     return bbl_ctrl_session_ncp_open_close(fd, ctx, key, false, false);
 }
 
+ssize_t
+bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root, *flows, *flow;
+    bbl_li_flow_t *li_flow;
+    struct dict_itor *itor;
+
+    flows = json_array();
+    itor = dict_itor_new(ctx->li_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
+        if(li_flow) {
+            flow = json_pack("{ss si ss si ss ss ss si si si si si si si}", 
+                                "source-address", format_ipv4_address(&li_flow->src_ipv4),
+                                "source-port", li_flow->src_port,
+                                "destination-address", format_ipv4_address(&li_flow->dst_ipv4), 
+                                "destination-port", li_flow->dst_port,
+                                "direction", bbl_li_direction_string(li_flow->direction), 
+                                "packet-type", bbl_li_packet_type_string(li_flow->packet_type), 
+                                "sub-packet-type", bbl_li_sub_packet_type_string(li_flow->sub_packet_type),
+                                "liid", li_flow->liid,
+                                "bytes-rx", li_flow->bytes_rx,
+                                "packets-rx", li_flow->packets_rx,
+                                "packets-rx-ipv4", li_flow->packets_rx_ipv4,
+                                "packets-rx-ipv4-tcp", li_flow->packets_rx_ipv4_tcp,
+                                "packets-rx-ipv4-udp", li_flow->packets_rx_ipv4_udp,
+                                "packets-rx-ipv4-host-internal", li_flow->packets_rx_ipv4_internal);
+            json_array_append(flows, flow);
+        }
+    }
+    root = json_pack("{ss si so}", 
+                     "status", "ok", 
+                     "code", 200,
+                     "li-flows", flows);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(flows);
+    }
+    return result;
+}
+
+ssize_t
+bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root, *tunnels, *tunnel;
+    
+    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+
+    tunnels = json_array();
+
+    while(l2tp_server) {
+        CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
+            
+            tunnel = json_pack("{ss ss ss si si ss ss ss ss si si si si si si si}",
+                                "state", l2tp_tunnel_state_string(l2tp_tunnel->state),
+                                "server-name", l2tp_server->host_name,
+                                "server-address", format_ipv4_address(&l2tp_server->ip), 
+                                "tunnel-id", l2tp_tunnel->tunnel_id,
+                                "peer-tunnel-id", l2tp_tunnel->peer_tunnel_id,
+                                "peer-name", string_or_na(l2tp_tunnel->peer_name),      
+                                "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip), 
+                                "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
+                                "secret", string_or_na(l2tp_server->secret),
+                                "control-packets-rx", l2tp_tunnel->stats.control_rx,
+                                "control-packets-rx-dup", l2tp_tunnel->stats.control_rx_dup,
+                                "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
+                                "control-packets-tx", l2tp_tunnel->stats.control_tx,
+                                "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
+                                "control-data-rx", l2tp_tunnel->stats.data_rx,
+                                "control-data-tx", l2tp_tunnel->stats.data_tx);
+            json_array_append(tunnels, tunnel);
+        }
+        l2tp_server = l2tp_server->next;
+    }
+
+    root = json_pack("{ss si so}", 
+                     "status", "ok", 
+                     "code", 200,
+                     "l2tp-tunnels", tunnels);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(tunnels);
+    }
+    return result;
+}
+
+json_t * 
+l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
+    return json_pack("{ss si si si si ss ss ss ss si si ss ss}", 
+                     "state", l2tp_session_state_string(l2tp_session->state),
+                     "tunnel-id", l2tp_session->key.tunnel_id,
+                     "session-id", l2tp_session->key.session_id,
+                     "peer-tunnel-id", l2tp_session->tunnel->peer_tunnel_id,
+                     "peer-session-id", l2tp_session->peer_session_id,
+                     "peer-proxy-auth-name", string_or_na(l2tp_session->proxy_auth_name),
+                     "peer-called-number", string_or_na(l2tp_session->peer_called_number),
+                     "peer-calling-number", string_or_na(l2tp_session->peer_calling_number),
+                     "peer-sub-address", string_or_na(l2tp_session->peer_sub_address),
+                     "peer-tx-bps", l2tp_session->peer_tx_bps,
+                     "peer-rx-bps", l2tp_session->peer_rx_bps,
+                     "peer-ari", string_or_na(l2tp_session->peer_ari),
+                     "peer-aci", string_or_na(l2tp_session->peer_aci));
+}
+
+ssize_t
+bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments) {
+    ssize_t result = 0;
+    json_t *root, *sessions;
+
+    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_t *l2tp_session;
+    l2tp_key_t l2tp_key = {0};
+    void **search = NULL;
+
+    int tunnel_id = 0;
+    int session_id = 0;
+
+    json_unpack(arguments, "{s:i}", "tunnel-id", &tunnel_id);
+    json_unpack(arguments, "{s:i}", "session-id", &session_id);
+
+    sessions = json_array();
+
+    if(tunnel_id && session_id) {
+        l2tp_key.tunnel_id = tunnel_id;
+        l2tp_key.session_id = session_id;
+        search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+        if(search) {
+            l2tp_session = *search;
+            json_array_append(sessions, l2tp_session_json(l2tp_session));
+        } else {
+            result = bbl_ctrl_status(fd, "warning", 404, "session not found");
+            json_decref(sessions);
+            return result;
+        }
+    } else if (tunnel_id) {
+        l2tp_key.tunnel_id = tunnel_id;
+        search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+        if(search) {
+            l2tp_session = *search;
+            l2tp_tunnel = l2tp_session->tunnel;
+            CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
+                if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
+                json_array_append(sessions, l2tp_session_json(l2tp_session));
+            }
+        } else {
+            result = bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+            json_decref(sessions);
+            return result;
+        }
+    } else {
+        while(l2tp_server) {
+            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
+                CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
+                    if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
+                    json_array_append(sessions, l2tp_session_json(l2tp_session));
+                }
+            }
+            l2tp_server = l2tp_server->next;
+        }
+    }
+    root = json_pack("{ss si so}", 
+                     "status", "ok", 
+                     "code", 200,
+                     "l2tp-sessions", sessions);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(sessions);
+    }
+    return result;
+}
+
+ssize_t
+bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments) {
+    json_t *sessions, *number;
+
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_t *l2tp_session;
+    l2tp_key_t l2tp_key = {0};
+    void **search = NULL;
+
+    uint16_t session_id = 0;
+    int tunnel_id = 0;
+    int size, i;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "tunnel-id", &tunnel_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
+    }
+    l2tp_key.tunnel_id = tunnel_id;
+    search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+    if(search) {
+        l2tp_session = *search;
+        l2tp_tunnel = l2tp_session->tunnel;
+        if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+        }
+        sessions = json_object_get(arguments, "sessions");
+        if (json_is_array(sessions)) {
+            size = json_array_size(sessions);
+            l2tp_tunnel->csurq_requests_len = size;
+            l2tp_tunnel->csurq_requests = malloc(size * sizeof(uint16_t));
+            for (i = 0; i < size; i++) {
+                number = json_array_get(sessions, i);
+                if(json_is_number(number)) {
+                    session_id = json_number_value(number);
+                    l2tp_tunnel->csurq_requests[i] = session_id;
+                }
+            }
+            bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_CSURQ);
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "error", 400, "invalid request");
+        }
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+    }
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -673,6 +943,10 @@ struct action actions[] = {
     {"igmp-join", bbl_ctrl_igmp_join},
     {"igmp-leave", bbl_ctrl_igmp_leave},
     {"igmp-info", bbl_ctrl_igmp_info},
+    {"li-flows", bbl_ctrl_li_flows},
+    {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
+    {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
+    {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
     {NULL, NULL},
 };
 
@@ -736,7 +1010,9 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                 }
                             } else {
                                 /* Use first interface as default. */
-                                key.ifindex = ctx->op.access_if[0]->addr.sll_ifindex;
+                                if(ctx->op.access_if[0]) {
+                                    key.ifindex = ctx->op.access_if[0]->addr.sll_ifindex;
+                                }
                             }
                             value = json_object_get(arguments, "outer-vlan");
                             if (value) {

@@ -19,14 +19,14 @@ struct keyval_ log_names[] = {
     { ERROR,         "error" },
     { IGMP,          "igmp" },
     { IO,            "io" },
-    { LCP,           "lcp" },
-    { NCP,           "ncp" },
+    { PPPOE,         "pppoe" },
     { NORMAL,        "normal" },
     { PCAP,          "pcap" },
     { TIMER,         "timer" },
     { TIMER_DETAIL,  "timer-detail" },
     { IP,            "ip" },
     { LOSS,          "loss" },
+    { L2TP,          "l2tp" },
     { 0, NULL}
 };
 

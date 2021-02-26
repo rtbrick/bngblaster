@@ -178,6 +178,30 @@ bbl_stats_job (timer_s *timer)
     }
     
     if (ctx->op.network_if) {
+        if(dict_count(ctx->li_flow_dict)) {
+            wprintw(stats_win, "\nLI Statistics\n");
+            wprintw(stats_win, "  Flows                     %10lu\n", dict_count(ctx->li_flow_dict));
+            wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",  
+                ctx->op.network_if->stats.li_rx, ctx->op.network_if->stats.rate_li_rx.avg);
+        }
+        if(ctx->config.l2tp_server) {
+            wprintw(stats_win, "\nL2TP LNS Statistics\n");
+            wprintw(stats_win, "  Tunnels     %10lu\n", ctx->l2tp_tunnels);
+            wprintw(stats_win, "  Established %10lu\n", ctx->l2tp_tunnels_established);
+            wprintw(stats_win, "  Sessions    %10lu\n", ctx->l2tp_sessions);
+            wprintw(stats_win, "  Packets:\n");
+            wprintw(stats_win, "    Tx Control              %10lu Retries: %lu\n", 
+                ctx->op.network_if->stats.l2tp_control_tx, ctx->op.network_if->stats.l2tp_control_retry);
+            wprintw(stats_win, "    Rx Control              %10lu Duplicate: %lu Out-of-Order: %lu\n", 
+                ctx->op.network_if->stats.l2tp_control_rx, 
+                ctx->op.network_if->stats.l2tp_control_rx_dup, 
+                ctx->op.network_if->stats.l2tp_control_rx_ooo);
+            wprintw(stats_win, "    Tx Data                 %10lu (%7lu PPS)\n", 
+                ctx->op.network_if->stats.l2tp_data_tx, ctx->op.network_if->stats.rate_l2tp_data_tx.avg);
+            wprintw(stats_win, "    Rx Data                 %10lu (%7lu PPS)\n", 
+                ctx->op.network_if->stats.l2tp_data_rx, ctx->op.network_if->stats.rate_l2tp_data_tx.avg);
+        }
+
         if(access_if && ctx->stats.session_traffic_flows) {
             wprintw(stats_win, "\nSession Traffic\n");
             wprintw(stats_win, "  Flows       %10lu\n", ctx->stats.session_traffic_flows);

@@ -36,7 +36,7 @@ Usage: bngblaster [OPTIONS]
 
   -h --help
   -C --config <args>
-  -l --logging error|igmp|io|lcp|ncp|normal|pcap|timer|timer-detail|ip
+  -l --logging error|igmp|io|pppoe|normal|pcap|timer|timer-detail|ip
   -L --log-file <args>
   -u --username <args>
   -p --password <args>

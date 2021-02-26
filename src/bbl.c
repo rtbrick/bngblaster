@@ -151,7 +151,18 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
                         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
                         session->pppoe_session_id = 0;
+                        if(session->pppoe_ac_cookie) {
+                            free(session->pppoe_ac_cookie);
+                            session->pppoe_ac_cookie = NULL;
+                        }
                         session->pppoe_ac_cookie_len = 0;
+                        if(!session->interface->ctx->config.pppoe_service_name) {
+                            if(session->pppoe_service_name) {
+                                free(session->pppoe_service_name);
+                                session->pppoe_service_name = NULL;
+                            }
+                            session->pppoe_service_name_len = 0;
+                        }
                         session->ip_address = 0;
                         session->peer_ip_address = 0;
                         session->dns1 = 0;
@@ -159,10 +170,14 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->ipv6_prefix.len = 0;
                         session->delegated_ipv6_prefix.len = 0;
                         session->icmpv6_ra_received = false;
+                        memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
+                        memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
                         session->dhcpv6_requested = false;
                         session->dhcpv6_received = false;
                         session->dhcpv6_type = DHCPV6_MESSAGE_SOLICIT;
                         session->dhcpv6_ia_pd_option_len = 0;
+                        memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
+                        memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
                         session->zapping_joined_group = NULL;
                         session->zapping_leaved_group = NULL;
                         session->zapping_count = 0;
@@ -197,7 +212,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     uint32_t source;
 
     int i;
-    uint len = 0;
+    uint16_t len = 0;
 
     if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
         interface->mc_packets = malloc(ctx->config.igmp_group_count * 1500);
@@ -447,7 +462,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      * List for sessions who want to transmit.
      */
     CIRCLEQ_INIT(&interface->session_tx_qhead);
-
+    CIRCLEQ_INIT(&interface->l2tp_tx_qhead);
     return interface;
 }
 
@@ -587,6 +602,14 @@ bbl_compare_session (void *key1, void *key2)
     return (a > b) - (a < b);
 }
 
+int
+bbl_compare_l2tp_session (void *key1, void *key2)
+{
+    const uint32_t a = *(const uint32_t*)key1;
+    const uint32_t b = *(const uint32_t*)key2;
+    return (a > b) - (a < b);
+}
+
 uint
 bbl_session_hash (const void* k)
 {
@@ -596,6 +619,14 @@ bbl_session_hash (const void* k)
     hash ^= *(uint16_t *)(k+4) << 12;
     hash ^= *(uint16_t *)(k+6);
 
+    return hash;
+}
+
+uint
+bbl_l2tp_session_hash (const void* k)
+{
+    uint hash = 2166136261U;
+    hash ^= *(uint32_t *)k;
     return hash;
 }
 
@@ -631,6 +662,14 @@ bbl_add_ctx (void)
      */
     ctx->session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session,
                                             bbl_session_hash,
+                                            BBL_SESSION_HASHTABLE_SIZE);
+
+    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
+                                                 bbl_l2tp_session_hash,
+                                                 BBL_SESSION_HASHTABLE_SIZE);
+
+    ctx->li_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
+                                            bbl_l2tp_session_hash,
                                             BBL_SESSION_HASHTABLE_SIZE);
 
     return ctx;
@@ -687,10 +726,10 @@ bbl_add_session (bbl_ctx_s *ctx, bbl_interface_s *interface, bbl_session_s *sess
     memcpy(session->client_mac, session_template->client_mac, ETH_ADDR_LEN);
     session->mru = session_template->mru;
     session->magic_number = session_template->magic_number;
-    snprintf(session->username, USERNAME_LEN, "%s", session_template->username);
-    snprintf(session->password, PASSWORD_LEN, "%s", session_template->password);
-    snprintf(session->agent_circuit_id, ACI_LEN, "%s", session_template->agent_circuit_id);
-    snprintf(session->agent_remote_id, ARI_LEN, "%s", session_template->agent_remote_id);
+    session->username = session_template->username;
+    session->password = session_template->password;
+    session->agent_circuit_id = session_template->agent_circuit_id;
+    session->agent_remote_id = session_template->agent_remote_id;
     session->rate_up = session_template->rate_up;
     session->rate_down = session_template->rate_down;
     session->duid[1] = 3;
@@ -701,7 +740,13 @@ bbl_add_session (bbl_ctx_s *ctx, bbl_interface_s *interface, bbl_session_s *sess
     session->igmp_robustness = 2; /* init robustness with 2 */
     session->zapping_group_max = be32toh(ctx->config.igmp_group) + ((ctx->config.igmp_group_count - 1) * be32toh(ctx->config.igmp_group_iter));
     session->session_traffic = access_config->session_traffic_autostart;
-    if(session->access_type == ACCESS_TYPE_IPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(ctx->config.pppoe_service_name) {
+            session->pppoe_service_name = (uint8_t*)ctx->config.pppoe_service_name;
+            session->pppoe_service_name_len = strlen(ctx->config.pppoe_service_name);
+        }
+        session->pppoe_host_uniq = session_template->pppoe_host_uniq;
+    } else if(session->access_type == ACCESS_TYPE_IPOE) {
         if(access_config->static_ip && access_config->static_gateway) {
             session->ip_address = access_config->static_ip;
             session->peer_ip_address = access_config->static_gateway;
@@ -806,30 +851,38 @@ bbl_init_sessions (bbl_ctx_s *ctx)
         session_template.client_mac[3] = i>>16;
         session_template.client_mac[4] = i>>8;
         session_template.client_mac[5] = i;
-        session_template.magic_number = i;
+        session_template.magic_number = htobe32(i);
+        if(ctx->config.pppoe_host_uniq) {
+            session_template.pppoe_host_uniq = htobe64(i);
+        }
         /* Populate session identifiaction attributes */
         snprintf(snum1, 6, "%d", i);
         snprintf(snum2, 6, "%d", access_config->sessions);
+    
         /* Update username */
         s = replace_substring(access_config->username, "{session-global}", snum1);
-        snprintf(session_template.username, USERNAME_LEN, "%s", s);
+        session_template.username = s;
         s = replace_substring(session_template.username, "{session}", snum2);
-        snprintf(session_template.username, USERNAME_LEN, "%s", s);
+        session_template.username = strdup(s);
+
         /* Update password */
         s = replace_substring(access_config->password, "{session-global}", snum1);
-        snprintf(session_template.password, PASSWORD_LEN, "%s", s);
+        session_template.password = s;
         s = replace_substring(session_template.password, "{session}", snum2);
-        snprintf(session_template.password, PASSWORD_LEN, "%s", s);
+        session_template.password = strdup(s);
+
         /* Update ACI */
         s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
-        snprintf(session_template.agent_circuit_id, ACI_LEN, "%s", s);
+        session_template.agent_circuit_id = s;
         s = replace_substring(session_template.agent_circuit_id, "{session}", snum2);
-        snprintf(session_template.agent_circuit_id, ACI_LEN, "%s", s);
+        session_template.agent_circuit_id = strdup(s);
+
         /* Update ARI */
         s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
-        snprintf(session_template.agent_remote_id, ARI_LEN, "%s", s);
+        session_template.agent_remote_id = s;
         s = replace_substring(session_template.agent_remote_id, "{session}", snum2);
-        snprintf(session_template.agent_remote_id, ARI_LEN, "%s", s);
+        session_template.agent_remote_id = strdup(s);
+        
         /* Update rates ... */
         session_template.rate_up = access_config->rate_up;
         session_template.rate_down = access_config->rate_down;
@@ -945,13 +998,24 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions) { 
         if(ctx->sessions_terminated >= ctx->sessions) {
-            CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            /* Now close all L2TP tunnels ... */
+            if(ctx->l2tp_tunnels == 0) {
+                /* Stop event loop to close application! */
+                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            } else {
+                bbl_l2tp_stop_all_tunnel(ctx);
+            }
             return;
         }
     } else {
         /* Network interface only... */
         if(g_teardown) {
-            CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            if(ctx->l2tp_tunnels == 0) {
+                /* Stop event loop to close application! */
+                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
+            } else {
+                bbl_l2tp_stop_all_tunnel(ctx);
+            }
             return;
         }
         return;
@@ -1165,8 +1229,8 @@ main (int argc, char *argv[])
         fprintf(stderr, "Error: Failed to load configuration file %s\n", config_file);
         exit(1);
     }
-    if(username) snprintf(ctx->config.username, USERNAME_LEN, "%s", username);
-    if(password) snprintf(ctx->config.password, PASSWORD_LEN, "%s", password);
+    if(username) ctx->config.username = username;
+    if(password) ctx->config.password = password;
     if(sessions) ctx->config.sessions = atoi(sessions);
     if(igmp_group) {
         inet_pton(AF_INET, igmp_group, &ipv4);
