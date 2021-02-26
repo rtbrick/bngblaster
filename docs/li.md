@@ -28,6 +28,7 @@ mediation device as shown in the following example.
         }
     }
 }
+```
 
 The received flows can be queried using the control socket. 
 
