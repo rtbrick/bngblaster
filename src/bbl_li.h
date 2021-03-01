@@ -33,6 +33,7 @@ typedef struct bbl_li_flow_
     uint64_t     packets_rx_ipv6_tcp;
     uint64_t     packets_rx_ipv6_udp;
     uint64_t     packets_rx_ipv6_internal;
+    uint64_t     packets_rx_ipv6_no_next_header;
 } bbl_li_flow_t;
 
 const char* bbl_li_direction_string(uint8_t direction);

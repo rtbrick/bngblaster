@@ -703,7 +703,7 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unus
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
         if(li_flow) {
-            flow = json_pack("{ss si ss si ss ss ss si si si si si si si si si si si}", 
+            flow = json_pack("{ss si ss si ss ss ss si si si si si si si si si si si si}", 
                                 "source-address", format_ipv4_address(&li_flow->src_ipv4),
                                 "source-port", li_flow->src_port,
                                 "destination-address", format_ipv4_address(&li_flow->dst_ipv4), 
@@ -721,7 +721,8 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unus
                                 "packets-rx-ipv6", li_flow->packets_rx_ipv6,
                                 "packets-rx-ipv6-tcp", li_flow->packets_rx_ipv6_tcp,
                                 "packets-rx-ipv6-udp", li_flow->packets_rx_ipv6_udp,
-                                "packets-rx-ipv6-host-internal", li_flow->packets_rx_ipv6_internal);
+                                "packets-rx-ipv6-host-internal", li_flow->packets_rx_ipv6_internal,
+                                "packets-rx-ipv6-no-next-header", li_flow->packets_rx_ipv6_no_next_header);
             json_array_append(flows, flow);
         }
     }
