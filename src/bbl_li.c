@@ -58,6 +58,7 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
     bbl_ethernet_header_t *inner_eth;
     bbl_pppoe_session_t *inner_pppoe;
     bbl_ipv4_t *inner_ipv4 = NULL;
+    bbl_ipv6_t *inner_ipv6 = NULL;
     bbl_li_flow_t *li_flow; 
 
     dict_insert_result result;
@@ -96,10 +97,13 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
         inner_pppoe = (bbl_pppoe_session_t*)inner_eth->next;
         if(inner_pppoe->protocol == PROTOCOL_IPV4) {
             inner_ipv4 = (bbl_ipv4_t*)inner_pppoe->next;
-
-        }
+        } else if(inner_pppoe->protocol == PROTOCOL_IPV6) {
+            inner_ipv6 = (bbl_ipv6_t*)inner_pppoe->next;
+        } 
     } else if(inner_eth->type == ETH_TYPE_IPV4) {
         inner_ipv4 = (bbl_ipv4_t*)eth->next;
+    } else if(inner_eth->type == PROTOCOL_IPV6) {
+        inner_ipv6 = (bbl_ipv6_t*)eth->next;
     }
 
     if(inner_ipv4) {
@@ -113,6 +117,21 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
                 break;
             case PROTOCOL_IPV4_INTERNAL:
                 li_flow->packets_rx_ipv4_internal++;
+                break;
+            default:
+                break;
+        }
+    } else if (inner_ipv6) {
+        li_flow->packets_rx_ipv6++;
+        switch(inner_ipv6->protocol) {
+            case IPV6_NEXT_HEADER_TCP:
+                li_flow->packets_rx_ipv6_tcp++;
+                break;
+            case IPV6_NEXT_HEADER_UDP:
+                li_flow->packets_rx_ipv6_udp++;
+                break;
+            case IPV6_NEXT_HEADER_INTERNAL:
+                li_flow->packets_rx_ipv6_internal++;
                 break;
             default:
                 break;

@@ -139,8 +139,10 @@
 #define UDP_PROTOCOL_L2TP               3
 #define UDP_PROTOCOL_QMX_LI             4
 
+#define IPV6_NEXT_HEADER_TCP            6
 #define IPV6_NEXT_HEADER_UDP            17
 #define IPV6_NEXT_HEADER_ICMPV6         58
+#define IPV6_NEXT_HEADER_INTERNAL       61
 
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
 #define ICMPV6_OPTION_PREFIX            3
