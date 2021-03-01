@@ -133,6 +133,9 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
             case IPV6_NEXT_HEADER_INTERNAL:
                 li_flow->packets_rx_ipv6_internal++;
                 break;
+            case IPV6_NEXT_HEADER_NO:
+                li_flow->packets_rx_ipv6_no_next_header++;
+                break;
             default:
                 break;
         }
