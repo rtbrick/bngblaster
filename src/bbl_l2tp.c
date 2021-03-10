@@ -491,6 +491,7 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
         q->packet_len = len;
         CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
         l2tp_tunnel->stats.data_tx++;
+        l2tp_session->stats.data_tx++;
         interface->stats.l2tp_data_tx++;
     } else {
         LOG(ERROR, "L2TP Data Encode Error!\n");
@@ -847,6 +848,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
         return;
     }
 
+    l2tp_session->stats.data_rx++;
     switch (l2tp->protocol) {
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_t*)l2tp->next;

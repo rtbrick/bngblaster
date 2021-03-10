@@ -281,8 +281,8 @@ Following an example with 30 L2TP LNS servers.
             "control-packets-rx-out-of-order": 0,
             "control-packets-tx": 102,
             "control-packets-tx-retry": 0,
-            "control-data-rx": 1406,
-            "control-data-tx": 206
+            "data-packets-rx": 1406,
+            "data-packets-tx": 206
         }
     ]
 }
@@ -311,7 +311,9 @@ The `l2tp-sessions` command returns all L2TP sessions.
             "peer-tx-bps": 48000,
             "peer-rx-bps": 1000,
             "peer-ari": "DEU.RTBRICK.1",
-            "peer-aci": "0.0.0.0/0.0.0.0 eth 0:1"
+            "peer-aci": "0.0.0.0/0.0.0.0 eth 0:1",
+            "data-packets-rx": 79,
+            "data-packets-tx": 79
         }
     ]
 }
