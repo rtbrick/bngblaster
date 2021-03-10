@@ -191,7 +191,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
             if(ctx->l2tp_tunnels_established > ctx->l2tp_tunnels_established_max) {
                 ctx->l2tp_tunnels_established_max = ctx->l2tp_tunnels_established;
             }
-            LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) estbalished\n",
+            LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) established\n",
                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
                       l2tp_tunnel->peer_name, 
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
@@ -788,7 +788,7 @@ bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     }
     if(l2tp_session->state == BBL_L2TP_SESSION_WAIT_CONN) {
         l2tp_session->state = BBL_L2TP_SESSION_ESTABLISHED;
-        LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) estbalished\n",
+        LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) established\n",
                   l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
                   l2tp_tunnel->peer_name, 
                   format_ipv4_address(&l2tp_tunnel->peer_ip),
