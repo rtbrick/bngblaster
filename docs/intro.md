@@ -9,7 +9,7 @@ targeted for max scaling with small resource footprint, simple to use and easy t
 our test automation infrastructure. 
 
 The BNG Blaster is able to simulate more than hundred thousand PPPoE subscribers including IPTV, 
-traffic verification and convergence testing capabilities.
+L2TPv2, traffic verification and convergence testing capabilities.
 
 * *High Scaling:* > 100K sessions
 * *Low CPU and Memory Footprint:* < 100MB memory for 16K sessions
