@@ -110,6 +110,7 @@ Attribute | Description
 `interfaces` | List all interfaces with index
 `session-counters` | Return session counters
 `terminate` | Terminate all sessions similar to sending SIGINT (ctr+c)
+`session-traffic` | Display session traffic statistics | |
 `session-traffic-enabled` | Enable session traffic for all sessions
 `session-traffic-disabled` | Disable session traffic for all sessions
 `multicast-traffic-start` | Start sending multicast traffic from network interface 

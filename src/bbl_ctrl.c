@@ -97,6 +97,22 @@ bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, session_key_t *key __att
 }
 
 ssize_t
+bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root = json_pack("{ss si s{si si}}", 
+                             "status", "ok", 
+                             "code", 200,
+                             "session-traffic",
+                             "total-flows", ctx->stats.session_traffic_flows,
+                             "verified-flows", ctx->stats.session_traffic_flows_verified);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+ssize_t
 bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, session_key_t *key, bool status) {
     struct dict_itor *itor;
     bbl_session_s *session;
@@ -944,6 +960,7 @@ struct action actions[] = {
     {"session-counters", bbl_ctrl_session_counters},
     {"session-info", bbl_ctrl_session_info},
     {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
+    {"session-traffic", bbl_ctrl_session_traffic_stats},
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
