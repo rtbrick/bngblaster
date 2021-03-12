@@ -97,6 +97,22 @@ bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, session_key_t *key __att
 }
 
 ssize_t
+bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root = json_pack("{ss si s{si si}}", 
+                             "status", "ok", 
+                             "code", 200,
+                             "session-traffic",
+                             "total-flows", ctx->stats.session_traffic_flows,
+                             "verified-flows", ctx->stats.session_traffic_flows_verified);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+ssize_t
 bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, session_key_t *key, bool status) {
     struct dict_itor *itor;
     bbl_session_s *session;
@@ -768,8 +784,8 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((
                                 "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
                                 "control-packets-tx", l2tp_tunnel->stats.control_tx,
                                 "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
-                                "control-data-rx", l2tp_tunnel->stats.data_rx,
-                                "control-data-tx", l2tp_tunnel->stats.data_tx);
+                                "data-packets-rx", l2tp_tunnel->stats.data_rx,
+                                "data-packets-tx", l2tp_tunnel->stats.data_tx);
             json_array_append(tunnels, tunnel);
         }
         l2tp_server = l2tp_server->next;
@@ -791,7 +807,7 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((
 
 json_t * 
 l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
-    return json_pack("{ss si si si si ss ss ss ss si si ss ss}", 
+    return json_pack("{ss si si si si ss ss ss ss si si ss ss si si si si}", 
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
@@ -804,7 +820,11 @@ l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
                      "peer-tx-bps", l2tp_session->peer_tx_bps,
                      "peer-rx-bps", l2tp_session->peer_rx_bps,
                      "peer-ari", string_or_na(l2tp_session->peer_ari),
-                     "peer-aci", string_or_na(l2tp_session->peer_aci));
+                     "peer-aci", string_or_na(l2tp_session->peer_aci),
+                     "data-packets-rx", l2tp_session->stats.data_rx,
+                     "data-packets-tx", l2tp_session->stats.data_tx,
+                     "data-ipv4-packets-rx", l2tp_session->stats.data_ipv4_rx,
+                     "data-ipv4-packets-tx", l2tp_session->stats.data_ipv4_tx);
 }
 
 ssize_t
@@ -940,6 +960,7 @@ struct action actions[] = {
     {"session-counters", bbl_ctrl_session_counters},
     {"session-info", bbl_ctrl_session_info},
     {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
+    {"session-traffic", bbl_ctrl_session_traffic_stats},
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
