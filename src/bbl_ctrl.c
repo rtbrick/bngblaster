@@ -791,7 +791,7 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((
 
 json_t * 
 l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
-    return json_pack("{ss si si si si ss ss ss ss si si ss ss si si}", 
+    return json_pack("{ss si si si si ss ss ss ss si si ss ss si si si si}", 
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
@@ -806,7 +806,9 @@ l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
                      "peer-ari", string_or_na(l2tp_session->peer_ari),
                      "peer-aci", string_or_na(l2tp_session->peer_aci),
                      "data-packets-rx", l2tp_session->stats.data_rx,
-                     "data-packets-tx", l2tp_session->stats.data_tx);
+                     "data-packets-tx", l2tp_session->stats.data_tx,
+                     "data-ipv4-packets-rx", l2tp_session->stats.data_ipv4_rx,
+                     "data-ipv4-packets-tx", l2tp_session->stats.data_ipv4_tx);
 }
 
 ssize_t
