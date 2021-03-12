@@ -52,7 +52,12 @@ The received flows can be queried using the control socket.
             "packets-rx-ipv4": 0,
             "packets-rx-ipv4-tcp": 0,
             "packets-rx-ipv4-udp": 0,
-            "packets-rx-ipv4-host-internal": 0
+            "packets-rx-ipv4-host-internal": 0,
+            "packets-rx-ipv6": 0,
+            "packets-rx-ipv6-tcp": 0,
+            "packets-rx-ipv6-udp": 0,
+            "packets-rx-ipv6-host-internal": 0,
+            "packets-rx-ipv6-no-next-header": 0
         },
         {
             "source-address": "1.1.1.1",
@@ -68,7 +73,12 @@ The received flows can be queried using the control socket.
             "packets-rx-ipv4": 820,
             "packets-rx-ipv4-tcp": 0,
             "packets-rx-ipv4-udp": 0,
-            "packets-rx-ipv4-host-internal": 820
+            "packets-rx-ipv4-host-internal": 820,
+            "packets-rx-ipv6": 0,
+            "packets-rx-ipv6-tcp": 0,
+            "packets-rx-ipv6-udp": 0,
+            "packets-rx-ipv6-host-internal": 0,
+            "packets-rx-ipv6-no-next-header": 0
         }
     ]
 }
@@ -76,3 +86,6 @@ The received flows can be queried using the control socket.
 
 The `packets-rx-ipv4-host-internal` refers to the IPv4 protocol number 61 (any host internal protocol)
 which is used by some network testers as default type for traffic streams. 
+The same is valid for `packets-rx-ipv6-host-internal` which refers to next header 61 and 
+`packets-rx-ipv6-no-next-header` with next header 59.
+

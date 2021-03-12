@@ -325,6 +325,28 @@ JSON:
 }
 ```
 
+The flow verification status can be also queried via 
+global control socket command `session-traffic`. 
+
+`$ cat command.json | jq .`
+```json
+{
+  "command": "session-traffic"
+}
+```
+
+`$ cat command.json | sudo nc -U test.socket | jq .`
+```json
+{
+    "status": "ok",
+    "code": 200,
+    "session-traffic": {
+        "total-flows": 3000,
+        "verified-flows": 3000
+    }
+}
+```
+
 ### First Sequence Number Received
 
 If session traffic is enabled, the BNG Blaster will start sending bidirectional 

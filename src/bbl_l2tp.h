@@ -212,6 +212,13 @@ typedef struct bbl_l2tp_session_
         uint16_t session_id;
     } key;
 
+    struct {
+        uint64_t data_rx; /* Session data traffic received */
+        uint64_t data_tx; /* Session data traffic send */
+        uint64_t data_ipv4_rx; /* Session data ipv4 traffic received */
+        uint64_t data_ipv4_tx; /* Session data ppv4 traffic send */
+    } stats;
+
     uint16_t peer_session_id;
 
     bool data_sequencing;
@@ -250,6 +257,7 @@ typedef struct bbl_l2tp_session_
     char *peer_sub_address;
     char *peer_ari;
     char *peer_aci;
+
 } bbl_l2tp_session_t;
 
 const char* l2tp_message_string(l2tp_message_type type);

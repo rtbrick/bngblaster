@@ -191,7 +191,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
             if(ctx->l2tp_tunnels_established > ctx->l2tp_tunnels_established_max) {
                 ctx->l2tp_tunnels_established_max = ctx->l2tp_tunnels_established;
             }
-            LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) estbalished\n",
+            LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) established\n",
                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
                       l2tp_tunnel->peer_name, 
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
@@ -491,7 +491,11 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
         q->packet_len = len;
         CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
         l2tp_tunnel->stats.data_tx++;
+        l2tp_session->stats.data_tx++;
         interface->stats.l2tp_data_tx++;
+        if(protocol == PROTOCOL_IPV4) {
+            l2tp_session->stats.data_ipv4_tx++;
+        }
     } else {
         LOG(ERROR, "L2TP Data Encode Error!\n");
         free(q);
@@ -788,7 +792,7 @@ bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     }
     if(l2tp_session->state == BBL_L2TP_SESSION_WAIT_CONN) {
         l2tp_session->state = BBL_L2TP_SESSION_ESTABLISHED;
-        LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) estbalished\n",
+        LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) established\n",
                   l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
                   l2tp_tunnel->peer_name, 
                   format_ipv4_address(&l2tp_tunnel->peer_ip),
@@ -847,6 +851,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
         return;
     }
 
+    l2tp_session->stats.data_rx++;
     switch (l2tp->protocol) {
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_t*)l2tp->next;
@@ -944,6 +949,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             }
             break;
         case PROTOCOL_IPV4:
+            l2tp_session->stats.data_ipv4_rx++;
             ipv4 = (bbl_ipv4_t*)l2tp->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
