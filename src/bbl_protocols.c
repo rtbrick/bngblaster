@@ -1558,6 +1558,7 @@ decode_udp(uint8_t *buf, uint16_t len,
                 udp->protocol = UDP_PROTOCOL_QMX_LI;
                 ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_t**)&udp->next);
             } else {
+                udp->protocol = 0;
                 udp->next = NULL;
             }
             break;
