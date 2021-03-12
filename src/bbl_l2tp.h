@@ -215,6 +215,8 @@ typedef struct bbl_l2tp_session_
     struct {
         uint64_t data_rx; /* Session data traffic received */
         uint64_t data_tx; /* Session data traffic send */
+        uint64_t data_ipv4_rx; /* Session data ipv4 traffic received */
+        uint64_t data_ipv4_tx; /* Session data ppv4 traffic send */
     } stats;
 
     uint16_t peer_session_id;

@@ -493,6 +493,9 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
         l2tp_tunnel->stats.data_tx++;
         l2tp_session->stats.data_tx++;
         interface->stats.l2tp_data_tx++;
+        if(protocol == PROTOCOL_IPV4) {
+            l2tp_session->stats.data_ipv4_tx++;
+        }
     } else {
         LOG(ERROR, "L2TP Data Encode Error!\n");
         free(q);
@@ -946,6 +949,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             }
             break;
         case PROTOCOL_IPV4:
+            l2tp_session->stats.data_ipv4_rx++;
             ipv4 = (bbl_ipv4_t*)l2tp->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;

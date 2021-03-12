@@ -313,7 +313,9 @@ The `l2tp-sessions` command returns all L2TP sessions.
             "peer-ari": "DEU.RTBRICK.1",
             "peer-aci": "0.0.0.0/0.0.0.0 eth 0:1",
             "data-packets-rx": 79,
-            "data-packets-tx": 79
+            "data-packets-tx": 79,
+            "data-ipv4-packets-rx": 15,
+            "data-ipv4-packets-tx": 15
         }
     ]
 }
