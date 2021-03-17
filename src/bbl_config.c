@@ -569,6 +569,20 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.qdisc_bypass = json_boolean_value(value);
         }
+        if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
+            if (strcmp(s, "default") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+            } else if (strcmp(s, "packet_mmap") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+            } else if (strcmp(s, "netmap") == 0) {
+                ctx->config.io_mode = IO_MODE_NETMAP;
+            } else {
+                fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
+                return false;
+            }
+        } else {
+            ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+        }
         sub = json_object_get(section, "network");
         if (json_is_object(sub)) {
             if (json_unpack(sub, "{s:s}", "interface", &s) == 0) {

@@ -6,6 +6,7 @@ cmake_minimum_required (VERSION 3.0)
 project(bngblaster LANGUAGES C VERSION 0.0.0)
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
+option(BNGBLASTER_NETMAP "Build with netmap support" OFF)
 
 configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in"
                 "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
@@ -19,6 +20,8 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+
+
 FILE(GLOB BBL_SOURCES src/*.c)
 add_executable(bngblaster ${BBL_SOURCES})
 
@@ -26,6 +29,11 @@ add_executable(bngblaster ${BBL_SOURCES})
 find_library(libdict NAMES libdict.a REQUIRED)
 
 target_link_libraries(bngblaster curses crypto jansson ${libdict} m)
+if(BNGBLASTER_NETMAP)
+    add_definitions(-DBNGBLASTER_NETMAP)
+    target_link_libraries(bngblaster netmap)
+endif()
+
 target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -m64 -mtune=generic)
 
 # Build tests only if required

@@ -8,7 +8,7 @@
  */
 
 #include "bbl.h"
-#include "bbl_pcap.h"
+#include "bbl_session.h"
 
 protocol_error_t
 bbl_encode_packet_session_ipv4 (bbl_session_s *session)
@@ -241,8 +241,8 @@ bbl_encode_packet_igmp (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
@@ -399,8 +399,8 @@ bbl_encode_packet_icmp_reply (bbl_session_s *session)
         session->interface->stats.icmp_tx++;
         eth.dst = session->server_mac;
         eth.src = session->client_mac;
-        eth.vlan_outer = session->key.outer_vlan_id;
-        eth.vlan_inner = session->key.inner_vlan_id;
+        eth.vlan_outer = session->outer_vlan_id;
+        eth.vlan_inner = session->inner_vlan_id;
         eth.vlan_three = session->access_third_vlan;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             eth.type = ETH_TYPE_PPPOE_SESSION;
@@ -459,8 +459,8 @@ bbl_encode_packet_pap_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -507,8 +507,8 @@ bbl_encode_packet_chap_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -555,8 +555,8 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
@@ -613,8 +613,8 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
@@ -678,8 +678,7 @@ bbl_ip6cp_timeout (timer_s *timer)
         }
         if(session->ip6cp_retries > ctx->config.ip6cp_conf_request_retry) {
             session->ip6cp_state = BBL_PPP_CLOSED;
-            LOG(PPPOE, "IP6CP TIMEOUT (Q-in-Q %u:%u)\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id);
+            LOG(PPPOE, "IP6CP TIMEOUT (ID: %u)\n", session->session_id);
             if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
                 bbl_session_clear(ctx, session);
             }
@@ -709,8 +708,8 @@ bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -737,8 +736,8 @@ bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -773,8 +772,7 @@ bbl_ipcp_timeout (timer_s *timer)
         }
         if(session->ipcp_retries > ctx->config.ipcp_conf_request_retry) {
             session->ipcp_state = BBL_PPP_CLOSED;
-            LOG(PPPOE, "IPCP TIMEOUT (Q-in-Q %u:%u)\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id);
+            LOG(PPPOE, "IPCP TIMEOUT (ID: %u)\n", session->session_id);
             if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
                 bbl_session_clear(ctx, session);
             }
@@ -804,8 +802,8 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -843,8 +841,8 @@ bbl_encode_packet_ipcp_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -910,8 +908,8 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -945,8 +943,8 @@ bbl_encode_packet_lcp_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -1001,8 +999,8 @@ bbl_encode_padi (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
@@ -1034,8 +1032,8 @@ bbl_encode_padr (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
@@ -1068,8 +1066,8 @@ bbl_encode_padt (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
@@ -1134,8 +1132,8 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     ctx = interface->ctx;
 
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_ARP;
     eth.next = &arp;
@@ -1164,8 +1162,8 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
     bbl_arp_t arp = {0};
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->outer_vlan_id;
+    eth.vlan_inner = session->inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_ARP;
     eth.next = &arp;
@@ -1178,14 +1176,13 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-bool
-bbl_encode_packet (bbl_session_s *session, u_char *frame_ptr)
+protocol_error_t
+bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len)
 {
-    struct tpacket2_hdr* tphdr;
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
     /* Reset write buffer. */
-    session->write_buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
+    session->write_buf = buf;
     session->write_idx = 0;
 
     if(session->send_requests & BBL_SEND_DISCOVERY) {
@@ -1250,24 +1247,17 @@ bbl_encode_packet (bbl_session_s *session, u_char *frame_ptr)
         session->send_requests = 0;
     }
 
-    if(result == PROTOCOL_SUCCESS) {
-        tphdr = (struct tpacket2_hdr *)frame_ptr;
-        tphdr->tp_len = session->write_idx;
-        tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-        return true;
-    }
-    session->interface->stats.encode_errors++;
-    return false;
+    *len = session->write_idx;
+    return result;
 }
 
-bool
-bbl_encode_network_packet (bbl_interface_s *interface, bbl_session_s *session, u_char *frame_ptr)
+protocol_error_t
+bbl_encode_network_packet (bbl_interface_s *interface, bbl_session_s *session, uint8_t *buf, uint16_t *len)
 {
-    struct tpacket2_hdr* tphdr;
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
     /* Reset write buffer. */
-    session->write_buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
+    session->write_buf = buf;
     session->write_idx = 0;
 
     if (session->network_send_requests & BBL_SEND_SESSION_IPV4) {
@@ -1283,13 +1273,8 @@ bbl_encode_network_packet (bbl_interface_s *interface, bbl_session_s *session, u
         session->network_send_requests = 0;
     }
 
-    if(result == PROTOCOL_SUCCESS) {
-        tphdr = (struct tpacket2_hdr *)frame_ptr;
-        tphdr->tp_len = session->write_idx;
-        tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-        return true;
-    }
-    return false;
+    *len = session->write_idx;
+    return result;
 }
 
 void
@@ -1306,17 +1291,14 @@ bbl_network_nd_timeout (timer_s *timer)
     interface->send_requests |= BBL_IF_SEND_ICMPV6_NS;
 }
 
-bool
-bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
+protocol_error_t
+bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
-    struct tpacket2_hdr* tphdr;
     protocol_error_t result = UNKNOWN_PROTOCOL;
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
     bbl_ipv6_t ipv6 = {0};
     bbl_icmpv6_t icmpv6 = {0};
-    uint16_t len = 0;
-    uint8_t *buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
 
     bbl_secondary_ip_s *secondary_ip;
 
@@ -1335,7 +1317,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
         } else {
             timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, bbl_network_arp_timeout);
         }
-        result = encode_ethernet(buf, &len, &eth);
+        result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ARP_REPLY) {
         interface->send_requests &= ~BBL_IF_SEND_ARP_REPLY;
         eth.dst = interface->gateway_mac;
@@ -1346,7 +1328,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
         arp.sender_ip = interface->arp_reply_ip;
         arp.target = interface->gateway_mac;
         arp.target_ip = interface->gateway;
-        result = encode_ethernet(buf, &len, &eth);
+        result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_SEC_ARP_REPLY) {
         secondary_ip = interface->ctx->config.secondary_ip_addresses;
         while(secondary_ip) {
@@ -1360,7 +1342,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
                 arp.sender_ip = secondary_ip->ip;
                 arp.target = interface->gateway_mac;
                 arp.target_ip = interface->gateway;
-                result = encode_ethernet(buf, &len, &eth);
+                result = encode_ethernet(buf, len, &eth);
                 break;
             }
             secondary_ip = secondary_ip->next;
@@ -1391,7 +1373,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
         } else {
             timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, bbl_network_nd_timeout);
         }
-        result = encode_ethernet(buf, &len, &eth);
+        result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NA) {
         interface->send_requests &= ~BBL_IF_SEND_ICMPV6_NA;
         eth.dst = interface->gateway_mac;
@@ -1405,113 +1387,33 @@ bbl_encode_interface_packet (bbl_interface_s *interface, u_char *frame_ptr)
         icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
         memcpy(icmpv6.prefix.address, interface->ip6.address, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
-        result = encode_ethernet(buf, &len, &eth);
+        result = encode_ethernet(buf, len, &eth);
     } else {
         interface->send_requests = 0;
     }
 
-    if(result == PROTOCOL_SUCCESS) {
-        tphdr = (struct tpacket2_hdr *)frame_ptr;
-        tphdr->tp_len = len;
-        tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-        return true;
-    }
-    return false;
+    return result;
 }
 
-bool
-bbl_encode_multicast_packet (bbl_interface_s *interface, int i, u_char *frame_ptr)
+protocol_error_t
+bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
-    struct tpacket2_hdr* tphdr;
-    uint8_t *buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
-    memcpy(buf, interface->mc_packets + (i*interface->mc_packet_len), interface->mc_packet_len);
-    *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
-    *(uint32_t*)(buf + (interface->mc_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(buf + (interface->mc_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    tphdr = (struct tpacket2_hdr *)frame_ptr;
-    tphdr->tp_len = interface->mc_packet_len;
-    tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-    return true;
-}
-
-void
-bbl_tx_job (timer_s *timer)
-{
-    bbl_ctx_s *ctx;
-    bbl_interface_s *interface;
+    protocol_error_t result = EMPTY;
     bbl_session_s *session;
     bbl_l2tp_queue_t *q;
-    struct tpacket2_hdr* tphdr;
-    u_char *frame_ptr;
-    struct pollfd fds[1] = {0};
-    int i, g = 0; // helper variables
-    bool encode_success;
-
-    interface = timer->data;
-    if (!interface) {
-        return;
-    }
-    ctx = interface->ctx;
-
-    fds[0].fd = interface->fd_tx;
-    fds[0].events = POLLOUT;
-    fds[0].revents = 0;
-
-    frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
-    tphdr = (struct tpacket2_hdr *)frame_ptr;
-
-    while (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-        /* If no buffer is available poll kernel. */
-        if (poll(fds, 1, 10) == -1) {
-            LOG(IO, "TX poll interface %s", interface->name);
-            return;
-        }
-        interface->stats.poll_tx++;
-        return;
-    }
-
-    /* Get TX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
 
     /* Write per interface frames like ARP, ICMPv6 NS or LLDP. */
-    while(interface->send_requests) {
-        frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
-        tphdr = (struct tpacket2_hdr *)frame_ptr;
-        /* Check if this slot available for writing. */
-        if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-            interface->stats.no_tx_buffer++;
-            goto Send;
-        }
-        /* Encode the packet straight into the mmapped send buffer. */
-        if(bbl_encode_interface_packet(interface, frame_ptr)){
-            interface->stats.packets_tx++;
-            interface->cursor_tx = (interface->cursor_tx + 1) % interface->req_tx.tp_frame_nr;
-            /* Dump the packet into pcap file. */
-            if (ctx->pcap.write_buf) {
-                pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                            frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll),
-			    tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-            }
-        }
+    if(interface->send_requests) {
+        return bbl_encode_interface_packet(interface, buf, len);
     }
 
-    /* Write per session frames. */
-    while (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
-        session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
+    if(interface->access) {
+        /* Write per session frames. */
+        if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
+            session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
 
-        frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
-        tphdr = (struct tpacket2_hdr *)frame_ptr;
-        /* Check if this slot available for writing. */
-        if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-            interface->stats.no_tx_buffer++;
-            goto Send;
-        }
-        /* Encode the packet straight into the mmapped send buffer. */
-        encode_success = false;
-        if(interface->access) {
-            /* Access Interface */
             if(session->send_requests != 0) {
-                encode_success = bbl_encode_packet(session, frame_ptr);
+                result = bbl_encode_packet(session, buf, len);
                 /* Remove only from TX queue if all requests are processed! */
                 if(session->send_requests == 0) {
                     bbl_session_tx_qnode_remove(session);
@@ -1523,10 +1425,14 @@ bbl_tx_job (timer_s *timer)
             } else {
                 bbl_session_tx_qnode_remove(session);
             }
-        } else {
-            /* Network Interface */
+            return result;
+        }
+    } else {
+        /* Write per session frames. */
+        if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
+            session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
             if(session->network_send_requests != 0) {
-                encode_success = bbl_encode_network_packet(interface, session, frame_ptr);
+                result = bbl_encode_network_packet(interface, session, buf, len);
                 /* Remove only from TX queue if all requests are processed! */
                 if(session->network_send_requests == 0) {
                     bbl_session_network_tx_qnode_remove(session);
@@ -1538,87 +1444,39 @@ bbl_tx_job (timer_s *timer)
             } else {
                 bbl_session_network_tx_qnode_remove(session);
             }
+            return result;
         }
-        if(encode_success) {
-            interface->stats.packets_tx++;
-            interface->cursor_tx = (interface->cursor_tx + 1) % interface->req_tx.tp_frame_nr;
-            /* Dump the packet into PCAP file. */
-            if (ctx->pcap.write_buf) {
-                pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                            frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll),
-                            tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-            }
-        }
-    }
-
-    /* Network Interface Only! */
-    if(!interface->access) {
-        /* Send L2TP Packets */
-        while (!CIRCLEQ_EMPTY(&interface->l2tp_tx_qhead)) {
-            frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
-            tphdr = (struct tpacket2_hdr *)frame_ptr;
-            /* Check if this slot available for writing. */
-            if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-                interface->stats.no_tx_buffer++;
-                goto Send;
-            }
-
-            /* Pop element from queue */
+        /* Write L2TP frames. */
+        if (!CIRCLEQ_EMPTY(&interface->l2tp_tx_qhead)) {
+            /* Pop element from queue. */
             q = CIRCLEQ_FIRST(&interface->l2tp_tx_qhead);
             CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
             CIRCLEQ_NEXT(q, tx_qnode) = NULL;
             CIRCLEQ_PREV(q, tx_qnode) = NULL;
-            /* Copy packet from queue to ring buffer */
-            memcpy((frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll)), q->packet, q->packet_len);
-            tphdr->tp_len = q->packet_len;
-            tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-            interface->stats.packets_tx++;
-            interface->cursor_tx = (interface->cursor_tx + 1) % interface->req_tx.tp_frame_nr;
-            /* Captrue packet */
-            if (ctx->pcap.write_buf) {
-                pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                            frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll),
-                            tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-            }
+            /* Copy packet from queue to ring buffer. */
+            memcpy(buf, q->packet, q->packet_len);
+            *len = q->packet_len;
             if(q->data) {
                 free(q);
             }
+            return PROTOCOL_SUCCESS;
         }
-        /* Generate Multicast Traffic */
-        g = ctx->config.igmp_group_count;
-        if(ctx->config.send_multicast_traffic && ctx->multicast_traffic && g) {
-            interface->mc_packet_seq++;
-            for(i = 0; i < g; i++) {
-                frame_ptr = interface->ring_tx + (interface->cursor_tx * interface->req_tx.tp_frame_size);
-                tphdr = (struct tpacket2_hdr *)frame_ptr;
-                /* Check if this slot available for writing. */
-                if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-                    interface->stats.no_tx_buffer++;
-                    goto Send;
-                }
-
-                if(bbl_encode_multicast_packet(interface, i, frame_ptr)) {
-                    interface->stats.packets_tx++;
-                    interface->stats.mc_tx++;
-                    interface->cursor_tx = (interface->cursor_tx + 1) % interface->req_tx.tp_frame_nr;
-                    /* Dump the packet into PCAP file. */
-                    if (ctx->pcap.write_buf) {
-                        pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                    frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll),
-                                    tphdr->tp_len, interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-                    }
-                }
+        /* Write Multicast frames. */
+        if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic ) {
+            if(interface->mc_packet_cursor < ctx->config.igmp_group_count) {
+                memcpy(buf, interface->mc_packets + (interface->mc_packet_cursor*interface->mc_packet_len), interface->mc_packet_len);
+                *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
+                *(uint32_t*)(buf + (interface->mc_packet_len - 8)) = interface->tx_timestamp.tv_sec;
+                *(uint32_t*)(buf + (interface->mc_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+                *len = interface->mc_packet_len;
+                interface->mc_packet_cursor++;
+                return PROTOCOL_SUCCESS;
+            } else {
+                /* This must be the last send operation in this function to fill up remaining slots
+                * with multicast traffic but allother types of traffic have priority. */
+                interface->mc_packet_cursor = 0;
             }
         }
     }
-
-Send:
-    pcapng_fflush(ctx);
-
-    /* Notify kernel. */
-    if (sendto(interface->fd_tx, NULL, 0 , 0, NULL, 0) == -1) {
-        LOG(IO, "Sendto failed with errno: %i\n", errno);
-        interface->stats.sendto_failed++;
-        return;
-    }
+    return result;
 }

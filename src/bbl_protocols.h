@@ -215,7 +215,8 @@ typedef enum protocol_error_ {
     ENCODE_ERROR,
     UNKNOWN_PROTOCOL,
     WRONG_PROTOCOL_STATE,
-    IGNORED
+    IGNORED,
+    EMPTY
 } protocol_error_t;
 
 typedef enum icmpv6_message_type_ {
@@ -587,6 +588,7 @@ typedef struct bbl_bbl_ {
     uint8_t      sub_type;
     uint8_t      direction;
     uint8_t      tos;
+    uint32_t     session_id;
     uint32_t     ifindex;
     uint16_t     outer_vlan_id;
     uint16_t     inner_vlan_id;

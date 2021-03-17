@@ -587,8 +587,9 @@ timer_walk (timer_root_s *root)
         if (timespec_compare(&now, &min) == -1) {
             timespec_sub(&sleep, &min, &now);
         } else {
-            sleep.tv_sec = 0;
-            sleep.tv_nsec = 1 * MSEC; /* sleep time is negative, sleep at least some time */
+            //sleep.tv_sec = 0;
+            //sleep.tv_nsec = 1 * MSEC; /* sleep time is negative, sleep at least some time */
+            continue;
         }
 
         LOG(TIMER_DETAIL, "  Sleep %s\n", timespec_format(&sleep));
