@@ -6,6 +6,8 @@
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
 
+#ifdef BNGBLASTER_NETMAP
+
 #include "bbl.h"
 #include "bbl_netmap.h"
 #include "bbl_pcap.h"
@@ -176,3 +178,5 @@ bbl_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) 
 
     return true;
 }
+
+#endif
