@@ -7,7 +7,7 @@
  */
 
 #include "bbl.h"
-#include "bbl_logging.h"
+#include "bbl_l2tp_avp.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 

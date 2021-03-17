@@ -10,6 +10,7 @@ local hd_f = ProtoField.uint8("bbl_proto.hd", "Direction", base.DEC,
   {[0]="reserved", [1]="upstream", [2]="downstream"}, none)
 local tt_f = ProtoField.uint8("bbl_proto.tt", "TX TOS", base.DEC, none)
 
+local si_f = ProtoField.uint32("bbl_proto.si", "Session Identifier", base.DEC, none, none)
 local ii_f = ProtoField.uint32("bbl_proto.ii", "Session Access Interface Index", base.DEC, none, none)
 local ov_f = ProtoField.uint16("bbl_proto.ov", "Session Outer VLAN", base.DEC, none, none)
 local iv_f = ProtoField.uint16("bbl_proto.iv", "Session Inner VLAN", base.DEC, none, none)
@@ -22,7 +23,7 @@ local sn_f = ProtoField.uint64("bbl_proto.sn", "Flow Sequence Number", base.DEC,
 local ts_f = ProtoField.uint32("bbl_proto.ts", "Send Timestamp Seconds", base.DEC, none, none)
 local tn_f = ProtoField.uint32("bbl_proto.tn", "Send Timestamp Nanoseconds", base.DEC, none, none)
 
-bbl_proto.fields = {mn_f, ht_f, st_f, hd_f, tt_f, ii_f, ov_f, iv_f, ms_f, mg_f, fi_f, sn_f, ts_f, tn_f}
+bbl_proto.fields = {mn_f, ht_f, st_f, hd_f, tt_f, si_f, ii_f, ov_f, iv_f, ms_f, mg_f, fi_f, sn_f, ts_f, tn_f}
 
 local data_dissector = Dissector.get("data")
 local ethernet_dissector = DissectorTable.get("wtap_encap"):get_dissector(1)
@@ -39,6 +40,7 @@ function bbl_proto.dissector(buffer,pinfo,tree)
     local header_type = buffer(8,1):uint()
     if header_type == 1 then
         -- unicast session traffic
+        subtree:add_le(si_f, buffer(12, 4))
         subtree:add_le(ii_f, buffer(16, 4))
         subtree:add_le(ov_f, buffer(20, 2))
         subtree:add_le(iv_f, buffer(22, 2))

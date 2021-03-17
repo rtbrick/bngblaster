@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <poll.h>
+#include <sys/epoll.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -41,10 +42,7 @@
 #include "bbl_timer.h"
 #include "bbl_protocols.h"
 #include "bbl_utils.h"
-#include "bbl_rx.h"
-#include "bbl_tx.h"
 #include "bbl_l2tp.h"
-#include "bbl_l2tp_avp.h"
 #include "bbl_li.h"
 
 #define WRITE_BUF_LEN               1514
@@ -92,6 +90,7 @@
 
 #define UNUSED(x)    (void)x
 
+typedef struct bbl_session_ bbl_session_s;
 
 typedef struct bbl_rate_
 {
@@ -101,6 +100,11 @@ typedef struct bbl_rate_
     uint64_t avg;
     uint64_t avg_max;
 } bbl_rate_s;
+
+typedef enum {
+    IO_MODE_PACKET_MMAP = 0,
+    IO_MODE_NETMAP
+} __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {
     ACCESS_TYPE_PPPOE = 0,
@@ -142,24 +146,17 @@ typedef struct bbl_interface_
 {
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
     struct bbl_ctx_ *ctx; /* parent */
-    char *name;
+    char *name; /* interface name */
 
-    bool access;
+    bool access; /* interface type (access/network) */
 
     struct timer_ *timer_arp;
     struct timer_ *timer_nd;
 
-    int fd_tx;
-    int fd_rx;
-    struct tpacket_req req_tx;
-    struct tpacket_req req_rx;
-    struct sockaddr_ll addr;
+    bbl_io_mode_t io_mode;
+    void *io_ctx; /* IO context */
 
-    u_char *ring_tx; /* ringbuffer */
-    u_char *ring_rx; /* ringbuffer */
-    uint cursor_tx; /* slot # inside the ringbuffer */
-    uint cursor_rx; /* slot # inside the ringbuffer */
-
+    uint32_t ifindex; /* interface index */
     uint32_t pcap_index; /* interface index for packet captures */
 
     uint32_t send_requests;
@@ -177,6 +174,7 @@ typedef struct bbl_interface_
     uint8_t *mc_packets;
     uint     mc_packet_len;
     uint64_t mc_packet_seq;
+    uint16_t mc_packet_cursor;
 
     struct {
         uint64_t packets_tx;
@@ -369,7 +367,8 @@ typedef struct bbl_ctx_
     CIRCLEQ_HEAD(bbl_ctx_teardown_, bbl_session_ ) sessions_teardown_qhead;
     CIRCLEQ_HEAD(bbl_ctx__, bbl_interface_ ) interface_qhead; /* list of interfaces */
 
-    dict *session_dict; /* hashtable for sessions */
+    bbl_session_s **session_list; /* list for sessions */
+    
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
 
@@ -379,6 +378,8 @@ typedef struct bbl_ctx_
 
     int ctrl_socket;
     char *ctrl_socket_path;
+
+    uint8_t ifindex;
 
     /* Operational state */
     struct {
@@ -425,6 +426,7 @@ typedef struct bbl_ctx_
         uint16_t rx_interval;
         
         bool qdisc_bypass;
+        bbl_io_mode_t io_mode;
 
         char *json_report_filename;
 
@@ -574,20 +576,16 @@ typedef enum {
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
 
-typedef struct session_key_ {
-    uint32_t ifindex;
-    uint16_t outer_vlan_id;
-    uint16_t inner_vlan_id;
-} __attribute__ ((__packed__)) session_key_t;
-
-#define BBL_SESSION_HASHTABLE_SIZE 32771 /* is a prime number */
+#define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
+#define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
 
 /*
  * Client Session to a BNG device.
  */
 typedef struct bbl_session_
 {
-    uint64_t session_id; // internal session identifier */
+    uint32_t session_id; /* BNG Blaster internal session identifier */
+
     session_state_t session_state;
     uint32_t send_requests;
     uint32_t network_send_requests;
@@ -596,13 +594,6 @@ typedef struct bbl_session_
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
-
-    /* Key in the hashtable */
-    struct {
-        uint32_t ifindex;
-        uint16_t outer_vlan_id;
-        uint16_t inner_vlan_id;
-    } key;
 
     struct bbl_interface_ *interface; /* where this session is attached to */
     struct bbl_access_config_ *access_config;
@@ -629,8 +620,11 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv6pd;
 
     bbl_access_type_t access_type;
-    uint16_t access_third_vlan;
     
+    uint16_t outer_vlan_id;
+    uint16_t inner_vlan_id;
+    uint16_t access_third_vlan;
+
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
 
@@ -852,9 +846,6 @@ void bbl_session_tx_qnode_insert(struct bbl_session_ *session);
 void bbl_session_tx_qnode_remove(struct bbl_session_ *session);
 void bbl_session_network_tx_qnode_insert(struct bbl_session_ *session);
 void bbl_session_network_tx_qnode_remove(struct bbl_session_ *session);
-void bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t state);
-void bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session);
-bbl_ctx_s * bbl_add_ctx (void);
 
 WINDOW *log_win;
 WINDOW *stats_win;
