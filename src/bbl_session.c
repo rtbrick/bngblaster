@@ -189,3 +189,208 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
         bbl_session_update_state(ctx, session, BBL_TERMINATED);
     }
 }
+
+bool
+bbl_sessions_init(bbl_ctx_s *ctx)
+{
+    bbl_session_s *session;
+    bbl_access_config_s *access_config;
+    
+    dict_insert_result result;
+
+    uint32_t i = 1;  /* BNG Blaster internal session identifier */
+
+    char *s;
+    char snum1[32];
+    char snum2[32];
+
+    /* The variable t counts how many sessions are created in one 
+     * loop over all access configurations and is reset to zero
+     * every time we start from first access profile. If the variable 
+     * is still zero after processing last access profile means 
+     * that all VLAN ranges are exhausted. */
+    int t = 0;
+    
+    
+    /* Init list of sessions */
+    ctx->session_list = calloc(ctx->config.sessions, sizeof(session));    
+    access_config = ctx->config.access_config;
+
+    /* For equal distribution of sessions over access configurations 
+     * and outer VLAN's, we loop first over all configurations and
+     * second over VLAN ranges as per configration. */
+    while(i <= ctx->config.sessions) {
+        if(access_config->vlan_mode == VLAN_MODE_N1) {
+            if(access_config->access_outer_vlan_min) {
+                access_config->access_outer_vlan = access_config->access_outer_vlan_min;
+            } else {
+                access_config->access_outer_vlan = access_config->access_outer_vlan_max;
+            }
+            if(access_config->access_inner_vlan_min) {
+                access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+            } else {
+                access_config->access_inner_vlan = access_config->access_inner_vlan_max;
+            }
+        } else {
+            if(access_config->exhausted) goto Next;
+            if(access_config->access_outer_vlan == 0) {
+                /* The outer VLAN is initial 0 */
+                access_config->access_outer_vlan = access_config->access_outer_vlan_min;
+                access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+            } else {
+                if(ctx->config.iterate_outer_vlan) {
+                    /* Iterate over outer VLAN first and inner VLAN second */
+                    access_config->access_outer_vlan++;
+                    if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
+                        access_config->access_outer_vlan = access_config->access_outer_vlan_min;
+                        access_config->access_inner_vlan++;
+                    }
+                } else {
+                    /* Iterate over inner VLAN first and outer VLAN second (default) */
+                    access_config->access_inner_vlan++;
+                    if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+                        access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+                        access_config->access_outer_vlan++;
+                    }
+                }
+            }
+            if(access_config->access_outer_vlan == 0) {
+                /* This is required to handle untagged interafaces */
+                access_config->exhausted = true;
+            }
+            if(access_config->access_outer_vlan > access_config->access_outer_vlan_max || 
+            access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+                /* VLAN range exhausted */
+                access_config->exhausted = true;
+                goto Next;
+            }
+        }
+        t++;
+        access_config->sessions++;
+        session = calloc(1, sizeof(bbl_session_s));
+        if (!session) {
+            LOG(ERROR, "Failed to allocate memory for session %u!\n", i);
+            return false;
+        }
+        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
+        session->session_id = i; // BNG Blaster internal session identifier
+        session->access_type = access_config->access_type;
+        session->vlan_key.ifindex = access_config->access_if->ifindex;
+        session->vlan_key.outer_vlan_id= access_config->access_outer_vlan;
+        session->vlan_key.inner_vlan_id = access_config->access_inner_vlan;
+        session->access_third_vlan = access_config->access_third_vlan;
+        session->access_config = access_config;
+
+        /* Set client OUI to locally administered */
+        session->client_mac[0] = 0x02;
+        session->client_mac[1] = 0x00;
+        session->client_mac[2] = 0x00;
+        /* Use session identifier for remaining bytes */
+        session->client_mac[3] = i>>16;
+        session->client_mac[4] = i>>8;
+        session->client_mac[5] = i;
+
+        /* Set DHCPv6 DUID */
+        session->duid[1] = 3;
+        session->duid[3] = 1;
+        memcpy(&session->duid[4], session->client_mac, ETH_ADDR_LEN);
+
+        /* Populate session identifiaction attributes */
+        snprintf(snum1, 6, "%d", i);
+        snprintf(snum2, 6, "%d", access_config->sessions);
+    
+        /* Update username */
+        s = replace_substring(access_config->username, "{session-global}", snum1);
+        session->username = s;
+        s = replace_substring(session->username, "{session}", snum2);
+        session->username = strdup(s);
+
+        /* Update password */
+        s = replace_substring(access_config->password, "{session-global}", snum1);
+        session->password = s;
+        s = replace_substring(session->password, "{session}", snum2);
+        session->password = strdup(s);
+
+        /* Update ACI */
+        s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
+        session->agent_circuit_id = s;
+        s = replace_substring(session->agent_circuit_id, "{session}", snum2);
+        session->agent_circuit_id = strdup(s);
+
+        /* Update ARI */
+        s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
+        session->agent_remote_id = s;
+        s = replace_substring(session->agent_remote_id, "{session}", snum2);
+        session->agent_remote_id = strdup(s);
+        
+        /* Update access rates ... */
+        session->rate_up = access_config->rate_up;
+        session->rate_down = access_config->rate_down;
+
+        /* IGMP */
+        session->igmp_autostart = access_config->igmp_autostart;
+        session->igmp_version = access_config->igmp_version;
+        session->igmp_robustness = 2; /* init robustness with 2 */
+        session->zapping_group_max = be32toh(ctx->config.igmp_group) + ((ctx->config.igmp_group_count - 1) * be32toh(ctx->config.igmp_group_iter));
+        
+        /* Session traffic */
+        session->session_traffic = access_config->session_traffic_autostart;
+    
+        /* Set access type specifc values */
+        if(session->access_type == ACCESS_TYPE_PPPOE) {
+            session->mru = ctx->config.ppp_mru;
+            session->magic_number = htobe32(i);
+            if(ctx->config.pppoe_service_name) {
+                session->pppoe_service_name = (uint8_t*)ctx->config.pppoe_service_name;
+                session->pppoe_service_name_len = strlen(ctx->config.pppoe_service_name);
+            }
+            if(ctx->config.pppoe_host_uniq) {
+                session->pppoe_host_uniq = htobe64(i);
+            }
+        } else if(session->access_type == ACCESS_TYPE_IPOE) {
+            if(access_config->static_ip && access_config->static_gateway) {
+                session->ip_address = access_config->static_ip;
+                session->peer_ip_address = access_config->static_gateway;
+                access_config->static_ip = htobe32(be32toh(access_config->static_ip) + be32toh(access_config->static_ip_iter));
+                access_config->static_gateway = htobe32(be32toh(access_config->static_gateway) + be32toh(access_config->static_gateway_iter));
+            }
+        }
+        session->interface = access_config->access_if;
+        session->session_state = BBL_IDLE;
+        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        ctx->sessions++;
+        if(session->access_type == ACCESS_TYPE_PPPOE) {
+            ctx->sessions_pppoe++;
+        } else {
+            ctx->sessions_ipoe++;
+        }
+        /* Add session to list */
+        ctx->session_list[i-1] = session;
+
+        if(access_config->vlan_mode == VLAN_MODE_11) {
+            /* Add 1:1 sessions to VLAN/session dictionary */
+            result = dict_insert(ctx->vlan_session_dict, &session->vlan_key);
+            if (result.inserted) {
+                *result.datum_ptr = session;
+            }
+        }
+
+        LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
+        i++;
+Next:
+        if(access_config->next) {
+            access_config = access_config->next;
+        } else {
+            if (t) {
+                t = 0;
+                access_config = ctx->config.access_config;
+            } else {
+                LOG(ERROR, "Failed to create sessions because VLAN ranges exhausted!\n");
+                return false;
+            }
+
+        }
+    }
+    return true;
+}
+
