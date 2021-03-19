@@ -631,9 +631,13 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv6pd;
 
     bbl_access_type_t access_type;
-    
-    uint16_t outer_vlan_id;
-    uint16_t inner_vlan_id;
+
+    struct {
+        uint32_t ifindex;
+        uint16_t outer_vlan_id;
+        uint16_t inner_vlan_id;
+    } vlan_key;
+
     uint16_t access_third_vlan;
 
     /* Set to true if session is tunnelled via L2TP. */
