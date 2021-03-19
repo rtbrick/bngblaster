@@ -381,7 +381,6 @@ bbl_init_sessions (bbl_ctx_s *ctx)
     bbl_access_config_s *access_config;
     
     dict_insert_result result;
-    vlan_session_key_t key = {0};
 
     uint32_t i = 1;  /* BNG Blaster internal session identifier */
 
@@ -460,8 +459,9 @@ bbl_init_sessions (bbl_ctx_s *ctx)
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
         session->session_id = i; // BNG Blaster internal session identifier
         session->access_type = access_config->access_type;
-        session->outer_vlan_id= access_config->access_outer_vlan;
-        session->inner_vlan_id = access_config->access_inner_vlan;
+        session->vlan_key.ifindex = access_config->access_if->ifindex;
+        session->vlan_key.outer_vlan_id= access_config->access_outer_vlan;
+        session->vlan_key.inner_vlan_id = access_config->access_inner_vlan;
         session->access_third_vlan = access_config->access_third_vlan;
         session->access_config = access_config;
 
@@ -553,15 +553,10 @@ bbl_init_sessions (bbl_ctx_s *ctx)
 
         if(access_config->vlan_mode == VLAN_MODE_11) {
             /* Add 1:1 sessions to VLAN/session dictionary */
-            key.ifindex = access_config->access_if->ifindex;
-            key.outer_vlan_id = session->outer_vlan_id;
-            key.inner_vlan_id = session->inner_vlan_id;
-            result = dict_insert(ctx->vlan_session_dict, &key);
-            if (!result.inserted) {
-                free(session);
-                return NULL;
+            result = dict_insert(ctx->vlan_session_dict, &session->vlan_key);
+            if (result.inserted) {
+                *result.datum_ptr = session;
             }
-            *result.datum_ptr = session;
         }
 
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);

@@ -37,8 +37,8 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
     bbl.session_id = session->session_id;
     bbl.ifindex = session->interface->ifindex;
-    bbl.outer_vlan_id = session->outer_vlan_id;
-    bbl.inner_vlan_id = session->inner_vlan_id;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
 
     /* Prepare Access (Session) to Network Packet */
     if(!session->access_ipv4_tx_packet_template) {
@@ -48,8 +48,8 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->outer_vlan_id;
-    eth.vlan_inner = session->inner_vlan_id;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
@@ -134,8 +134,8 @@ bbl_add_session_packets_ipv6 (bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
     bbl.ifindex = session->interface->ifindex;
-    bbl.outer_vlan_id = session->outer_vlan_id;
-    bbl.inner_vlan_id = session->inner_vlan_id;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
 
     /* Prepare Access (Session) to Network Packet */
     if(ipv6_pd) {
@@ -168,8 +168,8 @@ bbl_add_session_packets_ipv6 (bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->outer_vlan_id;
-    eth.vlan_inner = session->inner_vlan_id;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
@@ -658,8 +658,8 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
     if(bbl && bbl->type == BBL_TYPE_UNICAST_SESSION) {
         switch (bbl->sub_type) {
             case BBL_SUB_TYPE_IPV4:
-                if(bbl->outer_vlan_id != session->outer_vlan_id ||
-                   bbl->inner_vlan_id != session->inner_vlan_id) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv4_wrong_session++;
                     return;
                 }
@@ -679,8 +679,8 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
                 session->access_ipv4_rx_last_seq = bbl->flow_seq;
                 break;
             case BBL_SUB_TYPE_IPV6:
-                if(bbl->outer_vlan_id != session->outer_vlan_id ||
-                   bbl->inner_vlan_id != session->inner_vlan_id) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv6_wrong_session++;
                     return;
                 }
@@ -700,8 +700,8 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
                 session->access_ipv6_rx_last_seq = bbl->flow_seq;
                 break;
             case BBL_SUB_TYPE_IPV6PD:
-                if(bbl->outer_vlan_id != session->outer_vlan_id ||
-                   bbl->inner_vlan_id != session->inner_vlan_id) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv6pd_wrong_session++;
                     return;
                 }
@@ -887,8 +887,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
     /* BBL receive handler */
     if(bbl) {
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
-            if(bbl->outer_vlan_id != session->outer_vlan_id ||
-               bbl->inner_vlan_id != session->inner_vlan_id) {
+            if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+               bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                 interface->stats.session_ipv4_wrong_session++;
                 return;
             }
