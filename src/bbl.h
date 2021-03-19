@@ -103,7 +103,8 @@ typedef struct bbl_rate_
 
 typedef enum {
     IO_MODE_PACKET_MMAP = 0,
-    IO_MODE_NETMAP
+    IO_MODE_NETMAP,
+    IO_MODE_RAW,
 } __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {
@@ -111,6 +112,10 @@ typedef enum {
     ACCESS_TYPE_IPOE
 } __attribute__ ((__packed__)) bbl_access_type_t;
 
+typedef enum {
+    VLAN_MODE_11 = 0,   /* VLAN mode 1:1 */
+    VLAN_MODE_N1        /* VLAN mode N:1 */
+} __attribute__ ((__packed__)) bbl_vlan_mode_t;
 typedef enum {
     IGMP_GROUP_IDLE = 0,
     IGMP_GROUP_LEAVING,
@@ -285,9 +290,10 @@ typedef struct bbl_access_config_
         uint32_t sessions; /* per access config session counter */
         struct bbl_interface_ *access_if;
         
-        char interface[IFNAMSIZ];
+        char *interface;
 
         bbl_access_type_t access_type; /* pppoe or ipoe */
+        bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
         
         uint16_t access_outer_vlan;
         uint16_t access_outer_vlan_min;
@@ -368,7 +374,8 @@ typedef struct bbl_ctx_
     CIRCLEQ_HEAD(bbl_ctx__, bbl_interface_ ) interface_qhead; /* list of interfaces */
 
     bbl_session_s **session_list; /* list for sessions */
-    
+
+    dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */ 
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
 
@@ -378,8 +385,6 @@ typedef struct bbl_ctx_
 
     int ctrl_socket;
     char *ctrl_socket_path;
-
-    uint8_t ifindex;
 
     /* Operational state */
     struct {
@@ -575,6 +580,12 @@ typedef enum {
     BBL_PPP_TERMINATE   = 5,
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
+
+typedef struct vlan_session_key_ {
+    uint32_t ifindex;
+    uint16_t outer_vlan_id;
+    uint16_t inner_vlan_id;
+} __attribute__ ((__packed__)) vlan_session_key_t;
 
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */

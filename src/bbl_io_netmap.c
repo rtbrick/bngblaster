@@ -9,17 +9,17 @@
 #ifdef BNGBLASTER_NETMAP
 
 #include "bbl.h"
-#include "bbl_netmap.h"
+#include "bbl_io_netmap.h"
 #include "bbl_pcap.h"
 #include "bbl_rx.h"
 #include "bbl_tx.h"
 
 void
-bbl_netmap_rx_job (timer_s *timer)
+bbl_io_netmap_rx_job (timer_s *timer)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    bbl_io_ctx_netmap *io_ctx;
+    bbl_io_netmap_ctx *io_ctx;
 
 	struct netmap_ring *ring;
 	unsigned int i;
@@ -79,11 +79,11 @@ bbl_netmap_rx_job (timer_s *timer)
 }
 
 void
-bbl_netmap_tx_job (timer_s *timer)
+bbl_io_netmap_tx_job (timer_s *timer)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    bbl_io_ctx_netmap *io_ctx;
+    bbl_io_netmap_ctx *io_ctx;
     bool send = false;
 
     struct netmap_ring *ring;
@@ -135,15 +135,15 @@ bbl_netmap_tx_job (timer_s *timer)
 }
 
 /** 
- * bbl_netmap_add_interface 
+ * bbl_io_netmap_add_interface 
  * 
  * @param ctx global context
  * @param interface interface.
  * @param slots ring buffer size (currently not used)
  */
 bool
-bbl_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) {
-    bbl_io_ctx_netmap *io_ctx;
+bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) {
+    bbl_io_netmap_ctx *io_ctx;
     char timer_name[128];
     char netmap_port[128];
 
@@ -151,7 +151,7 @@ bbl_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) 
 
     snprintf(netmap_port, sizeof(netmap_port), "netmap:%s", interface->name);
 
-    io_ctx = calloc(1, sizeof(bbl_io_ctx_netmap));
+    io_ctx = calloc(1, sizeof(bbl_io_netmap_ctx));
     interface->io_mode = IO_MODE_NETMAP;
     interface->io_ctx = io_ctx;
 
@@ -172,9 +172,9 @@ bbl_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) 
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_netmap_tx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_io_netmap_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_netmap_rx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_io_netmap_rx_job);
 
     return true;
 }

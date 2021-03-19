@@ -20,9 +20,10 @@
 #include "bbl_interactive.h"
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
-#include "bbl_packet_mmap.h"
+#include "bbl_io_packet_mmap.h"
+#include "bbl_io_raw.h"
 #ifdef BNGBLASTER_NETMAP
-    #include "bbl_netmap.h"
+    #include "bbl_io_netmap.h"
 #endif
 
 /* Global Variables */
@@ -174,7 +175,6 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
 {
     bbl_interface_s *interface;
     struct ifreq ifr;
-    bool result;
 
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 
@@ -188,7 +188,6 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
     interface->ctx = ctx;
     CIRCLEQ_INSERT_TAIL(&ctx->interface_qhead, interface, interface_qnode);
 
-    interface->ifindex = ctx->ifindex++;
     interface->pcap_index = ctx->pcap.index;
     ctx->pcap.index++;
 
@@ -209,28 +208,54 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
         return NULL;
     }
     memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
-    LOG(NORMAL, "Getting MAC address %s for interface %s\n",
-        format_mac_address(interface->mac), interface->name);
 
+    /*
+     * Obtain the interface index.
+     */
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
+        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
+        strerror(errno), errno, interface->name);
+        return false;
+    }
+    interface->ifindex = ifr.ifr_ifindex;
+
+    /* The BNG Blaster supports multiple IO modes where packet_mmap is
+     * selected per default. */
     switch (ctx->config.io_mode) {
         case IO_MODE_PACKET_MMAP:
-            LOG(NORMAL, "Add packet_mmap interface %s\n", interface->name);
-            result = bbl_packet_mmap_add_interface(ctx, interface, slots);
+            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots)) {
+                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add packet_mmap interface %s\n", interface->name);
+                return NULL;
+            }
+            break;
+        case IO_MODE_RAW:
+            if(bbl_io_raw_add_interface(ctx, interface, slots)) {
+                LOG(NORMAL, "Interface %s added (mode: raw, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add raw socket interface %s\n", interface->name);
+                return NULL;
+            }
             break;
 #ifdef BNGBLASTER_NETMAP
         case IO_MODE_NETMAP:
-            LOG(NORMAL, "Add netmap interface %s\n", interface->name);
-            result = bbl_netmap_add_interface(ctx, interface, slots);
+            if(bbl_io_netmap_add_interface(ctx, interface, slots)) {
+                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add netmap interface %s\n", interface->name);
+                return NULL;
+            }
             break;
 #endif
         default:
-            result = false;
-            break;
-    }
-
-    if(!result) {
-        LOG(ERROR, "Failed to add interface %s\n", interface->name);
-        return NULL;
+            LOG(ERROR, "Failed to add interface %s because of unsupported io-mode\n", interface->name);
+            return NULL;
     }
 
     /*
@@ -257,7 +282,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
     while(access_config) {
         for(i = 0; i < ctx->op.access_if_count; i++) {
             if(ctx->op.access_if[i]->name) {
-                if (strncmp(ctx->op.access_if[i]->name, access_config->interface, IFNAMSIZ) == 0) {
+                if (strcmp(ctx->op.access_if[i]->name, access_config->interface) == 0) {
                     /* Interface already added! */
                     access_config->access_if = ctx->op.access_if[i];
                     goto Next;
@@ -327,7 +352,7 @@ bbl_print_version (void)
         printf("  SHA: %s\n", GIT_SHA);
     }
 
-    printf("IO Modes: packet_mmap");
+    printf("IO Modes: packet_mmap (default), raw");
 #ifdef BNGBLASTER_NETMAP
     printf(", netmap");
 #endif
@@ -355,6 +380,9 @@ bbl_init_sessions (bbl_ctx_s *ctx)
     bbl_session_s *session;
     bbl_access_config_s *access_config;
     
+    dict_insert_result result;
+    vlan_session_key_t key = {0};
+
     uint32_t i = 1;  /* BNG Blaster internal session identifier */
 
     char *s;
@@ -377,37 +405,50 @@ bbl_init_sessions (bbl_ctx_s *ctx)
      * and outer VLAN's, we loop first over all configurations and
      * second over VLAN ranges as per configration. */
     while(i <= ctx->config.sessions) {
-        if(access_config->exhausted) goto Next;
-        if(access_config->access_outer_vlan == 0) {
-            /* The outer VLAN is initial 0 */
-            access_config->access_outer_vlan = access_config->access_outer_vlan_min;
-            access_config->access_inner_vlan = access_config->access_inner_vlan_min;
-        } else {
-            if(ctx->config.iterate_outer_vlan) {
-                /* Iterate over outer VLAN first and inner VLAN second */
-                access_config->access_outer_vlan++;
-                if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
-                    access_config->access_outer_vlan = access_config->access_outer_vlan_min;
-                    access_config->access_inner_vlan++;
-                }
+        if(access_config->vlan_mode == VLAN_MODE_N1) {
+            if(access_config->access_outer_vlan_min) {
+                access_config->access_outer_vlan = access_config->access_outer_vlan_min;
             } else {
-                /* Iterate over inner VLAN first and outer VLAN second (default) */
-                access_config->access_inner_vlan++;
-                if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
-                    access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+                access_config->access_outer_vlan = access_config->access_outer_vlan_max;
+            }
+            if(access_config->access_inner_vlan_min) {
+                access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+            } else {
+                access_config->access_inner_vlan = access_config->access_inner_vlan_max;
+            }
+        } else {
+            if(access_config->exhausted) goto Next;
+            if(access_config->access_outer_vlan == 0) {
+                /* The outer VLAN is initial 0 */
+                access_config->access_outer_vlan = access_config->access_outer_vlan_min;
+                access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+            } else {
+                if(ctx->config.iterate_outer_vlan) {
+                    /* Iterate over outer VLAN first and inner VLAN second */
                     access_config->access_outer_vlan++;
+                    if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
+                        access_config->access_outer_vlan = access_config->access_outer_vlan_min;
+                        access_config->access_inner_vlan++;
+                    }
+                } else {
+                    /* Iterate over inner VLAN first and outer VLAN second (default) */
+                    access_config->access_inner_vlan++;
+                    if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+                        access_config->access_inner_vlan = access_config->access_inner_vlan_min;
+                        access_config->access_outer_vlan++;
+                    }
                 }
             }
-        }
-        if(access_config->access_outer_vlan == 0) {
-            /* This is required to handle untagged interafaces */
-            access_config->exhausted = true;
-        }
-        if(access_config->access_outer_vlan > access_config->access_outer_vlan_max || 
-           access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
-            /* VLAN range exhausted */
-            access_config->exhausted = true;
-            goto Next;
+            if(access_config->access_outer_vlan == 0) {
+                /* This is required to handle untagged interafaces */
+                access_config->exhausted = true;
+            }
+            if(access_config->access_outer_vlan > access_config->access_outer_vlan_max || 
+            access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+                /* VLAN range exhausted */
+                access_config->exhausted = true;
+                goto Next;
+            }
         }
         t++;
         access_config->sessions++;
@@ -509,6 +550,20 @@ bbl_init_sessions (bbl_ctx_s *ctx)
         }
         /* Add session to list */
         ctx->session_list[i-1] = session;
+
+        if(access_config->vlan_mode == VLAN_MODE_11) {
+            /* Add 1:1 sessions to VLAN/session dictionary */
+            key.ifindex = access_config->access_if->ifindex;
+            key.outer_vlan_id = session->outer_vlan_id;
+            key.inner_vlan_id = session->inner_vlan_id;
+            result = dict_insert(ctx->vlan_session_dict, &key);
+            if (!result.inserted) {
+                free(session);
+                return NULL;
+            }
+            *result.datum_ptr = session;
+        }
+
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;
 Next:

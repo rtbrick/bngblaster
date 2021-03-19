@@ -17,12 +17,12 @@
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
 
-typedef struct bbl_io_ctx_netmap_
+typedef struct bbl_io_netmap_ctx_
 {
     struct nm_desc *port;
-} bbl_io_ctx_netmap;
+} bbl_io_netmap_ctx;
 
 bool
-bbl_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots);
+bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots);
 
 #endif
