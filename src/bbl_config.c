@@ -33,8 +33,18 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
             return false;
         }
     }
+    if (json_unpack(access_interface, "{s:s}", "vlan-mode", &s) == 0) {
+        if (strcmp(s, "1:1") == 0) {
+            access_config->vlan_mode = VLAN_MODE_11;
+        } else if (strcmp(s, "N:1") == 0) {
+            access_config->vlan_mode = VLAN_MODE_N1;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for access->vlan-mode\n");
+            return false;
+        }
+    }
     if (json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
-        snprintf(access_config->interface, IFNAMSIZ, "%s", s);
+        access_config->interface = strdup(s);
     } else {
         fprintf(stderr, "JSON config error: Missing value for access->interface\n");
         return false;
@@ -570,12 +580,12 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             ctx->config.qdisc_bypass = json_boolean_value(value);
         }
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
-            if (strcmp(s, "default") == 0) {
-                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
-            } else if (strcmp(s, "packet_mmap") == 0) {
+            if (strcmp(s, "packet_mmap") == 0) {
                 ctx->config.io_mode = IO_MODE_PACKET_MMAP;
             } else if (strcmp(s, "netmap") == 0) {
                 ctx->config.io_mode = IO_MODE_NETMAP;
+            } else if (strcmp(s, "raw") == 0) {
+                ctx->config.io_mode = IO_MODE_RAW;
             } else {
                 fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
                 return false;

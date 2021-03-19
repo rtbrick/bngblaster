@@ -7,17 +7,17 @@
  */
 
 #include "bbl.h"
-#include "bbl_packet_mmap.h"
+#include "bbl_io_packet_mmap.h"
 #include "bbl_pcap.h"
 #include "bbl_rx.h"
 #include "bbl_tx.h"
 
 void
-bbl_packet_mmap_rx_job (timer_s *timer)
+bbl_io_packet_mmap_rx_job (timer_s *timer)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    bbl_io_ctx_packet_mmap *io_ctx;
+    bbl_io_packet_mmap_ctx *io_ctx;
     struct pollfd fds[1] = {0};
 
     uint8_t *frame_ptr;
@@ -96,11 +96,11 @@ bbl_packet_mmap_rx_job (timer_s *timer)
 }
 
 void
-bbl_packet_mmap_tx_job (timer_s *timer)
+bbl_io_packet_mmap_tx_job (timer_s *timer)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    bbl_io_ctx_packet_mmap *io_ctx;
+    bbl_io_packet_mmap_ctx *io_ctx;
 
     struct tpacket2_hdr* tphdr;
     struct pollfd fds[1] = {0};
@@ -173,21 +173,21 @@ bbl_packet_mmap_tx_job (timer_s *timer)
 }
 
 /** 
- * bbl_packet_mmap_add_interface 
+ * bbl_io_packet_mmap_add_interface 
  * 
  * @param ctx global context
  * @param interface interface.
  * @param slots ring buffer size 
  */
 bool
-bbl_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) {
-    bbl_io_ctx_packet_mmap *io_ctx;
+bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) {
+    bbl_io_packet_mmap_ctx *io_ctx;
     size_t ring_size;
     char timer_name[32];
     struct ifreq ifr;
     int version, qdisc_bypass;
 
-    io_ctx = calloc(1, sizeof(bbl_io_ctx_packet_mmap));
+    io_ctx = calloc(1, sizeof(bbl_io_packet_mmap_ctx));
     interface->io_mode = IO_MODE_PACKET_MMAP;
     interface->io_ctx = io_ctx;
 
@@ -221,26 +221,17 @@ bbl_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int sl
     }
 
     /*
-     * Limit packet capture to a given interface.
-     * Obtain the interface index and bind the socket to the interface.
+     * Limit socket to the given interface index.
      */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(io_ctx->fd_tx, SIOCGIFINDEX, &ifr) == -1) {
-        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return false;
-    }
-
-    io_ctx->addr.sll_family = AF_PACKET;
-    io_ctx->addr.sll_ifindex = ifr.ifr_ifindex;
-    io_ctx->addr.sll_protocol = htobe16(ETH_P_ALL);
+    io_ctx->addr.sll_family = PF_PACKET;
+    io_ctx->addr.sll_ifindex = interface->ifindex;
+    io_ctx->addr.sll_protocol = 0;
     if (bind(io_ctx->fd_tx, (struct sockaddr*)&io_ctx->addr, sizeof(io_ctx->addr)) == -1) {
         LOG(ERROR, "bind() TX error %s (%d) for interface %s\n",
         strerror(errno), errno, interface->name);
         return false;
     }
-
+    io_ctx->addr.sll_protocol = htobe16(ETH_P_ALL);
     if (bind(io_ctx->fd_rx, (struct sockaddr*)&io_ctx->addr, sizeof(io_ctx->addr)) == -1) {
         LOG(ERROR, "bind() RX error %s (%d) for interface %s\n",
         strerror(errno), errno, interface->name);
@@ -333,9 +324,9 @@ bbl_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int sl
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_packet_mmap_tx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_io_packet_mmap_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_packet_mmap_rx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_io_packet_mmap_rx_job);
 
     return true;
 }

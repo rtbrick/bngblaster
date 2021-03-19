@@ -15,10 +15,10 @@
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
 
-#ifndef __BBL_PACKET_MMAP_H__
-#define __BBL_PACKET_MMAP_H__
+#ifndef __BBL_IO_PACKET_MMAP_H__
+#define __BBL_IO_PACKET_MMAP_H__
 
-typedef struct bbl_io_ctx_packet_mmap_
+typedef struct bbl_io_packet_mmap_ctx_
 {
     int fd_tx;
     int fd_rx;
@@ -32,9 +32,9 @@ typedef struct bbl_io_ctx_packet_mmap_
     uint16_t cursor_tx; /* slot # inside the ringbuffer */
     uint16_t cursor_rx; /* slot # inside the ringbuffer */
 
-} bbl_io_ctx_packet_mmap;
+} bbl_io_packet_mmap_ctx;
 
 bool
-bbl_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots);
+bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots);
 
 #endif
