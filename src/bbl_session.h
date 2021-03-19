@@ -18,4 +18,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
 void 
 bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session);
 
+bool
+bbl_sessions_init(bbl_ctx_s *ctx);
+
 #endif
