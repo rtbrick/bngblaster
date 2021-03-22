@@ -97,9 +97,13 @@ Attribute | Description | Default
 `tx-interval` | TX ring polling interval in milliseconds | 5
 `rx-interval` | RX ring polling interval in milliseconds | 5
 `qdisc-bypass` | Bypass the kernel's qdisc layer | true
+`io-mode` | IO mode | packet_mmap
 
 WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
 This issue was frequently seen on Ubuntu 20.04. 
+
+The supported IO modes are listed with `bngblaster -v` but except
+`packet_mmap` all other modes are currently considered as experimental. 
 
 ### Network Interface
 
@@ -123,6 +127,7 @@ Attribute | Description | Default
 --------- | ----------- | -------
 `interface` | Access interface name (e.g. eth0, ...)
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
+`vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
 `outer-vlan-min` |Outer VLAN minimum value | 0 (untagged)
 `outer-vlan-max` | Outer VLAN maximum value | 0 (untagged)
 `inner-vlan-min` | Inner VLAN minimum value | 0 (untagged)
@@ -149,10 +154,7 @@ Attribute | Description | Default
 
 **WARNING**: DHCP (IPv4) is currently not supported!
 
-WARNING: The BNG Blaster supports VLAN mode 1:1 only which means 
-one session per VLAN. 
-
-It is possible to configure between zero and three VLAN
+But for all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
 
 ```
@@ -273,6 +275,31 @@ The configuration attributes for username, agent-remote-id and agent-circuit-id
 support also some variable substitution. The variable `{session-global}` will
 be replaced with a number starting from 1 and incremented for every new session. 
 where as the variable `{session}` is incremented per interface section. 
+
+In VLAN mode `N:1` only one VLAN combination is supported per access interface section. 
+This means that only VLAN min or max is considered as VLAN identifer. 
+
+```json
+{
+    "access": [
+        {
+            "interface": "eth1",
+            "type": "pppoe",
+            "vlan-mode": "N:1",
+            "username": "test@rtbrick.com",
+            "outer-vlan-min": 7
+        },
+        {
+            "interface": "eth2",
+            "type": "pppoe",
+            "vlan-mode": "N:1",
+            "username": "test@rtbrick.com",
+            "outer-vlan-min": 2000,
+            "inner-vlan-min": 7,
+        },
+    ]
+}
+```
 
 ## Sessions
 

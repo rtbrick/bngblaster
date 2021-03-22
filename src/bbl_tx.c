@@ -1395,10 +1395,21 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     return result;
 }
 
+/** 
+ * bbl_tx 
+ *
+ * This function should be called as long a send buffer is available or 
+ * return code is not EMPTY. 
+ * 
+ * @param ctx pointer to ethernet header structure of received packet
+ * @param interface pointer to interface on which packet was received
+ * @param buf send buffer where packet can be crafted
+ * @param len length of the crafted packet
+ */
 protocol_error_t
 bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
-    protocol_error_t result = EMPTY;
+    protocol_error_t result = EMPTY; /* EMPTY means that everthing was send */
     bbl_session_s *session;
     bbl_l2tp_queue_t *q;
 
@@ -1407,7 +1418,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         return bbl_encode_interface_packet(interface, buf, len);
     }
 
-    if(interface->access) {
+    if(interface->access) { /* Access interfaces ... */
         /* Write per session frames. */
         if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
             session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
@@ -1418,7 +1429,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 if(session->send_requests == 0) {
                     bbl_session_tx_qnode_remove(session);
                 } else {
-                    /* Move to the end */
+                    /* Move to the end. */
                     bbl_session_tx_qnode_remove(session);
                     bbl_session_tx_qnode_insert(session);
                 }
@@ -1427,7 +1438,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             }
             return result;
         }
-    } else {
+    } else { /* Network interfaces ... */
         /* Write per session frames. */
         if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
             session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
@@ -1437,7 +1448,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 if(session->network_send_requests == 0) {
                     bbl_session_network_tx_qnode_remove(session);
                 } else {
-                    /* Move to the end */
+                    /* Move to the end. */
                     bbl_session_network_tx_qnode_remove(session);
                     bbl_session_network_tx_qnode_insert(session);
                 }
@@ -1473,7 +1484,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 return PROTOCOL_SUCCESS;
             } else {
                 /* This must be the last send operation in this function to fill up remaining slots
-                * with multicast traffic but allother types of traffic have priority. */
+                * with multicast traffic but all other types of traffic have priority. */
                 interface->mc_packet_cursor = 0;
             }
         }
