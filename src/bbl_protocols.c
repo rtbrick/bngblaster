@@ -284,25 +284,27 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 break;
             case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
-                *(uint32_t*)buf = 0;
+                *(uint32_t*)buf = 0; /* Reserved */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
-                *(uint8_t*)buf = 1;
+                *(uint8_t*)buf = 1; /* Source link-layer address */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint8_t*)buf = 1;
+                *(uint8_t*)buf = 1; /* Length (1 = 8 byte) */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
                 break;
             case IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT:
-                *buf = 0x60;
+                *buf = 0x60; /* Flags */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
-                *(uint8_t*)buf = 1;
+                *(uint8_t*)buf = 2; /* Target link-layer address */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint8_t*)buf = 1;
+                *(uint8_t*)buf = 1; /* Length (1 = 8 byte) */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
