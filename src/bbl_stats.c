@@ -32,18 +32,20 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
 
         x = ctx->sessions_established_max;
         y = ctx->stats.setup_time;
-        ctx->stats.cps = (x / y) * 1000.0;
+        if(x > 0.0 && y > 0.0) {
+            ctx->stats.cps = (x / y) * 1000.0;
 
-        ctx->stats.cps_sum += ctx->stats.cps;
-        ctx->stats.cps_count++;
-        ctx->stats.cps_avg = ctx->stats.cps_sum / ctx->stats.cps_count;
+            ctx->stats.cps_sum += ctx->stats.cps;
+            ctx->stats.cps_count++;
+            ctx->stats.cps_avg = ctx->stats.cps_sum / ctx->stats.cps_count;
 
-        if(ctx->stats.cps_min) {
-            if(ctx->stats.cps < ctx->stats.cps_min) ctx->stats.cps_min = ctx->stats.cps;
-        } else {
-            ctx->stats.cps_min = ctx->stats.cps;
+            if(ctx->stats.cps_min) {
+                if(ctx->stats.cps < ctx->stats.cps_min) ctx->stats.cps_min = ctx->stats.cps;
+            } else {
+                ctx->stats.cps_min = ctx->stats.cps;
+            }
+            if(ctx->stats.cps > ctx->stats.cps_max) ctx->stats.cps_max = ctx->stats.cps;
         }
-        if(ctx->stats.cps > ctx->stats.cps_max) ctx->stats.cps_max = ctx->stats.cps;
     }
 }
 
