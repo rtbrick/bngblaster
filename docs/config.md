@@ -348,6 +348,7 @@ Attribute | Description | Default
 `discovery-retry` | PPPoE discovery (PADI and PADR) max retry | 10
 `service-name` | PPPoE discovery service name | 
 `host-uniq` | PPPoE discovery host-uniq | false
+`vlan-priority` | VLAN PBIT for all PPPoE/PPP control traffic | 0 
 
 ## PPP
 
