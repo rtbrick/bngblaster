@@ -536,6 +536,13 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.send_multicast_traffic = json_boolean_value(value);
         }
+        value = json_object_get(section, "multicast-traffic-length");
+        if (json_is_number(value)) {
+            ctx->config.multicast_traffic_len = json_number_value(value);
+            if(ctx->config.multicast_traffic_len > 1500) {
+                fprintf(stderr, "JSON config error: Invalid value for igmp->multicast-traffic-length (max 1500)\n");
+            }
+        }
     }
 
     /* Access Line Configuration */

@@ -119,7 +119,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     uint16_t len = 0;
 
     if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
-        interface->mc_packets = malloc(ctx->config.igmp_group_count * 1500);
+        interface->mc_packets = malloc(ctx->config.igmp_group_count * 2000);
         buf = interface->mc_packets;
 
         for(i = 0; i < ctx->config.igmp_group_count; i++) {
@@ -149,6 +149,9 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             udp.dst = BBL_UDP_PORT;
             udp.protocol = UDP_PROTOCOL_BBL;
             udp.next = &bbl;
+            if(ctx->config.multicast_traffic_len > 76) {
+                bbl.padding = ctx->config.multicast_traffic_len - 76;
+            } 
             bbl.type = BBL_TYPE_MULTICAST;
             bbl.direction = BBL_DIRECTION_DOWN;
             bbl.mc_source = ip.src;
