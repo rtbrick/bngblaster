@@ -582,8 +582,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if (strcmp(s, "packet_mmap") == 0) {
                 ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+#if BNGBLASTER_NETMAP
             } else if (strcmp(s, "netmap") == 0) {
                 ctx->config.io_mode = IO_MODE_NETMAP;
+#endif
             } else if (strcmp(s, "raw") == 0) {
                 ctx->config.io_mode = IO_MODE_RAW;
             } else {
