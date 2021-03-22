@@ -143,6 +143,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             ip.src = source;
             ip.dst = htobe32(group);
             ip.ttl = 64;
+            ip.tos = ctx->config.multicast_traffic_tos;
             ip.protocol = PROTOCOL_IPV4_UDP;
             ip.next = &udp;
             udp.src = BBL_UDP_PORT;
@@ -154,6 +155,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             } 
             bbl.type = BBL_TYPE_MULTICAST;
             bbl.direction = BBL_DIRECTION_DOWN;
+            bbl.tos = ctx->config.multicast_traffic_tos;
             bbl.mc_source = ip.src;
             bbl.mc_group = ip.dst ;
             if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
