@@ -144,6 +144,7 @@ Attribute | Description | Default
 `agent-remote-id` | Optionally overwrite the agent-remote-id from access-line section per access configuration
 `rate-up` | Optionally overwrite the rate-up from access-line section per access configuration
 `rate-down` | Optionally overwrite the rate-down from access-line section per access configuration
+`dsl-type` | Optionally overwrite the dsl-type from access-line section per access configuration
 `ipcp` | Optionally enable/disable PPP IPCP per access configuration
 `ip6cp` | Optionally enable/disable PPP IP6CP per access configuration
 `ipv4` | Optionally enable/disable IPoE IPv4 per access configuration
@@ -412,6 +413,7 @@ Attribute | Description | Default
 `agent-remote-id` | Agent-Remote-Id | DEU.RTBRICK.{session-global}
 `rate-up` | Actual-Data-Rate-Upstream | 0
 `rate-down` | Actual-Data-Rate-Downstream | 0
+`dsl-type` | DSL-Type | 0
 
 ## DHCP
 

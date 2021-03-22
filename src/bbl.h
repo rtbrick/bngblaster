@@ -319,6 +319,7 @@ typedef struct bbl_access_config_
         char *agent_circuit_id;
         uint32_t rate_up;
         uint32_t rate_down;
+        uint32_t dsl_type;
 
         /* Protocols */
         bool ipcp_enable;
@@ -470,11 +471,13 @@ typedef struct bbl_ctx_
         char *agent_circuit_id;
         uint32_t rate_up;
         uint32_t rate_down;
+        uint32_t dsl_type;
 
         /* PPPoE */
         uint32_t pppoe_session_time;
         uint16_t pppoe_discovery_timeout;
         uint16_t pppoe_discovery_retry;
+        uint8_t  pppoe_vlan_priority;
         char    *pppoe_service_name;
         bool     pppoe_reconnect;
         bool     pppoe_host_uniq;
@@ -655,6 +658,7 @@ typedef struct bbl_session_
     char *agent_remote_id;
     uint32_t rate_up;
     uint32_t rate_down;
+    uint32_t dsl_type;
 
     /* Ethernet */
     uint8_t server_mac[ETH_ADDR_LEN];
