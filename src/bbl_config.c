@@ -543,6 +543,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 fprintf(stderr, "JSON config error: Invalid value for igmp->multicast-traffic-length (max 1500)\n");
             }
         }
+        value = json_object_get(section, "multicast-traffic-tos");
+        if (json_is_number(value)) {
+            ctx->config.multicast_traffic_tos = json_number_value(value);
+        }
     }
 
     /* Access Line Configuration */

@@ -538,6 +538,7 @@ typedef struct bbl_ctx_
 
         /* Multicast Traffic */
         bool send_multicast_traffic;
+        uint8_t multicast_traffic_tos;
         uint16_t multicast_traffic_len;
 
         /* Session Traffic */

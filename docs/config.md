@@ -453,6 +453,7 @@ Attribute | Description | Default
 `view-duration` | Define the view duration in seconds | 0 (disabled)
 `send-multicast-traffic` | Generate multicast traffic | false
 `multicast-traffic-length` | Multicast traffic IP length | 76
+`multicast-traffic-tos` | Multicast traffic TOS priority | 0
 
 Per default join and leave requests are send using dedicated reports. The option `combined-leave-join` allows 
 the combination of leave and join records within a single IGMPv3 report using multiple group records. 
