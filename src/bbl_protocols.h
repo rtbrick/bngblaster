@@ -588,6 +588,7 @@ typedef struct bbl_l2tp_ {
 } bbl_l2tp_t;
 
 typedef struct bbl_bbl_ {
+    uint16_t     padding;
     uint8_t      type;
     uint8_t      sub_type;
     uint8_t      direction;

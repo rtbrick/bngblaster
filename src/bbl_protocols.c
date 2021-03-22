@@ -191,6 +191,10 @@ protocol_error_t
 encode_bbl(uint8_t *buf, uint16_t *len,
            bbl_bbl_t *bbl) {
 
+    if(bbl->padding) {
+        memset(buf, 0x0, bbl->padding);
+        BUMP_WRITE_BUFFER(buf, len, bbl->padding);
+    }
     *(uint64_t*)buf = BBL_MAGIC_NUMBER;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
     *buf = bbl->type;
@@ -1488,11 +1492,16 @@ decode_bbl(uint8_t *buf, uint16_t len,
 
     bbl_bbl_t *bbl;
 
-    if(len < 40 || sp_len < sizeof(bbl_bbl_t)) {
+    if(len < 48 || sp_len < sizeof(bbl_bbl_t)) {
         return DECODE_ERROR;
     }
     /* Init BBL header */
     bbl = (bbl_bbl_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bbl_t));
+
+    if(len > 48) {
+        /* Bump padding... */
+        BUMP_BUFFER(buf, len, (len - 48));
+    }
 
     if(*(uint64_t*)buf != BBL_MAGIC_NUMBER) {
         return DECODE_ERROR;
