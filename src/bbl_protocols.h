@@ -332,10 +332,11 @@ typedef enum access_line_codes_ {
 } access_line_codes;
 
 typedef struct access_line_ {
-    char    *aci;   // Agent Circuit ID
-    char    *ari;   // Agent Remote ID
-    uint32_t up;    // Actual Data Rate Upstream
-    uint32_t down;  // Actual Data Rate Downstream
+    char    *aci;       // Agent Circuit ID
+    char    *ari;       // Agent Remote ID
+    uint32_t up;        // Actual Data Rate Upstream
+    uint32_t down;      // Actual Data Rate Downstream
+    uint32_t dsl_type;  // DSL Type
 } access_line_t;
 
 /*

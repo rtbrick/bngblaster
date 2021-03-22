@@ -326,6 +326,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         /* Update access rates ... */
         session->rate_up = access_config->rate_up;
         session->rate_down = access_config->rate_down;
+        session->dsl_type = access_config->dsl_type;
 
         /* IGMP */
         session->igmp_autostart = access_config->igmp_autostart;

@@ -163,6 +163,13 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         access_config->rate_down = ctx->config.rate_down;
     }
 
+    value = json_object_get(access_interface, "dsl-type");
+    if (value) {
+        access_config->dsl_type = json_number_value(value);
+    } else {
+        access_config->dsl_type = ctx->config.dsl_type;
+    }
+
     value = json_object_get(access_interface, "ipcp");
     if (json_is_boolean(value)) {
         access_config->ipcp_enable = json_boolean_value(value);
@@ -539,6 +546,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "rate-down");
         if (json_is_number(value)) {
             ctx->config.rate_down = json_number_value(value);
+        }
+        value = json_object_get(section, "dsl-type");
+        if (json_is_number(value)) {
+            ctx->config.dsl_type = json_number_value(value);
         }
     }
 

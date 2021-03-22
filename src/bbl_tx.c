@@ -1018,6 +1018,7 @@ bbl_encode_padi (bbl_session_s *session)
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
+        access_line.dsl_type = session->dsl_type;
         pppoe.access_line = &access_line;
     }
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -1053,6 +1054,7 @@ bbl_encode_padr (bbl_session_s *session)
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
+        access_line.dsl_type = session->dsl_type;
         pppoe.access_line = &access_line;
     }
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);

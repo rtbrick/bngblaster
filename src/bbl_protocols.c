@@ -1066,6 +1066,15 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
+            if(pppoe->access_line->down) {
+                *buf = ACCESS_LINE_DSL_TYPE;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(pppoe->access_line->dsl_type);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
             *vendor_len_field = htobe16(vendor_len);
             pppoe_len += 4 + vendor_len;
         }
