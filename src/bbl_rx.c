@@ -521,7 +521,7 @@ bbl_igmp_initial_join(timer_s *timer)
     int group_start_index = 0;
 
     if(session->session_state != BBL_ESTABLISHED ||
-       session->ipcp_state != BBL_PPP_OPENED) {
+       (session->access_type == ACCESS_TYPE_PPPOE && session->ipcp_state != BBL_PPP_OPENED)) {
         return;
     }
 
