@@ -29,6 +29,8 @@ add_executable(bngblaster ${BBL_SOURCES})
 find_library(libdict NAMES libdict.a REQUIRED)
 
 target_link_libraries(bngblaster curses crypto jansson ${libdict} m)
+
+# add experimental netmap support
 if(BNGBLASTER_NETMAP)
     add_definitions(-DBNGBLASTER_NETMAP)
     target_link_libraries(bngblaster netmap)
