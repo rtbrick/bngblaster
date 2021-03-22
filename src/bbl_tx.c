@@ -244,6 +244,8 @@ bbl_encode_packet_igmp (bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         /* Check session and IPCP (PPP IPv4) state to prevent sending IGMP request
@@ -462,6 +464,8 @@ bbl_encode_packet_pap_request (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -510,6 +514,8 @@ bbl_encode_packet_chap_response (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -558,6 +564,8 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
             return WRONG_PROTOCOL_STATE;
@@ -616,6 +624,8 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
             return WRONG_PROTOCOL_STATE;
@@ -711,6 +721,8 @@ bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -728,17 +740,24 @@ bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
 
 protocol_error_t
 bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+    
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ip6cp_t ip6cp = {0};
 
-    session->interface->stats.ip6cp_tx++;
+    interface = session->interface;
+    ctx = interface->ctx;
+    interface->stats.ip6cp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -805,6 +824,8 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -833,17 +854,24 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
 
 protocol_error_t
 bbl_encode_packet_ipcp_response (bbl_session_s *session) {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ipcp_t ipcp = {0};
 
-    session->interface->stats.ipcp_tx++;
+    interface = session->interface;
+    ctx = interface->ctx;
+    interface->stats.ipcp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -911,6 +939,8 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -935,17 +965,24 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
 
 protocol_error_t
 bbl_encode_packet_lcp_response (bbl_session_s *session) {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_lcp_t lcp = {0};
 
-    session->interface->stats.lcp_tx++;
+    interface = session->interface;
+    ctx = interface->ctx;
+    interface->stats.lcp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -993,15 +1030,24 @@ bbl_padr_timeout (timer_s *timer)
 protocol_error_t
 bbl_encode_padi (bbl_session_s *session)
 {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_discovery_t pppoe = {0};
     access_line_t access_line = {0};
+
+    interface = session->interface;
+    ctx = interface->ctx;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
+
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
     pppoe.code = PPPOE_PADI;
@@ -1027,15 +1073,23 @@ bbl_encode_padi (bbl_session_s *session)
 protocol_error_t
 bbl_encode_padr (bbl_session_s *session)
 {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_discovery_t pppoe = {0};
     access_line_t access_line = {0};
+
+    interface = session->interface;
+    ctx = interface->ctx;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
     pppoe.code = PPPOE_PADR;
@@ -1063,14 +1117,22 @@ bbl_encode_padr (bbl_session_s *session)
 protocol_error_t
 bbl_encode_padt (bbl_session_s *session)
 {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_discovery_t pppoe = {0};
+
+    interface = session->interface;
+    ctx = interface->ctx;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
     pppoe.code = PPPOE_PADT;

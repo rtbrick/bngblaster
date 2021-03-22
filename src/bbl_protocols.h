@@ -41,6 +41,7 @@
 
 #define ETH_ADDR_LEN                    6
 #define ETH_VLAN_ID_MAX                 4095
+#define ETH_VLAN_PBIT_MAX               7
 
 #define IPV6_ADDR_LEN                   16
 #define IPV6_IDENTIFER_LEN              8
@@ -349,6 +350,8 @@ typedef struct bbl_ethernet_header_ {
     uint16_t  vlan_inner; // inner VLAN identifier
     uint16_t  vlan_three; // third VLAN
     uint16_t  type; // ethertype
+    uint8_t   vlan_outer_priority;
+    uint8_t   vlan_inner_priority;
     void     *next; // next header
     uint32_t  rx_sec;
     uint32_t  rx_nsec;

@@ -337,6 +337,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.pppoe_host_uniq = json_boolean_value(value);
         }
+        value = json_object_get(section, "vlan-priority");
+        if (json_is_number(value)) {
+            ctx->config.pppoe_vlan_priority = json_number_value(value);
+            if(ctx->config.pppoe_vlan_priority > 7) {
+                fprintf(stderr, "JSON config error: Invalid value for pppoe->vlan-priority\n");
+                return false;
+            }
+        }
     }
 
     /* PPP Configuration */

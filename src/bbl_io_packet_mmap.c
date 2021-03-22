@@ -68,10 +68,12 @@ bbl_io_packet_mmap_rx_job (timer_s *timer)
         }
 
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
-        if(decode_result == PROTOCOL_SUCCESS) {
+        if(decode_result == PROTOCOL_SUCCESS) {            
+#if 0
             /* The outer VLAN is stripped from header */
             eth->vlan_inner = eth->vlan_outer;
             eth->vlan_outer = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
+#endif
             /* Copy RX timestamp */
             eth->rx_sec = tphdr->tp_sec; /* ktime/hw timestamp */
             eth->rx_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
