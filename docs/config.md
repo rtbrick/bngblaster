@@ -97,9 +97,13 @@ Attribute | Description | Default
 `tx-interval` | TX ring polling interval in milliseconds | 5
 `rx-interval` | RX ring polling interval in milliseconds | 5
 `qdisc-bypass` | Bypass the kernel's qdisc layer | true
+`io-mode` | IO mode | packet_mmap
 
 WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
 This issue was frequently seen on Ubuntu 20.04. 
+
+The supported IO modes are listed with `bngblaster -v` but except
+`packet_mmap` all other modes are currently considered as experimental. 
 
 ### Network Interface
 
@@ -123,6 +127,7 @@ Attribute | Description | Default
 --------- | ----------- | -------
 `interface` | Access interface name (e.g. eth0, ...)
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
+`vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
 `outer-vlan-min` |Outer VLAN minimum value | 0 (untagged)
 `outer-vlan-max` | Outer VLAN maximum value | 0 (untagged)
 `inner-vlan-min` | Inner VLAN minimum value | 0 (untagged)
@@ -139,6 +144,7 @@ Attribute | Description | Default
 `agent-remote-id` | Optionally overwrite the agent-remote-id from access-line section per access configuration
 `rate-up` | Optionally overwrite the rate-up from access-line section per access configuration
 `rate-down` | Optionally overwrite the rate-down from access-line section per access configuration
+`dsl-type` | Optionally overwrite the dsl-type from access-line section per access configuration
 `ipcp` | Optionally enable/disable PPP IPCP per access configuration
 `ip6cp` | Optionally enable/disable PPP IP6CP per access configuration
 `ipv4` | Optionally enable/disable IPoE IPv4 per access configuration
@@ -149,10 +155,7 @@ Attribute | Description | Default
 
 **WARNING**: DHCP (IPv4) is currently not supported!
 
-WARNING: The BNG Blaster supports VLAN mode 1:1 only which means 
-one session per VLAN. 
-
-It is possible to configure between zero and three VLAN
+But for all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
 
 ```
@@ -274,6 +277,31 @@ support also some variable substitution. The variable `{session-global}` will
 be replaced with a number starting from 1 and incremented for every new session. 
 where as the variable `{session}` is incremented per interface section. 
 
+In VLAN mode `N:1` only one VLAN combination is supported per access interface section. 
+This means that only VLAN min or max is considered as VLAN identifer. 
+
+```json
+{
+    "access": [
+        {
+            "interface": "eth1",
+            "type": "pppoe",
+            "vlan-mode": "N:1",
+            "username": "test@rtbrick.com",
+            "outer-vlan-min": 7
+        },
+        {
+            "interface": "eth2",
+            "type": "pppoe",
+            "vlan-mode": "N:1",
+            "username": "test@rtbrick.com",
+            "outer-vlan-min": 2000,
+            "inner-vlan-min": 7,
+        },
+    ]
+}
+```
+
 ## Sessions
 
 This section describes all attributes of the `sessions` hierarchy. 
@@ -320,6 +348,7 @@ Attribute | Description | Default
 `discovery-retry` | PPPoE discovery (PADI and PADR) max retry | 10
 `service-name` | PPPoE discovery service name | 
 `host-uniq` | PPPoE discovery host-uniq | false
+`vlan-priority` | VLAN PBIT for all PPPoE/PPP control traffic | 0 
 
 ## PPP
 
@@ -385,6 +414,7 @@ Attribute | Description | Default
 `agent-remote-id` | Agent-Remote-Id | DEU.RTBRICK.{session-global}
 `rate-up` | Actual-Data-Rate-Upstream | 0
 `rate-down` | Actual-Data-Rate-Downstream | 0
+`dsl-type` | DSL-Type | 0
 
 ## DHCP
 
@@ -422,6 +452,8 @@ Attribute | Description | Default
 `zapping-count` | Define the amount of channel changes before starting view duration | 0 (disabled)
 `view-duration` | Define the view duration in seconds | 0 (disabled)
 `send-multicast-traffic` | Generate multicast traffic | false
+`multicast-traffic-length` | Multicast traffic IP length | 76
+`multicast-traffic-tos` | Multicast traffic TOS priority | 0
 
 Per default join and leave requests are send using dedicated reports. The option `combined-leave-join` allows 
 the combination of leave and join records within a single IGMPv3 report using multiple group records. 
@@ -489,6 +521,8 @@ Attribute | Description | Default
 `data-control-priority` | Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, ...) | false
 `data-length` | Set length bit for all data packets | false
 `data-offset` | Set offset bit with offset zero for all data packets | false
+`control-tos` | L2TP control traffic (SCCRQ, ICRQ, ...) TOS priority | 0
+`data-control-tos` | Set the L2TP tunnel TOS priority (outer IPv4 header) for all non-IP data packets (LCP, IPCP, ...) | 0
 
 The BNG Blaster supports different congestion modes for the 
 reliable delivery of control messages. The `default` mode

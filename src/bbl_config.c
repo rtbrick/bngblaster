@@ -33,8 +33,18 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
             return false;
         }
     }
+    if (json_unpack(access_interface, "{s:s}", "vlan-mode", &s) == 0) {
+        if (strcmp(s, "1:1") == 0) {
+            access_config->vlan_mode = VLAN_MODE_11;
+        } else if (strcmp(s, "N:1") == 0) {
+            access_config->vlan_mode = VLAN_MODE_N1;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for access->vlan-mode\n");
+            return false;
+        }
+    }
     if (json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
-        snprintf(access_config->interface, IFNAMSIZ, "%s", s);
+        access_config->interface = strdup(s);
     } else {
         fprintf(stderr, "JSON config error: Missing value for access->interface\n");
         return false;
@@ -151,6 +161,13 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         access_config->rate_down = json_number_value(value);
     } else {
         access_config->rate_down = ctx->config.rate_down;
+    }
+
+    value = json_object_get(access_interface, "dsl-type");
+    if (value) {
+        access_config->dsl_type = json_number_value(value);
+    } else {
+        access_config->dsl_type = ctx->config.dsl_type;
     }
 
     value = json_object_get(access_interface, "ipcp");
@@ -319,6 +336,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "host-uniq");
         if (json_is_boolean(value)) {
             ctx->config.pppoe_host_uniq = json_boolean_value(value);
+        }
+        value = json_object_get(section, "vlan-priority");
+        if (json_is_number(value)) {
+            ctx->config.pppoe_vlan_priority = json_number_value(value);
+            if(ctx->config.pppoe_vlan_priority > 7) {
+                fprintf(stderr, "JSON config error: Invalid value for pppoe->vlan-priority\n");
+                return false;
+            }
         }
     }
 
@@ -511,6 +536,17 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.send_multicast_traffic = json_boolean_value(value);
         }
+        value = json_object_get(section, "multicast-traffic-length");
+        if (json_is_number(value)) {
+            ctx->config.multicast_traffic_len = json_number_value(value);
+            if(ctx->config.multicast_traffic_len > 1500) {
+                fprintf(stderr, "JSON config error: Invalid value for igmp->multicast-traffic-length (max 1500)\n");
+            }
+        }
+        value = json_object_get(section, "multicast-traffic-tos");
+        if (json_is_number(value)) {
+            ctx->config.multicast_traffic_tos = json_number_value(value);
+        }
     }
 
     /* Access Line Configuration */
@@ -529,6 +565,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "rate-down");
         if (json_is_number(value)) {
             ctx->config.rate_down = json_number_value(value);
+        }
+        value = json_object_get(section, "dsl-type");
+        if (json_is_number(value)) {
+            ctx->config.dsl_type = json_number_value(value);
         }
     }
 
@@ -568,6 +608,22 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "qdisc-bypass");
         if (json_is_boolean(value)) {
             ctx->config.qdisc_bypass = json_boolean_value(value);
+        }
+        if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
+            if (strcmp(s, "packet_mmap") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+#if BNGBLASTER_NETMAP
+            } else if (strcmp(s, "netmap") == 0) {
+                ctx->config.io_mode = IO_MODE_NETMAP;
+#endif
+            } else if (strcmp(s, "raw") == 0) {
+                ctx->config.io_mode = IO_MODE_RAW;
+            } else {
+                fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
+                return false;
+            }
+        } else {
+            ctx->config.io_mode = IO_MODE_PACKET_MMAP;
         }
         sub = json_object_get(section, "network");
         if (json_is_object(sub)) {
@@ -744,6 +800,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             value = json_object_get(sub, "data-offset");
             if (json_is_boolean(value)) {
                 l2tp_server->data_offset = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "control-tos");
+            if (json_is_number(value)) {
+                l2tp_server->control_tos = json_number_value(value);
+            }
+            value = json_object_get(sub, "data-control-tos");
+            if (json_is_number(value)) {
+                l2tp_server->data_control_tos = json_number_value(value);
             }
         }   
     } else if (json_is_object(section)) {

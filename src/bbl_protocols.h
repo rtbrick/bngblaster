@@ -41,6 +41,7 @@
 
 #define ETH_ADDR_LEN                    6
 #define ETH_VLAN_ID_MAX                 4095
+#define ETH_VLAN_PBIT_MAX               7
 
 #define IPV6_ADDR_LEN                   16
 #define IPV6_IDENTIFER_LEN              8
@@ -215,7 +216,8 @@ typedef enum protocol_error_ {
     ENCODE_ERROR,
     UNKNOWN_PROTOCOL,
     WRONG_PROTOCOL_STATE,
-    IGNORED
+    IGNORED,
+    EMPTY
 } protocol_error_t;
 
 typedef enum icmpv6_message_type_ {
@@ -331,10 +333,11 @@ typedef enum access_line_codes_ {
 } access_line_codes;
 
 typedef struct access_line_ {
-    char    *aci;   // Agent Circuit ID
-    char    *ari;   // Agent Remote ID
-    uint32_t up;    // Actual Data Rate Upstream
-    uint32_t down;  // Actual Data Rate Downstream
+    char    *aci;       // Agent Circuit ID
+    char    *ari;       // Agent Remote ID
+    uint32_t up;        // Actual Data Rate Upstream
+    uint32_t down;      // Actual Data Rate Downstream
+    uint32_t dsl_type;  // DSL Type
 } access_line_t;
 
 /*
@@ -347,6 +350,8 @@ typedef struct bbl_ethernet_header_ {
     uint16_t  vlan_inner; // inner VLAN identifier
     uint16_t  vlan_three; // third VLAN
     uint16_t  type; // ethertype
+    uint8_t   vlan_outer_priority;
+    uint8_t   vlan_inner_priority;
     void     *next; // next header
     uint32_t  rx_sec;
     uint32_t  rx_nsec;
@@ -583,10 +588,12 @@ typedef struct bbl_l2tp_ {
 } bbl_l2tp_t;
 
 typedef struct bbl_bbl_ {
+    uint16_t     padding;
     uint8_t      type;
     uint8_t      sub_type;
     uint8_t      direction;
     uint8_t      tos;
+    uint32_t     session_id;
     uint32_t     ifindex;
     uint16_t     outer_vlan_id;
     uint16_t     inner_vlan_id;

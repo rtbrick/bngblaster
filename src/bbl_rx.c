@@ -8,7 +8,7 @@
  */
 
 #include "bbl.h"
-#include "bbl_pcap.h"
+#include "bbl_session.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -35,9 +35,10 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
-    bbl.ifindex = session->key.ifindex;
-    bbl.outer_vlan_id = session->key.outer_vlan_id;
-    bbl.inner_vlan_id = session->key.inner_vlan_id;
+    bbl.session_id = session->session_id;
+    bbl.ifindex = session->interface->ifindex;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
 
     /* Prepare Access (Session) to Network Packet */
     if(!session->access_ipv4_tx_packet_template) {
@@ -47,8 +48,8 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
@@ -131,9 +132,10 @@ bbl_add_session_packets_ipv6 (bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
-    bbl.ifindex = session->key.ifindex;
-    bbl.outer_vlan_id = session->key.outer_vlan_id;
-    bbl.inner_vlan_id = session->key.inner_vlan_id;
+    bbl.session_id = session->session_id;
+    bbl.ifindex = session->interface->ifindex;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
 
     /* Prepare Access (Session) to Network Packet */
     if(ipv6_pd) {
@@ -166,8 +168,8 @@ bbl_add_session_packets_ipv6 (bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
-    eth.vlan_outer = session->key.outer_vlan_id;
-    eth.vlan_inner = session->key.inner_vlan_id;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
@@ -344,8 +346,7 @@ bbl_lcp_echo(timer_s *timer)
             interface->stats.lcp_echo_timeout++;
         }
         if(session->lcp_retries > ctx->config.lcp_keepalive_retry) {
-            LOG(PPPOE, "LCP ECHO TIMEOUT (Q-in-Q %u:%u)\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id);
+            LOG(PPPOE, "LCP ECHO TIMEOUT (ID: %u)\n", session->session_id);
             /* Force terminate session after timeout. */
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_update_state(ctx, session, BBL_TERMINATING);
@@ -419,18 +420,16 @@ bbl_igmp_zapping(timer_s *timer)
         }
         session->stats.avg_join_delay = session->zapping_join_delay_sum / session->zapping_join_delay_count;
 
-        LOG(IGMP, "IGMP (Q-in-Q %u:%u) ZAPPING %u ms join delay for group %s\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id,
-                join_delay, format_ipv4_address(&group->group));
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms join delay for group %s\n",
+            session->session_id, join_delay, format_ipv4_address(&group->group));
     } else {
         if(ctx->config.igmp_zap_wait) {
             /* Wait until MC traffic is received ... */
             return;
         } else {
             session->stats.mc_not_received++;
-            LOG(IGMP, "IGMP (Q-in-Q %u:%u) ZAPPING join failed for group %s\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id,
-                format_ipv4_address(&group->group));
+            LOG(IGMP, "IGMP (ID: %u) ZAPPING join failed for group %s\n",
+                session->session_id, format_ipv4_address(&group->group));
         }
     }
 
@@ -467,9 +466,8 @@ bbl_igmp_zapping(timer_s *timer)
         }
         session->stats.avg_leave_delay = session->zapping_leave_delay_sum / session->zapping_leave_delay_count;
 
-        LOG(IGMP, "IGMP (Q-in-Q %u:%u) ZAPPING %u ms leave delay for group %s\n",
-                    session->key.outer_vlan_id, session->key.inner_vlan_id,
-                    leave_delay, format_ipv4_address(&group->group));
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms leave delay for group %s\n",
+            session->session_id, leave_delay, format_ipv4_address(&group->group));
     }
 
     /* Join next group ... */
@@ -495,10 +493,10 @@ bbl_igmp_zapping(timer_s *timer)
     session->zapping_leaved_group = session->zapping_joined_group;
     session->zapping_joined_group = group;
 
-    LOG(IGMP, "IGMP (Q-in-Q %u:%u) ZAPPING leave %s join %s\n",
-              session->key.outer_vlan_id, session->key.inner_vlan_id,
-              format_ipv4_address(&session->zapping_leaved_group->group),
-              format_ipv4_address(&session->zapping_joined_group->group));
+    LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s join %s\n",
+        session->session_id,
+        format_ipv4_address(&session->zapping_leaved_group->group),
+        format_ipv4_address(&session->zapping_joined_group->group));
 
     /* Handle viewing profile */
     session->zapping_count++;
@@ -542,9 +540,8 @@ bbl_igmp_initial_join(timer_s *timer)
     session->send_requests |= BBL_SEND_IGMP;
     bbl_session_tx_qnode_insert(session);
 
-    LOG(IGMP, "IGMP (Q-in-Q %u:%u) initial join for group %s\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id,
-                format_ipv4_address(&group->group));
+    LOG(IGMP, "IGMP (ID: %u) initial join for group %s\n",
+        session->session_id, format_ipv4_address(&group->group));
 
     if(ctx->config.igmp_group_count > 1 && ctx->config.igmp_zap_interval > 0) {
         /* Start/Init Zapping Logic ... */
@@ -562,9 +559,8 @@ bbl_igmp_initial_join(timer_s *timer)
 
         /* Adding 1 nanosecond to enforce a dedicated timer bucket for zapping. */
         timer_add_periodic(&ctx->timer_root, &session->timer_zapping, "IGMP Zapping", ctx->config.igmp_zap_interval, 1, session, bbl_igmp_zapping);
-        LOG(IGMP, "IGMP (Q-in-Q %u:%u) ZAPPING start zapping with interval %u\n",
-                    session->key.outer_vlan_id, session->key.inner_vlan_id,
-                    ctx->config.igmp_zap_interval);
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING start zapping with interval %u\n",
+            session->session_id, ctx->config.igmp_zap_interval);
 
         timer_smear_bucket(&ctx->timer_root, ctx->config.igmp_zap_interval, 1);
     }
@@ -589,9 +585,8 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                     memcpy(&session->delegated_ipv6_prefix, dhcpv6->delegated_prefix, sizeof(ipv6_prefix));
                     *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
                     *(uint64_t*)&session->delegated_ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                    LOG(IP, "IPv6 (Q-in-Q %u:%u) DHCPv6 PD prefix %s/%d\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id,
-                            format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
+                    LOG(IP, "IPv6 (ID: %u) DHCPv6 PD prefix %s/%d\n", session->session_id,
+                        format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
                     if(dhcpv6->dns1) {
                         memcpy(&session->dhcpv6_dns1, dhcpv6->dns1, IPV6_ADDR_LEN);
                         if(dhcpv6->dns2) {
@@ -615,8 +610,7 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                                                 1, 0, session, bbl_session_traffic_ipv6pd);
                             }
                         } else {
-                            LOG(ERROR, "Traffic (Q-in-Q %u:%u) failed to create IPv6 session traffic\n",
-                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
                         }
                     }
                 }
@@ -664,8 +658,8 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
     if(bbl && bbl->type == BBL_TYPE_UNICAST_SESSION) {
         switch (bbl->sub_type) {
             case BBL_SUB_TYPE_IPV4:
-                if(bbl->outer_vlan_id != session->key.outer_vlan_id ||
-                   bbl->inner_vlan_id != session->key.inner_vlan_id) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv4_wrong_session++;
                     return;
                 }
@@ -678,16 +672,15 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
                     if(session->access_ipv4_rx_last_seq +1 != bbl->flow_seq) {
                         interface->stats.session_ipv4_loss++;
                         session->stats.access_ipv4_loss++;
-                        LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id,
-                            bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
+                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
                     }
                 }
                 session->access_ipv4_rx_last_seq = bbl->flow_seq;
                 break;
             case BBL_SUB_TYPE_IPV6:
-                if(bbl->outer_vlan_id != session->key.outer_vlan_id ||
-                   bbl->inner_vlan_id != session->key.inner_vlan_id) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv6_wrong_session++;
                     return;
                 }
@@ -700,16 +693,15 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
                     if(session->access_ipv6_rx_last_seq +1 != bbl->flow_seq) {
                         interface->stats.session_ipv6_loss++;
                         session->stats.access_ipv6_loss++;
-                        LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id,
-                            bbl->flow_id, bbl->flow_seq, session->access_ipv6_rx_last_seq);
+                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6_rx_last_seq);
                     }
                 }
                 session->access_ipv6_rx_last_seq = bbl->flow_seq;
                 break;
             case BBL_SUB_TYPE_IPV6PD:
-                if(bbl->outer_vlan_id != session->key.outer_vlan_id ||
-                   bbl->inner_vlan_id != session->key.inner_vlan_id) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv6pd_wrong_session++;
                     return;
                 }
@@ -722,9 +714,8 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
                     if(session->access_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
                         interface->stats.session_ipv6pd_loss++;
                         session->stats.access_ipv6pd_loss++;
-                        LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id,
-                            bbl->flow_id, bbl->flow_seq, session->access_ipv6pd_rx_last_seq);
+                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6pd_rx_last_seq);
                     }
                 }
                 session->access_ipv6pd_rx_last_seq = bbl->flow_seq;
@@ -748,9 +739,8 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                 memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
                 *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                LOG(IP, "IPv6 (Q-in-Q %u:%u) ICMPv6 RA prefix %s/%d\n",
-                        session->key.outer_vlan_id, session->key.inner_vlan_id,
-                        format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
+                LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d\n",
+                    session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
                 if(icmpv6->dns1) {
                     memcpy(&session->ipv6_dns1, icmpv6->dns1, IPV6_ADDR_LEN);
                     if(icmpv6->dns2) {
@@ -774,8 +764,7 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                                             1, 0, session, bbl_session_traffic_ipv6);
                         }
                     } else {
-                        LOG(ERROR, "Traffic (Q-in-Q %u:%u) failed to create IPv6 session traffic\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
                     }
                 }
             }
@@ -828,10 +817,9 @@ bbl_rx_igmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
     bool send = false;
 
 #if 0
-    LOG(IGMP, "IGMPv%d (Q-in-Q %u:%u) type %s received\n",
+    LOG(IGMP, "IGMPv%d (ID: %u) type %s received\n",
         igmp->version,
-        session->key.outer_vlan_id,
-        session->key.inner_vlan_id,
+        session->session_id,
         val2key(igmp_msg_names, igmp->type));
 #endif
 
@@ -899,8 +887,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
     /* BBL receive handler */
     if(bbl) {
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
-            if(bbl->outer_vlan_id != session->key.outer_vlan_id ||
-               bbl->inner_vlan_id != session->key.inner_vlan_id) {
+            if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+               bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                 interface->stats.session_ipv4_wrong_session++;
                 return;
             }
@@ -913,9 +901,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                 if(session->access_ipv4_rx_last_seq +1 != bbl->flow_seq) {
                     interface->stats.session_ipv4_loss++;
                     session->stats.access_ipv4_loss++;
-                    LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                        session->key.outer_vlan_id, session->key.inner_vlan_id,
-                        bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
+                    LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                        session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
                 }
             }
             session->access_ipv4_rx_last_seq = bbl->flow_seq;
@@ -936,9 +923,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                             interface->stats.mc_loss++;
                             session->stats.mc_loss++;
                             group->loss++;
-                            LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                                session->key.outer_vlan_id, session->key.inner_vlan_id,
-                                bbl->flow_id, bbl->flow_seq, session->mc_rx_last_seq);
+                            LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                session->session_id, bbl->flow_id, bbl->flow_seq, session->mc_rx_last_seq);
                         }
                         session->mc_rx_last_seq = bbl->flow_seq;
                     } else {
@@ -1019,8 +1005,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                 if(pap->reply_message_len) {
                     if(strncmp(pap->reply_message, L2TP_REPLY_MESSAGE, pap->reply_message_len) == 0) {
                         session->l2tp = true;
-                        LOG(L2TP, "L2TP (Q-in-Q %u:%u) Session with BNG Blaster LNS\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS\n", session->session_id);
                     }
                 }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
@@ -1083,8 +1068,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 if(chap->reply_message_len) {
                     if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, chap->reply_message_len) == 0) {
                         session->l2tp = true;
-                        LOG(L2TP, "L2TP (Q-in-Q %u:%u) Session with BNG Blaster LNS\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS\n", session->session_id);
                     }
                 }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
@@ -1180,8 +1164,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                                         1, 0, session, bbl_session_traffic_ipv4);
                     }
                 } else {
-                    LOG(ERROR, "Traffic (Q-in-Q %u:%u) failed to create IPv4 session traffic\n",
-                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
                 }
             }
         }
@@ -1226,8 +1209,7 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
                                     1, 0, session, bbl_session_traffic_ipv4);
                 }
             } else {
-                LOG(ERROR, "Traffic (Q-in-Q %u:%u) failed to create IPv4 session traffic\n",
-                    session->key.outer_vlan_id, session->key.inner_vlan_id);
+                LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
             }
         }
     }
@@ -1376,9 +1358,8 @@ bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 case BBL_PPP_LOCAL_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
-                    LOG(IP, "IPv4 (Q-in-Q %u:%u) address %s\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id,
-                            format_ipv4_address(&session->ip_address));
+                    LOG(IP, "IPv4 (ID: %u) address %s\n",
+                        session->session_id, format_ipv4_address(&session->ip_address));
                     break;
                 default:
                     break;
@@ -1412,9 +1393,8 @@ bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
-                    LOG(IP, "IPv4 (Q-in-Q %u:%u) address %s\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id,
-                            format_ipv4_address(&session->ip_address));
+                    LOG(IP, "IPv4 (ID: %u) address %s\n",
+                        session->session_id, format_ipv4_address(&session->ip_address));
                     break;
                 default:
                     break;
@@ -1632,8 +1612,7 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                         /* Compare service name */
                         if(pppoed->service_name_len != session->pppoe_service_name_len || 
                            memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
-                            LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong service name in PADO\n",
-                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADO\n", session->session_id);
                             return;
                         }
                     } else {
@@ -1643,15 +1622,13 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                         memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
                     }
                 } else {
-                    LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Missing service name in PADO\n",
-                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADO\n", session->session_id);
                     return;
                 }
                 if(session->pppoe_host_uniq) {
                     if(pppoed->host_uniq_len != sizeof(uint64_t) || 
                        *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
-                        LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong host-uniq in PADO\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in PADO\n", session->session_id);
                         return;
                     }
                 }
@@ -1667,15 +1644,13 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                     if(session->pppoe_host_uniq) {
                         if(pppoed->host_uniq_len != sizeof(uint64_t) || 
                            *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
-                            LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong host-uniq in PADS\n",
-                                session->key.outer_vlan_id, session->key.inner_vlan_id);
+                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in PADS\n", session->session_id);
                             return;
                         }
                     }
                     if(pppoed->service_name_len != session->pppoe_service_name_len || 
                         memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
-                        LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Wrong service name in PADS\n",
-                            session->key.outer_vlan_id, session->key.inner_vlan_id);
+                        LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
                         return;
                     }
                     session->pppoe_session_id = pppoed->session_id;
@@ -1685,8 +1660,7 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                     session->lcp_state = BBL_PPP_INIT;
                     bbl_session_tx_qnode_insert(session);
                 } else {
-                    LOG(PPPOE, "PPPoE Error (Q-in-Q %u:%u) Invalid PADS\n",
-                        session->key.outer_vlan_id, session->key.inner_vlan_id);
+                    LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADS\n", session->session_id);
                     return;
                 }
             }
@@ -1721,19 +1695,33 @@ bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     }
 }
 
+/** 
+ * bbl_rx_handler_access 
+ *
+ * This function handles all packets received on access interfaces.
+ * 
+ * @param eth pointer to ethernet header structure of received packet
+ * @param interface pointer to interface on which packet was received
+ */
 void
 bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_ctx_s *ctx;
     bbl_session_s *session;
-    void **search;
-    session_key_t key;
+    uint32_t session_id = 0;
+
     ctx = interface->ctx;
-    key.ifindex = interface->addr.sll_ifindex;
-    key.outer_vlan_id = eth->vlan_outer;
-    key.inner_vlan_id = eth->vlan_inner;
-    search = dict_search(ctx->session_dict, &key);
-    if(search) {
-        session = *search;
+
+    /* The session-id is mapped into the last 3 bytes of 
+     * the client MAC address. The original approach using
+     * VLAN identifiers was not working as some NIC drivers
+     * strip outer VLAN and it is also possible to have 
+     * multiple session per VLAN (N:1). */
+    session_id |= eth->dst[5];
+    session_id |= eth->dst[4] << 8;
+    session_id |= eth->dst[3] << 16;
+
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
         if(session->session_state != BBL_TERMINATED &&
            session->session_state != BBL_IDLE) {
             switch (session->access_type) {
@@ -1826,8 +1814,14 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
 }
 
-
-
+/** 
+ * bbl_rx_handler_network 
+ *
+ * This function handles all packets received on network interfaces.
+ * 
+ * @param eth pointer to ethernet header structure of received packet
+ * @param interface pointer to interface on which packet was received
+ */
 void
 bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
@@ -1837,21 +1831,18 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_ipv6_t *ipv6;
     bbl_udp_t *udp;
     bbl_bbl_t *bbl = NULL;
-
     bbl_session_s *session;
-    void **search;
-    session_key_t key;
 
     ctx = interface->ctx;
-    if(ctx->config.network_vlan && (ctx->config.network_vlan != eth->vlan_outer)) {
-        /* Drop wrong VLAN */
-        return;
-    }
 
     switch(eth->type) {
         case ETH_TYPE_ARP:
             return bbl_rx_network_arp(eth, interface);
         case ETH_TYPE_IPV4:
+            if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                /* Drop wrong MAC */
+                return;   
+            }
             ipv4 = (bbl_ipv4_t*)eth->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
@@ -1865,6 +1856,10 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             }
             break;
         case ETH_TYPE_IPV6:
+            if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                /* Drop wrong MAC */
+                return;   
+            }
             ipv6 = (bbl_ipv6_t*)eth->next;
             if(ipv6->protocol == IPV6_NEXT_HEADER_UDP) {
                 udp = (bbl_udp_t*)ipv6->next;
@@ -1881,12 +1876,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     if(bbl) {
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
-            key.ifindex = bbl->ifindex;
-            key.outer_vlan_id = bbl->outer_vlan_id;
-            key.inner_vlan_id = bbl->inner_vlan_id;
-            search = dict_search(ctx->session_dict, &key);
-            if(search) {
-                session = *search;
+            session = bbl_session_get(ctx, bbl->session_id);
+            if(session) {
                 switch (bbl->sub_type) {
                     case BBL_SUB_TYPE_IPV4:
                         interface->stats.session_ipv4_rx++;
@@ -1898,9 +1889,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             if(session->network_ipv4_rx_last_seq +1 != bbl->flow_seq) {
                                 interface->stats.session_ipv4_loss++;
                                 session->stats.network_ipv4_loss++;
-                                LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                                    session->key.outer_vlan_id, session->key.inner_vlan_id,
-                                    bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
+                                LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                    session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
                             }
                         }
                         session->network_ipv4_rx_last_seq = bbl->flow_seq;
@@ -1915,9 +1905,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             if(session->network_ipv6_rx_last_seq +1 != bbl->flow_seq) {
                                 interface->stats.session_ipv6_loss++;
                                 session->stats.network_ipv6_loss++;
-                                LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                                    session->key.outer_vlan_id, session->key.inner_vlan_id,
-                                    bbl->flow_id, bbl->flow_seq, session->network_ipv6_rx_last_seq);
+                                LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                    session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6_rx_last_seq);
                             }
                         }
                         session->network_ipv6_rx_last_seq = bbl->flow_seq;
@@ -1932,9 +1921,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             if(session->network_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
                                 interface->stats.session_ipv6pd_loss++;
                                 session->stats.network_ipv6pd_loss++;
-                                LOG(LOSS, "LOSS (Q-in-Q %u:%u) flow: %lu seq: %lu last: %lu\n",
-                                    session->key.outer_vlan_id, session->key.inner_vlan_id,
-                                    bbl->flow_id, bbl->flow_seq, session->network_ipv6pd_rx_last_seq);
+                                LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                    session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6pd_rx_last_seq);
                             }
                         }
                         session->network_ipv6pd_rx_last_seq = bbl->flow_seq;
@@ -1946,88 +1934,5 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         }
     } else {
         interface->stats.packets_rx_drop_unknown++;
-    }
-}
-
-void
-bbl_rx_job (timer_s *timer)
-{
-    bbl_ctx_s *ctx;
-    bbl_interface_s *interface;
-    struct tpacket2_hdr* tphdr;
-    u_char* frame_ptr;
-    struct pollfd fds[1] = {0};
-
-    uint8_t *eth_start;
-    uint eth_len;
-    bbl_ethernet_header_t *eth;
-
-    protocol_error_t decode_result;
-
-    interface = timer->data;
-    if (!interface) {
-        return;
-    }
-    ctx = interface->ctx;
-
-    fds[0].fd = interface->fd_rx;
-    fds[0].events = POLLIN;
-    fds[0].revents = 0;
-
-    /* Get RX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->rx_timestamp);
-
-    while (true) {
-
-        frame_ptr = interface->ring_rx + (interface->cursor_rx * interface->req_rx.tp_frame_size);
-        tphdr = (struct tpacket2_hdr*)frame_ptr;
-
-        /* If no buffer is available poll kernel */
-        while (!(tphdr->tp_status & TP_STATUS_USER)) {
-            if (poll(fds, 1, 0) == -1) {
-                LOG(IO, "RX poll interface %s", interface->name);
-                return;
-            }
-            interface->stats.poll_rx++;
-	        pcapng_fflush(ctx);
-            return;
-        }
-
-        //printf("consumed packet #%llu, %p, len %u\n", interface->packets, frame_ptr, tphdr->tp_len);
-        interface->stats.packets_rx++;
-
-        eth_start = (uint8_t*)tphdr + tphdr->tp_mac;
-        eth_len = tphdr->tp_len;
-
-        /*
-	     * Dump the packet into pcap file.
-	     */
-        if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
-				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
-        }
-
-        decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
-
-        if(decode_result == PROTOCOL_SUCCESS) {
-            /* The outer VLAN is stripped from header */
-            eth->vlan_inner = eth->vlan_outer;
-            eth->vlan_outer = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
-            /* Copy RX timestamp */
-            eth->rx_sec = tphdr->tp_sec; /* ktime/hw timestamp */
-            eth->rx_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
-            if(interface->access) {
-                bbl_rx_handler_access(eth, interface);
-            } else {
-                bbl_rx_handler_network(eth, interface);
-            }
-        } else if (decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.packets_rx_drop_unknown++;
-        } else {
-            interface->stats.packets_rx_drop_decode_error++;
-        }
-
-        tphdr->tp_status = TP_STATUS_KERNEL; /* Return ownership back to kernel */
-        interface->cursor_rx = (interface->cursor_rx + 1) % interface->req_rx.tp_frame_nr;
     }
 }

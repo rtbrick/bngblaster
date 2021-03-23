@@ -71,6 +71,9 @@ typedef struct bbl_l2tp_server_
     bool data_lenght;
     bool data_offset;
 
+    uint8_t control_tos;
+    uint8_t data_control_tos;
+
     l2tp_congestion_mode_t congestion_mode;
 
     char *secret;
