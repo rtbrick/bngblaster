@@ -12,9 +12,9 @@ BNG Blaster Control Socket Client
 {c} <socket> <command> [arguments]
 
 Examples: 
-    {c} run.sock session-info outer-vlan 1 inner-vlan 1
-    {c} run.sock igmp-join outer-vlan 1 inner-vlan 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
-    {c} run.sock igmp-info outer-vlan 1 inner-vlan 1
+    {c} run.sock session-info session-id 1
+    {c} run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
+    {c} run.sock igmp-info session-id 1
     {c} run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
 
 """.format(c=sys.argv[0]))
@@ -40,7 +40,10 @@ def main():
             try: 
                 request["arguments"][sys.argv[i]] = int(arg)
             except:
-                request["arguments"][sys.argv[i]] = ast.literal_eval(arg)
+                try:
+                    request["arguments"][sys.argv[i]] = ast.literal_eval(arg)
+                except: 
+                    request["arguments"][sys.argv[i]] = arg
         #print(json.dumps(request).encode('utf-8'))
     if os.path.exists(socket_path):
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
