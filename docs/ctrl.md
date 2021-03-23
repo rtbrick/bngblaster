@@ -167,8 +167,8 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 The `session-id` is the same as used for `{session-global}` in the 
 configuration section. This number starts with 1 and is increased 
 per session added. In example if username is configured as 
-`user{session-global}@rtbrick.com"` and logged in user is 
-`user10@rtbrick.com"` the `session-id` of this user is `10`. 
+`user{session-global}@rtbrick.com` and logged in user is 
+`user10@rtbrick.com` the `session-id` of this user is `10`. 
 
 ### L2TP Commands
 
