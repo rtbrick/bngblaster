@@ -159,7 +159,7 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
 
     len = (digest[idx++] ^ *value) << 8;
     value++;
-    len = digest[idx++] ^ *value;
+    len |= digest[idx++] ^ *value;
     value++;
 
     if (len + 2 > avp->len) {
