@@ -36,8 +36,7 @@ the actual command which is invoked with optional arguments.
 {
     "command": "session-info",
     "arguments": {
-        "outer-vlan": 1,
-        "inner-vlan": 1
+        "session-id": 1
     }
 }
 ```
@@ -49,43 +48,56 @@ the actual command which is invoked with optional arguments.
     "code": 200,
     "session-information": {
         "type": "pppoe",
-        "username": "local@rtbrick.com",
+        "session-id": 1,
+        "session-state": "Established",
+        "interface": "eth1",
+        "outer-vlan": 1000,
+        "inner-vlan": 1,
+        "mac": "02:00:00:00:00:01",
+        "username": "user1@rtbrick.com",
         "agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:1",
         "agent-remote-id": "DEU.RTBRICK.1",
-        "session-state": "Established",
         "lcp-state": "Opened",
-        "ipcp-state": "Closed",
+        "ipcp-state": "Opened",
         "ip6cp-state": "Opened",
-        "ipv6-prefix": "fc66:1337:0:8::/64",
-        "ipv6-delegated-prefix": "fc66:1338:0:800::/56",
+        "ipv4-address": "10.10.10.1",
+        "ipv4-dns1": "10.0.0.3",
+        "ipv4-dns2": "10.0.0.4",
+        "ipv6-prefix": "fc66:1000:1::/64",
+        "ipv6-delegated-prefix": "fc66:2000::/56",
+        "ipv6-dns1": "fc66::3",
+        "ipv6-dns2": "fc66::4",
+        "dhcpv6-dns1": "fc66::3",
+        "dhcpv6-dns2": "fc66::4",
         "session-traffic": {
-            "first-seq-rx-access-ipv4": 0,
+            "first-seq-rx-access-ipv4": 1,
             "first-seq-rx-access-ipv6": 1,
             "first-seq-rx-access-ipv6pd": 1,
-            "first-seq-rx-network-ipv4": 0,
+            "first-seq-rx-network-ipv4": 1,
             "first-seq-rx-network-ipv6": 1,
             "first-seq-rx-network-ipv6pd": 1,
-            "access-tx-session-packets": 0,
-            "access-rx-session-packets": 0,
+            "access-tx-session-packets": 28,
+            "access-rx-session-packets": 28,
             "access-rx-session-packets-loss": 0,
-            "network-tx-session-packets": 0,
-            "network-rx-session-packets": 0,
+            "network-tx-session-packets": 28,
+            "network-rx-session-packets": 28,
             "network-rx-session-packets-loss": 0,
-            "access-tx-session-packets-ipv6": 25,
-            "access-rx-session-packets-ipv6": 25,
+            "access-tx-session-packets-ipv6": 28,
+            "access-rx-session-packets-ipv6": 28,
             "access-rx-session-packets-ipv6-loss": 0,
-            "network-tx-session-packets-ipv6": 25,
-            "network-rx-session-packets-ipv6": 25,
+            "network-tx-session-packets-ipv6": 28,
+            "network-rx-session-packets-ipv6": 28,
             "network-rx-session-packets-ipv6-loss": 0,
-            "access-tx-session-packets-ipv6pd": 25,
-            "access-rx-session-packets-ipv6pd": 25,
+            "access-tx-session-packets-ipv6pd": 28,
+            "access-rx-session-packets-ipv6pd": 28,
             "access-rx-session-packets-ipv6pd-loss": 0,
-            "network-tx-session-packets-ipv6pd": 25,
-            "network-rx-session-packets-ipv6pd": 25,
+            "network-tx-session-packets-ipv6pd": 28,
+            "network-rx-session-packets-ipv6pd": 28,
             "network-rx-session-packets-ipv6pd-loss": 0
         }
     }
 }
+
 ```
 
 The response contains at least the status element with the value `ok` and status code `2xx` 
@@ -119,10 +131,12 @@ Attribute | Description
 
 ### Session Commands
 
-The following commands must be execute with interface index and VLAN of the session
-for which the command is executed. The interface index (`ifindex`) can be requests using
-the `interfaces` command or skipped. The first access interface is automatically used if 
-the argument `ifindex` is not present in the command. 
+The following commands must be execute with either `session-id` or alternative with 
+interface index and VLAN of the session for which the command is executed. The interface 
+index (`ifindex`) can be requests using the `interfaces` command or skipped. The first 
+access interface is automatically used if the argument `ifindex` is not present in the 
+command. For N:1 sessions only `session-id` is supported because multiple sessions can
+be assigned to a single VLAN in this mode. 
 
 `$ cat command.json | jq .`
 ```json
@@ -149,6 +163,12 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
 `igmp-leave` | Leave group | `group` |
 `igmp-info` | IGMP information | |
+
+The `session-id` is the same as used for `{session-global}` in the 
+configuration section. This number starts with 1 and is increased 
+per session added. In example if username is configured as 
+`user{session-global}@rtbrick.com"` and logged in user is 
+`user10@rtbrick.com"` the `session-id` of this user is `10`. 
 
 ### L2TP Commands
 
