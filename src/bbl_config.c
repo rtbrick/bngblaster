@@ -801,6 +801,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             if (json_is_boolean(value)) {
                 l2tp_server->data_offset = json_boolean_value(value);
             }
+            value = json_object_get(sub, "control-tos");
+            if (json_is_number(value)) {
+                l2tp_server->control_tos = json_number_value(value);
+            }
+            value = json_object_get(sub, "data-control-tos");
+            if (json_is_number(value)) {
+                l2tp_server->data_control_tos = json_number_value(value);
+            }
         }   
     } else if (json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
