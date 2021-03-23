@@ -428,6 +428,8 @@ typedef struct bbl_ctx_
 
     /* Config options */
     struct {
+        bool interface_lock_force;
+
         uint16_t tx_interval;
         uint16_t rx_interval;
         
