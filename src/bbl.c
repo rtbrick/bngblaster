@@ -25,6 +25,7 @@
 #ifdef BNGBLASTER_NETMAP
     #include "bbl_io_netmap.h"
 #endif
+#include <sys/stat.h>
 
 /* Global Variables */
 bool g_interactive = false; // interactive mode using ncurses
@@ -168,6 +169,71 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     return true;
 }
 
+bool
+bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name) {
+
+    FILE *lock_file;
+    char  lock_path[128];
+    int   lock_pid;
+    char  proc_pid_path[32];
+
+    struct stat sts;
+    pid_t pid = getpid();
+
+    snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface_name);
+
+    if(access(lock_path, F_OK) == 0) {
+        // lock file exists
+        lock_file = fopen(lock_path, "r");
+        if(!lock_file) {
+            LOG(ERROR, "Failed to open interface lock file %s\n", lock_path);
+            return false;
+        }
+        if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
+            snprintf(proc_pid_path, 32, "/proc/%d", lock_pid);
+            if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
+                LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
+                if(!ctx->config.interface_lock_force) return false;
+            }
+        } else {
+            LOG(ERROR, "Invalid interface lock file %s\n", lock_path);
+            if(!ctx->config.interface_lock_force) return false;
+        }
+        fclose(lock_file);
+    }
+    /* crate lock file */
+    lock_pid = pid;
+    lock_file = fopen(lock_path, "w");
+    if(!lock_file) {
+        LOG(ERROR, "Failed to open interface lock file %s\n", lock_path);
+        return false;
+    }
+    fprintf(lock_file, "%d", lock_pid);
+    fclose(lock_file);
+
+    return true;
+}
+
+void
+bbl_interface_unlock_all(bbl_ctx_s *ctx) {
+    char  lock_path[128];
+    bbl_interface_s *interface;
+    int i;
+
+    if(ctx->op.network_if) {
+        interface = ctx->op.network_if;
+        snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface->name);
+        remove(lock_path);
+    }
+    for(i = 0; i < ctx->op.access_if_count; i++) {
+        interface = ctx->op.access_if[i];
+        if(interface) {
+            snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface->name);
+            remove(lock_path);
+        }
+    }
+}
+
 /** 
  * bbl_add_interface 
  *
@@ -182,6 +248,10 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
     struct ifreq ifr;
 
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    if(!bbl_interface_lock(ctx, interface_name)) {
+        return NULL;
+    }
 
     interface = calloc(1, sizeof(bbl_interface_s));
     if (!interface) {
@@ -209,7 +279,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
     if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
         LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
+            strerror(errno), errno, interface->name);
         return NULL;
     }
     memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
@@ -221,8 +291,8 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
     if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
         LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return false;
+            strerror(errno), errno, interface->name);
+        return NULL;
     }
     interface->ifindex = ifr.ifr_ifindex;
 
@@ -311,7 +381,7 @@ Next:
 /*
  * Command line options.
  */
-const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:I";
+const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:If";
 static struct option long_options[] = {
     { "version",                no_argument,        NULL, 'v' },
     { "help",                   no_argument,        NULL, 'h' },
@@ -327,8 +397,9 @@ static struct option long_options[] = {
     { "mc-source",              required_argument,  NULL, 's' },
     { "mc-group-count",         required_argument,  NULL, 'r' },
     { "mc-zapping-interval",    required_argument,  NULL, 'z' },
-    { "control socket (UDS)",   required_argument,  NULL, 'S' },
-    { "interactive (ncurses)",  no_argument,        NULL, 'I' },
+    { "control-socket",         required_argument,  NULL, 'S' },
+    { "interactive",            no_argument,        NULL, 'I' },
+    { "force",                  no_argument,        NULL, 'f' },
     { NULL,                     0,                  NULL,  0 }
 };
 
@@ -608,6 +679,9 @@ main (int argc, char *argv[])
             case 'S':
 		        ctx->ctrl_socket_path = optarg;
                 break;
+            case 'f':
+		        ctx->config.interface_lock_force = true;
+                break;
             default:
                 bbl_print_usage();
                 exit(1);
@@ -765,6 +839,7 @@ main (int argc, char *argv[])
     /*
      * Cleanup ressources.
      */
+    bbl_interface_unlock_all(ctx);
     log_close();
     if(ctx->ctrl_socket_path) {
         bbl_ctrl_socket_close(ctx);
