@@ -23,6 +23,18 @@ val2key (struct keyval_ *keyval, uint val)
     return "Unknown";
 }
 
+char *
+format_mac_address (uint8_t *mac)
+{
+    static char buffer[32][MAC_STR_LEN];
+    static int idx = 0;
+    char *ret;
+    ret = buffer[idx];
+    idx = (idx+1) & 31;
+    snprintf(ret, MAC_STR_LEN, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]); 
+    return ret;
+}
+
 /*
  * Format an IPv4 address as string in one of 16 buffers.
  */

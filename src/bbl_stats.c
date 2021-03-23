@@ -52,8 +52,8 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
 void
 bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
-    struct dict_itor *itor;
     bbl_session_s *session;
+    uint32_t i;
 
     int join_delays = 0;
     int leave_delays = 0;
@@ -61,87 +61,85 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     bbl_stats_update_cps(ctx);
 
     /* Iterate over all sessions */
-    itor = dict_itor_new(ctx->session_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        session = (bbl_session_s*)*dict_itor_datum(itor);
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session) {
+            /* Multicast */
+            stats->mc_old_rx_after_first_new += session->stats.mc_old_rx_after_first_new;
+            stats->mc_not_received += session->stats.mc_not_received;
 
-        /* Multicast */
-        stats->mc_old_rx_after_first_new += session->stats.mc_old_rx_after_first_new;
-        stats->mc_not_received += session->stats.mc_not_received;
+            if(session->stats.avg_join_delay) {
+                join_delays++;
+                stats->avg_join_delay += session->stats.avg_join_delay;
+                if(session->stats.max_join_delay > stats->max_join_delay) stats->max_join_delay = session->stats.max_join_delay;
+                if(stats->min_join_delay) {
+                    if(session->stats.min_join_delay < stats->min_join_delay) stats->min_join_delay = session->stats.min_join_delay;
+                } else {
+                    stats->min_join_delay = session->stats.min_join_delay;
+                }
 
-        if(session->stats.avg_join_delay) {
-            join_delays++;
-            stats->avg_join_delay += session->stats.avg_join_delay;
-            if(session->stats.max_join_delay > stats->max_join_delay) stats->max_join_delay = session->stats.max_join_delay;
-            if(stats->min_join_delay) {
-                if(session->stats.min_join_delay < stats->min_join_delay) stats->min_join_delay = session->stats.min_join_delay;
-            } else {
-                stats->min_join_delay = session->stats.min_join_delay;
+            }
+            if(session->stats.avg_leave_delay) {
+                leave_delays++;
+                stats->avg_leave_delay += session->stats.avg_leave_delay;
+                if(session->stats.max_leave_delay > stats->max_leave_delay) stats->max_leave_delay = session->stats.max_leave_delay;
+                if(stats->min_leave_delay) {
+                    if(session->stats.min_leave_delay < stats->min_leave_delay) stats->min_leave_delay = session->stats.min_leave_delay;
+                } else {
+                    stats->min_leave_delay = session->stats.min_leave_delay;
+                }
             }
 
-        }
-        if(session->stats.avg_leave_delay) {
-            leave_delays++;
-            stats->avg_leave_delay += session->stats.avg_leave_delay;
-            if(session->stats.max_leave_delay > stats->max_leave_delay) stats->max_leave_delay = session->stats.max_leave_delay;
-            if(stats->min_leave_delay) {
-                if(session->stats.min_leave_delay < stats->min_leave_delay) stats->min_leave_delay = session->stats.min_leave_delay;
+            /* Session Traffic */
+            if(session->access_ipv4_rx_first_seq) stats->sessions_access_ipv4_rx++;
+            if(session->network_ipv4_rx_first_seq) stats->sessions_network_ipv4_rx++;
+            if(session->access_ipv6_rx_first_seq) stats->sessions_access_ipv6_rx++;
+            if(session->network_ipv6_rx_first_seq) stats->sessions_network_ipv6_rx++;
+            if(session->access_ipv6pd_rx_first_seq) stats->sessions_access_ipv6pd_rx++;
+            if(session->network_ipv6pd_rx_first_seq) stats->sessions_network_ipv6pd_rx++;
+
+            if(stats->min_access_ipv4_rx_first_seq) {
+                if(session->access_ipv4_rx_first_seq < stats->min_access_ipv4_rx_first_seq) stats->min_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
             } else {
-                stats->min_leave_delay = session->stats.min_leave_delay;
+                stats->min_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
             }
+            if(session->access_ipv4_rx_first_seq > stats->max_access_ipv4_rx_first_seq) stats->max_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
+
+            if(stats->min_network_ipv4_rx_first_seq) {
+                if(session->network_ipv4_rx_first_seq < stats->min_network_ipv4_rx_first_seq) stats->min_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
+            } else {
+                stats->min_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
+            }
+            if(session->network_ipv4_rx_first_seq > stats->max_network_ipv4_rx_first_seq) stats->max_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
+
+            if(stats->min_access_ipv6_rx_first_seq) {
+                if(session->access_ipv6_rx_first_seq < stats->min_access_ipv6_rx_first_seq) stats->min_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
+            } else {
+                stats->min_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
+            }
+            if(session->access_ipv6_rx_first_seq > stats->max_access_ipv6_rx_first_seq) stats->max_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
+
+            if(stats->min_network_ipv6_rx_first_seq) {
+                if(session->network_ipv6_rx_first_seq < stats->min_network_ipv6_rx_first_seq) stats->min_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
+            } else {
+                stats->min_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
+            }
+            if(session->network_ipv6_rx_first_seq > stats->max_network_ipv6_rx_first_seq) stats->max_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
+
+            if(stats->min_access_ipv6pd_rx_first_seq) {
+                if(session->access_ipv6pd_rx_first_seq < stats->min_access_ipv6pd_rx_first_seq) stats->min_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
+            } else {
+                stats->min_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
+            }
+            if(session->access_ipv6pd_rx_first_seq > stats->max_access_ipv6pd_rx_first_seq) stats->max_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
+
+            if(stats->min_network_ipv6pd_rx_first_seq) {
+                if(session->network_ipv6pd_rx_first_seq < stats->min_network_ipv6pd_rx_first_seq) stats->min_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
+            } else {
+                stats->min_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
+            }
+            if(session->network_ipv6pd_rx_first_seq > stats->max_network_ipv6pd_rx_first_seq) stats->max_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
         }
-
-        /* Session Traffic */
-        if(session->access_ipv4_rx_first_seq) stats->sessions_access_ipv4_rx++;
-        if(session->network_ipv4_rx_first_seq) stats->sessions_network_ipv4_rx++;
-        if(session->access_ipv6_rx_first_seq) stats->sessions_access_ipv6_rx++;
-        if(session->network_ipv6_rx_first_seq) stats->sessions_network_ipv6_rx++;
-        if(session->access_ipv6pd_rx_first_seq) stats->sessions_access_ipv6pd_rx++;
-        if(session->network_ipv6pd_rx_first_seq) stats->sessions_network_ipv6pd_rx++;
-
-        if(stats->min_access_ipv4_rx_first_seq) {
-            if(session->access_ipv4_rx_first_seq < stats->min_access_ipv4_rx_first_seq) stats->min_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
-        } else {
-            stats->min_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
-        }
-        if(session->access_ipv4_rx_first_seq > stats->max_access_ipv4_rx_first_seq) stats->max_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
-
-        if(stats->min_network_ipv4_rx_first_seq) {
-            if(session->network_ipv4_rx_first_seq < stats->min_network_ipv4_rx_first_seq) stats->min_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
-        } else {
-            stats->min_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
-        }
-        if(session->network_ipv4_rx_first_seq > stats->max_network_ipv4_rx_first_seq) stats->max_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
-
-        if(stats->min_access_ipv6_rx_first_seq) {
-            if(session->access_ipv6_rx_first_seq < stats->min_access_ipv6_rx_first_seq) stats->min_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
-        } else {
-            stats->min_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
-        }
-        if(session->access_ipv6_rx_first_seq > stats->max_access_ipv6_rx_first_seq) stats->max_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
-
-        if(stats->min_network_ipv6_rx_first_seq) {
-            if(session->network_ipv6_rx_first_seq < stats->min_network_ipv6_rx_first_seq) stats->min_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
-        } else {
-            stats->min_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
-        }
-        if(session->network_ipv6_rx_first_seq > stats->max_network_ipv6_rx_first_seq) stats->max_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
-
-        if(stats->min_access_ipv6pd_rx_first_seq) {
-            if(session->access_ipv6pd_rx_first_seq < stats->min_access_ipv6pd_rx_first_seq) stats->min_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
-        } else {
-            stats->min_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
-        }
-        if(session->access_ipv6pd_rx_first_seq > stats->max_access_ipv6pd_rx_first_seq) stats->max_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
-
-        if(stats->min_network_ipv6pd_rx_first_seq) {
-            if(session->network_ipv6pd_rx_first_seq < stats->min_network_ipv6pd_rx_first_seq) stats->min_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
-        } else {
-            stats->min_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
-        }
-        if(session->network_ipv6pd_rx_first_seq > stats->max_network_ipv6pd_rx_first_seq) stats->max_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
-
     }
     if(join_delays) {
         stats->avg_join_delay = round(stats->avg_join_delay / join_delays);

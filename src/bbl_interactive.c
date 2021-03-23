@@ -27,14 +27,12 @@ extern const char banner[];
 static void
 enable_disable_session_traffic(bbl_ctx_s *ctx, bool status)
 {
-    struct dict_itor *itor;
     bbl_session_s *session;
+    uint32_t i;
 
     /* Iterate over all sessions */
-    itor = dict_itor_new(ctx->session_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        session = (bbl_session_s*)*dict_itor_datum(itor);
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
         if(session) {
             session->session_traffic = status;
         }

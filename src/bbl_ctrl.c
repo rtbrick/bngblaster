@@ -23,6 +23,7 @@
 #include "bbl.h"
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
+#include "bbl_session.h"
 
 #define BACKLOG 4
 #define INPUT_BUFFER 1024
@@ -30,7 +31,7 @@
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
 
-typedef ssize_t callback_function(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments);
+typedef ssize_t callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
 
 const char *
 session_state_string(uint32_t state) {
@@ -85,19 +86,19 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) 
 }
 
 ssize_t
-bbl_ctrl_multicast_traffic_start(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_multicast_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ctx->multicast_traffic = true;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 ssize_t
-bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ctx->multicast_traffic = false;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 ssize_t
-bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root = json_pack("{ss si s{si si}}", 
                              "status", "ok", 
@@ -113,14 +114,12 @@ bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, session_key_t *key __attr
 }
 
 ssize_t
-bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, session_key_t *key, bool status) {
-    struct dict_itor *itor;
+bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
-    void **search;
-    if(key->outer_vlan_id || key->inner_vlan_id) {
-        search = dict_search(ctx->session_dict, key);
-        if(search) {
-            session = *search;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
             session->session_traffic = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
         } else {
@@ -128,10 +127,8 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, session_key_t *key, bool status
         }
     } else {
         /* Iterate over all sessions */
-        itor = dict_itor_new(ctx->session_dict);
-        dict_itor_first(itor);
-        for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-            session = (bbl_session_s*)*dict_itor_datum(itor);
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
             if(session) {
                 session->session_traffic = status;
             }
@@ -142,19 +139,18 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, session_key_t *key, bool status
 }
 
 ssize_t
-bbl_ctrl_session_traffic_start(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_traffic(fd, ctx, key, true);
+bbl_ctrl_session_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_session_traffic(fd, ctx, session_id, true);
 }
 
 ssize_t
-bbl_ctrl_session_traffic_stop(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_traffic(fd, ctx, key, false);
+bbl_ctrl_session_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_session_traffic(fd, ctx, session_id, false);
 }
 
 ssize_t
-bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments) {
+bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
-    void **search;
     const char *s;
     uint32_t group_address = 0;
     uint32_t source1 = 0;
@@ -188,9 +184,8 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments
     }
 
     /* Search session */
-    search = dict_search(ctx->session_dict, key);
-    if(search) {
-        session = *search;
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
         /* Search for free slot ... */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
             if(!session->igmp_groups[i].zapping) {
@@ -220,11 +215,8 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments
         group->send = true;
         session->send_requests |= BBL_SEND_IGMP;
         bbl_session_tx_qnode_insert(session);
-
-        LOG(IGMP, "IGMP (Q-in-Q %u:%u) join %s\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id,
-                format_ipv4_address(&group->group));
-
+        LOG(IGMP, "IGMP (ID: %u) join %s\n", 
+            session->session_id, format_ipv4_address(&group->group));
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -233,18 +225,17 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments
 }
 
 ssize_t
-bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments) {
+bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
 
     bbl_session_s *session;
-    void **search;
     const char *s;
     uint32_t group_address = 0;
     bbl_igmp_group_s *group = NULL;
     int i;
 
-    if(!(key->outer_vlan_id || key->inner_vlan_id)) {
-        /* VLAN is mandatory */
-        return bbl_ctrl_status(fd, "error", 400, "invalid request");
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
     if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
@@ -254,9 +245,8 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argument
         return bbl_ctrl_status(fd, "error", 400, "missing group address");
     }
 
-    search = dict_search(ctx->session_dict, key);
-    if(search) {
-        session = *search;
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
         /* Search for group ... */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
             if (session->igmp_groups[i].group == group_address) {
@@ -282,11 +272,8 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argument
         group->last_mc_rx_time.tv_nsec = 0;
         session->send_requests |= BBL_SEND_IGMP;
         bbl_session_tx_qnode_insert(session);
-
-        LOG(IGMP, "IGMP (Q-in-Q %u:%u) leave %s\n",
-                session->key.outer_vlan_id, session->key.inner_vlan_id,
-                format_ipv4_address(&group->group));
-
+        LOG(IGMP, "IGMP (ID: %u) leave %s\n", 
+            session->session_id, format_ipv4_address(&group->group));
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -295,18 +282,22 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argument
 }
 
 ssize_t
-bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root, *groups, *record, *sources;
     bbl_session_s *session = NULL;
-    void **search;
     bbl_igmp_group_s *group = NULL;
     uint32_t delay = 0;
     struct timespec time_diff;
     int ms, i, i2;
-    search = dict_search(ctx->session_dict, key);
-    if(search) {
-        session = *search;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+    
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
         groups = json_array();
         /* Add group informations */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
@@ -379,7 +370,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments
 }
 
 ssize_t
-bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root = json_pack("{ss si s{si si si si}}", 
                              "status", "ok", 
@@ -397,13 +388,11 @@ bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute
 }
 
 ssize_t
-bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root;
     json_t *session_traffic = NULL;
-
     bbl_session_s *session;
-    void **search;
 
     const char *ipv4 = NULL;
     const char *dns1 = NULL;
@@ -420,9 +409,13 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
     const char *ipcp = NULL;
     const char *ip6cp = NULL;
 
-    search = dict_search(ctx->session_dict, key);
-    if(search) {
-        session = *search;
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+    
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
         if(session->ip_address) {
             ipv4 = format_ipv4_address(&session->ip_address);
         }
@@ -488,15 +481,20 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss ss* ss ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
+        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
                         "type", type,
+                        "session-id", session->session_id,
+                        "session-state", session_state_string(session->session_state),
+                        "interface", session->interface->name,
+                        "outer-vlan", session->vlan_key.outer_vlan_id,
+                        "inner-vlan", session->vlan_key.inner_vlan_id,
+                        "mac", format_mac_address(session->client_mac),
                         "username", username,
                         "agent-circuit-id", session->agent_circuit_id,
                         "agent-remote-id", session->agent_remote_id,
-                        "session-state", session_state_string(session->session_state),
                         "lcp-state", lcp,
                         "ipcp-state", ipcp,
                         "ip6cp-state", ip6cp,
@@ -524,7 +522,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* argume
 }
 
 ssize_t
-bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root, *interfaces, *interface;
     char *type = "network";
@@ -537,7 +535,7 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((un
         }
         interface = json_pack("{ss si ss}", 
                             "name", ctx->op.access_if[i]->name, 
-                            "ifindex", ctx->op.access_if[i]->addr.sll_ifindex,
+                            "ifindex", ctx->op.access_if[i]->ifindex,
                             "type", type);
         json_array_append(interfaces, interface);
     }
@@ -557,14 +555,12 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((un
 }
 
 ssize_t
-bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     bbl_session_s *session;
-    void **search;
-    if(key->outer_vlan_id || key->inner_vlan_id) {
+    if(session_id) {
         /* Terminate single matching session ... */
-        search = dict_search(ctx->session_dict, key);
-        if(search) {
-            session = *search;
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
             bbl_session_clear(ctx, session);
             return bbl_ctrl_status(fd, "ok", 200, "terminate session");
         } else {
@@ -644,14 +640,12 @@ bbl_ctrl_session_ncp_close(bbl_ctx_s *ctx, bbl_session_s *session, bool ipcp) {
 }
 
 ssize_t
-bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, session_key_t *key, bool open, bool ipcp) {
-    struct dict_itor *itor;
+bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool open, bool ipcp) {
     bbl_session_s *session;
-    void **search;
-    if(key->outer_vlan_id || key->inner_vlan_id) {
-        search = dict_search(ctx->session_dict, key);
-        if(search) {
-            session = *search;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
             if(session->access_type == ACCESS_TYPE_PPPOE) {
                 if(open) {
                     bbl_ctrl_session_ncp_open(session, ipcp);
@@ -667,10 +661,8 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, session_key_t *key, bool
         }
     } else {
         /* Iterate over all sessions */
-        itor = dict_itor_new(ctx->session_dict);
-        dict_itor_first(itor);
-        for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-            session = (bbl_session_s*)*dict_itor_datum(itor);
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
             if(session) {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(open) {
@@ -687,27 +679,27 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, session_key_t *key, bool
 }
 
 ssize_t
-bbl_ctrl_session_ipcp_open(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, key, true, true);
+bbl_ctrl_session_ipcp_open(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, true, true);
 }
 
 ssize_t
-bbl_ctrl_session_ipcp_close(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, key, false, true);
+bbl_ctrl_session_ipcp_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, false, true);
 }
 
 ssize_t
-bbl_ctrl_session_ip6cp_open(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, key, true, false);
+bbl_ctrl_session_ip6cp_open(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, true, false);
 }
 
 ssize_t
-bbl_ctrl_session_ip6cp_close(int fd, bbl_ctx_s *ctx, session_key_t *key, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, key, false, false);
+bbl_ctrl_session_ip6cp_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, false, false);
 }
 
 ssize_t
-bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root, *flows, *flow;
     bbl_li_flow_t *li_flow;
@@ -742,6 +734,7 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unus
             json_array_append(flows, flow);
         }
     }
+    dict_itor_free(itor);
     root = json_pack("{ss si so}", 
                      "status", "ok", 
                      "code", 200,
@@ -757,7 +750,7 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unus
 }
 
 ssize_t
-bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root, *tunnels, *tunnel;
     
@@ -828,7 +821,7 @@ l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
 }
 
 ssize_t
-bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments) {
+bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
     ssize_t result = 0;
     json_t *root, *sessions;
 
@@ -838,17 +831,17 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__(
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
 
-    int tunnel_id = 0;
-    int session_id = 0;
+    int l2tp_tunnel_id = 0;
+    int l2tp_session_id = 0;
 
-    json_unpack(arguments, "{s:i}", "tunnel-id", &tunnel_id);
-    json_unpack(arguments, "{s:i}", "session-id", &session_id);
+    json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id);
+    json_unpack(arguments, "{s:i}", "session-id", &l2tp_session_id);
 
     sessions = json_array();
 
-    if(tunnel_id && session_id) {
-        l2tp_key.tunnel_id = tunnel_id;
-        l2tp_key.session_id = session_id;
+    if(l2tp_tunnel_id && l2tp_session_id) {
+        l2tp_key.tunnel_id = l2tp_tunnel_id;
+        l2tp_key.session_id = l2tp_session_id;
         search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
         if(search) {
             l2tp_session = *search;
@@ -858,8 +851,8 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__(
             json_decref(sessions);
             return result;
         }
-    } else if (tunnel_id) {
-        l2tp_key.tunnel_id = tunnel_id;
+    } else if (l2tp_tunnel_id) {
+        l2tp_key.tunnel_id = l2tp_tunnel_id;
         search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
         if(search) {
             l2tp_session = *search;
@@ -899,7 +892,7 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__(
 }
 
 ssize_t
-bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((unused)), json_t* arguments) {
+bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
     json_t *sessions, *number;
 
     bbl_l2tp_tunnel_t *l2tp_tunnel;
@@ -907,15 +900,15 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((un
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
 
-    uint16_t session_id = 0;
-    int tunnel_id = 0;
+    uint16_t l2tp_session_id = 0;
+    int l2tp_tunnel_id = 0;
     int size, i;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:i}", "tunnel-id", &tunnel_id) != 0) {
+    if (json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
     }
-    l2tp_key.tunnel_id = tunnel_id;
+    l2tp_key.tunnel_id = l2tp_tunnel_id;
     search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
     if(search) {
         l2tp_session = *search;
@@ -931,8 +924,8 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, session_key_t *key __attribute__((un
             for (i = 0; i < size; i++) {
                 number = json_array_get(sessions, i);
                 if(json_is_number(number)) {
-                    session_id = json_number_value(number);
-                    l2tp_tunnel->csurq_requests[i] = session_id;
+                    l2tp_session_id = json_number_value(number);
+                    l2tp_tunnel->csurq_requests[i] = l2tp_session_id;
                 }
             }
             bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_CSURQ);
@@ -979,9 +972,6 @@ struct action actions[] = {
 void
 bbl_ctrl_socket_job (timer_s *timer) {
     bbl_ctx_s *ctx = timer->data;
-
-    session_key_t key = {0};
-
     char buf[INPUT_BUFFER];
     ssize_t len;
     int fd;
@@ -990,8 +980,12 @@ bbl_ctrl_socket_job (timer_s *timer) {
     json_t *root = NULL;
     json_t* arguments = NULL;
     json_t* value = NULL;
-
     const char *command = NULL;
+    uint32_t session_id = 0;
+
+    vlan_session_key_t key = {0};
+    bbl_session_s *session;
+    void **search;
 
     while(true) {
         fd = accept(ctx->ctrl_socket, 0, 0);
@@ -1026,36 +1020,60 @@ bbl_ctrl_socket_job (timer_s *timer) {
                         bbl_ctrl_status(fd, "error", 400, "invalid request");
                     } else {
                         if(arguments) {
-                            value = json_object_get(arguments, "ifindex");
+                            value = json_object_get(arguments, "session-id");
                             if (value) {
                                 if(json_is_number(value)) {
-                                    key.ifindex = json_number_value(value);
+                                    session_id = json_number_value(value);
                                 } else {
-                                    bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
+                                    bbl_ctrl_status(fd, "error", 400, "invalid session-id");
                                     goto Close;
                                 }
                             } else {
-                                /* Use first interface as default. */
-                                if(ctx->op.access_if[0]) {
-                                    key.ifindex = ctx->op.access_if[0]->addr.sll_ifindex;
-                                }
-                            }
-                            value = json_object_get(arguments, "outer-vlan");
-                            if (value) {
-                                if(json_is_number(value)) {
-                                    key.outer_vlan_id = json_number_value(value);
+                                /* Deprecated! 
+                                 * For backward compatibility with version 0.4.X, we still 
+                                 * support per session commands using VLAN index instead of 
+                                 * new session-id. */ 
+                                value = json_object_get(arguments, "ifindex");
+                                if (value) {
+                                    if(json_is_number(value)) {
+                                        key.ifindex = json_number_value(value);
+                                    } else {
+                                        bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
+                                        goto Close;
+                                    }
                                 } else {
-                                    bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
-                                    goto Close;
+                                    /* Use first interface as default. */
+                                    if(ctx->op.access_if[0]) {
+                                        key.ifindex = ctx->op.access_if[0]->ifindex;
+                                    }
                                 }
-                            }
-                            value = json_object_get(arguments, "inner-vlan");
-                            if (value) {
-                                if(json_is_number(value)) {
-                                    key.inner_vlan_id = json_number_value(value);
-                                } else {
-                                    bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
-                                    goto Close;
+                                value = json_object_get(arguments, "outer-vlan");
+                                if (value) {
+                                    if(json_is_number(value)) {
+                                        key.outer_vlan_id = json_number_value(value);
+                                    } else {
+                                        bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
+                                        goto Close;
+                                    }
+                                }
+                                value = json_object_get(arguments, "inner-vlan");
+                                if (value) {
+                                    if(json_is_number(value)) {
+                                        key.inner_vlan_id = json_number_value(value);
+                                    } else {
+                                        bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
+                                        goto Close;
+                                    }
+                                }
+                                if(key.outer_vlan_id) {
+                                    search = dict_search(ctx->vlan_session_dict, &key);
+                                    if(search) {
+                                        session = *search;
+                                        session_id = session->session_id;
+                                    } else {
+                                        bbl_ctrl_status(fd, "warning", 404, "session not found");
+                                        goto Close;
+                                    }
                                 }
                             }
                         }
@@ -1064,7 +1082,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                 bbl_ctrl_status(fd, "error", 400, "unknown command");
                                 break;
                             } else if(strcmp(actions[i].name, command) == 0) {
-                                actions[i].fn(fd, ctx, &key, arguments);
+                                actions[i].fn(fd, ctx, session_id, arguments);
                                 break;
                             }
                         }
