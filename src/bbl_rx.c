@@ -1856,12 +1856,12 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             }
             break;
         case ETH_TYPE_IPV6:
-            if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
-                /* Drop wrong MAC */
-                return;   
-            }
             ipv6 = (bbl_ipv6_t*)eth->next;
             if(ipv6->protocol == IPV6_NEXT_HEADER_UDP) {
+                if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                    /* Drop wrong MAC */
+                    return;
+                }
                 udp = (bbl_udp_t*)ipv6->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
                     bbl = (bbl_bbl_t*)udp->next;
