@@ -98,6 +98,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             } else {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(ctx->config.pppoe_reconnect) {
+                        /* Reset session for reconnect */
                         state = BBL_IDLE;
                         CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
                         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
@@ -134,6 +135,76 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->zapping_count = 0;
                         session->zapping_view_start_time.tv_sec = 0;
                         session->zapping_view_start_time.tv_nsec = 0;
+
+                        /* Session traffic */
+                        session->access_ipv4_tx_flow_id = 0;
+                        session->access_ipv4_tx_seq = 0;
+                        session->access_ipv4_tx_packet_len = 0;
+                        session->access_ipv4_rx_first_seq = 0;
+                        session->access_ipv4_rx_last_seq = 0;
+                        session->network_ipv4_tx_flow_id = 0;
+                        session->network_ipv4_tx_seq = 0;
+                        session->network_ipv4_tx_packet_len = 0;
+                        session->network_ipv4_rx_first_seq = 0;
+                        session->network_ipv4_rx_last_seq = 0;
+                        session->access_ipv6_tx_flow_id = 0;
+                        session->access_ipv6_tx_seq = 0;
+                        session->access_ipv6_tx_packet_len = 0;
+                        session->access_ipv6_rx_first_seq = 0;
+                        session->access_ipv6_rx_last_seq = 0;
+                        session->network_ipv6_tx_flow_id = 0;
+                        session->network_ipv6_tx_seq = 0;
+                        session->network_ipv6_tx_packet_len = 0;
+                        session->network_ipv6_rx_first_seq = 0;
+                        session->network_ipv6_rx_last_seq = 0;
+                        session->access_ipv6pd_tx_flow_id = 0;
+                        session->access_ipv6pd_tx_seq = 0;
+                        session->access_ipv6pd_tx_packet_len = 0;
+                        session->access_ipv6pd_rx_first_seq = 0;
+                        session->access_ipv6pd_rx_last_seq = 0;
+                        session->network_ipv6pd_tx_flow_id = 0;
+                        session->network_ipv6pd_tx_seq = 0;
+                        session->network_ipv6pd_tx_packet_len = 0;
+                        session->network_ipv6pd_rx_first_seq = 0;
+                        session->network_ipv6pd_rx_last_seq = 0;
+
+                        /* Reset session stats */
+                        session->stats.igmp_rx = 0;
+                        session->stats.igmp_tx = 0;
+                        session->stats.min_join_delay = 0;
+                        session->stats.avg_join_delay = 0;
+                        session->stats.max_join_delay = 0;
+                        session->stats.min_leave_delay = 0;
+                        session->stats.avg_leave_delay = 0;
+                        session->stats.max_leave_delay = 0;
+                        session->stats.mc_old_rx_after_first_new = 0;
+                        session->stats.mc_rx = 0;
+                        session->stats.mc_loss = 0;
+                        session->stats.mc_not_received = 0;
+                        session->stats.icmp_rx = 0;
+                        session->stats.icmp_tx = 0;
+                        session->stats.icmpv6_rx = 0;
+                        session->stats.icmpv6_tx = 0;
+                        session->stats.access_ipv4_rx = 0;
+                        session->stats.access_ipv4_tx = 0;
+                        session->stats.access_ipv4_loss = 0;
+                        session->stats.network_ipv4_rx = 0;
+                        session->stats.network_ipv4_tx = 0;
+                        session->stats.network_ipv4_loss = 0;
+                        session->stats.access_ipv6_rx = 0;
+                        session->stats.access_ipv6_tx = 0;
+                        session->stats.access_ipv6_loss = 0;
+                        session->stats.network_ipv6_rx = 0;
+                        session->stats.network_ipv6_tx = 0;
+                        session->stats.network_ipv6_loss = 0;
+                        session->stats.access_ipv6pd_rx = 0;
+                        session->stats.access_ipv6pd_tx = 0;
+                        session->stats.access_ipv6pd_loss = 0;
+                        session->stats.network_ipv6pd_rx = 0;
+                        session->stats.network_ipv6pd_tx = 0;
+                        session->stats.network_ipv6pd_loss = 0;
+
+                        /* Increment flap counter */
                         session->stats.flapped++;
                         ctx->sessions_flapped++;
                     } else {
