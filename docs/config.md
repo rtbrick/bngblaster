@@ -477,7 +477,7 @@ Attribute | Description | Default
 `ipv6-pps` | Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses | 0 (disabled)
 `ipv6pd-pps` | Generate bidirectional Ipv6 traffic between network interface and all session delegated IPv6 addresses | 0 (disabled)
 
-## l2TP Server
+## L2TP Server (LNS)
 
 This section describes all attributes of the `l2tp-server` (LNS) hierarchy. 
 

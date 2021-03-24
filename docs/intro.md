@@ -34,21 +34,23 @@ $ bngblaster --help
 
 Usage: bngblaster [OPTIONS]
 
+  -v --version
   -h --help
   -C --config <args>
-  -l --logging error|igmp|io|pppoe|normal|pcap|timer|timer-detail|ip
+  -l --logging debug|error|igmp|io|pppoe|normal|pcap|timer|timer-detail|ip|loss|l2tp
   -L --log-file <args>
   -u --username <args>
   -p --password <args>
   -P --pcap-capture <args>
   -J --json-report <args>
-  -c --pppoe-session-count <args>
+  -c --session-count <args>
   -g --mc-group <args>
   -s --mc-source <args>
   -r --mc-group-count <args>
   -z --mc-zapping-interval <args>
-  -S --control socket (UDS) <args>
-  -I --interactive (ncurses)
+  -S --control-socket <args>
+  -I --interactive
+  -f --force
 ```
 
 The BNG Blaster includes an optional interactive mode (`-I`) with realtime stats and 
