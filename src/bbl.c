@@ -1,5 +1,9 @@
 /*
- * BNG BLaster (BBL), a tool for scale testing the control plane of BNG and BRAS devices.
+ * BNG BLaster (BBL) - Main File
+ * 
+ * The BNG Blaster is a test tool to simulate thousands 
+ * of PPPoE or IPoE subscribers including IPTV, L2TPv2, 
+ * traffic verification and convergence testing capabilities.
  *
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
@@ -8,13 +12,20 @@
  */
 
 #include "bbl.h"
+#include "bbl_ctx.h"
 #include "bbl_config.h"
+#include "bbl_session.h"
 #include "bbl_pcap.h"
 #include "bbl_stats.h"
 #include "bbl_interactive.h"
 #include "bbl_ctrl.h"
-
 #include "bbl_logging.h"
+#include "bbl_io_packet_mmap.h"
+#include "bbl_io_raw.h"
+#ifdef BNGBLASTER_NETMAP
+    #include "bbl_io_netmap.h"
+#endif
+#include <sys/stat.h>
 
 /* Global Variables */
 bool g_interactive = false; // interactive mode using ncurses
@@ -24,7 +35,7 @@ volatile bool g_teardown = false;
 volatile bool g_teardown_request = false;
 volatile uint8_t g_teardown_request_count = 0;
 
-/* This variable is used to switch between access
+/* This global variable is used to switch between access
  * interfaces in interactive mode (ncurses). */
 uint8_t g_access_if_selected = 0; 
 
@@ -92,112 +103,6 @@ bbl_session_network_tx_qnode_remove (bbl_session_s *session)
     }
 }
 
-void
-bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t state)
-{
-    if(session->session_state != state) {
-        /* State has changed ... */
-        if(session->session_state == BBL_ESTABLISHED && ctx->sessions_established) {
-            /* Decrement sessions established if old state is established. */
-            ctx->sessions_established--;
-            if(session->dhcpv6_received) {
-                ctx->dhcpv6_established--;
-            }
-            if(session->dhcpv6_requested) {
-                ctx->dhcpv6_requested--;
-            }
-        } else if(state == BBL_ESTABLISHED) {
-            /* Increment sessions established and decrement outstanding
-             * if new state is established. */
-            ctx->sessions_established++;
-            if(ctx->sessions_established > ctx->sessions_established_max) ctx->sessions_established_max = ctx->sessions_established;
-            if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
-        }
-        if(state == BBL_PPP_TERMINATING) {
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
-        }
-        if(state == BBL_TERMINATED) {
-            /* Stop all session tiemrs */
-            timer_del(session->timer_arp);
-            timer_del(session->timer_padi);
-            timer_del(session->timer_padr);
-            timer_del(session->timer_lcp);
-            timer_del(session->timer_lcp_echo);
-            timer_del(session->timer_auth);
-            timer_del(session->timer_ipcp);
-            timer_del(session->timer_ip6cp);
-            timer_del(session->timer_dhcpv6);
-            timer_del(session->timer_igmp);
-            timer_del(session->timer_zapping);
-            timer_del(session->timer_icmpv6);
-            timer_del(session->timer_session);
-            timer_del(session->timer_session_traffic_ipv4);
-            timer_del(session->timer_session_traffic_ipv6);
-            timer_del(session->timer_session_traffic_ipv6pd);
-
-            /* Reset all states */
-            session->lcp_state = BBL_PPP_CLOSED;
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
-
-            /* Increment sessions terminated if new state is terminated. */
-            if(g_teardown) {
-                ctx->sessions_terminated++;
-            } else {
-                if(session->access_type == ACCESS_TYPE_PPPOE) {
-                    if(ctx->config.pppoe_reconnect) {
-                        state = BBL_IDLE;
-                        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
-                        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
-                        session->pppoe_session_id = 0;
-                        if(session->pppoe_ac_cookie) {
-                            free(session->pppoe_ac_cookie);
-                            session->pppoe_ac_cookie = NULL;
-                        }
-                        session->pppoe_ac_cookie_len = 0;
-                        if(!session->interface->ctx->config.pppoe_service_name) {
-                            if(session->pppoe_service_name) {
-                                free(session->pppoe_service_name);
-                                session->pppoe_service_name = NULL;
-                            }
-                            session->pppoe_service_name_len = 0;
-                        }
-                        session->ip_address = 0;
-                        session->peer_ip_address = 0;
-                        session->dns1 = 0;
-                        session->dns2 = 0;
-                        session->ipv6_prefix.len = 0;
-                        session->delegated_ipv6_prefix.len = 0;
-                        session->icmpv6_ra_received = false;
-                        memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
-                        memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-                        session->dhcpv6_requested = false;
-                        session->dhcpv6_received = false;
-                        session->dhcpv6_type = DHCPV6_MESSAGE_SOLICIT;
-                        session->dhcpv6_ia_pd_option_len = 0;
-                        memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
-                        memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
-                        session->zapping_joined_group = NULL;
-                        session->zapping_leaved_group = NULL;
-                        session->zapping_count = 0;
-                        session->zapping_view_start_time.tv_sec = 0;
-                        session->zapping_view_start_time.tv_nsec = 0;
-                        session->stats.flapped++;
-                        ctx->sessions_flapped++;
-                    } else {
-                        ctx->sessions_terminated++;
-                    }
-                } else {
-                    /* IPoE */
-                    ctx->sessions_terminated++;
-                }
-            }
-        }
-        session->session_state = state;
-    }
-}
-
 bool
 bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
 {
@@ -215,7 +120,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     uint16_t len = 0;
 
     if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
-        interface->mc_packets = malloc(ctx->config.igmp_group_count * 1500);
+        interface->mc_packets = malloc(ctx->config.igmp_group_count * 2000);
         buf = interface->mc_packets;
 
         for(i = 0; i < ctx->config.igmp_group_count; i++) {
@@ -239,14 +144,19 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             ip.src = source;
             ip.dst = htobe32(group);
             ip.ttl = 64;
+            ip.tos = ctx->config.multicast_traffic_tos;
             ip.protocol = PROTOCOL_IPV4_UDP;
             ip.next = &udp;
             udp.src = BBL_UDP_PORT;
             udp.dst = BBL_UDP_PORT;
             udp.protocol = UDP_PROTOCOL_BBL;
             udp.next = &bbl;
+            if(ctx->config.multicast_traffic_len > 76) {
+                bbl.padding = ctx->config.multicast_traffic_len - 76;
+            } 
             bbl.type = BBL_TYPE_MULTICAST;
             bbl.direction = BBL_DIRECTION_DOWN;
+            bbl.tos = ctx->config.multicast_traffic_tos;
             bbl.mc_source = ip.src;
             bbl.mc_group = ip.dst ;
             if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
@@ -259,17 +169,83 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     return true;
 }
 
-/*
- * Allocate an interface and setup Tx and Rx rings.
+bool
+bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name) {
+
+    FILE *lock_file;
+    char  lock_path[128];
+    int   lock_pid;
+    char  proc_pid_path[32];
+
+    struct stat sts;
+    pid_t pid = getpid();
+
+    snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface_name);
+    lock_file = fopen(lock_path, "r");
+    if(lock_file) {
+        // lock file exists
+        if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
+            snprintf(proc_pid_path, 32, "/proc/%d", lock_pid);
+            if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
+                LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
+                if(!ctx->config.interface_lock_force) return false;
+            }
+        } else {
+            LOG(ERROR, "Invalid interface lock file %s\n", lock_path);
+            if(!ctx->config.interface_lock_force) return false;
+        }
+        fclose(lock_file);
+    }
+    /* crate lock file */
+    lock_pid = pid;
+    lock_file = fopen(lock_path, "w");
+    if(!lock_file) {
+        LOG(ERROR, "Failed to open interface lock file %s\n", lock_path);
+        return false;
+    }
+    fprintf(lock_file, "%d", lock_pid);
+    fclose(lock_file);
+    return true;
+}
+
+void
+bbl_interface_unlock_all(bbl_ctx_s *ctx) {
+    char  lock_path[128];
+    bbl_interface_s *interface;
+    int i;
+
+    if(ctx->op.network_if) {
+        interface = ctx->op.network_if;
+        snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface->name);
+        remove(lock_path);
+    }
+    for(i = 0; i < ctx->op.access_if_count; i++) {
+        interface = ctx->op.access_if[i];
+        if(interface) {
+            snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface->name);
+            remove(lock_path);
+        }
+    }
+}
+
+/** 
+ * bbl_add_interface 
+ *
+ * @param ctx global context
+ * @param interface interface.
+ * @param slots ring buffer size 
  */
 bbl_interface_s *
 bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
 {
     bbl_interface_s *interface;
-    char timer_name[16];
     struct ifreq ifr;
-    size_t ring_size;
-    int version, qdisc_bypass;
+
+    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    if(!bbl_interface_lock(ctx, interface_name)) {
+        return NULL;
+    }
 
     interface = calloc(1, sizeof(bbl_interface_s));
     if (!interface) {
@@ -278,180 +254,6 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
     }
 
     interface->name = strdup(interface_name);
-
-    /*
-     * Open RAW socket for all Ethertypes.
-     * https://man7.org/linux/man-pages/man7/packet.7.html
-     */
-    interface->fd_tx = socket(AF_PACKET, SOCK_RAW, htobe16(ETH_P_ALL));
-    if (interface->fd_tx == -1) {
-        LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    interface->fd_rx = socket(AF_PACKET, SOCK_RAW, htobe16(ETH_P_ALL));
-    if (interface->fd_rx == -1) {
-        LOG(ERROR, "socket() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    /*
-     * Use API version 2 which is good enough for what we're doing.
-     */
-    version = TPACKET_V2;
-    if ((setsockopt(interface->fd_tx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
-        LOG(ERROR, "setsockopt() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    if ((setsockopt(interface->fd_rx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
-        LOG(ERROR, "setsockopt() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    /*
-     * Limit packet capture to a given interface.
-     * Obtain the interface index and bind the socket to the interface.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
-    if (ioctl(interface->fd_tx, SIOCGIFINDEX, &ifr) == -1) {
-        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    interface->addr.sll_family = AF_PACKET;
-    interface->addr.sll_ifindex = ifr.ifr_ifindex;
-    interface->addr.sll_protocol = htobe16(ETH_P_ALL);
-    if (bind(interface->fd_tx, (struct sockaddr*)&interface->addr, sizeof(interface->addr)) == -1) {
-        LOG(ERROR, "bind() TX error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    if (bind(interface->fd_rx, (struct sockaddr*)&interface->addr, sizeof(interface->addr)) == -1) {
-        LOG(ERROR, "bind() RX error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    /*
-     * Obtain the interface MAC address.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
-    if (ioctl(interface->fd_rx, SIOCGIFHWADDR, &ifr) == -1) {
-        LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-    memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
-    LOG(NORMAL, "Getting MAC address %02x:%02x:%02x:%02x:%02x:%02x for interface %s\n",
-	interface->mac[0], interface->mac[1], interface->mac[2],
-	interface->mac[3], interface->mac[4], interface->mac[5], interface->name);
-
-    /*
-     * Set the interface to promiscuous mode. Only for the RX FD.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
-    if (ioctl(interface->fd_rx, SIOCGIFFLAGS, &ifr) == -1) {
-        LOG(ERROR, "Getting socket flags error %s (%d) when setting promiscuous mode for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    ifr.ifr_flags |= IFF_PROMISC;
-    if (ioctl(interface->fd_rx, SIOCSIFFLAGS, ifr) == -1){
-        LOG(ERROR, "Setting socket flags error %s (%d) when setting promiscuous mode for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    /*
-     *   Bypass TC_QDISC, such that the kernel is hammered 30% less with processing packets. Only for the TX FD.
-     *
-     *   PACKET_QDISC_BYPASS (since Linux 3.14)
-     *          By default, packets sent through packet sockets pass through
-     *          the kernel's qdisc (traffic control) layer, which is fine for
-     *          the vast majority of use cases.  For traffic generator appli‐
-     *          ances using packet sockets that intend to brute-force flood
-     *          the network—for example, to test devices under load in a simi‐
-     *          lar fashion to pktgen—this layer can be bypassed by setting
-     *          this integer option to 1.  A side effect is that packet
-     *          buffering in the qdisc layer is avoided, which will lead to
-     *          increased drops when network device transmit queues are busy;
-     *          therefore, use at your own risk.
-     */
-    if(ctx->config.qdisc_bypass) {
-        qdisc_bypass = 1;
-        if (setsockopt(interface->fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
-            LOG(ERROR, "Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-            return NULL;
-        }
-    }
-
-    /*
-     * Setup TX ringbuffer.
-     */
-    memset(&interface->req_tx, 0, sizeof(interface->req_tx));
-    interface->req_tx.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */
-    interface->req_tx.tp_frame_size = interface->req_tx.tp_block_size/2; /* 2048 */
-    interface->req_tx.tp_block_nr = slots/2;
-    interface->req_tx.tp_frame_nr = slots;
-    if (setsockopt(interface->fd_tx, SOL_PACKET, PACKET_TX_RING, &interface->req_tx, sizeof(interface->req_tx)) == -1) {
-        LOG(ERROR, "Allocating TX ringbuffer error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    /*
-     * Open the shared memory TX window between kernel and userspace.
-     */
-    ring_size = interface->req_tx.tp_block_nr * interface->req_tx.tp_block_size;
-    interface->ring_tx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->fd_tx, 0);
-
-    /*
-     * Setup RX ringbuffer. Double the slots, such that we do not miss any packets.
-     */
-    slots <<= 1;
-    memset(&interface->req_rx, 0, sizeof(interface->req_rx));
-    interface->req_rx.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */
-    interface->req_rx.tp_frame_size = interface->req_rx.tp_block_size/2; /* 2048 */
-    interface->req_rx.tp_block_nr = slots/2;
-    interface->req_rx.tp_frame_nr = slots;
-    if (setsockopt(interface->fd_rx, SOL_PACKET, PACKET_RX_RING, &interface->req_rx, sizeof(interface->req_rx)) == -1) {
-        LOG(ERROR, "Allocating RX ringbuffer error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    /*
-     * Open the shared memory RX window between kernel and userspace.
-     */
-    ring_size = interface->req_rx.tp_block_nr * interface->req_rx.tp_block_size;
-    interface->ring_rx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->fd_rx, 0);
-
-    LOG(NORMAL, "Add interface %s\n", interface->name);
-
-    /*
-     * Add an periodic timer for polling I/O.
-     */
-    snprintf(timer_name, sizeof(timer_name), "%s TX", interface_name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_tx_job);
-    snprintf(timer_name, sizeof(timer_name), "%s RX", interface_name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_rx_job);
-
-    /*
-     * Timer to compute periodic rates.
-     */
-    timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-		               bbl_compute_interface_rate_job);
-
-    /*
-     * Add to context interface list.
-     */
     interface->ctx = ctx;
     CIRCLEQ_INSERT_TAIL(&ctx->interface_qhead, interface, interface_qnode);
 
@@ -463,9 +265,83 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      */
     CIRCLEQ_INIT(&interface->session_tx_qhead);
     CIRCLEQ_INIT(&interface->l2tp_tx_qhead);
+
+    /*
+     * Obtain the interface MAC address.
+     */
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
+    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
+        LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        return NULL;
+    }
+    memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
+
+    /*
+     * Obtain the interface index.
+     */
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
+        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        return NULL;
+    }
+    interface->ifindex = ifr.ifr_ifindex;
+
+    /* The BNG Blaster supports multiple IO modes where packet_mmap is
+     * selected per default. */
+    switch (ctx->config.io_mode) {
+        case IO_MODE_PACKET_MMAP:
+            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots)) {
+                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add packet_mmap interface %s\n", interface->name);
+                return NULL;
+            }
+            break;
+        case IO_MODE_RAW:
+            if(bbl_io_raw_add_interface(ctx, interface, slots)) {
+                LOG(NORMAL, "Interface %s added (mode: raw, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add raw socket interface %s\n", interface->name);
+                return NULL;
+            }
+            break;
+#ifdef BNGBLASTER_NETMAP
+        case IO_MODE_NETMAP:
+            if(bbl_io_netmap_add_interface(ctx, interface, slots)) {
+                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add netmap interface %s\n", interface->name);
+                return NULL;
+            }
+            break;
+#endif
+        default:
+            LOG(ERROR, "Failed to add interface %s because of unsupported io-mode\n", interface->name);
+            return NULL;
+    }
+
+    /*
+     * Timer to compute periodic rates.
+     */
+    timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
+		               bbl_compute_interface_rate_job);
+
+
     return interface;
 }
 
+/** 
+ * bbl_add_access_interfaces 
+ *
+ * @param ctx global context
+ */
 bool
 bbl_add_access_interfaces (bbl_ctx_s *ctx) {
     bbl_access_config_s *access_config = ctx->config.access_config;
@@ -475,7 +351,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
     while(access_config) {
         for(i = 0; i < ctx->op.access_if_count; i++) {
             if(ctx->op.access_if[i]->name) {
-                if (strncmp(ctx->op.access_if[i]->name, access_config->interface, IFNAMSIZ) == 0) {
+                if (strcmp(ctx->op.access_if[i]->name, access_config->interface) == 0) {
                     /* Interface already added! */
                     access_config->access_if = ctx->op.access_if[i];
                     goto Next;
@@ -499,7 +375,7 @@ Next:
 /*
  * Command line options.
  */
-const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:I";
+const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:If";
 static struct option long_options[] = {
     { "version",                no_argument,        NULL, 'v' },
     { "help",                   no_argument,        NULL, 'h' },
@@ -515,8 +391,9 @@ static struct option long_options[] = {
     { "mc-source",              required_argument,  NULL, 's' },
     { "mc-group-count",         required_argument,  NULL, 'r' },
     { "mc-zapping-interval",    required_argument,  NULL, 'z' },
-    { "control socket (UDS)",   required_argument,  NULL, 'S' },
-    { "interactive (ncurses)",  no_argument,        NULL, 'I' },
+    { "control-socket",         required_argument,  NULL, 'S' },
+    { "interactive",            no_argument,        NULL, 'I' },
+    { "force",                  no_argument,        NULL, 'f' },
     { NULL,                     0,                  NULL,  0 }
 };
 
@@ -544,12 +421,18 @@ bbl_print_version (void)
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
     }
+
+    printf("IO Modes: packet_mmap (default), raw");
+#ifdef BNGBLASTER_NETMAP
+    printf(", netmap");
+#endif
+    printf("\n");
 }
 
 void
 bbl_print_usage (void)
 {
-    u_int idx;
+    int idx;
     printf("%s", banner);
     printf("Usage: bngblaster [OPTIONS]\n\n");
     for (idx = 0; ; idx++) {
@@ -558,416 +441,6 @@ bbl_print_usage (void)
         }
         printf("  -%c --%s%s\n", long_options[idx].val, long_options[idx].name,
                bbl_print_usage_arg(&long_options[idx]));
-    }
-}
-
-#if 0
-/*
- * Called by hashtable destructor.
- */
-void
-bbl_free_session (void *key __attribute__((unused)), void *s)
-{
-    bbl_session_s *session = s; 
-    if(session->access_ipv4_tx_packet_template) {
-        free(session->access_ipv4_tx_packet_template);
-    }
-    if(session->network_ipv4_tx_packet_template) {
-        free(session->network_ipv4_tx_packet_template);
-    }
-    if(session->access_ipv6_tx_packet_template) {
-        free(session->access_ipv6_tx_packet_template);
-    }
-    if(session->network_ipv6_tx_packet_template) {
-        free(session->network_ipv6_tx_packet_template);
-    }
-    if(session->access_ipv6pd_tx_packet_template) {
-        free(session->access_ipv6pd_tx_packet_template);
-    }
-    if(session->network_ipv6pd_tx_packet_template) {
-        free(session->network_ipv6pd_tx_packet_template);
-    }
-    free(session);
-}
-#endif
-
-/*
- * A session key fits in 64-Bits. Lets do this instead of a memcmp()
- */
-int
-bbl_compare_session (void *key1, void *key2)
-{
-    const uint64_t a = *(const uint64_t*)key1;
-    const uint64_t b = *(const uint64_t*)key2;
-    return (a > b) - (a < b);
-}
-
-int
-bbl_compare_l2tp_session (void *key1, void *key2)
-{
-    const uint32_t a = *(const uint32_t*)key1;
-    const uint32_t b = *(const uint32_t*)key2;
-    return (a > b) - (a < b);
-}
-
-uint
-bbl_session_hash (const void* k)
-{
-    uint hash = 2166136261U;
-
-    hash ^= *(uint32_t *)k;
-    hash ^= *(uint16_t *)(k+4) << 12;
-    hash ^= *(uint16_t *)(k+6);
-
-    return hash;
-}
-
-uint
-bbl_l2tp_session_hash (const void* k)
-{
-    uint hash = 2166136261U;
-    hash ^= *(uint32_t *)k;
-    return hash;
-}
-
-/*
- * Allocate a context which is our top-level data structure.
- */
-bbl_ctx_s *
-bbl_add_ctx (void)
-{
-    bbl_ctx_s *ctx;
-
-    ctx = calloc(1, sizeof(bbl_ctx_s));
-        if (!ctx) {
-        return NULL;
-    }
-
-    /* Allocate scratchpad memory. */
-    ctx->sp_rx = malloc(SCRATCHPAD_LEN);
-    ctx->sp_tx = malloc(SCRATCHPAD_LEN);
-
-    /*
-     * Initialize Timer root.
-     */
-    timer_init_root(&ctx->timer_root);
-
-    CIRCLEQ_INIT(&ctx->sessions_idle_qhead);
-    CIRCLEQ_INIT(&ctx->sessions_teardown_qhead);
-    CIRCLEQ_INIT(&ctx->interface_qhead);
-
-    ctx->flow_id = 1;
-    /*
-     * Initialize session DB.
-     */
-    ctx->session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session,
-                                            bbl_session_hash,
-                                            BBL_SESSION_HASHTABLE_SIZE);
-
-    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
-                                                 bbl_l2tp_session_hash,
-                                                 BBL_SESSION_HASHTABLE_SIZE);
-
-    ctx->li_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_l2tp_session,
-                                            bbl_l2tp_session_hash,
-                                            BBL_SESSION_HASHTABLE_SIZE);
-
-    return ctx;
-}
-
-void
-bbl_del_ctx (bbl_ctx_s *ctx) {
-    bbl_access_config_s *access_config = ctx->config.access_config;
-    void *p = NULL;
-
-    /* Free access configuration memory. */
-    while(access_config) {
-        p = access_config;
-        access_config = access_config->next;
-        free(p);
-    }
-
-    if(ctx->sp_rx) {
-        free(ctx->sp_rx);
-    }
-    if(ctx->sp_tx) {
-        free(ctx->sp_tx);
-    }
-
-    pcapng_free(ctx);
-    timer_flush_root(&ctx->timer_root);
-    free(ctx);
-    return;
-}
-
-bbl_session_s *
-bbl_add_session (bbl_ctx_s *ctx, bbl_interface_s *interface, bbl_session_s *session_template, bbl_access_config_s *access_config)
-{
-    bbl_session_s *session;
-    dict_insert_result result;
-
-    session = calloc(1, sizeof(bbl_session_s));
-    if (!session) {
-        return NULL;
-    }
-
-    /*
-     * Copy key data.
-     */
-    memcpy(&session->key, &session_template->key, sizeof(session->key));
-
-    /*
-     * Copy non-key data.
-     */
-    session->access_type = session_template->access_type;
-    session->access_third_vlan = access_config->access_third_vlan;
-    session->access_config = access_config;
-    memcpy(session->server_mac, session_template->server_mac, ETH_ADDR_LEN);
-    memcpy(session->client_mac, session_template->client_mac, ETH_ADDR_LEN);
-    session->mru = session_template->mru;
-    session->magic_number = session_template->magic_number;
-    session->username = session_template->username;
-    session->password = session_template->password;
-    session->agent_circuit_id = session_template->agent_circuit_id;
-    session->agent_remote_id = session_template->agent_remote_id;
-    session->rate_up = session_template->rate_up;
-    session->rate_down = session_template->rate_down;
-    session->duid[1] = 3;
-    session->duid[3] = 1;
-    memcpy(&session->duid[4], session_template->client_mac, ETH_ADDR_LEN);
-    session->igmp_autostart = access_config->igmp_autostart;
-    session->igmp_version = access_config->igmp_version;
-    session->igmp_robustness = 2; /* init robustness with 2 */
-    session->zapping_group_max = be32toh(ctx->config.igmp_group) + ((ctx->config.igmp_group_count - 1) * be32toh(ctx->config.igmp_group_iter));
-    session->session_traffic = access_config->session_traffic_autostart;
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(ctx->config.pppoe_service_name) {
-            session->pppoe_service_name = (uint8_t*)ctx->config.pppoe_service_name;
-            session->pppoe_service_name_len = strlen(ctx->config.pppoe_service_name);
-        }
-        session->pppoe_host_uniq = session_template->pppoe_host_uniq;
-    } else if(session->access_type == ACCESS_TYPE_IPOE) {
-        if(access_config->static_ip && access_config->static_gateway) {
-            session->ip_address = access_config->static_ip;
-            session->peer_ip_address = access_config->static_gateway;
-            access_config->static_ip = htobe32(be32toh(access_config->static_ip) + be32toh(access_config->static_ip_iter));
-            access_config->static_gateway = htobe32(be32toh(access_config->static_gateway) + be32toh(access_config->static_gateway_iter));
-        }
-    }
-
-    /*
-     * Insert session into session dictionary hanging off a context.
-     */
-    result = dict_insert(ctx->session_dict, &session->key);
-    if (!result.inserted) {
-        free(session);
-        return NULL;
-    }
-    *result.datum_ptr = session;
-
-    /*
-     * Store parent.
-     */
-    session->interface = interface;
-    session->session_state = BBL_IDLE;
-    CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
-    ctx->sessions++;
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        ctx->sessions_pppoe++;
-    } else {
-        ctx->sessions_ipoe++;
-    }
-    return session;
-}
-
-bool
-bbl_init_sessions (bbl_ctx_s *ctx)
-{
-    bbl_session_s session_template;
-    bbl_access_config_s *access_config;
-        
-    uint32_t i = 1;
-    char *s;
-    char snum1[32];
-    char snum2[32];
-
-    /* The variable t counts how many sessions are created in one 
-     * loop over all access configurations and is reset to zero
-     * every time we start from first access profile. If the variable 
-     * is still zero after processing last access profile means 
-     * that all VLAN ranges are exhausted. */
-    int t = 0;
-    
-    access_config = ctx->config.access_config;
-
-    /* For equal distribution of sessions over access configurations 
-     * and outer VLAN's, we loop first over all configurations and
-     * second over VLAN ranges as per configration. */
-    while(i <= ctx->config.sessions) {
-        if(access_config->exhausted) goto Next;
-        if(access_config->access_outer_vlan == 0) {
-            /* The outer VLAN is initial 0 */
-            access_config->access_outer_vlan = access_config->access_outer_vlan_min;
-            access_config->access_inner_vlan = access_config->access_inner_vlan_min;
-        } else {
-            if(ctx->config.iterate_outer_vlan) {
-                /* Iterate over outer VLAN first and inner VLAN second */
-                access_config->access_outer_vlan++;
-                if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
-                    access_config->access_outer_vlan = access_config->access_outer_vlan_min;
-                    access_config->access_inner_vlan++;
-                }
-            } else {
-                /* Iterate over inner VLAN first and outer VLAN second (default) */
-                access_config->access_inner_vlan++;
-                if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
-                    access_config->access_inner_vlan = access_config->access_inner_vlan_min;
-                    access_config->access_outer_vlan++;
-                }
-            }
-        }
-        if(access_config->access_outer_vlan == 0) {
-            /* This is required to handle untagged interafaces */
-            access_config->exhausted = true;
-        }
-        if(access_config->access_outer_vlan > access_config->access_outer_vlan_max || 
-           access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
-            /* VLAN range exhausted */
-            access_config->exhausted = true;
-            goto Next;
-        }
-        t++;
-        access_config->sessions++;
-        memset(&session_template, 0, sizeof(session_template));
-        memset(&session_template.server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
-        session_template.key.outer_vlan_id= access_config->access_outer_vlan;
-        session_template.key.inner_vlan_id = access_config->access_inner_vlan;
-        session_template.key.ifindex = access_config->access_if->addr.sll_ifindex;
-        session_template.client_mac[0] = 0x02; //
-        session_template.client_mac[1] = 0x00; // set client OUI ro locally administered
-        session_template.client_mac[2] = 0x00; //
-        session_template.mru = ctx->config.ppp_mru;
-        session_template.access_type = access_config->access_type;
-        session_template.client_mac[3] = i>>16;
-        session_template.client_mac[4] = i>>8;
-        session_template.client_mac[5] = i;
-        session_template.magic_number = htobe32(i);
-        if(ctx->config.pppoe_host_uniq) {
-            session_template.pppoe_host_uniq = htobe64(i);
-        }
-        /* Populate session identifiaction attributes */
-        snprintf(snum1, 6, "%d", i);
-        snprintf(snum2, 6, "%d", access_config->sessions);
-    
-        /* Update username */
-        s = replace_substring(access_config->username, "{session-global}", snum1);
-        session_template.username = s;
-        s = replace_substring(session_template.username, "{session}", snum2);
-        session_template.username = strdup(s);
-
-        /* Update password */
-        s = replace_substring(access_config->password, "{session-global}", snum1);
-        session_template.password = s;
-        s = replace_substring(session_template.password, "{session}", snum2);
-        session_template.password = strdup(s);
-
-        /* Update ACI */
-        s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
-        session_template.agent_circuit_id = s;
-        s = replace_substring(session_template.agent_circuit_id, "{session}", snum2);
-        session_template.agent_circuit_id = strdup(s);
-
-        /* Update ARI */
-        s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
-        session_template.agent_remote_id = s;
-        s = replace_substring(session_template.agent_remote_id, "{session}", snum2);
-        session_template.agent_remote_id = strdup(s);
-        
-        /* Update rates ... */
-        session_template.rate_up = access_config->rate_up;
-        session_template.rate_down = access_config->rate_down;
-        if(bbl_add_session(ctx, access_config->access_if, &session_template, access_config) == NULL) {
-            LOG(ERROR, "Failed to create session (%s Q-in-Q %u:%u)\n", access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
-            return false;
-        } else {
-            LOG(DEBUG, "Session created (%s Q-in-Q %u:%u)\n", access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
-        }
-        i++;
-Next:
-        if(access_config->next) {
-            access_config = access_config->next;
-        } else {
-            if (t) {
-                t = 0;
-                access_config = ctx->config.access_config;
-            } else {
-                LOG(ERROR, "Failed to create sessions because VLAN ranges exhausted!\n");
-                return false;
-            }
-
-        }
-    }
-    return true;
-}
-
-/*
- * performance test code
- */
-#if 0
-void
-bbl_test_lookup_session(bbl_ctx_s *ctx)
-{
-    session_key_t key;
-    uint ifindex, outer_vlan_id, inner_vlan_id, session_found;
-    void **search;
-
-    session_found = 0;
-    for (ifindex = 0; ifindex < 10; ifindex++) {
-        for (outer_vlan_id = 1; outer_vlan_id < 200; outer_vlan_id++) {
-            for (inner_vlan_id = 1; inner_vlan_id < 200; inner_vlan_id++) {
-                key.ifindex = ifindex;
-                key.outer_vlan_id = outer_vlan_id;
-                key.inner_vlan_id = inner_vlan_id;
-                search = dict_search(ctx->session_dict, &key);
-                if (search) {
-                    session_found++;
-                }
-            }
-        }
-    }
-}
-#endif
-
-void
-bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
-{
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        switch(session->session_state) {
-            case BBL_IDLE:
-                bbl_session_update_state(ctx, session, BBL_TERMINATED);
-                break;
-            case BBL_PPPOE_INIT:
-            case BBL_PPPOE_REQUEST:
-            case BBL_PPP_LINK:
-                bbl_session_update_state(ctx, session, BBL_TERMINATING);
-                session->send_requests = BBL_SEND_DISCOVERY;
-                bbl_session_tx_qnode_insert(session);
-                break;
-            case BBL_PPP_AUTH:
-            case BBL_PPP_NETWORK:
-            case BBL_ESTABLISHED:
-            case BBL_PPP_TERMINATING:
-                bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
-                session->lcp_request_code = PPP_CODE_TERM_REQUEST;
-                session->lcp_options_len = 0;
-                session->send_requests |= BBL_SEND_LCP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
-                break;
-            default:
-                break;
-        }
-    } else {
-        bbl_session_update_state(ctx, session, BBL_TERMINATED);
     }
 }
 
@@ -991,8 +464,8 @@ bbl_ctrl_job (timer_s *timer)
 {
     bbl_ctx_s *ctx = timer->data;
     bbl_session_s *session;
-    struct dict_itor *itor;
     int rate = 0;
+    uint32_t i;
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
@@ -1025,16 +498,15 @@ bbl_ctrl_job (timer_s *timer)
         /* Teardown phase ... */
         if(g_teardown_request) {
             /* Put all sessions on the teardown list. */
-            itor = dict_itor_new(ctx->session_dict);
-            dict_itor_first(itor);
-            for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-                session = (bbl_session_s*)*dict_itor_datum(itor);
-                if(!CIRCLEQ_NEXT(session, session_teardown_qnode)) {
-                    /* Add only if not already on teardown list. */
-                    CIRCLEQ_INSERT_TAIL(&ctx->sessions_teardown_qhead, session, session_teardown_qnode);
+            for(i = 0; i < ctx->sessions; i++) {
+                session = ctx->session_list[i];
+                if(session) {
+                    if(!CIRCLEQ_NEXT(session, session_teardown_qnode)) {
+                        /* Add only if not already on teardown list. */
+                        CIRCLEQ_INSERT_TAIL(&ctx->sessions_teardown_qhead, session, session_teardown_qnode);
+                    }
                 }
             }
-            dict_itor_free(itor);
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
@@ -1127,7 +599,7 @@ main (int argc, char *argv[])
     char *igmp_zap_interval = NULL;
     bool  interactive = false;
 
-    ctx = bbl_add_ctx();
+    ctx = bbl_ctx_add();
     if (!ctx) {
         exit(1);
     }
@@ -1200,6 +672,9 @@ main (int argc, char *argv[])
                 break;
             case 'S':
 		        ctx->ctrl_socket_path = optarg;
+                break;
+            case 'f':
+		        ctx->config.interface_lock_force = true;
                 break;
             default:
                 bbl_print_usage();
@@ -1302,7 +777,7 @@ main (int argc, char *argv[])
      * Setup test.
      */
     if(ctx->op.access_if_count) {
-        if(!bbl_init_sessions(ctx)) {
+        if(!bbl_sessions_init(ctx)) {
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
             exit(1);
@@ -1358,10 +833,11 @@ main (int argc, char *argv[])
     /*
      * Cleanup ressources.
      */
+    bbl_interface_unlock_all(ctx);
     log_close();
     if(ctx->ctrl_socket_path) {
         bbl_ctrl_socket_close(ctx);
     }
-    bbl_del_ctx(ctx);
+    bbl_ctx_del(ctx);
     ctx = NULL;
 }

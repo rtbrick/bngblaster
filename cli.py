@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""
+BNG Blaster Control Socket Client
+
+Simple script to interact with the BNG Blaster
+control socket JSON RPC API. 
+
+Christian Giese, January 2021
+
+Copyright (C) 2020-2021, RtBrick, Inc.
+"""
 import sys
 import socket
 import os
@@ -12,20 +22,22 @@ BNG Blaster Control Socket Client
 {c} <socket> <command> [arguments]
 
 Examples: 
-    {c} run.sock session-info outer-vlan 1 inner-vlan 1
-    {c} run.sock igmp-join outer-vlan 1 inner-vlan 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
-    {c} run.sock igmp-info outer-vlan 1 inner-vlan 1
+    {c} run.sock session-info session-id 1
+    {c} run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
+    {c} run.sock igmp-info session-id 1
     {c} run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
 
 """.format(c=sys.argv[0]))
     sys.exit(1)
 
 def error(*args, **kwargs):
+    """print error and exit"""
     print(*args, file=sys.stderr, **kwargs)
     sys.exit(1)
 
 
 def main():
+    """main function"""
     request = {}
     if(len(sys.argv)) < 3:
         usage()
@@ -34,13 +46,19 @@ def main():
 
     request["command"] = sys.argv[2]
     if(len(sys.argv)) > 4:
-        request["arguments"] = {} 
+        request["arguments"] = {}
         for i in range(3, len(sys.argv), 2):
             arg = sys.argv[i+1]
-            try: 
+            try:
+                # integer arguments like "session-id 1"
                 request["arguments"][sys.argv[i]] = int(arg)
             except:
-                request["arguments"][sys.argv[i]] = ast.literal_eval(arg)
+                try:
+                    # list arguments like "sessions [1,2]""
+                    request["arguments"][sys.argv[i]] = ast.literal_eval(arg)
+                except:
+                    # string arguments like "group 239.0.0.1"
+                    request["arguments"][sys.argv[i]] = arg
         #print(json.dumps(request).encode('utf-8'))
     if os.path.exists(socket_path):
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
