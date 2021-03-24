@@ -185,12 +185,16 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
 }
 
 /*
- * encode_icmp
+ * encode_bbl
  */
 protocol_error_t
 encode_bbl(uint8_t *buf, uint16_t *len,
            bbl_bbl_t *bbl) {
 
+    if(bbl->padding) {
+        memset(buf, 0x0, bbl->padding);
+        BUMP_WRITE_BUFFER(buf, len, bbl->padding);
+    }
     *(uint64_t*)buf = BBL_MAGIC_NUMBER;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
     *buf = bbl->type;
@@ -201,6 +205,7 @@ encode_bbl(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = bbl->tos;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint32_t*)buf = bbl->session_id; 
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
         *(uint32_t*)buf = bbl->ifindex;
@@ -225,7 +230,7 @@ encode_bbl(uint8_t *buf, uint16_t *len,
 }
 
 /*
- * encode_icmp
+ * encode_udp
  */
 protocol_error_t
 encode_udp(uint8_t *buf, uint16_t *len,
@@ -258,6 +263,9 @@ encode_udp(uint8_t *buf, uint16_t *len,
     return result;
 }
 
+/*
+ * encode_icmpv6
+ */
 protocol_error_t
 encode_icmpv6(uint8_t *buf, uint16_t *len,
               bbl_icmpv6_t *icmp) {
@@ -324,6 +332,9 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * encode_arp
+ */
 protocol_error_t
 encode_arp(uint8_t *buf, uint16_t *len,
            bbl_arp_t *arp) {
@@ -460,6 +471,9 @@ encode_igmp(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * encode_ipv6
+ */
 protocol_error_t
 encode_ipv6(uint8_t *buf, uint16_t *len,
              bbl_ipv6_t *ipv6) {
@@ -517,6 +531,9 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
     return result;
 }
 
+/*
+ * encode_ipv4
+ */
 protocol_error_t
 encode_ipv4(uint8_t *buf, uint16_t *len,
             bbl_ipv4_t *ipv4) {
@@ -599,6 +616,9 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     return result;
 }
 
+/*
+ * encode_ppp_pap
+ */
 protocol_error_t
 encode_ppp_pap(uint8_t *buf, uint16_t *len,
                bbl_pap_t *pap) {
@@ -635,6 +655,9 @@ encode_ppp_pap(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * encode_ppp_chap
+ */
 protocol_error_t
 encode_ppp_chap(uint8_t *buf, uint16_t *len,
                 bbl_chap_t *chap) {
@@ -667,6 +690,9 @@ encode_ppp_chap(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * encode_ppp_ip6cp
+ */
 protocol_error_t
 encode_ppp_ip6cp(uint8_t *buf, uint16_t *len,
                  bbl_ip6cp_t *ip6cp) {
@@ -703,7 +729,9 @@ encode_ppp_ip6cp(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
-
+/*
+ * encode_ppp_ipcp
+ */
 protocol_error_t
 encode_ppp_ipcp(uint8_t *buf, uint16_t *len,
                 bbl_ipcp_t *ipcp) {
@@ -834,6 +862,9 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * encode_l2tp
+ */
 protocol_error_t
 encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp) {
 
@@ -1039,6 +1070,15 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
+            if(pppoe->access_line->down) {
+                *buf = ACCESS_LINE_DSL_TYPE;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(pppoe->access_line->dsl_type);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
             *vendor_len_field = htobe16(vendor_len);
             pppoe_len += 4 + vendor_len;
         }
@@ -1047,6 +1087,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * encode_pppoe_session
+ */
 protocol_error_t
 encode_pppoe_session(uint8_t *buf, uint16_t *len,
                      bbl_pppoe_session_t *pppoe) {
@@ -1105,10 +1148,12 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
     return result;
 }
 
+/*
+ * encode_ethernet
+ */
 protocol_error_t
 encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_t *eth) {
-
     if(eth->dst) {
         memcpy(buf, eth->dst, ETH_ADDR_LEN);
     } else {
@@ -1124,11 +1169,13 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
     if(eth->vlan_outer) {
         *(uint16_t*)buf = htobe16(ETH_TYPE_VLAN);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        eth->vlan_outer |= eth->vlan_outer_priority << 13;
         *(uint16_t*)buf = htobe16(eth->vlan_outer);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         if(eth->vlan_inner) {
             *(uint16_t*)buf = htobe16(ETH_TYPE_VLAN);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            eth->vlan_inner |= eth->vlan_inner_priority << 13;
             *(uint16_t*)buf = htobe16(eth->vlan_inner);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
             if(eth->vlan_three) {
@@ -1362,6 +1409,9 @@ decode_igmp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_dhcpv6
+ */
 protocol_error_t
 decode_dhcpv6(uint8_t *buf, uint16_t len,
               uint8_t *sp, uint16_t sp_len,
@@ -1432,6 +1482,9 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     return ret_val;
 }
 
+/*
+ * decode_bbl
+ */
 protocol_error_t
 decode_bbl(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
@@ -1439,11 +1492,16 @@ decode_bbl(uint8_t *buf, uint16_t len,
 
     bbl_bbl_t *bbl;
 
-    if(len < 40 || sp_len < sizeof(bbl_bbl_t)) {
+    if(len < 48 || sp_len < sizeof(bbl_bbl_t)) {
         return DECODE_ERROR;
     }
     /* Init BBL header */
     bbl = (bbl_bbl_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bbl_t));
+
+    if(len > 48) {
+        /* Bump padding... */
+        BUMP_BUFFER(buf, len, (len - 48));
+    }
 
     if(*(uint64_t*)buf != BBL_MAGIC_NUMBER) {
         return DECODE_ERROR;
@@ -1457,6 +1515,7 @@ decode_bbl(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     bbl->tos = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
+    bbl->session_id = *(uint32_t*)buf;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
     if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
         bbl->ifindex = *(uint32_t*)buf;
@@ -1482,6 +1541,9 @@ decode_bbl(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_qmx_li
+ */
 protocol_error_t
 decode_qmx_li(uint8_t *buf, uint16_t len,
               uint8_t *sp, uint16_t sp_len,
@@ -1506,6 +1568,9 @@ decode_qmx_li(uint8_t *buf, uint16_t len,
     return decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_t**)&qmx_li->next);
 }
 
+/*
+ * decode_udp
+ */
 protocol_error_t
 decode_udp(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
@@ -1570,6 +1635,9 @@ decode_udp(uint8_t *buf, uint16_t len,
     return ret_val;
 }
 
+/*
+ * decode_ipv6
+ */
 protocol_error_t
 decode_ipv6(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
@@ -1717,6 +1785,9 @@ decode_ipv4(uint8_t *buf, uint16_t len,
     return ret_val;
 }
 
+/*
+ * decode_ppp_pap
+ */
 protocol_error_t
 decode_ppp_pap(uint8_t *buf, uint16_t len,
                uint8_t *sp, uint16_t sp_len,
@@ -1774,6 +1845,9 @@ decode_ppp_pap(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_ppp_chap
+ */
 protocol_error_t
 decode_ppp_chap(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,
@@ -1823,6 +1897,9 @@ decode_ppp_chap(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_ppp_ip6cp
+ */
 protocol_error_t
 decode_ppp_ip6cp(uint8_t *buf, uint16_t len,
                  uint8_t *sp, uint16_t sp_len,
@@ -1901,6 +1978,9 @@ decode_ppp_ip6cp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_ppp_ipcp
+ */
 protocol_error_t
 decode_ppp_ipcp(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,
@@ -2086,6 +2166,9 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_l2tp
+ */
 protocol_error_t
 decode_l2tp(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
@@ -2306,6 +2389,9 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_pppoe_session
+ */
 protocol_error_t
 decode_pppoe_session(uint8_t *buf, uint16_t len,
                      uint8_t *sp, uint16_t sp_len,
@@ -2372,6 +2458,9 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
     return ret_val;
 }
 
+/*
+ * decode_arp
+ */
 protocol_error_t
 decode_arp(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
@@ -2403,6 +2492,9 @@ decode_arp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * decode_ethernet
+ */
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,
@@ -2433,7 +2525,9 @@ decode_ethernet(uint8_t *buf, uint16_t len,
             return DECODE_ERROR;
         }
         eth->vlan_outer = be16toh(*(uint16_t*)buf);
+        eth->vlan_outer_priority = (eth->vlan_outer >> 13) & ETH_VLAN_PBIT_MAX;
         eth->vlan_outer &= ETH_VLAN_ID_MAX;
+
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
         eth->type = be16toh(*(uint16_t*)buf);
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -2442,6 +2536,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 return DECODE_ERROR;
             }
             eth->vlan_inner = be16toh(*(uint16_t*)buf);
+            eth->vlan_inner_priority = (eth->vlan_inner >> 13) & ETH_VLAN_PBIT_MAX;
             eth->vlan_inner &= ETH_VLAN_ID_MAX;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
             eth->type = be16toh(*(uint16_t*)buf);

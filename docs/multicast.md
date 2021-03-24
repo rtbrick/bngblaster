@@ -50,14 +50,14 @@ delay in milliseconds.
 It is possible to join and leave multicast groups manually using the <<Control Socket>> as 
 shown in the example below.
 
-`$ sudo ./cli.py run.sock igmp-join outer-vlan 1 inner-vlan 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103`
+`$ sudo ./cli.py run.sock igmp-join session-id 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103`
 ```json
 {
     "status": "ok"
 }
 ```
 
-`$ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1`
+`$ sudo ./cli.py run.sock igmp-info session-id 1`
 ```json
 {
     "status": "ok",
@@ -78,14 +78,14 @@ shown in the example below.
 }
 ```
 
-`$ sudo ./cli.py run.sock igmp-leave outer-vlan 1 inner-vlan 1 group 232.1.1.1 `
+`$ sudo ./cli.py run.sock igmp-leave session-id 1 group 232.1.1.1 `
 ```json
 {
     "status": "ok"
 }
 ```
 
-`$ sudo ./cli.py run.sock igmp-info outer-vlan 1 inner-vlan 1`
+`$ sudo ./cli.py run.sock igmp-info session-id 1`
 ```json
 {
     "status": "ok",

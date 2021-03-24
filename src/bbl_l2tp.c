@@ -7,7 +7,7 @@
  */
 
 #include "bbl.h"
-#include "bbl_logging.h"
+#include "bbl_l2tp_avp.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -385,6 +385,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
     ipv4.dst = l2tp_tunnel->peer_ip;
     ipv4.src = l2tp_tunnel->server->ip;
     ipv4.ttl = 64;
+    ipv4.tos = l2tp_tunnel->server->control_tos;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
     udp.src = L2TP_UDP_PORT;
@@ -480,10 +481,11 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
     l2tp.protocol = protocol;
     l2tp.with_length = l2tp_server->data_lenght;
     l2tp.with_offset = l2tp_server->data_offset;
-    if(l2tp_server->data_control_priority) {
-        if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
+    if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
+        if(l2tp_server->data_control_priority) {
             l2tp.with_priority = true;
         }
+        ipv4.tos = l2tp_tunnel->server->data_control_tos;
     }
     l2tp.next = next;
     q->data = true;

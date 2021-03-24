@@ -11,6 +11,9 @@
 #define __BBL_RX_H__
 
 void
-bbl_rx_job (timer_s *timer);
+bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
+
+void
+bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
 
 #endif
