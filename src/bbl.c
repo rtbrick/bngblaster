@@ -181,14 +181,9 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name) {
     pid_t pid = getpid();
 
     snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface_name);
-
-    if(access(lock_path, F_OK) == 0) {
+    lock_file = fopen(lock_path, "r");
+    if(lock_file) {
         // lock file exists
-        lock_file = fopen(lock_path, "r");
-        if(!lock_file) {
-            LOG(ERROR, "Failed to open interface lock file %s\n", lock_path);
-            return false;
-        }
         if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
             snprintf(proc_pid_path, 32, "/proc/%d", lock_pid);
             if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
@@ -210,7 +205,6 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name) {
     }
     fprintf(lock_file, "%d", lock_pid);
     fclose(lock_file);
-
     return true;
 }
 
