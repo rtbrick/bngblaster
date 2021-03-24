@@ -800,13 +800,25 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 
 json_t * 
 l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
-    return json_pack("{ss si si si si ss ss ss ss si si ss ss si si si si}", 
+    char *proxy_auth_response = NULL;
+    
+    if(l2tp_session->proxy_auth_response) {
+        if(l2tp_session->proxy_auth_type == L2TP_PROXY_AUTH_TYPE_PAP) {
+            proxy_auth_response = (char*)l2tp_session->proxy_auth_response;
+        } else {
+            proxy_auth_response = "0x...";
+        }
+    }
+
+    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss si si si si}", 
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
                      "peer-tunnel-id", l2tp_session->tunnel->peer_tunnel_id,
                      "peer-session-id", l2tp_session->peer_session_id,
+                     "peer-proxy-auth-type", l2tp_session->proxy_auth_type,
                      "peer-proxy-auth-name", string_or_na(l2tp_session->proxy_auth_name),
+                     "peer-proxy-auth-response", string_or_na(proxy_auth_response),
                      "peer-called-number", string_or_na(l2tp_session->peer_called_number),
                      "peer-calling-number", string_or_na(l2tp_session->peer_calling_number),
                      "peer-sub-address", string_or_na(l2tp_session->peer_sub_address),

@@ -17,6 +17,8 @@
 #define L2TP_IPCP_IP_REMOTE         168430090
 #define L2TP_TX_WAIT_MS             10
 
+#define L2TP_PROXY_AUTH_TYPE_PAP    3
+
 #define L2TP_REPLY_MESSAGE          "BNG Blaster L2TP LNS"
 
 #define L2TP_SEQ_LT(_a, _b)\
