@@ -409,6 +409,9 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     const char *ipcp = NULL;
     const char *ip6cp = NULL;
 
+    int flows = 0;
+    int flows_verified = 0;
+
     if(session_id == 0) {
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
@@ -454,8 +457,24 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         } else {
             type = "ipoe";
         }
+
         if(ctx->config.session_traffic_ipv4_pps || ctx->config.session_traffic_ipv6_pps || ctx->config.session_traffic_ipv6pd_pps) {
-            session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si}", 
+            if(session->access_ipv4_tx_flow_id) flows++;
+            if(session->access_ipv6_tx_flow_id) flows++;
+            if(session->access_ipv6pd_tx_flow_id) flows++;
+            if(session->network_ipv4_tx_flow_id) flows++;
+            if(session->network_ipv6_tx_flow_id) flows++;
+            if(session->network_ipv6pd_tx_flow_id) flows++;
+            if(session->access_ipv4_rx_first_seq) flows_verified++;
+            if(session->access_ipv6_rx_first_seq) flows_verified++;
+            if(session->access_ipv6pd_rx_first_seq) flows_verified++;
+            if(session->network_ipv4_rx_first_seq) flows_verified++;
+            if(session->network_ipv6_rx_first_seq) flows_verified++;
+            if(session->network_ipv6pd_rx_first_seq) flows_verified++;
+            
+            session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+                        "total-flows", flows,
+                        "verified-flows", flows_verified,
                         "first-seq-rx-access-ipv4", session->access_ipv4_rx_first_seq,
                         "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
                         "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
