@@ -560,10 +560,12 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     /* Skip total length field */
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
-    *(uint32_t*)buf = 0;
-    /* Skip fragmentation fields
+    /* Fragmentation fields
      * (Identification, Flags, Fragment Offset) */
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(ipv4->offset);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
     *buf = ipv4->ttl;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1751,6 +1753,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
+    ipv4->offset = be16toh(header->ip_off);
     ipv4->ttl = header->ip_ttl;
     ipv4->protocol = header->ip_p;
 

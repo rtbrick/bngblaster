@@ -500,7 +500,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
+        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -526,6 +526,9 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "ipv6-dns2", ipv6_dns2,
                         "dhcpv6-dns1", dhcpv6_dns1,
                         "dhcpv6-dns2", dhcpv6_dns2,
+                        "tx-packets", session->stats.packets_tx,
+                        "rx-packets", session->stats.packets_rx,
+                        "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
                         "session-traffic", session_traffic);
         if(root) {
             result = json_dumpfd(root, fd, 0);

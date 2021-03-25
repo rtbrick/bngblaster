@@ -247,6 +247,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
             printf("    ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
             printf("    DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+            printf("    IPv4 Fragmented       RX: %10u\n", access_if->stats.ipv4_fragmented_rx);
             printf("\n  Access Interface Protocol Timeout Stats:\n");
             printf("    LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
             printf("    LCP Request:      %10u\n", access_if->stats.lcp_timeout);
@@ -440,6 +441,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_protocols, "icmpv6-rx", json_integer(access_if->stats.icmpv6_rx));
             json_object_set(jobj_protocols, "dhcpv6-tx", json_integer(access_if->stats.dhcpv6_tx));
             json_object_set(jobj_protocols, "dhcpv6-rx", json_integer(access_if->stats.dhcpv6_rx));
+            json_object_set(jobj_protocols, "ipv4-fragmented-rx", json_integer(access_if->stats.ipv4_fragmented_rx));
             json_object_set(jobj_protocols, "lcp-echo-timeout", json_integer(access_if->stats.lcp_echo_timeout));
             json_object_set(jobj_protocols, "lcp-request-timeout", json_integer(access_if->stats.lcp_timeout));
             json_object_set(jobj_protocols, "ipcp-request-timeout", json_integer(access_if->stats.ipcp_timeout));
