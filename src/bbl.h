@@ -237,6 +237,8 @@ typedef struct bbl_interface_
         uint32_t dhcpv6_rx;
         uint32_t dhcpv6_timeout;
 
+        uint32_t ipv4_fragmented_rx;
+
         uint64_t session_ipv4_tx;
         bbl_rate_s rate_session_ipv4_tx;
         uint64_t session_ipv4_rx;
@@ -815,6 +817,9 @@ typedef struct bbl_session_
     uint64_t network_ipv6pd_rx_last_seq;
 
     struct {
+        uint64_t packets_tx;
+        uint64_t packets_rx;
+
         uint32_t igmp_rx;
         uint32_t igmp_tx;
 
@@ -837,6 +842,7 @@ typedef struct bbl_session_
         uint32_t icmp_tx;
         uint32_t icmpv6_rx;
         uint32_t icmpv6_tx;
+        uint32_t ipv4_fragmented_rx;
 
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;

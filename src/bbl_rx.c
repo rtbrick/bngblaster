@@ -64,6 +64,7 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     }
     ip.dst = ctx->op.network_if->ip;
     ip.src = session->ip_address;
+    ip.offset = IPV4_DF;
     ip.ttl = 64;
     ip.protocol = PROTOCOL_IPV4_UDP;
     ip.next = &udp;
@@ -864,6 +865,12 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
     bbl_bbl_t *bbl = NULL;
     bbl_igmp_group_s *group = NULL;
     int i;
+
+    if(ipv4->offset & ~IPV4_DF) {
+        /* Reassembling of fragmented IPv4 packets is currently not supported. */
+        session->stats.ipv4_fragmented_rx++;
+        interface->stats.ipv4_fragmented_rx++;
+    }
 
     switch(ipv4->protocol) {
         case PROTOCOL_IPV4_IGMP:
@@ -1724,6 +1731,7 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     if(session) {
         if(session->session_state != BBL_TERMINATED &&
            session->session_state != BBL_IDLE) {
+            session->stats.packets_rx++;
             switch (session->access_type) {
                 case ACCESS_TYPE_PPPOE:
                     switch(eth->type) {
