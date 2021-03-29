@@ -37,7 +37,10 @@ volatile uint8_t g_teardown_request_count = 0;
 
 /* This global variable is used to switch between access
  * interfaces in interactive mode (ncurses). */
-uint8_t g_access_if_selected = 0; 
+uint8_t g_access_if_selected = 0;
+
+uint8_t g_display_streams = 0; 
+uint8_t g_stream_start_index = 0; 
 
 const char banner[] = "\n"
 "      ____   __   ____         _        __                                  ,/\n"
@@ -358,7 +361,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
                 }
             }
         }
-        access_if = bbl_add_interface(ctx, access_config->interface, 1024);
+        access_if = bbl_add_interface(ctx, access_config->interface, ctx->config.io_slots);
         if (!access_if) {
             LOG(ERROR, "Failed to add access interface %s\n", access_config->interface);
             return false;
@@ -738,7 +741,7 @@ main (int argc, char *argv[])
      * Add network interface.
      */
     if (strlen(ctx->config.network_if)) {
-        ctx->op.network_if = bbl_add_interface(ctx, ctx->config.network_if, 1024);
+        ctx->op.network_if = bbl_add_interface(ctx, ctx->config.network_if, ctx->config.io_slots);
         if (!ctx->op.network_if) {
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to add network interface\n");

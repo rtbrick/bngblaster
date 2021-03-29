@@ -24,6 +24,7 @@
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
 #include "bbl_session.h"
+#include "bbl_stream.h"
 
 #define BACKLOG 4
 #define INPUT_BUFFER 1024
@@ -972,6 +973,71 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     }
 }
 
+ssize_t
+bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root;
+    json_t *json_streams = NULL;
+    json_t *json_stream = NULL;
+
+    bbl_session_s *session;
+    bbl_stream *stream;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
+        stream = session->stream;
+
+        json_streams = json_array();
+        while(stream) {
+            json_stream = json_pack("{ss ss si si si si si si si si si si si si si si si si si si}",
+                                "name", stream->config->name,
+                                "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "dowstream",
+                                "flow-id", stream->flow_id,
+                                "rx-first-seq", stream->rx_first_seq,
+                                "rx-last-seq", stream->rx_last_seq,
+                                "rx-tos-tc", stream->rx_priority,
+                                "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
+                                "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
+                                "rx-len", stream->rx_len,
+                                "tx-len", stream->tx_len,
+                                "rx-packets", stream->packets_rx,
+                                "tx-packets", stream->packets_tx,
+                                "rx-loss", stream->loss,
+                                "rx-delay-nsec-min", stream->min_delay_ns,
+                                "rx-delay-nsec-max", stream->max_delay_ns,
+                                "rx-pps", stream->rate_packets_rx.avg,
+                                "tx-pps", stream->rate_packets_tx.avg,
+                                "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
+                                "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
+                                "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8);
+
+            json_array_append(json_streams, json_stream);
+            stream = stream->next;
+        }
+        root = json_pack("{ss si s{si so*}}", 
+                        "status", "ok", 
+                        "code", 200,
+                        "session-streams",
+                        "session-id", session->session_id,
+                        "streams", json_streams);
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(json_streams);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1000,6 +1066,7 @@ struct action actions[] = {
     {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
     {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
     {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
+    {"session-streams", bbl_ctrl_session_streams},
     {NULL, NULL},
 };
 

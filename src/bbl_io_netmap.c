@@ -47,6 +47,7 @@ bbl_io_netmap_rx_job (timer_s *timer)
         eth_start = (uint8_t*)NETMAP_BUF(ring, ring->slot[i].buf_idx);
         eth_len = ring->slot[i].len;
         interface->stats.packets_rx++;
+        interface->stats.bytes_rx += eth_len;
 
         /*
 	     * Dump the packet into pcap file.
@@ -59,8 +60,8 @@ bbl_io_netmap_rx_job (timer_s *timer)
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             /* Copy RX timestamp */
-            eth->rx_sec = ring->ts.tv_sec;
-            eth->rx_nsec = ring->ts.tv_usec * 1000;
+            eth->timestamp.tv_sec = ring->ts.tv_sec;
+            eth->timestamp.tv_nsec = ring->ts.tv_usec * 1000;
             if(interface->access) {
                 bbl_rx_handler_access(eth, interface);
             } else {
@@ -118,6 +119,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
         if (tx_result == PROTOCOL_SUCCESS) {
             send = true;
             interface->stats.packets_tx++;
+            interface->stats.bytes_tx += len;
             ring->slot[i].len = len;
             ring->head = ring->cur = nm_ring_next(ring, i);
             /* Dump the packet into pcap file. */
@@ -132,6 +134,22 @@ bbl_io_netmap_tx_job (timer_s *timer)
         pcapng_fflush(ctx);
         ioctl(io_ctx->port->fd, NIOCTXSYNC, NULL);
     }
+}
+
+/** 
+ * bbl_io_netmap_send 
+ * 
+ * @param interface interface.
+ * @param packet packet to be send
+ * @param packet_len packet length
+ */
+bool
+bbl_io_netmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+    /* NOT IMPLEMENTED */
+    UNUSED(interface);
+    UNUSED(packet);
+    UNUSED(packet_len);
+    return false;   
 }
 
 /** 
@@ -172,9 +190,9 @@ bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slot
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_io_netmap_tx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_netmap_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_io_netmap_rx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_netmap_rx_job);
 
     return true;
 }

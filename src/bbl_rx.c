@@ -9,6 +9,7 @@
 
 #include "bbl.h"
 #include "bbl_session.h"
+#include "bbl_stream.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -573,7 +574,7 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
     bbl_dhcpv6_t *dhcpv6 = (bbl_dhcpv6_t*)udp->next;
     bbl_ctx_s *ctx = interface->ctx;
-    uint16_t tx_interval;
+    uint64_t tx_interval;
 
     if(dhcpv6->server_duid_len && dhcpv6->server_duid_len < DHCPV6_BUFFER) {
         memcpy(session->server_duid, dhcpv6->server_duid, dhcpv6->server_duid_len);
@@ -599,16 +600,16 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                         /* Start IPv6 PD Session Traffic */
                         if(bbl_add_session_packets_ipv6(ctx, session, true)) {
                             if(ctx->config.session_traffic_ipv6pd_pps > 1) {
-                                tx_interval = 1000 / ctx->config.session_traffic_ipv6pd_pps;
+                                tx_interval = 1000000000 / ctx->config.session_traffic_ipv6pd_pps;
                                 if(tx_interval < ctx->config.tx_interval) {
                                     /* It is not possible to send faster than TX interval. */
                                     tx_interval = ctx->config.tx_interval;
                                 }
                                 timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6PD",
-                                                0, tx_interval * MSEC, session, bbl_session_traffic_ipv6pd);
+                                                   0, tx_interval, session, bbl_session_traffic_ipv6pd);
                             } else {
                                 timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6PD",
-                                                1, 0, session, bbl_session_traffic_ipv6pd);
+                                                   1, 0, session, bbl_session_traffic_ipv6pd);
                             }
                         } else {
                             LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
@@ -637,7 +638,48 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
 }
 
 void
-bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
+bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos) {
+
+    bbl_stream *stream;
+    void **search = NULL;
+
+    struct timespec delay;
+    uint64_t delay_nsec;
+
+    search = dict_search(interface->ctx->stream_flow_dict, &bbl->flow_id);
+    if(search) {
+        stream = *search;
+        stream->packets_rx++;
+        stream->rx_len = eth->length;
+        stream->rx_priority = tos;
+        stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
+        stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
+
+        timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
+        delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
+        if(delay_nsec > stream->max_delay_ns) {
+            stream->max_delay_ns = delay_nsec;
+        }
+        if(stream->min_delay_ns) {
+            if(delay_nsec > stream->min_delay_ns) {
+                stream->min_delay_ns = delay_nsec;
+            }
+        } else {
+            stream->min_delay_ns = delay_nsec;
+        }
+        if(!stream->rx_first_seq) {
+            stream->rx_first_seq = bbl->flow_seq;
+        } else {
+            if(stream->rx_last_seq +1 != bbl->flow_seq) {
+                stream->loss++;
+            }
+        }
+        stream->rx_last_seq = bbl->flow_seq;
+    }
+}
+
+void
+bbl_rx_udp(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
     bbl_bbl_t *bbl = NULL;
@@ -658,47 +700,31 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
     /* BBL receive handler */
     if(bbl && bbl->type == BBL_TYPE_UNICAST_SESSION) {
         switch (bbl->sub_type) {
-            case BBL_SUB_TYPE_IPV4:
-                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
-                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
-                    interface->stats.session_ipv4_wrong_session++;
-                    return;
-                }
-                interface->stats.session_ipv4_rx++;
-                session->stats.access_ipv4_rx++;
-                if(!session->access_ipv4_rx_first_seq) {
-                    session->access_ipv4_rx_first_seq = bbl->flow_seq;
-                    interface->ctx->stats.session_traffic_flows_verified++;
-                } else {
-                    if(session->access_ipv4_rx_last_seq +1 != bbl->flow_seq) {
-                        interface->stats.session_ipv4_loss++;
-                        session->stats.access_ipv4_loss++;
-                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
-                    }
-                }
-                session->access_ipv4_rx_last_seq = bbl->flow_seq;
-                break;
             case BBL_SUB_TYPE_IPV6:
                 if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
                    bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
                     interface->stats.session_ipv6_wrong_session++;
                     return;
                 }
-                interface->stats.session_ipv6_rx++;
-                session->stats.access_ipv6_rx++;
-                if(!session->access_ipv6_rx_first_seq) {
-                    session->access_ipv6_rx_first_seq = bbl->flow_seq;
-                    interface->ctx->stats.session_traffic_flows_verified++;
-                } else {
-                    if(session->access_ipv6_rx_last_seq +1 != bbl->flow_seq) {
-                        interface->stats.session_ipv6_loss++;
-                        session->stats.access_ipv6_loss++;
-                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6_rx_last_seq);
+                if(bbl->flow_id == session->network_ipv4_tx_flow_id) {
+                    /* Session traffic */
+                    interface->stats.session_ipv6_rx++;
+                    session->stats.access_ipv6_rx++;
+                    if(!session->access_ipv6_rx_first_seq) {
+                        session->access_ipv6_rx_first_seq = bbl->flow_seq;
+                        interface->ctx->stats.session_traffic_flows_verified++;
+                    } else {
+                        if(session->access_ipv6_rx_last_seq +1 != bbl->flow_seq) {
+                            interface->stats.session_ipv6_loss++;
+                            session->stats.access_ipv6_loss++;
+                            LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6_rx_last_seq);
+                        }
                     }
+                    session->access_ipv6_rx_last_seq = bbl->flow_seq;
+                } else {
+                    bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                 }
-                session->access_ipv6_rx_last_seq = bbl->flow_seq;
                 break;
             case BBL_SUB_TYPE_IPV6PD:
                 if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
@@ -706,20 +732,27 @@ bbl_rx_udp(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session)
                     interface->stats.session_ipv6pd_wrong_session++;
                     return;
                 }
-                interface->stats.session_ipv6pd_rx++;
-                session->stats.access_ipv6pd_rx++;
-                if(!session->access_ipv6pd_rx_first_seq) {
-                    session->access_ipv6pd_rx_first_seq = bbl->flow_seq;
-                    interface->ctx->stats.session_traffic_flows_verified++;
-                } else {
-                    if(session->access_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
-                        interface->stats.session_ipv6pd_loss++;
-                        session->stats.access_ipv6pd_loss++;
-                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6pd_rx_last_seq);
+                if(bbl->flow_id == session->network_ipv4_tx_flow_id) {
+                    /* Session traffic */
+                    interface->stats.session_ipv6pd_rx++;
+                    session->stats.access_ipv6pd_rx++;
+                    if(!session->access_ipv6pd_rx_first_seq) {
+                        session->access_ipv6pd_rx_first_seq = bbl->flow_seq;
+                        interface->ctx->stats.session_traffic_flows_verified++;
+                    } else {
+                        if(session->access_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
+                            interface->stats.session_ipv6pd_loss++;
+                            session->stats.access_ipv6pd_loss++;
+                            LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6pd_rx_last_seq);
+                        }
                     }
+                    session->access_ipv6pd_rx_last_seq = bbl->flow_seq;
+                } else {
+                    bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                 }
-                session->access_ipv6pd_rx_last_seq = bbl->flow_seq;
+                break;
+            default:
                 break;
         }
     }
@@ -730,7 +763,7 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
 
     bbl_icmpv6_t *icmpv6 = (bbl_icmpv6_t*)ipv6->next;
     bbl_ctx_s *ctx = interface->ctx;
-    uint16_t tx_interval;
+    uint64_t tx_interval;
 
     session->stats.icmpv6_rx++;
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
@@ -753,16 +786,16 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                     /* Start IPv6 Session Traffic */
                     if(bbl_add_session_packets_ipv6(ctx, session, false)) {
                         if(ctx->config.session_traffic_ipv6_pps > 1) {
-                            tx_interval = 1000 / ctx->config.session_traffic_ipv6_pps;
+                            tx_interval = 1000000000 / ctx->config.session_traffic_ipv6_pps;
                             if(tx_interval < ctx->config.tx_interval) {
                                 /* It is not possible to send faster than TX interval. */
                                 tx_interval = ctx->config.tx_interval;
                             }
                             timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
-                                            0, tx_interval * MSEC, session, bbl_session_traffic_ipv6);
+                                               0, tx_interval, session, bbl_session_traffic_ipv6);
                         } else {
                             timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
-                                            1, 0, session, bbl_session_traffic_ipv6);
+                                               1, 0, session, bbl_session_traffic_ipv6);
                         }
                     } else {
                         LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
@@ -899,21 +932,25 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                 interface->stats.session_ipv4_wrong_session++;
                 return;
             }
-            interface->stats.session_ipv4_rx++;
-            session->stats.access_ipv4_rx++;
-            if(!session->access_ipv4_rx_first_seq) {
-                session->access_ipv4_rx_first_seq = bbl->flow_seq;
-                interface->ctx->stats.session_traffic_flows_verified++;
-            } else {
-                if(session->access_ipv4_rx_last_seq +1 != bbl->flow_seq) {
-                    interface->stats.session_ipv4_loss++;
-                    session->stats.access_ipv4_loss++;
-                    LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                        session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
+            if(bbl->flow_id == session->network_ipv4_tx_flow_id) {
+                /* Session traffic */
+                interface->stats.session_ipv4_rx++;
+                session->stats.access_ipv4_rx++;
+                if(!session->access_ipv4_rx_first_seq) {
+                    session->access_ipv4_rx_first_seq = bbl->flow_seq;
+                    interface->ctx->stats.session_traffic_flows_verified++;
+                } else {
+                    if(session->access_ipv4_rx_last_seq +1 != bbl->flow_seq) {
+                        interface->stats.session_ipv4_loss++;
+                        session->stats.access_ipv4_loss++;
+                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
+                    }
                 }
+                session->access_ipv4_rx_last_seq = bbl->flow_seq;
+            } else {
+                bbl_rx_stream(interface, eth, bbl, ipv4->tos);
             }
-            session->access_ipv4_rx_last_seq = bbl->flow_seq;
-
         } else if(bbl->type == BBL_TYPE_MULTICAST) {
             /* Multicast receive handler */
             for(i=0; i < IGMP_MAX_GROUPS; i++) {
@@ -924,8 +961,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                         session->stats.mc_rx++;
                         group->packets++;
                         if(!group->first_mc_rx_time.tv_sec) {
-                            group->first_mc_rx_time.tv_sec = eth->rx_sec;
-                            group->first_mc_rx_time.tv_nsec = eth->rx_nsec;
+                            group->first_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
+                            group->first_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
                         } else if(bbl->flow_seq > session->mc_rx_last_seq + 1) {
                             interface->stats.mc_loss++;
                             session->stats.mc_loss++;
@@ -938,8 +975,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                         interface->stats.mc_rx++;
                         session->stats.mc_rx++;
                         group->packets++;
-                        group->last_mc_rx_time.tv_sec = eth->rx_sec;
-                        group->last_mc_rx_time.tv_nsec = eth->rx_nsec;
+                        group->last_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
+                        group->last_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
                         if(session->zapping_joined_group &&
                             session->zapping_leaved_group == group) {
                             if(session->zapping_joined_group->first_mc_rx_time.tv_sec) {
@@ -961,15 +998,15 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                     session->stats.mc_rx++;
                     group->packets++;
                     if(!group->first_mc_rx_time.tv_sec) {
-                        group->first_mc_rx_time.tv_sec = eth->rx_sec;
-                        group->first_mc_rx_time.tv_nsec = eth->rx_nsec;
+                        group->first_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
+                        group->first_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
                     }
                 } else {
                     interface->stats.mc_rx++;
                     session->stats.mc_rx++;
                     group->packets++;
-                    group->last_mc_rx_time.tv_sec = eth->rx_sec;
-                    group->last_mc_rx_time.tv_nsec = eth->rx_nsec;
+                    group->last_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
+                    group->last_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
                     if(session->zapping_joined_group &&
                        session->zapping_leaved_group == group) {
                         if(session->zapping_joined_group->first_mc_rx_time.tv_sec) {
@@ -983,14 +1020,14 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
 }
 
 void
-bbl_rx_ipv6(bbl_ethernet_header_t *eth __attribute__((unused)), bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
+bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
     switch(ipv6->protocol) {
         case IPV6_NEXT_HEADER_ICMPV6:
             bbl_rx_icmpv6(ipv6, interface, session);
             interface->stats.icmpv6_rx++;
             break;
         case IPV6_NEXT_HEADER_UDP:
-            bbl_rx_udp(ipv6, interface, session);
+            bbl_rx_udp(eth, ipv6, interface, session);
             break;
         default:
             break;
@@ -1125,7 +1162,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
 
     bool ipcp = false;
     bool ip6cp = false;
-    uint16_t tx_interval;
+    uint64_t tx_interval;
 
     if(ctx->config.ipcp_enable == false || session->ipcp_state == BBL_PPP_OPENED) ipcp = true;
     if(ctx->config.ip6cp_enable == false || session->ip6cp_state == BBL_PPP_OPENED) ip6cp = true;
@@ -1133,8 +1170,8 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
     if(ipcp && ip6cp) {
         if(session->session_state != BBL_ESTABLISHED) {
             if(ctx->sessions_established_max < ctx->sessions) {
-                ctx->stats.last_session_established.tv_sec = eth->rx_sec;
-                ctx->stats.last_session_established.tv_nsec = eth->rx_nsec;
+                ctx->stats.last_session_established.tv_sec = eth->timestamp.tv_sec;
+                ctx->stats.last_session_established.tv_nsec = eth->timestamp.tv_nsec;
                 bbl_session_update_state(ctx, session, BBL_ESTABLISHED);
                 if(ctx->sessions_established == ctx->sessions) {
                     LOG(NORMAL, "ALL SESSIONS ESTABLISHED\n");
@@ -1159,16 +1196,16 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 /* Start IPv4 Session Traffic */
                 if(bbl_add_session_packets_ipv4(ctx, session)) {
                     if(ctx->config.session_traffic_ipv4_pps > 1) {
-                        tx_interval = 1000 / ctx->config.session_traffic_ipv4_pps;
+                        tx_interval = 1000000000 / ctx->config.session_traffic_ipv4_pps;
                         if(tx_interval < ctx->config.tx_interval) {
                             /* It is not possible to send faster than TX interval. */
                             tx_interval = ctx->config.tx_interval;
                         }
                         timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                        0, tx_interval * MSEC, session, bbl_session_traffic_ipv4);
+                                           0, tx_interval, session, bbl_session_traffic_ipv4);
                     } else {
                         timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                        1, 0, session, bbl_session_traffic_ipv4);
+                                           1, 0, session, bbl_session_traffic_ipv4);
                     }
                 } else {
                     LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
@@ -1182,12 +1219,12 @@ void
 bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_ctx_s *ctx = interface->ctx;
-    uint16_t tx_interval;
+    uint64_t tx_interval;
 
     if(session->session_state != BBL_ESTABLISHED) {
         if(ctx->sessions_established_max < ctx->sessions) {
-            ctx->stats.last_session_established.tv_sec = eth->rx_sec;
-            ctx->stats.last_session_established.tv_nsec = eth->rx_nsec;
+            ctx->stats.last_session_established.tv_sec = eth->timestamp.tv_sec;
+            ctx->stats.last_session_established.tv_nsec = eth->timestamp.tv_nsec;
             bbl_session_update_state(ctx, session, BBL_ESTABLISHED);
             if(ctx->sessions_established == ctx->sessions) {
                 LOG(NORMAL, "ALL SESSIONS ESTABLISHED\n");
@@ -1204,16 +1241,16 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
             /* Start IPv4 Session Traffic */
             if(bbl_add_session_packets_ipv4(ctx, session)) {
                 if(ctx->config.session_traffic_ipv4_pps > 1) {
-                    tx_interval = 1000 / ctx->config.session_traffic_ipv4_pps;
+                    tx_interval = 1000000000 / ctx->config.session_traffic_ipv4_pps;
                     if(tx_interval < ctx->config.tx_interval) {
                         /* It is not possible to send faster than TX interval. */
                         tx_interval = ctx->config.tx_interval;
                     }
                     timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                    0, tx_interval * MSEC, session, bbl_session_traffic_ipv4);
+                                       0, tx_interval, session, bbl_session_traffic_ipv4);
                 } else {
                     timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                    1, 0, session, bbl_session_traffic_ipv4);
+                                       1, 0, session, bbl_session_traffic_ipv4);
                 }
             } else {
                 LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
@@ -1835,9 +1872,9 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     bbl_ctx_s *ctx;
 
-    bbl_ipv4_t *ipv4;
-    bbl_ipv6_t *ipv6;
-    bbl_udp_t *udp;
+    bbl_ipv4_t *ipv4 = NULL;
+    bbl_ipv6_t *ipv6 = NULL;
+    bbl_udp_t *udp = NULL;
     bbl_bbl_t *bbl = NULL;
     bbl_session_s *session;
 
@@ -1888,52 +1925,64 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             if(session) {
                 switch (bbl->sub_type) {
                     case BBL_SUB_TYPE_IPV4:
-                        interface->stats.session_ipv4_rx++;
-                        session->stats.network_ipv4_rx++;
-                        if(!session->network_ipv4_rx_first_seq) {
-                            session->network_ipv4_rx_first_seq = bbl->flow_seq;
-                            interface->ctx->stats.session_traffic_flows_verified++;
-                        } else {
-                            if(session->network_ipv4_rx_last_seq +1 != bbl->flow_seq) {
-                                interface->stats.session_ipv4_loss++;
-                                session->stats.network_ipv4_loss++;
-                                LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                    session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
+                        if(session->access_ipv4_tx_flow_id == bbl->flow_id) {
+                            interface->stats.session_ipv4_rx++;
+                            session->stats.network_ipv4_rx++;
+                            if(!session->network_ipv4_rx_first_seq) {
+                                session->network_ipv4_rx_first_seq = bbl->flow_seq;
+                                interface->ctx->stats.session_traffic_flows_verified++;
+                            } else {
+                                if(session->network_ipv4_rx_last_seq +1 != bbl->flow_seq) {
+                                    interface->stats.session_ipv4_loss++;
+                                    session->stats.network_ipv4_loss++;
+                                    LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                        session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
+                                }
                             }
+                            session->network_ipv4_rx_last_seq = bbl->flow_seq;
+                        } else {
+                            if(ipv4) bbl_rx_stream(interface, eth, bbl, ipv4->tos);
                         }
-                        session->network_ipv4_rx_last_seq = bbl->flow_seq;
                         break;
                     case BBL_SUB_TYPE_IPV6:
-                        interface->stats.session_ipv6_rx++;
-                        session->stats.network_ipv6_rx++;
-                        if(!session->network_ipv6_rx_first_seq) {
-                            session->network_ipv6_rx_first_seq = bbl->flow_seq;
-                            interface->ctx->stats.session_traffic_flows_verified++;
-                        } else {
-                            if(session->network_ipv6_rx_last_seq +1 != bbl->flow_seq) {
-                                interface->stats.session_ipv6_loss++;
-                                session->stats.network_ipv6_loss++;
-                                LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                    session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6_rx_last_seq);
+                        if(session->access_ipv6_tx_flow_id == bbl->flow_id) {
+                            interface->stats.session_ipv6_rx++;
+                            session->stats.network_ipv6_rx++;
+                            if(!session->network_ipv6_rx_first_seq) {
+                                session->network_ipv6_rx_first_seq = bbl->flow_seq;
+                                interface->ctx->stats.session_traffic_flows_verified++;
+                            } else {
+                                if(session->network_ipv6_rx_last_seq +1 != bbl->flow_seq) {
+                                    interface->stats.session_ipv6_loss++;
+                                    session->stats.network_ipv6_loss++;
+                                    LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                        session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6_rx_last_seq);
+                                }
                             }
+                            session->network_ipv6_rx_last_seq = bbl->flow_seq;
+                        } else {
+                            if(ipv6) bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                         }
-                        session->network_ipv6_rx_last_seq = bbl->flow_seq;
                         break;
                     case BBL_SUB_TYPE_IPV6PD:
-                        interface->stats.session_ipv6pd_rx++;
-                        session->stats.network_ipv6pd_rx++;
-                        if(!session->network_ipv6pd_rx_first_seq) {
-                            session->network_ipv6pd_rx_first_seq = bbl->flow_seq;
-                            interface->ctx->stats.session_traffic_flows_verified++;
-                        } else {
-                            if(session->network_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
-                                interface->stats.session_ipv6pd_loss++;
-                                session->stats.network_ipv6pd_loss++;
-                                LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                    session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6pd_rx_last_seq);
+                        if(session->access_ipv6pd_tx_flow_id == bbl->flow_id) {
+                            interface->stats.session_ipv6pd_rx++;
+                            session->stats.network_ipv6pd_rx++;
+                            if(!session->network_ipv6pd_rx_first_seq) {
+                                session->network_ipv6pd_rx_first_seq = bbl->flow_seq;
+                                interface->ctx->stats.session_traffic_flows_verified++;
+                            } else {
+                                if(session->network_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
+                                    interface->stats.session_ipv6pd_loss++;
+                                    session->stats.network_ipv6pd_loss++;
+                                    LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                        session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6pd_rx_last_seq);
+                                }
                             }
+                            session->network_ipv6pd_rx_last_seq = bbl->flow_seq;
+                        } else {
+                            if(ipv6) bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                         }
-                        session->network_ipv6pd_rx_last_seq = bbl->flow_seq;
                         break;
                     default:
                         break;

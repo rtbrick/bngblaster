@@ -86,7 +86,7 @@
 
 #define BBL_MAX_ACCESS_INTERFACES   64
 #define BBL_AVG_SAMPLES             5
-#define DATA_TRAFFIC_MAX_LEN        1500
+#define DATA_TRAFFIC_MAX_LEN        2000
 
 #define UNUSED(x)    (void)x
 
@@ -184,6 +184,8 @@ typedef struct bbl_interface_
     struct {
         uint64_t packets_tx;
         uint64_t packets_rx;
+        uint64_t bytes_tx;
+        uint64_t bytes_rx;
         bbl_rate_s rate_packets_tx;
         bbl_rate_s rate_packets_rx;
         uint64_t packets_rx_drop_unknown;
@@ -282,6 +284,7 @@ typedef struct bbl_interface_
 
     struct timespec tx_timestamp; /* user space timestamps */
     struct timespec rx_timestamp; /* user space timestamps */
+
     CIRCLEQ_HEAD(bbl_interface__, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
     CIRCLEQ_HEAD(bbl_interface___, bbl_l2tp_queue_ ) l2tp_tx_qhead; /* list of messages that want to transmit */
 } bbl_interface_s;
@@ -297,6 +300,8 @@ typedef struct bbl_access_config_
         bbl_access_type_t access_type; /* pppoe or ipoe */
         bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
         
+        uint16_t stream_group_id;
+
         uint16_t access_outer_vlan;
         uint16_t access_outer_vlan_min;
         uint16_t access_outer_vlan_max;
@@ -381,6 +386,7 @@ typedef struct bbl_ctx_
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */ 
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
+    dict *stream_flow_dict; /* hashtable for traffic stream flows */
 
     uint16_t next_tunnel_id;
 
@@ -432,9 +438,11 @@ typedef struct bbl_ctx_
     struct {
         bool interface_lock_force;
 
-        uint16_t tx_interval;
-        uint16_t rx_interval;
+        uint64_t tx_interval; /* TX interval in nsec */
+        uint64_t rx_interval; /* RX interval in nsec */
         
+        uint16_t io_slots;
+
         bool qdisc_bypass;
         bbl_io_mode_t io_mode;
 
@@ -452,6 +460,9 @@ typedef struct bbl_ctx_
 
         /* Access Interfaces  */
         bbl_access_config_s *access_config;
+
+        /* Traffic Streams */
+        void *stream_config;
 
         /* Global Session Settings */
         uint32_t sessions;
@@ -598,6 +609,7 @@ typedef struct vlan_session_key_ {
 
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
+#define BBL_STREAM_FLOW_HASHTABLE_SIZE 32771 /* is a prime number */
 
 /*
  * Client Session to a BNG device.
@@ -641,6 +653,8 @@ typedef struct bbl_session_
 
     bbl_access_type_t access_type;
 
+    uint16_t stream_group_id;
+    void *stream;
     struct {
         uint32_t ifindex;
         uint16_t outer_vlan_id;

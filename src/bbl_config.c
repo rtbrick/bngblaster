@@ -9,6 +9,7 @@
 
 #include "bbl.h"
 #include "bbl_config.h"
+#include "bbl_stream.h"
 #include <jansson.h>
 #include <sys/stat.h>
 
@@ -230,6 +231,88 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     } else {
         access_config->session_traffic_autostart = ctx->config.session_traffic_autostart;
     }
+
+    value = json_object_get(access_interface, "stream-group-id");
+    if (value) {
+        access_config->stream_group_id = json_number_value(value);
+    }
+    return true;
+}
+
+static bool
+json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    if (json_unpack(stream, "{s:s}", "type", &s) == 0) {
+        if (strcmp(s, "ipv4") == 0) {
+            stream_config->type = STREAM_IPV4;
+        } else if (strcmp(s, "ipv6") == 0) {
+            stream_config->type = STREAM_IPV6;
+        } else if (strcmp(s, "ipv6pd") == 0) {
+            stream_config->type = STREAM_IPV6PD;
+        } else if (strcmp(s, "l2tp") == 0) {
+            stream_config->type = STREAM_L2TP;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->type\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for stream->type\n");
+        return false;    
+    }
+
+    if (json_unpack(stream, "{s:s}", "direction", &s) == 0) {
+        if (strcmp(s, "upstream") == 0) {
+            stream_config->direction = STREAM_DIRECTION_UP;
+        } else if (strcmp(s, "downstream") == 0) {
+            stream_config->direction = STREAM_DIRECTION_DOWN;
+        } else if (strcmp(s, "both") == 0) {
+            stream_config->direction = STREAM_DIRECTION_BOTH;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->direction\n");
+            return false;
+        }
+    } else {
+        stream_config->direction = STREAM_DIRECTION_BOTH;
+        return false;    
+    }
+
+    if (json_unpack(stream, "{s:s}", "name", &s) == 0) {
+        stream_config->name = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for stream->name\n");
+        return false;
+    }
+
+    value = json_object_get(stream, "stream-group-id");
+    if (value) {
+        stream_config->stream_group_id = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "length");
+    if (value) {
+        stream_config->length = json_number_value(value);
+    } else {
+        stream_config->length = 128;
+    }
+
+    value = json_object_get(stream, "priority");
+    if (value) {
+        stream_config->priority = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "vlan-priority");
+    if (value) {
+        stream_config->vlan_priority = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "pps");
+    if (value) {
+        stream_config->pps = json_number_value(value);
+    } else {
+        stream_config->pps = 1;
+    }
     return true;
 }
 
@@ -240,9 +323,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     const char *s;
     uint32_t ipv4;
     int i, size;
-    bbl_access_config_s *access_config = NULL;
-    bbl_l2tp_server_t *l2tp_server = NULL;
-    bbl_secondary_ip_s *secondary_ip;
+    bbl_access_config_s *access_config  = NULL;
+    bbl_stream_config   *stream_config  = NULL;
+    bbl_l2tp_server_t   *l2tp_server    = NULL;
+    bbl_secondary_ip_s  *secondary_ip;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -593,17 +677,16 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         }
     }
 
-
     /* Interface Configuration */
     section = json_object_get(root, "interfaces");
     if (json_is_object(section)) {
         value = json_object_get(section, "tx-interval");
         if (json_is_number(value)) {
-            ctx->config.tx_interval = json_number_value(value);
+            ctx->config.tx_interval = json_number_value(value) * MSEC;
         }
         value = json_object_get(section, "rx-interval");
         if (json_is_number(value)) {
-            ctx->config.rx_interval = json_number_value(value);
+            ctx->config.rx_interval = json_number_value(value) * MSEC;
         }
         value = json_object_get(section, "qdisc-bypass");
         if (json_is_boolean(value)) {
@@ -814,6 +897,26 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
     }
 
+    /* Traffic Streams Configuration */
+    section = json_object_get(root, "streams");
+    if (json_is_array(section)) {
+        /* Config is provided as array (multiple streams) */ 
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            if(!stream_config) {
+                ctx->config.stream_config = malloc(sizeof(bbl_stream_config));
+                stream_config = ctx->config.stream_config;
+            } else {
+                stream_config->next = malloc(sizeof(bbl_stream_config));
+                stream_config = stream_config->next;
+            }
+            memset(stream_config, 0x0, sizeof(bbl_stream_config));
+            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -851,8 +954,9 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.password = (char *)g_default_pass;
     ctx->config.agent_remote_id = (char *)g_default_ari;
     ctx->config.agent_circuit_id = (char *)g_default_aci;
-    ctx->config.tx_interval = 5;
-    ctx->config.rx_interval = 5;
+    ctx->config.tx_interval = 5 * MSEC;
+    ctx->config.rx_interval = 5 * MSEC;
+    ctx->config.io_slots = 1024;
     ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
     ctx->config.sessions_max_outstanding = 800;

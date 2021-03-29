@@ -13,8 +13,7 @@
 #include "bbl_tx.h"
 
 void
-bbl_io_raw_rx_job (timer_s *timer)
-{
+bbl_io_raw_rx_job (timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     bbl_io_raw_ctx *io_ctx;
@@ -44,10 +43,12 @@ bbl_io_raw_rx_job (timer_s *timer)
 		if(rx_len < 14) {
             break;
         }
-        interface->stats.packets_rx++;
         eth_start = io_ctx->buf;
         eth_len = rx_len;
-        
+
+        interface->stats.packets_rx++;
+        interface->stats.bytes_rx += eth_len;
+
         /*
 	     * Dump the packet into pcap file.
 	     */
@@ -59,8 +60,8 @@ bbl_io_raw_rx_job (timer_s *timer)
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             /* Copy RX timestamp */
-            eth->rx_sec = interface->rx_timestamp.tv_sec;
-            eth->rx_nsec = interface->rx_timestamp.tv_nsec;
+            eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
+            eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
             if(interface->access) {
                 bbl_rx_handler_access(eth, interface);
             } else {
@@ -76,8 +77,7 @@ bbl_io_raw_rx_job (timer_s *timer)
 }
 
 void
-bbl_io_raw_tx_job (timer_s *timer)
-{
+bbl_io_raw_tx_job (timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     bbl_io_raw_ctx *io_ctx;
@@ -106,6 +106,7 @@ bbl_io_raw_tx_job (timer_s *timer)
                 return;
             }
             interface->stats.packets_tx++;
+            interface->stats.bytes_tx += len;
             /* Dump the packet into pcap file. */
             if (ctx->pcap.write_buf) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
@@ -116,6 +117,22 @@ bbl_io_raw_tx_job (timer_s *timer)
     }
 
     pcapng_fflush(ctx);
+}
+
+/** 
+ * bbl_io_raw_send 
+ * 
+ * @param interface interface.
+ * @param packet packet to be send
+ * @param packet_len packet length
+ */
+bool
+bbl_io_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+    /* NOT IMPLEMENTED */
+    UNUSED(interface);
+    UNUSED(packet);
+    UNUSED(packet_len);
+    return false;   
 }
 
 /** 
@@ -222,9 +239,9 @@ bbl_io_raw_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) 
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_io_raw_tx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_raw_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_io_raw_rx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_raw_rx_job);
 
     return true;
 }
