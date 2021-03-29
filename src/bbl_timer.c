@@ -50,13 +50,13 @@ timespec_sub (struct timespec *result, struct timespec *x, struct timespec *y)
     /*
      * Avoid overflow of result->tv_nsec
      */
-  if (x->tv_nsec < y->tv_nsec) {
-      result->tv_nsec = x->tv_nsec + 1e9 - y->tv_nsec;
-      result->tv_sec = x->tv_sec - y->tv_sec - 1;
-  } else {
-      result->tv_sec = x->tv_sec - y->tv_sec;
-      result->tv_nsec = x->tv_nsec - y->tv_nsec;
-  }
+    if (x->tv_nsec < y->tv_nsec) {
+        result->tv_nsec = x->tv_nsec + 1e9 - y->tv_nsec;
+        result->tv_sec = x->tv_sec - y->tv_sec - 1;
+    } else {
+        result->tv_sec = x->tv_sec - y->tv_sec;
+        result->tv_nsec = x->tv_nsec - y->tv_nsec;
+    }
 }
 
 /*

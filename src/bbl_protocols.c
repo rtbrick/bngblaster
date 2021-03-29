@@ -224,8 +224,10 @@ encode_bbl(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
     *(uint64_t*)buf = bbl->flow_seq;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
-    *(uint64_t*)buf = bbl->timestamp;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
+    *(uint32_t*)buf = bbl->timestamp.tv_sec;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint32_t*)buf = bbl->timestamp.tv_nsec;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     return PROTOCOL_SUCCESS;
 }
 
@@ -1536,8 +1538,10 @@ decode_bbl(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
     bbl->flow_seq = *(uint64_t*)buf;
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
-    bbl->timestamp = *(uint64_t*)buf;
-    BUMP_BUFFER(buf, len, sizeof(uint64_t));
+    bbl->timestamp.tv_sec = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    bbl->timestamp.tv_nsec = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
 
     *_bbl = bbl;
     return PROTOCOL_SUCCESS;
@@ -2514,6 +2518,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     eth = (bbl_ethernet_header_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ethernet_header_t));
     memset(eth, 0x0, sizeof(bbl_ethernet_header_t));
     *ethernet = eth;
+
+    eth->length = len;
 
     /* Decode ethernet header */
     header = (struct ether_header*)buf;

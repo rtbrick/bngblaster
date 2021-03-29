@@ -13,8 +13,7 @@
 #include "bbl_tx.h"
 
 void
-bbl_io_packet_mmap_rx_job (timer_s *timer)
-{
+bbl_io_packet_mmap_rx_job (timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     bbl_io_packet_mmap_ctx *io_ctx;
@@ -58,6 +57,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer)
         eth_start = (uint8_t*)tphdr + tphdr->tp_mac;
         eth_len = tphdr->tp_len;
         interface->stats.packets_rx++;
+        interface->stats.bytes_rx += eth_len;
 
         /*
 	     * Dump the packet into pcap file.
@@ -75,8 +75,8 @@ bbl_io_packet_mmap_rx_job (timer_s *timer)
             eth->vlan_outer = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
 #endif
             /* Copy RX timestamp */
-            eth->rx_sec = tphdr->tp_sec; /* ktime/hw timestamp */
-            eth->rx_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
+            eth->timestamp.tv_sec = tphdr->tp_sec; /* ktime/hw timestamp */
+            eth->timestamp.tv_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
             if(interface->access) {
                 bbl_rx_handler_access(eth, interface);
             } else {
@@ -98,8 +98,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer)
 }
 
 void
-bbl_io_packet_mmap_tx_job (timer_s *timer)
-{
+bbl_io_packet_mmap_tx_job (timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     bbl_io_packet_mmap_ctx *io_ctx;
@@ -150,6 +149,7 @@ bbl_io_packet_mmap_tx_job (timer_s *timer)
         tx_result = bbl_tx(ctx, interface, buf, &len);
         if (tx_result == PROTOCOL_SUCCESS) {
             interface->stats.packets_tx++;
+            interface->stats.bytes_tx += len;
             tphdr->tp_len = len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
             io_ctx->cursor_tx = (io_ctx->cursor_tx + 1) % io_ctx->req_tx.tp_frame_nr;
@@ -172,6 +172,59 @@ bbl_io_packet_mmap_tx_job (timer_s *timer)
         interface->stats.sendto_failed++;
         return;
     }
+}
+
+/** 
+ * bbl_io_packet_mmap_send 
+ * 
+ * @param interface interface.
+ * @param packet packet to be send
+ * @param packet_len packet length
+ */
+bool
+bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+    bbl_ctx_s *ctx;
+    bbl_io_packet_mmap_ctx *io_ctx;
+
+    struct tpacket2_hdr* tphdr;
+
+    uint8_t *frame_ptr;
+
+    ctx = interface->ctx;
+    io_ctx = interface->io_ctx;
+
+    frame_ptr = io_ctx->ring_tx + (io_ctx->cursor_tx * io_ctx->req_tx.tp_frame_size);
+    tphdr = (struct tpacket2_hdr *)frame_ptr;
+
+    if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
+        interface->stats.no_tx_buffer++;
+        return false;
+    }
+
+    memcpy(frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll), packet, packet_len);
+    interface->stats.packets_tx++;
+    interface->stats.bytes_tx += packet_len;
+    tphdr->tp_len = packet_len;
+    tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+    io_ctx->cursor_tx = (io_ctx->cursor_tx + 1) % io_ctx->req_tx.tp_frame_nr;
+    /* Dump the packet into pcap file. */
+    if (ctx->pcap.write_buf) {
+        pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+                                  packet, packet_len, interface->pcap_index, 
+                                  PCAPNG_EPB_FLAGS_OUTBOUND);
+        pcapng_fflush(ctx);
+    }
+
+#if 0
+    /* Notify kernel. */
+    if (sendto(io_ctx->fd_tx, NULL, 0 , 0, NULL, 0) == -1) {
+        LOG(IO, "Sendto failed with errno: %i\n", errno);
+        interface->stats.sendto_failed++;
+        return false;
+    } 
+#endif
+
+    return true;
 }
 
 /** 
@@ -326,9 +379,9 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval * MSEC, interface, bbl_io_packet_mmap_tx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_packet_mmap_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval * MSEC, interface, bbl_io_packet_mmap_rx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_packet_mmap_rx_job);
 
     return true;
 }

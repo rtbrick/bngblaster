@@ -35,6 +35,9 @@ typedef struct bbl_io_packet_mmap_ctx_
 } bbl_io_packet_mmap_ctx;
 
 bool
+bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len);
+
+bool
 bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots);
 
 #endif

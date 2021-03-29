@@ -10,6 +10,7 @@
 
 #include "bbl.h"
 #include "bbl_session.h"
+#include "bbl_stream.h"
 
 extern volatile bool g_teardown;
 
@@ -444,6 +445,12 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             result = dict_insert(ctx->vlan_session_dict, &session->vlan_key);
             if (result.inserted) {
                 *result.datum_ptr = session;
+            }
+        }
+        if(access_config->stream_group_id) {
+            if(!bbl_stream_add(ctx, access_config, session)) {
+                LOG(ERROR, "Failed to create session traffic stream!\n");
+                return false;
             }
         }
 
