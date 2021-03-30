@@ -692,6 +692,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.qdisc_bypass = json_boolean_value(value);
         }
+        value = json_object_get(section, "io-slots");
+        if (json_is_number(value)) {
+            ctx->config.io_slots = json_number_value(value);
+        }
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if (strcmp(s, "packet_mmap") == 0) {
                 ctx->config.io_mode = IO_MODE_PACKET_MMAP;

@@ -552,6 +552,8 @@ bbl_compute_interface_rate_job (timer_s *timer)
 
     bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
     bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
