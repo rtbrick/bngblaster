@@ -668,6 +668,7 @@ typedef struct bbl_session_
 
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
+    bbl_l2tp_session_t *l2tp_session;
 
     /* Authentication */
     char *username;

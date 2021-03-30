@@ -8,6 +8,7 @@
 
 #include "bbl.h"
 #include "bbl_l2tp_avp.h"
+#include "bbl_stream.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -844,6 +845,11 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     bbl_udp_t   *udp;
     bbl_bbl_t   *bbl;
 
+    char reply_message[sizeof(L2TP_REPLY_MESSAGE)+6];
+
+    bbl_stream *stream;
+    void **search = NULL;
+
     uint32_t tmp;
 
     UNUSED(ctx);
@@ -871,8 +877,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             pap_rx = (bbl_pap_t*)l2tp->next;
             pap_tx.code = PAP_CODE_ACK;
             pap_tx.identifier = pap_rx->identifier;
-            pap_tx.reply_message = (void*)L2TP_REPLY_MESSAGE;
-            pap_tx.reply_message_len = sizeof(L2TP_REPLY_MESSAGE) - 1;
+            pap_tx.reply_message = reply_message;
+            pap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message), 
+                L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
             break;
         case PROTOCOL_CHAP:
@@ -880,8 +887,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             chap_rx = (bbl_chap_t*)l2tp->next;
             chap_tx.code = CHAP_CODE_SUCCESS;
             chap_tx.identifier = chap_rx->identifier;
-            chap_tx.reply_message = (void*)L2TP_REPLY_MESSAGE;
-            chap_tx.reply_message_len = sizeof(L2TP_REPLY_MESSAGE) - 1;
+            chap_tx.reply_message = reply_message;
+            chap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message), 
+                L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
             break;
         case PROTOCOL_IPCP:
@@ -956,14 +964,31 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
-                    /* Send BNG Blaster session traffic back by swapping 
-                     * IP address and set direction to downstream. */
+
                     bbl = (bbl_bbl_t*)udp->next;
-                    tmp = ipv4->dst; 
-                    ipv4->dst = ipv4->src;
-                    ipv4->src = tmp;
-                    bbl->direction = BBL_DIRECTION_DOWN;
-                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV4, ipv4);
+                    search = dict_search(ctx->stream_flow_dict, &bbl->flow_id);
+                    if(search) {
+                        stream = *search;
+                        stream->packets_rx++;
+                        stream->rx_len = eth->length;
+                        stream->rx_priority = ((bbl_ipv4_t*)eth->next)->tos;
+                        if(!stream->rx_first_seq) {
+                            stream->rx_first_seq = bbl->flow_seq;
+                        } else {
+                            if(stream->rx_last_seq +1 != bbl->flow_seq) {
+                                stream->loss++;
+                            }
+                        }
+                        stream->rx_last_seq = bbl->flow_seq;
+                    } else {
+                        /* Send BNG Blaster session traffic back by swapping 
+                         * IP address and set direction to downstream. */
+                        tmp = ipv4->dst; 
+                        ipv4->dst = ipv4->src;
+                        ipv4->src = tmp;
+                        bbl->direction = BBL_DIRECTION_DOWN;
+                        bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV4, ipv4);
+                    }
                 }
             }
         default:

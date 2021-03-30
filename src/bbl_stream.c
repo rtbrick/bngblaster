@@ -23,7 +23,6 @@ bbl_stream_can_send(bbl_stream *stream) {
     if(session->session_state == BBL_ESTABLISHED) {
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             switch (stream->config->type) {
-                case STREAM_L2TP:
                 case STREAM_IPV4:
                     if(session->ipcp_state == BBL_PPP_OPENED) {
                         return true;
@@ -92,7 +91,6 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
     bbl.direction = BBL_DIRECTION_UP;
 
     switch (stream->config->type) {
-        case STREAM_L2TP:
         case STREAM_IPV4:
             pppoe.protocol = PROTOCOL_IPV4;
             pppoe.next = &ipv4;
@@ -344,7 +342,7 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     bbl_session_s *session = stream->session;
     bbl_stream_config *config = stream->config;
 
-    bbl_l2tp_session_t *l2tp_session = stream->l2tp_session;
+    bbl_l2tp_session_t *l2tp_session = stream->session->l2tp_session;
     bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
 
     uint16_t buf_len;
@@ -417,27 +415,27 @@ bool
 bbl_stream_build_packet(bbl_stream *stream) {
 
     if(stream->session->access_type == ACCESS_TYPE_PPPOE) {
-        switch (stream->config->type) {
-            case STREAM_IPV4:
-            case STREAM_IPV6:
-            case STREAM_IPV6PD:
-                if(stream->direction == STREAM_DIRECTION_UP) {
-                    return bbl_stream_build_access_pppoe_packet(stream);
-                } else {
-                    return bbl_stream_build_network_packet(stream);
-                }
-                break;
-            case STREAM_L2TP:
-                if(stream->direction == STREAM_DIRECTION_UP) {
-                    return bbl_stream_build_access_pppoe_packet(stream);
-                } else {
-                    if(stream->l2tp_session) {
-                        return bbl_stream_build_l2tp_packet(stream);
+        if(stream->session->l2tp_session) {
+            if(stream->direction == STREAM_DIRECTION_UP) {
+                return bbl_stream_build_access_pppoe_packet(stream);
+            } else {
+                return bbl_stream_build_l2tp_packet(stream);
+            }
+        } else {
+            switch (stream->config->type) {
+                case STREAM_IPV4:
+                case STREAM_IPV6:
+                case STREAM_IPV6PD:
+                    if(stream->direction == STREAM_DIRECTION_UP) {
+                        return bbl_stream_build_access_pppoe_packet(stream);
+                    } else {
+                        return bbl_stream_build_network_packet(stream);
                     }
-                }
-            default:
-                break;
-        }
+                    break;                    
+                default:
+                    break;
+            }
+        }        
     } else if (stream->session->access_type == ACCESS_TYPE_IPOE) {
         if(stream->direction == STREAM_DIRECTION_UP) {
             return bbl_stream_build_access_ipoe_packet(stream);
