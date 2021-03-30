@@ -13,7 +13,6 @@ typedef enum {
     STREAM_IPV4,    /* From/to framed IPv4 address */
     STREAM_IPV6,    /* From/to framed IPv6 address */
     STREAM_IPV6PD,  /* From/to delegated IPv6 address */
-    STREAM_L2TP,    /* L2TP downstream (LNS to client) */
 } __attribute__ ((__packed__)) bbl_stream_type_t;
 
 typedef enum {
@@ -54,7 +53,6 @@ typedef struct bbl_stream_
 
     bbl_interface_s *interface;
     bbl_session_s *session;
-    bbl_l2tp_session_t *l2tp_session;
 
     uint8_t *buf;
     uint16_t tx_len;

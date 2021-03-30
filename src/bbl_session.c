@@ -147,6 +147,10 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->zapping_view_start_time.tv_sec = 0;
                         session->zapping_view_start_time.tv_nsec = 0;
 
+                        /* L2TP */
+                        session->l2tp = false;
+                        session->l2tp_session = NULL;
+                        
                         /* Session traffic */
                         session->access_ipv4_tx_flow_id = 0;
                         session->access_ipv4_tx_seq = 0;

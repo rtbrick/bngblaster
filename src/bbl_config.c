@@ -251,8 +251,6 @@ json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
             stream_config->type = STREAM_IPV6;
         } else if (strcmp(s, "ipv6pd") == 0) {
             stream_config->type = STREAM_IPV6PD;
-        } else if (strcmp(s, "l2tp") == 0) {
-            stream_config->type = STREAM_L2TP;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for stream->type\n");
             return false;

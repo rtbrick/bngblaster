@@ -1085,6 +1085,12 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
 
     MD5_CTX md5_ctx;
 
+    char substring[16];
+    char *tok;
+    
+    l2tp_key_t key = {0};
+    void **search = NULL;
+
     pppoes = (bbl_pppoe_session_t*)eth->next;
     chap = (bbl_chap_t*)pppoes->next;
 
@@ -1109,10 +1115,25 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 }
                 break;
             case CHAP_CODE_SUCCESS:
-                if(chap->reply_message_len) {
-                    if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, chap->reply_message_len) == 0) {
-                        session->l2tp = true;
-                        LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS\n", session->session_id);
+                if(chap->reply_message_len > 23) {
+                    if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, 20) == 0) {
+                        memset(substring, 0x0, sizeof(substring));
+                        memcpy(substring, chap->reply_message+21, chap->reply_message_len-21);
+                        tok = strtok(substring, ":");
+                        if(tok) {
+                            key.tunnel_id = atoi(tok);
+                            tok = strtok(0, ":");
+                            if(tok) {
+                                key.session_id = atoi(tok);
+                                search = dict_search(ctx->l2tp_session_dict, &key);
+                                if(search) {
+                                    session->l2tp = true;
+                                    session->l2tp_session = *search;
+                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n", 
+                                        session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
+                                }
+                            }
+                        }
                     }
                 }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
