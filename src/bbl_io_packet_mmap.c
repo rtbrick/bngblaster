@@ -336,6 +336,16 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
 
     /*
      * Setup TX ringbuffer.
+     * 
+     *  The following are conditions that are checked in packet_set_ring
+    
+     *  tp_block_size must be a multiple of PAGE_SIZE (1)
+     *  tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
+     *  tp_frame_size must be a multiple of TPACKET_ALIGNMENT
+     *  tp_frame_nr   must be exactly frames_per_block*tp_block_nr
+     *  
+     *  Note that tp_block_size should be chosen to be a power of two or there will
+     *  be a waste of memory.
      */
     memset(&io_ctx->req_tx, 0, sizeof(io_ctx->req_tx));
     io_ctx->req_tx.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */

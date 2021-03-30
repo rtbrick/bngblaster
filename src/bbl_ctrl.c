@@ -1019,12 +1019,19 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
             json_array_append(json_streams, json_stream);
             stream = stream->next;
         }
-        root = json_pack("{ss si s{si so*}}", 
+        root = json_pack("{ss si s{si si si si si si si  so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-streams",
                         "session-id", session->session_id,
+                        "rx-packets", session->stats.packets_rx,
+                        "tx-packets", session->stats.packets_tx,
+                        "rx-pps", session->stats.rate_packets_rx.avg,
+                        "tx-pps", session->stats.rate_packets_tx.avg,
+                        "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
+                        "tx-bps-l2", session->stats.rate_bytes_tx.avg * 8,
                         "streams", json_streams);
+
         if(root) {
             result = json_dumpfd(root, fd, 0);
             json_decref(root);

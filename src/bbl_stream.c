@@ -525,6 +525,10 @@ bbl_stream_tx_job (timer_s *timer) {
         stream->packets_tx++;
         stream->flow_seq++;
         packets--;
+        if(stream->session && stream->direction == STREAM_DIRECTION_UP) {
+            stream->session->stats.packets_tx++;
+            stream->session->stats.bytes_tx += stream->tx_len;
+        }
     }
 }
 

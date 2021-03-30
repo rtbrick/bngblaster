@@ -184,10 +184,12 @@ typedef struct bbl_interface_
     struct {
         uint64_t packets_tx;
         uint64_t packets_rx;
-        uint64_t bytes_tx;
-        uint64_t bytes_rx;
         bbl_rate_s rate_packets_tx;
         bbl_rate_s rate_packets_rx;
+        uint64_t bytes_tx;
+        uint64_t bytes_rx;
+        bbl_rate_s rate_bytes_tx;
+        bbl_rate_s rate_bytes_rx;
         uint64_t packets_rx_drop_unknown;
         uint64_t packets_rx_drop_decode_error;
         uint64_t sendto_failed;
@@ -650,6 +652,7 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv4;
     struct timer_ *timer_session_traffic_ipv6;
     struct timer_ *timer_session_traffic_ipv6pd;
+    struct timer_ *timer_rate;
 
     bbl_access_type_t access_type;
 
@@ -833,6 +836,12 @@ typedef struct bbl_session_
     struct {
         uint64_t packets_tx;
         uint64_t packets_rx;
+        bbl_rate_s rate_packets_tx;
+        bbl_rate_s rate_packets_rx;
+        uint64_t bytes_tx;
+        uint64_t bytes_rx;
+        bbl_rate_s rate_bytes_tx;
+        bbl_rate_s rate_bytes_rx;
 
         uint32_t igmp_rx;
         uint32_t igmp_tx;
@@ -881,7 +890,6 @@ typedef struct bbl_session_
 
         uint32_t flapped; // flap counter
     } stats;
-
 
 } bbl_session_s;
 

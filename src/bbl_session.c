@@ -11,8 +11,18 @@
 #include "bbl.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
+#include "bbl_stats.h"
 
 extern volatile bool g_teardown;
+
+void
+bbl_session_rate_job (timer_s *timer) {
+    bbl_session_s *session = timer->data;
+    bbl_compute_avg_rate(&session->stats.rate_packets_tx, session->stats.packets_tx);
+    bbl_compute_avg_rate(&session->stats.rate_packets_rx, session->stats.packets_rx);
+    bbl_compute_avg_rate(&session->stats.rate_bytes_tx, session->stats.bytes_tx);
+    bbl_compute_avg_rate(&session->stats.rate_bytes_rx, session->stats.bytes_rx);
+}
 
 /** 
  * bbl_session_update_state 
@@ -452,8 +462,8 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 LOG(ERROR, "Failed to create session traffic stream!\n");
                 return false;
             }
+            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, bbl_session_rate_job);
         }
-
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;
 Next:

@@ -220,26 +220,28 @@ bbl_stats_job (timer_s *timer)
         wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
         wprintw(stats_win, " %s", ctx->op.network_if->name);
         wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
-        wprintw(stats_win, " )\n  Tx Packets                %10lu (%7lu PPS)\n",
-            ctx->op.network_if->stats.packets_tx, ctx->op.network_if->stats.rate_packets_tx.avg);
-        wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",
-            ctx->op.network_if->stats.packets_rx, ctx->op.network_if->stats.rate_packets_rx.avg);
-        wprintw(stats_win, "  Tx Session Packets        %10lu (%7lu PPS)\n",
+        wprintw(stats_win, " )\n  Tx Packets                %10lu |%7lu PPS %10lu Kbps\n",
+            ctx->op.network_if->stats.packets_tx, ctx->op.network_if->stats.rate_packets_tx.avg, 
+            ctx->op.network_if->stats.rate_bytes_tx.avg * 8 / 1000);
+        wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
+            ctx->op.network_if->stats.packets_rx, ctx->op.network_if->stats.rate_packets_rx.avg, 
+            ctx->op.network_if->stats.rate_bytes_rx.avg * 8 / 1000);
+        wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
             ctx->op.network_if->stats.session_ipv4_tx, ctx->op.network_if->stats.rate_session_ipv4_tx.avg);
-        wprintw(stats_win, "  Rx Session Packets        %10lu (%7lu PPS) Loss: %lu\n",
+        wprintw(stats_win, "  Rx Session Packets        %10lu |%7lu PPS %10lu Loss\n",
             ctx->op.network_if->stats.session_ipv4_rx, ctx->op.network_if->stats.rate_session_ipv4_rx.avg,
             ctx->op.network_if->stats.session_ipv4_loss);
-        wprintw(stats_win, "  Tx Session Packets IPv6   %10lu (%7lu PPS)\n",
+        wprintw(stats_win, "  Tx Session Packets IPv6   %10lu |%7lu PPS\n",
             ctx->op.network_if->stats.session_ipv6_tx, ctx->op.network_if->stats.rate_session_ipv6_tx.avg);
-        wprintw(stats_win, "  Rx Session Packets IPv6   %10lu (%7lu PPS) Loss: %lu\n",
+        wprintw(stats_win, "  Rx Session Packets IPv6   %10lu |%7lu PPS %10lu Loss\n",
             ctx->op.network_if->stats.session_ipv6_rx, ctx->op.network_if->stats.rate_session_ipv6_rx.avg,
             ctx->op.network_if->stats.session_ipv6_loss);
-        wprintw(stats_win, "  Tx Session Packets IPv6PD %10lu (%7lu PPS)\n",
+        wprintw(stats_win, "  Tx Session Packets IPv6PD %10lu |%7lu PPS\n",
             ctx->op.network_if->stats.session_ipv6pd_tx, ctx->op.network_if->stats.rate_session_ipv6pd_tx.avg);
-        wprintw(stats_win, "  Rx Session Packets IPv6PD %10lu (%7lu PPS) Loss: %lu\n",
+        wprintw(stats_win, "  Rx Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss\n",
             ctx->op.network_if->stats.session_ipv6pd_rx, ctx->op.network_if->stats.rate_session_ipv6pd_rx.avg,
             ctx->op.network_if->stats.session_ipv6pd_loss);
-        wprintw(stats_win, "  Tx Multicast Packets      %10lu (%7lu PPS)\n",
+        wprintw(stats_win, "  Tx Multicast Packets      %10lu |%7lu PPS\n",
             ctx->op.network_if->stats.mc_tx, ctx->op.network_if->stats.rate_mc_tx.avg);
     }
 
@@ -254,26 +256,28 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, " %s", ctx->op.access_if[i]->name); 
             }
         }
-        wprintw(stats_win, " )\n  Tx Packets                %10lu (%7lu PPS)\n",
-            access_if->stats.packets_tx, access_if->stats.rate_packets_tx.avg);
-        wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",
-            access_if->stats.packets_rx, access_if->stats.rate_packets_rx.avg);
-        wprintw(stats_win, "  Tx Session Packets        %10lu (%7lu PPS)\n",
+        wprintw(stats_win, " )\n  Tx Packets                %10lu |%7lu PPS %10lu Kbps\n",
+            access_if->stats.packets_tx, access_if->stats.rate_packets_tx.avg, 
+            access_if->stats.rate_bytes_tx.avg * 8 / 1000);
+        wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
+            access_if->stats.packets_rx, access_if->stats.rate_packets_rx.avg, 
+            access_if->stats.rate_bytes_rx.avg * 8 / 1000);
+        wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
             access_if->stats.session_ipv4_tx, access_if->stats.rate_session_ipv4_tx.avg);
-        wprintw(stats_win, "  Rx Session Packets        %10lu (%7lu PPS) Loss: %lu Wrong Session: %lu\n",
+        wprintw(stats_win, "  Rx Session Packets        %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
             access_if->stats.session_ipv4_rx, access_if->stats.rate_session_ipv4_rx.avg,
             access_if->stats.session_ipv4_loss, access_if->stats.session_ipv4_wrong_session);
-        wprintw(stats_win, "  Tx Session Packets IPv6   %10lu (%7lu PPS)\n",
+        wprintw(stats_win, "  Tx Session Packets IPv6   %10lu |%7lu PPS\n",
             access_if->stats.session_ipv6_tx, access_if->stats.rate_session_ipv6_tx.avg);
-        wprintw(stats_win, "  Rx Session Packets IPv6   %10lu (%7lu PPS) Loss: %lu Wrong Session: %lu\n",
+        wprintw(stats_win, "  Rx Session Packets IPv6   %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
             access_if->stats.session_ipv6_rx, access_if->stats.rate_session_ipv6_rx.avg,
             access_if->stats.session_ipv6_loss, access_if->stats.session_ipv6_wrong_session);
-        wprintw(stats_win, "  Tx Session Packets IPv6PD %10lu (%7lu PPS)\n",
+        wprintw(stats_win, "  Tx Session Packets IPv6PD %10lu |%7lu PPS\n",
             access_if->stats.session_ipv6pd_tx, access_if->stats.rate_session_ipv6pd_tx.avg);
-        wprintw(stats_win, "  Rx Session Packets IPv6PD %10lu (%7lu PPS) Loss: %lu Wrong Session: %lu\n",
+        wprintw(stats_win, "  Rx Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
             access_if->stats.session_ipv6pd_rx, access_if->stats.rate_session_ipv6pd_rx.avg,
             access_if->stats.session_ipv6pd_loss, access_if->stats.session_ipv6pd_wrong_session);
-        wprintw(stats_win, "  Rx Multicast Packets      %10lu (%7lu PPS) Loss: %lu\n",
+        wprintw(stats_win, "  Rx Multicast Packets      %10lu |%7lu PPS %10lu Loss\n",
             access_if->stats.mc_rx, access_if->stats.rate_mc_rx.avg,
             access_if->stats.mc_loss);
 

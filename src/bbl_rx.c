@@ -661,7 +661,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
             stream->max_delay_ns = delay_nsec;
         }
         if(stream->min_delay_ns) {
-            if(delay_nsec > stream->min_delay_ns) {
+            if(delay_nsec < stream->min_delay_ns) {
                 stream->min_delay_ns = delay_nsec;
             }
         } else {
@@ -1769,6 +1769,7 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         if(session->session_state != BBL_TERMINATED &&
            session->session_state != BBL_IDLE) {
             session->stats.packets_rx++;
+            session->stats.bytes_rx += eth->length;
             switch (session->access_type) {
                 case ACCESS_TYPE_PPPOE:
                     switch(eth->type) {

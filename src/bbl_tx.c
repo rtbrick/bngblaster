@@ -1491,6 +1491,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 result = bbl_encode_packet(session, buf, len);
                 if(result == PROTOCOL_SUCCESS) {
                     session->stats.packets_tx++;
+                    session->stats.bytes_tx += *len;
                 }
                 /* Remove only from TX queue if all requests are processed! */
                 if(session->send_requests == 0) {
