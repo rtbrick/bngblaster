@@ -89,12 +89,14 @@ bbl_read_key_job (timer_s *timer)
             if(g_session_selected > ctx->sessions) {
                 g_session_selected = 1;
             }
+            bbl_init_stats_win();
             break;
         case KEY_F(6):
             g_access_if_selected++;
             if(g_access_if_selected >= ctx->op.access_if_count) {
                 g_access_if_selected = 0;
             }
+            bbl_init_stats_win();
             break;
         case KEY_F(7):
             enable_disable_traffic(ctx, true);
@@ -378,8 +380,8 @@ bbl_stats_job (timer_s *timer)
                 session->stats.rate_bytes_rx.avg * 8 / 1000);
 
             if(session->stream) {
-                wprintw(stats_win, "\n  Streams\n");
-                wprintw(stats_win, "\n  Name             | Direction | Tx PPS  | Tx Kbps    | Rx PPS  | Rx Kbps    | Loss\n");
+                wprintw(stats_win, "\n  Stream           | Direction | Tx PPS  | Tx Kbps    | Rx PPS  | Rx Kbps    | Loss\n");
+
                 stream = session->stream;
                 while(stream) {
                     wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, 
@@ -394,8 +396,6 @@ bbl_stats_job (timer_s *timer)
     }
     wrefresh(stats_win);
 }
-
-
 
 /*
  * Curses init.
