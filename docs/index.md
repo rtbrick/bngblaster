@@ -9,6 +9,7 @@
 - [Multicast](multicast)
 - [L2TPv2](l2tp)
 - [Legal Interception](li)
+- [Traffic Streams](streams)
 
 A short introduction can be found on [YouTube](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster").
 

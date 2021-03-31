@@ -761,11 +761,12 @@ bbl_rx_udp(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interf
     switch(udp->dst) {
         case DHCPV6_UDP_CLIENT:
         case DHCPV6_UDP_SERVER:
-            bbl_rx_dhcpv6(ipv6, interface, session);
             interface->stats.dhcpv6_rx++;
-            break;
+            return bbl_rx_dhcpv6(ipv6, interface, session);
         case BBL_UDP_PORT:
             bbl = (bbl_bbl_t*)udp->next;
+            session->stats.accounting_packets_rx++;
+            session->stats.accounting_bytes_rx += eth->length;
             break;
         default:
             break;
@@ -998,6 +999,9 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
             break;
     }
 
+    session->stats.accounting_packets_rx++;
+    session->stats.accounting_bytes_rx += eth->length;
+
     /* BBL receive handler */
     if(bbl) {
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
@@ -1097,15 +1101,16 @@ void
 bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
     switch(ipv6->protocol) {
         case IPV6_NEXT_HEADER_ICMPV6:
-            bbl_rx_icmpv6(ipv6, interface, session);
             interface->stats.icmpv6_rx++;
-            break;
+            return bbl_rx_icmpv6(ipv6, interface, session);
         case IPV6_NEXT_HEADER_UDP:
             bbl_rx_udp(eth, ipv6, interface, session);
             break;
         default:
             break;
     }
+    session->stats.accounting_packets_rx++;
+    session->stats.accounting_bytes_rx += eth->length;
 }
 
 void

@@ -658,6 +658,8 @@ typedef struct bbl_session_
 
     uint16_t stream_group_id;
     void *stream;
+    bool stream_traffic;
+
     struct {
         uint32_t ifindex;
         uint16_t outer_vlan_id;
@@ -843,6 +845,12 @@ typedef struct bbl_session_
         uint64_t bytes_rx;
         bbl_rate_s rate_bytes_tx;
         bbl_rate_s rate_bytes_rx;
+
+        /* Accounting relevant traffic (without control). */
+        uint64_t accounting_packets_tx;
+        uint64_t accounting_packets_rx;
+        uint64_t accounting_bytes_tx;
+        uint64_t accounting_bytes_rx;
 
         uint32_t igmp_rx;
         uint32_t igmp_tx;

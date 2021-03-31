@@ -291,6 +291,10 @@ json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
     value = json_object_get(stream, "length");
     if (value) {
         stream_config->length = json_number_value(value);
+        if(stream_config->length < 76 || stream_config->length > 1500) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->length\n");
+            return false;
+        }
     } else {
         stream_config->length = 128;
     }
@@ -308,6 +312,10 @@ json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
     value = json_object_get(stream, "pps");
     if (value) {
         stream_config->pps = json_number_value(value);
+        if(stream_config->pps == 0) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
+            return false;
+        }
     } else {
         stream_config->pps = 1;
     }

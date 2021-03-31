@@ -385,6 +385,7 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     ipv4.dst = session->ip_address;
     ipv4.src = l2tp_tunnel->server->ip;
     ipv4.ttl = 64;
+    ipv4.tos = config->priority;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp; 
     udp.src = BBL_UDP_PORT;
@@ -474,6 +475,12 @@ bbl_stream_tx_job (timer_s *timer) {
                 stream->config->name, session->session_id);
             return;
         }
+    }
+
+    if(!session->stream_traffic) {
+        /* Close send window */
+        stream->send_window_packets = 0;
+        return;
     }
 
     clock_gettime(CLOCK_MONOTONIC, &now);

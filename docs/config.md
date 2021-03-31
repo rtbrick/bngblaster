@@ -94,10 +94,11 @@ This section describes all attributes of the `interfaces` hierarchy.
 
 Attribute | Description | Default 
 --------- | ----------- | -------
-`tx-interval` | TX ring polling interval in milliseconds | 5
-`rx-interval` | RX ring polling interval in milliseconds | 5
+`tx-interval` | TX ring polling interval in milliseconds | 5.0
+`rx-interval` | RX ring polling interval in milliseconds | 5.0
 `qdisc-bypass` | Bypass the kernel's qdisc layer | true
 `io-mode` | IO mode | packet_mmap
+`io-slots` | IO slots (ring size) | 1024
 
 WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
 This issue was frequently seen on Ubuntu 20.04. 
@@ -151,7 +152,7 @@ Attribute | Description | Default
 `ipv6` | Optionally enable/disable IPoE IPv4 per access configuration
 `dhcp` | Optionally enable/disable DHCP per access configuration
 `dhcpv6` | Optionally enable/disable DHCPv6 per access configuration
-
+`stream-group-id` | Optional stream group identifier
 
 **WARNING**: DHCP (IPv4) is currently not supported!
 
@@ -530,3 +531,20 @@ is described in RFC2661 appendix A (Control Channel Slow Start and
 Congestion Avoidance). The mode `slow` uses a fixed control window
 size of 1 where `aggressive` sticks to max permitted based on peer 
 received window size. 
+
+## Traffic Streams
+
+This section describes all attributes of the `streams` hierarchy. 
+
+Attribute | Description | Default 
+--------- | ----------- | -------
+`name` | Mandatory stream name |   
+`stream-group-id` | Mandatory stream group identifier | 
+`type` | Mandatory stream type (`ipv4`, `ipv6` or `ipv6pd`)  |  
+`direction` | Mandatory stream direction (`upstream`, `downstream` or `both`) | `both`
+`priority` | IPv4 TOS / IPv6 TC | 0
+`vlan-priority` | VLAN priority | 0 
+`length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
+`pps` | Stream traffic rate in packets per second | 1 
+
+For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header. 

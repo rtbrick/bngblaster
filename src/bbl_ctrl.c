@@ -996,7 +996,7 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
         while(stream) {
             json_stream = json_pack("{ss ss si si si si si si si si si si si si si si si si si si sf sf sf}",
                                 "name", stream->config->name,
-                                "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "dowstream",
+                                "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "downstream",
                                 "flow-id", stream->flow_id,
                                 "rx-first-seq", stream->rx_first_seq,
                                 "rx-last-seq", stream->rx_last_seq,
@@ -1022,13 +1022,15 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
             json_array_append(json_streams, json_stream);
             stream = stream->next;
         }
-        root = json_pack("{ss si s{si si si si si si si sf sf so*}}", 
+        root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-streams",
                         "session-id", session->session_id,
                         "rx-packets", session->stats.packets_rx,
                         "tx-packets", session->stats.packets_tx,
+                        "rx-accounting-packets", session->stats.accounting_packets_rx,
+                        "tx-accounting-packets", session->stats.accounting_packets_tx,
                         "rx-pps", session->stats.rate_packets_rx.avg,
                         "tx-pps", session->stats.rate_packets_tx.avg,
                         "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
@@ -1050,6 +1052,42 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
     }
 }
 
+ssize_t
+bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
+            session->stream_traffic = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                session->stream_traffic = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+    return 0;
+}
+
+ssize_t
+bbl_ctrl_stream_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_stream_traffic(fd, ctx, session_id, true);
+}
+
+ssize_t
+bbl_ctrl_stream_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_stream_traffic(fd, ctx, session_id, false);
+}
+
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1064,8 +1102,8 @@ struct action actions[] = {
     {"ip6cp-close", bbl_ctrl_session_ip6cp_close},
     {"session-counters", bbl_ctrl_session_counters},
     {"session-info", bbl_ctrl_session_info},
-    {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
     {"session-traffic", bbl_ctrl_session_traffic_stats},
+    {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
@@ -1079,6 +1117,10 @@ struct action actions[] = {
     {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
     {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
     {"session-streams", bbl_ctrl_session_streams},
+    {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start},
+    {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
+    {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
+    {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
     {NULL, NULL},
 };
 
