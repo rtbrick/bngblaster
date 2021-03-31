@@ -128,11 +128,27 @@ bbl_io_raw_tx_job (timer_s *timer) {
  */
 bool
 bbl_io_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
-    /* NOT IMPLEMENTED */
-    UNUSED(interface);
-    UNUSED(packet);
-    UNUSED(packet_len);
-    return false;   
+    bbl_ctx_s *ctx;
+    bbl_io_raw_ctx *io_ctx;
+
+    ctx = interface->ctx;
+    io_ctx = interface->io_ctx;
+
+    if (sendto(io_ctx->fd_rx, packet, packet_len, 0, (struct sockaddr*)&io_ctx->addr, sizeof(struct sockaddr_ll)) <0 ) {
+        LOG(IO, "Sendto failed with errno: %i\n", errno);
+        interface->stats.sendto_failed++;
+        return false;
+    }
+    interface->stats.packets_tx++;
+    interface->stats.bytes_tx += packet_len;
+    /* Dump the packet into pcap file. */
+    if (ctx->pcap.write_buf) {
+        pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+                                  packet, packet_len, interface->pcap_index, 
+                                  PCAPNG_EPB_FLAGS_OUTBOUND);
+        pcapng_fflush(ctx);
+    }
+    return true;   
 }
 
 /** 

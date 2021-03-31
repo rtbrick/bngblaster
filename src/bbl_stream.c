@@ -613,11 +613,6 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 } else {
                     session->stream = stream;
                 }
-                if(stream->tx_interval < ctx->config.tx_interval) {
-                    timer_sec = 0;
-                    timer_nsec = ctx->config.tx_interval;
-                    stream->tx_interval = ctx->config.tx_interval;
-                }
                 timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
                 LOG(DEBUG, "Traffic stream %s added in upstream with timer %lu sec %lu nsec\n", config->name, timer_sec, timer_nsec); 
@@ -646,11 +641,6 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     session_stream->next = stream;
                 } else {
                     session->stream = stream;
-                }
-                if(stream->tx_interval < ctx->config.tx_interval) {
-                    timer_sec = 0;
-                    timer_nsec = ctx->config.tx_interval;
-                    stream->tx_interval = ctx->config.tx_interval;
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
