@@ -9,7 +9,6 @@
 #ifndef __BBL_IO_RAW_H__
 #define __BBL_IO_RAW_H__
 
-#define BBL_IO_RAW_BUFFER_LEN   2048
 
 typedef struct bbl_io_raw_ctx_
 {

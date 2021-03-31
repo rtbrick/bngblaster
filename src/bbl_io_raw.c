@@ -166,7 +166,7 @@ bbl_io_raw_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) 
     int qdisc_bypass;
 
     io_ctx = calloc(1, sizeof(bbl_io_raw_ctx));
-    io_ctx->buf = malloc(BBL_IO_RAW_BUFFER_LEN);
+    io_ctx->buf = malloc(2048);
     interface->io_mode = IO_MODE_RAW;
     interface->io_ctx = io_ctx;
 

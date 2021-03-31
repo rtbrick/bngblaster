@@ -104,6 +104,7 @@ typedef enum {
     IO_MODE_PACKET_MMAP = 0,
     IO_MODE_NETMAP,
     IO_MODE_RAW,
+    IO_MODE_PACKET_MMAP_RAW,
 } __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {

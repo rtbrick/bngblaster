@@ -527,6 +527,11 @@ bbl_stream_tx_job (timer_s *timer) {
                     return;
                 }
                 break;
+            case IO_MODE_PACKET_MMAP_RAW:
+                if(!bbl_io_packet_mmap_raw_send(interface, stream->buf, stream->tx_len)) {
+                    return;
+                }
+                break;
             case IO_MODE_RAW:
                 if(!bbl_io_raw_send(interface, stream->buf, stream->tx_len)) {
                     return;
