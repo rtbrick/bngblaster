@@ -86,7 +86,7 @@
 
 #define BBL_MAX_ACCESS_INTERFACES   64
 #define BBL_AVG_SAMPLES             5
-#define DATA_TRAFFIC_MAX_LEN        2000
+#define DATA_TRAFFIC_MAX_LEN        1920
 
 #define UNUSED(x)    (void)x
 

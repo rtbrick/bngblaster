@@ -22,6 +22,9 @@ bbl_stream_can_send(bbl_stream *stream) {
 
     if(session->session_state == BBL_ESTABLISHED) {
         if(session->access_type == ACCESS_TYPE_PPPOE) {
+            if(session->l2tp && session->l2tp_session == NULL) {
+                goto Free;
+            }
             switch (stream->config->type) {
                 case STREAM_IPV4:
                     if(session->ipcp_state == BBL_PPP_OPENED) {
@@ -43,6 +46,7 @@ bbl_stream_can_send(bbl_stream *stream) {
             }
         }
     }
+Free:
     /* Free of packet if not ready to send */
     if(stream->buf) {
         free(stream->buf);

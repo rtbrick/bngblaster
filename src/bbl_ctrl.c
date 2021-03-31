@@ -994,7 +994,7 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
 
         json_streams = json_array();
         while(stream) {
-            json_stream = json_pack("{ss ss si si si si si si si si si si si si si si si si si si}",
+            json_stream = json_pack("{ss ss si si si si si si si si si si si si si si si si si si sf sf sf}",
                                 "name", stream->config->name,
                                 "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "dowstream",
                                 "flow-id", stream->flow_id,
@@ -1014,12 +1014,15 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
                                 "tx-pps", stream->rate_packets_tx.avg,
                                 "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
                                 "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
-                                "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8);
+                                "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
+                                "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0,
+                                "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
+                                "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
 
             json_array_append(json_streams, json_stream);
             stream = stream->next;
         }
-        root = json_pack("{ss si s{si si si si si si si  so*}}", 
+        root = json_pack("{ss si s{si si si si si si si sf sf so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-streams",
@@ -1030,6 +1033,8 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
                         "tx-pps", session->stats.rate_packets_tx.avg,
                         "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
                         "tx-bps-l2", session->stats.rate_bytes_tx.avg * 8,
+                        "rx-mbps-l2", (double)(session->stats.rate_bytes_rx.avg * 8) / 1000000.0,
+                        "tx-mbps-l2", (double)(session->stats.rate_bytes_tx.avg * 8) / 1000000.0,
                         "streams", json_streams);
 
         if(root) {

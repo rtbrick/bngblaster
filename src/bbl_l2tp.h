@@ -29,6 +29,7 @@
 
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_ctx_ bbl_ctx_s;
+typedef struct bbl_session_ bbl_session_s;
 
 /* L2TP Tunnel State */
 typedef enum {
@@ -212,6 +213,7 @@ typedef struct bbl_l2tp_session_
     bbl_l2tp_tunnel_t *tunnel;
     l2tp_session_state_t state;
 
+    bbl_session_s *pppoe_session;
     struct {
         uint16_t tunnel_id;
         uint16_t session_id;
