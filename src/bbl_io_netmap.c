@@ -145,11 +145,39 @@ bbl_io_netmap_tx_job (timer_s *timer)
  */
 bool
 bbl_io_netmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
-    /* NOT IMPLEMENTED */
-    UNUSED(interface);
-    UNUSED(packet);
-    UNUSED(packet_len);
-    return false;   
+    bbl_ctx_s *ctx;
+    bbl_io_netmap_ctx *io_ctx;
+
+    struct netmap_ring *ring;
+	unsigned int i;
+
+    uint8_t *buf;
+
+    ctx = interface->ctx;
+    io_ctx = interface->io_ctx;
+
+    ring = NETMAP_TXRING(io_ctx->port->nifp, 0);
+    if (nm_ring_empty(ring)) {
+        interface->stats.no_tx_buffer++;
+        return false;
+    }
+
+    i = ring->cur;
+    buf = (uint8_t*)NETMAP_BUF(ring, ring->slot[i].buf_idx);
+    memcpy(buf, packet, packet_len);
+    ring->slot[i].len = packet_len;
+    ring->head = ring->cur = nm_ring_next(ring, i);
+
+    interface->stats.packets_tx++;
+    interface->stats.bytes_tx += packet_len;
+    /* Dump the packet into pcap file. */
+    if (ctx->pcap.write_buf) {
+        pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+                                  packet, packet_len, interface->pcap_index, 
+                                  PCAPNG_EPB_FLAGS_OUTBOUND);
+        pcapng_fflush(ctx);
+    }
+    return true;   
 }
 
 /** 
