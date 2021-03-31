@@ -32,6 +32,7 @@ typedef struct bbl_io_packet_mmap_ctx_
     uint16_t cursor_tx; /* slot # inside the ringbuffer */
     uint16_t cursor_rx; /* slot # inside the ringbuffer */
 
+    bool pollout;
 } bbl_io_packet_mmap_ctx;
 
 bool
