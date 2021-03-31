@@ -285,7 +285,11 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
             ipv4.dst = session->ip_address;
-            ipv4.src = ctx->op.network_if->ip;
+            if(stream->config->ipv4_source_address) {
+                ipv4.src = stream->config->ipv4_source_address;
+            } else {
+                ipv4.src = ctx->op.network_if->ip;
+            }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -299,7 +303,11 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             ipv6.dst = session->ipv6_address;
-            ipv6.src = ctx->op.network_if->ip6.address;
+            if(*(uint64_t*)stream->config->ipv6_source_address) {
+                ipv6.src = stream->config->ipv6_source_address;
+            } else {
+                ipv6.src = ctx->op.network_if->ip6.address;
+            }
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
@@ -313,7 +321,11 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             ipv6.dst = session->delegated_ipv6_address;
-            ipv6.src = ctx->op.network_if->ip6.address;
+            if(*(uint64_t*)stream->config->ipv6_source_address) {
+                ipv6.src = stream->config->ipv6_source_address;
+            } else {
+                ipv6.src = ctx->op.network_if->ip6.address;
+            }
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
