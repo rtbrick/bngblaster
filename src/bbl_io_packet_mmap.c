@@ -180,6 +180,49 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
     }
 }
 
+void
+bbl_io_packet_mmap_raw_tx_job (timer_s *timer) {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+    bbl_io_packet_mmap_ctx *io_ctx;
+
+    uint16_t len;
+
+    protocol_error_t tx_result = IGNORED;
+
+    interface = timer->data;
+    if (!interface) {
+        return;
+    }
+
+    ctx = interface->ctx;
+    io_ctx = interface->io_ctx;
+
+    /* Get TX timestamp */
+    clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
+
+    while(tx_result != EMPTY) {
+        tx_result = bbl_tx(ctx, interface, io_ctx->buf, &len);
+        if (tx_result == PROTOCOL_SUCCESS) {
+            if (sendto(io_ctx->fd_rx, io_ctx->buf, len, 0, (struct sockaddr*)&io_ctx->addr, sizeof(struct sockaddr_ll)) <0 ) {
+                LOG(IO, "Sendto failed with errno: %i\n", errno);
+                interface->stats.sendto_failed++;
+                return;
+            }
+            interface->stats.packets_tx++;
+            interface->stats.bytes_tx += len;
+            /* Dump the packet into pcap file. */
+            if (ctx->pcap.write_buf) {
+                pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+                                          io_ctx->buf, len, interface->pcap_index, 
+                                          PCAPNG_EPB_FLAGS_OUTBOUND);
+            }
+        }
+    }
+
+    pcapng_fflush(ctx);
+}
+
 /** 
  * bbl_io_packet_mmap_send 
  * 
@@ -234,6 +277,38 @@ bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t p
 }
 
 /** 
+ * bbl_io_raw_send 
+ * 
+ * @param interface interface.
+ * @param packet packet to be send
+ * @param packet_len packet length
+ */
+bool
+bbl_io_packet_mmap_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+    bbl_ctx_s *ctx;
+    bbl_io_packet_mmap_ctx *io_ctx;
+
+    ctx = interface->ctx;
+    io_ctx = interface->io_ctx;
+
+    if (sendto(io_ctx->fd_rx, packet, packet_len, 0, (struct sockaddr*)&io_ctx->addr, sizeof(struct sockaddr_ll)) <0 ) {
+        LOG(IO, "Sendto failed with errno: %i\n", errno);
+        interface->stats.sendto_failed++;
+        return false;
+    }
+    interface->stats.packets_tx++;
+    interface->stats.bytes_tx += packet_len;
+    /* Dump the packet into pcap file. */
+    if (ctx->pcap.write_buf) {
+        pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+                                  packet, packet_len, interface->pcap_index, 
+                                  PCAPNG_EPB_FLAGS_OUTBOUND);
+        pcapng_fflush(ctx);
+    }
+    return true;   
+}
+
+/** 
  * bbl_io_packet_mmap_add_interface 
  * 
  * @param ctx global context
@@ -241,7 +316,7 @@ bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t p
  * @param slots ring buffer size 
  */
 bool
-bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots) {
+bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots, bbl_io_mode_t io_mode) {
     bbl_io_packet_mmap_ctx *io_ctx;
     size_t ring_size;
     char timer_name[32];
@@ -249,14 +324,19 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
     int version, qdisc_bypass;
 
     io_ctx = calloc(1, sizeof(bbl_io_packet_mmap_ctx));
-    interface->io_mode = IO_MODE_PACKET_MMAP;
+    io_ctx->buf = malloc(2048);
+    interface->io_mode = io_mode;
     interface->io_ctx = io_ctx;
 
     /*
      * Open RAW socket for all Ethertypes.
      * https://man7.org/linux/man-pages/man7/packet.7.html
      */
-    io_ctx->fd_tx = socket(PF_PACKET, SOCK_RAW, 0);
+    if(io_mode == IO_MODE_PACKET_MMAP_RAW) {
+        io_ctx->fd_tx = socket(AF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
+    } else {
+        io_ctx->fd_tx = socket(PF_PACKET, SOCK_RAW, 0);
+    }
     if (io_ctx->fd_tx == -1) {
         LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
         return false;
@@ -271,11 +351,12 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
      * Use API version 2 which is good enough for what we're doing.
      */
     version = TPACKET_V2;
-    if ((setsockopt(io_ctx->fd_tx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
-        LOG(ERROR, "setsockopt() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return false;
+    if(io_mode == IO_MODE_PACKET_MMAP) {
+        if ((setsockopt(io_ctx->fd_tx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
+            LOG(ERROR, "setsockopt() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+            return false;
+        }
     }
-
     if ((setsockopt(io_ctx->fd_rx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
         LOG(ERROR, "setsockopt() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
         return false;
@@ -284,7 +365,11 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
     /*
      * Limit socket to the given interface index.
      */
-    io_ctx->addr.sll_family = PF_PACKET;
+    if(io_mode == IO_MODE_PACKET_MMAP_RAW) {
+        io_ctx->addr.sll_family = AF_PACKET;
+    } else {
+        io_ctx->addr.sll_family = PF_PACKET;
+    }
     io_ctx->addr.sll_ifindex = interface->ifindex;
     io_ctx->addr.sll_protocol = 0;
     if (bind(io_ctx->fd_tx, (struct sockaddr*)&io_ctx->addr, sizeof(io_ctx->addr)) == -1) {
@@ -353,22 +438,24 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
      *  Note that tp_block_size should be chosen to be a power of two or there will
      *  be a waste of memory.
      */
-    memset(&io_ctx->req_tx, 0, sizeof(io_ctx->req_tx));
-    io_ctx->req_tx.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */
-    io_ctx->req_tx.tp_frame_size = io_ctx->req_tx.tp_block_size/2; /* 2048 */
-    io_ctx->req_tx.tp_block_nr = slots/2;
-    io_ctx->req_tx.tp_frame_nr = slots;
-    if (setsockopt(io_ctx->fd_tx, SOL_PACKET, PACKET_TX_RING, &io_ctx->req_tx, sizeof(io_ctx->req_tx)) == -1) {
-        LOG(ERROR, "Allocating TX ringbuffer error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return false;
-    }
+    if(io_mode == IO_MODE_PACKET_MMAP) {
+        memset(&io_ctx->req_tx, 0, sizeof(io_ctx->req_tx));
+        io_ctx->req_tx.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */
+        io_ctx->req_tx.tp_frame_size = io_ctx->req_tx.tp_block_size/2; /* 2048 */
+        io_ctx->req_tx.tp_block_nr = slots/2;
+        io_ctx->req_tx.tp_frame_nr = slots;
+        if (setsockopt(io_ctx->fd_tx, SOL_PACKET, PACKET_TX_RING, &io_ctx->req_tx, sizeof(io_ctx->req_tx)) == -1) {
+            LOG(ERROR, "Allocating TX ringbuffer error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+            return false;
+        }
 
-    /*
-     * Open the shared memory TX window between kernel and userspace.
-     */
-    ring_size = io_ctx->req_tx.tp_block_nr * io_ctx->req_tx.tp_block_size;
-    io_ctx->ring_tx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, io_ctx->fd_tx, 0);
+        /*
+        * Open the shared memory TX window between kernel and userspace.
+        */
+        ring_size = io_ctx->req_tx.tp_block_nr * io_ctx->req_tx.tp_block_size;
+        io_ctx->ring_tx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, io_ctx->fd_tx, 0);
+    }
 
     /*
      * Setup RX ringbuffer. Double the slots, such that we do not miss any packets.
@@ -395,7 +482,11 @@ bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_packet_mmap_tx_job);
+    if(io_mode == IO_MODE_PACKET_MMAP) {
+        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_packet_mmap_tx_job);
+    } else {
+        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_packet_mmap_raw_tx_job);
+    }
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
     timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_packet_mmap_rx_job);
 

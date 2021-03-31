@@ -26,7 +26,7 @@ typedef struct bbl_io_packet_mmap_ctx_
     struct tpacket_req req_tx;
     struct tpacket_req req_rx;
     struct sockaddr_ll addr;
-    
+    uint8_t *buf;    
     uint8_t *ring_tx; /* ringbuffer */
     uint8_t *ring_rx; /* ringbuffer */
     uint16_t cursor_tx; /* slot # inside the ringbuffer */
@@ -39,6 +39,9 @@ bool
 bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len);
 
 bool
-bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots);
+bbl_io_packet_mmap_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len);
+
+bool
+bbl_io_packet_mmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface, int slots, bbl_io_mode_t io_mode);
 
 #endif

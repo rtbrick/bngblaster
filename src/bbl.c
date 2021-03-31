@@ -292,7 +292,16 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      * selected per default. */
     switch (ctx->config.io_mode) {
         case IO_MODE_PACKET_MMAP:
-            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots)) {
+            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots, IO_MODE_PACKET_MMAP)) {
+                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
+                    interface->name, interface->ifindex, format_mac_address(interface->mac));
+            } else {
+                LOG(ERROR, "Failed to add packet_mmap interface %s\n", interface->name);
+                return NULL;
+            }
+            break;
+        case IO_MODE_PACKET_MMAP_RAW:
+            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots, IO_MODE_PACKET_MMAP_RAW)) {
                 LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
                     interface->name, interface->ifindex, format_mac_address(interface->mac));
             } else {

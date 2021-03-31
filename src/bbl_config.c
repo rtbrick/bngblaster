@@ -725,12 +725,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
 #endif
             } else if (strcmp(s, "raw") == 0) {
                 ctx->config.io_mode = IO_MODE_RAW;
+            } else if (strcmp(s, "packet_mmap_raw") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
             } else {
                 fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
                 return false;
             }
         } else {
-            ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+            ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
         }
         sub = json_object_get(section, "network");
         if (json_is_object(sub)) {
