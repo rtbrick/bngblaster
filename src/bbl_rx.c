@@ -23,6 +23,79 @@ struct keyval_ igmp_msg_names[] = {
 };
 
 bool
+bbl_add_session_packets_ipv4_l2tp (bbl_ctx_s *ctx, bbl_session_s *session)
+{
+    bbl_ethernet_header_t eth = {0};
+    bbl_ipv4_t l2tp_ipv4 = {0};
+    bbl_udp_t l2tp_udp = {0};
+    bbl_l2tp_t l2tp = {0};
+    bbl_ipv4_t ipv4 = {0};
+    bbl_udp_t udp = {0};
+    bbl_bbl_t bbl = {0};
+    uint8_t *buf;
+    uint16_t len = 0;
+
+    bbl_l2tp_session_t *l2tp_session = session->l2tp_session;
+    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+
+    if(!session->network_ipv4_tx_packet_template) {
+        session->network_ipv4_tx_packet_template = malloc(DATA_TRAFFIC_MAX_LEN);
+    }
+    buf = session->network_ipv4_tx_packet_template;
+
+    eth.dst = ctx->op.network_if->gateway_mac;
+    eth.src = ctx->op.network_if->mac;
+    eth.vlan_outer = ctx->config.network_vlan;
+    eth.vlan_inner = 0;
+    eth.type = ETH_TYPE_IPV4;
+    eth.next = &l2tp_ipv4;
+    l2tp_ipv4.dst = l2tp_tunnel->peer_ip;
+    l2tp_ipv4.src = l2tp_tunnel->server->ip;
+    l2tp_ipv4.ttl = 64;
+    l2tp_ipv4.protocol = PROTOCOL_IPV4_UDP;
+    l2tp_ipv4.next = &l2tp_udp;
+    l2tp_udp.src = L2TP_UDP_PORT;
+    l2tp_udp.dst = L2TP_UDP_PORT;
+    l2tp_udp.protocol = UDP_PROTOCOL_L2TP;
+    l2tp_udp.next = &l2tp;
+    l2tp.type = L2TP_MESSAGE_DATA;
+    l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
+    l2tp.session_id = l2tp_session->peer_session_id;
+    l2tp.protocol = PROTOCOL_IPV4;
+    l2tp.with_length = l2tp_tunnel->server->data_lenght;
+    l2tp.with_offset = l2tp_tunnel->server->data_offset;
+    l2tp.next = &ipv4;
+    ipv4.dst = session->ip_address;
+    ipv4.src = l2tp_tunnel->server->ip;
+    ipv4.ttl = 64;
+    ipv4.protocol = PROTOCOL_IPV4_UDP;
+    ipv4.next = &udp;
+    udp.src = BBL_UDP_PORT;
+    udp.dst = BBL_UDP_PORT;
+    udp.protocol = UDP_PROTOCOL_BBL;
+    udp.next = &bbl;
+    bbl.type = BBL_TYPE_UNICAST_SESSION;
+    bbl.session_id = session->session_id;
+    bbl.ifindex = session->interface->ifindex;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
+    session->network_ipv4_tx_seq = 1;
+    if(!session->network_ipv4_tx_flow_id) {
+        ctx->stats.session_traffic_flows++;
+    }
+    session->network_ipv4_tx_flow_id = ctx->flow_id++;
+    bbl.flow_id = session->network_ipv4_tx_flow_id;
+    bbl.direction = BBL_DIRECTION_DOWN;
+    bbl.sub_type = BBL_SUB_TYPE_IPV4;
+    
+    if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
+        return false;
+    }
+    session->network_ipv4_tx_packet_len = len;      
+    return true;
+}
+
+bool
 bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
@@ -86,8 +159,8 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
     }
     session->access_ipv4_tx_packet_len = len;
 
-    if(session->l2tp) {
-        return true;
+    if(session->l2tp_session) {
+        return bbl_add_session_packets_ipv4_l2tp(ctx, session);
     }
 
     /* Prepare Network to Access (Session) Packet */
@@ -117,7 +190,6 @@ bbl_add_session_packets_ipv4 (bbl_ctx_s *ctx, bbl_session_s *session)
         return false;
     }
     session->network_ipv4_tx_packet_len = len;
-
     return true;
 }
 
@@ -262,6 +334,10 @@ bbl_session_traffic_ipv4(timer_s *timer)
             timer->periodic = false; /* Stop periodic timer */
             return;
         }
+        if(session->l2tp && session->l2tp_session == NULL) {
+            timer->periodic = false; /* Stop periodic timer */
+            return;
+        }
     } else {
         if(session->session_state != BBL_ESTABLISHED) {
             timer->periodic = false; /* Stop periodic timer */
@@ -271,10 +347,8 @@ bbl_session_traffic_ipv4(timer_s *timer)
     if(session->session_traffic) {
         session->send_requests |= BBL_SEND_SESSION_IPV4;
         bbl_session_tx_qnode_insert(session);
-        if(session->l2tp == false) {
-            session->network_send_requests |= BBL_SEND_SESSION_IPV4;
-            bbl_session_network_tx_qnode_insert(session);
-        }
+        session->network_send_requests |= BBL_SEND_SESSION_IPV4;
+        bbl_session_network_tx_qnode_insert(session);
     }
 }
 
@@ -781,7 +855,7 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                         memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
                     }
                 }
-                if(session->l2tp == false &&  ctx->config.session_traffic_ipv6_pps && 
+                if(session->l2tp == false && ctx->config.session_traffic_ipv6_pps && 
                    ctx->op.network_if && ctx->op.network_if->ip6.len) {
                     /* Start IPv6 Session Traffic */
                     if(bbl_add_session_packets_ipv6(ctx, session, false)) {
@@ -1040,16 +1114,38 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     bbl_pap_t *pap;
     bbl_ctx_s *ctx = interface->ctx;
 
+    char substring[16];
+    char *tok;
+    
+    l2tp_key_t key = {0};
+    void **search = NULL;
+
     pppoes = (bbl_pppoe_session_t*)eth->next;
     pap = (bbl_pap_t*)pppoes->next;
 
     if(session->session_state == BBL_PPP_AUTH) {
         switch(pap->code) {
             case PAP_CODE_ACK:
-                if(pap->reply_message_len) {
-                    if(strncmp(pap->reply_message, L2TP_REPLY_MESSAGE, pap->reply_message_len) == 0) {
+                if(pap->reply_message_len > 23) {
+                    if(strncmp(pap->reply_message, L2TP_REPLY_MESSAGE, 20) == 0) {
                         session->l2tp = true;
-                        LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS\n", session->session_id);
+                        memset(substring, 0x0, sizeof(substring));
+                        memcpy(substring, pap->reply_message+21, pap->reply_message_len-21);
+                        tok = strtok(substring, ":");
+                        if(tok) {
+                            key.tunnel_id = atoi(tok);
+                            tok = strtok(0, ":");
+                            if(tok) {
+                                key.session_id = atoi(tok);
+                                search = dict_search(ctx->l2tp_session_dict, &key);
+                                if(search) {
+                                    session->l2tp_session = *search;
+                                    session->l2tp_session->pppoe_session = session;
+                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n", 
+                                        session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
+                                }
+                            }
+                        }
                     }
                 }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
@@ -1117,6 +1213,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
             case CHAP_CODE_SUCCESS:
                 if(chap->reply_message_len > 23) {
                     if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, 20) == 0) {
+                        session->l2tp = true;
                         memset(substring, 0x0, sizeof(substring));
                         memcpy(substring, chap->reply_message+21, chap->reply_message_len-21);
                         tok = strtok(substring, ":");
@@ -1127,8 +1224,8 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                                 key.session_id = atoi(tok);
                                 search = dict_search(ctx->l2tp_session_dict, &key);
                                 if(search) {
-                                    session->l2tp = true;
                                     session->l2tp_session = *search;
+                                    session->l2tp_session->pppoe_session = session;
                                     LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n", 
                                         session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
                                 }
