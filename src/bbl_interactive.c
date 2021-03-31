@@ -392,7 +392,6 @@ bbl_stats_job (timer_s *timer)
             }
         }
     }
-    wclrtoeol(stats_win);          
     wrefresh(stats_win);
 }
 
