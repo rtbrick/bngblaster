@@ -422,7 +422,8 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         
         /* Session traffic */
         session->session_traffic = access_config->session_traffic_autostart;
-    
+        session->stream_traffic = true;
+        
         /* Set access type specifc values */
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             session->mru = ctx->config.ppp_mru;

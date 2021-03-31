@@ -25,7 +25,7 @@ extern uint8_t g_access_if_selected;
 extern const char banner[];
 
 static void
-enable_disable_session_traffic(bbl_ctx_s *ctx, bool status)
+enable_disable_traffic(bbl_ctx_s *ctx, bool status)
 {
     bbl_session_s *session;
     uint32_t i;
@@ -35,6 +35,7 @@ enable_disable_session_traffic(bbl_ctx_s *ctx, bool status)
         session = ctx->session_list[i];
         if(session) {
             session->session_traffic = status;
+            session->stream_traffic = status;
         }
     }
 }
@@ -57,12 +58,12 @@ bbl_read_key_job (timer_s *timer)
             }
             break;
         case KEY_F(7):
-            enable_disable_session_traffic(ctx, true);
-            LOG(NORMAL, "Enable session traffic\n");
+            enable_disable_traffic(ctx, true);
+            LOG(NORMAL, "Start traffic\n");
             break;
         case KEY_F(8):
-            enable_disable_session_traffic(ctx, false);
-            LOG(NORMAL, "Disable session traffic\n");
+            enable_disable_traffic(ctx, false);
+            LOG(NORMAL, "Stop traffic\n");
             break;
         case KEY_F(9):
             g_teardown = true;

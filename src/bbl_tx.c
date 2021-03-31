@@ -1241,7 +1241,7 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len)
+bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *accounting)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
@@ -1295,12 +1295,15 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len)
     } else if (session->send_requests & BBL_SEND_SESSION_IPV4) {
         result = bbl_encode_packet_session_ipv4(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV4;
+        *accounting = true;
     } else if (session->send_requests & BBL_SEND_SESSION_IPV6) {
         result = bbl_encode_packet_session_ipv6(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV6;
+        *accounting = true;
     } else if (session->send_requests & BBL_SEND_SESSION_IPV6PD) {
         result = bbl_encode_packet_session_ipv6pd(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV6PD;
+        *accounting = true;
     } else if (session->send_requests & BBL_SEND_ARP_REQUEST) {
         result = bbl_encode_packet_arp_request(session);
         session->send_requests &= ~BBL_SEND_ARP_REQUEST;
@@ -1477,6 +1480,8 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
     bbl_session_s *session;
     bbl_l2tp_queue_t *q;
 
+    bool accounting;
+
     /* Write per interface frames like ARP, ICMPv6 NS or LLDP. */
     if(interface->send_requests) {
         return bbl_encode_interface_packet(interface, buf, len);
@@ -1488,10 +1493,15 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
 
             if(session->send_requests != 0) {
-                result = bbl_encode_packet(session, buf, len);
+                accounting = false;
+                result = bbl_encode_packet(session, buf, len, &accounting);
                 if(result == PROTOCOL_SUCCESS) {
                     session->stats.packets_tx++;
                     session->stats.bytes_tx += *len;
+                    if(accounting) {
+                        session->stats.accounting_packets_tx++;
+                        session->stats.accounting_bytes_tx += *len;
+                    }
                 }
                 /* Remove only from TX queue if all requests are processed! */
                 if(session->send_requests == 0) {
