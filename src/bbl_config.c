@@ -319,6 +319,20 @@ json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
     } else {
         stream_config->pps = 1;
     }
+
+    if (json_unpack(stream, "{s:s}", "source-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &stream_config->ipv4_source_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->source-ipv4-address\n");
+            return false;
+        }
+    }
+
+    if (json_unpack(stream, "{s:s}", "source-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_source_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->source-ipv6-address\n");
+            return false;
+        }
+    }
     return true;
 }
 
