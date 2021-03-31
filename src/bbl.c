@@ -35,12 +35,7 @@ volatile bool g_teardown = false;
 volatile bool g_teardown_request = false;
 volatile uint8_t g_teardown_request_count = 0;
 
-/* This global variable is used to switch between access
- * interfaces in interactive mode (ncurses). */
-uint8_t g_access_if_selected = 0;
 
-uint8_t g_display_streams = 0; 
-uint8_t g_stream_start_index = 0; 
 
 const char banner[] = "\n"
 "      ____   __   ____         _        __                                  ,/\n"
