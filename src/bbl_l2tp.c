@@ -857,6 +857,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     bbl_stream *stream;
     void **search = NULL;
 
+    struct timespec delay;
+    uint64_t delay_nsec;
+
     UNUSED(ctx);
     UNUSED(eth);
 
@@ -976,6 +979,18 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                         stream->packets_rx++;
                         stream->rx_len = eth->length;
                         stream->rx_priority = ((bbl_ipv4_t*)eth->next)->tos;
+                        timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
+                        delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
+                        if(delay_nsec > stream->max_delay_ns) {
+                            stream->max_delay_ns = delay_nsec;
+                        }
+                        if(stream->min_delay_ns) {
+                            if(delay_nsec < stream->min_delay_ns) {
+                                stream->min_delay_ns = delay_nsec;
+                            }
+                        } else {
+                            stream->min_delay_ns = delay_nsec;
+                        }
                         if(!stream->rx_first_seq) {
                             stream->rx_first_seq = bbl->flow_seq;
                         } else {
