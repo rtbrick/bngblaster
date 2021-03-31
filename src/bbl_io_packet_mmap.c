@@ -124,6 +124,10 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
     tphdr = (struct tpacket2_hdr *)frame_ptr;
 
     if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
+        if(io_ctx->pollout) {
+            /* We already polled kernel. */
+            return;
+        }
         /* If no buffer is available poll kernel. */
         fds[0].fd = io_ctx->fd_tx;
         fds[0].events = POLLOUT;
@@ -131,9 +135,11 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
         if (poll(fds, 1, 0) == -1) {
             LOG(IO, "Failed to TX poll interface %s", interface->name);
         }
+        io_ctx->pollout = true;
         interface->stats.poll_tx++;
         return;
     }
+    io_ctx->pollout = false;
 
     /* Get TX timestamp */
     clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);

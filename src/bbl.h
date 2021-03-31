@@ -45,8 +45,7 @@
 #include "bbl_l2tp.h"
 #include "bbl_li.h"
 
-#define WRITE_BUF_LEN               1514
-#define SCRATCHPAD_LEN              1514
+#define SCRATCHPAD_LEN              2048
 #define CHALLENGE_LEN               16
 
 /* Access Interface */
