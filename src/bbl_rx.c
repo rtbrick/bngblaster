@@ -781,7 +781,7 @@ bbl_rx_udp(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interf
                     interface->stats.session_ipv6_wrong_session++;
                     return;
                 }
-                if(bbl->flow_id == session->network_ipv4_tx_flow_id) {
+                if(bbl->flow_id == session->network_ipv6_tx_flow_id) {
                     /* Session traffic */
                     interface->stats.session_ipv6_rx++;
                     session->stats.access_ipv6_rx++;
@@ -807,7 +807,7 @@ bbl_rx_udp(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interf
                     interface->stats.session_ipv6pd_wrong_session++;
                     return;
                 }
-                if(bbl->flow_id == session->network_ipv4_tx_flow_id) {
+                if(bbl->flow_id == session->network_ipv6pd_tx_flow_id) {
                     /* Session traffic */
                     interface->stats.session_ipv6pd_rx++;
                     session->stats.access_ipv6pd_rx++;
