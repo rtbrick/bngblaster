@@ -509,8 +509,8 @@ bbl_stream_tx_job (timer_s *timer) {
         if(packets_expected > stream->send_window_packets) {
             packets = packets_expected - stream->send_window_packets;
         }
-        if(packets > (interface->ctx->config.io_slots >> 1)) {
-            packets = (interface->ctx->config.io_slots >> 1);
+        if(packets > 32) {
+            packets = 32;
         }
     }
 
@@ -616,6 +616,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 if(stream->tx_interval < ctx->config.tx_interval) {
                     timer_sec = 0;
                     timer_nsec = ctx->config.tx_interval;
+                    stream->tx_interval = ctx->config.tx_interval;
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
@@ -649,6 +650,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 if(stream->tx_interval < ctx->config.tx_interval) {
                     timer_sec = 0;
                     timer_nsec = ctx->config.tx_interval;
+                    stream->tx_interval = ctx->config.tx_interval;
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
