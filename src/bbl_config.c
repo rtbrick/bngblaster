@@ -333,6 +333,11 @@ json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
             return false;
         }
     }
+
+    value = json_object_get(stream, "threaded");
+    if (json_is_boolean(value)) {
+        stream_config->threaded = json_boolean_value(value);
+    }
     return true;
 }
 

@@ -516,7 +516,8 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 void
 bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
 {
-    uint idx, div;
+    uint8_t idx; 
+    uint64_t div;
     uint64_t sum;
 
     if(current_value == 0) return;

@@ -102,7 +102,7 @@ typedef struct bbl_session_ bbl_session_s;
 
 typedef struct bbl_rate_
 {
-    uint32_t diff_value[BBL_AVG_SAMPLES];
+    uint64_t diff_value[BBL_AVG_SAMPLES];
     uint32_t cursor;
     uint64_t last_value;
     uint64_t avg;
