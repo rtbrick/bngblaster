@@ -9,12 +9,7 @@
 #include "bbl.h"
 #include "bbl_stream.h"
 #include "bbl_stats.h"
-#include "bbl_io_packet_mmap.h"
-#include "bbl_io_raw.h"
-#ifdef BNGBLASTER_NETMAP
-    #include "bbl_io_netmap.h"
-#endif
-
+#include "bbl_io.h"
 
 bool
 bbl_stream_can_send(bbl_stream *stream) {
@@ -521,31 +516,8 @@ bbl_stream_tx_job (timer_s *timer) {
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet ... */
-        switch (interface->io_mode) {
-            case IO_MODE_PACKET_MMAP:
-                if(!bbl_io_packet_mmap_send(interface, stream->buf, stream->tx_len)) {
-                    return;
-                }
-                break;
-            case IO_MODE_PACKET_MMAP_RAW:
-                if(!bbl_io_packet_mmap_raw_send(interface, stream->buf, stream->tx_len)) {
-                    return;
-                }
-                break;
-            case IO_MODE_RAW:
-                if(!bbl_io_raw_send(interface, stream->buf, stream->tx_len)) {
-                    return;
-                }
-                break;
-    #ifdef BNGBLASTER_NETMAP
-            case IO_MODE_NETMAP:
-                if(!bbl_io_netmap_send(interface, stream->buf, stream->tx_len)) {
-                    return;
-                }
-                break;
-    #endif
-            default:
-                return;
+        if(!bbl_io_send(interface, stream->buf, stream->tx_len)) {
+            return;
         }
         stream->send_window_packets++;
         stream->packets_tx++;

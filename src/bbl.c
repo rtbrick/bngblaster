@@ -20,11 +20,7 @@
 #include "bbl_interactive.h"
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
-#include "bbl_io_packet_mmap.h"
-#include "bbl_io_raw.h"
-#ifdef BNGBLASTER_NETMAP
-    #include "bbl_io_netmap.h"
-#endif
+#include "bbl_io.h"
 #include <sys/stat.h>
 
 /* Global Variables */
@@ -231,10 +227,9 @@ bbl_interface_unlock_all(bbl_ctx_s *ctx) {
  *
  * @param ctx global context
  * @param interface interface.
- * @param slots ring buffer size 
  */
 bbl_interface_s *
-bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
+bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
 {
     bbl_interface_s *interface;
     struct ifreq ifr;
@@ -290,48 +285,9 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
 
     /* The BNG Blaster supports multiple IO modes where packet_mmap is
      * selected per default. */
-    switch (ctx->config.io_mode) {
-        case IO_MODE_PACKET_MMAP:
-            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots, IO_MODE_PACKET_MMAP)) {
-                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
-                    interface->name, interface->ifindex, format_mac_address(interface->mac));
-            } else {
-                LOG(ERROR, "Failed to add packet_mmap interface %s\n", interface->name);
-                return NULL;
-            }
-            break;
-        case IO_MODE_PACKET_MMAP_RAW:
-            if(bbl_io_packet_mmap_add_interface(ctx, interface, slots, IO_MODE_PACKET_MMAP_RAW)) {
-                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
-                    interface->name, interface->ifindex, format_mac_address(interface->mac));
-            } else {
-                LOG(ERROR, "Failed to add packet_mmap interface %s\n", interface->name);
-                return NULL;
-            }
-            break;
-        case IO_MODE_RAW:
-            if(bbl_io_raw_add_interface(ctx, interface, slots)) {
-                LOG(NORMAL, "Interface %s added (mode: raw, index: %u mac: %s)\n",
-                    interface->name, interface->ifindex, format_mac_address(interface->mac));
-            } else {
-                LOG(ERROR, "Failed to add raw socket interface %s\n", interface->name);
-                return NULL;
-            }
-            break;
-#ifdef BNGBLASTER_NETMAP
-        case IO_MODE_NETMAP:
-            if(bbl_io_netmap_add_interface(ctx, interface, slots)) {
-                LOG(NORMAL, "Interface %s added (mode: packet_mmap, index: %u mac: %s)\n",
-                    interface->name, interface->ifindex, format_mac_address(interface->mac));
-            } else {
-                LOG(ERROR, "Failed to add netmap interface %s\n", interface->name);
-                return NULL;
-            }
-            break;
-#endif
-        default:
-            LOG(ERROR, "Failed to add interface %s because of unsupported io-mode\n", interface->name);
-            return NULL;
+    if(!bbl_io_add_interface(ctx, interface)) {
+        LOG(ERROR, "Failed to add interface %s\n", interface->name);
+        return NULL;     
     }
 
     /*
@@ -339,7 +295,6 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name, int slots)
      */
     timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
 		               bbl_compute_interface_rate_job);
-
 
     return interface;
 }
@@ -365,7 +320,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
                 }
             }
         }
-        access_if = bbl_add_interface(ctx, access_config->interface, ctx->config.io_slots);
+        access_if = bbl_add_interface(ctx, access_config->interface);
         if (!access_if) {
             LOG(ERROR, "Failed to add access interface %s\n", access_config->interface);
             return false;
@@ -429,7 +384,7 @@ bbl_print_version (void)
         printf("  SHA: %s\n", GIT_SHA);
     }
 
-    printf("IO Modes: packet_mmap (default), raw");
+    printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
 #ifdef BNGBLASTER_NETMAP
     printf(", netmap");
 #endif
@@ -745,7 +700,7 @@ main (int argc, char *argv[])
      * Add network interface.
      */
     if (strlen(ctx->config.network_if)) {
-        ctx->op.network_if = bbl_add_interface(ctx, ctx->config.network_if, ctx->config.io_slots);
+        ctx->op.network_if = bbl_add_interface(ctx, ctx->config.network_if);
         if (!ctx->op.network_if) {
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to add network interface\n");

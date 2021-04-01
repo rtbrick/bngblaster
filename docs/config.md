@@ -97,14 +97,16 @@ Attribute | Description | Default
 `tx-interval` | TX ring polling interval in milliseconds | 5.0
 `rx-interval` | RX ring polling interval in milliseconds | 5.0
 `qdisc-bypass` | Bypass the kernel's qdisc layer | true
-`io-mode` | IO mode | packet_mmap
+`io-mode` | IO mode | packet_mmap_raw
 `io-slots` | IO slots (ring size) | 1024
 
 WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
 This issue was frequently seen on Ubuntu 20.04. 
 
 The supported IO modes are listed with `bngblaster -v` but except
-`packet_mmap` all other modes are currently considered as experimental. 
+`packet_mmap_raw` all other modes are currently considered as experimental. In 
+the default mode (`packet_mmap_raw`) all packets are received in a ring buffer
+and send directly trough raw sockets. 
 
 ### Network Interface
 
