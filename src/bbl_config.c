@@ -717,16 +717,16 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             ctx->config.io_slots = json_number_value(value);
         }
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
-            if (strcmp(s, "packet_mmap") == 0) {
-                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+            if (strcmp(s, "packet_mmap_raw") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
 #if BNGBLASTER_NETMAP
             } else if (strcmp(s, "netmap") == 0) {
                 ctx->config.io_mode = IO_MODE_NETMAP;
 #endif
+            } else if (strcmp(s, "packet_mmap") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
             } else if (strcmp(s, "raw") == 0) {
                 ctx->config.io_mode = IO_MODE_RAW;
-            } else if (strcmp(s, "packet_mmap_raw") == 0) {
-                ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
             } else {
                 fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
                 return false;

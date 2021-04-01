@@ -37,6 +37,14 @@
 #define NCURSES_NOMACROS 1
 #include <curses.h>
 
+/* Experimental NETMAP Support */
+#ifdef BNGBLASTER_NETMAP
+#define LIBNETMAP_NOTHREADSAFE
+#include <net/netmap.h>
+#define NETMAP_WITH_LIBS
+#include <net/netmap_user.h>
+#endif
+
 #include "libdict/dict.h"
 #include "bbl_logging.h"
 #include "bbl_timer.h"
@@ -45,6 +53,7 @@
 #include "bbl_l2tp.h"
 #include "bbl_li.h"
 
+#define IO_BUFFER_LEN               2048
 #define SCRATCHPAD_LEN              2048
 #define CHALLENGE_LEN               16
 
@@ -101,10 +110,10 @@ typedef struct bbl_rate_
 } bbl_rate_s;
 
 typedef enum {
-    IO_MODE_PACKET_MMAP = 0,
-    IO_MODE_NETMAP,
-    IO_MODE_RAW,
-    IO_MODE_PACKET_MMAP_RAW,
+    IO_MODE_PACKET_MMAP_RAW = 0,    /* RX packet_mmap ring / TX raw sockets */
+    IO_MODE_PACKET_MMAP,            /* RX/TX packet_mmap ring */
+    IO_MODE_RAW,                    /* RX/TX raw sockets */
+    IO_MODE_NETMAP                  /* RX/TX netmap ring */
 } __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {
@@ -158,8 +167,28 @@ typedef struct bbl_interface_
     struct timer_ *timer_arp;
     struct timer_ *timer_nd;
 
-    bbl_io_mode_t io_mode;
-    void *io_ctx; /* IO context */
+    struct {
+        bbl_io_mode_t mode;
+
+        int fd_tx;
+        int fd_rx;
+
+        struct tpacket_req req_tx;
+        struct tpacket_req req_rx;
+        struct sockaddr_ll addr;
+
+        uint8_t *buf; /* IO buffer */
+        uint8_t *ring_tx; /* TX ring buffer */
+        uint8_t *ring_rx; /* RX ring buffer */
+        uint16_t cursor_tx; /* slot # inside the ring buffer */
+        uint16_t cursor_rx; /* slot # inside the ring buffer */
+
+        bool pollout;
+
+#ifdef BNGBLASTER_NETMAP
+        struct nm_desc *port;
+#endif
+    } io;
 
     uint32_t ifindex; /* interface index */
     uint32_t pcap_index; /* interface index for packet captures */
@@ -177,7 +206,7 @@ typedef struct bbl_interface_
     ipv6_prefix gateway6;
 
     uint8_t *mc_packets;
-    uint     mc_packet_len;
+    uint16_t mc_packet_len;
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
 

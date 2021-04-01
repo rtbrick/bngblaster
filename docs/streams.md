@@ -7,9 +7,8 @@ Traffic streams allow to test QoS using BNG Blaster.
 ```json
 {
     "interfaces": {
-        "tx-interval": 0.01,
+        "tx-interval": 1,
         "rx-interval": 1,
-        "io-slots": 8192,
         "network": {
             "interface": "eth2",
             "address": "10.0.0.1",
@@ -83,9 +82,10 @@ Traffic streams allow to test QoS using BNG Blaster.
             "stream-group-id": 1,
             "type": "ipv4", 
             "direction": "downstream",
-            "length": 1000,
             "priority": 128,
             "vlan-priority": 2,
+            "source-ipv4-address": "10.0.0.10",
+            "length": 1000,
             "pps": 100
         },
         {
@@ -99,10 +99,6 @@ Traffic streams allow to test QoS using BNG Blaster.
     ]
 }
 ```
-
-To reduce traffic burst the `tx-interval` should be set to at least 0.1 milliseconds 
-where `rx-interval` set to 1 millisecond is fine. The optimal settings here
-depend on actual test environment.
 
 ## Check Session Stream Information
 
