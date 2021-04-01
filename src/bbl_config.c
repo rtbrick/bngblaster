@@ -734,6 +734,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         } else {
             ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
         }
+        value = json_object_get(section, "io-stream-max-ppi");
+        if (json_is_number(value)) {
+            ctx->config.io_stream_max_ppi = json_number_value(value);
+        }
         sub = json_object_get(section, "network");
         if (json_is_object(sub)) {
             if (json_unpack(sub, "{s:s}", "interface", &s) == 0) {
@@ -983,6 +987,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.tx_interval = 5 * MSEC;
     ctx->config.rx_interval = 5 * MSEC;
     ctx->config.io_slots = 1024;
+    ctx->config.io_stream_max_ppi = 32;
     ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
     ctx->config.sessions_max_outstanding = 800;
