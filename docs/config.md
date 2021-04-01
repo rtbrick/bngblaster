@@ -551,5 +551,8 @@ Attribute | Description | Default
 `pps` | Stream traffic rate in packets per second | 1 
 `source-ipv4-address` | Overwrite source IPv4 address (downstream only) | 
 `source-ipv6-address` | Overwrite source IPv6 address (downstream only) | 
+`threaded` | Run those streams in separate threads | false
 
-For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header. 
+For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
+
+The threading support is experimental and should be used with caution! 

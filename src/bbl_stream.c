@@ -562,7 +562,7 @@ bbl_stream_tx_thread (void *thread_data) {
             stream->flow_seq++;
             packets--;
         }
-        sleep.tv_nsec = 1000;
+        sleep.tv_nsec = 1000; /* 0.001ms */
         nanosleep(&sleep, &rem);
     }
     return NULL;
