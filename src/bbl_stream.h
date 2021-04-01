@@ -37,6 +37,7 @@ typedef struct bbl_stream_config_
     uint32_t ipv4_source_address; /* overwrite default IPv4 source address */
     ipv6addr_t ipv6_source_address; /* overwrite default IPv6 source address */
 
+    bool threaded;
     void *next; /* next bbl_stream_config */
 } bbl_stream_config;
 
@@ -70,6 +71,9 @@ typedef struct bbl_stream_
 
     uint64_t packets_tx;
     uint64_t packets_rx;
+    uint64_t packets_tx_last_sync;
+    uint64_t packets_rx_last_sync;
+
     uint64_t loss;
 
     uint64_t min_delay_ns;

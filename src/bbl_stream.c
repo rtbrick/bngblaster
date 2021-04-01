@@ -10,6 +10,9 @@
 #include "bbl_stream.h"
 #include "bbl_stats.h"
 #include "bbl_io.h"
+#include <pthread.h>
+
+extern volatile bool g_teardown;
 
 bool
 bbl_stream_can_send(bbl_stream *stream) {
@@ -458,6 +461,136 @@ bbl_stream_build_packet(bbl_stream *stream) {
     return false;
 }
 
+void *
+bbl_stream_tx_thread (void *thread_data) {
+
+    bbl_stream *stream = thread_data;
+    bbl_interface_s *interface = stream->interface;
+
+    struct timespec send_windwow;
+    struct timespec now;
+    struct timespec sleep;
+    struct timespec rem;
+
+    double d;
+    uint64_t packets;
+    uint64_t packets_expected;
+
+    struct sockaddr_ll addr = {0};
+    int fd_tx;
+    int qdisc_bypass = 1;
+
+    /* Open new TX socket for thread. */
+    fd_tx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
+    if (fd_tx == -1) {
+        LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+        return NULL;
+    }
+    addr.sll_family = PF_PACKET;
+    addr.sll_ifindex = interface->ifindex;
+    addr.sll_protocol = 0;
+    if (bind(fd_tx, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+        LOG(ERROR, "bind() TX error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        return NULL;
+    }
+    if (setsockopt(fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
+        LOG(ERROR, "Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+        return NULL;
+    }
+
+    while(!g_teardown) {
+        packets = 0;
+
+        if(!bbl_stream_can_send(stream)) {
+            /* Close send window */
+            stream->send_window_packets = 0;
+            sleep.tv_nsec = 10 * MSEC;
+            nanosleep(&sleep, &rem);
+            continue;
+        }
+        if(!stream->buf) {
+            if(!bbl_stream_build_packet(stream)) {
+                LOG(ERROR, "Failed to build packet for stream %s session-id %u\n", 
+                    stream->config->name, stream->session->session_id);
+                sleep.tv_nsec = 100 * MSEC;
+                nanosleep(&sleep, &rem);
+                continue;
+            }
+        }
+
+        if(!stream->session->stream_traffic) {
+            /* Close send window */
+            stream->send_window_packets = 0;
+            sleep.tv_nsec = 10 * MSEC;
+            nanosleep(&sleep, &rem);
+            continue;
+        }
+
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        if(stream->send_window_packets == 0) {
+            /* Open new send window */
+            stream->send_window_start.tv_sec = now.tv_sec;
+            stream->send_window_start.tv_nsec = now.tv_nsec;
+            packets = 1;
+        } else {
+            timespec_sub(&send_windwow, &now, &stream->send_window_start);
+            packets_expected = send_windwow.tv_sec * stream->config->pps;
+            d = (send_windwow.tv_nsec / 1000000000.0);
+            packets_expected += d * stream->config->pps;
+
+            if(packets_expected > stream->send_window_packets) {
+                packets = packets_expected - stream->send_window_packets;
+            }
+        }
+
+        /* Update BBL header fields */
+        clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
+        *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = interface->tx_timestamp.tv_sec;
+        *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = interface->tx_timestamp.tv_nsec;
+        while(packets) {
+            *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
+            /* Send packet ... */
+            if (sendto(fd_tx, stream->buf, stream->tx_len, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_ll)) <0 ) {
+                LOG(IO, "Sendto failed with errno: %i\n", errno);
+                sleep.tv_nsec = 1 * MSEC;
+                nanosleep(&sleep, &rem);
+                continue;
+            }
+            stream->send_window_packets++;
+            stream->packets_tx++;
+            stream->flow_seq++;
+            packets--;
+        }
+        sleep.tv_nsec = 1000;
+        nanosleep(&sleep, &rem);
+    }
+    return NULL;
+}
+
+void
+bbl_stream_tx_thread_counter_sync (timer_s *timer) {
+
+    bbl_stream *stream = timer->data;
+    bbl_interface_s *interface = stream->interface;
+
+    uint64_t packets_tx;
+    uint64_t delta_packets;
+    uint64_t delta_bytes;
+
+    packets_tx = stream->packets_tx;
+    delta_packets = packets_tx - stream->packets_tx_last_sync;
+    delta_bytes = delta_packets * stream->tx_len;
+
+    interface->stats.packets_tx += delta_packets;
+    interface->stats.bytes_tx += delta_bytes;
+    if(stream->session && stream->direction == STREAM_DIRECTION_UP) {
+        stream->session->stats.packets_tx += delta_packets;
+        stream->session->stats.bytes_tx += delta_bytes;
+    }
+    stream->packets_tx_last_sync = packets_tx;
+}
+
 void
 bbl_stream_tx_job (timer_s *timer) {
 
@@ -548,6 +681,8 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
+    
+    pthread_t thread_id;
 
     config = ctx->config.stream_config;
 
@@ -590,7 +725,12 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 } else {
                     session->stream = stream;
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
+                if(config->threaded) {
+                    pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, bbl_stream_tx_thread_counter_sync);
+                } else {
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
+                }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
                 LOG(DEBUG, "Traffic stream %s added in upstream with timer %lu sec %lu nsec\n", config->name, timer_sec, timer_nsec); 
             }
@@ -619,7 +759,12 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 } else {
                     session->stream = stream;
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
+                if(config->threaded) {
+                    pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, bbl_stream_tx_thread_counter_sync);
+                } else {
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
+                }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
                 LOG(DEBUG, "Traffic stream %s added in downstream with timer %lu sec %lu nsec\n", config->name, timer_sec, timer_nsec); 
             }
