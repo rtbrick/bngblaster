@@ -99,6 +99,7 @@ Attribute | Description | Default
 `qdisc-bypass` | Bypass the kernel's qdisc layer | true
 `io-mode` | IO mode | packet_mmap_raw
 `io-slots` | IO slots (ring size) | 1024
+`io-stream-max-ppi` | IO traffic stream max packets per interval | 32
 
 WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
 This issue was frequently seen on Ubuntu 20.04. 

@@ -504,8 +504,8 @@ bbl_stream_tx_job (timer_s *timer) {
         if(packets_expected > stream->send_window_packets) {
             packets = packets_expected - stream->send_window_packets;
         }
-        if(packets > 32) {
-            packets = 32;
+        if(packets > interface->ctx->config.io_stream_max_ppi) {
+            packets = interface->ctx->config.io_stream_max_ppi;
         }
     }
 
