@@ -771,13 +771,13 @@ main (int argc, char *argv[])
      * Start event loop.
      */
     log_open();
-    clock_gettime(CLOCK_REALTIME, &ctx->timestamp_start);
+    clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
     timer_walk(&ctx->timer_root);
     while(ctx->sessions_terminated < ctx->sessions && g_teardown_request_count < 10) {
         timer_walk(&ctx->timer_root);
     }
-    clock_gettime(CLOCK_REALTIME, &ctx->timestamp_stop);
+    clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_stop);
 
     /*
      * Stop curses. Do this before the final reports.

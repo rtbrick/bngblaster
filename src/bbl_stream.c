@@ -545,9 +545,8 @@ bbl_stream_tx_thread (void *thread_data) {
         }
 
         /* Update BBL header fields */
-        clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
-        *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = interface->tx_timestamp.tv_sec;
-        *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = interface->tx_timestamp.tv_nsec;
+        *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
+        *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
         while(packets) {
             *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
             /* Send packet ... */
@@ -643,9 +642,8 @@ bbl_stream_tx_job (timer_s *timer) {
     }
 
     /* Update BBL header fields */
-    clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
-    *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = interface->tx_timestamp.tv_nsec;
+    *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
+    *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet ... */

@@ -236,7 +236,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
         }
     }
 
-    clock_gettime(CLOCK_REALTIME, &timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
     q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
     while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
