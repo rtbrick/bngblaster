@@ -1572,6 +1572,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 /* This must be the last send operation in this function to fill up remaining slots
                 * with multicast traffic but all other types of traffic have priority. */
                 interface->mc_packet_cursor = 0;
+                interface->mc_packet_seq++;
             }
         }
     }
