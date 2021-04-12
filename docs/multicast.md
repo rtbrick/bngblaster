@@ -27,8 +27,8 @@ delay in milliseconds.
 ```json
 {
     "interfaces": {
-        "tx-interval": 1,
-        "rx-interval": 10,
+        "tx-interval": 1.0,
+        "rx-interval": 1.0,
         "network": {
             "interface": "eth2",
             "address": "100.0.0.10",
@@ -44,6 +44,9 @@ delay in milliseconds.
     }
 }
 ```
+
+The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms) for more
+precise IGMP join/leave delay measurements. 
 
 ## Manual Join/Leave Testing
 
