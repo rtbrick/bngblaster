@@ -457,7 +457,7 @@ bbl_igmp_zapping(timer_s *timer)
     struct timespec time_diff;
     struct timespec time_now;
 
-    int ms;
+    uint32_t ms;
 
     if(session->session_state != BBL_ESTABLISHED ||
        session->ipcp_state != BBL_PPP_OPENED) {
@@ -483,9 +483,10 @@ bbl_igmp_zapping(timer_s *timer)
     group = session->zapping_joined_group;
     if(group->first_mc_rx_time.tv_sec) {
         timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-        ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
         join_delay = (time_diff.tv_sec * 1000) + ms;
-
+        if(!join_delay) join_delay = 1; // join delay must be at least one millisecond
         session->zapping_join_delay_sum += join_delay;
         session->zapping_join_delay_count++;
         if(join_delay > session->stats.max_join_delay) session->stats.max_join_delay = join_delay;
@@ -530,8 +531,10 @@ bbl_igmp_zapping(timer_s *timer)
     group = session->zapping_leaved_group;
     if(group->group && group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
         timespec_sub(&time_diff, &group->last_mc_rx_time, &group->leave_tx_time);
-        ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
         leave_delay = (time_diff.tv_sec * 1000) + ms;
+        if(!leave_delay) leave_delay = 1; // leave delay must be at least one millisecond
         session->zapping_leave_delay_sum += leave_delay;
         session->zapping_leave_delay_count++;
         if(leave_delay > session->stats.max_leave_delay) session->stats.max_leave_delay = leave_delay;

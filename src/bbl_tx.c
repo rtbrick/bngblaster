@@ -295,7 +295,6 @@ bbl_encode_packet_igmp (bbl_session_s *session)
             if(group->robustness_count) {
                 group->robustness_count--;
             }
-
             if(session->igmp_version == IGMP_VERSION_3) {
                 igmp.version = IGMP_VERSION_3;
                 igmp.type = IGMP_TYPE_REPORT_V3;
@@ -374,6 +373,15 @@ bbl_encode_packet_igmp (bbl_session_s *session)
                     }
                 }
                 break;
+            }
+            if(group->state == IGMP_GROUP_JOINING) {
+                if(!group->robustness_count) {
+                    group->state = IGMP_GROUP_ACTIVE;
+                }
+            } else if(group->state == IGMP_GROUP_LEAVING) {
+                if(!group->robustness_count) {
+                    group->state = IGMP_GROUP_IDLE;
+                }
             }
         }
     }
