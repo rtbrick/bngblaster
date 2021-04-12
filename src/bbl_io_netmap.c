@@ -36,7 +36,7 @@ bbl_io_netmap_rx_job (timer_s *timer)
     ctx = interface->ctx;
 
     /* Get RX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->rx_timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
     ring = NETMAP_RXRING(interface->io.port->nifp, 0);
     while (!nm_ring_empty(ring)) {
@@ -57,9 +57,14 @@ bbl_io_netmap_rx_job (timer_s *timer)
 
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
+#if 0
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = ring->ts.tv_sec;
             eth->timestamp.tv_nsec = ring->ts.tv_usec * 1000;
+#endif
+            /* Copy RX timestamp */
+            eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
+            eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
             if(interface->access) {
                 bbl_rx_handler_access(eth, interface);
             } else {
@@ -99,7 +104,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
     ctx = interface->ctx;
 
     /* Get TX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
 
     ring = NETMAP_TXRING(interface->io.port->nifp, 0);
     while(tx_result != EMPTY) {

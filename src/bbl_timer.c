@@ -35,12 +35,11 @@ timespec_add (struct timespec *result, struct timespec *x, struct timespec *y)
 }
 
 /*
- * Subtract the timestamps x and y, storing the result in result.
+ * Subtract the timestamps x from y, storing the result in result.
  */
 void
 timespec_sub (struct timespec *result, struct timespec *x, struct timespec *y)
 {
-
     if (x->tv_sec < y->tv_sec) {
         result->tv_sec = 0;
         result->tv_nsec = 0;
@@ -51,6 +50,11 @@ timespec_sub (struct timespec *result, struct timespec *x, struct timespec *y)
      * Avoid overflow of result->tv_nsec
      */
     if (x->tv_nsec < y->tv_nsec) {
+        if (x->tv_sec == y->tv_sec) {
+            result->tv_sec = 0;
+            result->tv_nsec = 0;
+            return;
+        }
         result->tv_nsec = x->tv_nsec + 1e9 - y->tv_nsec;
         result->tv_sec = x->tv_sec - y->tv_sec - 1;
     } else {

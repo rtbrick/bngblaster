@@ -37,7 +37,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
 
 
     /* Get RX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->rx_timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
     frame_ptr = interface->io.ring_rx + (interface->io.cursor_rx * interface->io.req_rx.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
@@ -70,10 +70,13 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
             /* The outer VLAN is stripped from header */
             eth->vlan_inner = eth->vlan_outer;
             eth->vlan_outer = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
-#endif
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = tphdr->tp_sec; /* ktime/hw timestamp */
             eth->timestamp.tv_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
+#endif
+            /* Copy RX timestamp */
+            eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
+            eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
             if(interface->access) {
                 bbl_rx_handler_access(eth, interface);
             } else {
@@ -116,7 +119,7 @@ bbl_io_raw_rx_job (timer_s *timer) {
     ctx = interface->ctx;
 
     /* Get RX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->rx_timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
     while (true) {
         rx_len = recvfrom(interface->io.fd_rx, interface->io.buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
@@ -196,7 +199,7 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
     interface->io.pollout = false;
 
     /* Get TX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
 
     while(tx_result != EMPTY) {
         /* Check if this slot available for writing. */
@@ -249,7 +252,7 @@ bbl_io_raw_tx_job (timer_s *timer) {
     ctx = interface->ctx;
 
     /* Get TX timestamp */
-    clock_gettime(CLOCK_REALTIME, &interface->tx_timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
     while(tx_result != EMPTY) {
         tx_result = bbl_tx(ctx, interface, interface->io.buf, &len);
         if (tx_result == PROTOCOL_SUCCESS) {
