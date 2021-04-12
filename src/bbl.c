@@ -721,6 +721,7 @@ main (int argc, char *argv[])
                 exit(1);
             }
             ctx->multicast_traffic = true;
+            ctx->op.network_if->mc_packet_seq = 1;
         }
         if(ctx->config.network_ip6.len && ctx->config.network_gateway6.len) {
             memcpy(&ctx->op.network_if->ip6, &ctx->config.network_ip6, sizeof(ipv6_prefix));
