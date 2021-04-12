@@ -101,13 +101,16 @@ Attribute | Description | Default
 `io-slots` | IO slots (ring size) | 1024
 `io-stream-max-ppi` | IO traffic stream max packets per interval | 32
 
-WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
-This issue was frequently seen on Ubuntu 20.04. 
+The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms)
+if more precise timestamps are needed. This is recommended for IGMP join/leave 
+or QoS delay measurements.
 
 The supported IO modes are listed with `bngblaster -v` but except
 `packet_mmap_raw` all other modes are currently considered as experimental. In 
-the default mode (`packet_mmap_raw`) all packets are received in a ring buffer
-and send directly trough raw sockets. 
+the default mode (`packet_mmap_raw`) all packets are received in a packet_mmap 
+ring buffer and send directly trough raw sockets. 
+
+**WARNING**: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
 
 ### Network Interface
 
@@ -121,7 +124,6 @@ Attribute | Description | Default
 `address-ipv6` | Local network interface IPv6 address (implicitly /64) | - 
 `gateway-ipv6` | Gateway network interface IPv6 address (implicitly /64)
 `vlan` | Network interface VLAN | 0 (untagged)
-
 
 ### Access Interfaces
 
@@ -159,7 +161,7 @@ Attribute | Description | Default
 
 **WARNING**: DHCP (IPv4) is currently not supported!
 
-But for all modes it is possible to configure between zero and three VLAN
+For all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
 
 ```
@@ -424,11 +426,11 @@ Attribute | Description | Default
 
 This section describes all attributes of the `dhcp` hierarchy. 
 
-**WARNING**: DHCP (IPv4) is currently not supported!
-
 Attribute | Description | Default 
 --------- | ----------- | -------
 `enable` | This option allows to enable or disable DHCP | true
+
+**WARNING**: DHCP (IPv4) is currently not supported!
 
 ## DHCPv6
 
@@ -555,4 +557,4 @@ Attribute | Description | Default
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
 
-The threading support is experimental and should be used with caution! 
+**WARNING**: The threading support is experimental and should be used with caution! 
