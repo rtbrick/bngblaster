@@ -55,8 +55,8 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     bbl_session_s *session;
     uint32_t i;
 
-    int join_delays = 0;
-    int leave_delays = 0;
+    uint32_t join_delays = 0;
+    uint32_t leave_delays = 0;
 
     bbl_stats_update_cps(ctx);
 
@@ -142,10 +142,10 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         }
     }
     if(join_delays) {
-        stats->avg_join_delay = round(stats->avg_join_delay / join_delays);
+        stats->avg_join_delay = stats->avg_join_delay / join_delays;
     }
     if(leave_delays) {
-        stats->avg_leave_delay = round(stats->avg_leave_delay / leave_delays);
+        stats->avg_leave_delay = stats->avg_leave_delay / leave_delays;
     }
 }
 
