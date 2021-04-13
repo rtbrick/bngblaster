@@ -449,8 +449,8 @@ typedef struct bbl_ctx_
 
     /* Global Stats */
     struct {
-        uint32_t setup_time; // Time between first session started and last session established
-        double cps; // PPPoE setup rate in calls per second
+        uint32_t setup_time; /* Time between first session started and last session established */
+        double cps; /* PPPoE setup rate in calls per second */
         double cps_min;
         double cps_avg;
         double cps_max;
