@@ -487,7 +487,8 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
     uint16_t checksum;
 
     *(uint64_t*)buf = 0;
-    *buf = 6 <<4;
+    *(uint16_t*)buf |= be16toh(ipv6->tos << 4);
+    *buf |= 6 <<4;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
 
     /* Skip payload length field */
@@ -1660,8 +1661,13 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
     //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
+    
+    /* Check if version is 6 */
+    if(((*buf >> 4) & 0xf) != 6) {
+        return DECODE_ERROR;
+    }
 
-    ipv6->tos = (*(uint16_t*)buf >> 4) & UINT8_MAX;
+    ipv6->tos = (be16toh(*(uint16_t*)buf) >> 4);
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
     ipv6->payload_len = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
