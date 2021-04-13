@@ -96,7 +96,11 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
         case STREAM_IPV4:
             pppoe.protocol = PROTOCOL_IPV4;
             pppoe.next = &ipv4;
-            ipv4.dst = ctx->op.network_if->ip;
+            if(stream->config->ipv4_network_address) {
+                ipv4.dst = stream->config->ipv4_network_address;
+            } else {
+                ipv4.dst = ctx->op.network_if->ip;
+            }       
             ipv4.src = session->ip_address;
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -110,7 +114,11 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
         case STREAM_IPV6:
             pppoe.protocol = PROTOCOL_IPV6;
             pppoe.next = &ipv6;
-            ipv6.dst = ctx->op.network_if->ip6.address;
+            if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.dst = stream->config->ipv6_network_address;
+            } else {
+                ipv6.dst = ctx->op.network_if->ip6.address;
+            }
             ipv6.src = session->ipv6_address;
             ipv6.ttl = 64;
             ipv4.tos = config->priority;
@@ -124,7 +132,11 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
         case STREAM_IPV6PD:
             pppoe.protocol = PROTOCOL_IPV6;
             pppoe.next = &ipv6;
-            ipv6.dst = ctx->op.network_if->ip6.address;
+            if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.dst = stream->config->ipv6_network_address;
+            } else {
+                ipv6.dst = ctx->op.network_if->ip6.address;
+            }
             ipv6.src = session->delegated_ipv6_address;
             ipv6.ttl = 64;
             ipv4.tos = config->priority;
