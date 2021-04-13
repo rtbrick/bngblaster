@@ -1376,6 +1376,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     bbl_icmpv6_t icmpv6 = {0};
 
     bbl_secondary_ip_s *secondary_ip;
+    bbl_secondary_ip6_s *secondary_ip6;
 
     eth.src = interface->mac;
     eth.vlan_outer = interface->ctx->config.network_vlan;
@@ -1455,7 +1456,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
         ipv6.src = interface->ip6.address;
-        ipv6.dst = interface->gateway6.address;
+        ipv6.dst = interface->icmpv6_src;
         ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
         ipv6.next = &icmpv6;
         ipv6.ttl = 255;
@@ -1463,6 +1464,31 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         memcpy(icmpv6.prefix.address, interface->ip6.address, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         result = encode_ethernet(buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_SEC_ICMPV6_NA) {
+        secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
+        while(secondary_ip6) {
+            if(secondary_ip6->icmpv6_na) {
+                secondary_ip6->icmpv6_na = false;
+                eth.dst = interface->gateway_mac;
+                eth.type = ETH_TYPE_IPV6;
+                eth.next = &ipv6;
+                ipv6.src = secondary_ip6->ip;
+                ipv6.dst = secondary_ip6->icmpv6_src;
+                ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+                ipv6.next = &icmpv6;
+                ipv6.ttl = 255;
+                icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
+                memcpy(icmpv6.prefix.address, secondary_ip6->ip, IPV6_ADDR_LEN);
+                icmpv6.mac = interface->mac;
+                result = encode_ethernet(buf, len, &eth);
+                break;
+            }
+            secondary_ip6 = secondary_ip6->next;
+        }
+        if(!secondary_ip6) {
+            /* Stop if we reach end of secondary IP address list */
+            interface->send_requests &= ~BBL_IF_SEND_SEC_ICMPV6_NA;
+        }
     } else {
         interface->send_requests = 0;
     }

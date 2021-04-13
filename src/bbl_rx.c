@@ -733,7 +733,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
         stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
 
         timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
-        delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
+        delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
         if(delay_nsec > stream->max_delay_ns) {
             stream->max_delay_ns = delay_nsec;
         }
@@ -893,9 +893,13 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
             }
         }
         session->icmpv6_ra_received = true;
-    } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
-        session->send_requests |= BBL_IF_SEND_ICMPV6_NA;
     }
+#if 0
+    /* TODO: ICMPv6 neighbor discovery over PPPoE is currently not implemented! */
+     else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
+        session->send_requests |= BBL_SEND_ICMPV6_NA;
+    }
+#endif
 }
 
 void
@@ -1968,20 +1972,32 @@ void
 bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_ipv6_t *ipv6;
     bbl_icmpv6_t *icmpv6;
+    bbl_secondary_ip6_s *secondary_ip6;
+
     ipv6 = (bbl_ipv6_t*)eth->next;
     icmpv6 = (bbl_icmpv6_t*)ipv6->next;
 
-    if(memcmp(ipv6->src, interface->gateway6.address, ETH_ADDR_LEN) == 0) {
+    if(memcmp(ipv6->src, interface->gateway6.address, IPV6_ADDR_LEN) == 0) {
         interface->icmpv6_nd_resolved = true;
         if(*(uint32_t*)interface->gateway_mac == 0) {
             memcpy(interface->gateway_mac, eth->src, ETH_ADDR_LEN);
         }
-        switch(icmpv6->type) {
-            case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
-                interface->send_requests |= BBL_IF_SEND_ICMPV6_NA;
-                break;
-            default:
-                break;
+    }
+    if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
+        if(memcmp(icmpv6->prefix.address, interface->ip6.address, IPV6_ADDR_LEN) == 0) {
+            memcpy(interface->icmpv6_src, ipv6->src, IPV6_ADDR_LEN);
+            interface->send_requests |= BBL_IF_SEND_ICMPV6_NA;
+        } else {
+            secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
+            while(secondary_ip6) {
+                if(memcmp(icmpv6->prefix.address, secondary_ip6->ip, IPV6_ADDR_LEN) == 0) {
+                    secondary_ip6->icmpv6_na = true;
+                    memcpy(secondary_ip6->icmpv6_src, ipv6->src, IPV6_ADDR_LEN);
+                    interface->send_requests |= BBL_IF_SEND_SEC_ICMPV6_NA;
+                    return;
+                }
+                secondary_ip6 = secondary_ip6->next;
+            }
         }
     }
 }

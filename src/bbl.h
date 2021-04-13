@@ -87,6 +87,7 @@
 #define BBL_IF_SEND_ICMPV6_NS       0x00000004
 #define BBL_IF_SEND_ICMPV6_NA       0x00000008
 #define BBL_IF_SEND_SEC_ARP_REPLY   0x00000010
+#define BBL_IF_SEND_SEC_ICMPV6_NA   0x00000020
 
 #define DUID_LEN                    10
 
@@ -156,6 +157,14 @@ typedef struct bbl_secondary_ip_
     void *next;
 } bbl_secondary_ip_s;
 
+typedef struct bbl_secondary_ip6_
+{
+    ipv6addr_t ip;
+    ipv6addr_t icmpv6_src;
+    bool icmpv6_na;
+    void *next;
+} bbl_secondary_ip6_s;
+
 typedef struct bbl_interface_
 {
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
@@ -201,9 +210,11 @@ typedef struct bbl_interface_
     uint8_t  mac[ETH_ADDR_LEN];
     uint8_t  gateway_mac[ETH_ADDR_LEN];
 
-    bool        icmpv6_nd_resolved;
+
     ipv6_prefix ip6;
     ipv6_prefix gateway6;
+    ipv6addr_t  icmpv6_src;
+    bool        icmpv6_nd_resolved;
 
     uint8_t *mc_packets;
     uint16_t mc_packet_len;
@@ -489,6 +500,7 @@ typedef struct bbl_ctx_
         uint16_t network_vlan;
 
         bbl_secondary_ip_s *secondary_ip_addresses;
+        bbl_secondary_ip6_s *secondary_ip6_addresses;
 
         /* Access Interfaces  */
         bbl_access_config_s *access_config;
