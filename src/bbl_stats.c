@@ -16,7 +16,7 @@ extern const char banner[];
 void
 bbl_stats_update_cps (bbl_ctx_s *ctx) {
     struct timespec time_diff = {0};
-    int ms;
+    uint32_t ms;
     double x, y;
 
     /* Session setup time and rate */
@@ -27,7 +27,8 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
 		     &ctx->stats.last_session_established,
 		     &ctx->stats.first_session_tx);
 
-        ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
         ctx->stats.setup_time = (time_diff.tv_sec * 1000) + ms; // Setup time in milliseconds
 
         x = ctx->sessions_established_max;
