@@ -52,6 +52,40 @@ add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
     }
 }
 
+static void
+add_secondary_ipv6(bbl_ctx_s *ctx, ipv6addr_t ipv6) {
+    bbl_secondary_ip6_s  *secondary_ip6;
+
+    if(memcmp(ipv6, ctx->config.network_ip6.address, IPV6_ADDR_LEN) != 0) {
+        /* Add secondary IP address to be served by ICMPv6 */
+        secondary_ip6 = ctx->config.secondary_ip6_addresses;
+        if(secondary_ip6) {
+            while(secondary_ip6) {
+                if(memcmp(secondary_ip6->ip, ctx->config.network_ip6.address, IPV6_ADDR_LEN) == 0) {
+                    /* Address is already known ... */
+                    break;
+                }
+                if(secondary_ip6->next) {
+                    /* Check next address ... */
+                    secondary_ip6 = secondary_ip6->next;
+                } else {
+                    /* Append secondary address ... */
+                    secondary_ip6->next = malloc(sizeof(bbl_secondary_ip6_s));
+                    memset(secondary_ip6->next, 0x0, sizeof(bbl_secondary_ip6_s));
+                    secondary_ip6 = secondary_ip6->next;
+                    memcpy(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN);
+                    break;
+                }
+            }
+        } else {
+            /* Add first secondary address */
+            ctx->config.secondary_ip6_addresses = malloc(sizeof(bbl_secondary_ip6_s));
+            memset(ctx->config.secondary_ip6_addresses, 0x0, sizeof(bbl_secondary_ip6_s));
+            memcpy(ctx->config.secondary_ip6_addresses->ip, ipv6, IPV6_ADDR_LEN);
+        }
+    }
+}
+
 static bool
 json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_access_config_s *access_config) {
     json_t *value = NULL;
@@ -367,6 +401,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
             fprintf(stderr, "JSON config error: Invalid value for stream->network-ipv6-address\n");
             return false;
         }
+        add_secondary_ipv6(ctx, stream_config->ipv6_network_address);
     }
 
     value = json_object_get(stream, "threaded");

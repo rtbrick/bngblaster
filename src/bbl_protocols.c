@@ -1161,7 +1161,7 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
     if(eth->dst) {
         memcpy(buf, eth->dst, ETH_ADDR_LEN);
     } else {
-        /* Default braodcast */
+        /* Default broadcast */
         memset(buf, 0xff, ETH_ADDR_LEN);
     }
     BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
