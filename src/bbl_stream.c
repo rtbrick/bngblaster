@@ -121,7 +121,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
             }
             ipv6.src = session->ipv6_address;
             ipv6.ttl = 64;
-            ipv4.tos = config->priority;
+            ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
             ipv6.next = &udp;
             bbl.sub_type = BBL_SUB_TYPE_IPV6;
@@ -139,7 +139,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
             }
             ipv6.src = session->delegated_ipv6_address;
             ipv6.ttl = 64;
-            ipv4.tos = config->priority;
+            ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
             ipv6.next = &udp;
             bbl.sub_type = BBL_SUB_TYPE_IPV6;
