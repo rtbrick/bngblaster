@@ -551,8 +551,8 @@ Attribute | Description | Default
 `vlan-priority` | VLAN priority | 0 
 `length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
 `pps` | Stream traffic rate in packets per second | 1 
-`source-ipv4-address` | Overwrite source IPv4 address (downstream only) | 
-`source-ipv6-address` | Overwrite source IPv6 address (downstream only) | 
+`network-ipv4-address` | Overwrite network interface IPv4 address | 
+`network-ipv6-address` | Overwrite network interface IPv6 address | 
 `threaded` | Run those streams in separate threads | false
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.

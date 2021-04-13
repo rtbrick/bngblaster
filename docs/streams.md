@@ -84,7 +84,7 @@ Traffic streams allow to test QoS using BNG Blaster.
             "direction": "downstream",
             "priority": 128,
             "vlan-priority": 2,
-            "source-ipv4-address": "10.0.0.10",
+            "network-ipv4-address": "10.0.0.10",
             "length": 1000,
             "pps": 100
         },

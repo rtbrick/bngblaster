@@ -190,7 +190,11 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
         case STREAM_IPV4:
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
-            ipv4.dst = ctx->op.network_if->ip;
+            if(stream->config->ipv4_network_address) {
+                ipv4.dst = stream->config->ipv4_network_address;
+            } else {
+                ipv4.dst = ctx->op.network_if->ip;
+            }            
             ipv4.src = session->ip_address;
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -204,7 +208,11 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
         case STREAM_IPV6:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
-            ipv6.dst = ctx->op.network_if->ip6.address;
+            if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.dst = stream->config->ipv6_network_address;
+            } else {
+                ipv6.dst = ctx->op.network_if->ip6.address;
+            }
             ipv6.src = session->ipv6_address;
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
@@ -218,7 +226,11 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
         case STREAM_IPV6PD:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
-            ipv6.dst = ctx->op.network_if->ip6.address;
+            if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.dst = stream->config->ipv6_network_address;
+            } else {
+                ipv6.dst = ctx->op.network_if->ip6.address;
+            }
             ipv6.src = session->delegated_ipv6_address;
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
@@ -283,8 +295,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
             ipv4.dst = session->ip_address;
-            if(stream->config->ipv4_source_address) {
-                ipv4.src = stream->config->ipv4_source_address;
+            if(stream->config->ipv4_network_address) {
+                ipv4.src = stream->config->ipv4_network_address;
             } else {
                 ipv4.src = ctx->op.network_if->ip;
             }
@@ -301,8 +313,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             ipv6.dst = session->ipv6_address;
-            if(*(uint64_t*)stream->config->ipv6_source_address) {
-                ipv6.src = stream->config->ipv6_source_address;
+            if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.src = stream->config->ipv6_network_address;
             } else {
                 ipv6.src = ctx->op.network_if->ip6.address;
             }
@@ -319,8 +331,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             ipv6.dst = session->delegated_ipv6_address;
-            if(*(uint64_t*)stream->config->ipv6_source_address) {
-                ipv6.src = stream->config->ipv6_source_address;
+            if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.src = stream->config->ipv6_network_address;
             } else {
                 ipv6.src = ctx->op.network_if->ip6.address;
             }
