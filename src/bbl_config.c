@@ -18,6 +18,40 @@ const char g_default_pass[] = "test";
 const char g_default_ari[] = "DEU.RTBRICK.{session-global}";
 const char g_default_aci[] = "0.0.0.0/0.0.0.0 eth 0:{session-global}";
 
+static void
+add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
+    bbl_secondary_ip_s  *secondary_ip;
+
+    if(ipv4 != ctx->config.network_ip) {
+        /* Add secondary IP address to be served by ARP */
+        secondary_ip = ctx->config.secondary_ip_addresses;
+        if(secondary_ip) {
+            while(secondary_ip) {
+                if(secondary_ip->ip == ipv4) {
+                    /* Address is already known ... */
+                    break;
+                }
+                if(secondary_ip->next) {
+                    /* Check next address ... */
+                    secondary_ip = secondary_ip->next;
+                } else {
+                    /* Append secondary address ... */
+                    secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
+                    memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
+                    secondary_ip = secondary_ip->next;
+                    secondary_ip->ip = ipv4;
+                    break;
+                }
+            }
+        } else {
+            /* Add first secondary address */
+            ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
+            memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
+            ctx->config.secondary_ip_addresses->ip = ipv4;
+        }
+    }
+}
+
 static bool
 json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_access_config_s *access_config) {
     json_t *value = NULL;
@@ -240,7 +274,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 }
 
 static bool
-json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
+json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_config) {
     json_t *value = NULL;
     const char *s = NULL;
 
@@ -325,6 +359,7 @@ json_parse_stream (json_t *stream, bbl_stream_config *stream_config) {
             fprintf(stderr, "JSON config error: Invalid value for stream->network-ipv4-address\n");
             return false;
         }
+        add_secondary_ipv4(ctx, stream_config->ipv4_network_address);
     }
 
     if (json_unpack(stream, "{s:s}", "network-ipv6-address", &s) == 0) {
@@ -351,7 +386,6 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     bbl_access_config_s *access_config  = NULL;
     bbl_stream_config   *stream_config  = NULL;
     bbl_l2tp_server_t   *l2tp_server    = NULL;
-    bbl_secondary_ip_s  *secondary_ip;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -849,35 +883,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 }
                 l2tp_server->ip = ipv4;
                 CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
-
-                if(ipv4 != ctx->config.network_ip) {
-                    /* Add secondary IP address to be served by ARP */
-                    secondary_ip = ctx->config.secondary_ip_addresses;
-                    if(secondary_ip) {
-                        while(secondary_ip) {
-                            if(secondary_ip->ip == ipv4) {
-                                /* Address is already known ... */
-                                break;
-                            }
-                            if(secondary_ip->next) {
-                                /* Check next address ... */
-                                secondary_ip = secondary_ip->next;
-                            } else {
-                                /* Append secondary address ... */
-                                secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
-                                memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
-                                secondary_ip = secondary_ip->next;
-                                secondary_ip->ip = ipv4;
-                                break;
-                            }
-                        }                        
-                    } else {
-                        /* Add first secondary address */
-                        ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
-                        memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
-                        ctx->config.secondary_ip_addresses->ip = ipv4;
-                    }
-                }
+                add_secondary_ipv4(ctx, ipv4);
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
             }
@@ -946,7 +952,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 stream_config = stream_config->next;
             }
             memset(stream_config, 0x0, sizeof(bbl_stream_config));
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
+            if(!json_parse_stream(ctx, json_array_get(section, i), stream_config)) {
                 return false;
             }
         }
