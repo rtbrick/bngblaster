@@ -610,6 +610,8 @@ bbl_stream_tx_thread_counter_sync (timer_s *timer) {
     if(stream->session && stream->direction == STREAM_DIRECTION_UP) {
         stream->session->stats.packets_tx += delta_packets;
         stream->session->stats.bytes_tx += delta_bytes;
+        stream->session->stats.accounting_packets_tx += delta_packets;
+        stream->session->stats.accounting_bytes_tx += delta_bytes;
     }
     stream->packets_tx_last_sync = packets_tx;
 }
@@ -681,6 +683,8 @@ bbl_stream_tx_job (timer_s *timer) {
         if(stream->session && stream->direction == STREAM_DIRECTION_UP) {
             stream->session->stats.packets_tx++;
             stream->session->stats.bytes_tx += stream->tx_len;
+            stream->session->stats.accounting_packets_tx++;
+            stream->session->stats.accounting_bytes_tx += stream->tx_len;
         }
     }
 }
