@@ -1657,10 +1657,11 @@ decode_ipv6(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
     //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
 
+    ipv6->tos = (*(uint16_t*)buf >> 4) & UINT8_MAX;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
     ipv6->payload_len = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
