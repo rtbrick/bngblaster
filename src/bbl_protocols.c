@@ -2540,8 +2540,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         if(len < 4) {
             return DECODE_ERROR;
         }
+        eth->vlan_outer_priority = *buf >> 5;
         eth->vlan_outer = be16toh(*(uint16_t*)buf);
-        eth->vlan_outer_priority = (eth->vlan_outer >> 13) & ETH_VLAN_PBIT_MAX;
         eth->vlan_outer &= ETH_VLAN_ID_MAX;
 
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -2551,8 +2551,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
             if(len < 4) {
                 return DECODE_ERROR;
             }
+            eth->vlan_inner_priority = *buf >> 5;
             eth->vlan_inner = be16toh(*(uint16_t*)buf);
-            eth->vlan_inner_priority = (eth->vlan_inner >> 13) & ETH_VLAN_PBIT_MAX;
             eth->vlan_inner &= ETH_VLAN_ID_MAX;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
             eth->type = be16toh(*(uint16_t*)buf);
