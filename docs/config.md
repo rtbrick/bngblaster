@@ -550,11 +550,19 @@ Attribute | Description | Default
 `priority` | IPv4 TOS / IPv6 TC | 0
 `vlan-priority` | VLAN priority | 0 
 `length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
-`pps` | Stream traffic rate in packets per second | 1 
+`pps` | Stream traffic rate in packets per second | 1
+`bps` | Stream traffic rate in bits per second (layer 3) | 
 `network-ipv4-address` | Overwrite network interface IPv4 address | 
 `network-ipv6-address` | Overwrite network interface IPv6 address | 
 `threaded` | Run those streams in separate threads | false
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
+
+The `pps` option has priority over `bps` where second is only a helper to calculate the `pps` 
+based on given `bps` and `length`. 
+
+With threading enabled, those streams will be started in a dedicated thread per flow. This
+means one thread per session and stream direction. A threaded , bidirectional stream assigned 
+to 10 sessions will therefore run in 20 threads. 
 
 **WARNING**: The threading support is experimental and should be used with caution! 
