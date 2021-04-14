@@ -115,7 +115,7 @@ The `session-streams` command returns detailed stream statistics per session.
         "rx-packets": 59670,
         "tx-packets": 54610,
         "rx-accounting-packets": 59655,
-        "tx-accounting-packets": 0,
+        "tx-accounting-packets": 54594,
         "rx-pps": 1100,
         "tx-pps": 1000,
         "rx-bps-l2": 9028800,
@@ -206,8 +206,21 @@ The `session-streams` command returns detailed stream statistics per session.
 The `rx-outer-vlan-pbit` might be wrong depending on network interface driver and 
 optional VLAN offloading. 
 
-The measured `rx-delay-nsec-min/max` depends also on the actual test environment 
-and maximum host IO delay.
+The measured `rx-delay-nsec-min/max` shows the minimum and maximum calculated delay
+in nanosecond. The delay is calculated by subtracting the send and receive timestamp. 
+The send timestamp is stored in the BBL header (see section Traffic). This calculated 
+result depends also on the actual test environment, configured rx-interval and host IO 
+delay.
+
+Traffic streams will start as soon as the session is established using the rate as configured 
+starting with sequence number 1 for each flow. The attribute `rx-first-seq` stores the first 
+sequence number received. Assuming the first sequence number received for given flow is 1000 
+combined with a rate of 1000 PPS would mean that it took around 1 second until forwarding is 
+working. After first packet is received for a given flow, for every further packet it checks 
+if there is a gap between last and new sequence number which is than reported as loss.
+
+The `rx/tx-accounting-packets` are all packets which should be counted in the session volume 
+accounting of the BNG, meaning session rx/tx packets excluding control traffic. 
 
 ## Start/Stop Session Stream Information
 
