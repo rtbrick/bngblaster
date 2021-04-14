@@ -9,6 +9,7 @@
 
 #include "bbl.h"
 #include "bbl_config.h"
+#include "bbl_stream.h"
 #include <jansson.h>
 #include <sys/stat.h>
 
@@ -16,6 +17,74 @@ const char g_default_user[] = "user{session-global}@rtbrick.com";
 const char g_default_pass[] = "test";
 const char g_default_ari[] = "DEU.RTBRICK.{session-global}";
 const char g_default_aci[] = "0.0.0.0/0.0.0.0 eth 0:{session-global}";
+
+static void
+add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
+    bbl_secondary_ip_s  *secondary_ip;
+
+    if(ipv4 != ctx->config.network_ip) {
+        /* Add secondary IP address to be served by ARP */
+        secondary_ip = ctx->config.secondary_ip_addresses;
+        if(secondary_ip) {
+            while(secondary_ip) {
+                if(secondary_ip->ip == ipv4) {
+                    /* Address is already known ... */
+                    break;
+                }
+                if(secondary_ip->next) {
+                    /* Check next address ... */
+                    secondary_ip = secondary_ip->next;
+                } else {
+                    /* Append secondary address ... */
+                    secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
+                    memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
+                    secondary_ip = secondary_ip->next;
+                    secondary_ip->ip = ipv4;
+                    break;
+                }
+            }
+        } else {
+            /* Add first secondary address */
+            ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
+            memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
+            ctx->config.secondary_ip_addresses->ip = ipv4;
+        }
+    }
+}
+
+static void
+add_secondary_ipv6(bbl_ctx_s *ctx, ipv6addr_t ipv6) {
+    bbl_secondary_ip6_s  *secondary_ip6;
+
+    if(memcmp(ipv6, ctx->config.network_ip6.address, IPV6_ADDR_LEN) != 0) {
+        /* Add secondary IP address to be served by ICMPv6 */
+        secondary_ip6 = ctx->config.secondary_ip6_addresses;
+        if(secondary_ip6) {
+            while(secondary_ip6) {
+                if(memcmp(secondary_ip6->ip, ctx->config.network_ip6.address, IPV6_ADDR_LEN) == 0) {
+                    /* Address is already known ... */
+                    break;
+                }
+                if(secondary_ip6->next) {
+                    /* Check next address ... */
+                    secondary_ip6 = secondary_ip6->next;
+                } else {
+                    /* Append secondary address ... */
+                    secondary_ip6->next = malloc(sizeof(bbl_secondary_ip6_s));
+                    memset(secondary_ip6->next, 0x0, sizeof(bbl_secondary_ip6_s));
+                    secondary_ip6 = secondary_ip6->next;
+                    memcpy(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN);
+                    break;
+                }
+            }
+        } else {
+            /* Add first secondary address */
+            ctx->config.secondary_ip6_addresses = malloc(sizeof(bbl_secondary_ip6_s));
+            memset(ctx->config.secondary_ip6_addresses, 0x0, sizeof(bbl_secondary_ip6_s));
+            memcpy(ctx->config.secondary_ip6_addresses->ip, ipv6, IPV6_ADDR_LEN);
+        }
+    }
+}
 
 static bool
 json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_access_config_s *access_config) {
@@ -230,6 +299,126 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     } else {
         access_config->session_traffic_autostart = ctx->config.session_traffic_autostart;
     }
+
+    value = json_object_get(access_interface, "stream-group-id");
+    if (value) {
+        access_config->stream_group_id = json_number_value(value);
+    }
+    return true;
+}
+
+static bool
+json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_config) {
+    json_t *value = NULL;
+    const char *s = NULL;
+    double bps;
+
+    if (json_unpack(stream, "{s:s}", "type", &s) == 0) {
+        if (strcmp(s, "ipv4") == 0) {
+            stream_config->type = STREAM_IPV4;
+        } else if (strcmp(s, "ipv6") == 0) {
+            stream_config->type = STREAM_IPV6;
+        } else if (strcmp(s, "ipv6pd") == 0) {
+            stream_config->type = STREAM_IPV6PD;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->type\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for stream->type\n");
+        return false;    
+    }
+
+    if (json_unpack(stream, "{s:s}", "direction", &s) == 0) {
+        if (strcmp(s, "upstream") == 0) {
+            stream_config->direction = STREAM_DIRECTION_UP;
+        } else if (strcmp(s, "downstream") == 0) {
+            stream_config->direction = STREAM_DIRECTION_DOWN;
+        } else if (strcmp(s, "both") == 0) {
+            stream_config->direction = STREAM_DIRECTION_BOTH;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->direction\n");
+            return false;
+        }
+    } else {
+        stream_config->direction = STREAM_DIRECTION_BOTH;
+        return false;    
+    }
+
+    if (json_unpack(stream, "{s:s}", "name", &s) == 0) {
+        stream_config->name = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for stream->name\n");
+        return false;
+    }
+
+    value = json_object_get(stream, "stream-group-id");
+    if (value) {
+        stream_config->stream_group_id = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "length");
+    if (value) {
+        stream_config->length = json_number_value(value);
+        if(stream_config->length < 76 || stream_config->length > 1500) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->length\n");
+            return false;
+        }
+    } else {
+        stream_config->length = 128;
+    }
+
+    value = json_object_get(stream, "priority");
+    if (value) {
+        stream_config->priority = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "vlan-priority");
+    if (value) {
+        stream_config->vlan_priority = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "pps");
+    if (value) {
+        stream_config->pps = json_number_value(value);
+        if(stream_config->pps == 0) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
+            return false;
+        }
+    } else {
+        /* pps config has priority over bps */
+        value = json_object_get(stream, "bps");
+        if (value) {
+            bps = json_number_value(value);
+            if(!bps) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->bps\n");
+                return false;
+            }
+            stream_config->pps = bps / (stream_config->length * 8);
+        }
+    }
+    if(!stream_config->pps) stream_config->pps = 1;
+
+    if (json_unpack(stream, "{s:s}", "network-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &stream_config->ipv4_network_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->network-ipv4-address\n");
+            return false;
+        }
+        add_secondary_ipv4(ctx, stream_config->ipv4_network_address);
+    }
+
+    if (json_unpack(stream, "{s:s}", "network-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_network_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->network-ipv6-address\n");
+            return false;
+        }
+        add_secondary_ipv6(ctx, stream_config->ipv6_network_address);
+    }
+
+    value = json_object_get(stream, "threaded");
+    if (json_is_boolean(value)) {
+        stream_config->threaded = json_boolean_value(value);
+    }
     return true;
 }
 
@@ -240,9 +429,9 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     const char *s;
     uint32_t ipv4;
     int i, size;
-    bbl_access_config_s *access_config = NULL;
-    bbl_l2tp_server_t *l2tp_server = NULL;
-    bbl_secondary_ip_s *secondary_ip;
+    bbl_access_config_s *access_config  = NULL;
+    bbl_stream_config   *stream_config  = NULL;
+    bbl_l2tp_server_t   *l2tp_server    = NULL;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -593,29 +782,34 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         }
     }
 
-
     /* Interface Configuration */
     section = json_object_get(root, "interfaces");
     if (json_is_object(section)) {
         value = json_object_get(section, "tx-interval");
         if (json_is_number(value)) {
-            ctx->config.tx_interval = json_number_value(value);
+            ctx->config.tx_interval = json_number_value(value) * MSEC;
         }
         value = json_object_get(section, "rx-interval");
         if (json_is_number(value)) {
-            ctx->config.rx_interval = json_number_value(value);
+            ctx->config.rx_interval = json_number_value(value) * MSEC;
         }
         value = json_object_get(section, "qdisc-bypass");
         if (json_is_boolean(value)) {
             ctx->config.qdisc_bypass = json_boolean_value(value);
         }
+        value = json_object_get(section, "io-slots");
+        if (json_is_number(value)) {
+            ctx->config.io_slots = json_number_value(value);
+        }
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
-            if (strcmp(s, "packet_mmap") == 0) {
-                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+            if (strcmp(s, "packet_mmap_raw") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
 #if BNGBLASTER_NETMAP
             } else if (strcmp(s, "netmap") == 0) {
                 ctx->config.io_mode = IO_MODE_NETMAP;
 #endif
+            } else if (strcmp(s, "packet_mmap") == 0) {
+                ctx->config.io_mode = IO_MODE_PACKET_MMAP;
             } else if (strcmp(s, "raw") == 0) {
                 ctx->config.io_mode = IO_MODE_RAW;
             } else {
@@ -623,7 +817,11 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 return false;
             }
         } else {
-            ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+            ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
+        }
+        value = json_object_get(section, "io-stream-max-ppi");
+        if (json_is_number(value)) {
+            ctx->config.io_stream_max_ppi = json_number_value(value);
         }
         sub = json_object_get(section, "network");
         if (json_is_object(sub)) {
@@ -731,35 +929,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 }
                 l2tp_server->ip = ipv4;
                 CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
-
-                if(ipv4 != ctx->config.network_ip) {
-                    /* Add secondary IP address to be served by ARP */
-                    secondary_ip = ctx->config.secondary_ip_addresses;
-                    if(secondary_ip) {
-                        while(secondary_ip) {
-                            if(secondary_ip->ip == ipv4) {
-                                /* Address is already known ... */
-                                break;
-                            }
-                            if(secondary_ip->next) {
-                                /* Check next address ... */
-                                secondary_ip = secondary_ip->next;
-                            } else {
-                                /* Append secondary address ... */
-                                secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
-                                memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
-                                secondary_ip = secondary_ip->next;
-                                secondary_ip->ip = ipv4;
-                                break;
-                            }
-                        }                        
-                    } else {
-                        /* Add first secondary address */
-                        ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
-                        memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
-                        ctx->config.secondary_ip_addresses->ip = ipv4;
-                    }
-                }
+                add_secondary_ipv4(ctx, ipv4);
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
             }
@@ -814,6 +984,26 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
     }
 
+    /* Traffic Streams Configuration */
+    section = json_object_get(root, "streams");
+    if (json_is_array(section)) {
+        /* Config is provided as array (multiple streams) */ 
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            if(!stream_config) {
+                ctx->config.stream_config = malloc(sizeof(bbl_stream_config));
+                stream_config = ctx->config.stream_config;
+            } else {
+                stream_config->next = malloc(sizeof(bbl_stream_config));
+                stream_config = stream_config->next;
+            }
+            memset(stream_config, 0x0, sizeof(bbl_stream_config));
+            if(!json_parse_stream(ctx, json_array_get(section, i), stream_config)) {
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -851,8 +1041,10 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.password = (char *)g_default_pass;
     ctx->config.agent_remote_id = (char *)g_default_ari;
     ctx->config.agent_circuit_id = (char *)g_default_aci;
-    ctx->config.tx_interval = 5;
-    ctx->config.rx_interval = 5;
+    ctx->config.tx_interval = 5 * MSEC;
+    ctx->config.rx_interval = 5 * MSEC;
+    ctx->config.io_slots = 1024;
+    ctx->config.io_stream_max_ppi = 32;
     ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
     ctx->config.sessions_max_outstanding = 800;

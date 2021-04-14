@@ -224,8 +224,10 @@ encode_bbl(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
     *(uint64_t*)buf = bbl->flow_seq;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
-    *(uint64_t*)buf = bbl->timestamp;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
+    *(uint32_t*)buf = bbl->timestamp.tv_sec;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint32_t*)buf = bbl->timestamp.tv_nsec;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     return PROTOCOL_SUCCESS;
 }
 
@@ -485,7 +487,8 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
     uint16_t checksum;
 
     *(uint64_t*)buf = 0;
-    *buf = 6 <<4;
+    *(uint16_t*)buf |= be16toh(ipv6->tos << 4);
+    *buf |= 6 <<4;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
 
     /* Skip payload length field */
@@ -560,10 +563,12 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     /* Skip total length field */
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
-    *(uint32_t*)buf = 0;
-    /* Skip fragmentation fields
+    /* Fragmentation fields
      * (Identification, Flags, Fragment Offset) */
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(ipv4->offset);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
     *buf = ipv4->ttl;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1157,7 +1162,7 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
     if(eth->dst) {
         memcpy(buf, eth->dst, ETH_ADDR_LEN);
     } else {
-        /* Default braodcast */
+        /* Default broadcast */
         memset(buf, 0xff, ETH_ADDR_LEN);
     }
     BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
@@ -1534,8 +1539,10 @@ decode_bbl(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
     bbl->flow_seq = *(uint64_t*)buf;
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
-    bbl->timestamp = *(uint64_t*)buf;
-    BUMP_BUFFER(buf, len, sizeof(uint64_t));
+    bbl->timestamp.tv_sec = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    bbl->timestamp.tv_nsec = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
 
     *_bbl = bbl;
     return PROTOCOL_SUCCESS;
@@ -1651,10 +1658,16 @@ decode_ipv6(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
     //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
+    
+    /* Check if version is 6 */
+    if(((*buf >> 4) & 0xf) != 6) {
+        return DECODE_ERROR;
+    }
 
+    ipv6->tos = (be16toh(*(uint16_t*)buf) >> 4);
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
     ipv6->payload_len = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -1751,6 +1764,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
+    ipv4->offset = be16toh(header->ip_off);
     ipv4->ttl = header->ip_ttl;
     ipv4->protocol = header->ip_p;
 
@@ -2512,6 +2526,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     memset(eth, 0x0, sizeof(bbl_ethernet_header_t));
     *ethernet = eth;
 
+    eth->length = len;
+
     /* Decode ethernet header */
     header = (struct ether_header*)buf;
     BUMP_BUFFER(buf, len, sizeof(struct ether_header));
@@ -2524,8 +2540,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         if(len < 4) {
             return DECODE_ERROR;
         }
+        eth->vlan_outer_priority = *buf >> 5;
         eth->vlan_outer = be16toh(*(uint16_t*)buf);
-        eth->vlan_outer_priority = (eth->vlan_outer >> 13) & ETH_VLAN_PBIT_MAX;
         eth->vlan_outer &= ETH_VLAN_ID_MAX;
 
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -2535,8 +2551,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
             if(len < 4) {
                 return DECODE_ERROR;
             }
+            eth->vlan_inner_priority = *buf >> 5;
             eth->vlan_inner = be16toh(*(uint16_t*)buf);
-            eth->vlan_inner_priority = (eth->vlan_inner >> 13) & ETH_VLAN_PBIT_MAX;
             eth->vlan_inner &= ETH_VLAN_ID_MAX;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
             eth->type = be16toh(*(uint16_t*)buf);

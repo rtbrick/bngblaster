@@ -30,6 +30,9 @@ find_library(libdict NAMES libdict.a REQUIRED)
 
 target_link_libraries(bngblaster curses crypto jansson ${libdict} m)
 
+SET(PLATFORM_SPECIFIC_LIBS "-lpthread")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+
 # add experimental netmap support
 if(BNGBLASTER_NETMAP)
     add_definitions(-DBNGBLASTER_NETMAP)

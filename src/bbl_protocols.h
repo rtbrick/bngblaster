@@ -43,6 +43,11 @@
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
 
+#define IPV4_RF                         0x8000 /* reserved fragment flag */
+#define IPV4_DF                         0x4000 /* dont fragment flag */
+#define IPV4_MF                         0x2000 /* more fragments flag */
+#define IPV4_OFFMASK                    0x1fff /* mask for fragmenting bits */
+
 #define IPV6_ADDR_LEN                   16
 #define IPV6_IDENTIFER_LEN              8
 
@@ -353,8 +358,8 @@ typedef struct bbl_ethernet_header_ {
     uint8_t   vlan_outer_priority;
     uint8_t   vlan_inner_priority;
     void     *next; // next header
-    uint32_t  rx_sec;
-    uint32_t  rx_nsec;
+    uint16_t  length;
+    struct timespec timestamp;
 } bbl_ethernet_header_t;
 
 /*
@@ -471,6 +476,7 @@ typedef struct bbl_ipv4_ {
     uint32_t    src;
     uint32_t    dst;
     uint8_t     tos;
+    uint16_t    offset;
     uint8_t     ttl;
     uint8_t     protocol;
     void       *next; // next header
@@ -601,7 +607,7 @@ typedef struct bbl_bbl_ {
     uint32_t     mc_group;
     uint64_t     flow_id;
     uint64_t     flow_seq;
-    uint64_t     timestamp;
+    struct timespec timestamp;
 } bbl_bbl_t;
 
 typedef struct bbl_qmx_li_ {

@@ -125,6 +125,8 @@ Attribute | Description
 `session-traffic` | Display session traffic statistics | |
 `session-traffic-enabled` | Enable session traffic for all sessions
 `session-traffic-disabled` | Disable session traffic for all sessions
+`stream-traffic-enabled` | Enable stream traffic for all sessions | |
+`stream-traffic-disabled` | Disable stream traffic for all sessions | |
 `multicast-traffic-start` | Start sending multicast traffic from network interface 
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
 `li-flows` | List all LI flows with detailed statistics
@@ -160,6 +162,9 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `ip6cp-close` |Close IP6CP | |
 `session-traffic-enabled` | Enable session traffic | |
 `session-traffic-disabled` | Disable session traffic | |
+`session-streams` | Session traffic stream information | | 
+`stream-traffic-enabled` | Enable session stream traffic | |
+`stream-traffic-disabled` | Disable session stream traffic | |
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
 `igmp-leave` | Leave group | `group` |
 `igmp-info` | IGMP information | |

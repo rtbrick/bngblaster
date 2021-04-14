@@ -16,7 +16,7 @@ extern const char banner[];
 void
 bbl_stats_update_cps (bbl_ctx_s *ctx) {
     struct timespec time_diff = {0};
-    int ms;
+    uint32_t ms;
     double x, y;
 
     /* Session setup time and rate */
@@ -27,7 +27,8 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
 		     &ctx->stats.last_session_established,
 		     &ctx->stats.first_session_tx);
 
-        ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
         ctx->stats.setup_time = (time_diff.tv_sec * 1000) + ms; // Setup time in milliseconds
 
         x = ctx->sessions_established_max;
@@ -55,8 +56,8 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     bbl_session_s *session;
     uint32_t i;
 
-    int join_delays = 0;
-    int leave_delays = 0;
+    uint32_t join_delays = 0;
+    uint32_t leave_delays = 0;
 
     bbl_stats_update_cps(ctx);
 
@@ -142,10 +143,10 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         }
     }
     if(join_delays) {
-        stats->avg_join_delay = round(stats->avg_join_delay / join_delays);
+        stats->avg_join_delay = stats->avg_join_delay / join_delays;
     }
     if(leave_delays) {
-        stats->avg_leave_delay = round(stats->avg_leave_delay / leave_delays);
+        stats->avg_leave_delay = stats->avg_leave_delay / leave_delays;
     }
 }
 
@@ -247,6 +248,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
             printf("    ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
             printf("    DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+            printf("    IPv4 Fragmented       RX: %10u\n", access_if->stats.ipv4_fragmented_rx);
             printf("\n  Access Interface Protocol Timeout Stats:\n");
             printf("    LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
             printf("    LCP Request:      %10u\n", access_if->stats.lcp_timeout);
@@ -440,6 +442,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_protocols, "icmpv6-rx", json_integer(access_if->stats.icmpv6_rx));
             json_object_set(jobj_protocols, "dhcpv6-tx", json_integer(access_if->stats.dhcpv6_tx));
             json_object_set(jobj_protocols, "dhcpv6-rx", json_integer(access_if->stats.dhcpv6_rx));
+            json_object_set(jobj_protocols, "ipv4-fragmented-rx", json_integer(access_if->stats.ipv4_fragmented_rx));
             json_object_set(jobj_protocols, "lcp-echo-timeout", json_integer(access_if->stats.lcp_echo_timeout));
             json_object_set(jobj_protocols, "lcp-request-timeout", json_integer(access_if->stats.lcp_timeout));
             json_object_set(jobj_protocols, "ipcp-request-timeout", json_integer(access_if->stats.ipcp_timeout));
@@ -514,7 +517,8 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 void
 bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
 {
-    uint idx, div;
+    uint8_t idx; 
+    uint64_t div;
     uint64_t sum;
 
     if(current_value == 0) return;
@@ -550,6 +554,8 @@ bbl_compute_interface_rate_job (timer_s *timer)
 
     bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
     bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);

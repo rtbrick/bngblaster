@@ -23,5 +23,4 @@ char *format_ipv6_prefix(ipv6_prefix *addr6);
 
 char *replace_substring (const char* s, const char* old, const char* new);
 const char *val2key (struct keyval_ *keyval, uint val);
-
 #endif

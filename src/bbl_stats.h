@@ -43,6 +43,7 @@ typedef struct bbl_stats_ {
     uint32_t sessions_network_ipv6pd_rx;
 } bbl_stats_t;
 
+void bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value);
 void bbl_stats_update_cps (bbl_ctx_s *ctx);
 void bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t *stats);
 void bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t *stats);

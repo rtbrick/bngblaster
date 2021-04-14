@@ -90,20 +90,54 @@ Following an example configuration file which is explained in detail below.
 
 ## Interfaces
 
-This section describes all attributes of the `interfaces` hierarchy. 
+This section describes all attributes of the `interfaces` hierarchy 
+which allows to modify how to send and receive traffic. 
+
+```json
+{
+    "interfaces": {
+        "tx-interval": 0.1,
+        "rx-interval": 0.1,
+        "io-slots": 2048,
+    }
+}
+```
 
 Attribute | Description | Default 
 --------- | ----------- | -------
-`tx-interval` | TX ring polling interval in milliseconds | 5
-`rx-interval` | RX ring polling interval in milliseconds | 5
+`tx-interval` | TX ring polling interval in milliseconds | 5.0
+`rx-interval` | RX ring polling interval in milliseconds | 5.0
 `qdisc-bypass` | Bypass the kernel's qdisc layer | true
-`io-mode` | IO mode | packet_mmap
+`io-mode` | IO mode | packet_mmap_raw
+`io-slots` | IO slots (ring size) | 1024
+`io-stream-max-ppi` | IO traffic stream max packets per interval | 32
 
-WARNING: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
-This issue was frequently seen on Ubuntu 20.04. 
+The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms)
+if more precise timestamps are needed. This is recommended for IGMP join/leave 
+or QoS delay measurements. For higher packet rates (>1g) it might be needed to 
+increase the `io-slots` from the default value of `1024` to `2048` or more.
 
 The supported IO modes are listed with `bngblaster -v` but except
-`packet_mmap` all other modes are currently considered as experimental. 
+`packet_mmap_raw` all other modes are currently considered as experimental. In 
+the default mode (`packet_mmap_raw`) all packets are received in a packet_mmap 
+ring buffer and send directly trough raw sockets. 
+
+**WARNING**: Disable `qdisc-bypass` only if BNG Blaster is not sending traffic!
+
+The interfaces used in BNG Blaster do not need IP addresses configured in the host
+operating system but they need to be in up state.
+
+```
+sudo ip link set dev <interface> up
+```
+
+It is not possible to send packets larger than the interface MTU which is 1500 per default 
+but for PPPoE with multiple VLAN headers this might be not enough for large packets. 
+Therefore the interface MTU should be increased using the following commands.
+
+```
+sudo ip link set mtu 9000 dev <interface>
+```
 
 ### Network Interface
 
@@ -117,7 +151,6 @@ Attribute | Description | Default
 `address-ipv6` | Local network interface IPv6 address (implicitly /64) | - 
 `gateway-ipv6` | Gateway network interface IPv6 address (implicitly /64)
 `vlan` | Network interface VLAN | 0 (untagged)
-
 
 ### Access Interfaces
 
@@ -151,11 +184,11 @@ Attribute | Description | Default
 `ipv6` | Optionally enable/disable IPoE IPv4 per access configuration
 `dhcp` | Optionally enable/disable DHCP per access configuration
 `dhcpv6` | Optionally enable/disable DHCPv6 per access configuration
-
+`stream-group-id` | Optional stream group identifier
 
 **WARNING**: DHCP (IPv4) is currently not supported!
 
-But for all modes it is possible to configure between zero and three VLAN
+For all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
 
 ```
@@ -420,11 +453,11 @@ Attribute | Description | Default
 
 This section describes all attributes of the `dhcp` hierarchy. 
 
-**WARNING**: DHCP (IPv4) is currently not supported!
-
 Attribute | Description | Default 
 --------- | ----------- | -------
 `enable` | This option allows to enable or disable DHCP | true
+
+**WARNING**: DHCP (IPv4) is currently not supported!
 
 ## DHCPv6
 
@@ -530,3 +563,33 @@ is described in RFC2661 appendix A (Control Channel Slow Start and
 Congestion Avoidance). The mode `slow` uses a fixed control window
 size of 1 where `aggressive` sticks to max permitted based on peer 
 received window size. 
+
+## Traffic Streams
+
+This section describes all attributes of the `streams` hierarchy. 
+
+Attribute | Description | Default 
+--------- | ----------- | -------
+`name` | Mandatory stream name |   
+`stream-group-id` | Mandatory stream group identifier | 
+`type` | Mandatory stream type (`ipv4`, `ipv6` or `ipv6pd`)  |  
+`direction` | Mandatory stream direction (`upstream`, `downstream` or `both`) | `both`
+`priority` | IPv4 TOS / IPv6 TC | 0
+`vlan-priority` | VLAN priority | 0 
+`length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
+`pps` | Stream traffic rate in packets per second | 1
+`bps` | Stream traffic rate in bits per second (layer 3) | 
+`network-ipv4-address` | Overwrite network interface IPv4 address | 
+`network-ipv6-address` | Overwrite network interface IPv6 address | 
+`threaded` | Run those streams in separate threads | false
+
+For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
+
+The `pps` option has priority over `bps` where second is only a helper to calculate the `pps` 
+based on given `bps` and `length`. 
+
+With threading enabled, those streams will be started in a dedicated thread per flow. This
+means one thread per session and stream direction. A threaded , bidirectional stream assigned 
+to 10 sessions will therefore run in 20 threads. 
+
+**WARNING**: The threading support is experimental and should be used with caution! 
