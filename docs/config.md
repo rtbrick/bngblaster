@@ -512,7 +512,8 @@ Attribute | Description | Default
 
 ## L2TP Server (LNS)
 
-This section describes all attributes of the `l2tp-server` (LNS) hierarchy. 
+This section describes all attributes of the `l2tp-server` (LNS) hierarchy 
+as explained in [L2TPv2](l2tp). 
 
 The BNG Blaster supports multiple L2TPv2 servers (LNS) over the network interface
 as shown in the example below. 
@@ -566,7 +567,8 @@ received window size.
 
 ## Traffic Streams
 
-This section describes all attributes of the `streams` hierarchy. 
+This section describes all attributes of the `streams` hierarchy 
+as explained in [Traffic Streams](streams).
 
 Attribute | Description | Default 
 --------- | ----------- | -------
