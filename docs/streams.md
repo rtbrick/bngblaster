@@ -2,7 +2,12 @@
 
 Traffic streams allow to test QoS using BNG Blaster. 
 
+![BBL Interactive Streams](images/bbl_streams.png "BNG Blaster")
+
 ## Configuration
+
+Following a simple example using streams as described in  
+[Configuration](config).
 
 ```json
 {
@@ -221,6 +226,37 @@ if there is a gap between last and new sequence number which is than reported as
 
 The `rx/tx-accounting-packets` are all packets which should be counted in the session volume 
 accounting of the BNG, meaning session rx/tx packets excluding control traffic. 
+
+Each flow can be queried separately using jsonpath expression with name and direction or flow-id. 
+
+`$ sudo ./cli.py run.sock session-streams session-id 1 | jq '."session-streams".streams[] | select(.name == "BE" and .direction == "downstream" )'`
+```json
+{
+  "name": "BE",
+  "direction": "downstream",
+  "flow-id": 2,
+  "rx-first-seq": 33,
+  "rx-last-seq": 27040,
+  "rx-tos-tc": 213,
+  "rx-outer-vlan-pbit": 0,
+  "rx-inner-vlan-pbit": 0,
+  "rx-len": 126,
+  "tx-len": 114,
+  "rx-packets": 27008,
+  "tx-packets": 27040,
+  "rx-loss": 0,
+  "rx-delay-nsec-min": 50450,
+  "rx-delay-nsec-max": 10561572,
+  "rx-pps": 99,
+  "tx-pps": 99,
+  "tx-bps-l2": 90288,
+  "rx-bps-l2": 99792,
+  "rx-bps-l3": 79200,
+  "tx-mbps-l2": 0.090288,
+  "rx-mbps-l2": 0.099792,
+  "rx-mbps-l3": 0.0792
+}
+```
 
 ## Start/Stop Session Stream Information
 
