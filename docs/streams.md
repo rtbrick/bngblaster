@@ -7,8 +7,9 @@ Traffic streams allow to test QoS using BNG Blaster.
 ```json
 {
     "interfaces": {
-        "tx-interval": 1,
-        "rx-interval": 1,
+        "tx-interval": 0.1,
+        "rx-interval": 0.1,
+        "io-slots": 2048,
         "network": {
             "interface": "eth2",
             "address": "10.0.0.1",
@@ -206,7 +207,7 @@ The `rx-outer-vlan-pbit` might be wrong depending on network interface driver an
 optional VLAN offloading. 
 
 The measured `rx-delay-nsec-min/max` depends also on the actual test environment 
-and maximum host send delay.
+and maximum host IO delay.
 
 ## Start/Stop Session Stream Information
 

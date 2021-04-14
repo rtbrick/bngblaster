@@ -311,6 +311,7 @@ static bool
 json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_config) {
     json_t *value = NULL;
     const char *s = NULL;
+    double bps;
 
     if (json_unpack(stream, "{s:s}", "type", &s) == 0) {
         if (strcmp(s, "ipv4") == 0) {
@@ -385,8 +386,18 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
             return false;
         }
     } else {
-        stream_config->pps = 1;
+        /* pps config has priority over bps */
+        value = json_object_get(stream, "bps");
+        if (value) {
+            bps = json_number_value(value);
+            if(!bps) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->bps\n");
+                return false;
+            }
+            stream_config->pps = bps / (stream_config->length * 8);
+        }
     }
+    if(!stream_config->pps) stream_config->pps = 1;
 
     if (json_unpack(stream, "{s:s}", "network-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &stream_config->ipv4_network_address)) {
