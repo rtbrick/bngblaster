@@ -295,7 +295,6 @@ bbl_encode_packet_igmp (bbl_session_s *session)
             if(group->robustness_count) {
                 group->robustness_count--;
             }
-
             if(session->igmp_version == IGMP_VERSION_3) {
                 igmp.version = IGMP_VERSION_3;
                 igmp.type = IGMP_TYPE_REPORT_V3;
@@ -374,6 +373,15 @@ bbl_encode_packet_igmp (bbl_session_s *session)
                     }
                 }
                 break;
+            }
+            if(group->state == IGMP_GROUP_JOINING) {
+                if(!group->robustness_count) {
+                    group->state = IGMP_GROUP_ACTIVE;
+                }
+            } else if(group->state == IGMP_GROUP_LEAVING) {
+                if(!group->robustness_count) {
+                    group->state = IGMP_GROUP_IDLE;
+                }
             }
         }
     }
@@ -1241,7 +1249,7 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len)
+bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *accounting)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
@@ -1295,12 +1303,15 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len)
     } else if (session->send_requests & BBL_SEND_SESSION_IPV4) {
         result = bbl_encode_packet_session_ipv4(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV4;
+        *accounting = true;
     } else if (session->send_requests & BBL_SEND_SESSION_IPV6) {
         result = bbl_encode_packet_session_ipv6(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV6;
+        *accounting = true;
     } else if (session->send_requests & BBL_SEND_SESSION_IPV6PD) {
         result = bbl_encode_packet_session_ipv6pd(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV6PD;
+        *accounting = true;
     } else if (session->send_requests & BBL_SEND_ARP_REQUEST) {
         result = bbl_encode_packet_arp_request(session);
         session->send_requests &= ~BBL_SEND_ARP_REQUEST;
@@ -1365,6 +1376,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     bbl_icmpv6_t icmpv6 = {0};
 
     bbl_secondary_ip_s *secondary_ip;
+    bbl_secondary_ip6_s *secondary_ip6;
 
     eth.src = interface->mac;
     eth.vlan_outer = interface->ctx->config.network_vlan;
@@ -1444,7 +1456,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
         ipv6.src = interface->ip6.address;
-        ipv6.dst = interface->gateway6.address;
+        ipv6.dst = interface->icmpv6_src;
         ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
         ipv6.next = &icmpv6;
         ipv6.ttl = 255;
@@ -1452,6 +1464,31 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         memcpy(icmpv6.prefix.address, interface->ip6.address, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         result = encode_ethernet(buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_SEC_ICMPV6_NA) {
+        secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
+        while(secondary_ip6) {
+            if(secondary_ip6->icmpv6_na) {
+                secondary_ip6->icmpv6_na = false;
+                eth.dst = interface->gateway_mac;
+                eth.type = ETH_TYPE_IPV6;
+                eth.next = &ipv6;
+                ipv6.src = secondary_ip6->ip;
+                ipv6.dst = secondary_ip6->icmpv6_src;
+                ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+                ipv6.next = &icmpv6;
+                ipv6.ttl = 255;
+                icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
+                memcpy(icmpv6.prefix.address, secondary_ip6->ip, IPV6_ADDR_LEN);
+                icmpv6.mac = interface->mac;
+                result = encode_ethernet(buf, len, &eth);
+                break;
+            }
+            secondary_ip6 = secondary_ip6->next;
+        }
+        if(!secondary_ip6) {
+            /* Stop if we reach end of secondary IP address list */
+            interface->send_requests &= ~BBL_IF_SEND_SEC_ICMPV6_NA;
+        }
     } else {
         interface->send_requests = 0;
     }
@@ -1477,6 +1514,8 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
     bbl_session_s *session;
     bbl_l2tp_queue_t *q;
 
+    bool accounting;
+
     /* Write per interface frames like ARP, ICMPv6 NS or LLDP. */
     if(interface->send_requests) {
         return bbl_encode_interface_packet(interface, buf, len);
@@ -1488,7 +1527,16 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
 
             if(session->send_requests != 0) {
-                result = bbl_encode_packet(session, buf, len);
+                accounting = false;
+                result = bbl_encode_packet(session, buf, len, &accounting);
+                if(result == PROTOCOL_SUCCESS) {
+                    session->stats.packets_tx++;
+                    session->stats.bytes_tx += *len;
+                    if(accounting) {
+                        session->stats.accounting_packets_tx++;
+                        session->stats.accounting_bytes_tx += *len;
+                    }
+                }
                 /* Remove only from TX queue if all requests are processed! */
                 if(session->send_requests == 0) {
                     bbl_session_tx_qnode_remove(session);
@@ -1550,6 +1598,7 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 /* This must be the last send operation in this function to fill up remaining slots
                 * with multicast traffic but all other types of traffic have priority. */
                 interface->mc_packet_cursor = 0;
+                interface->mc_packet_seq++;
             }
         }
     }

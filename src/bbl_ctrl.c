@@ -24,6 +24,7 @@
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
 #include "bbl_session.h"
+#include "bbl_stream.h"
 
 #define BACKLOG 4
 #define INPUT_BUFFER 1024
@@ -288,8 +289,10 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     bbl_session_s *session = NULL;
     bbl_igmp_group_s *group = NULL;
     uint32_t delay = 0;
+    uint32_t ms;
+    
     struct timespec time_diff;
-    int ms, i, i2;
+    int i, i2;
 
     if(session_id == 0) {
         /* session-id is mandatory */
@@ -320,7 +323,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_object_set(record, "state", json_string("idle"));
                         if(group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->last_mc_rx_time, &group->leave_tx_time);
-                            ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+                            ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+                            if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
                             delay = (time_diff.tv_sec * 1000) + ms;
                             json_object_set(record, "leave-delay-ms", json_integer(delay));
                         }
@@ -332,7 +336,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_object_set(record, "state", json_string("active"));
                         if(group->first_mc_rx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-                            ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+                            ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+                            if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
                             delay = (time_diff.tv_sec * 1000) + ms;
                             json_object_set(record, "join-delay-ms", json_integer(delay));
                         }
@@ -341,7 +346,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_object_set(record, "state", json_string("joining"));
                         if(group->first_mc_rx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-                            ms = round(time_diff.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+                            ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
+                            if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
                             delay = (time_diff.tv_sec * 1000) + ms;
                             json_object_set(record, "join-delay-ms", json_integer(delay));
                         }
@@ -409,6 +415,9 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     const char *ipcp = NULL;
     const char *ip6cp = NULL;
 
+    int flows = 0;
+    int flows_verified = 0;
+
     if(session_id == 0) {
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
@@ -454,8 +463,24 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         } else {
             type = "ipoe";
         }
+
         if(ctx->config.session_traffic_ipv4_pps || ctx->config.session_traffic_ipv6_pps || ctx->config.session_traffic_ipv6pd_pps) {
-            session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si}", 
+            if(session->access_ipv4_tx_flow_id) flows++;
+            if(session->access_ipv6_tx_flow_id) flows++;
+            if(session->access_ipv6pd_tx_flow_id) flows++;
+            if(session->network_ipv4_tx_flow_id) flows++;
+            if(session->network_ipv6_tx_flow_id) flows++;
+            if(session->network_ipv6pd_tx_flow_id) flows++;
+            if(session->access_ipv4_rx_first_seq) flows_verified++;
+            if(session->access_ipv6_rx_first_seq) flows_verified++;
+            if(session->access_ipv6pd_rx_first_seq) flows_verified++;
+            if(session->network_ipv4_rx_first_seq) flows_verified++;
+            if(session->network_ipv6_rx_first_seq) flows_verified++;
+            if(session->network_ipv6pd_rx_first_seq) flows_verified++;
+            
+            session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+                        "total-flows", flows,
+                        "verified-flows", flows_verified,
                         "first-seq-rx-access-ipv4", session->access_ipv4_rx_first_seq,
                         "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
                         "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
@@ -481,7 +506,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* so*}}", 
+        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -507,6 +532,9 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "ipv6-dns2", ipv6_dns2,
                         "dhcpv6-dns1", dhcpv6_dns1,
                         "dhcpv6-dns2", dhcpv6_dns2,
+                        "tx-packets", session->stats.packets_tx,
+                        "rx-packets", session->stats.packets_rx,
+                        "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
                         "session-traffic", session_traffic);
         if(root) {
             result = json_dumpfd(root, fd, 0);
@@ -800,13 +828,25 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 
 json_t * 
 l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
-    return json_pack("{ss si si si si ss ss ss ss si si ss ss si si si si}", 
+    char *proxy_auth_response = NULL;
+    
+    if(l2tp_session->proxy_auth_response) {
+        if(l2tp_session->proxy_auth_type == L2TP_PROXY_AUTH_TYPE_PAP) {
+            proxy_auth_response = (char*)l2tp_session->proxy_auth_response;
+        } else {
+            proxy_auth_response = "0x...";
+        }
+    }
+
+    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss si si si si}", 
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
                      "peer-tunnel-id", l2tp_session->tunnel->peer_tunnel_id,
                      "peer-session-id", l2tp_session->peer_session_id,
+                     "peer-proxy-auth-type", l2tp_session->proxy_auth_type,
                      "peer-proxy-auth-name", string_or_na(l2tp_session->proxy_auth_name),
+                     "peer-proxy-auth-response", string_or_na(proxy_auth_response),
                      "peer-called-number", string_or_na(l2tp_session->peer_called_number),
                      "peer-calling-number", string_or_na(l2tp_session->peer_calling_number),
                      "peer-sub-address", string_or_na(l2tp_session->peer_sub_address),
@@ -938,6 +978,121 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     }
 }
 
+ssize_t
+bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root;
+    json_t *json_streams = NULL;
+    json_t *json_stream = NULL;
+
+    bbl_session_s *session;
+    bbl_stream *stream;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
+        stream = session->stream;
+
+        json_streams = json_array();
+        while(stream) {
+            json_stream = json_pack("{ss ss si si si si si si si si si si si si si si si si si si sf sf sf}",
+                                "name", stream->config->name,
+                                "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "downstream",
+                                "flow-id", stream->flow_id,
+                                "rx-first-seq", stream->rx_first_seq,
+                                "rx-last-seq", stream->rx_last_seq,
+                                "rx-tos-tc", stream->rx_priority,
+                                "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
+                                "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
+                                "rx-len", stream->rx_len,
+                                "tx-len", stream->tx_len,
+                                "rx-packets", stream->packets_rx,
+                                "tx-packets", stream->packets_tx,
+                                "rx-loss", stream->loss,
+                                "rx-delay-nsec-min", stream->min_delay_ns,
+                                "rx-delay-nsec-max", stream->max_delay_ns,
+                                "rx-pps", stream->rate_packets_rx.avg,
+                                "tx-pps", stream->rate_packets_tx.avg,
+                                "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
+                                "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
+                                "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
+                                "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0,
+                                "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
+                                "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
+
+            json_array_append(json_streams, json_stream);
+            stream = stream->next;
+        }
+        root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}", 
+                        "status", "ok", 
+                        "code", 200,
+                        "session-streams",
+                        "session-id", session->session_id,
+                        "rx-packets", session->stats.packets_rx,
+                        "tx-packets", session->stats.packets_tx,
+                        "rx-accounting-packets", session->stats.accounting_packets_rx,
+                        "tx-accounting-packets", session->stats.accounting_packets_tx,
+                        "rx-pps", session->stats.rate_packets_rx.avg,
+                        "tx-pps", session->stats.rate_packets_tx.avg,
+                        "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
+                        "tx-bps-l2", session->stats.rate_bytes_tx.avg * 8,
+                        "rx-mbps-l2", (double)(session->stats.rate_bytes_rx.avg * 8) / 1000000.0,
+                        "tx-mbps-l2", (double)(session->stats.rate_bytes_tx.avg * 8) / 1000000.0,
+                        "streams", json_streams);
+
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(json_streams);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
+ssize_t
+bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
+            session->stream_traffic = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                session->stream_traffic = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+    return 0;
+}
+
+ssize_t
+bbl_ctrl_stream_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_stream_traffic(fd, ctx, session_id, true);
+}
+
+ssize_t
+bbl_ctrl_stream_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_stream_traffic(fd, ctx, session_id, false);
+}
+
+
 struct action {
     char *name;
     callback_function *fn;
@@ -952,8 +1107,8 @@ struct action actions[] = {
     {"ip6cp-close", bbl_ctrl_session_ip6cp_close},
     {"session-counters", bbl_ctrl_session_counters},
     {"session-info", bbl_ctrl_session_info},
-    {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
     {"session-traffic", bbl_ctrl_session_traffic_stats},
+    {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
@@ -966,6 +1121,11 @@ struct action actions[] = {
     {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
     {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
     {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
+    {"session-streams", bbl_ctrl_session_streams},
+    {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start},
+    {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
+    {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
+    {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
     {NULL, NULL},
 };
 

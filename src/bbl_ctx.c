@@ -12,26 +12,6 @@
 extern volatile bool g_teardown;
 
 int
-bbl_compare_session (void *key1, void *key2)
-{
-    const uint64_t a = *(const uint64_t*)key1;
-    const uint64_t b = *(const uint64_t*)key2;
-    return (a > b) - (a < b);
-}
-
-uint
-bbl_session_hash (const void* k)
-{
-    uint hash = 2166136261U;
-
-    hash ^= *(uint32_t *)k;
-    hash ^= *(uint16_t *)(k+4) << 12;
-    hash ^= *(uint16_t *)(k+6);
-
-    return hash;
-}
-
-int
 bbl_compare_key32 (void *key1, void *key2)
 {
     const uint32_t a = *(const uint32_t*)key1;
@@ -44,6 +24,26 @@ bbl_key32_hash (const void* k)
 {
     uint hash = 2166136261U;
     hash ^= *(uint32_t *)k;
+    return hash;
+}
+
+int
+bbl_compare_key64 (void *key1, void *key2)
+{
+    const uint64_t a = *(const uint64_t*)key1;
+    const uint64_t b = *(const uint64_t*)key2;
+    return (a > b) - (a < b);
+}
+
+uint
+bbl_key64_hash (const void* k)
+{
+    uint hash = 2166136261U;
+
+    hash ^= *(uint32_t *)k;
+    hash ^= *(uint16_t *)(k+4) << 12;
+    hash ^= *(uint16_t *)(k+6);
+
     return hash;
 }
 
@@ -78,9 +78,10 @@ bbl_ctx_add (void)
     ctx->flow_id = 1;
 
     /* Initialize hash table dictionaries. */
-    ctx->vlan_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_session, bbl_session_hash, BBL_SESSION_HASHTABLE_SIZE);
+    ctx->vlan_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_SESSION_HASHTABLE_SIZE);
     ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_SESSION_HASHTABLE_SIZE);
     ctx->li_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_LI_HASHTABLE_SIZE);
+    ctx->stream_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_STREAM_FLOW_HASHTABLE_SIZE);
 
     return ctx;
 }

@@ -9,13 +9,14 @@ targeted for max scaling with small resource footprint, simple to use and easy t
 our test automation infrastructure. 
 
 The BNG Blaster is able to simulate more than hundred thousand PPPoE subscribers including IPTV, 
-L2TPv2, traffic verification and convergence testing capabilities.
+L2TPv2, QoS, forwarding verification and convergence testing capabilities.
 
 * *High Scaling:* > 100K sessions
 * *Low CPU and Memory Footprint:* < 100MB memory for 16K sessions
 * *Portable:* runs on every modern linux, virtual machines and containers
 * *User Space:* all protocols implemented in user-space from scratch and optimized for performance
 * *IPTV:* IGMP version 1, 2 and 3 with automated channel zapping test
+* *QoS:* define and analyze traffic streams
 * *Automation:* the BNG Blaster Controller provides an automation friendly REST API and robot keywords
 
 ```
@@ -68,12 +69,16 @@ protocol session FSM timers quickly and at scale.
 BNG Blaster expects a Linux kernel interface which is up, but not configured with any IP addresses or VLAN as it expects to 
 receive and transmit raw ethernet packets.
 
-BNG Blaster does I/O using high-speed polling timers using the so-called PACKET_RX_RING/PACKET_TX_RING abstraction where a 
-userspace program gets a fast-lane into reading and writing to kernel interfaces using a shared ring buffer. The shared ring 
-buffer is a memory mapped "window" that is shared between kernel and user-space. This low overhead abstraction allows to 
-transmit and receive traffic without doing expensive system calls. 
+BNG Blaster does I/O using high-speed polling timers with a mix of raw sockets and so-called PACKET_RX_RING/PACKET_TX_RING 
+abstraction where a userspace program gets a fast-lane into reading and writing to kernel interfaces using a shared ring buffer. 
+The shared ring buffer is a memory mapped "window" that is shared between kernel and user-space. This low overhead abstraction 
+allows to transmit and receive traffic without doing expensive system calls. 
 
 ![BNG Blaster Architecture](images/bbl_arch.png)
+
+The BNG Blaster supports multiple configurable I/O modes listed with `bngblaster -v` but except `packet_mmap_raw` all other modes 
+are currently considered as experimental. In the default mode (`packet_mmap_raw`) all packets are received in a packet_mmap ring
+buffer and send directly trough raw sockets. 
 
 Sending and transmitting traffic is as easy as just by copying a packet into a buffer and setting a flag. This is super 
 efficient and hence we have measured the I/O performance of roughly 1M pps per single CPU thread, which is more than enough for 

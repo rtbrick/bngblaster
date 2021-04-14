@@ -8,6 +8,7 @@
 
 #include "bbl.h"
 #include "bbl_l2tp_avp.h"
+#include "bbl_stream.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -96,6 +97,12 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
         }
         /* Remove session from dict */
         dict_remove(ctx->l2tp_session_dict, &l2tp_session->key);
+        
+        /* Remove session from PPPoE session */
+        if(l2tp_session->pppoe_session) {
+            l2tp_session->pppoe_session->l2tp_session = NULL;
+        }
+
         /* Free tunnel memory */
         if(l2tp_session->proxy_auth_name) free(l2tp_session->proxy_auth_name);
         if(l2tp_session->proxy_auth_challenge) free(l2tp_session->proxy_auth_challenge);
@@ -229,7 +236,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
         }
     }
 
-    clock_gettime(CLOCK_REALTIME, &timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
     q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
     while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
@@ -830,6 +837,7 @@ bbl_l2tp_cdn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *i
 static void
 bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_session_t *l2tp_session) {
     bbl_ctx_s *ctx = interface->ctx;
+    bbl_session_s *pppoe_session;
 
     bbl_lcp_t   *lcp_rx;
     bbl_pap_t   *pap_rx;
@@ -844,7 +852,13 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     bbl_udp_t   *udp;
     bbl_bbl_t   *bbl;
 
-    uint32_t tmp;
+    char reply_message[sizeof(L2TP_REPLY_MESSAGE)+6];
+
+    bbl_stream *stream;
+    void **search = NULL;
+
+    struct timespec delay;
+    uint64_t delay_nsec;
 
     UNUSED(ctx);
     UNUSED(eth);
@@ -871,8 +885,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             pap_rx = (bbl_pap_t*)l2tp->next;
             pap_tx.code = PAP_CODE_ACK;
             pap_tx.identifier = pap_rx->identifier;
-            pap_tx.reply_message = (void*)L2TP_REPLY_MESSAGE;
-            pap_tx.reply_message_len = sizeof(L2TP_REPLY_MESSAGE) - 1;
+            pap_tx.reply_message = reply_message;
+            pap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message), 
+                L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
             break;
         case PROTOCOL_CHAP:
@@ -880,8 +895,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             chap_rx = (bbl_chap_t*)l2tp->next;
             chap_tx.code = CHAP_CODE_SUCCESS;
             chap_tx.identifier = chap_rx->identifier;
-            chap_tx.reply_message = (void*)L2TP_REPLY_MESSAGE;
-            chap_tx.reply_message_len = sizeof(L2TP_REPLY_MESSAGE) - 1;
+            chap_tx.reply_message = reply_message;
+            chap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message), 
+                L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
             break;
         case PROTOCOL_IPCP:
@@ -956,14 +972,54 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
-                    /* Send BNG Blaster session traffic back by swapping 
-                     * IP address and set direction to downstream. */
                     bbl = (bbl_bbl_t*)udp->next;
-                    tmp = ipv4->dst; 
-                    ipv4->dst = ipv4->src;
-                    ipv4->src = tmp;
-                    bbl->direction = BBL_DIRECTION_DOWN;
-                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV4, ipv4);
+                    search = dict_search(ctx->stream_flow_dict, &bbl->flow_id);
+                    if(search) {
+                        stream = *search;
+                        stream->packets_rx++;
+                        stream->rx_len = eth->length;
+                        stream->rx_priority = ((bbl_ipv4_t*)eth->next)->tos;
+                        timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
+                        delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
+                        if(delay_nsec > stream->max_delay_ns) {
+                            stream->max_delay_ns = delay_nsec;
+                        }
+                        if(stream->min_delay_ns) {
+                            if(delay_nsec < stream->min_delay_ns) {
+                                stream->min_delay_ns = delay_nsec;
+                            }
+                        } else {
+                            stream->min_delay_ns = delay_nsec;
+                        }
+                        if(!stream->rx_first_seq) {
+                            stream->rx_first_seq = bbl->flow_seq;
+                        } else {
+                            if(stream->rx_last_seq +1 != bbl->flow_seq) {
+                                stream->loss++;
+                            }
+                        }
+                        stream->rx_last_seq = bbl->flow_seq;
+                    } else {
+                        if(l2tp_session->pppoe_session) {
+                            pppoe_session = l2tp_session->pppoe_session;
+                            if(bbl->flow_id == pppoe_session->access_ipv4_tx_flow_id) {
+                                interface->stats.session_ipv4_rx++;
+                                pppoe_session->stats.network_ipv4_rx++;
+                                if(!pppoe_session->network_ipv4_rx_first_seq) {
+                                    pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
+                                    interface->ctx->stats.session_traffic_flows_verified++;
+                                } else {
+                                    if(pppoe_session->network_ipv4_rx_last_seq +1 != bbl->flow_seq) {
+                                        interface->stats.session_ipv4_loss++;
+                                        pppoe_session->stats.network_ipv4_loss++;
+                                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
+                                            pppoe_session->session_id, bbl->flow_id, bbl->flow_seq, pppoe_session->network_ipv4_rx_last_seq);
+                                    }
+                                }
+                                pppoe_session->network_ipv4_rx_last_seq = bbl->flow_seq;
+                            }
+                        }
+                    }
                 }
             }
         default:

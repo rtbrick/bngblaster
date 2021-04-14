@@ -37,6 +37,14 @@
 #define NCURSES_NOMACROS 1
 #include <curses.h>
 
+/* Experimental NETMAP Support */
+#ifdef BNGBLASTER_NETMAP
+#define LIBNETMAP_NOTHREADSAFE
+#include <net/netmap.h>
+#define NETMAP_WITH_LIBS
+#include <net/netmap_user.h>
+#endif
+
 #include "libdict/dict.h"
 #include "bbl_logging.h"
 #include "bbl_timer.h"
@@ -45,8 +53,8 @@
 #include "bbl_l2tp.h"
 #include "bbl_li.h"
 
-#define WRITE_BUF_LEN               1514
-#define SCRATCHPAD_LEN              1514
+#define IO_BUFFER_LEN               2048
+#define SCRATCHPAD_LEN              2048
 #define CHALLENGE_LEN               16
 
 /* Access Interface */
@@ -79,6 +87,7 @@
 #define BBL_IF_SEND_ICMPV6_NS       0x00000004
 #define BBL_IF_SEND_ICMPV6_NA       0x00000008
 #define BBL_IF_SEND_SEC_ARP_REPLY   0x00000010
+#define BBL_IF_SEND_SEC_ICMPV6_NA   0x00000020
 
 #define DUID_LEN                    10
 
@@ -86,7 +95,7 @@
 
 #define BBL_MAX_ACCESS_INTERFACES   64
 #define BBL_AVG_SAMPLES             5
-#define DATA_TRAFFIC_MAX_LEN        1500
+#define DATA_TRAFFIC_MAX_LEN        1920
 
 #define UNUSED(x)    (void)x
 
@@ -94,7 +103,7 @@ typedef struct bbl_session_ bbl_session_s;
 
 typedef struct bbl_rate_
 {
-    uint32_t diff_value[BBL_AVG_SAMPLES];
+    uint64_t diff_value[BBL_AVG_SAMPLES];
     uint32_t cursor;
     uint64_t last_value;
     uint64_t avg;
@@ -102,9 +111,10 @@ typedef struct bbl_rate_
 } bbl_rate_s;
 
 typedef enum {
-    IO_MODE_PACKET_MMAP = 0,
-    IO_MODE_NETMAP,
-    IO_MODE_RAW,
+    IO_MODE_PACKET_MMAP_RAW = 0,    /* RX packet_mmap ring / TX raw sockets */
+    IO_MODE_PACKET_MMAP,            /* RX/TX packet_mmap ring */
+    IO_MODE_RAW,                    /* RX/TX raw sockets */
+    IO_MODE_NETMAP                  /* RX/TX netmap ring */
 } __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {
@@ -147,6 +157,14 @@ typedef struct bbl_secondary_ip_
     void *next;
 } bbl_secondary_ip_s;
 
+typedef struct bbl_secondary_ip6_
+{
+    ipv6addr_t ip;
+    ipv6addr_t icmpv6_src;
+    bool icmpv6_na;
+    void *next;
+} bbl_secondary_ip6_s;
+
 typedef struct bbl_interface_
 {
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
@@ -158,8 +176,28 @@ typedef struct bbl_interface_
     struct timer_ *timer_arp;
     struct timer_ *timer_nd;
 
-    bbl_io_mode_t io_mode;
-    void *io_ctx; /* IO context */
+    struct {
+        bbl_io_mode_t mode;
+
+        int fd_tx;
+        int fd_rx;
+
+        struct tpacket_req req_tx;
+        struct tpacket_req req_rx;
+        struct sockaddr_ll addr;
+
+        uint8_t *buf; /* IO buffer */
+        uint8_t *ring_tx; /* TX ring buffer */
+        uint8_t *ring_rx; /* RX ring buffer */
+        uint16_t cursor_tx; /* slot # inside the ring buffer */
+        uint16_t cursor_rx; /* slot # inside the ring buffer */
+
+        bool pollout;
+
+#ifdef BNGBLASTER_NETMAP
+        struct nm_desc *port;
+#endif
+    } io;
 
     uint32_t ifindex; /* interface index */
     uint32_t pcap_index; /* interface index for packet captures */
@@ -172,12 +210,14 @@ typedef struct bbl_interface_
     uint8_t  mac[ETH_ADDR_LEN];
     uint8_t  gateway_mac[ETH_ADDR_LEN];
 
-    bool        icmpv6_nd_resolved;
+
     ipv6_prefix ip6;
     ipv6_prefix gateway6;
+    ipv6addr_t  icmpv6_src;
+    bool        icmpv6_nd_resolved;
 
     uint8_t *mc_packets;
-    uint     mc_packet_len;
+    uint16_t mc_packet_len;
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
 
@@ -186,6 +226,10 @@ typedef struct bbl_interface_
         uint64_t packets_rx;
         bbl_rate_s rate_packets_tx;
         bbl_rate_s rate_packets_rx;
+        uint64_t bytes_tx;
+        uint64_t bytes_rx;
+        bbl_rate_s rate_bytes_tx;
+        bbl_rate_s rate_bytes_rx;
         uint64_t packets_rx_drop_unknown;
         uint64_t packets_rx_drop_decode_error;
         uint64_t sendto_failed;
@@ -237,6 +281,8 @@ typedef struct bbl_interface_
         uint32_t dhcpv6_rx;
         uint32_t dhcpv6_timeout;
 
+        uint32_t ipv4_fragmented_rx;
+
         uint64_t session_ipv4_tx;
         bbl_rate_s rate_session_ipv4_tx;
         uint64_t session_ipv4_rx;
@@ -280,6 +326,7 @@ typedef struct bbl_interface_
 
     struct timespec tx_timestamp; /* user space timestamps */
     struct timespec rx_timestamp; /* user space timestamps */
+
     CIRCLEQ_HEAD(bbl_interface__, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
     CIRCLEQ_HEAD(bbl_interface___, bbl_l2tp_queue_ ) l2tp_tx_qhead; /* list of messages that want to transmit */
 } bbl_interface_s;
@@ -295,6 +342,8 @@ typedef struct bbl_access_config_
         bbl_access_type_t access_type; /* pppoe or ipoe */
         bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
         
+        uint16_t stream_group_id;
+
         uint16_t access_outer_vlan;
         uint16_t access_outer_vlan_min;
         uint16_t access_outer_vlan_max;
@@ -379,6 +428,7 @@ typedef struct bbl_ctx_
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */ 
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
+    dict *stream_flow_dict; /* hashtable for traffic stream flows */
 
     uint16_t next_tunnel_id;
 
@@ -410,8 +460,8 @@ typedef struct bbl_ctx_
 
     /* Global Stats */
     struct {
-        uint32_t setup_time; // Time between first session started and last session established
-        double cps; // PPPoE setup rate in calls per second
+        uint32_t setup_time; /* Time between first session started and last session established */
+        double cps; /* PPPoE setup rate in calls per second */
         double cps_min;
         double cps_avg;
         double cps_max;
@@ -430,9 +480,12 @@ typedef struct bbl_ctx_
     struct {
         bool interface_lock_force;
 
-        uint16_t tx_interval;
-        uint16_t rx_interval;
+        uint64_t tx_interval; /* TX interval in nsec */
+        uint64_t rx_interval; /* RX interval in nsec */
         
+        uint16_t io_slots;
+        uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
+
         bool qdisc_bypass;
         bbl_io_mode_t io_mode;
 
@@ -447,9 +500,13 @@ typedef struct bbl_ctx_
         uint16_t network_vlan;
 
         bbl_secondary_ip_s *secondary_ip_addresses;
+        bbl_secondary_ip6_s *secondary_ip6_addresses;
 
         /* Access Interfaces  */
         bbl_access_config_s *access_config;
+
+        /* Traffic Streams */
+        void *stream_config;
 
         /* Global Session Settings */
         uint32_t sessions;
@@ -596,6 +653,7 @@ typedef struct vlan_session_key_ {
 
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
+#define BBL_STREAM_FLOW_HASHTABLE_SIZE 32771 /* is a prime number */
 
 /*
  * Client Session to a BNG device.
@@ -636,8 +694,13 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv4;
     struct timer_ *timer_session_traffic_ipv6;
     struct timer_ *timer_session_traffic_ipv6pd;
+    struct timer_ *timer_rate;
 
     bbl_access_type_t access_type;
+
+    uint16_t stream_group_id;
+    void *stream;
+    bool stream_traffic;
 
     struct {
         uint32_t ifindex;
@@ -649,6 +712,7 @@ typedef struct bbl_session_
 
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
+    bbl_l2tp_session_t *l2tp_session;
 
     /* Authentication */
     char *username;
@@ -815,6 +879,21 @@ typedef struct bbl_session_
     uint64_t network_ipv6pd_rx_last_seq;
 
     struct {
+        uint64_t packets_tx;
+        uint64_t packets_rx;
+        bbl_rate_s rate_packets_tx;
+        bbl_rate_s rate_packets_rx;
+        uint64_t bytes_tx;
+        uint64_t bytes_rx;
+        bbl_rate_s rate_bytes_tx;
+        bbl_rate_s rate_bytes_rx;
+
+        /* Accounting relevant traffic (without control). */
+        uint64_t accounting_packets_tx;
+        uint64_t accounting_packets_rx;
+        uint64_t accounting_bytes_tx;
+        uint64_t accounting_bytes_rx;
+
         uint32_t igmp_rx;
         uint32_t igmp_tx;
 
@@ -837,6 +916,7 @@ typedef struct bbl_session_
         uint32_t icmp_tx;
         uint32_t icmpv6_rx;
         uint32_t icmpv6_tx;
+        uint32_t ipv4_fragmented_rx;
 
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;
@@ -861,7 +941,6 @@ typedef struct bbl_session_
 
         uint32_t flapped; // flap counter
     } stats;
-
 
 } bbl_session_s;
 

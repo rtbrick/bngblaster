@@ -10,8 +10,19 @@
 
 #include "bbl.h"
 #include "bbl_session.h"
+#include "bbl_stream.h"
+#include "bbl_stats.h"
 
 extern volatile bool g_teardown;
+
+void
+bbl_session_rate_job (timer_s *timer) {
+    bbl_session_s *session = timer->data;
+    bbl_compute_avg_rate(&session->stats.rate_packets_tx, session->stats.packets_tx);
+    bbl_compute_avg_rate(&session->stats.rate_packets_rx, session->stats.packets_rx);
+    bbl_compute_avg_rate(&session->stats.rate_bytes_tx, session->stats.bytes_tx);
+    bbl_compute_avg_rate(&session->stats.rate_bytes_rx, session->stats.bytes_rx);
+}
 
 /** 
  * bbl_session_update_state 
@@ -136,6 +147,10 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->zapping_view_start_time.tv_sec = 0;
                         session->zapping_view_start_time.tv_nsec = 0;
 
+                        /* L2TP */
+                        session->l2tp = false;
+                        session->l2tp_session = NULL;
+                        
                         /* Session traffic */
                         session->access_ipv4_tx_flow_id = 0;
                         session->access_ipv4_tx_seq = 0;
@@ -407,7 +422,8 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         
         /* Session traffic */
         session->session_traffic = access_config->session_traffic_autostart;
-    
+        session->stream_traffic = true;
+        
         /* Set access type specifc values */
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             session->mru = ctx->config.ppp_mru;
@@ -446,7 +462,13 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 *result.datum_ptr = session;
             }
         }
-
+        if(access_config->stream_group_id) {
+            if(!bbl_stream_add(ctx, access_config, session)) {
+                LOG(ERROR, "Failed to create session traffic stream!\n");
+                return false;
+            }
+            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, bbl_session_rate_job);
+        }
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;
 Next:
