@@ -90,7 +90,18 @@ Following an example configuration file which is explained in detail below.
 
 ## Interfaces
 
-This section describes all attributes of the `interfaces` hierarchy. 
+This section describes all attributes of the `interfaces` hierarchy 
+which allows to modify how to send and receive traffic. 
+
+```json
+{
+    "interfaces": {
+        "tx-interval": 0.1,
+        "rx-interval": 0.1,
+        "io-slots": 2048,
+    }
+}
+```
 
 Attribute | Description | Default 
 --------- | ----------- | -------
@@ -103,14 +114,30 @@ Attribute | Description | Default
 
 The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms)
 if more precise timestamps are needed. This is recommended for IGMP join/leave 
-or QoS delay measurements.
+or QoS delay measurements. For higher packet rates (>1g) it might be needed to 
+increase the `io-slots` from the default value of `1024` to `2048` or more.
 
 The supported IO modes are listed with `bngblaster -v` but except
 `packet_mmap_raw` all other modes are currently considered as experimental. In 
 the default mode (`packet_mmap_raw`) all packets are received in a packet_mmap 
 ring buffer and send directly trough raw sockets. 
 
-**WARNING**: Try to disable `qdisc-bypass` if BNG Blaster is not sending traffic!
+**WARNING**: Disable `qdisc-bypass` only if BNG Blaster is not sending traffic!
+
+The interfaces used in BNG Blaster do not need IP addresses configured in the host
+operating system but they need to be in up state.
+
+```
+sudo ip link set dev <interface> up
+```
+
+It is not possible to send packets larger than the interface MTU which is 1500 per default 
+but for PPPoE with multiple VLAN headers this might be not enough for large packets. 
+Therefore the interface MTU should be increased using the following commands.
+
+```
+sudo ip link set mtu 9000 dev <interface>
+```
 
 ### Network Interface
 
