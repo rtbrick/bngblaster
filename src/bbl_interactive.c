@@ -155,7 +155,6 @@ bbl_stats_job (timer_s *timer)
     struct bbl_interface_ *access_if;
     
     bbl_session_s *session;
-    bbl_stream *stream;
 
     int max_x, max_y;
     int i; 
@@ -371,7 +370,7 @@ bbl_stats_job (timer_s *timer)
             if(session->username) {
                 wprintw(stats_win, "\n  Username: %s \n", session->username);
             }
-            wprintw(stats_win, "\n  Session\n");
+            wprintw(stats_win, "\n  Access Client Interface\n");
             wprintw(stats_win, "    Tx Packets %10lu | %7lu PPS | %10lu Kbps\n",
                 session->stats.packets_tx, session->stats.rate_packets_tx.avg, 
                 session->stats.rate_bytes_tx.avg * 8 / 1000);
@@ -381,16 +380,49 @@ bbl_stats_job (timer_s *timer)
 
             if(session->stream) {
                 wprintw(stats_win, "\n  Stream           | Direction | Tx PPS  | Tx Kbps    | Rx PPS  | Rx Kbps    | Loss\n");
+                wprintw(stats_win, "  -------------------------------------------------------------------------------------\n");
 
-                stream = session->stream;
+                uint64_t tx_kbps;
+                uint64_t rx_kbps; 
+                uint64_t stream_sum_up_tx_pps = 0;
+                uint64_t stream_sum_up_tx_kbps = 0;
+                uint64_t stream_sum_up_rx_pps = 0;
+                uint64_t stream_sum_up_rx_kbps = 0;
+                uint64_t stream_sum_up_loss = 0;
+                uint64_t stream_sum_down_tx_pps = 0;
+                uint64_t stream_sum_down_rx_pps = 0;
+                uint64_t stream_sum_down_tx_kbps = 0;
+                uint64_t stream_sum_down_rx_kbps = 0;
+                uint64_t stream_sum_down_loss = 0;
+
+                bbl_stream *stream = session->stream;
                 while(stream) {
+                    tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
+                    rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
                     wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, 
                             stream->direction == STREAM_DIRECTION_UP ? "up" : "down",
-                            stream->rate_packets_tx.avg, stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000,
-                            stream->rate_packets_rx.avg, stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000,
-                            stream->loss);
+                            stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, stream->loss);
+
+                    if(stream->direction == STREAM_DIRECTION_UP) {
+                        stream_sum_up_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_up_tx_kbps += tx_kbps;
+                        stream_sum_up_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_up_rx_kbps += rx_kbps;
+                        stream_sum_up_loss += stream->loss;
+                    } else {
+                        stream_sum_down_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_down_tx_kbps += tx_kbps;
+                        stream_sum_down_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_down_rx_kbps += rx_kbps;
+                        stream_sum_down_loss += stream->loss;
+                    }
                     stream = stream->next;
                 }
+                wprintw(stats_win, "  =====================================================================================\n");
+                wprintw(stats_win, "  SUM              | up        | %7lu | %10lu | %7lu | %10lu | %8lu\n", 
+                        stream_sum_up_tx_pps, stream_sum_up_tx_kbps, stream_sum_up_rx_pps, stream_sum_up_rx_kbps, stream_sum_up_loss);
+                wprintw(stats_win, "                   | down      | %7lu | %10lu | %7lu | %10lu | %8lu\n", 
+                        stream_sum_down_tx_pps, stream_sum_down_tx_kbps, stream_sum_down_rx_pps, stream_sum_down_rx_kbps, stream_sum_down_loss);
             }
         }
     }
