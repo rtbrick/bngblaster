@@ -214,13 +214,13 @@ timer_dequeue_bucket (timer_s *timer)
      * If the last timer of a bucket is gone, remove the bucket as well.
      */
     if (!timer_bucket->timers) {
-	CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
+        CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
 
-	LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
-	    timer_bucket->sec, timer_bucket->nsec/1000);
+        LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
+            timer_bucket->sec, timer_bucket->nsec/1000);
 
-	free(timer_bucket);
-	timer_root->buckets--;
+        free(timer_bucket);
+        timer_root->buckets--;
     }
 }
 
@@ -259,22 +259,21 @@ timer_requeue (timer_s *timer, time_t sec, long nsec)
 void
 timer_del_internal (timer_s *timer)
 {
-    timer_root_s *timer_root;
     timer_bucket_s *timer_bucket;
-
-    timer_bucket = timer->timer_bucket;
-    timer_root = timer_bucket->timer_root;
+    timer_root_s *timer_root;
 
     LOG(TIMER, "  Delete %s timer\n", timer->name);
 
-    timer_dequeue_bucket(timer);
-
-    /* Add to GC list */
-    CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
-    timer_root->gc++;
-
-    *timer->ptimer = NULL; /* delete references to this timer */
-    timer->ptimer= NULL;
+    timer_bucket = timer->timer_bucket;
+    if(timer_bucket) {
+        timer_root = timer_bucket->timer_root;
+        timer_dequeue_bucket(timer);
+        /* Add to GC list */
+        CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
+        timer_root->gc++;
+        *timer->ptimer = NULL; /* delete references to this timer */
+        timer->ptimer= NULL;
+    }
 }
 
 /*

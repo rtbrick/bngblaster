@@ -103,7 +103,7 @@ replace_substring (const char* s,
     }
 
     /* Check if string fits into buffer */
-    if((i + cnt * (new_len - old_len) + 1) > STRLEN_MAX) {
+    if((i + cnt * (new_len - old_len) + 1) >= STRLEN_MAX) {
         return NULL;
     }
 
