@@ -553,7 +553,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     }
 
     /* Set version 4 and header length to 20 */
-    *buf = 4 << 4;
+    *buf = 64;
     *buf |= header_len;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
@@ -1478,6 +1478,7 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                         dhcpv6->dns2 = (ipv6addr_t*)(buf+16);
                     }
                 }
+                break;
             default:
                 break;
         }

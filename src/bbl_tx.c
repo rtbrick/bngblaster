@@ -390,7 +390,7 @@ bbl_encode_packet_igmp (bbl_session_s *session)
         session->send_requests &= ~BBL_SEND_IGMP;
         return IGNORED;
     }
-    timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", 1, 0, session, bbl_igmp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", 1, 0, session, &bbl_igmp_timeout);
     session->stats.igmp_tx++;
     interface->stats.igmp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -486,7 +486,7 @@ bbl_encode_packet_pap_request (bbl_session_s *session) {
     pap.username_len = strlen(session->username);
     pap.password = session->password;
     pap.password_len = strlen(session->password);
-    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, bbl_pap_timeout);
+    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, &bbl_pap_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -535,7 +535,7 @@ bbl_encode_packet_chap_response (bbl_session_s *session) {
     chap.challenge_len = CHALLENGE_LEN;
     chap.name = session->username;
     chap.name_len = strlen(session->username);
-    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, bbl_chap_timeout);
+    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, &bbl_chap_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -594,7 +594,7 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
     ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
     ipv6.next = &icmpv6;
     icmpv6.type = IPV6_ICMPV6_ROUTER_SOLICITATION;
-    timer_add(&ctx->timer_root, &session->timer_icmpv6, "ICMPv6", 5, 0, session, bbl_icmpv6_timeout);
+    timer_add(&ctx->timer_root, &session->timer_icmpv6, "ICMPv6", 5, 0, session, &bbl_icmpv6_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -676,7 +676,7 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
         dhcpv6.oro = true;
     }
-    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", 5, 0, session, bbl_dhcpv6_timeout);
+    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", 5, 0, session, &bbl_dhcpv6_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -742,7 +742,7 @@ bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
     if(ip6cp.code == PPP_CODE_CONF_REQUEST) {
         ip6cp.ipv6_identifier = session->ip6cp_ipv6_identifier;
     }
-    timer_add(&ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout", ctx->config.ip6cp_conf_request_timeout, 0, session, bbl_ip6cp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout", ctx->config.ip6cp_conf_request_timeout, 0, session, &bbl_ip6cp_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -856,7 +856,7 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
             ipcp.option_dns2 = true;
         }
     }
-    timer_add(&ctx->timer_root, &session->timer_ipcp, "IPCP timeout", ctx->config.ipcp_conf_request_timeout, 0, session, bbl_ipcp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_ipcp, "IPCP timeout", ctx->config.ipcp_conf_request_timeout, 0, session, &bbl_ipcp_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -966,7 +966,7 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
         timeout = ctx->config.lcp_conf_request_timeout;
     }
     if(timeout) {
-        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout", timeout, 0, session, bbl_lcp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout", timeout, 0, session, &bbl_lcp_timeout);
     }
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
@@ -1160,7 +1160,7 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
      switch(session->session_state) {
         case BBL_PPPOE_INIT:
             result = bbl_encode_padi(session);
-            timer_add(&ctx->timer_root, &session->timer_padi, "PADI timeout", 5, 0, session, bbl_padi_timeout);
+            timer_add(&ctx->timer_root, &session->timer_padi, "PADI timeout", 5, 0, session, &bbl_padi_timeout);
             interface->stats.padi_tx++;
             if(!ctx->stats.first_session_tx.tv_sec) {
                 ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
@@ -1169,7 +1169,7 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
             break;
         case BBL_PPPOE_REQUEST:
             result = bbl_encode_padr(session);
-            timer_add(&ctx->timer_root, &session->timer_padr, "PADR timeout", 5, 0, session, bbl_padr_timeout);
+            timer_add(&ctx->timer_root, &session->timer_padr, "PADR timeout", 5, 0, session, &bbl_padr_timeout);
             interface->stats.padr_tx++;
             break;
         case BBL_TERMINATING:
@@ -1215,9 +1215,9 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     arp.target_ip = session->peer_ip_address;
 
     if(session->arp_resolved) {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 300, 0, session, bbl_arp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 300, 0, session, &bbl_arp_timeout);
     } else {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 1, 0, session, bbl_arp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 1, 0, session, &bbl_arp_timeout);
     }
     interface->stats.arp_tx++;
     if(!ctx->stats.first_session_tx.tv_sec) {
@@ -1389,9 +1389,9 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         arp.sender_ip = interface->ip;
         arp.target_ip = interface->gateway;
         if(interface->arp_resolved) {
-            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 300, 0, interface, bbl_network_arp_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 300, 0, interface, &bbl_network_arp_timeout);
         } else {
-            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, bbl_network_arp_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, &bbl_network_arp_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ARP_REPLY) {
@@ -1445,9 +1445,9 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         memcpy(icmpv6.prefix.address, interface->gateway6.address, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         if(interface->icmpv6_nd_resolved) {
-            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 300, 0, interface, bbl_network_nd_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 300, 0, interface, &bbl_network_nd_timeout);
         } else {
-            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, bbl_network_nd_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, &bbl_network_nd_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NA) {

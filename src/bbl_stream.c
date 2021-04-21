@@ -470,7 +470,6 @@ bbl_stream_build_packet(bbl_stream *stream) {
                     } else {
                         return bbl_stream_build_network_packet(stream);
                     }
-                    break;                    
                 default:
                     break;
             }
@@ -753,11 +752,11 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 }
                 if(config->threaded) {
                     pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, bbl_stream_tx_thread_counter_sync);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, &bbl_stream_tx_thread_counter_sync);
                 } else {
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
+                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 LOG(DEBUG, "Traffic stream %s added in upstream with %u PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec); 
             }
             if(config->direction & STREAM_DIRECTION_DOWN) {
@@ -787,11 +786,11 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 }
                 if(config->threaded) {
                     pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, bbl_stream_tx_thread_counter_sync);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, &bbl_stream_tx_thread_counter_sync);
                 } else {
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, bbl_stream_tx_job);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, bbl_stream_rate_job);
+                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 LOG(DEBUG, "Traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec); 
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);

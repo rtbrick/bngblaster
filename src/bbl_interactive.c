@@ -429,9 +429,9 @@ bbl_init_curses (bbl_ctx_s *ctx)
     wrefresh(stats_win);
 
     timer_add_periodic(&ctx->timer_root, &ctx->stats_timer, "Statistics Timer",
-		               0, 100 * MSEC, ctx, bbl_stats_job);
+		               0, 100 * MSEC, ctx, &bbl_stats_job);
     timer_add_periodic(&ctx->timer_root, &ctx->keyboard_timer, "Keyboard Reader",
-		               0, 100 * MSEC, ctx, bbl_read_key_job);
+		               0, 100 * MSEC, ctx, &bbl_read_key_job);
 
     g_interactive = true;
 }

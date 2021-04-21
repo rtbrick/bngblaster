@@ -637,7 +637,7 @@ bbl_igmp_initial_join(timer_s *timer)
         }
 
         /* Adding 1 nanosecond to enforce a dedicated timer bucket for zapping. */
-        timer_add_periodic(&ctx->timer_root, &session->timer_zapping, "IGMP Zapping", ctx->config.igmp_zap_interval, 1, session, bbl_igmp_zapping);
+        timer_add_periodic(&ctx->timer_root, &session->timer_zapping, "IGMP Zapping", ctx->config.igmp_zap_interval, 1, session, &bbl_igmp_zapping);
         LOG(IGMP, "IGMP (ID: %u) ZAPPING start zapping with interval %u\n",
             session->session_id, ctx->config.igmp_zap_interval);
 
@@ -683,10 +683,10 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                                     tx_interval = ctx->config.tx_interval;
                                 }
                                 timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6PD",
-                                                   0, tx_interval, session, bbl_session_traffic_ipv6pd);
+                                                   0, tx_interval, session, &bbl_session_traffic_ipv6pd);
                             } else {
                                 timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6PD",
-                                                   1, 0, session, bbl_session_traffic_ipv6pd);
+                                                   1, 0, session, &bbl_session_traffic_ipv6pd);
                             }
                         } else {
                             LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
@@ -870,10 +870,10 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                                 tx_interval = ctx->config.tx_interval;
                             }
                             timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
-                                               0, tx_interval, session, bbl_session_traffic_ipv6);
+                                               0, tx_interval, session, &bbl_session_traffic_ipv6);
                         } else {
                             timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
-                                               1, 0, session, bbl_session_traffic_ipv6);
+                                               1, 0, session, &bbl_session_traffic_ipv6);
                         }
                     } else {
                         LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
@@ -1311,15 +1311,15 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
             }
             if(ctx->config.lcp_keepalive_interval) {
                 /* Start LCP echo request / keep alive */
-                timer_add_periodic(&ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", ctx->config.lcp_keepalive_interval, 0, session, bbl_lcp_echo);
+                timer_add_periodic(&ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", ctx->config.lcp_keepalive_interval, 0, session, &bbl_lcp_echo);
             }
             if(session->l2tp == false && ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
                 /* Start IGMP */
-                timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, bbl_igmp_initial_join);
+                timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
             }
             if(ctx->config.pppoe_session_time) {
                 /* Start Session Timer */
-                timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, bbl_session_timeout);
+                timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, &bbl_session_timeout);
             }
             if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
                ctx->op.network_if && ctx->op.network_if->ip) {
@@ -1332,10 +1332,10 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                             tx_interval = ctx->config.tx_interval;
                         }
                         timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                           0, tx_interval, session, bbl_session_traffic_ipv4);
+                                           0, tx_interval, session, &bbl_session_traffic_ipv4);
                     } else {
                         timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                           1, 0, session, bbl_session_traffic_ipv4);
+                                           1, 0, session, &bbl_session_traffic_ipv4);
                     }
                 } else {
                     LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
@@ -1364,7 +1364,7 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
         }
         if(ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
             /* Start IGMP */
-            timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, bbl_igmp_initial_join);
+            timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
         }
         if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
             ctx->op.network_if && ctx->op.network_if->ip) {
@@ -1377,10 +1377,10 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
                         tx_interval = ctx->config.tx_interval;
                     }
                     timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                       0, tx_interval, session, bbl_session_traffic_ipv4);
+                                       0, tx_interval, session, &bbl_session_traffic_ipv4);
                 } else {
                     timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                       1, 0, session, bbl_session_traffic_ipv4);
+                                       1, 0, session, &bbl_session_traffic_ipv4);
                 }
             } else {
                 LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
@@ -1433,7 +1433,7 @@ bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session
                     session->ip6cp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
                     session->link_local_ipv6_address[0] = 0xfe;
-                    session->link_local_ipv6_address[0] = 0x80;
+                    session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
                     session->send_requests |= BBL_SEND_ICMPV6_RS;
                     bbl_session_tx_qnode_insert(session);

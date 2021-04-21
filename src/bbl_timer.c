@@ -672,21 +672,21 @@ timer_test (void *ctx)
     t12 = t22 = t32 = NULL;
     t41 = NULL;
 
-    timer_add(&root, &t11, "t1.1", 1, 0, ctx, timer_test_cb);
-    timer_add(&root, &t12, "t1.2", 1, 0, ctx, timer_test_cb);
+    timer_add(&root, &t11, "t1.1", 1, 0, ctx, &timer_test_cb);
+    timer_add(&root, &t12, "t1.2", 1, 0, ctx, &timer_test_cb);
 
-    timer_add(&root, &t21, "t2.1", 2, 0, ctx, timer_test_cb);
-    timer_add(&root, &t22, "t2.2", 2, 0, ctx, timer_test_cb);
+    timer_add(&root, &t21, "t2.1", 2, 0, ctx, &timer_test_cb);
+    timer_add(&root, &t22, "t2.2", 2, 0, ctx, &timer_test_cb);
 
-    timer_add(&root, &t31, "t3.1", 5, 0, ctx, timer_test_cb);
-    timer_add(&root, &t32, "t3.2", 5, 0, ctx, timer_test_cb);
+    timer_add(&root, &t31, "t3.1", 5, 0, ctx, &timer_test_cb);
+    timer_add(&root, &t32, "t3.2", 5, 0, ctx, &timer_test_cb);
 
-    timer_add_periodic(&root, &t41, "t4.1 periodic", 4, 0, ctx, timer_test_cb);
+    timer_add_periodic(&root, &t41, "t4.1 periodic", 4, 0, ctx, &timer_test_cb);
 
     for (idx = 0; idx < 10; idx++) {
         t5[idx] = NULL;
         snprintf(timer_name, sizeof(timer_name), "t5.%u", idx+1);
-        timer_add(&root, &t5[idx], timer_name, 10, 0, ctx, timer_test_cb);
+        timer_add(&root, &t5[idx], timer_name, 10, 0, ctx, &timer_test_cb);
     }
     timer_smear_bucket(&root, 10, 0);
 
