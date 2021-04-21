@@ -375,10 +375,10 @@ bbl_print_usage_arg (struct option *option)
 void
 bbl_print_version (void)
 {
-    if(strlen(BNGBLASTER_VERSION)) {
+    if(sizeof(BNGBLASTER_VERSION)-1) {
         printf("Version: %s\n", BNGBLASTER_VERSION);
     }
-    if(strlen(GIT_REF) + strlen(GIT_SHA)) {
+    if(sizeof(GIT_REF)-1 + sizeof(GIT_SHA)-1) {
         printf("GIT:\n");
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
