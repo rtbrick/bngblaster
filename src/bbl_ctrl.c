@@ -136,7 +136,6 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool statu
         }
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
-    return 0;
 }
 
 ssize_t
@@ -222,7 +221,6 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
     }
-    return 0;
 }
 
 ssize_t
@@ -279,7 +277,6 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
     }
-    return 0;
 }
 
 ssize_t
@@ -601,7 +598,6 @@ bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* 
         LOG(NORMAL, "Teardown request\n");
         return bbl_ctrl_status(fd, "ok", 200, "terminate all sessions");
     }
-    return 0;
 }
 
 static void
@@ -703,7 +699,6 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
         }
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
-    return 0;
 }
 
 ssize_t
@@ -1079,7 +1074,6 @@ bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status
         }
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
-    return 0;
 }
 
 ssize_t
@@ -1152,7 +1146,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
         if(fd < 0) {
             /* The accept function fails with error EAGAIN or EWOULDBLOCK if
              * there are no pending connections present on the queue.*/
-            if((errno == EAGAIN || errno == EWOULDBLOCK)) {
+            if(errno == EAGAIN) {
                 return;
             }
         } else {
@@ -1281,7 +1275,7 @@ bbl_ctrl_socket_open (bbl_ctx_s *ctx) {
     /* Change socket to non-blocking */
     fcntl(ctx->ctrl_socket, F_SETFL, O_NONBLOCK);
 
-    timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_timer, "CTRL Socket Timer", 0, 100 * MSEC, ctx, bbl_ctrl_socket_job);
+    timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_timer, "CTRL Socket Timer", 0, 100 * MSEC, ctx, &bbl_ctrl_socket_job);
 
     LOG(NORMAL, "Opened control socket %s\n", ctx->ctrl_socket_path);
     return true;

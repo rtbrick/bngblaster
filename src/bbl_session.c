@@ -467,7 +467,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 LOG(ERROR, "Failed to create session traffic stream!\n");
                 return false;
             }
-            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, bbl_session_rate_job);
+            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
         }
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;

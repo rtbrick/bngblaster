@@ -294,7 +294,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
      * Timer to compute periodic rates.
      */
     timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-		               bbl_compute_interface_rate_job);
+		               &bbl_compute_interface_rate_job);
 
     return interface;
 }
@@ -750,7 +750,7 @@ main (int argc, char *argv[])
     /*
      * Setup control job.
      */
-    timer_add_periodic(&ctx->timer_root, &ctx->control_timer, "Control Timer", 1, 0, ctx, bbl_ctrl_job);
+    timer_add_periodic(&ctx->timer_root, &ctx->control_timer, "Control Timer", 1, 0, ctx, &bbl_ctrl_job);
 
     /*
      * Setup control socket and job
@@ -765,7 +765,7 @@ main (int argc, char *argv[])
     /*
      * Start smear job. Use a crazy nsec bucket '12345678', such that we do not accidentally smear ourselves.
      */
-    timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, bbl_smear_job);
+    timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
 
     /*
      * Start event loop.

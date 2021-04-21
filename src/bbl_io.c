@@ -484,9 +484,9 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
         /* Open the shared memory TX window between kernel and userspace. */
         ring_size = interface->io.req_tx.tp_block_nr * interface->io.req_tx.tp_block_size;
         interface->io.ring_tx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->io.fd_tx, 0);
-        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_packet_mmap_tx_job);
+        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_packet_mmap_tx_job);
     } else {
-        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_raw_tx_job);
+        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_raw_tx_job);
     }
 
     /*
@@ -509,9 +509,9 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
         /* Open the shared memory RX window between kernel and userspace. */
         ring_size = interface->io.req_rx.tp_block_nr * interface->io.req_rx.tp_block_size;
         interface->io.ring_rx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->io.fd_rx, 0);
-        timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_packet_mmap_rx_job);
+        timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_packet_mmap_rx_job);
     } else {
-        timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_raw_rx_job);
+        timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_raw_rx_job);
     }
     return true;
 }

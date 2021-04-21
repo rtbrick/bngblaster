@@ -195,11 +195,11 @@
 
 #define BUMP_BUFFER(_buf, _len, _size) \
     (_buf) += _size; \
-    _len -= _size;
+    _len -= _size
 
 #define BUMP_WRITE_BUFFER(_buf, _len, _size) \
     (_buf) += _size; \
-    *(uint16_t*)(_len) += _size;
+    *(uint16_t*)(_len) += _size
 
 typedef uint8_t ipv6addr_t[IPV6_ADDR_LEN];
 
