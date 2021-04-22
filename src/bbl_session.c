@@ -318,7 +318,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 access_config->access_inner_vlan = access_config->access_inner_vlan_max;
             }
         } else {
-            if(access_config->exhausted) goto Next;
+            if(access_config->exhausted) goto NEXT;
             if(access_config->access_outer_vlan == 0) {
                 /* The outer VLAN is initial 0 */
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
@@ -348,7 +348,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
                 /* VLAN range exhausted */
                 access_config->exhausted = true;
-                goto Next;
+                goto NEXT;
             }
         }
         t++;
@@ -471,7 +471,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         }
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;
-Next:
+NEXT:
         if(access_config->next) {
             access_config = access_config->next;
         } else {

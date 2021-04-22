@@ -1378,6 +1378,8 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     bbl_secondary_ip_s *secondary_ip;
     bbl_secondary_ip6_s *secondary_ip6;
 
+    *len = 0;
+
     eth.src = interface->mac;
     eth.vlan_outer = interface->ctx->config.network_vlan;
     if(interface->send_requests & BBL_IF_SEND_ARP_REQUEST) {

@@ -104,7 +104,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     bbl_ipv4_t ip = {0};
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
-    uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x00, 0x5e, 0x00, 0x00, 0x00 };
+    uint8_t mac[ETH_ADDR_LEN] = {0};
     uint8_t *buf;
 
     uint32_t group;
@@ -127,16 +127,19 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             } else {
                 source = interface->ip;
             }
-            /* Generate destination MAC */
-            *(uint32_t*)&mac[2] = group & 0x7FDDDF; mac[2] = 0x5e;
-
+            group = htobe32(group);
+            /* Generate multicast destination MAC */
+            *(uint32_t*)(&mac[2]) = group;
+            mac[0] = 0x01;
+            mac[2] = 0x5e;
+            mac[3] &= 0x7f;
             eth.src = interface->mac;
             eth.dst = mac;
             eth.vlan_outer = ctx->config.network_vlan;
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ip;
             ip.src = source;
-            ip.dst = htobe32(group);
+            ip.dst = group;
             ip.ttl = 64;
             ip.tos = ctx->config.multicast_traffic_tos;
             ip.protocol = PROTOCOL_IPV4_UDP;
@@ -152,7 +155,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             bbl.direction = BBL_DIRECTION_DOWN;
             bbl.tos = ctx->config.multicast_traffic_tos;
             bbl.mc_source = ip.src;
-            bbl.mc_group = ip.dst ;
+            bbl.mc_group = group ;
             if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
                 return false;
             }
@@ -316,7 +319,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
                 if (strcmp(ctx->op.access_if[i]->name, access_config->interface) == 0) {
                     /* Interface already added! */
                     access_config->access_if = ctx->op.access_if[i];
-                    goto Next;
+                    goto NEXT;
                 }
             }
         }
@@ -328,7 +331,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
         access_if->access = true;
         access_config->access_if = access_if;
         ctx->op.access_if[ctx->op.access_if_count++] = access_if;
-Next:
+NEXT:
         access_config = access_config->next;
     }
     return true;

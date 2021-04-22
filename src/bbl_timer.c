@@ -114,11 +114,10 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
         if (timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
             continue;
         }
-
         /*
          * Found it !
          */
-        goto insert;
+        goto INSERT;
     }
 
     /*
@@ -139,7 +138,7 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
     LOG(TIMER_DETAIL, "Add timer bucket %lu.%06lus\n",
 	timer_bucket->sec, timer_bucket->nsec/1000);
 
- insert:
+ INSERT:
     timer->timer_bucket = timer_bucket;
     CIRCLEQ_INSERT_TAIL(&timer_bucket->timer_qhead, timer, timer_qnode);
     timer_bucket->timers++;

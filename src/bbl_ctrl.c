@@ -1180,7 +1180,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                     session_id = json_number_value(value);
                                 } else {
                                     bbl_ctrl_status(fd, "error", 400, "invalid session-id");
-                                    goto Close;
+                                    goto CLOSE;
                                 }
                             } else {
                                 /* Deprecated! 
@@ -1193,7 +1193,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                         key.ifindex = json_number_value(value);
                                     } else {
                                         bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
-                                        goto Close;
+                                        goto CLOSE;
                                     }
                                 } else {
                                     /* Use first interface as default. */
@@ -1207,7 +1207,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                         key.outer_vlan_id = json_number_value(value);
                                     } else {
                                         bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
-                                        goto Close;
+                                        goto CLOSE;
                                     }
                                 }
                                 value = json_object_get(arguments, "inner-vlan");
@@ -1216,7 +1216,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                         key.inner_vlan_id = json_number_value(value);
                                     } else {
                                         bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
-                                        goto Close;
+                                        goto CLOSE;
                                     }
                                 }
                                 if(key.outer_vlan_id) {
@@ -1226,7 +1226,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                         session_id = session->session_id;
                                     } else {
                                         bbl_ctrl_status(fd, "warning", 404, "session not found");
-                                        goto Close;
+                                        goto CLOSE;
                                     }
                                 }
                             }
@@ -1243,7 +1243,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
                     }
                 }
             }
-Close:
+CLOSE:
             if(root) json_decref(root);
             close(fd);
         }

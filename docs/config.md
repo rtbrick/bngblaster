@@ -581,8 +581,10 @@ Attribute | Description | Default
 `length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
 `pps` | Stream traffic rate in packets per second | 1
 `bps` | Stream traffic rate in bits per second (layer 3) | 
-`network-ipv4-address` | Overwrite network interface IPv4 address | 
+`network-ipv4-address` | Overwrite network interface IPv4 address |
 `network-ipv6-address` | Overwrite network interface IPv6 address | 
+`destination-ipv4-address` | Overwrite the IPv4 destination address | 
+`destination-ipv6-address` | Overwrite the IPv6 destination address | 
 `threaded` | Run those streams in separate threads | false
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.

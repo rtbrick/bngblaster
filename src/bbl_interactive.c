@@ -128,7 +128,7 @@ bbl_format_progress (uint complete, uint current)
 
     if (!complete || !current) {
         memset(buf, ' ', sizeof(buf));
-        goto exit;
+        goto EXIT;
     }
 
     percentage = (float)current / (float)complete;
@@ -140,7 +140,7 @@ bbl_format_progress (uint complete, uint current)
         buf[idx] = ' ';
     }
 
- exit:
+ EXIT:
     buf[PROGRESS_BAR_SIZE] = 0;
     return buf;
 }

@@ -68,7 +68,7 @@ sudo apt install libcmocka-dev
 
 The option `BNGBLASTER_TESTS` enables to build unit tests. 
 ```
-cmake -DBNGBLASTER_TESTS=ON .
+cmake -DCMAKE_BUILD_TYPE=Debug -DBNGBLASTER_TESTS=ON .
 make all
 make test
 ```
