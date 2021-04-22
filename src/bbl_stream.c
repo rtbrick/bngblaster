@@ -17,8 +17,11 @@ extern volatile bool g_teardown;
 bool
 bbl_stream_can_send(bbl_stream *stream) {
     bbl_session_s *session = stream->session;
-
-    if(session->session_state == BBL_ESTABLISHED) {
+    if(stream->config->stream_group_id == 0) {
+        /* RAW stream */
+        return true;
+    }
+    if(session && session->session_state == BBL_ESTABLISHED) {
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             if(session->l2tp && session->l2tp_session == NULL) {
                 goto FREE;
@@ -297,13 +300,14 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
-    bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
-    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
-    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
+    if(session) {
+        bbl.session_id = session->session_id;
+        bbl.ifindex = session->interface->ifindex;
+        bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+        bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
+    }
     bbl.flow_id = stream->flow_id;
     bbl.direction = BBL_DIRECTION_DOWN;
-
     switch (stream->config->type) {
         case STREAM_IPV4:
             eth.type = ETH_TYPE_IPV4;
@@ -317,8 +321,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             /* Destination address */
             if(stream->config->ipv4_destination_address) {
                 ipv4.dst = stream->config->ipv4_destination_address;
-                if(ipv4.dst && IPV4_MULTICAST) {
-                    LOG(DEBUG, "Multicast traffic stream %s added in downstream\n", config->name); 
+                /* All IPv4 multicast addresses start with 1110 */
+                if((ipv4.dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
                     /* Generate multicast destination MAC */
                     *(uint32_t*)(&mac[2]) = ipv4.dst; 
                     mac[0] = 0x01;
@@ -330,7 +334,11 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
                     bbl.mc_group = ipv4.dst;
                 }
             } else {
-                ipv4.dst = session->ip_address;
+                if(session) {
+                    ipv4.dst = session->ip_address;
+                } else {
+                    return false;
+                }
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -355,10 +363,14 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             if(*(uint64_t*)stream->config->ipv6_destination_address) {
                 ipv6.dst = stream->config->ipv6_destination_address;
             } else {
-                if(stream->config->type == STREAM_IPV6) {
-                    ipv6.dst = session->ipv6_address;
+                if(session) {
+                    if(stream->config->type == STREAM_IPV6) {
+                        ipv6.dst = session->ipv6_address;
+                    } else {
+                        ipv6.dst = session->delegated_ipv6_address;
+                    }
                 } else {
-                    ipv6.dst = session->delegated_ipv6_address;
+                    return false;
                 }
             }
             ipv6.ttl = 64;
@@ -465,33 +477,38 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
 
 bool
 bbl_stream_build_packet(bbl_stream *stream) {
-
-    if(stream->session->access_type == ACCESS_TYPE_PPPOE) {
-        if(stream->session->l2tp_session) {
-            if(stream->direction == STREAM_DIRECTION_UP) {
-                return bbl_stream_build_access_pppoe_packet(stream);
+    if(stream->config->stream_group_id == 0) {
+        /* RAW stream */
+        return bbl_stream_build_network_packet(stream);
+    }
+    if(stream->session) {
+        if(stream->session->access_type == ACCESS_TYPE_PPPOE) {
+            if(stream->session->l2tp_session) {
+                if(stream->direction == STREAM_DIRECTION_UP) {
+                    return bbl_stream_build_access_pppoe_packet(stream);
+                } else {
+                    return bbl_stream_build_l2tp_packet(stream);
+                }
             } else {
-                return bbl_stream_build_l2tp_packet(stream);
+                switch (stream->config->type) {
+                    case STREAM_IPV4:
+                    case STREAM_IPV6:
+                    case STREAM_IPV6PD:
+                        if(stream->direction == STREAM_DIRECTION_UP) {
+                            return bbl_stream_build_access_pppoe_packet(stream);
+                        } else {
+                            return bbl_stream_build_network_packet(stream);
+                        }
+                    default:
+                        break;
+                }
+            }        
+        } else if (stream->session->access_type == ACCESS_TYPE_IPOE) {
+            if(stream->direction == STREAM_DIRECTION_UP) {
+                return bbl_stream_build_access_ipoe_packet(stream);
+            } else {
+                return bbl_stream_build_network_packet(stream);
             }
-        } else {
-            switch (stream->config->type) {
-                case STREAM_IPV4:
-                case STREAM_IPV6:
-                case STREAM_IPV6PD:
-                    if(stream->direction == STREAM_DIRECTION_UP) {
-                        return bbl_stream_build_access_pppoe_packet(stream);
-                    } else {
-                        return bbl_stream_build_network_packet(stream);
-                    }
-                default:
-                    break;
-            }
-        }        
-    } else if (stream->session->access_type == ACCESS_TYPE_IPOE) {
-        if(stream->direction == STREAM_DIRECTION_UP) {
-            return bbl_stream_build_access_ipoe_packet(stream);
-        } else {
-            return bbl_stream_build_network_packet(stream);
         }
     }
     return false;
@@ -657,7 +674,7 @@ bbl_stream_tx_job (timer_s *timer) {
         }
     }
 
-    if(!session->stream_traffic) {
+    if(session && !session->stream_traffic) {
         /* Close send window */
         stream->send_window_packets = 0;
         return;
@@ -695,11 +712,11 @@ bbl_stream_tx_job (timer_s *timer) {
         stream->packets_tx++;
         stream->flow_seq++;
         packets--;
-        if(stream->session && stream->direction == STREAM_DIRECTION_UP) {
-            stream->session->stats.packets_tx++;
-            stream->session->stats.bytes_tx += stream->tx_len;
-            stream->session->stats.accounting_packets_tx++;
-            stream->session->stats.accounting_bytes_tx += stream->tx_len;
+        if(session && stream->direction == STREAM_DIRECTION_UP) {
+            session->stats.packets_tx++;
+            session->stats.bytes_tx += stream->tx_len;
+            session->stats.accounting_packets_tx++;
+            session->stats.accounting_bytes_tx += stream->tx_len;
         }
     }
 }
@@ -816,3 +833,62 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
     return true;
 }
+
+bool
+bbl_stream_raw_add(bbl_ctx_s *ctx) {
+
+    bbl_stream_config *config;
+    bbl_stream *stream;
+
+    dict_insert_result result;
+
+    time_t timer_sec = 0;
+    long timer_nsec  = 0;
+    
+    pthread_t thread_id;
+
+    config = ctx->config.stream_config;
+
+    if(!ctx->op.network_if) {
+        LOG(ERROR, "Failed to add raw stream because of missing network interface\n"); 
+        return false;
+    }
+    while(config) {
+        if(config->stream_group_id == 0) {
+            if(config->pps == 1) {
+                timer_sec = 1;
+            } else {
+                timer_nsec = 1000000000 / config->pps;
+            }
+            if(config->direction & STREAM_DIRECTION_DOWN) {
+                stream = calloc(1, sizeof(bbl_stream));
+                stream->flow_id = ctx->flow_id++;
+                stream->flow_seq = 1;
+                stream->config = config;
+                stream->direction = STREAM_DIRECTION_DOWN;
+                stream->interface = ctx->op.network_if;
+                stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+                result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
+                if (!result.inserted) {
+                    LOG(ERROR, "Failed to insert stream %s\n", config->name); 
+                    free(stream);
+                    return false;
+                }
+                *result.datum_ptr = stream;
+                if(config->threaded) {
+                    pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, &bbl_stream_tx_thread_counter_sync);
+                } else {
+                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                }
+                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                LOG(DEBUG, "RAW traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec); 
+            }
+            timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
+        }
+        config = config->next;
+    }
+
+    return true;
+}
+

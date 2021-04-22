@@ -21,6 +21,7 @@
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
 #include "bbl_io.h"
+#include "bbl_stream.h"
 #include <sys/stat.h>
 
 /* Global Variables */
@@ -732,6 +733,7 @@ main (int argc, char *argv[])
             /* Send initial ICMPv6 NS */
             ctx->op.network_if->send_requests |= BBL_IF_SEND_ICMPV6_NS;
         }
+        bbl_stream_raw_add(ctx);
     }
 
     /*

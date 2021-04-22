@@ -573,7 +573,7 @@ as explained in [Traffic Streams](streams).
 Attribute | Description | Default 
 --------- | ----------- | -------
 `name` | Mandatory stream name |   
-`stream-group-id` | Mandatory stream group identifier | 
+`stream-group-id` | Stream group identifier | 0 (raw)
 `type` | Mandatory stream type (`ipv4`, `ipv6` or `ipv6pd`)  |  
 `direction` | Mandatory stream direction (`upstream`, `downstream` or `both`) | `both`
 `priority` | IPv4 TOS / IPv6 TC | 0

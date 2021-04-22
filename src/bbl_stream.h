@@ -90,6 +90,9 @@ typedef struct bbl_stream_
 bool
 bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s *session);
 
+bool
+bbl_stream_raw_add(bbl_ctx_s *ctx);
+
 void
 bbl_stream_tx_job (timer_s *timer);
 
