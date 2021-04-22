@@ -270,3 +270,30 @@ session identifier.
 
 `$ sudo ./cli.py run.sock stream-traffic-disabled`
 
+
+## RAW Streams
+
+Streams with default `stream-group-id` set to zero are considered as raw streams not 
+bound to any session which is supported in downstream only. For those streams the
+destination address must be explicitly set. 
+
+```json
+{
+    "streams": [
+        {
+            "name": "RAW",
+            "type": "ipv4", 
+            "direction": "downstream",
+            "priority": 128,
+            "network-ipv4-address": "10.0.0.20",
+            "destination-ipv4-address": "1.1.1.1",
+            "length": 256,
+            "pps": 1
+        }
+    ]
+}
+```
+
+If `destination-ipv4-address` is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
+the BNG Blaster will set the the destination MAC address to the corresponding 
+multicast MAC address.

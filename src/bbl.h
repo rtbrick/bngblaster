@@ -686,6 +686,7 @@ typedef struct bbl_session_
     struct timer_ *timer_auth;
     struct timer_ *timer_ipcp;
     struct timer_ *timer_ip6cp;
+    struct timer_ *timer_dhcp;
     struct timer_ *timer_dhcpv6;
     struct timer_ *timer_igmp;
     struct timer_ *timer_zapping;

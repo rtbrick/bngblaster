@@ -47,7 +47,6 @@
 #define IPV4_DF                         0x4000 /* dont fragment flag */
 #define IPV4_MF                         0x2000 /* more fragments flag */
 #define IPV4_OFFMASK                    0x1fff /* mask for fragmenting bits */
-#define IPV4_MULTICAST                  0xe0000000
 
 #define IPV6_ADDR_LEN                   16
 #define IPV6_IDENTIFER_LEN              8
