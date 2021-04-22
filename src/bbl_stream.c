@@ -528,7 +528,7 @@ bbl_stream_tx_thread (void *thread_data) {
         if(!bbl_stream_can_send(stream)) {
             /* Close send window */
             stream->send_window_packets = 0;
-            sleep.tv_nsec = 10 * MSEC;
+            sleep.tv_nsec = (100 + (rand() % 900)) * MSEC;
             nanosleep(&sleep, &rem);
             continue;
         }
@@ -577,6 +577,9 @@ bbl_stream_tx_thread (void *thread_data) {
                 LOG(IO, "Sendto failed with errno: %i\n", errno);
                 sleep.tv_nsec = 1 * MSEC;
                 nanosleep(&sleep, &rem);
+                clock_gettime(CLOCK_MONOTONIC, &now); 
+                *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
+                *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
                 continue;
             }
             stream->send_window_packets++;
