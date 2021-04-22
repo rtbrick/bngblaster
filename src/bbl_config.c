@@ -415,6 +415,20 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         add_secondary_ipv6(ctx, stream_config->ipv6_network_address);
     }
 
+    if (json_unpack(stream, "{s:s}", "destination-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &stream_config->ipv4_destination_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv4-address\n");
+            return false;
+        }
+    }
+
+    if (json_unpack(stream, "{s:s}", "destination-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_destination_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv6-address\n");
+            return false;
+        }
+    }
+
     value = json_object_get(stream, "threaded");
     if (json_is_boolean(value)) {
         stream_config->threaded = json_boolean_value(value);

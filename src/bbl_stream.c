@@ -21,7 +21,7 @@ bbl_stream_can_send(bbl_stream *stream) {
     if(session->session_state == BBL_ESTABLISHED) {
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             if(session->l2tp && session->l2tp_session == NULL) {
-                goto Free;
+                goto FREE;
             }
             switch (stream->config->type) {
                 case STREAM_IPV4:
@@ -44,7 +44,7 @@ bbl_stream_can_send(bbl_stream *stream) {
             }
         }
     }
-Free:
+FREE:
     /* Free of packet if not ready to send */
     if(stream->buf) {
         free(stream->buf);
@@ -96,12 +96,18 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
         case STREAM_IPV4:
             pppoe.protocol = PROTOCOL_IPV4;
             pppoe.next = &ipv4;
-            if(stream->config->ipv4_network_address) {
-                ipv4.dst = stream->config->ipv4_network_address;
-            } else {
-                ipv4.dst = ctx->op.network_if->ip;
-            }       
+            /* Source address */
             ipv4.src = session->ip_address;
+            /* Destination address */
+            if(stream->config->ipv4_destination_address) {
+                ipv4.dst = stream->config->ipv4_destination_address;
+            } else {
+                if(stream->config->ipv4_network_address) {
+                    ipv4.dst = stream->config->ipv4_network_address;
+                } else {
+                    ipv4.dst = ctx->op.network_if->ip;
+                }
+            }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -112,32 +118,26 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
             }
             break;
         case STREAM_IPV6:
-            pppoe.protocol = PROTOCOL_IPV6;
-            pppoe.next = &ipv6;
-            if(*(uint64_t*)stream->config->ipv6_network_address) {
-                ipv6.dst = stream->config->ipv6_network_address;
-            } else {
-                ipv6.dst = ctx->op.network_if->ip6.address;
-            }
-            ipv6.src = session->ipv6_address;
-            ipv6.ttl = 64;
-            ipv6.tos = config->priority;
-            ipv6.protocol = IPV6_NEXT_HEADER_UDP;
-            ipv6.next = &udp;
-            bbl.sub_type = BBL_SUB_TYPE_IPV6;
-            if (config->length > 96) {
-                bbl.padding = config->length - 96;
-            }
-            break;
         case STREAM_IPV6PD:
             pppoe.protocol = PROTOCOL_IPV6;
             pppoe.next = &ipv6;
-            if(*(uint64_t*)stream->config->ipv6_network_address) {
-                ipv6.dst = stream->config->ipv6_network_address;
+            /* Source address */
+            if(stream->config->type == STREAM_IPV6) {
+                ipv6.src = session->ipv6_address;
             } else {
-                ipv6.dst = ctx->op.network_if->ip6.address;
+                ipv6.src = session->delegated_ipv6_address;
             }
-            ipv6.src = session->delegated_ipv6_address;
+            /* Destination address */
+            if(*(uint64_t*)stream->config->ipv6_destination_address) {
+                ipv6.dst = stream->config->ipv6_destination_address;
+            } else {
+                if(*(uint64_t*)stream->config->ipv6_network_address) {
+                    ipv6.dst = stream->config->ipv6_network_address;
+                } else {
+                    ipv6.dst = ctx->op.network_if->ip6.address;
+                }
+            }
+            ipv6.src = session->ipv6_address;
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
@@ -202,12 +202,18 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
         case STREAM_IPV4:
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
-            if(stream->config->ipv4_network_address) {
-                ipv4.dst = stream->config->ipv4_network_address;
-            } else {
-                ipv4.dst = ctx->op.network_if->ip;
-            }            
+            /* Source address */
             ipv4.src = session->ip_address;
+            /* Destination address */
+            if(stream->config->ipv4_destination_address) {
+                ipv4.dst = stream->config->ipv4_destination_address;
+            } else {
+                if(stream->config->ipv4_network_address) {
+                    ipv4.dst = stream->config->ipv4_network_address;
+                } else {
+                    ipv4.dst = ctx->op.network_if->ip;
+                }        
+            }    
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -218,32 +224,26 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
             }
             break;
         case STREAM_IPV6:
-            eth.type = ETH_TYPE_IPV6;
-            eth.next = &ipv6;
-            if(*(uint64_t*)stream->config->ipv6_network_address) {
-                ipv6.dst = stream->config->ipv6_network_address;
-            } else {
-                ipv6.dst = ctx->op.network_if->ip6.address;
-            }
-            ipv6.src = session->ipv6_address;
-            ipv6.ttl = 64;
-            ipv6.tos = config->priority;
-            ipv6.protocol = IPV6_NEXT_HEADER_UDP;
-            ipv6.next = &udp;
-            bbl.sub_type = BBL_SUB_TYPE_IPV6;
-            if (config->length > 96) {
-                bbl.padding = config->length - 96;
-            }
-            break;
         case STREAM_IPV6PD:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
-            if(*(uint64_t*)stream->config->ipv6_network_address) {
-                ipv6.dst = stream->config->ipv6_network_address;
+            /* Source address */
+            if(stream->config->type == STREAM_IPV6) {
+                ipv6.src = session->ipv6_address;
             } else {
-                ipv6.dst = ctx->op.network_if->ip6.address;
+                ipv6.src = session->delegated_ipv6_address;
             }
-            ipv6.src = session->delegated_ipv6_address;
+            /* Destination address */
+            if(*(uint64_t*)stream->config->ipv6_destination_address) {
+                ipv6.dst = stream->config->ipv6_destination_address;
+            } else {
+                if(*(uint64_t*)stream->config->ipv6_network_address) {
+                    ipv6.dst = stream->config->ipv6_network_address;
+                } else {
+                    ipv6.dst = ctx->op.network_if->ip6.address;
+                }
+            }
+            ipv6.src = session->ipv6_address;
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
@@ -284,6 +284,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
+    uint8_t mac[ETH_ADDR_LEN] = {0};
+
     eth.dst = ctx->op.network_if->gateway_mac;
     eth.src = ctx->op.network_if->mac;
     eth.vlan_outer = ctx->config.network_vlan;
@@ -306,11 +308,29 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
         case STREAM_IPV4:
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
-            ipv4.dst = session->ip_address;
+            /* Source address */
             if(stream->config->ipv4_network_address) {
                 ipv4.src = stream->config->ipv4_network_address;
             } else {
                 ipv4.src = ctx->op.network_if->ip;
+            }
+            /* Destination address */
+            if(stream->config->ipv4_destination_address) {
+                ipv4.dst = stream->config->ipv4_destination_address;
+                if(ipv4.dst && IPV4_MULTICAST) {
+                    LOG(DEBUG, "Multicast traffic stream %s added in downstream\n", config->name); 
+                    /* Generate multicast destination MAC */
+                    *(uint32_t*)(&mac[2]) = ipv4.dst; 
+                    mac[0] = 0x01;
+                    mac[2] = 0x5e;
+                    mac[3] &= 0x7f;
+                    eth.dst = mac;
+                    bbl.type = BBL_TYPE_MULTICAST;
+                    bbl.mc_source = ipv4.src;
+                    bbl.mc_group = ipv4.dst;
+                }
+            } else {
+                ipv4.dst = session->ip_address;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -322,31 +342,24 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             }
             break;
         case STREAM_IPV6:
-            eth.type = ETH_TYPE_IPV6;
-            eth.next = &ipv6;
-            ipv6.dst = session->ipv6_address;
-            if(*(uint64_t*)stream->config->ipv6_network_address) {
-                ipv6.src = stream->config->ipv6_network_address;
-            } else {
-                ipv6.src = ctx->op.network_if->ip6.address;
-            }
-            ipv6.ttl = 64;
-            ipv6.tos = config->priority;
-            ipv6.protocol = IPV6_NEXT_HEADER_UDP;
-            ipv6.next = &udp;
-            bbl.sub_type = BBL_SUB_TYPE_IPV6;
-            if (config->length > 96) {
-                bbl.padding = config->length - 96;
-            }
-            break;
         case STREAM_IPV6PD:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
-            ipv6.dst = session->delegated_ipv6_address;
+            /* Source address */
             if(*(uint64_t*)stream->config->ipv6_network_address) {
                 ipv6.src = stream->config->ipv6_network_address;
             } else {
                 ipv6.src = ctx->op.network_if->ip6.address;
+            }
+            /* Destination address */
+            if(*(uint64_t*)stream->config->ipv6_destination_address) {
+                ipv6.dst = stream->config->ipv6_destination_address;
+            } else {
+                if(stream->config->type == STREAM_IPV6) {
+                    ipv6.dst = session->ipv6_address;
+                } else {
+                    ipv6.dst = session->delegated_ipv6_address;
+                }
             }
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
