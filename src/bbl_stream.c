@@ -564,15 +564,20 @@ bbl_stream_tx_thread (void *thread_data) {
         }
         if(!stream->buf) {
             if(!bbl_stream_build_packet(stream)) {
-                LOG(ERROR, "Failed to build packet for stream %s session-id %u\n", 
-                    stream->config->name, stream->session->session_id);
+                if(stream->session) {
+                    LOG(ERROR, "Failed to build packet for stream %s session-id %u\n", 
+                        stream->config->name, stream->session->session_id);
+                } else {
+                    LOG(ERROR, "Failed to build packet for stream %s\n", 
+                        stream->config->name); 
+                }
                 sleep.tv_nsec = 100 * MSEC;
                 nanosleep(&sleep, &rem);
                 continue;
             }
         }
 
-        if(!stream->session->stream_traffic) {
+        if(stream->session && !stream->session->stream_traffic) {
             /* Close send window */
             stream->send_window_packets = 0;
             sleep.tv_nsec = 10 * MSEC;
