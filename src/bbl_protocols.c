@@ -193,7 +193,9 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
 
     if(!dhcp->header) return ENCODE_ERROR;
 
-    uint8_t *option_len;
+    uint8_t  str_len;
+    uint8_t  option_len;
+    uint8_t *option_len_ptr;
 
     memcpy(buf, dhcp->header, sizeof(struct dhcp_header));
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
@@ -208,29 +210,30 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
     if(dhcp->parameter_request_list) {
         *buf = DHCPV4_OPTION_PARAM_REQUEST_LIST;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-        option_len = buf; /* option len */
-        *option_len = 0;
+        option_len_ptr = buf;
+        option_len = 0;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         if(dhcp->option_netmask) {
-            *option_len = *option_len+1;
+            option_len++;
             *buf = DHCPV4_OPTION_SUBNET_MASK;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         }
         if(dhcp->option_router) {
-            *option_len = *option_len+1;
+            option_len++;
             *buf = DHCPV4_OPTION_ROUTER;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         }
         if(dhcp->option_dns1 || dhcp->option_dns2) {
-            *option_len = *option_len+1;
+            option_len++;
             *buf = DHCPV4_OPTION_DNS_SERVER;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         }
         if(dhcp->option_domain_name) {
-            *option_len = *option_len+1;
+            option_len++;
             *buf = DHCPV4_OPTION_DOMAIN_NAME;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         }
+        *option_len_ptr = option_len;
     }
     if(dhcp->client_identifier) {
         *buf = DHCPV4_OPTION_CLIENT_IDENTIFIER;
@@ -255,6 +258,36 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         *(uint32_t*)buf = dhcp->address;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+
+    if(dhcp->ari || dhcp->aci) {
+        /* RFC3046 Relay Agent Information Option (82) */
+        *buf = DHCPV4_OPTION_RELAY_AGENT_INFORMATION;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        option_len_ptr = buf;
+        option_len = 0;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        if(dhcp->aci) {
+            *buf = ACCESS_LINE_ACI;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            str_len = strnlen(dhcp->aci, UINT8_MAX);
+            *buf = str_len;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            memcpy(buf, dhcp->aci, str_len);
+            BUMP_WRITE_BUFFER(buf, len, str_len);
+            option_len += str_len + 2;
+        }
+        if(dhcp->ari) {
+            *buf = ACCESS_LINE_ARI;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            str_len = strnlen(dhcp->ari, UINT8_MAX);
+            *buf = str_len;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            memcpy(buf, dhcp->ari, str_len);
+            BUMP_WRITE_BUFFER(buf, len, str_len);
+            option_len += str_len + 2;
+        }
+        *option_len_ptr = option_len;
     }
 
     *buf = DHCPV4_OPTION_END;
