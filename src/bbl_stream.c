@@ -45,6 +45,26 @@ bbl_stream_can_send(bbl_stream *stream) {
                 default:
                     break;
             }
+        } else if (session->access_type == ACCESS_TYPE_IPOE) {
+            switch (stream->config->type) {
+                case STREAM_IPV4:
+                    if(session->ip_address) {
+                        return true;
+                    }
+                    break;
+                case STREAM_IPV6:
+                    if(*(uint64_t*)session->ipv6_address) {
+                        return true;
+                    }
+                    break;
+                case STREAM_IPV6PD:
+                    if(*(uint64_t*)session->delegated_ipv6_address) {
+                        return true;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
     }
 FREE:
@@ -564,13 +584,7 @@ bbl_stream_tx_thread (void *thread_data) {
         }
         if(!stream->buf) {
             if(!bbl_stream_build_packet(stream)) {
-                if(stream->session) {
-                    LOG(ERROR, "Failed to build packet for stream %s session-id %u\n", 
-                        stream->config->name, stream->session->session_id);
-                } else {
-                    LOG(ERROR, "Failed to build packet for stream %s\n", 
-                        stream->config->name); 
-                }
+                LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name); 
                 sleep.tv_nsec = 100 * MSEC;
                 nanosleep(&sleep, &rem);
                 continue;
@@ -632,6 +646,7 @@ void
 bbl_stream_tx_thread_counter_sync (timer_s *timer) {
 
     bbl_stream *stream = timer->data;
+    bbl_session_s *session = stream->session;
     bbl_interface_s *interface = stream->interface;
 
     uint64_t packets_tx;
@@ -644,11 +659,20 @@ bbl_stream_tx_thread_counter_sync (timer_s *timer) {
 
     interface->stats.packets_tx += delta_packets;
     interface->stats.bytes_tx += delta_bytes;
-    if(stream->session && stream->direction == STREAM_DIRECTION_UP) {
-        stream->session->stats.packets_tx += delta_packets;
-        stream->session->stats.bytes_tx += delta_bytes;
-        stream->session->stats.accounting_packets_tx += delta_packets;
-        stream->session->stats.accounting_bytes_tx += delta_bytes;
+    if(session) {
+        if(stream->direction == STREAM_DIRECTION_UP) {
+            session->stats.packets_tx += delta_packets;
+            session->stats.bytes_tx += delta_bytes;
+            session->stats.accounting_packets_tx += delta_packets;
+            session->stats.accounting_bytes_tx += delta_bytes;
+        } else {
+            if(session->l2tp_session) {
+                interface->stats.l2tp_data_tx++;
+                session->l2tp_session->tunnel->stats.data_tx++;
+                session->l2tp_session->stats.data_tx++;
+                session->l2tp_session->stats.data_ipv4_tx++;
+            }
+        }
     }
     stream->packets_tx_last_sync = packets_tx;
 }
@@ -673,8 +697,7 @@ bbl_stream_tx_job (timer_s *timer) {
     }
     if(!stream->buf) {
         if(!bbl_stream_build_packet(stream)) {
-            LOG(ERROR, "Failed to build packet for stream %s session-id %u\n", 
-                stream->config->name, session->session_id);
+            LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name); 
             return;
         }
     }
@@ -717,11 +740,20 @@ bbl_stream_tx_job (timer_s *timer) {
         stream->packets_tx++;
         stream->flow_seq++;
         packets--;
-        if(session && stream->direction == STREAM_DIRECTION_UP) {
-            session->stats.packets_tx++;
-            session->stats.bytes_tx += stream->tx_len;
-            session->stats.accounting_packets_tx++;
-            session->stats.accounting_bytes_tx += stream->tx_len;
+        if(session) {
+            if(stream->direction == STREAM_DIRECTION_UP) {
+                session->stats.packets_tx++;
+                session->stats.bytes_tx += stream->tx_len;
+                session->stats.accounting_packets_tx++;
+                session->stats.accounting_bytes_tx += stream->tx_len;
+            } else {
+                if(session->l2tp_session) {
+                    interface->stats.l2tp_data_tx++;
+                    session->l2tp_session->tunnel->stats.data_tx++;
+                    session->l2tp_session->stats.data_tx++;
+                    session->l2tp_session->stats.data_ipv4_tx++;
+                }
+            }
         }
     }
 }
