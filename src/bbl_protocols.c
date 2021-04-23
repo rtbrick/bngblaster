@@ -185,6 +185,90 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_dhcp
+ */
+protocol_error_t
+encode_dhcp(uint8_t *buf, uint16_t *len,
+            bbl_dhcp_t *dhcp) {
+
+    if(!dhcp->header) return ENCODE_ERROR;
+
+    uint8_t *option_len;
+
+    memcpy(buf, dhcp->header, sizeof(struct dhcp_header));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    *buf = DHCPV4_OPTION_DHCP_MESSAGE_TYPE;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 1;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = dhcp->type;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    if(dhcp->parameter_request_list) {
+        *buf = DHCPV4_OPTION_PARAM_REQUEST_LIST;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        option_len = buf; /* option len */
+        *option_len = 0;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        if(dhcp->option_netmask) {
+            *option_len = *option_len+1;
+            *buf = DHCPV4_OPTION_SUBNET_MASK;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(dhcp->option_router) {
+            *option_len = *option_len+1;
+            *buf = DHCPV4_OPTION_ROUTER;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(dhcp->option_dns1 || dhcp->option_dns2) {
+            *option_len = *option_len+1;
+            *buf = DHCPV4_OPTION_DNS_SERVER;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(dhcp->option_domain_name) {
+            *option_len = *option_len+1;
+            *buf = DHCPV4_OPTION_DOMAIN_NAME;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+    }
+    if(dhcp->client_identifier) {
+        *buf = DHCPV4_OPTION_CLIENT_IDENTIFIER;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = dhcp->client_identifier_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, dhcp->client_identifier, dhcp->client_identifier_len);
+        BUMP_WRITE_BUFFER(buf, len, dhcp->client_identifier_len);
+    }
+    if(dhcp->server_identifier) {
+        *buf = DHCPV4_OPTION_SERVER_IDENTIFIER;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = dhcp->server_identifier_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, dhcp->server_identifier, dhcp->server_identifier_len);
+        BUMP_WRITE_BUFFER(buf, len, dhcp->server_identifier_len);
+    }
+    if(dhcp->option_address) {
+        *buf = DHCPV4_OPTION_REQUESTED_IP_ADDRESS;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = 4;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *(uint32_t*)buf = dhcp->address;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+
+    *buf = DHCPV4_OPTION_END;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* This is optional ... */
+    while(*len % 8) {
+        *buf = DHCPV4_OPTION_PAD;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_bbl
  */
 protocol_error_t
@@ -1432,7 +1516,7 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init DHCPv6 structure */
     dhcpv6 = (bbl_dhcpv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcpv6_t));
     memset(dhcpv6, 0x0, sizeof(bbl_dhcpv6_t));
 
@@ -1485,6 +1569,102 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
         BUMP_BUFFER(buf, len, option_len);
     }
     *_dhcpv6 = dhcpv6;
+    return ret_val;
+}
+
+/*
+ * decode_dhcp
+ */
+protocol_error_t
+decode_dhcp(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
+            bbl_dhcp_t **_dhcp) {
+
+    protocol_error_t ret_val = PROTOCOL_SUCCESS;
+
+    bbl_dhcp_t *dhcp;
+
+    uint8_t option;
+    uint8_t option_len;
+
+    if(len < sizeof(struct dhcp_header) || sp_len < sizeof(bbl_dhcp_t)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init DHCP structure */
+    dhcp = (bbl_dhcp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcp_t));
+    memset(dhcp, 0x0, sizeof(bbl_dhcp_t));
+
+    dhcp->header = (struct dhcp_header*)buf;
+    BUMP_BUFFER(buf, len, sizeof(struct dhcp_header));
+
+    while(len >= 2) {
+        option = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(option == DHCPV4_OPTION_PAD) {
+            continue;
+        }
+        option_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(option_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(option) {
+            case DHCPV4_OPTION_END:
+                option_len = len;
+                break;
+            case DHCPV4_OPTION_DHCP_MESSAGE_TYPE:
+                if(option_len != 1) {
+                    return DECODE_ERROR;
+                }
+                dhcp->type = *buf;
+                break;
+            case DHCPV4_OPTION_SUBNET_MASK:
+                if(option_len != 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->netmask = *(uint32_t*)buf;
+                dhcp->option_netmask = true;
+                break;
+            case DHCPV4_OPTION_ROUTER:
+                if(option_len < 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->router = *(uint32_t*)buf;
+                dhcp->option_router = true;
+                break;
+            case DHCPV4_OPTION_DNS_SERVER:
+                if(option_len < 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->dns1 = *(uint32_t*)buf;
+                dhcp->option_dns1 = true;
+                if(option_len >=8) {
+                    dhcp->dns2 = *(uint32_t*)(buf+4);
+                    dhcp->option_dns2 = true;
+                }
+                break;
+            case DHCPV4_OPTION_HOST_NAME:
+                dhcp->host_name = (char*)buf;
+                dhcp->host_name_len = option_len;
+                break;
+            case DHCPV4_OPTION_DOMAIN_NAME:
+                dhcp->domain_name = (char*)buf;
+                dhcp->domain_name_len = option_len;
+                break;
+            case DHCPV4_OPTION_INTERFACE_MTU:
+                if(option_len != 2) {
+                    return DECODE_ERROR;
+                }
+                dhcp->mtu = be16toh(*(uint16_t*)buf);
+                dhcp->option_mtu = true;
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, option_len);
+    }
+    *_dhcp = dhcp;
     return ret_val;
 }
 

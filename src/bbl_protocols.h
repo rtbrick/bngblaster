@@ -297,6 +297,99 @@ typedef enum dhcpv6_option_code_ {
     DHCPV6_OPTION_MAX,
 } dhcpv6_option_code;
 
+typedef enum dhcp_message_type_ {
+    DHCPV4_MESSAGE_DISCOVER              = 1,
+    DHCPV4_MESSAGE_OFFER                 = 2,
+    DHCPV4_MESSAGE_REQUEST               = 3,
+    DHCPV4_MESSAGE_DECLINE               = 4,
+    DHCPV4_MESSAGE_ACK                   = 5,
+    DHCPV4_MESSAGE_NAK                   = 6,
+    DHCPV4_MESSAGE_RELEASE               = 7,
+    DHCPV4_MESSAGE_INFORM                = 8,
+    DHCPV4_MESSAGE_MAX
+} dhcp_message_type;
+
+typedef enum dhcp_option_code_ {
+    DHCPV4_OPTION_PAD                          = 0,
+    DHCPV4_OPTION_SUBNET_MASK                  = 1,
+    DHCPV4_OPTION_TIME_OFFSET                  = 2,
+    DHCPV4_OPTION_ROUTER                       = 3,
+    DHCPV4_OPTION_TIME_SERVER                  = 4,
+    DHCPV4_OPTION_NAME_SERVER                  = 5,
+    DHCPV4_OPTION_DNS_SERVER                   = 6,
+    DHCPV4_OPTION_LOG_SERVER                   = 7,
+    DHCPV4_OPTION_COOKIE_SERVER                = 8,
+    DHCPV4_OPTION_LPR_SERVER                   = 9,
+    DHCPV4_OPTION_IMPRESS_SERVER               = 10,
+    DHCPV4_OPTION_RESOURCE_LOCATION_SERVER     = 11,
+    DHCPV4_OPTION_HOST_NAME                    = 12,
+    DHCPV4_OPTION_BOOT_FILE_SIZE               = 13,
+    DHCPV4_OPTION_MERIT_DUMP_FILE              = 14,
+    DHCPV4_OPTION_DOMAIN_NAME                  = 15,
+    DHCPV4_OPTION_SWAP_SERVER                  = 16,
+    DHCPV4_OPTION_ROOT_PATH                    = 17,
+    DHCPV4_OPTION_EXTENSIONS_PATH              = 18,
+    DHCPV4_OPTION_IP_FORWARDING                = 19,
+    DHCPV4_OPTION_NON_LOCAL_SOURCE_ROUTING     = 20,
+    DHCPV4_OPTION_POLICY_FILTER                = 21,
+    DHCPV4_OPTION_MAX_DATAGRAM_REASSEMBLY_SIZE = 22,
+    DHCPV4_OPTION_DEFAULT_IP_TTL               = 23,
+    DHCPV4_OPTION_PATH_MTU_AGING_TIMEOUT       = 24,
+    DHCPV4_OPTION_PATH_MTU_PLATEAU_TABLE       = 25,
+    DHCPV4_OPTION_INTERFACE_MTU                = 26,
+    DHCPV4_OPTION_ALL_SUBNETS_ARE_LOCAL        = 27,
+    DHCPV4_OPTION_BROADCAST_ADDRESS            = 28,
+    DHCPV4_OPTION_PERFORM_MASK_DISCOVERY       = 29,
+    DHCPV4_OPTION_MASK_SUPPLIER                = 30,
+    DHCPV4_OPTION_PERFORM_ROUTER_DISCOVERY     = 31,
+    DHCPV4_OPTION_ROUTER_SOLICITATION_ADDRESS  = 32,
+    DHCPV4_OPTION_STATIC_ROUTE                 = 33,
+    DHCPV4_OPTION_TRAILER_ENCAPSULATION        = 34,
+    DHCPV4_OPTION_ARP_CACHE_TIMEOUT            = 35,
+    DHCPV4_OPTION_ETHERNET_ENCAPSULATION       = 36,
+    DHCPV4_OPTION_TCP_DEFAULT_TTL              = 37,
+    DHCPV4_OPTION_TCP_KEEPALIVE_INTERVAL       = 38,
+    DHCPV4_OPTION_TCP_KEEPALIVE_GARBAGE        = 39,
+    DHCPV4_OPTION_NIS_DOMAIN                   = 40,
+    DHCPV4_OPTION_NIS_SERVER                   = 41,
+    DHCPV4_OPTION_NTP_SERVER                   = 42,
+    DHCPV4_OPTION_VENDOR_SPECIFIC_INFO         = 43,
+    DHCPV4_OPTION_NETBIOS_NBNS_SERVER          = 44,
+    DHCPV4_OPTION_NETBIOS_NBDD_SERVER          = 45,
+    DHCPV4_OPTION_NETBIOS_NODE_TYPE            = 46,
+    DHCPV4_OPTION_NETBIOS_SCOPE                = 47,
+    DHCPV4_OPTION_X11_FONT_SERVER              = 48,
+    DHCPV4_OPTION_X11_DISPLAY_MANAGER          = 49,
+    DHCPV4_OPTION_REQUESTED_IP_ADDRESS         = 50,
+    DHCPV4_OPTION_IP_ADDRESS_LEASE_TIME        = 51,
+    DHCPV4_OPTION_OPTION_OVERLOAD              = 52,
+    DHCPV4_OPTION_DHCP_MESSAGE_TYPE            = 53,
+    DHCPV4_OPTION_SERVER_IDENTIFIER            = 54,
+    DHCPV4_OPTION_PARAM_REQUEST_LIST           = 55,
+    DHCPV4_OPTION_MESSAGE                      = 56,
+    DHCPV4_OPTION_MAX_DHCP_MESSAGE_SIZE        = 57,
+    DHCPV4_OPTION_RENEWAL_TIME_VALUE           = 58,
+    DHCPV4_OPTION_REBINDING_TIME_VALUE         = 59,
+    DHCPV4_OPTION_VENDOR_CLASS_IDENTIFIER      = 60,
+    DHCPV4_OPTION_CLIENT_IDENTIFIER            = 61,
+    DHCPV4_OPTION_NISP_DOMAIN                  = 64,
+    DHCPV4_OPTION_NISP_SERVER                  = 65,
+    DHCPV4_OPTION_TFTP_SERVER_NAME             = 66,
+    DHCPV4_OPTION_BOOTFILE_NAME                = 67,
+    DHCPV4_OPTION_MOBILE_IP_HOME_AGENT         = 68,
+    DHCPV4_OPTION_SMTP_SERVER                  = 69,
+    DHCPV4_OPTION_POP3_SERVER                  = 70,
+    DHCPV4_OPTION_NNTP_SERVER                  = 71,
+    DHCPV4_OPTION_DEFAULT_WWW_SERVER           = 72,
+    DHCPV4_OPTION_DEFAULT_FINGER_SERVER        = 73,
+    DHCPV4_OPTION_DEFAULT_IRC_SERVER           = 74,
+    DHCPV4_OPTION_STREETTALK_SERVER            = 75,
+    DHCPV4_OPTION_STDA_SERVER                  = 76,
+    DHCPV4_OPTION_RAPID_COMMIT                 = 80,
+    DHCPV4_OPTION_CAPTIVE_PORTAL               = 160,
+    DHCPV4_OPTION_END                          = 255
+} dhcp_option_code;
+
 typedef enum access_line_codes_ {
     // broadband forum tr101
     ACCESS_LINE_ACI                      = 0x01,  // Agent Circuit ID
@@ -574,6 +667,58 @@ typedef struct bbl_dhcpv6_ {
     ipv6addr_t  *dns1;
     ipv6addr_t  *dns2;
 } bbl_dhcpv6_t;
+
+struct dhcp_header {
+    uint8_t     op;
+    uint8_t     htype;
+    uint8_t     hlen;
+    uint8_t     hops;
+    uint32_t    xid;
+    uint16_t    secs;
+    uint16_t    flags;
+    uint32_t    ciaddr;
+    uint32_t    yiaddr;
+    uint32_t    siaddr;
+    uint32_t    giaddr;
+    char        chaddr[16];
+    char        sname[64];
+    char        file[128];
+    uint32_t    magic_cookie;
+} __attribute__ ((__packed__));
+
+typedef struct bbl_dhcp_ {
+    const struct dhcp_header *header;
+    uint8_t      type;
+
+    uint8_t     *server_identifier;
+    uint8_t      server_identifier_len;
+    uint8_t     *client_identifier;
+    uint8_t      client_identifier_len;
+
+    uint32_t     lease_time;
+    uint32_t     address;
+    uint32_t     netmask;
+    uint32_t     dns1;
+    uint32_t     dns2;
+    uint32_t     router;
+    uint16_t     mtu;
+    char        *host_name;
+    uint8_t      host_name_len;
+    char        *domain_name;
+    uint8_t      domain_name_len;
+
+    bool         parameter_request_list;
+    bool         option_lease_time;
+    bool         option_address;
+    bool         option_netmask;
+    bool         option_dns1;
+    bool         option_dns2;
+    bool         option_router;
+    bool         option_mtu;
+    bool         option_host_name;
+    bool         option_domain_name;
+
+} bbl_dhcp_t;
 
 typedef struct bbl_l2tp_ {
     bool        with_length;     // L Bit
