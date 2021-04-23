@@ -576,6 +576,9 @@ typedef struct bbl_ctx_
 
         /* DHCP */
         bool dhcp_enable;
+        uint16_t dhcp_timeout;
+        uint16_t dhcp_retry;
+        uint8_t  dhcp_vlan_priority;
 
         /* DHCPv6 */
         bool dhcpv6_enable;

@@ -386,6 +386,7 @@ typedef enum dhcp_option_code_ {
     DHCPV4_OPTION_STREETTALK_SERVER            = 75,
     DHCPV4_OPTION_STDA_SERVER                  = 76,
     DHCPV4_OPTION_RAPID_COMMIT                 = 80,
+    DHCPV4_OPTION_RELAY_AGENT_INFORMATION      = 82,
     DHCPV4_OPTION_CAPTIVE_PORTAL               = 160,
     DHCPV4_OPTION_END                          = 255
 } dhcp_option_code;
@@ -718,6 +719,8 @@ typedef struct bbl_dhcp_ {
     bool         option_host_name;
     bool         option_domain_name;
 
+    char        *ari;
+    char        *aci;
 } bbl_dhcp_t;
 
 typedef struct bbl_l2tp_ {

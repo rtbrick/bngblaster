@@ -263,14 +263,12 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     } else {
         access_config->ipv6_enable = ctx->config.ipv6_enable;
     }
-#if 0
     value = json_object_get(access_interface, "dhcp");
     if (json_is_boolean(value)) {
         access_config->dhcp_enable = json_boolean_value(value);
     } else {
         access_config->dhcp_enable = ctx->config.dhcp_enable;
     }
-#endif
     value = json_object_get(access_interface, "dhcpv6");
     if (json_is_boolean(value)) {
         access_config->dhcpv6_enable = json_boolean_value(value);
@@ -671,7 +669,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             }
         }
     }
-#if 0
+
     /* DHCP Configuration */
     section = json_object_get(root, "dhcp");
     if (json_is_object(section)) {
@@ -679,8 +677,23 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.dhcp_enable = json_boolean_value(value);
         }
+        value = json_object_get(section, "timeout");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_timeout = json_number_value(value);
+        }
+        value = json_object_get(section, "retry");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_retry = json_number_value(value);
+        }
+        value = json_object_get(section, "vlan-priority");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_vlan_priority = json_number_value(value);
+            if(ctx->config.dhcp_vlan_priority > 7) {
+                fprintf(stderr, "JSON config error: Invalid value for dhcp->vlan-priority\n");
+                return false;
+            }
+        }
     }
-#endif
 
     /* DHCPv6 Configuration */
     section = json_object_get(root, "dhcpv6");
@@ -1109,6 +1122,9 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.ip6cp_enable = true;
     ctx->config.ip6cp_conf_request_timeout = 5;
     ctx->config.ip6cp_conf_request_retry = 10;
+    ctx->config.dhcp_enable = false;
+    ctx->config.dhcp_timeout = 5;
+    ctx->config.dhcp_retry = 10;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;
     ctx->config.igmp_autostart = true;
