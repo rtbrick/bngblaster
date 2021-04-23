@@ -52,6 +52,21 @@ make all
 There are also CPack files generated which allows to easily generate a debian
 package by just executing `cpack` from build directory. 
 
+It is also recommended to provide the GIT commit details to be included in the 
+manually build version as shown below:
+```
+cmake -DGIT_REF=`git rev-parse --abbrev-ref HEAD` -DGIT_SHA=`git rev-parse HEAD` ..
+```
+
+*Example:*
+```
+$ bngblaster -v
+GIT:
+  REF: dev
+  SHA: df453a5ee9dbf6440aefbfb9630fa0f06e326d44
+IO Modes: packet_mmap_raw (default), packet_mmap, raw
+```
+
 ### Install 
 
 Then BNG Blaster can be installed using make install target.  
