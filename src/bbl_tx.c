@@ -113,6 +113,12 @@ bbl_encode_packet_network_session_ipv4 (bbl_interface_s *interface, bbl_session_
 
     session->stats.network_ipv4_tx++;
     interface->stats.session_ipv4_tx++;
+    if(session->l2tp_session) {
+        interface->stats.l2tp_data_tx++;
+        session->l2tp_session->tunnel->stats.data_tx++;
+        session->l2tp_session->stats.data_tx++;
+        session->l2tp_session->stats.data_ipv4_tx++;
+    }
 
     memcpy(session->write_buf, session->network_ipv4_tx_packet_template, session->network_ipv4_tx_packet_len);
     session->write_idx = session->network_ipv4_tx_packet_len;
