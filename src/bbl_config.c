@@ -433,6 +433,31 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     if (json_is_boolean(value)) {
         stream_config->threaded = json_boolean_value(value);
     }
+
+    /* Validate configuration */
+    if(stream_config->stream_group_id == 0) {
+        /* RAW stream */
+        if(stream_config->type == STREAM_IPV4) {
+            if(!stream_config->ipv4_destination_address) {
+                fprintf(stderr, "JSON config error: Missing destination-ipv4-address for RAW stream %s\n", stream_config->name);
+                return false;
+            }
+        }
+        if(stream_config->type == STREAM_IPV6) {
+            if(!*(uint64_t*)stream_config->ipv6_destination_address) {
+                fprintf(stderr, "JSON config error: Missing destination-ipv6-address for RAW stream %s\n", stream_config->name);
+                return false;
+            }
+        }
+        if(stream_config->type == STREAM_IPV6PD) {
+            fprintf(stderr, "JSON config error: Invalid type for RAW stream %s\n", stream_config->name);
+            return false;
+        }
+        if(stream_config->direction != STREAM_DIRECTION_DOWN) {
+            fprintf(stderr, "JSON config error: Invalid direction for RAW stream %s\n", stream_config->name);
+            return false;
+        }
+    }
     return true;
 }
 

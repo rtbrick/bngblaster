@@ -591,9 +591,3 @@ For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner 
 
 The `pps` option has priority over `bps` where second is only a helper to calculate the `pps` 
 based on given `bps` and `length`. 
-
-With threading enabled, those streams will be started in a dedicated thread per flow. This
-means one thread per session and stream direction. A threaded , bidirectional stream assigned 
-to 10 sessions will therefore run in 20 threads. 
-
-**WARNING**: The threading support is experimental and should be used with caution! 
