@@ -104,13 +104,11 @@ bbl_io_raw_rx_job (timer_s *timer) {
 
     struct sockaddr saddr;
     int saddr_size = sizeof(saddr);
-    int rx_len;
-
-    uint8_t *eth_start;
-    uint16_t eth_len;
 
     bbl_ethernet_header_t *eth;
     protocol_error_t decode_result;
+
+    ssize_t recv_result;
 
     interface = timer->data;
     if (!interface) {
@@ -122,23 +120,20 @@ bbl_io_raw_rx_job (timer_s *timer) {
     clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
     while (true) {
-        rx_len = recvfrom(interface->io.fd_rx, interface->io.buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
-		if(rx_len < 14) {
+        recv_result = recvfrom(interface->io.fd_rx, interface->io.rx_buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
+		if(recv_result < 14 || recv_result > IO_BUFFER_LEN) {
             break;
         }
-        eth_start = interface->io.buf;
-        eth_len = rx_len;
-
         interface->stats.packets_rx++;
-        interface->stats.bytes_rx += eth_len;
+        interface->stats.bytes_rx += recv_result;
 
         /* Dump the packet into pcap file. */
         if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
+	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
 				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
 
-        decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
+        decode_result = decode_ethernet(interface->io.rx_buf, interface->io.rx_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
@@ -240,9 +235,7 @@ void
 bbl_io_raw_tx_job (timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    protocol_error_t tx_result = IGNORED;
-
-    uint16_t len;
+    protocol_error_t tx_result = PROTOCOL_SUCCESS;
 
     interface = timer->data;
     if (!interface) {
@@ -254,24 +247,29 @@ bbl_io_raw_tx_job (timer_s *timer) {
     /* Get TX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
     while(tx_result != EMPTY) {
-        tx_result = bbl_tx(ctx, interface, interface->io.buf, &len);
+        /* If sendto fails, the failed packet remains in TX buffer to be retried
+         * in the next interval. */
+        if(!interface->io.tx_len) {
+            tx_result = bbl_tx(ctx, interface, interface->io.tx_buf, &interface->io.tx_len);
+        }
         if (tx_result == PROTOCOL_SUCCESS) {
-            if (sendto(interface->io.fd_tx, interface->io.buf, len, 0, (struct sockaddr*)&interface->io.addr, sizeof(struct sockaddr_ll)) <0 ) {
+            if (sendto(interface->io.fd_tx, interface->io.tx_buf, interface->io.tx_len, 0, (struct sockaddr*)&interface->io.addr, sizeof(struct sockaddr_ll)) <0 ) {
                 LOG(IO, "Sendto failed with errno: %i\n", errno);
                 interface->stats.sendto_failed++;
                 return;
             }
             interface->stats.packets_tx++;
-            interface->stats.bytes_tx += len;
+            interface->stats.bytes_tx += interface->io.tx_len;
             /* Dump the packet into pcap file. */
             if (ctx->pcap.write_buf) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                          interface->io.buf, len, interface->pcap_index, 
+                                          interface->io.tx_buf, interface->io.tx_len, interface->pcap_index, 
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
             }
         }
+        interface->io.tx_len = 0;
     }
-    pcapng_fflush(ctx);
+    pcapng_fflush(ctx);    
 }
 
 bool
@@ -365,7 +363,8 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     int slots = ctx->config.io_slots;
 
     interface->io.mode = ctx->config.io_mode;
-    interface->io.buf = malloc(IO_BUFFER_LEN);
+    interface->io.rx_buf = malloc(IO_BUFFER_LEN);
+    interface->io.tx_buf = malloc(IO_BUFFER_LEN);
     
 #ifdef BNGBLASTER_NETMAP
     if(interface->io.mode == IO_MODE_NETMAP) {

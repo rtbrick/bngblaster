@@ -186,7 +186,11 @@ typedef struct bbl_interface_
         struct tpacket_req req_rx;
         struct sockaddr_ll addr;
 
-        uint8_t *buf; /* IO buffer */
+        uint8_t *rx_buf; /* RX buffer */
+        uint16_t rx_len;
+        uint8_t *tx_buf; /* TX buffer */
+        uint16_t tx_len;
+
         uint8_t *ring_tx; /* TX ring buffer */
         uint8_t *ring_rx; /* RX ring buffer */
         uint16_t cursor_tx; /* slot # inside the ring buffer */
