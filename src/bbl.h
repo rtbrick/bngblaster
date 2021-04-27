@@ -715,7 +715,9 @@ typedef struct bbl_session_
     struct timer_ *timer_auth;
     struct timer_ *timer_ipcp;
     struct timer_ *timer_ip6cp;
-    struct timer_ *timer_dhcp;
+    struct timer_ *timer_dhcp_retry;
+    struct timer_ *timer_dhcp_t1;
+    struct timer_ *timer_dhcp_t2;
     struct timer_ *timer_dhcpv6;
     struct timer_ *timer_igmp;
     struct timer_ *timer_zapping;
@@ -811,6 +813,7 @@ typedef struct bbl_session_
     /* IPv4 */
     bool        arp_resolved;
     uint32_t    ip_address;
+    uint32_t    ip_netmask;
     uint32_t    peer_ip_address;
     uint32_t    dns1;
     uint32_t    dns2;
@@ -827,13 +830,13 @@ typedef struct bbl_session_
     /* DHCP */
     dhcp_state_t dhcp_state;
     uint32_t dhcp_xid;
-    uint32_t dhcp_server;
+    uint32_t dhcp_address;
+    uint32_t dhcp_t1;
+    uint32_t dhcp_t2;    
     uint32_t dhcp_server_identifier;
-    uint32_t lease_time;
-    struct timespec lease_timestamp;
-    struct timespec request_timestamp;
+    struct timespec dhcp_lease_timestamp;
+    struct timespec dhcp_request_timestamp;
     char *dhcp_client_identifier;
-    char *dhcp_server_name;
     char *dhcp_host_name;
     char *dhcp_domain_name;
 

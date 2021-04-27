@@ -1194,11 +1194,13 @@ void
 bbl_dhcp_timeout (timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    
-    if(session->dhcp_state == BBL_DHCP_INIT ||
+
+    if(session->dhcp_state == BBL_DHCP_INIT || 
        session->dhcp_state == BBL_DHCP_BOUND) {
+        /* Wrong state */
         return;
-    }
+    } 
+
     session->send_requests = BBL_SEND_DHCPREQUEST;
     bbl_session_tx_qnode_insert(session);
 }
@@ -1260,11 +1262,11 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
      * elapsed time, in seconds, since the client sent its first 
      * BOOTREQUEST message. */
     clock_gettime(CLOCK_REALTIME, &now);
-    if(session->request_timestamp.tv_sec) {
-        header.secs = now.tv_sec - session->request_timestamp.tv_sec;
+    if(session->dhcp_request_timestamp.tv_sec) {
+        header.secs = now.tv_sec - session->dhcp_request_timestamp.tv_sec;
     } else {
         header.secs = 0;
-        session->request_timestamp.tv_sec = now.tv_sec;
+        session->dhcp_request_timestamp.tv_sec = now.tv_sec;
     }
 
     /* Option 82 ... */
@@ -1276,7 +1278,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
 
     switch(session->dhcp_state) {
         case BBL_DHCP_SELECTING:
-            dhcp.type = DHCPV4_MESSAGE_DISCOVER;
+            dhcp.type = DHCP_MESSAGE_DISCOVER;
             dhcp.parameter_request_list = true;
             dhcp.option_netmask = true;
             dhcp.option_dns1 = true;
@@ -1290,7 +1292,11 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
             }
             break;
         case BBL_DHCP_REQUESTING:
-            dhcp.type = DHCPV4_MESSAGE_REQUEST;
+            dhcp.type = DHCP_MESSAGE_REQUEST;
+            dhcp.option_address = true;
+            dhcp.address = session->dhcp_address;
+            dhcp.option_server_identifier = true;
+            dhcp.server_identifier = session->dhcp_server_identifier;
             dhcp.parameter_request_list = true;
             dhcp.option_netmask = true;
             dhcp.option_dns1 = true;
@@ -1298,21 +1304,19 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
             dhcp.option_router = true;
             dhcp.option_host_name = true;
             dhcp.option_domain_name = true;
-            dhcp.option_address = true;
-            dhcp.server_identifier = session->dhcp_server_identifier;
             break;
         case BBL_DHCP_RENEWING:
-            dhcp.type = DHCPV4_MESSAGE_REQUEST;
+            dhcp.type = DHCP_MESSAGE_REQUEST;
             break;
         case BBL_DHCP_DHCPRELEASE:
-            dhcp.type = DHCPV4_MESSAGE_RELEASE;
+            dhcp.type = DHCP_MESSAGE_RELEASE;
             header.flags = 0;
             break;
         default:
             return IGNORED;
     }
 
-    timer_add(&ctx->timer_root, &session->timer_dhcp, "DHCP timeout", 5, 0, session, &bbl_dhcp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 5, 0, session, &bbl_dhcp_timeout);
     interface->stats.dhcp_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
