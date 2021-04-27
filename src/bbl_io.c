@@ -25,6 +25,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
 
     uint8_t *eth_start;
     uint16_t eth_len;
+    uint16_t vlan;
 
     bbl_ethernet_header_t *eth;
     protocol_error_t decode_result;
@@ -66,10 +67,15 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
 
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {            
+            vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
+            if(eth->vlan_outer != vlan) {
+                /* The outer VLAN is stripped from header */
+                eth->vlan_inner = eth->vlan_outer;
+                eth->vlan_inner_priority = eth->vlan_outer_priority;
+                eth->vlan_outer = vlan;
+                eth->vlan_outer_priority = tphdr->tp_vlan_tci >> 13;
+            }
 #if 0
-            /* The outer VLAN is stripped from header */
-            eth->vlan_inner = eth->vlan_outer;
-            eth->vlan_outer = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = tphdr->tp_sec; /* ktime/hw timestamp */
             eth->timestamp.tv_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */

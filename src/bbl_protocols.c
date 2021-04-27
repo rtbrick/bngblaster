@@ -1718,7 +1718,7 @@ decode_dhcp(uint8_t *buf, uint16_t len,
             continue;
         }
         option_len = *buf;
-        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
         if(option_len > len) {
             return DECODE_ERROR;
         }
@@ -1731,6 +1731,13 @@ decode_dhcp(uint8_t *buf, uint16_t len,
                     return DECODE_ERROR;
                 }
                 dhcp->type = *buf;
+                break;
+            case DHCPV4_OPTION_IP_ADDRESS_LEASE_TIME:
+                if(option_len != 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->lease_time = be32toh(*(uint32_t*)buf);
+                dhcp->option_lease_time = true;
                 break;
             case DHCPV4_OPTION_CLIENT_IDENTIFIER:
                 dhcp->client_identifier = buf;
@@ -1896,7 +1903,7 @@ decode_udp(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init UDP header */
     udp = (bbl_udp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_udp_t));
     //memset(udp, 0x0, sizeof(bbl_udp_t));
 
@@ -1928,7 +1935,7 @@ decode_udp(uint8_t *buf, uint16_t len,
             udp->protocol = UDP_PROTOCOL_L2TP;
             ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
             break;
-        case BOOTREPLY:
+        case DHCP_UDP_CLIENT:
             udp->protocol = UDP_PROTOCOL_DHCP;
             ret_val = decode_dhcp(buf, len, sp, sp_len, (bbl_dhcp_t**)&udp->next);
             break;

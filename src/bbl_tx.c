@@ -1252,7 +1252,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     header.hlen = 6;
     header.xid = session->dhcp_xid;
     if(ctx->config.dhcp_broadcast) {
-        header.flags = 1 << 15;
+        header.flags = htobe16(1 << 15);
     }
     header.ciaddr = session->ip_address;
     memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);

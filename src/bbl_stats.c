@@ -248,6 +248,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
             printf("    ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
             printf("    DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+            printf("    DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
             printf("    IPv4 Fragmented       RX: %10u\n", access_if->stats.ipv4_fragmented_rx);
             printf("\n  Access Interface Protocol Timeout Stats:\n");
             printf("    LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
