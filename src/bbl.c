@@ -518,6 +518,7 @@ bbl_ctrl_job (timer_s *timer)
                             if(session->access_config->ipv4_enable) {
                                 if(session->access_config->dhcp_enable) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
+                                    session->dhcp_state = BBL_DHCP_SELECTING;
                                     session->send_requests |= BBL_SEND_DHCPREQUEST;
                                 } else if (session->ip_address && session->peer_ip_address) {
                                     /* Start IPoE session by sending ARP request if local and 

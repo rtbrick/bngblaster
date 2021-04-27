@@ -131,6 +131,7 @@
 #define IGMP_MAX_SOURCES                3
 #define IGMP_MAX_GROUPS                 8
 
+#define IPV4_BROADCAST                  0xffffffff /* 255.255.255.255 */
 #define IPV4_MC_ALL_HOSTS               0x010000e0 /* 224.0.0.1 */
 #define IPV4_MC_ALL_ROUTERS             0x020000e0 /* 224.0.0.2 */
 #define IPV4_MC_IGMP                    0x160000e0 /* 224.0.0.22 */
@@ -144,6 +145,7 @@
 #define UDP_PROTOCOL_BBL                2
 #define UDP_PROTOCOL_L2TP               3
 #define UDP_PROTOCOL_QMX_LI             4
+#define UDP_PROTOCOL_DHCP               5
 
 #define IPV6_NEXT_HEADER_TCP            6
 #define IPV6_NEXT_HEADER_UDP            17
@@ -154,6 +156,12 @@
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
 #define ICMPV6_OPTION_PREFIX            3
 #define ICMPV6_OPTION_DNS               25
+
+#define BOOTREQUEST                     1
+#define BOOTREPLY                       2
+#define DHCP_UDP_CLIENT                 68
+#define DHCP_UDP_SERVER                 67
+#define DHCP_MAGIC_COOKIE               htobe32(0x63825363)
 
 #define DHCPV6_TRANS_ID_LEN             3
 #define DHCPV6_TYPE_MASK                0x00ffffff
@@ -213,6 +221,9 @@ static const ipv6addr_t ipv6_link_local_prefix = {0xFE, 0x80, 0x00, 0x00, 0x00, 
 static const ipv6addr_t ipv6_multicast_all_nodes = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 static const ipv6addr_t ipv6_multicast_all_routers = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
 static const ipv6addr_t ipv6_multicast_solicited_node = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+
+/* MAC Addresses */
+static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static const uint8_t ipv6_multicast_mac[ETH_ADDR_LEN] =  { 0x33, 0x33, 0xff, 0x00, 0x00, 0x10};
 
 typedef enum protocol_error_ {
@@ -684,18 +695,13 @@ struct dhcp_header {
     char        chaddr[16];
     char        sname[64];
     char        file[128];
-    uint32_t    magic_cookie;
 } __attribute__ ((__packed__));
 
 typedef struct bbl_dhcp_ {
-    const struct dhcp_header *header;
+    struct dhcp_header *header;
     uint8_t      type;
 
-    uint8_t     *server_identifier;
-    uint8_t      server_identifier_len;
-    uint8_t     *client_identifier;
-    uint8_t      client_identifier_len;
-
+    uint32_t     server_identifier;
     uint32_t     lease_time;
     uint32_t     address;
     uint32_t     netmask;
@@ -709,6 +715,7 @@ typedef struct bbl_dhcp_ {
     uint8_t      domain_name_len;
 
     bool         parameter_request_list;
+    bool         option_server_identifier;
     bool         option_lease_time;
     bool         option_address;
     bool         option_netmask;
@@ -719,8 +726,9 @@ typedef struct bbl_dhcp_ {
     bool         option_host_name;
     bool         option_domain_name;
 
-    char        *ari;
-    char        *aci;
+    access_line_t *access_line;
+    uint8_t *client_identifier;
+    uint8_t client_identifier_len;
 } bbl_dhcp_t;
 
 typedef struct bbl_l2tp_ {

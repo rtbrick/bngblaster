@@ -1073,7 +1073,7 @@ bbl_encode_padi (bbl_session_s *session)
         pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
         pppoe.host_uniq_len = sizeof(uint64_t);
     }
-    if(strlen(session->agent_circuit_id) || strlen(session->agent_remote_id)) {
+    if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;
@@ -1117,7 +1117,7 @@ bbl_encode_padr (bbl_session_s *session)
         pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
         pppoe.host_uniq_len = sizeof(uint64_t);
     }
-    if(strlen(session->agent_circuit_id) || strlen(session->agent_remote_id)) {
+    if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;
@@ -1188,6 +1188,134 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
     }
 
     return result;
+}
+
+void
+bbl_dhcp_timeout (timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    
+    if(session->dhcp_state == BBL_DHCP_INIT ||
+       session->dhcp_state == BBL_DHCP_BOUND) {
+        return;
+    }
+    session->send_requests = BBL_SEND_DHCPREQUEST;
+    bbl_session_tx_qnode_insert(session);
+}
+
+protocol_error_t
+bbl_encode_packet_dhcp (bbl_session_s *session) {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
+    bbl_ethernet_header_t eth = {0};
+    bbl_ipv4_t ipv4 = {0};
+    bbl_udp_t udp = {0};
+    struct dhcp_header header = {0};
+    bbl_dhcp_t dhcp = {0};
+    access_line_t access_line = {0};
+    struct timespec now;
+
+    if(session->dhcp_state == BBL_DHCP_INIT ||
+       session->dhcp_state == BBL_DHCP_BOUND) {
+        return IGNORED;
+    }
+
+    interface = session->interface;
+    ctx = interface->ctx;
+
+    dhcp.header = &header;
+
+    eth.src = session->client_mac;
+    eth.dst = (uint8_t*)broadcast_mac;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
+
+    eth.type = ETH_TYPE_IPV4;
+    eth.next = &ipv4;
+    ipv4.src = session->ip_address;
+    ipv4.dst = IPV4_BROADCAST;
+    ipv4.ttl = 255;
+    ipv4.protocol = PROTOCOL_IPV4_UDP;
+    ipv4.next = &udp;
+    udp.src = DHCP_UDP_CLIENT;
+    udp.dst = DHCP_UDP_SERVER;
+    udp.protocol = UDP_PROTOCOL_DHCP;
+    udp.next = &dhcp;
+
+    /* Init DHCP header */
+    header.op = BOOTREQUEST;
+    header.htype = 1; /* fixed set to ethernet */
+    header.hlen = 6;
+    header.xid = session->dhcp_xid;
+    if(ctx->config.dhcp_broadcast) {
+        header.flags = 1 << 15;
+    }
+    header.ciaddr = session->ip_address;
+    memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
+    /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
+     * elapsed time, in seconds, since the client sent its first 
+     * BOOTREQUEST message. */
+    clock_gettime(CLOCK_REALTIME, &now);
+    if(session->request_timestamp.tv_sec) {
+        header.secs = now.tv_sec - session->request_timestamp.tv_sec;
+    } else {
+        header.secs = 0;
+        session->request_timestamp.tv_sec = now.tv_sec;
+    }
+
+    /* Option 82 ... */
+    if(session->agent_circuit_id || session->agent_remote_id) {
+        access_line.aci = session->agent_circuit_id;
+        access_line.ari = session->agent_remote_id;
+        dhcp.access_line = &access_line;
+    }
+
+    switch(session->dhcp_state) {
+        case BBL_DHCP_SELECTING:
+            dhcp.type = DHCPV4_MESSAGE_DISCOVER;
+            dhcp.parameter_request_list = true;
+            dhcp.option_netmask = true;
+            dhcp.option_dns1 = true;
+            dhcp.option_dns2 = true;
+            dhcp.option_router = true;
+            dhcp.option_host_name = true;
+            dhcp.option_domain_name = true;
+            if(!ctx->stats.first_session_tx.tv_sec) {
+                ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
+                ctx->stats.first_session_tx.tv_nsec = interface->tx_timestamp.tv_nsec;
+            }
+            break;
+        case BBL_DHCP_REQUESTING:
+            dhcp.type = DHCPV4_MESSAGE_REQUEST;
+            dhcp.parameter_request_list = true;
+            dhcp.option_netmask = true;
+            dhcp.option_dns1 = true;
+            dhcp.option_dns2 = true;
+            dhcp.option_router = true;
+            dhcp.option_host_name = true;
+            dhcp.option_domain_name = true;
+            dhcp.option_address = true;
+            dhcp.server_identifier = session->dhcp_server_identifier;
+            break;
+        case BBL_DHCP_RENEWING:
+            dhcp.type = DHCPV4_MESSAGE_REQUEST;
+            break;
+        case BBL_DHCP_DHCPRELEASE:
+            dhcp.type = DHCPV4_MESSAGE_RELEASE;
+            header.flags = 0;
+            break;
+        default:
+            return IGNORED;
+    }
+
+    timer_add(&ctx->timer_root, &session->timer_dhcp, "DHCP timeout", 5, 0, session, &bbl_dhcp_timeout);
+    interface->stats.dhcp_tx++;
+
+    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
@@ -1324,6 +1452,9 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     } else if (session->send_requests & BBL_SEND_ARP_REPLY) {
         result = bbl_encode_packet_arp_reply(session);
         session->send_requests &= ~BBL_SEND_ARP_REPLY;
+    } else if (session->send_requests & BBL_SEND_DHCPREQUEST) {
+        result = bbl_encode_packet_dhcp(session);
+        session->send_requests &= ~BBL_SEND_DHCPREQUEST;
     } else {
         session->send_requests = 0;
     }
