@@ -25,7 +25,7 @@ bbl_session_rate_job (timer_s *timer) {
 }
 
 /** 
- * bbl_session_update_state 
+ * bbl_session_get 
  *
  * This function allows to change the state of a session including
  * the required action caused by state changes. 
@@ -89,6 +89,9 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             timer_del(session->timer_auth);
             timer_del(session->timer_ipcp);
             timer_del(session->timer_ip6cp);
+            timer_del(session->timer_dhcp_retry);
+            timer_del(session->timer_dhcp_t1);
+            timer_del(session->timer_dhcp_t2);
             timer_del(session->timer_dhcpv6);
             timer_del(session->timer_igmp);
             timer_del(session->timer_zapping);
