@@ -281,6 +281,10 @@ typedef struct bbl_interface_
         uint32_t icmpv6_rx;
         uint32_t icmpv6_rs_timeout;
 
+        uint32_t dhcp_tx;
+        uint32_t dhcp_rx;
+        uint32_t dhcp_timeout;
+
         uint32_t dhcpv6_tx;
         uint32_t dhcpv6_rx;
         uint32_t dhcpv6_timeout;
@@ -582,7 +586,8 @@ typedef struct bbl_ctx_
         bool dhcp_enable;
         uint16_t dhcp_timeout;
         uint16_t dhcp_retry;
-        uint8_t  dhcp_vlan_priority;
+        uint8_t dhcp_vlan_priority;
+        bool dhcp_broadcast;
 
         /* DHCPv6 */
         bool dhcpv6_enable;
@@ -651,6 +656,23 @@ typedef enum {
     BBL_PPP_TERMINATE   = 5,
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
+
+
+/*
+ * DHCP state
+ *
+ * This is a simple not fully RFC conform version
+ * of the DHCP FSM.
+ */
+typedef enum {
+    BBL_DHCP_INIT           = 0,
+    BBL_DHCP_SELECTING      = 1,
+    BBL_DHCP_REQUESTING     = 2,
+    BBL_DHCP_BOUND          = 3,
+    BBL_DHCP_RENEWING       = 4,
+    BBL_DHCP_DHCPRELEASE    = 5,
+    BBL_DHCP_MAX
+} __attribute__ ((__packed__)) dhcp_state_t;
 
 typedef struct vlan_session_key_ {
     uint32_t ifindex;
@@ -801,6 +823,19 @@ typedef struct bbl_session_
     ipv6addr_t  ipv6_address;
     ipv6addr_t  ipv6_dns1; /* DNS learned via RA */
     ipv6addr_t  ipv6_dns2; /* DNS learned via RA */
+
+    /* DHCP */
+    dhcp_state_t dhcp_state;
+    uint32_t dhcp_xid;
+    uint32_t dhcp_server;
+    uint32_t dhcp_server_identifier;
+    uint32_t lease_time;
+    struct timespec lease_timestamp;
+    struct timespec request_timestamp;
+    char *dhcp_client_identifier;
+    char *dhcp_server_name;
+    char *dhcp_host_name;
+    char *dhcp_domain_name;
 
     /* DHCPv6 */
     ipv6_prefix delegated_ipv6_prefix;
