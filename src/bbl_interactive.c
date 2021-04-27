@@ -346,6 +346,7 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "  ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
                 wprintw(stats_win, "  ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
                 wprintw(stats_win, "  DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+                wprintw(stats_win, "  DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
             }
             if(max_y > 80) {
                 wprintw(stats_win, "\nAccess Interface Protocol Timeout Stats\n");

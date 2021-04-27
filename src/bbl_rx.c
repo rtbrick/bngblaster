@@ -756,7 +756,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
 }
 
 void
-bbl_rx_udp(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
+bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
     bbl_bbl_t *bbl = NULL;
@@ -974,6 +974,14 @@ bbl_rx_igmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
 }
 
 void
+bbl_rx_dhcp(bbl_dhcp_t *dhcp, bbl_session_s *session) {
+    
+    UNUSED(dhcp);
+    UNUSED(session);
+    return;
+}
+
+void
 bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp;
@@ -998,6 +1006,11 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
             return bbl_rx_icmp(ipv4, session);
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_t*)ipv4->next;
+            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+                session->stats.dhcp_rx++;
+                interface->stats.dhcp_rx++;
+                return bbl_rx_dhcp((bbl_dhcp_t*)udp->next, session);
+            }
             if(udp->protocol == UDP_PROTOCOL_BBL) {
                 bbl = (bbl_bbl_t*)udp->next;
             }
@@ -1111,7 +1124,7 @@ bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *inter
             interface->stats.icmpv6_rx++;
             return bbl_rx_icmpv6(ipv6, interface, session);
         case IPV6_NEXT_HEADER_UDP:
-            bbl_rx_udp(eth, ipv6, interface, session);
+            bbl_rx_udp_ipv6(eth, ipv6, interface, session);
             break;
         default:
             break;
@@ -1869,6 +1882,50 @@ bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     }
 }
 
+uint32_t
+bbl_rx_session_id_from_vlan(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    uint32_t session_id = 0;
+    vlan_session_key_t key = {0};
+    bbl_session_s *session;
+    void **search;
+
+    key.ifindex = interface->ifindex;
+    key.outer_vlan_id = eth->vlan_outer;
+    key.inner_vlan_id = eth->vlan_inner;
+
+    search = dict_search(interface->ctx->vlan_session_dict, &key);
+    if(search) {
+        session = *search;
+        session_id = session->session_id;
+    }
+    return session_id;
+}
+
+uint32_t
+bbl_rx_session_id_from_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    uint32_t session_id = 0;
+    bbl_ipv4_t *ipv4;
+    bbl_udp_t *udp;
+    bbl_dhcp_t *dhcp;
+
+    if(eth->type == ETH_TYPE_IPV4) {
+        ipv4 = (bbl_ipv4_t*)eth->next;
+        if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
+            udp = (bbl_udp_t*)ipv4->next;
+            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+                dhcp = (bbl_dhcp_t*)udp->next;
+                session_id |= dhcp->header->chaddr[5];
+                session_id |= dhcp->header->chaddr[4] << 8;
+                session_id |= dhcp->header->chaddr[3] << 16;
+            }
+        }
+    }
+    if(!session_id) {
+        return(bbl_rx_session_id_from_vlan(eth, interface));
+    }
+    return session_id;
+}
+
 /** 
  * bbl_rx_handler_access 
  *
@@ -1885,14 +1942,24 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     ctx = interface->ctx;
 
-    /* The session-id is mapped into the last 3 bytes of 
-     * the client MAC address. The original approach using
-     * VLAN identifiers was not working as some NIC drivers
-     * strip outer VLAN and it is also possible to have 
-     * multiple session per VLAN (N:1). */
-    session_id |= eth->dst[5];
-    session_id |= eth->dst[4] << 8;
-    session_id |= eth->dst[3] << 16;
+    if(memcmp(eth->dst, (uint8_t*)multicast_mac, ETH_ADDR_LEN/2) == 0) {
+        /* Multicast destination MAC address (01:00:5e:XX:XX:XX) */
+        session_id = bbl_rx_session_id_from_vlan(eth, interface);
+    } else if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
+        /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
+        session_id = bbl_rx_session_id_from_broadcast(eth, interface);
+    } else {
+        /* The session-id is mapped into the last 3 bytes of 
+         * the client MAC address. The original approach using
+         * VLAN identifiers was not working reliable as some NIC 
+         * drivers strip outer VLAN and it is also possible to have 
+         * multiple session per VLAN (N:1). */
+        session_id |= eth->dst[5];
+        session_id |= eth->dst[4] << 8;
+        session_id |= eth->dst[3] << 16;
+    }
+
+    LOG(ERROR, "lets check for session %u\n", session_id);
 
     session = bbl_session_get(ctx, session_id);
     if(session) {

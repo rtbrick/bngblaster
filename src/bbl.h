@@ -961,6 +961,9 @@ typedef struct bbl_session_
         uint32_t icmpv6_tx;
         uint32_t ipv4_fragmented_rx;
 
+        uint32_t dhcp_tx;
+        uint32_t dhcp_rx;
+
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;
         uint64_t access_ipv4_loss;

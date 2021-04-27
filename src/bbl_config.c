@@ -677,6 +677,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.dhcp_enable = json_boolean_value(value);
         }
+        value = json_object_get(section, "broadcast");
+        if (json_is_boolean(value)) {
+            ctx->config.dhcp_broadcast = json_boolean_value(value);
+        }
         value = json_object_get(section, "timeout");
         if (json_is_number(value)) {
             ctx->config.dhcp_timeout = json_number_value(value);
