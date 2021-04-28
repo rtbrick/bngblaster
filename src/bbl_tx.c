@@ -1261,7 +1261,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
      * elapsed time, in seconds, since the client sent its first 
      * BOOTREQUEST message. */
-    clock_gettime(CLOCK_REALTIME, &now);
+    clock_gettime(CLOCK_MONOTONIC, &now);
     if(session->dhcp_request_timestamp.tv_sec) {
         header.secs = htobe16(now.tv_sec - session->dhcp_request_timestamp.tv_sec);
     } else {
