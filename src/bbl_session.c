@@ -1,9 +1,7 @@
-
-
 /*
  * BNG Blaster (BBL) - Sessions
  *
- * Christian Giese, October 2021
+ * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
@@ -401,16 +399,19 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->password = strdup(s);
 
         /* Update ACI */
-        s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
-        session->agent_circuit_id = s;
-        s = replace_substring(session->agent_circuit_id, "{session}", snum2);
-        session->agent_circuit_id = strdup(s);
-
+        if(access_config->agent_circuit_id) {
+            s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
+            session->agent_circuit_id = s;
+            s = replace_substring(session->agent_circuit_id, "{session}", snum2);
+            session->agent_circuit_id = strdup(s);
+        }
         /* Update ARI */
-        s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
-        session->agent_remote_id = s;
-        s = replace_substring(session->agent_remote_id, "{session}", snum2);
-        session->agent_remote_id = strdup(s);
+        if(access_config->agent_remote_id) {
+            s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
+            session->agent_remote_id = s;
+            s = replace_substring(session->agent_remote_id, "{session}", snum2);
+            session->agent_remote_id = strdup(s);
+        }
         
         /* Update access rates ... */
         session->rate_up = access_config->rate_up;

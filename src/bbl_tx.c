@@ -1263,7 +1263,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
      * BOOTREQUEST message. */
     clock_gettime(CLOCK_REALTIME, &now);
     if(session->dhcp_request_timestamp.tv_sec) {
-        header.secs = now.tv_sec - session->dhcp_request_timestamp.tv_sec;
+        header.secs = htobe16(now.tv_sec - session->dhcp_request_timestamp.tv_sec);
     } else {
         header.secs = 0;
         session->dhcp_request_timestamp.tv_sec = now.tv_sec;

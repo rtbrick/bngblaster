@@ -209,13 +209,17 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     if (json_unpack(access_interface, "{s:s}", "agent-circuit-id", &s) == 0) {
         access_config->agent_circuit_id = strdup(s);
     } else {
-        access_config->agent_circuit_id = strdup(ctx->config.agent_circuit_id);
+        if(ctx->config.agent_circuit_id) {
+            access_config->agent_circuit_id = strdup(ctx->config.agent_circuit_id);
+        }
     }
 
     if (json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
         access_config->agent_remote_id = strdup(s);
     } else {
-        access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
+        if(ctx->config.agent_circuit_id) {
+            access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
+        }
     }
 
     value = json_object_get(access_interface, "rate-up");
@@ -1095,8 +1099,6 @@ void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.username = (char *)g_default_user;
     ctx->config.password = (char *)g_default_pass;
-    ctx->config.agent_remote_id = (char *)g_default_ari;
-    ctx->config.agent_circuit_id = (char *)g_default_aci;
     ctx->config.tx_interval = 5 * MSEC;
     ctx->config.rx_interval = 5 * MSEC;
     ctx->config.io_slots = 1024;

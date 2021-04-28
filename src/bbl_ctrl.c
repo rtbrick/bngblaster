@@ -65,6 +65,19 @@ ppp_state_string(uint32_t state) {
     }
 }
 
+const char *
+dhcp_state_string(uint32_t state) {
+    switch(state) {
+        case BBL_DHCP_INIT: return "Init";
+        case BBL_DHCP_SELECTING: return "Selecting";
+        case BBL_DHCP_REQUESTING: return "Requesting";
+        case BBL_DHCP_BOUND: return "Bound";
+        case BBL_DHCP_RENEWING: return "Renewing";
+        case BBL_DHCP_DHCPRELEASE: return "Releasing";
+        default: return "N/A";
+    }
+}
+
 static char *
 string_or_na(char *string) {
     if(string) {
@@ -411,6 +424,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     const char *lcp = NULL;
     const char *ipcp = NULL;
     const char *ip6cp = NULL;
+    const char *dhcp = NULL;
 
     int flows = 0;
     int flows_verified = 0;
@@ -459,6 +473,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
 
         } else {
             type = "ipoe";
+            dhcp = dhcp_state_string(session->dhcp_state);
         }
 
         if(ctx->config.session_traffic_ipv4_pps || ctx->config.session_traffic_ipv6_pps || ctx->config.session_traffic_ipv6pd_pps) {
@@ -503,7 +518,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
+        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -520,6 +535,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "lcp-state", lcp,
                         "ipcp-state", ipcp,
                         "ip6cp-state", ip6cp,
+                        "dhcp-state", dhcp,
                         "ipv4-address", ipv4,
                         "ipv4-dns1", dns1,
                         "ipv4-dns2", dns2,

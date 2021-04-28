@@ -831,6 +831,7 @@ typedef struct bbl_session_
     dhcp_state_t dhcp_state;
     uint32_t dhcp_xid;
     uint32_t dhcp_address;
+    uint32_t dhcp_lease_time;
     uint32_t dhcp_t1;
     uint32_t dhcp_t2;    
     uint32_t dhcp_server_identifier;
