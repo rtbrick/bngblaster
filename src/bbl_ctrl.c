@@ -409,8 +409,12 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     json_t *root;
     json_t *session_traffic = NULL;
     bbl_session_s *session;
+    
+    struct timespec now;
 
     const char *ipv4 = NULL;
+    const char *ipv4_netmask = NULL;
+    const char *ipv4_gw = NULL;
     const char *dns1 = NULL;
     const char *dns2 = NULL;
     const char *ipv6 = NULL;
@@ -419,15 +423,13 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     const char *ipv6_dns2 = NULL;
     const char *dhcpv6_dns1 = NULL;
     const char *dhcpv6_dns2 = NULL;
-    const char *type = NULL;
-    const char *username = NULL;
-    const char *lcp = NULL;
-    const char *ipcp = NULL;
-    const char *ip6cp = NULL;
-    const char *dhcp = NULL;
 
     int flows = 0;
     int flows_verified = 0;
+    uint32_t seconds = 0;
+    uint32_t lease_expire = 0;
+    uint32_t lease_expire_t1 = 0;
+    uint32_t lease_expire_t2 = 0;
 
     if(session_id == 0) {
         /* session-id is mandatory */
@@ -438,6 +440,12 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     if(session) {
         if(session->ip_address) {
             ipv4 = format_ipv4_address(&session->ip_address);
+        }
+        if(session->ip_netmask) {
+            ipv4_netmask = format_ipv4_address(&session->ip_netmask);
+        }
+        if(session->peer_ip_address) {
+            ipv4_gw = format_ipv4_address(&session->peer_ip_address);
         }
         if(session->dns1) {
             dns1 = format_ipv4_address(&session->dns1);
@@ -462,18 +470,6 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         }
         if(*(uint64_t*)session->dhcpv6_dns2) {
             dhcpv6_dns2 = format_ipv6_address(&session->dhcpv6_dns2);
-        }
-
-        if(session->access_type == ACCESS_TYPE_PPPOE) {
-            type = "pppoe";
-            username = session->username;
-            lcp = ppp_state_string(session->lcp_state);
-            ipcp = ppp_state_string(session->ipcp_state);
-            ip6cp = ppp_state_string(session->ip6cp_state);
-
-        } else {
-            type = "ipoe";
-            dhcp = dhcp_state_string(session->dhcp_state);
         }
 
         if(ctx->config.session_traffic_ipv4_pps || ctx->config.session_traffic_ipv6_pps || ctx->config.session_traffic_ipv6pd_pps) {
@@ -518,24 +514,25 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
-        root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
+
+        if(session->access_type == ACCESS_TYPE_PPPOE) {
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
-                        "type", type,
+                        "type", "pppoe",
                         "session-id", session->session_id,
                         "session-state", session_state_string(session->session_state),
                         "interface", session->interface->name,
                         "outer-vlan", session->vlan_key.outer_vlan_id,
                         "inner-vlan", session->vlan_key.inner_vlan_id,
                         "mac", format_mac_address(session->client_mac),
-                        "username", username,
+                        "username", session->username,
                         "agent-circuit-id", session->agent_circuit_id,
                         "agent-remote-id", session->agent_remote_id,
-                        "lcp-state", lcp,
-                        "ipcp-state", ipcp,
-                        "ip6cp-state", ip6cp,
-                        "dhcp-state", dhcp,
+                        "lcp-state", ppp_state_string(session->lcp_state),
+                        "ipcp-state", ppp_state_string(session->ipcp_state),
+                        "ip6cp-state", ppp_state_string(session->ip6cp_state),
                         "ipv4-address", ipv4,
                         "ipv4-dns1", dns1,
                         "ipv4-dns2", dns2,
@@ -549,6 +546,50 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "rx-packets", session->stats.packets_rx,
                         "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
                         "session-traffic", session_traffic);
+
+        } else {
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            if(session->dhcp_lease_timestamp.tv_sec && now.tv_sec > session->dhcp_lease_timestamp.tv_sec) {
+                seconds = now.tv_sec - session->dhcp_lease_timestamp.tv_sec;
+            }
+            if(seconds <= session->dhcp_lease_time) lease_expire = session->dhcp_lease_time - seconds;
+            if(seconds <= session->dhcp_t1) lease_expire_t1 = session->dhcp_t1 - seconds;
+            if(seconds <= session->dhcp_t2) lease_expire_t2 = session->dhcp_t2 - seconds;
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* si si si si ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
+                        "status", "ok", 
+                        "code", 200,
+                        "session-information",
+                        "type", "ipoe",
+                        "session-id", session->session_id,
+                        "session-state", session_state_string(session->session_state),
+                        "interface", session->interface->name,
+                        "outer-vlan", session->vlan_key.outer_vlan_id,
+                        "inner-vlan", session->vlan_key.inner_vlan_id,
+                        "mac", format_mac_address(session->client_mac),
+                        "agent-circuit-id", session->agent_circuit_id,
+                        "agent-remote-id", session->agent_remote_id,
+                        "dhcp-state", dhcp_state_string(session->dhcp_state),
+                        "dhcp-server", format_ipv4_address(&session->dhcp_server_identifier),
+                        "dhcp-lease-time", session->dhcp_lease_time,
+                        "dhcp-lease-expire", lease_expire,
+                        "dhcp-lease-expire-t1", lease_expire_t1,
+                        "dhcp-lease-expire-t2", lease_expire_t2,
+                        "ipv4-address", ipv4,
+                        "ipv4-netmask", ipv4_netmask,
+                        "ipv4-gateway", ipv4_gw,
+                        "ipv4-dns1", dns1,
+                        "ipv4-dns2", dns2,
+                        "ipv6-prefix", ipv6,
+                        "ipv6-delegated-prefix", ipv6pd,
+                        "ipv6-dns1", ipv6_dns1,
+                        "ipv6-dns2", ipv6_dns2,
+                        "dhcpv6-dns1", dhcpv6_dns1,
+                        "dhcpv6-dns2", dhcpv6_dns2,
+                        "tx-packets", session->stats.packets_tx,
+                        "rx-packets", session->stats.packets_rx,
+                        "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+                        "session-traffic", session_traffic);
+        }
         if(root) {
             result = json_dumpfd(root, fd, 0);
             json_decref(root);

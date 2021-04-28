@@ -22,6 +22,9 @@ extern volatile bool g_teardown;
 void
 bbl_dhcp_restart(bbl_session_s *session) {
     bbl_interface_s *interface = session->interface;
+
+    LOG(DHCP, "DHCP (ID: %u) Restart DHCP\n", session->session_id);
+
     bbl_session_update_state(interface->ctx, session, BBL_IPOE_SETUP);
 
     /* Reset DHCP */
@@ -32,6 +35,7 @@ bbl_dhcp_restart(bbl_session_s *session) {
     session->dhcp_state = BBL_DHCP_SELECTING;
     session->dhcp_xid = rand();
     session->dhcp_address = 0;
+    session->dhcp_lease_time = 0;
     session->dhcp_t1 = 0;
     session->dhcp_t2 = 0;
     session->dhcp_server_identifier = 0;
@@ -74,6 +78,9 @@ void
 bbl_dhcp_t1(timer_s *timer) {
     bbl_session_s *session = timer->data;
     if(session->dhcp_state == BBL_DHCP_BOUND) {
+        session->dhcp_xid = rand();
+        session->dhcp_request_timestamp.tv_sec = 0;
+        session->dhcp_request_timestamp.tv_nsec = 0;
         session->dhcp_state = BBL_DHCP_RENEWING;
         session->send_requests = BBL_SEND_DHCPREQUEST;
         bbl_session_tx_qnode_insert(session);
@@ -101,11 +108,6 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
     bbl_interface_s *interface = session->interface;
     bbl_ctx_s *ctx = interface->ctx;
     
-    UNUSED(eth);
-
-    time_t t1; 
-    time_t t2;
-
     /* Ignore packets with wrong transaction identifier! */
     if(dhcp->header->xid != session->dhcp_xid) {
         return;
@@ -118,12 +120,13 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 session->dhcp_address = dhcp->header->yiaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
                 session->dhcp_lease_time = dhcp->lease_time;
+                session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+                session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
                 if(!(session->dhcp_address && session->dhcp_server_identifier && session->dhcp_lease_time)) {
-                    LOG(ERROR, "DHCP (ID: %u) Restart because of invalid DHCP-OFFER!\n", session->session_id);
+                    LOG(ERROR, "DHCP (ID: %u) Invalid DHCP-OFFER!\n", session->session_id);
                     return bbl_dhcp_restart(session);
                 }
-                t2 = 0.875 * session->dhcp_lease_time; if(!t2) t2 = 1;
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", t2, 0, session, &bbl_dhcp_t2);
+                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_t2);
                 session->send_requests |= BBL_SEND_DHCPREQUEST;
                 bbl_session_tx_qnode_insert(session);
             }
@@ -134,11 +137,17 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 session->dhcp_address = dhcp->header->yiaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
                 session->dhcp_lease_time = dhcp->lease_time;
+                session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+                session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
                 if(!(session->dhcp_address && session->dhcp_server_identifier && session->dhcp_lease_time)) {
-                    LOG(ERROR, "DHCP (ID: %u) Restart because of invalid DHCP-ACK!\n", session->session_id);
+                    LOG(ERROR, "DHCP (ID: %u) Invalid DHCP-ACK!\n", session->session_id);
                     return bbl_dhcp_restart(session);
                 }
                 /* Update session ... */
+                if(session->dhcp_address != session->ip_address) {
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
+                        format_ipv4_address(&session->dhcp_address));
+                }
                 session->ip_address = session->dhcp_address;
                 if(dhcp->option_netmask) {
                     session->ip_netmask = dhcp->netmask;
@@ -147,7 +156,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                     session->peer_ip_address = dhcp->router;
                 } else {
                     /* Can't proceed without router-option received! */
-                    LOG(ERROR, "DHCP (ID: %u) Restart because of missing router-option in DHCP-ACK!\n", session->session_id);
+                    LOG(ERROR, "DHCP (ID: %u) Missing router-option in DHCP-ACK!\n", session->session_id);
                     return bbl_dhcp_restart(session);
                 }
                 if(dhcp->option_dns1) {
@@ -170,15 +179,10 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                     session->dhcp_domain_name = calloc(1, dhcp->domain_name_len +1);
                     strncpy(session->dhcp_domain_name, dhcp->domain_name, dhcp->domain_name_len);
                 }
-
-                LOG(IP, "IPv4 (ID: %u) address %s/%s\n", session->session_id, 
-                    format_ipv4_address(&session->ip_address),
-                    format_ipv4_address(&session->ip_netmask));
-
-                t1 = 0.5 * session->dhcp_lease_time; if(!t1) t1 = 1;
-                t2 = 0.875 * session->dhcp_lease_time; if(!t2) t2 = 1;
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T1", t1, 0, session, &bbl_dhcp_t1);
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", t2, 0, session, &bbl_dhcp_t2);
+                session->dhcp_t1 = 0.5 * session->dhcp_lease_time; if(!session->dhcp_t1) session->dhcp_t1 = 1;
+                session->dhcp_t2 = 0.875 * session->dhcp_lease_time; if(!session->dhcp_t2) session->dhcp_t2 = 1;
+                timer_add(&ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
+                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
             } else if (dhcp->type == DHCP_MESSAGE_NAK) {
@@ -191,14 +195,16 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 session->dhcp_address = dhcp->header->yiaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
                 session->dhcp_lease_time = dhcp->lease_time;
+                session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+                session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
                 if(!(session->dhcp_address && session->dhcp_server_identifier && session->dhcp_lease_time)) {
                     LOG(ERROR, "DHCP (ID: %u) Restart because of invalid DHCP-ACK!\n", session->session_id);
                     return bbl_dhcp_restart(session);
                 }
-                t1 = 0.5 * session->dhcp_lease_time; if(!t1) t1 = 1;
-                t2 = 0.875 * session->dhcp_lease_time; if(!t2) t2 = 1;
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T1", t1, 0, session, &bbl_dhcp_t1);
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", t2, 0, session, &bbl_dhcp_t2);
+                session->dhcp_t1 = 0.5 * session->dhcp_lease_time; if(!session->dhcp_t1) session->dhcp_t1 = 1;
+                session->dhcp_t2 = 0.875 * session->dhcp_lease_time; if(!session->dhcp_t2) session->dhcp_t2 = 1;
+                timer_add(&ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
+                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
             } else if (dhcp->type == DHCP_MESSAGE_NAK) {

@@ -1573,8 +1573,8 @@ bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
-                    LOG(IP, "IPv4 (ID: %u) address %s\n",
-                        session->session_id, format_ipv4_address(&session->ip_address));
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
+                        format_ipv4_address(&session->ip_address));
                     break;
                 default:
                     break;
