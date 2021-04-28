@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - Global Context
  *
- * Christian Giese, October 2021
+ * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
