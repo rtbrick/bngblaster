@@ -273,7 +273,17 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
                 break;
         }
     } else {
-        bbl_session_update_state(ctx, session, BBL_TERMINATED);
+        if(session->dhcp_state > BBL_DHCP_SELECTING) {
+            bbl_session_update_state(ctx, session, BBL_TERMINATING);
+            session->dhcp_state = BBL_DHCP_RELEASE;
+            session->dhcp_xid = rand();
+            session->dhcp_request_timestamp.tv_sec = 0;
+            session->dhcp_request_timestamp.tv_nsec = 0;
+            session->send_requests |= BBL_SEND_DHCP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            bbl_session_update_state(ctx, session, BBL_TERMINATED);
+        }
     }
 }
 
@@ -360,6 +370,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             return false;
         }
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
+        memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
         session->session_id = i; // BNG Blaster internal session identifier
         session->access_type = access_config->access_type;
         session->vlan_key.ifindex = access_config->access_if->ifindex;

@@ -76,7 +76,7 @@
 #define BBL_SEND_SESSION_IPV6PD     0x00008000
 #define BBL_SEND_ARP_REQUEST        0x00010000
 #define BBL_SEND_ARP_REPLY          0x00020000
-#define BBL_SEND_DHCPREQUEST        0x00040000
+#define BBL_SEND_DHCP_REQUEST       0x00040000
 #define BBL_SEND_ICMPV6_REPLY       0x00080000
 #define BBL_SEND_ICMPV6_NS          0x00100000
 #define BBL_SEND_ICMPV6_NA          0x00200000
@@ -585,7 +585,7 @@ typedef struct bbl_ctx_
         /* DHCP */
         bool dhcp_enable;
         uint16_t dhcp_timeout;
-        uint16_t dhcp_retry;
+        uint8_t dhcp_tos;
         uint8_t dhcp_vlan_priority;
         bool dhcp_broadcast;
 
@@ -670,7 +670,7 @@ typedef enum {
     BBL_DHCP_REQUESTING     = 2,
     BBL_DHCP_BOUND          = 3,
     BBL_DHCP_RENEWING       = 4,
-    BBL_DHCP_DHCPRELEASE    = 5,
+    BBL_DHCP_RELEASE        = 5,
     BBL_DHCP_MAX
 } __attribute__ ((__packed__)) dhcp_state_t;
 
@@ -833,8 +833,10 @@ typedef struct bbl_session_
     uint32_t dhcp_address;
     uint32_t dhcp_lease_time;
     uint32_t dhcp_t1;
-    uint32_t dhcp_t2;    
+    uint32_t dhcp_t2;
+    uint32_t dhcp_server;
     uint32_t dhcp_server_identifier;
+    uint8_t  dhcp_server_mac[ETH_ADDR_LEN];
     struct timespec dhcp_lease_timestamp;
     struct timespec dhcp_request_timestamp;
     char *dhcp_client_identifier;
@@ -967,6 +969,12 @@ typedef struct bbl_session_
 
         uint32_t dhcp_tx;
         uint32_t dhcp_rx;
+        uint32_t dhcp_tx_discover;
+        uint32_t dhcp_rx_offer;
+        uint32_t dhcp_tx_request;
+        uint32_t dhcp_rx_ack;
+        uint32_t dhcp_rx_nak;
+        uint32_t dhcp_tx_release;
 
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;

@@ -455,9 +455,11 @@ This section describes all attributes of the `dhcp` hierarchy.
 
 Attribute | Description | Default 
 --------- | ----------- | -------
-`enable` | This option allows to enable or disable DHCP | true
-
-**WARNING**: DHCP (IPv4) is currently not supported!
+`enable` | This option allows to enable or disable DHCP | false
+`broadcast` | DHCP broadcast flag | false
+`timeout` | DHCP timeout in seconds | 5
+`tos` | IPv4 TOS for all DHCP control traffic | 0 
+`vlan-priority` | VLAN PBIT for all DHCP control traffic | 0 
 
 ## DHCPv6
 

@@ -520,7 +520,7 @@ bbl_ctrl_job (timer_s *timer)
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
                                     session->dhcp_state = BBL_DHCP_SELECTING;
                                     session->dhcp_xid = rand();
-                                    session->send_requests |= BBL_SEND_DHCPREQUEST;
+                                    session->send_requests |= BBL_SEND_DHCP_REQUEST;
                                 } else if (session->ip_address && session->peer_ip_address) {
                                     /* Start IPoE session by sending ARP request if local and 
                                      * remote IP addresses are already provided. */

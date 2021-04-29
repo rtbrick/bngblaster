@@ -73,7 +73,7 @@ dhcp_state_string(uint32_t state) {
         case BBL_DHCP_REQUESTING: return "Requesting";
         case BBL_DHCP_BOUND: return "Bound";
         case BBL_DHCP_RENEWING: return "Renewing";
-        case BBL_DHCP_DHCPRELEASE: return "Releasing";
+        case BBL_DHCP_RELEASE: return "Releasing";
         default: return "N/A";
     }
 }
@@ -555,7 +555,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             if(seconds <= session->dhcp_lease_time) lease_expire = session->dhcp_lease_time - seconds;
             if(seconds <= session->dhcp_t1) lease_expire_t1 = session->dhcp_t1 - seconds;
             if(seconds <= session->dhcp_t2) lease_expire_t2 = session->dhcp_t2 - seconds;
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* si si si si ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si ss* ss* si si si so*}}", 
                         "status", "ok", 
                         "code", 200,
                         "session-information",
@@ -568,12 +568,6 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "mac", format_mac_address(session->client_mac),
                         "agent-circuit-id", session->agent_circuit_id,
                         "agent-remote-id", session->agent_remote_id,
-                        "dhcp-state", dhcp_state_string(session->dhcp_state),
-                        "dhcp-server", format_ipv4_address(&session->dhcp_server_identifier),
-                        "dhcp-lease-time", session->dhcp_lease_time,
-                        "dhcp-lease-expire", lease_expire,
-                        "dhcp-lease-expire-t1", lease_expire_t1,
-                        "dhcp-lease-expire-t2", lease_expire_t2,
                         "ipv4-address", ipv4,
                         "ipv4-netmask", ipv4_netmask,
                         "ipv4-gateway", ipv4_gw,
@@ -583,6 +577,18 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "ipv6-delegated-prefix", ipv6pd,
                         "ipv6-dns1", ipv6_dns1,
                         "ipv6-dns2", ipv6_dns2,
+                        "dhcp-state", dhcp_state_string(session->dhcp_state),
+                        "dhcp-server", format_ipv4_address(&session->dhcp_server_identifier),
+                        "dhcp-lease-time", session->dhcp_lease_time,
+                        "dhcp-lease-expire", lease_expire,
+                        "dhcp-lease-expire-t1", lease_expire_t1,
+                        "dhcp-lease-expire-t2", lease_expire_t2,
+                        "dhcp-tx-discover", session->stats.dhcp_tx_discover,
+                        "dhcp-tx-request", session->stats.dhcp_tx_request,
+                        "dhcp-tx-release", session->stats.dhcp_tx_release,
+                        "dhcp-rx-offer", session->stats.dhcp_rx_offer,
+                        "dhcp-rx-ack", session->stats.dhcp_rx_ack,
+                        "dhcp-rx-nak", session->stats.dhcp_rx_nak,
                         "dhcpv6-dns1", dhcpv6_dns1,
                         "dhcpv6-dns2", dhcpv6_dns2,
                         "tx-packets", session->stats.packets_tx,

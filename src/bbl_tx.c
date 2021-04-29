@@ -1201,7 +1201,7 @@ bbl_dhcp_timeout (timer_s *timer)
         return;
     } 
 
-    session->send_requests = BBL_SEND_DHCPREQUEST;
+    session->send_requests = BBL_SEND_DHCP_REQUEST;
     bbl_session_tx_qnode_insert(session);
 }
 
@@ -1228,19 +1228,20 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
 
     dhcp.header = &header;
 
+    eth.dst = session->dhcp_server_mac;
     eth.src = session->client_mac;
-    eth.dst = (uint8_t*)broadcast_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = ctx->config.dhcp_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.src = session->ip_address;
-    ipv4.dst = IPV4_BROADCAST;
+    ipv4.dst = session->dhcp_server;
     ipv4.ttl = 255;
+    ipv4.tos = ctx->config.dhcp_tos;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
     udp.src = DHCP_UDP_CLIENT;
@@ -1253,8 +1254,10 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     header.htype = 1; /* fixed set to ethernet */
     header.hlen = 6;
     header.xid = session->dhcp_xid;
-    if(ctx->config.dhcp_broadcast) {
+    if(ctx->config.dhcp_broadcast && session->dhcp_state != BBL_DHCP_RELEASE) {
         header.flags = htobe16(1 << 15);
+        eth.dst = (uint8_t*)broadcast_mac;
+        ipv4.dst = IPV4_BROADCAST;
     }
     header.ciaddr = session->ip_address;
     memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
@@ -1270,7 +1273,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     }
 
     /* Option 82 ... */
-    if(session->agent_circuit_id || session->agent_remote_id) {
+    if((session->agent_circuit_id || session->agent_remote_id) && session->dhcp_state != BBL_DHCP_RELEASE) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         dhcp.access_line = &access_line;
@@ -1279,6 +1282,10 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     switch(session->dhcp_state) {
         case BBL_DHCP_SELECTING:
             dhcp.type = DHCP_MESSAGE_DISCOVER;
+            session->stats.dhcp_tx_discover++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Discover send\n", session->session_id);
+            eth.dst = (uint8_t*)broadcast_mac;
+            ipv4.dst = IPV4_BROADCAST;
             dhcp.parameter_request_list = true;
             dhcp.option_netmask = true;
             dhcp.option_dns1 = true;
@@ -1293,6 +1300,8 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
             break;
         case BBL_DHCP_REQUESTING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
+            session->stats.dhcp_tx_request++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             dhcp.option_address = true;
             dhcp.address = session->dhcp_address;
             dhcp.option_server_identifier = true;
@@ -1307,16 +1316,24 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
             break;
         case BBL_DHCP_RENEWING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
+            session->stats.dhcp_tx_request++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             break;
-        case BBL_DHCP_DHCPRELEASE:
+        case BBL_DHCP_RELEASE:
             dhcp.type = DHCP_MESSAGE_RELEASE;
-            header.flags = 0;
+            session->stats.dhcp_tx_release++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
+            dhcp.option_server_identifier = true;
+            dhcp.server_identifier = session->dhcp_server_identifier;
+            if(session->session_state == BBL_TERMINATING) {
+                bbl_session_update_state(ctx, session, BBL_TERMINATED);
+            }
             break;
         default:
             return IGNORED;
     }
 
-    timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 5, 0, session, &bbl_dhcp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
     interface->stats.dhcp_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -1456,9 +1473,9 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     } else if (session->send_requests & BBL_SEND_ARP_REPLY) {
         result = bbl_encode_packet_arp_reply(session);
         session->send_requests &= ~BBL_SEND_ARP_REPLY;
-    } else if (session->send_requests & BBL_SEND_DHCPREQUEST) {
+    } else if (session->send_requests & BBL_SEND_DHCP_REQUEST) {
         result = bbl_encode_packet_dhcp(session);
-        session->send_requests &= ~BBL_SEND_DHCPREQUEST;
+        session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
     } else {
         session->send_requests = 0;
     }

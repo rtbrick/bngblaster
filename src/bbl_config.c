@@ -689,9 +689,9 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.dhcp_timeout = json_number_value(value);
         }
-        value = json_object_get(section, "retry");
+        value = json_object_get(section, "tos");
         if (json_is_number(value)) {
-            ctx->config.dhcp_retry = json_number_value(value);
+            ctx->config.dhcp_tos = json_number_value(value);
         }
         value = json_object_get(section, "vlan-priority");
         if (json_is_number(value)) {
@@ -1130,7 +1130,6 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.ip6cp_conf_request_retry = 10;
     ctx->config.dhcp_enable = false;
     ctx->config.dhcp_timeout = 5;
-    ctx->config.dhcp_retry = 10;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;
     ctx->config.igmp_autostart = true;
