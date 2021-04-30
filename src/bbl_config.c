@@ -119,25 +119,39 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         return false;
     }
 
-    value = json_object_get(access_interface, "outer-vlan-min");
+    value = json_object_get(access_interface, "outer-vlan");
     if (json_is_number(value)) {
         access_config->access_outer_vlan_min = json_number_value(value);
         access_config->access_outer_vlan_min &= 4095;
+        access_config->access_outer_vlan_max = access_config->access_outer_vlan_min;
+    } else {
+        value = json_object_get(access_interface, "outer-vlan-min");
+        if (json_is_number(value)) {
+            access_config->access_outer_vlan_min = json_number_value(value);
+            access_config->access_outer_vlan_min &= 4095;
+        }
+        value = json_object_get(access_interface, "outer-vlan-max");
+        if (value) {
+            access_config->access_outer_vlan_max = json_number_value(value);
+            access_config->access_outer_vlan_max &= 4095;
+        }
     }
-    value = json_object_get(access_interface, "outer-vlan-max");
-    if (value) {
-        access_config->access_outer_vlan_max = json_number_value(value);
-        access_config->access_outer_vlan_max &= 4095;
-    }
-    value = json_object_get(access_interface, "inner-vlan-min");
-    if (value) {
+    value = json_object_get(access_interface, "inner-vlan");
+    if (json_is_number(value)) {
         access_config->access_inner_vlan_min = json_number_value(value);
         access_config->access_inner_vlan_min &= 4095;
-    }
-    value = json_object_get(access_interface, "inner-vlan-max");
-    if (value) {
-        access_config->access_inner_vlan_max = json_number_value(value);
-        access_config->access_inner_vlan_max &= 4095;
+        access_config->access_inner_vlan_max = access_config->access_inner_vlan_min;
+    } else {
+        value = json_object_get(access_interface, "inner-vlan-min");
+        if (value) {
+            access_config->access_inner_vlan_min = json_number_value(value);
+            access_config->access_inner_vlan_min &= 4095;
+        }
+        value = json_object_get(access_interface, "inner-vlan-max");
+        if (value) {
+            access_config->access_inner_vlan_max = json_number_value(value);
+            access_config->access_inner_vlan_max &= 4095;
+        }
     }
     if(access_config->access_outer_vlan_min > access_config->access_outer_vlan_max ||
        access_config->access_inner_vlan_min > access_config->access_inner_vlan_max) {
