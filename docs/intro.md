@@ -8,8 +8,8 @@ Therefore we decided to build our own BNG test solution which is completely buil
 targeted for max scaling with small resource footprint, simple to use and easy to integrate in 
 our test automation infrastructure. 
 
-The BNG Blaster is able to simulate more than hundred thousand PPPoE subscribers including IPTV, 
-L2TPv2, QoS, forwarding verification and convergence testing capabilities.
+The BNG Blaster is able to simulate more than hundred thousand PPPoE and IPoE subscribers including 
+IPTV, L2TPv2, QoS, forwarding verification and convergence testing capabilities.
 
 * *High Scaling:* > 100K sessions
 * *Low CPU and Memory Footprint:* < 100MB memory for 16K sessions
@@ -38,7 +38,7 @@ Usage: bngblaster [OPTIONS]
   -v --version
   -h --help
   -C --config <args>
-  -l --logging debug|error|igmp|io|pppoe|normal|pcap|timer|timer-detail|ip|loss|l2tp
+  -l --logging debug|error|igmp|io|pppoe|normal|pcap|timer|timer-detail|ip|loss|l2tp|dhcp
   -L --log-file <args>
   -u --username <args>
   -p --password <args>

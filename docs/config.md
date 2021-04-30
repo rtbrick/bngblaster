@@ -161,15 +161,17 @@ Attribute | Description | Default
 `interface` | Access interface name (e.g. eth0, ...)
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
 `vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
-`outer-vlan-min` |Outer VLAN minimum value | 0 (untagged)
+`outer-vlan-min` | Outer VLAN minimum value | 0 (untagged)
 `outer-vlan-max` | Outer VLAN maximum value | 0 (untagged)
+`outer-vlan` |Set outer-vlan-min/max equally
 `inner-vlan-min` | Inner VLAN minimum value | 0 (untagged)
-`inner-vlan-max` |Inner VLAN maximum value | 0 (untagged)
+`inner-vlan-max` | Inner VLAN maximum value | 0 (untagged)
+`inner-vlan` |Set inner-vlan-min/max equally
 `third-vlan` | Add a fixed third VLAN (most inner VLAN) as required for some lab environments | 0 (untagged)
 `address` | Static IPv4 base address (IPoE only)
-`address-iter` |Static IPv4 base address iterator (IPoE only)
-`gateway` |Static IPv4 gateway address (IPoE only)
-`gateway` |Static IPv4 gateway address iterator (IPoE only)
+`address-iter` | Static IPv4 base address iterator (IPoE only)
+`gateway` | Static IPv4 gateway address (IPoE only)
+`gateway-iter` | Static IPv4 gateway address iterator (IPoE only)
 `username` | Optionally overwrite the username from authentication section per access configuration 
 `password` | Optionally overwrite the password from authentication section per access configuration
 `authentication-protocol` | Optionally overwrite the username from authentication section per access configuration
