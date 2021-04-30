@@ -4,12 +4,14 @@
 - [Installation](install)
 - [Configuration](config)
 - [Reports](reports)
-- [Traffic](traffic)
 - [Control Socket](ctrl)
-- [Multicast](multicast)
+- [PPPoE](pppoe)
 - [L2TPv2](l2tp)
-- [Legal Interception](li)
+- [IPoE](ipoe)
+- [Traffic](traffic)
 - [Traffic Streams](streams)
+- [Multicast](multicast)
+- [Legal Interception](li)
 
 A short introduction can be found on [YouTube](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster").
 
