@@ -557,6 +557,7 @@ typedef struct bbl_ctx_
         uint16_t lcp_conf_request_retry;
         uint16_t lcp_keepalive_interval;
         uint16_t lcp_keepalive_retry;
+        uint16_t lcp_start_delay;
 
         /* Authentication */
         uint16_t authentication_timeout;

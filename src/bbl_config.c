@@ -643,6 +643,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             if (json_is_number(value)) {
                 ctx->config.lcp_keepalive_retry = json_number_value(value);
             }
+            value = json_object_get(sub, "start-delay");
+            if (json_is_number(value)) {
+                ctx->config.lcp_start_delay = json_number_value(value);
+                if(ctx->config.lcp_start_delay >= 1000) {
+                    fprintf(stderr, "JSON config error: ppp->lcp->start-delay must be < 1000\n");
+                    return false;
+                }
+            }
         }
         sub = json_object_get(section, "ipcp");
         if (json_is_object(sub)) {

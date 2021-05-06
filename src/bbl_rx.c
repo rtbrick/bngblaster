@@ -1769,6 +1769,14 @@ bbl_rx_session(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_sessi
 }
 
 void
+bbl_lcp_start_delay(timer_s *timer) {
+    bbl_session_s *session = timer->data;
+    session->send_requests |= BBL_SEND_LCP_REQUEST;
+    session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+    bbl_session_tx_qnode_insert(session);
+}
+
+void
 bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_discovery_t *pppoed;
     bbl_ctx_s *ctx = interface->ctx;
@@ -1838,7 +1846,14 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                     session->send_requests = BBL_SEND_LCP_REQUEST;
                     session->lcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->lcp_state = BBL_PPP_INIT;
-                    bbl_session_tx_qnode_insert(session);
+                    if(ctx->config.lcp_start_delay) {
+                        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout",
+                                  0, ctx->config.lcp_start_delay * MSEC, session, &bbl_lcp_start_delay);
+                    } else {
+                        session->send_requests = BBL_SEND_LCP_REQUEST;
+                        session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+                        bbl_session_tx_qnode_insert(session);
+                    }                    
                 } else {
                     LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADS\n", session->session_id);
                     return;
