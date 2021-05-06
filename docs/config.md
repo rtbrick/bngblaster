@@ -415,6 +415,7 @@ Attribute | Description | Default
 `conf-request-retry` | LCP configuration request max retry | 10
 `keepalive-interval` | LCP echo request interval in seconds (0 means disabled) | 30
 `keepalive-retry` | PPP LCP echo request max retry | 3
+`start-delay` | PPP LCP initial request delay in milliseconds | 0
 
 ### PPP IPCP
 
