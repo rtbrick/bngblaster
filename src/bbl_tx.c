@@ -1415,13 +1415,13 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     if(session->send_requests & BBL_SEND_DISCOVERY) {
         result = bbl_encode_packet_discovery(session);
         session->send_requests &= ~BBL_SEND_DISCOVERY;
-    } else if (session->send_requests & BBL_SEND_LCP_RESPONSE) {
-        result = bbl_encode_packet_lcp_response(session);
-        session->send_requests &= ~BBL_SEND_LCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_LCP_REQUEST) {
         result = bbl_encode_packet_lcp_request(session);
         session->send_requests &= ~BBL_SEND_LCP_REQUEST;
         session->lcp_retries++;
+    } else if (session->send_requests & BBL_SEND_LCP_RESPONSE) {
+        result = bbl_encode_packet_lcp_response(session);
+        session->send_requests &= ~BBL_SEND_LCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_PAP_REQUEST) {
         result = bbl_encode_packet_pap_request(session);
         session->send_requests &= ~BBL_SEND_PAP_REQUEST;
@@ -1430,20 +1430,20 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
         result = bbl_encode_packet_chap_response(session);
         session->send_requests &= ~BBL_SEND_CHAP_RESPONSE;
         session->auth_retries++;
-    } else if (session->send_requests & BBL_SEND_IPCP_RESPONSE) {
-        result = bbl_encode_packet_ipcp_response(session);
-        session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_IPCP_REQUEST) {
         result = bbl_encode_packet_ipcp_request(session);
         session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
         session->ipcp_retries++;
-    } else if (session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
-        result = bbl_encode_packet_ip6cp_response(session);
-        session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
+    } else if (session->send_requests & BBL_SEND_IPCP_RESPONSE) {
+        result = bbl_encode_packet_ipcp_response(session);
+        session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_IP6CP_REQUEST) {
         result = bbl_encode_packet_ip6cp_request(session);
         session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
         session->ip6cp_retries++;
+    } else if (session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
+        result = bbl_encode_packet_ip6cp_response(session);
+        session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_ICMPV6_RS) {
         result = bbl_encode_packet_icmpv6_rs(session);
         session->send_requests &= ~BBL_SEND_ICMPV6_RS;
