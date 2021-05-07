@@ -1879,8 +1879,10 @@ bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
             memcpy(session->server_mac, arp->sender, ETH_ADDR_LEN);
         }
         if(arp->code == ARP_REQUEST) {
-            session->send_requests |= BBL_SEND_ARP_REPLY;
-            bbl_session_tx_qnode_insert(session);
+            if(arp->target_ip == session->ip_address) {
+                session->send_requests |= BBL_SEND_ARP_REPLY;
+                bbl_session_tx_qnode_insert(session);
+            }
         } else {
             if(!session->arp_resolved) {
                 bbl_rx_established_ipoe(eth, interface, session);
@@ -1934,6 +1936,69 @@ bbl_rx_session_id_from_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *in
     return session_id;
 }
 
+void
+bbl_rx_handler_access_multicast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    bbl_ctx_s *ctx;
+    bbl_session_s *session;
+    uint32_t session_index;
+
+    ctx = interface->ctx;
+
+    for(session_index = 0; session_index < ctx->sessions; session_index++) {
+        session = ctx->session_list[session_index];
+        if(session->access_type == ACCESS_TYPE_IPOE) {
+            if(session->session_state != BBL_TERMINATED &&
+               session->session_state != BBL_IDLE) {
+                session->stats.packets_rx++;
+                session->stats.bytes_rx += eth->length;
+                switch(eth->type) {
+                    case ETH_TYPE_IPV4:
+                        bbl_rx_ipv4(eth, (bbl_ipv4_t*)eth->next, interface, session);
+                        break;
+                    case ETH_TYPE_IPV6:
+                        bbl_rx_ipv6(eth, (bbl_ipv6_t*)eth->next, interface, session);
+                        break;
+                    default:
+                        interface->stats.packets_rx_drop_unknown++;
+                        break;
+                }
+            }
+        }
+    }
+}
+
+void
+bbl_rx_handler_access_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    bbl_ctx_s *ctx;
+    bbl_session_s *session;
+    uint32_t session_index;
+
+    ctx = interface->ctx;
+
+    for(session_index = 0; session_index < ctx->sessions; session_index++) {
+        session = ctx->session_list[session_index];
+        if(session->access_type == ACCESS_TYPE_IPOE) {
+            if(session->session_state != BBL_TERMINATED &&
+               session->session_state != BBL_IDLE) {
+                session->stats.packets_rx++;
+                session->stats.bytes_rx += eth->length;
+                switch(eth->type) {
+                    case ETH_TYPE_ARP:
+                        interface->stats.arp_rx++;
+                        bbl_rx_arp(eth, interface, session);
+                        break;
+                    case ETH_TYPE_IPV4:
+                        bbl_rx_ipv4(eth, (bbl_ipv4_t*)eth->next, interface, session);
+                        break;
+                    default:
+                        interface->stats.packets_rx_drop_unknown++;
+                        break;
+                }
+            }
+        }
+    }
+}
+
 /** 
  * bbl_rx_handler_access 
  *
@@ -1953,9 +2018,15 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     if(memcmp(eth->dst, (uint8_t*)multicast_mac, ETH_ADDR_LEN/2) == 0) {
         /* Multicast destination MAC address (01:00:5e:XX:XX:XX) */
         session_id = bbl_rx_session_id_from_vlan(eth, interface);
+        if(!session_id) {
+            return bbl_rx_handler_access_multicast(eth, interface);
+        }
     } else if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
         /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
         session_id = bbl_rx_session_id_from_broadcast(eth, interface);
+        if(!session_id) {
+            return bbl_rx_handler_access_broadcast(eth, interface);
+        }
     } else {
         /* The session-id is mapped into the last 3 bytes of 
          * the client MAC address. The original approach using
