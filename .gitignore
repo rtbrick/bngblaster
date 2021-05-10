@@ -53,3 +53,6 @@ dkms.conf
 
 # Build Files
 build/
+
+# SonarQube
+.scannerwork

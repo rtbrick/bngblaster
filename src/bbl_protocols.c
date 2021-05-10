@@ -12,7 +12,7 @@ protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t s
 protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
 
 uint16_t
-checksum(uint16_t *buf, uint16_t len) {
+bbl_checksum(uint16_t *buf, uint16_t len) {
          uint32_t sum = 0;
          uint16_t checksum = 0;
 
@@ -107,6 +107,70 @@ bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *buf, uint16_t 
     return bbl_ipv6_checksum(src, dst, IPV6_NEXT_HEADER_ICMPV6, buf, len);
 }
 
+uint16_t
+bbl_ipv4_checksum(uint32_t src, uint32_t dst, uint8_t proto, uint8_t *buf, uint16_t len) {
+
+    uint8_t *ip8;
+
+    int i;
+    uint32_t checksum = 0;
+    uint16_t word16;
+    bool padding = false;
+
+    /* The following block ensures that checksum field is ignored */
+    switch(proto) {
+        case PROTOCOL_IPV4_UDP:
+            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
+            word16 = ((buf[2]<<8)&0xFF00) + (buf[3]&0xFF); checksum += word16;
+            word16 = ((buf[4]<<8)&0xFF00) + (buf[5]&0xFF); checksum += word16;
+            i = 8;
+            break;
+        default:
+            i = 0;
+            break;
+    }
+    if (len % 2) {
+        padding = true;
+        len--;
+    }    
+    /* Make 16 bit words out of every two adjacent 8 bit words and 
+     * calculate the sum of all 16 bit words */
+    for (; i < len; i = i+2) {
+        word16 = ((buf[i]<<8)&0xFF00) + (buf[i+1]&0xFF);
+        checksum += word16;
+    }
+    if(padding) {
+        word16 = (buf[len]<<8)&0xFF00;
+        checksum += word16;
+        len++;
+    }
+
+    /* Add the IPv4 pseudo header which contains the 
+     * source and destinations addresses */
+    ip8 = (void *)&src;
+    word16 = ((ip8[0]<<8)&0xFF00) + (ip8[1]&0xFF); checksum += word16;
+    word16 = ((ip8[2]<<8)&0xFF00) + (ip8[3]&0xFF); checksum += word16;
+    ip8 = (void *)&dst;
+    word16 = ((ip8[0]<<8)&0xFF00) + (ip8[1]&0xFF); checksum += word16;
+    word16 = ((ip8[2]<<8)&0xFF00) + (ip8[3]&0xFF); checksum += word16;
+
+    /* Add the protocol number and the length of the UDP packet */
+    checksum += proto + len;
+
+    /* Keep only the last 16 bits of the 32 bit calculated sum and add the carries */
+    while (checksum >> 16)
+        checksum = (checksum & 0xffff) + (checksum >> 16);
+    
+    /* Take the one's complement of checksum */
+    checksum = ~checksum;
+
+    return (uint16_t)checksum;
+}
+
+uint16_t
+bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *buf, uint16_t len) {
+    return bbl_ipv4_checksum(src, dst, PROTOCOL_IPV4_UDP, buf, len);
+}
 
 /*
  * ENCODE
@@ -185,6 +249,127 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_dhcp
+ */
+protocol_error_t
+encode_dhcp(uint8_t *buf, uint16_t *len,
+            bbl_dhcp_t *dhcp) {
+
+    if(!dhcp->header) return ENCODE_ERROR;
+
+    uint8_t  str_len;
+    uint8_t  option_len;
+    uint8_t *option_len_ptr;
+
+    memcpy(buf, dhcp->header, sizeof(struct dhcp_header));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(struct dhcp_header));
+
+    /* Magic Cookie */
+    *(uint32_t*)buf = DHCP_MAGIC_COOKIE;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    *buf = DHCP_OPTION_DHCP_MESSAGE_TYPE;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 1;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = dhcp->type;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    if(dhcp->parameter_request_list) {
+        *buf = DHCP_OPTION_PARAM_REQUEST_LIST;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        option_len_ptr = buf;
+        option_len = 0;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        if(dhcp->option_netmask) {
+            option_len++;
+            *buf = DHCP_OPTION_SUBNET_MASK;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(dhcp->option_router) {
+            option_len++;
+            *buf = DHCP_OPTION_ROUTER;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(dhcp->option_dns1 || dhcp->option_dns2) {
+            option_len++;
+            *buf = DHCP_OPTION_DNS_SERVER;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(dhcp->option_domain_name) {
+            option_len++;
+            *buf = DHCP_OPTION_DOMAIN_NAME;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        *option_len_ptr = option_len;
+    }
+    if(dhcp->client_identifier) {
+        *buf = DHCP_OPTION_CLIENT_IDENTIFIER;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = dhcp->client_identifier_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, dhcp->client_identifier, dhcp->client_identifier_len);
+        BUMP_WRITE_BUFFER(buf, len, dhcp->client_identifier_len);
+    }
+    if(dhcp->option_server_identifier) {
+        *buf = DHCP_OPTION_SERVER_IDENTIFIER;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = 4;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *(uint32_t*)buf = dhcp->server_identifier;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+    if(dhcp->option_address) {
+        *buf = DHCP_OPTION_REQUESTED_IP_ADDRESS;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = 4;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *(uint32_t*)buf = dhcp->address;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+
+    if(dhcp->access_line) {
+        /* RFC3046 Relay Agent Information Option (82) */
+        *buf = DHCP_OPTION_RELAY_AGENT_INFORMATION;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        option_len_ptr = buf;
+        option_len = 0;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        if(dhcp->access_line->aci) {
+            *buf = ACCESS_LINE_ACI;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            str_len = strnlen(dhcp->access_line->aci, UINT8_MAX);
+            *buf = str_len;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            memcpy(buf, dhcp->access_line->aci, str_len);
+            BUMP_WRITE_BUFFER(buf, len, str_len);
+            option_len += str_len + 2;
+        }
+        if(dhcp->access_line->ari) {
+            *buf = ACCESS_LINE_ARI;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            str_len = strnlen(dhcp->access_line->ari, UINT8_MAX);
+            *buf = str_len;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            memcpy(buf, dhcp->access_line->ari, str_len);
+            BUMP_WRITE_BUFFER(buf, len, str_len);
+            option_len += str_len + 2;
+        }
+        *option_len_ptr = option_len;
+    }
+
+    *buf = DHCP_OPTION_END;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* This is optional ... */
+    while(*len % 8) {
+        *buf = DHCP_OPTION_PAD;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_bbl
  */
 protocol_error_t
@@ -258,6 +443,9 @@ encode_udp(uint8_t *buf, uint16_t *len,
         case UDP_PROTOCOL_L2TP:
             result = encode_l2tp(buf, len, (bbl_l2tp_t*)udp->next);
             break;
+        case UDP_PROTOCOL_DHCP:
+            result = encode_dhcp(buf, len, (bbl_dhcp_t*)udp->next);
+            break;
         default:
             result = PROTOCOL_SUCCESS;
             break;
@@ -328,7 +516,7 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
     icmp_len = *len - icmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = checksum((uint16_t*)start, icmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, icmp_len);
 
 
     return PROTOCOL_SUCCESS;
@@ -395,7 +583,7 @@ encode_icmp(uint8_t *buf, uint16_t *len,
     icmp_len = *len - icmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = checksum((uint16_t*)start, icmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, icmp_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -468,7 +656,7 @@ encode_igmp(uint8_t *buf, uint16_t *len,
     igmp_len = *len - igmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = checksum((uint16_t*)start, igmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, igmp_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -546,6 +734,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     uint8_t *start = buf;
     uint16_t ipv4_len = *len;
     uint16_t udp_len = *len;
+    uint16_t checksum;
     uint8_t header_len = 5; // header length 20 (4 * 5)
 
     if(ipv4->router_alert_option) {
@@ -553,7 +742,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     }
 
     /* Set version 4 and header length to 20 */
-    *buf = 4 << 4;
+    *buf = 64;
     *buf |= header_len;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
@@ -604,7 +793,12 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
         case PROTOCOL_IPV4_UDP:
             udp_len = *len;
             result = encode_udp(buf, len, (bbl_udp_t*)ipv4->next);
-            *(uint16_t*)(buf + 4) = htobe16(*len - udp_len); // update UDP length
+            udp_len = *len - udp_len;
+            *(uint16_t*)(buf + 4) = htobe16(udp_len); // update UDP length
+            if(((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_BBL) {
+                checksum = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
+                *(uint16_t*)(buf + 6) = htobe16(checksum); // update UDP checksum
+            }
             break;
         default:
             result = PROTOCOL_SUCCESS;
@@ -616,7 +810,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     *(uint16_t*)(start + 2) = htobe16(ipv4_len);
 
     /* Update checksum */
-    *(uint16_t*)(start + 10) = checksum((uint16_t*)start, header_len * 4);
+    *(uint16_t*)(start + 10) = bbl_checksum((uint16_t*)start, header_len * 4);
 
     return result;
 }
@@ -1432,7 +1626,7 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init DHCPv6 structure */
     dhcpv6 = (bbl_dhcpv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcpv6_t));
     memset(dhcpv6, 0x0, sizeof(bbl_dhcpv6_t));
 
@@ -1478,12 +1672,130 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                         dhcpv6->dns2 = (ipv6addr_t*)(buf+16);
                     }
                 }
+                break;
             default:
                 break;
         }
         BUMP_BUFFER(buf, len, option_len);
     }
     *_dhcpv6 = dhcpv6;
+    return ret_val;
+}
+
+/*
+ * decode_dhcp
+ */
+protocol_error_t
+decode_dhcp(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
+            bbl_dhcp_t **_dhcp) {
+
+    protocol_error_t ret_val = PROTOCOL_SUCCESS;
+
+    bbl_dhcp_t *dhcp;
+
+    uint8_t option;
+    uint8_t option_len;
+
+    if(len < sizeof(struct dhcp_header) + 4 || sp_len < sizeof(bbl_dhcp_t)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init DHCP structure */
+    dhcp = (bbl_dhcp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcp_t));
+    memset(dhcp, 0x0, sizeof(bbl_dhcp_t));
+
+    dhcp->header = (struct dhcp_header*)buf;
+    BUMP_BUFFER(buf, len, sizeof(struct dhcp_header));
+
+    /* Magic Cookie */
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+
+    while(len >= 2) {
+        option = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(option == DHCP_OPTION_PAD) {
+            continue;
+        }
+        option_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(option_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(option) {
+            case DHCP_OPTION_END:
+                option_len = len;
+                break;
+            case DHCP_OPTION_DHCP_MESSAGE_TYPE:
+                if(option_len != 1) {
+                    return DECODE_ERROR;
+                }
+                dhcp->type = *buf;
+                break;
+            case DHCP_OPTION_IP_ADDRESS_LEASE_TIME:
+                if(option_len != 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->lease_time = be32toh(*(uint32_t*)buf);
+                dhcp->option_lease_time = true;
+                break;
+            case DHCP_OPTION_CLIENT_IDENTIFIER:
+                dhcp->client_identifier = buf;
+                dhcp->client_identifier_len = option_len;
+                break;
+            case DHCP_OPTION_SERVER_IDENTIFIER:
+                if(option_len != 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->server_identifier = *(uint32_t*)buf;
+                dhcp->option_server_identifier = true;
+                break;
+            case DHCP_OPTION_SUBNET_MASK:
+                if(option_len != 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->netmask = *(uint32_t*)buf;
+                dhcp->option_netmask = true;
+                break;
+            case DHCP_OPTION_ROUTER:
+                if(option_len < 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->router = *(uint32_t*)buf;
+                dhcp->option_router = true;
+                break;
+            case DHCP_OPTION_DNS_SERVER:
+                if(option_len < 4) {
+                    return DECODE_ERROR;
+                }
+                dhcp->dns1 = *(uint32_t*)buf;
+                dhcp->option_dns1 = true;
+                if(option_len >=8) {
+                    dhcp->dns2 = *(uint32_t*)(buf+4);
+                    dhcp->option_dns2 = true;
+                }
+                break;
+            case DHCP_OPTION_HOST_NAME:
+                dhcp->host_name = (char*)buf;
+                dhcp->host_name_len = option_len;
+                break;
+            case DHCP_OPTION_DOMAIN_NAME:
+                dhcp->domain_name = (char*)buf;
+                dhcp->domain_name_len = option_len;
+                break;
+            case DHCP_OPTION_INTERFACE_MTU:
+                if(option_len != 2) {
+                    return DECODE_ERROR;
+                }
+                dhcp->mtu = be16toh(*(uint16_t*)buf);
+                dhcp->option_mtu = true;
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, option_len);
+    }
+    *_dhcp = dhcp;
     return ret_val;
 }
 
@@ -1591,7 +1903,7 @@ decode_udp(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init IPv4 header */
+    /* Init UDP header */
     udp = (bbl_udp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_udp_t));
     //memset(udp, 0x0, sizeof(bbl_udp_t));
 
@@ -1622,6 +1934,10 @@ decode_udp(uint8_t *buf, uint16_t len,
         case L2TP_UDP_PORT:
             udp->protocol = UDP_PROTOCOL_L2TP;
             ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
+            break;
+        case DHCP_UDP_CLIENT:
+            udp->protocol = UDP_PROTOCOL_DHCP;
+            ret_val = decode_dhcp(buf, len, sp, sp_len, (bbl_dhcp_t**)&udp->next);
             break;
         case QMX_LI_UDP_PORT:
             udp->protocol = UDP_PROTOCOL_QMX_LI;

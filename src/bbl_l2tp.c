@@ -352,7 +352,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
             break;
     }
     if(!l2tp_tunnel->timer_tx_active) {
-        timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+        timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
         l2tp_tunnel->timer_tx_active = true;
     }
 }
@@ -435,7 +435,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
         } else {
             CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->txq_qhead, q, txq_qnode);
             if(!l2tp_tunnel->timer_tx_active) {
-                timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+                timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                 l2tp_tunnel->timer_tx_active = true;
             }
         }
@@ -641,7 +641,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             CIRCLEQ_INSERT_TAIL(&l2tp_server->tunnel_qhead, l2tp_tunnel, tunnel_qnode);
             /* Start control job
              * WARNING: Do not change the interval! */
-            timer_add_periodic(&ctx->timer_root, &l2tp_tunnel->timer_ctrl, "L2TP Control", 1, 0, l2tp_tunnel, bbl_l2tp_tunnel_control_job);
+            timer_add_periodic(&ctx->timer_root, &l2tp_tunnel->timer_ctrl, "L2TP Control", 1, 0, l2tp_tunnel, &bbl_l2tp_tunnel_control_job);
             /* Prepare ZLB */
             bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_ZLB);
             /* Send response */
@@ -1022,6 +1022,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     }
                 }
             }
+            break;
         default:
             break;
     }
@@ -1090,7 +1091,7 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                 l2tp_tunnel->zlb = true;
                 /* Start tx timer */
                 if(!l2tp_tunnel->timer_tx_active) {
-                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                     l2tp_tunnel->timer_tx_active = true;
                 }
             }
@@ -1172,7 +1173,7 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                 l2tp_tunnel->stats.control_rx_dup++;
                 interface->stats.l2tp_control_rx_dup++;
                 if(!l2tp_tunnel->timer_tx_active) {
-                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, bbl_l2tp_tunnel_tx_job);
+                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                     l2tp_tunnel->timer_tx_active = true;
                 }
             } else {

@@ -131,6 +131,7 @@
 #define IGMP_MAX_SOURCES                3
 #define IGMP_MAX_GROUPS                 8
 
+#define IPV4_BROADCAST                  0xffffffff /* 255.255.255.255 */
 #define IPV4_MC_ALL_HOSTS               0x010000e0 /* 224.0.0.1 */
 #define IPV4_MC_ALL_ROUTERS             0x020000e0 /* 224.0.0.2 */
 #define IPV4_MC_IGMP                    0x160000e0 /* 224.0.0.22 */
@@ -144,6 +145,7 @@
 #define UDP_PROTOCOL_BBL                2
 #define UDP_PROTOCOL_L2TP               3
 #define UDP_PROTOCOL_QMX_LI             4
+#define UDP_PROTOCOL_DHCP               5
 
 #define IPV6_NEXT_HEADER_TCP            6
 #define IPV6_NEXT_HEADER_UDP            17
@@ -154,6 +156,12 @@
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
 #define ICMPV6_OPTION_PREFIX            3
 #define ICMPV6_OPTION_DNS               25
+
+#define BOOTREQUEST                     1
+#define BOOTREPLY                       2
+#define DHCP_UDP_CLIENT                 68
+#define DHCP_UDP_SERVER                 67
+#define DHCP_MAGIC_COOKIE               htobe32(0x63825363)
 
 #define DHCPV6_TRANS_ID_LEN             3
 #define DHCPV6_TYPE_MASK                0x00ffffff
@@ -195,11 +203,11 @@
 
 #define BUMP_BUFFER(_buf, _len, _size) \
     (_buf) += _size; \
-    _len -= _size;
+    _len -= _size
 
 #define BUMP_WRITE_BUFFER(_buf, _len, _size) \
     (_buf) += _size; \
-    *(uint16_t*)(_len) += _size;
+    *(uint16_t*)(_len) += _size
 
 typedef uint8_t ipv6addr_t[IPV6_ADDR_LEN];
 
@@ -213,6 +221,10 @@ static const ipv6addr_t ipv6_link_local_prefix = {0xFE, 0x80, 0x00, 0x00, 0x00, 
 static const ipv6addr_t ipv6_multicast_all_nodes = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 static const ipv6addr_t ipv6_multicast_all_routers = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
 static const ipv6addr_t ipv6_multicast_solicited_node = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+
+/* MAC Addresses */
+static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static const uint8_t multicast_mac[ETH_ADDR_LEN] =  { 0x01, 0x00, 0x5e, 0x00, 0x00, 0x00};
 static const uint8_t ipv6_multicast_mac[ETH_ADDR_LEN] =  { 0x33, 0x33, 0xff, 0x00, 0x00, 0x10};
 
 typedef enum protocol_error_ {
@@ -296,6 +308,100 @@ typedef enum dhcpv6_option_code_ {
     DHCPV6_OPTION_IAPREFIX              = 26,
     DHCPV6_OPTION_MAX,
 } dhcpv6_option_code;
+
+typedef enum dhcp_message_type_ {
+    DHCP_MESSAGE_DISCOVER              = 1,
+    DHCP_MESSAGE_OFFER                 = 2,
+    DHCP_MESSAGE_REQUEST               = 3,
+    DHCP_MESSAGE_DECLINE               = 4,
+    DHCP_MESSAGE_ACK                   = 5,
+    DHCP_MESSAGE_NAK                   = 6,
+    DHCP_MESSAGE_RELEASE               = 7,
+    DHCP_MESSAGE_INFORM                = 8,
+    DHCP_MESSAGE_MAX
+} dhcp_message_type;
+
+typedef enum dhcp_option_code_ {
+    DHCP_OPTION_PAD                          = 0,
+    DHCP_OPTION_SUBNET_MASK                  = 1,
+    DHCP_OPTION_TIME_OFFSET                  = 2,
+    DHCP_OPTION_ROUTER                       = 3,
+    DHCP_OPTION_TIME_SERVER                  = 4,
+    DHCP_OPTION_NAME_SERVER                  = 5,
+    DHCP_OPTION_DNS_SERVER                   = 6,
+    DHCP_OPTION_LOG_SERVER                   = 7,
+    DHCP_OPTION_COOKIE_SERVER                = 8,
+    DHCP_OPTION_LPR_SERVER                   = 9,
+    DHCP_OPTION_IMPRESS_SERVER               = 10,
+    DHCP_OPTION_RESOURCE_LOCATION_SERVER     = 11,
+    DHCP_OPTION_HOST_NAME                    = 12,
+    DHCP_OPTION_BOOT_FILE_SIZE               = 13,
+    DHCP_OPTION_MERIT_DUMP_FILE              = 14,
+    DHCP_OPTION_DOMAIN_NAME                  = 15,
+    DHCP_OPTION_SWAP_SERVER                  = 16,
+    DHCP_OPTION_ROOT_PATH                    = 17,
+    DHCP_OPTION_EXTENSIONS_PATH              = 18,
+    DHCP_OPTION_IP_FORWARDING                = 19,
+    DHCP_OPTION_NON_LOCAL_SOURCE_ROUTING     = 20,
+    DHCP_OPTION_POLICY_FILTER                = 21,
+    DHCP_OPTION_MAX_DATAGRAM_REASSEMBLY_SIZE = 22,
+    DHCP_OPTION_DEFAULT_IP_TTL               = 23,
+    DHCP_OPTION_PATH_MTU_AGING_TIMEOUT       = 24,
+    DHCP_OPTION_PATH_MTU_PLATEAU_TABLE       = 25,
+    DHCP_OPTION_INTERFACE_MTU                = 26,
+    DHCP_OPTION_ALL_SUBNETS_ARE_LOCAL        = 27,
+    DHCP_OPTION_BROADCAST_ADDRESS            = 28,
+    DHCP_OPTION_PERFORM_MASK_DISCOVERY       = 29,
+    DHCP_OPTION_MASK_SUPPLIER                = 30,
+    DHCP_OPTION_PERFORM_ROUTER_DISCOVERY     = 31,
+    DHCP_OPTION_ROUTER_SOLICITATION_ADDRESS  = 32,
+    DHCP_OPTION_STATIC_ROUTE                 = 33,
+    DHCP_OPTION_TRAILER_ENCAPSULATION        = 34,
+    DHCP_OPTION_ARP_CACHE_TIMEOUT            = 35,
+    DHCP_OPTION_ETHERNET_ENCAPSULATION       = 36,
+    DHCP_OPTION_TCP_DEFAULT_TTL              = 37,
+    DHCP_OPTION_TCP_KEEPALIVE_INTERVAL       = 38,
+    DHCP_OPTION_TCP_KEEPALIVE_GARBAGE        = 39,
+    DHCP_OPTION_NIS_DOMAIN                   = 40,
+    DHCP_OPTION_NIS_SERVER                   = 41,
+    DHCP_OPTION_NTP_SERVER                   = 42,
+    DHCP_OPTION_VENDOR_SPECIFIC_INFO         = 43,
+    DHCP_OPTION_NETBIOS_NBNS_SERVER          = 44,
+    DHCP_OPTION_NETBIOS_NBDD_SERVER          = 45,
+    DHCP_OPTION_NETBIOS_NODE_TYPE            = 46,
+    DHCP_OPTION_NETBIOS_SCOPE                = 47,
+    DHCP_OPTION_X11_FONT_SERVER              = 48,
+    DHCP_OPTION_X11_DISPLAY_MANAGER          = 49,
+    DHCP_OPTION_REQUESTED_IP_ADDRESS         = 50,
+    DHCP_OPTION_IP_ADDRESS_LEASE_TIME        = 51,
+    DHCP_OPTION_OPTION_OVERLOAD              = 52,
+    DHCP_OPTION_DHCP_MESSAGE_TYPE            = 53,
+    DHCP_OPTION_SERVER_IDENTIFIER            = 54,
+    DHCP_OPTION_PARAM_REQUEST_LIST           = 55,
+    DHCP_OPTION_MESSAGE                      = 56,
+    DHCP_OPTION_MAX_DHCP_MESSAGE_SIZE        = 57,
+    DHCP_OPTION_RENEWAL_TIME_VALUE           = 58,
+    DHCP_OPTION_REBINDING_TIME_VALUE         = 59,
+    DHCP_OPTION_VENDOR_CLASS_IDENTIFIER      = 60,
+    DHCP_OPTION_CLIENT_IDENTIFIER            = 61,
+    DHCP_OPTION_NISP_DOMAIN                  = 64,
+    DHCP_OPTION_NISP_SERVER                  = 65,
+    DHCP_OPTION_TFTP_SERVER_NAME             = 66,
+    DHCP_OPTION_BOOTFILE_NAME                = 67,
+    DHCP_OPTION_MOBILE_IP_HOME_AGENT         = 68,
+    DHCP_OPTION_SMTP_SERVER                  = 69,
+    DHCP_OPTION_POP3_SERVER                  = 70,
+    DHCP_OPTION_NNTP_SERVER                  = 71,
+    DHCP_OPTION_DEFAULT_WWW_SERVER           = 72,
+    DHCP_OPTION_DEFAULT_FINGER_SERVER        = 73,
+    DHCP_OPTION_DEFAULT_IRC_SERVER           = 74,
+    DHCP_OPTION_STREETTALK_SERVER            = 75,
+    DHCP_OPTION_STDA_SERVER                  = 76,
+    DHCP_OPTION_RAPID_COMMIT                 = 80,
+    DHCP_OPTION_RELAY_AGENT_INFORMATION      = 82,
+    DHCP_OPTION_CAPTIVE_PORTAL               = 160,
+    DHCP_OPTION_END                          = 255
+} dhcp_option_code;
 
 typedef enum access_line_codes_ {
     // broadband forum tr101
@@ -574,6 +680,57 @@ typedef struct bbl_dhcpv6_ {
     ipv6addr_t  *dns1;
     ipv6addr_t  *dns2;
 } bbl_dhcpv6_t;
+
+struct dhcp_header {
+    uint8_t     op;
+    uint8_t     htype;
+    uint8_t     hlen;
+    uint8_t     hops;
+    uint32_t    xid;
+    uint16_t    secs;
+    uint16_t    flags;
+    uint32_t    ciaddr;
+    uint32_t    yiaddr;
+    uint32_t    siaddr;
+    uint32_t    giaddr;
+    char        chaddr[16];
+    char        sname[64];
+    char        file[128];
+} __attribute__ ((__packed__));
+
+typedef struct bbl_dhcp_ {
+    struct dhcp_header *header;
+    uint8_t      type;
+
+    uint32_t     server_identifier;
+    uint32_t     lease_time;
+    uint32_t     address;
+    uint32_t     netmask;
+    uint32_t     dns1;
+    uint32_t     dns2;
+    uint32_t     router;
+    uint16_t     mtu;
+    char        *host_name;
+    uint8_t      host_name_len;
+    char        *domain_name;
+    uint8_t      domain_name_len;
+
+    bool         parameter_request_list;
+    bool         option_server_identifier;
+    bool         option_lease_time;
+    bool         option_address;
+    bool         option_netmask;
+    bool         option_dns1;
+    bool         option_dns2;
+    bool         option_router;
+    bool         option_mtu;
+    bool         option_host_name;
+    bool         option_domain_name;
+
+    access_line_t *access_line;
+    uint8_t *client_identifier;
+    uint8_t client_identifier_len;
+} bbl_dhcp_t;
 
 typedef struct bbl_l2tp_ {
     bool        with_length;     // L Bit

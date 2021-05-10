@@ -114,11 +114,10 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
         if (timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
             continue;
         }
-
         /*
          * Found it !
          */
-        goto insert;
+        goto INSERT;
     }
 
     /*
@@ -139,7 +138,7 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
     LOG(TIMER_DETAIL, "Add timer bucket %lu.%06lus\n",
 	timer_bucket->sec, timer_bucket->nsec/1000);
 
- insert:
+ INSERT:
     timer->timer_bucket = timer_bucket;
     CIRCLEQ_INSERT_TAIL(&timer_bucket->timer_qhead, timer, timer_qnode);
     timer_bucket->timers++;
@@ -214,13 +213,13 @@ timer_dequeue_bucket (timer_s *timer)
      * If the last timer of a bucket is gone, remove the bucket as well.
      */
     if (!timer_bucket->timers) {
-	CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
+        CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
 
-	LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
-	    timer_bucket->sec, timer_bucket->nsec/1000);
+        LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
+            timer_bucket->sec, timer_bucket->nsec/1000);
 
-	free(timer_bucket);
-	timer_root->buckets--;
+        free(timer_bucket);
+        timer_root->buckets--;
     }
 }
 
@@ -259,22 +258,21 @@ timer_requeue (timer_s *timer, time_t sec, long nsec)
 void
 timer_del_internal (timer_s *timer)
 {
-    timer_root_s *timer_root;
     timer_bucket_s *timer_bucket;
-
-    timer_bucket = timer->timer_bucket;
-    timer_root = timer_bucket->timer_root;
+    timer_root_s *timer_root;
 
     LOG(TIMER, "  Delete %s timer\n", timer->name);
 
-    timer_dequeue_bucket(timer);
-
-    /* Add to GC list */
-    CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
-    timer_root->gc++;
-
-    *timer->ptimer = NULL; /* delete references to this timer */
-    timer->ptimer= NULL;
+    timer_bucket = timer->timer_bucket;
+    if(timer_bucket) {
+        timer_root = timer_bucket->timer_root;
+        timer_dequeue_bucket(timer);
+        /* Add to GC list */
+        CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
+        timer_root->gc++;
+        *timer->ptimer = NULL; /* delete references to this timer */
+        timer->ptimer= NULL;
+    }
 }
 
 /*
@@ -672,21 +670,21 @@ timer_test (void *ctx)
     t12 = t22 = t32 = NULL;
     t41 = NULL;
 
-    timer_add(&root, &t11, "t1.1", 1, 0, ctx, timer_test_cb);
-    timer_add(&root, &t12, "t1.2", 1, 0, ctx, timer_test_cb);
+    timer_add(&root, &t11, "t1.1", 1, 0, ctx, &timer_test_cb);
+    timer_add(&root, &t12, "t1.2", 1, 0, ctx, &timer_test_cb);
 
-    timer_add(&root, &t21, "t2.1", 2, 0, ctx, timer_test_cb);
-    timer_add(&root, &t22, "t2.2", 2, 0, ctx, timer_test_cb);
+    timer_add(&root, &t21, "t2.1", 2, 0, ctx, &timer_test_cb);
+    timer_add(&root, &t22, "t2.2", 2, 0, ctx, &timer_test_cb);
 
-    timer_add(&root, &t31, "t3.1", 5, 0, ctx, timer_test_cb);
-    timer_add(&root, &t32, "t3.2", 5, 0, ctx, timer_test_cb);
+    timer_add(&root, &t31, "t3.1", 5, 0, ctx, &timer_test_cb);
+    timer_add(&root, &t32, "t3.2", 5, 0, ctx, &timer_test_cb);
 
-    timer_add_periodic(&root, &t41, "t4.1 periodic", 4, 0, ctx, timer_test_cb);
+    timer_add_periodic(&root, &t41, "t4.1 periodic", 4, 0, ctx, &timer_test_cb);
 
     for (idx = 0; idx < 10; idx++) {
         t5[idx] = NULL;
         snprintf(timer_name, sizeof(timer_name), "t5.%u", idx+1);
-        timer_add(&root, &t5[idx], timer_name, 10, 0, ctx, timer_test_cb);
+        timer_add(&root, &t5[idx], timer_name, 10, 0, ctx, &timer_test_cb);
     }
     timer_smear_bucket(&root, 10, 0);
 
