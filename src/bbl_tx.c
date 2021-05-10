@@ -113,6 +113,12 @@ bbl_encode_packet_network_session_ipv4 (bbl_interface_s *interface, bbl_session_
 
     session->stats.network_ipv4_tx++;
     interface->stats.session_ipv4_tx++;
+    if(session->l2tp_session) {
+        interface->stats.l2tp_data_tx++;
+        session->l2tp_session->tunnel->stats.data_tx++;
+        session->l2tp_session->stats.data_tx++;
+        session->l2tp_session->stats.data_ipv4_tx++;
+    }
 
     memcpy(session->write_buf, session->network_ipv4_tx_packet_template, session->network_ipv4_tx_packet_len);
     session->write_idx = session->network_ipv4_tx_packet_len;
@@ -390,7 +396,7 @@ bbl_encode_packet_igmp (bbl_session_s *session)
         session->send_requests &= ~BBL_SEND_IGMP;
         return IGNORED;
     }
-    timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", 1, 0, session, bbl_igmp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", 1, 0, session, &bbl_igmp_timeout);
     session->stats.igmp_tx++;
     interface->stats.igmp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -486,7 +492,7 @@ bbl_encode_packet_pap_request (bbl_session_s *session) {
     pap.username_len = strlen(session->username);
     pap.password = session->password;
     pap.password_len = strlen(session->password);
-    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, bbl_pap_timeout);
+    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, &bbl_pap_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -535,7 +541,7 @@ bbl_encode_packet_chap_response (bbl_session_s *session) {
     chap.challenge_len = CHALLENGE_LEN;
     chap.name = session->username;
     chap.name_len = strlen(session->username);
-    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, bbl_chap_timeout);
+    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, &bbl_chap_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -594,7 +600,7 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
     ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
     ipv6.next = &icmpv6;
     icmpv6.type = IPV6_ICMPV6_ROUTER_SOLICITATION;
-    timer_add(&ctx->timer_root, &session->timer_icmpv6, "ICMPv6", 5, 0, session, bbl_icmpv6_timeout);
+    timer_add(&ctx->timer_root, &session->timer_icmpv6, "ICMPv6", 5, 0, session, &bbl_icmpv6_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -676,7 +682,7 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
         dhcpv6.oro = true;
     }
-    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", 5, 0, session, bbl_dhcpv6_timeout);
+    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", 5, 0, session, &bbl_dhcpv6_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -742,7 +748,7 @@ bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
     if(ip6cp.code == PPP_CODE_CONF_REQUEST) {
         ip6cp.ipv6_identifier = session->ip6cp_ipv6_identifier;
     }
-    timer_add(&ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout", ctx->config.ip6cp_conf_request_timeout, 0, session, bbl_ip6cp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout", ctx->config.ip6cp_conf_request_timeout, 0, session, &bbl_ip6cp_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -856,7 +862,7 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
             ipcp.option_dns2 = true;
         }
     }
-    timer_add(&ctx->timer_root, &session->timer_ipcp, "IPCP timeout", ctx->config.ipcp_conf_request_timeout, 0, session, bbl_ipcp_timeout);
+    timer_add(&ctx->timer_root, &session->timer_ipcp, "IPCP timeout", ctx->config.ipcp_conf_request_timeout, 0, session, &bbl_ipcp_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -966,7 +972,7 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
         timeout = ctx->config.lcp_conf_request_timeout;
     }
     if(timeout) {
-        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout", timeout, 0, session, bbl_lcp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout", timeout, 0, session, &bbl_lcp_timeout);
     }
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
@@ -1067,7 +1073,7 @@ bbl_encode_padi (bbl_session_s *session)
         pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
         pppoe.host_uniq_len = sizeof(uint64_t);
     }
-    if(strlen(session->agent_circuit_id) || strlen(session->agent_remote_id)) {
+    if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;
@@ -1111,7 +1117,7 @@ bbl_encode_padr (bbl_session_s *session)
         pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
         pppoe.host_uniq_len = sizeof(uint64_t);
     }
-    if(strlen(session->agent_circuit_id) || strlen(session->agent_remote_id)) {
+    if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;
@@ -1160,7 +1166,7 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
      switch(session->session_state) {
         case BBL_PPPOE_INIT:
             result = bbl_encode_padi(session);
-            timer_add(&ctx->timer_root, &session->timer_padi, "PADI timeout", 5, 0, session, bbl_padi_timeout);
+            timer_add(&ctx->timer_root, &session->timer_padi, "PADI timeout", 5, 0, session, &bbl_padi_timeout);
             interface->stats.padi_tx++;
             if(!ctx->stats.first_session_tx.tv_sec) {
                 ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
@@ -1169,7 +1175,7 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
             break;
         case BBL_PPPOE_REQUEST:
             result = bbl_encode_padr(session);
-            timer_add(&ctx->timer_root, &session->timer_padr, "PADR timeout", 5, 0, session, bbl_padr_timeout);
+            timer_add(&ctx->timer_root, &session->timer_padr, "PADR timeout", 5, 0, session, &bbl_padr_timeout);
             interface->stats.padr_tx++;
             break;
         case BBL_TERMINATING:
@@ -1182,6 +1188,155 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
     }
 
     return result;
+}
+
+void
+bbl_dhcp_timeout (timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+
+    if(session->dhcp_state == BBL_DHCP_INIT || 
+       session->dhcp_state == BBL_DHCP_BOUND) {
+        /* Wrong state */
+        return;
+    } 
+
+    session->send_requests = BBL_SEND_DHCP_REQUEST;
+    bbl_session_tx_qnode_insert(session);
+}
+
+protocol_error_t
+bbl_encode_packet_dhcp (bbl_session_s *session) {
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
+    bbl_ethernet_header_t eth = {0};
+    bbl_ipv4_t ipv4 = {0};
+    bbl_udp_t udp = {0};
+    struct dhcp_header header = {0};
+    bbl_dhcp_t dhcp = {0};
+    access_line_t access_line = {0};
+    struct timespec now;
+
+    if(session->dhcp_state == BBL_DHCP_INIT ||
+       session->dhcp_state == BBL_DHCP_BOUND) {
+        return IGNORED;
+    }
+
+    interface = session->interface;
+    ctx = interface->ctx;
+
+    dhcp.header = &header;
+
+    eth.dst = session->dhcp_server_mac;
+    eth.src = session->client_mac;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = ctx->config.dhcp_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
+
+    eth.type = ETH_TYPE_IPV4;
+    eth.next = &ipv4;
+    ipv4.src = session->ip_address;
+    ipv4.dst = session->dhcp_server;
+    ipv4.ttl = 255;
+    ipv4.tos = ctx->config.dhcp_tos;
+    ipv4.protocol = PROTOCOL_IPV4_UDP;
+    ipv4.next = &udp;
+    udp.src = DHCP_UDP_CLIENT;
+    udp.dst = DHCP_UDP_SERVER;
+    udp.protocol = UDP_PROTOCOL_DHCP;
+    udp.next = &dhcp;
+
+    /* Init DHCP header */
+    header.op = BOOTREQUEST;
+    header.htype = 1; /* fixed set to ethernet */
+    header.hlen = 6;
+    header.xid = session->dhcp_xid;
+    if(ctx->config.dhcp_broadcast && session->dhcp_state != BBL_DHCP_RELEASE) {
+        header.flags = htobe16(1 << 15);
+        eth.dst = (uint8_t*)broadcast_mac;
+        ipv4.dst = IPV4_BROADCAST;
+    }
+    header.ciaddr = session->ip_address;
+    memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
+    /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
+     * elapsed time, in seconds, since the client sent its first 
+     * BOOTREQUEST message. */
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if(session->dhcp_request_timestamp.tv_sec) {
+        header.secs = htobe16(now.tv_sec - session->dhcp_request_timestamp.tv_sec);
+    } else {
+        header.secs = 0;
+        session->dhcp_request_timestamp.tv_sec = now.tv_sec;
+    }
+
+    /* Option 82 ... */
+    if((session->agent_circuit_id || session->agent_remote_id) && session->dhcp_state != BBL_DHCP_RELEASE) {
+        access_line.aci = session->agent_circuit_id;
+        access_line.ari = session->agent_remote_id;
+        dhcp.access_line = &access_line;
+    }
+
+    switch(session->dhcp_state) {
+        case BBL_DHCP_SELECTING:
+            dhcp.type = DHCP_MESSAGE_DISCOVER;
+            session->stats.dhcp_tx_discover++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Discover send\n", session->session_id);
+            eth.dst = (uint8_t*)broadcast_mac;
+            ipv4.dst = IPV4_BROADCAST;
+            dhcp.parameter_request_list = true;
+            dhcp.option_netmask = true;
+            dhcp.option_dns1 = true;
+            dhcp.option_dns2 = true;
+            dhcp.option_router = true;
+            dhcp.option_host_name = true;
+            dhcp.option_domain_name = true;
+            if(!ctx->stats.first_session_tx.tv_sec) {
+                ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
+                ctx->stats.first_session_tx.tv_nsec = interface->tx_timestamp.tv_nsec;
+            }
+            break;
+        case BBL_DHCP_REQUESTING:
+            dhcp.type = DHCP_MESSAGE_REQUEST;
+            session->stats.dhcp_tx_request++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
+            dhcp.option_address = true;
+            dhcp.address = session->dhcp_address;
+            dhcp.option_server_identifier = true;
+            dhcp.server_identifier = session->dhcp_server_identifier;
+            dhcp.parameter_request_list = true;
+            dhcp.option_netmask = true;
+            dhcp.option_dns1 = true;
+            dhcp.option_dns2 = true;
+            dhcp.option_router = true;
+            dhcp.option_host_name = true;
+            dhcp.option_domain_name = true;
+            break;
+        case BBL_DHCP_RENEWING:
+            dhcp.type = DHCP_MESSAGE_REQUEST;
+            session->stats.dhcp_tx_request++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
+            break;
+        case BBL_DHCP_RELEASE:
+            dhcp.type = DHCP_MESSAGE_RELEASE;
+            session->stats.dhcp_tx_release++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
+            dhcp.option_server_identifier = true;
+            dhcp.server_identifier = session->dhcp_server_identifier;
+            if(session->session_state == BBL_TERMINATING) {
+                bbl_session_update_state(ctx, session, BBL_TERMINATED);
+            }
+            break;
+        default:
+            return IGNORED;
+    }
+
+    timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+    interface->stats.dhcp_tx++;
+
+    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
@@ -1215,9 +1370,9 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     arp.target_ip = session->peer_ip_address;
 
     if(session->arp_resolved) {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 300, 0, session, bbl_arp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 300, 0, session, &bbl_arp_timeout);
     } else {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 1, 0, session, bbl_arp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 1, 0, session, &bbl_arp_timeout);
     }
     interface->stats.arp_tx++;
     if(!ctx->stats.first_session_tx.tv_sec) {
@@ -1260,13 +1415,13 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     if(session->send_requests & BBL_SEND_DISCOVERY) {
         result = bbl_encode_packet_discovery(session);
         session->send_requests &= ~BBL_SEND_DISCOVERY;
-    } else if (session->send_requests & BBL_SEND_LCP_RESPONSE) {
-        result = bbl_encode_packet_lcp_response(session);
-        session->send_requests &= ~BBL_SEND_LCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_LCP_REQUEST) {
         result = bbl_encode_packet_lcp_request(session);
         session->send_requests &= ~BBL_SEND_LCP_REQUEST;
         session->lcp_retries++;
+    } else if (session->send_requests & BBL_SEND_LCP_RESPONSE) {
+        result = bbl_encode_packet_lcp_response(session);
+        session->send_requests &= ~BBL_SEND_LCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_PAP_REQUEST) {
         result = bbl_encode_packet_pap_request(session);
         session->send_requests &= ~BBL_SEND_PAP_REQUEST;
@@ -1275,20 +1430,20 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
         result = bbl_encode_packet_chap_response(session);
         session->send_requests &= ~BBL_SEND_CHAP_RESPONSE;
         session->auth_retries++;
-    } else if (session->send_requests & BBL_SEND_IPCP_RESPONSE) {
-        result = bbl_encode_packet_ipcp_response(session);
-        session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_IPCP_REQUEST) {
         result = bbl_encode_packet_ipcp_request(session);
         session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
         session->ipcp_retries++;
-    } else if (session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
-        result = bbl_encode_packet_ip6cp_response(session);
-        session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
+    } else if (session->send_requests & BBL_SEND_IPCP_RESPONSE) {
+        result = bbl_encode_packet_ipcp_response(session);
+        session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_IP6CP_REQUEST) {
         result = bbl_encode_packet_ip6cp_request(session);
         session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
         session->ip6cp_retries++;
+    } else if (session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
+        result = bbl_encode_packet_ip6cp_response(session);
+        session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_ICMPV6_RS) {
         result = bbl_encode_packet_icmpv6_rs(session);
         session->send_requests &= ~BBL_SEND_ICMPV6_RS;
@@ -1318,6 +1473,9 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     } else if (session->send_requests & BBL_SEND_ARP_REPLY) {
         result = bbl_encode_packet_arp_reply(session);
         session->send_requests &= ~BBL_SEND_ARP_REPLY;
+    } else if (session->send_requests & BBL_SEND_DHCP_REQUEST) {
+        result = bbl_encode_packet_dhcp(session);
+        session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
     } else {
         session->send_requests = 0;
     }
@@ -1378,6 +1536,8 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     bbl_secondary_ip_s *secondary_ip;
     bbl_secondary_ip6_s *secondary_ip6;
 
+    *len = 0;
+
     eth.src = interface->mac;
     eth.vlan_outer = interface->ctx->config.network_vlan;
     if(interface->send_requests & BBL_IF_SEND_ARP_REQUEST) {
@@ -1389,9 +1549,9 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         arp.sender_ip = interface->ip;
         arp.target_ip = interface->gateway;
         if(interface->arp_resolved) {
-            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 300, 0, interface, bbl_network_arp_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 300, 0, interface, &bbl_network_arp_timeout);
         } else {
-            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, bbl_network_arp_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, &bbl_network_arp_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ARP_REPLY) {
@@ -1445,9 +1605,9 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         memcpy(icmpv6.prefix.address, interface->gateway6.address, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         if(interface->icmpv6_nd_resolved) {
-            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 300, 0, interface, bbl_network_nd_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 300, 0, interface, &bbl_network_nd_timeout);
         } else {
-            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, bbl_network_nd_timeout);
+            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, &bbl_network_nd_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NA) {

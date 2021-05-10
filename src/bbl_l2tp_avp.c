@@ -641,7 +641,6 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
                                     l2tp_tunnel->server->host_name, avp.type, 
                                     l2tp_message_string(l2tp->type), 
                                     format_ipv4_address(&l2tp_tunnel->peer_ip));
-                            return false;
                         }
                         break;
                 }

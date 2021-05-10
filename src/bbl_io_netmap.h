@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - Netmap
  *
- * Christian Giese, October 2021
+ * Christian Giese, October 2020
  *
  * Netmap is a an framework for very fast packet I/O from userspace.
  * https://github.com/luigirizzo/netmap

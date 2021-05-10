@@ -36,6 +36,8 @@ typedef struct bbl_stream_config_
 
     uint32_t ipv4_network_address; /* overwrite default IPv4 network address */
     ipv6addr_t ipv6_network_address; /* overwrite default IPv6 network address */
+    uint32_t ipv4_destination_address; /* overwrite IPv4 destination address */
+    ipv6addr_t ipv6_destination_address; /* overwrite IPv6 destination address */
 
     bool threaded;
     void *next; /* next bbl_stream_config */
@@ -87,6 +89,9 @@ typedef struct bbl_stream_
 
 bool
 bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s *session);
+
+bool
+bbl_stream_raw_add(bbl_ctx_s *ctx);
 
 void
 bbl_stream_tx_job (timer_s *timer);

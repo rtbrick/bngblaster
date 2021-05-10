@@ -258,6 +258,44 @@ Each flow can be queried separately using jsonpath expression with name and dire
 }
 ```
 
+## RAW Streams
+
+Streams with default `stream-group-id` set to zero are considered as raw streams not 
+bound to any session which is supported in downstream only. For those streams the
+destination address must be explicitly set. 
+
+```json
+{
+    "streams": [
+        {
+            "name": "RAW",
+            "type": "ipv4", 
+            "direction": "downstream",
+            "priority": 128,
+            "network-ipv4-address": "10.0.0.20",
+            "destination-ipv4-address": "1.1.1.1",
+            "length": 256,
+            "pps": 1
+        }
+    ]
+}
+```
+
+If `destination-ipv4-address` is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
+the BNG Blaster will set the the destination MAC address to the corresponding 
+multicast MAC address.
+
+## Threaded Streams
+
+**WARNING**: The threading support is experimental and should be used with caution! 
+
+With threading enabled, those streams will be started in a dedicated thread per flow. This
+means one thread per session and stream direction. A threaded , bidirectional stream assigned 
+to 10 sessions will therefore run in 20 threads. 
+
+In most environments we see that 200.000 PPS single threaded is working. Depending on actual setup this 
+can be also more. With threaded streams we are also able to scale up to three million PPS or more. 
+
 ## Start/Stop Session Stream Information
 
 Session stream traffic can be started/stopped dynamically

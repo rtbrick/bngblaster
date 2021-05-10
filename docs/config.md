@@ -161,15 +161,17 @@ Attribute | Description | Default
 `interface` | Access interface name (e.g. eth0, ...)
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
 `vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
-`outer-vlan-min` |Outer VLAN minimum value | 0 (untagged)
+`outer-vlan-min` | Outer VLAN minimum value | 0 (untagged)
 `outer-vlan-max` | Outer VLAN maximum value | 0 (untagged)
+`outer-vlan` |Set outer-vlan-min/max equally
 `inner-vlan-min` | Inner VLAN minimum value | 0 (untagged)
-`inner-vlan-max` |Inner VLAN maximum value | 0 (untagged)
+`inner-vlan-max` | Inner VLAN maximum value | 0 (untagged)
+`inner-vlan` |Set inner-vlan-min/max equally
 `third-vlan` | Add a fixed third VLAN (most inner VLAN) as required for some lab environments | 0 (untagged)
 `address` | Static IPv4 base address (IPoE only)
-`address-iter` |Static IPv4 base address iterator (IPoE only)
-`gateway` |Static IPv4 gateway address (IPoE only)
-`gateway` |Static IPv4 gateway address iterator (IPoE only)
+`address-iter` | Static IPv4 base address iterator (IPoE only)
+`gateway` | Static IPv4 gateway address (IPoE only)
+`gateway-iter` | Static IPv4 gateway address iterator (IPoE only)
 `username` | Optionally overwrite the username from authentication section per access configuration 
 `password` | Optionally overwrite the password from authentication section per access configuration
 `authentication-protocol` | Optionally overwrite the username from authentication section per access configuration
@@ -413,6 +415,7 @@ Attribute | Description | Default
 `conf-request-retry` | LCP configuration request max retry | 10
 `keepalive-interval` | LCP echo request interval in seconds (0 means disabled) | 30
 `keepalive-retry` | PPP LCP echo request max retry | 3
+`start-delay` | PPP LCP initial request delay in milliseconds | 0
 
 ### PPP IPCP
 
@@ -455,9 +458,11 @@ This section describes all attributes of the `dhcp` hierarchy.
 
 Attribute | Description | Default 
 --------- | ----------- | -------
-`enable` | This option allows to enable or disable DHCP | true
-
-**WARNING**: DHCP (IPv4) is currently not supported!
+`enable` | This option allows to enable or disable DHCP | false
+`broadcast` | DHCP broadcast flag | false
+`timeout` | DHCP timeout in seconds | 5
+`tos` | IPv4 TOS for all DHCP control traffic | 0 
+`vlan-priority` | VLAN PBIT for all DHCP control traffic | 0 
 
 ## DHCPv6
 
@@ -573,7 +578,7 @@ as explained in [Traffic Streams](streams).
 Attribute | Description | Default 
 --------- | ----------- | -------
 `name` | Mandatory stream name |   
-`stream-group-id` | Mandatory stream group identifier | 
+`stream-group-id` | Stream group identifier | 0 (raw)
 `type` | Mandatory stream type (`ipv4`, `ipv6` or `ipv6pd`)  |  
 `direction` | Mandatory stream direction (`upstream`, `downstream` or `both`) | `both`
 `priority` | IPv4 TOS / IPv6 TC | 0
@@ -581,17 +586,13 @@ Attribute | Description | Default
 `length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
 `pps` | Stream traffic rate in packets per second | 1
 `bps` | Stream traffic rate in bits per second (layer 3) | 
-`network-ipv4-address` | Overwrite network interface IPv4 address | 
+`network-ipv4-address` | Overwrite network interface IPv4 address |
 `network-ipv6-address` | Overwrite network interface IPv6 address | 
+`destination-ipv4-address` | Overwrite the IPv4 destination address | 
+`destination-ipv6-address` | Overwrite the IPv6 destination address | 
 `threaded` | Run those streams in separate threads | false
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
 
 The `pps` option has priority over `bps` where second is only a helper to calculate the `pps` 
 based on given `bps` and `length`. 
-
-With threading enabled, those streams will be started in a dedicated thread per flow. This
-means one thread per session and stream direction. A threaded , bidirectional stream assigned 
-to 10 sessions will therefore run in 20 threads. 
-
-**WARNING**: The threading support is experimental and should be used with caution! 

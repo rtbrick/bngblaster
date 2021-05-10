@@ -10,6 +10,7 @@
 #include "bbl.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
+#include "bbl_dhcp.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -637,7 +638,7 @@ bbl_igmp_initial_join(timer_s *timer)
         }
 
         /* Adding 1 nanosecond to enforce a dedicated timer bucket for zapping. */
-        timer_add_periodic(&ctx->timer_root, &session->timer_zapping, "IGMP Zapping", ctx->config.igmp_zap_interval, 1, session, bbl_igmp_zapping);
+        timer_add_periodic(&ctx->timer_root, &session->timer_zapping, "IGMP Zapping", ctx->config.igmp_zap_interval, 1, session, &bbl_igmp_zapping);
         LOG(IGMP, "IGMP (ID: %u) ZAPPING start zapping with interval %u\n",
             session->session_id, ctx->config.igmp_zap_interval);
 
@@ -683,10 +684,10 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                                     tx_interval = ctx->config.tx_interval;
                                 }
                                 timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6PD",
-                                                   0, tx_interval, session, bbl_session_traffic_ipv6pd);
+                                                   0, tx_interval, session, &bbl_session_traffic_ipv6pd);
                             } else {
                                 timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6PD",
-                                                   1, 0, session, bbl_session_traffic_ipv6pd);
+                                                   1, 0, session, &bbl_session_traffic_ipv6pd);
                             }
                         } else {
                             LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
@@ -756,7 +757,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
 }
 
 void
-bbl_rx_udp(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
+bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
     bbl_bbl_t *bbl = NULL;
@@ -870,10 +871,10 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                                 tx_interval = ctx->config.tx_interval;
                             }
                             timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
-                                               0, tx_interval, session, bbl_session_traffic_ipv6);
+                                               0, tx_interval, session, &bbl_session_traffic_ipv6);
                         } else {
                             timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
-                                               1, 0, session, bbl_session_traffic_ipv6);
+                                               1, 0, session, &bbl_session_traffic_ipv6);
                         }
                     } else {
                         LOG(ERROR, "Traffic (ID: %u) failed to create IPv6 session traffic\n", session->session_id);
@@ -998,6 +999,11 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
             return bbl_rx_icmp(ipv4, session);
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_t*)ipv4->next;
+            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+                session->stats.dhcp_rx++;
+                interface->stats.dhcp_rx++;
+                return bbl_dhcp_rx(eth, (bbl_dhcp_t*)udp->next, session);
+            }
             if(udp->protocol == UDP_PROTOCOL_BBL) {
                 bbl = (bbl_bbl_t*)udp->next;
             }
@@ -1111,7 +1117,7 @@ bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *inter
             interface->stats.icmpv6_rx++;
             return bbl_rx_icmpv6(ipv6, interface, session);
         case IPV6_NEXT_HEADER_UDP:
-            bbl_rx_udp(eth, ipv6, interface, session);
+            bbl_rx_udp_ipv6(eth, ipv6, interface, session);
             break;
         default:
             break;
@@ -1311,15 +1317,15 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
             }
             if(ctx->config.lcp_keepalive_interval) {
                 /* Start LCP echo request / keep alive */
-                timer_add_periodic(&ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", ctx->config.lcp_keepalive_interval, 0, session, bbl_lcp_echo);
+                timer_add_periodic(&ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", ctx->config.lcp_keepalive_interval, 0, session, &bbl_lcp_echo);
             }
             if(session->l2tp == false && ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
                 /* Start IGMP */
-                timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, bbl_igmp_initial_join);
+                timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
             }
             if(ctx->config.pppoe_session_time) {
                 /* Start Session Timer */
-                timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, bbl_session_timeout);
+                timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, &bbl_session_timeout);
             }
             if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
                ctx->op.network_if && ctx->op.network_if->ip) {
@@ -1332,10 +1338,10 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                             tx_interval = ctx->config.tx_interval;
                         }
                         timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                           0, tx_interval, session, bbl_session_traffic_ipv4);
+                                           0, tx_interval, session, &bbl_session_traffic_ipv4);
                     } else {
                         timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                           1, 0, session, bbl_session_traffic_ipv4);
+                                           1, 0, session, &bbl_session_traffic_ipv4);
                     }
                 } else {
                     LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
@@ -1364,7 +1370,7 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
         }
         if(ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
             /* Start IGMP */
-            timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, bbl_igmp_initial_join);
+            timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
         }
         if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
             ctx->op.network_if && ctx->op.network_if->ip) {
@@ -1377,10 +1383,10 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
                         tx_interval = ctx->config.tx_interval;
                     }
                     timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                       0, tx_interval, session, bbl_session_traffic_ipv4);
+                                       0, tx_interval, session, &bbl_session_traffic_ipv4);
                 } else {
                     timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
-                                       1, 0, session, bbl_session_traffic_ipv4);
+                                       1, 0, session, &bbl_session_traffic_ipv4);
                 }
             } else {
                 LOG(ERROR, "Traffic (ID: %u) failed to create IPv4 session traffic\n", session->session_id);
@@ -1433,7 +1439,7 @@ bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session
                     session->ip6cp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
                     session->link_local_ipv6_address[0] = 0xfe;
-                    session->link_local_ipv6_address[0] = 0x80;
+                    session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
                     session->send_requests |= BBL_SEND_ICMPV6_RS;
                     bbl_session_tx_qnode_insert(session);
@@ -1567,8 +1573,8 @@ bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
-                    LOG(IP, "IPv4 (ID: %u) address %s\n",
-                        session->session_id, format_ipv4_address(&session->ip_address));
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
+                        format_ipv4_address(&session->ip_address));
                     break;
                 default:
                     break;
@@ -1763,6 +1769,14 @@ bbl_rx_session(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_sessi
 }
 
 void
+bbl_lcp_start_delay(timer_s *timer) {
+    bbl_session_s *session = timer->data;
+    session->send_requests |= BBL_SEND_LCP_REQUEST;
+    session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+    bbl_session_tx_qnode_insert(session);
+}
+
+void
 bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_discovery_t *pppoed;
     bbl_ctx_s *ctx = interface->ctx;
@@ -1832,7 +1846,14 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                     session->send_requests = BBL_SEND_LCP_REQUEST;
                     session->lcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->lcp_state = BBL_PPP_INIT;
-                    bbl_session_tx_qnode_insert(session);
+                    if(ctx->config.lcp_start_delay) {
+                        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout",
+                                  0, ctx->config.lcp_start_delay * MSEC, session, &bbl_lcp_start_delay);
+                    } else {
+                        session->send_requests = BBL_SEND_LCP_REQUEST;
+                        session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+                        bbl_session_tx_qnode_insert(session);
+                    }                    
                 } else {
                     LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADS\n", session->session_id);
                     return;
@@ -1869,6 +1890,50 @@ bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     }
 }
 
+uint32_t
+bbl_rx_session_id_from_vlan(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    uint32_t session_id = 0;
+    vlan_session_key_t key = {0};
+    bbl_session_s *session;
+    void **search;
+
+    key.ifindex = interface->ifindex;
+    key.outer_vlan_id = eth->vlan_outer;
+    key.inner_vlan_id = eth->vlan_inner;
+
+    search = dict_search(interface->ctx->vlan_session_dict, &key);
+    if(search) {
+        session = *search;
+        session_id = session->session_id;
+    }
+    return session_id;
+}
+
+uint32_t
+bbl_rx_session_id_from_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    uint32_t session_id = 0;
+    bbl_ipv4_t *ipv4;
+    bbl_udp_t *udp;
+    bbl_dhcp_t *dhcp;
+
+    if(eth->type == ETH_TYPE_IPV4) {
+        ipv4 = (bbl_ipv4_t*)eth->next;
+        if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
+            udp = (bbl_udp_t*)ipv4->next;
+            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+                dhcp = (bbl_dhcp_t*)udp->next;
+                session_id |= dhcp->header->chaddr[5];
+                session_id |= dhcp->header->chaddr[4] << 8;
+                session_id |= dhcp->header->chaddr[3] << 16;
+            }
+        }
+    }
+    if(!session_id) {
+        return(bbl_rx_session_id_from_vlan(eth, interface));
+    }
+    return session_id;
+}
+
 /** 
  * bbl_rx_handler_access 
  *
@@ -1885,14 +1950,22 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     ctx = interface->ctx;
 
-    /* The session-id is mapped into the last 3 bytes of 
-     * the client MAC address. The original approach using
-     * VLAN identifiers was not working as some NIC drivers
-     * strip outer VLAN and it is also possible to have 
-     * multiple session per VLAN (N:1). */
-    session_id |= eth->dst[5];
-    session_id |= eth->dst[4] << 8;
-    session_id |= eth->dst[3] << 16;
+    if(memcmp(eth->dst, (uint8_t*)multicast_mac, ETH_ADDR_LEN/2) == 0) {
+        /* Multicast destination MAC address (01:00:5e:XX:XX:XX) */
+        session_id = bbl_rx_session_id_from_vlan(eth, interface);
+    } else if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
+        /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
+        session_id = bbl_rx_session_id_from_broadcast(eth, interface);
+    } else {
+        /* The session-id is mapped into the last 3 bytes of 
+         * the client MAC address. The original approach using
+         * VLAN identifiers was not working reliable as some NIC 
+         * drivers strip outer VLAN and it is also possible to have 
+         * multiple session per VLAN (N:1). */
+        session_id |= eth->dst[5];
+        session_id |= eth->dst[4] << 8;
+        session_id |= eth->dst[3] << 16;
+    }
 
     session = bbl_session_get(ctx, session_id);
     if(session) {

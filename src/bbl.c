@@ -21,6 +21,7 @@
 #include "bbl_ctrl.h"
 #include "bbl_logging.h"
 #include "bbl_io.h"
+#include "bbl_stream.h"
 #include <sys/stat.h>
 
 /* Global Variables */
@@ -104,7 +105,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     bbl_ipv4_t ip = {0};
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
-    uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x00, 0x5e, 0x00, 0x00, 0x00 };
+    uint8_t mac[ETH_ADDR_LEN] = {0};
     uint8_t *buf;
 
     uint32_t group;
@@ -127,16 +128,19 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             } else {
                 source = interface->ip;
             }
-            /* Generate destination MAC */
-            *(uint32_t*)&mac[2] = group & 0x7FDDDF; mac[2] = 0x5e;
-
+            group = htobe32(group);
+            /* Generate multicast destination MAC */
+            *(uint32_t*)(&mac[2]) = group;
+            mac[0] = 0x01;
+            mac[2] = 0x5e;
+            mac[3] &= 0x7f;
             eth.src = interface->mac;
             eth.dst = mac;
             eth.vlan_outer = ctx->config.network_vlan;
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ip;
             ip.src = source;
-            ip.dst = htobe32(group);
+            ip.dst = group;
             ip.ttl = 64;
             ip.tos = ctx->config.multicast_traffic_tos;
             ip.protocol = PROTOCOL_IPV4_UDP;
@@ -152,7 +156,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             bbl.direction = BBL_DIRECTION_DOWN;
             bbl.tos = ctx->config.multicast_traffic_tos;
             bbl.mc_source = ip.src;
-            bbl.mc_group = ip.dst ;
+            bbl.mc_group = group ;
             if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
                 return false;
             }
@@ -294,7 +298,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
      * Timer to compute periodic rates.
      */
     timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-		               bbl_compute_interface_rate_job);
+		               &bbl_compute_interface_rate_job);
 
     return interface;
 }
@@ -316,7 +320,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
                 if (strcmp(ctx->op.access_if[i]->name, access_config->interface) == 0) {
                     /* Interface already added! */
                     access_config->access_if = ctx->op.access_if[i];
-                    goto Next;
+                    goto NEXT;
                 }
             }
         }
@@ -328,7 +332,7 @@ bbl_add_access_interfaces (bbl_ctx_s *ctx) {
         access_if->access = true;
         access_config->access_if = access_if;
         ctx->op.access_if[ctx->op.access_if_count++] = access_if;
-Next:
+NEXT:
         access_config = access_config->next;
     }
     return true;
@@ -375,10 +379,10 @@ bbl_print_usage_arg (struct option *option)
 void
 bbl_print_version (void)
 {
-    if(strlen(BNGBLASTER_VERSION)) {
+    if(sizeof(BNGBLASTER_VERSION)-1) {
         printf("Version: %s\n", BNGBLASTER_VERSION);
     }
-    if(strlen(GIT_REF) + strlen(GIT_SHA)) {
+    if(sizeof(GIT_REF)-1 + sizeof(GIT_SHA)-1) {
         printf("GIT:\n");
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
@@ -514,7 +518,9 @@ bbl_ctrl_job (timer_s *timer)
                             if(session->access_config->ipv4_enable) {
                                 if(session->access_config->dhcp_enable) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
-                                    session->send_requests |= BBL_SEND_DHCPREQUEST;
+                                    session->dhcp_state = BBL_DHCP_SELECTING;
+                                    session->dhcp_xid = rand();
+                                    session->send_requests |= BBL_SEND_DHCP_REQUEST;
                                 } else if (session->ip_address && session->peer_ip_address) {
                                     /* Start IPoE session by sending ARP request if local and 
                                      * remote IP addresses are already provided. */
@@ -729,6 +735,7 @@ main (int argc, char *argv[])
             /* Send initial ICMPv6 NS */
             ctx->op.network_if->send_requests |= BBL_IF_SEND_ICMPV6_NS;
         }
+        bbl_stream_raw_add(ctx);
     }
 
     /*
@@ -750,7 +757,7 @@ main (int argc, char *argv[])
     /*
      * Setup control job.
      */
-    timer_add_periodic(&ctx->timer_root, &ctx->control_timer, "Control Timer", 1, 0, ctx, bbl_ctrl_job);
+    timer_add_periodic(&ctx->timer_root, &ctx->control_timer, "Control Timer", 1, 0, ctx, &bbl_ctrl_job);
 
     /*
      * Setup control socket and job
@@ -765,7 +772,7 @@ main (int argc, char *argv[])
     /*
      * Start smear job. Use a crazy nsec bucket '12345678', such that we do not accidentally smear ourselves.
      */
-    timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, bbl_smear_job);
+    timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
 
     /*
      * Start event loop.

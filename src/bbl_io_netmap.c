@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - Netmap
  *
- * Christian Giese, October 2021
+ * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
@@ -194,9 +194,9 @@ bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, bbl_io_netmap_tx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_netmap_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, bbl_io_netmap_rx_job);
+    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_netmap_rx_job);
 
     return true;
 }

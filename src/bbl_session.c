@@ -1,9 +1,7 @@
-
-
 /*
  * BNG Blaster (BBL) - Sessions
  *
- * Christian Giese, October 2021
+ * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
@@ -25,7 +23,7 @@ bbl_session_rate_job (timer_s *timer) {
 }
 
 /** 
- * bbl_session_update_state 
+ * bbl_session_get 
  *
  * This function allows to change the state of a session including
  * the required action caused by state changes. 
@@ -89,6 +87,9 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             timer_del(session->timer_auth);
             timer_del(session->timer_ipcp);
             timer_del(session->timer_ip6cp);
+            timer_del(session->timer_dhcp_retry);
+            timer_del(session->timer_dhcp_t1);
+            timer_del(session->timer_dhcp_t2);
             timer_del(session->timer_dhcpv6);
             timer_del(session->timer_igmp);
             timer_del(session->timer_zapping);
@@ -272,7 +273,17 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
                 break;
         }
     } else {
-        bbl_session_update_state(ctx, session, BBL_TERMINATED);
+        if(session->dhcp_state > BBL_DHCP_SELECTING) {
+            bbl_session_update_state(ctx, session, BBL_TERMINATING);
+            session->dhcp_state = BBL_DHCP_RELEASE;
+            session->dhcp_xid = rand();
+            session->dhcp_request_timestamp.tv_sec = 0;
+            session->dhcp_request_timestamp.tv_nsec = 0;
+            session->send_requests |= BBL_SEND_DHCP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            bbl_session_update_state(ctx, session, BBL_TERMINATED);
+        }
     }
 }
 
@@ -318,7 +329,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 access_config->access_inner_vlan = access_config->access_inner_vlan_max;
             }
         } else {
-            if(access_config->exhausted) goto Next;
+            if(access_config->exhausted) goto NEXT;
             if(access_config->access_outer_vlan == 0) {
                 /* The outer VLAN is initial 0 */
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
@@ -348,7 +359,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
                 /* VLAN range exhausted */
                 access_config->exhausted = true;
-                goto Next;
+                goto NEXT;
             }
         }
         t++;
@@ -359,6 +370,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             return false;
         }
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
+        memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
         session->session_id = i; // BNG Blaster internal session identifier
         session->access_type = access_config->access_type;
         session->vlan_key.ifindex = access_config->access_if->ifindex;
@@ -398,16 +410,19 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->password = strdup(s);
 
         /* Update ACI */
-        s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
-        session->agent_circuit_id = s;
-        s = replace_substring(session->agent_circuit_id, "{session}", snum2);
-        session->agent_circuit_id = strdup(s);
-
+        if(access_config->agent_circuit_id) {
+            s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
+            session->agent_circuit_id = s;
+            s = replace_substring(session->agent_circuit_id, "{session}", snum2);
+            session->agent_circuit_id = strdup(s);
+        }
         /* Update ARI */
-        s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
-        session->agent_remote_id = s;
-        s = replace_substring(session->agent_remote_id, "{session}", snum2);
-        session->agent_remote_id = strdup(s);
+        if(access_config->agent_remote_id) {
+            s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
+            session->agent_remote_id = s;
+            s = replace_substring(session->agent_remote_id, "{session}", snum2);
+            session->agent_remote_id = strdup(s);
+        }
         
         /* Update access rates ... */
         session->rate_up = access_config->rate_up;
@@ -467,11 +482,11 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 LOG(ERROR, "Failed to create session traffic stream!\n");
                 return false;
             }
-            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, bbl_session_rate_job);
+            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
         }
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;
-Next:
+NEXT:
         if(access_config->next) {
             access_config = access_config->next;
         } else {

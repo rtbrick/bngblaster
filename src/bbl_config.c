@@ -119,25 +119,39 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         return false;
     }
 
-    value = json_object_get(access_interface, "outer-vlan-min");
+    value = json_object_get(access_interface, "outer-vlan");
     if (json_is_number(value)) {
         access_config->access_outer_vlan_min = json_number_value(value);
         access_config->access_outer_vlan_min &= 4095;
+        access_config->access_outer_vlan_max = access_config->access_outer_vlan_min;
+    } else {
+        value = json_object_get(access_interface, "outer-vlan-min");
+        if (json_is_number(value)) {
+            access_config->access_outer_vlan_min = json_number_value(value);
+            access_config->access_outer_vlan_min &= 4095;
+        }
+        value = json_object_get(access_interface, "outer-vlan-max");
+        if (value) {
+            access_config->access_outer_vlan_max = json_number_value(value);
+            access_config->access_outer_vlan_max &= 4095;
+        }
     }
-    value = json_object_get(access_interface, "outer-vlan-max");
-    if (value) {
-        access_config->access_outer_vlan_max = json_number_value(value);
-        access_config->access_outer_vlan_max &= 4095;
-    }
-    value = json_object_get(access_interface, "inner-vlan-min");
-    if (value) {
+    value = json_object_get(access_interface, "inner-vlan");
+    if (json_is_number(value)) {
         access_config->access_inner_vlan_min = json_number_value(value);
         access_config->access_inner_vlan_min &= 4095;
-    }
-    value = json_object_get(access_interface, "inner-vlan-max");
-    if (value) {
-        access_config->access_inner_vlan_max = json_number_value(value);
-        access_config->access_inner_vlan_max &= 4095;
+        access_config->access_inner_vlan_max = access_config->access_inner_vlan_min;
+    } else {
+        value = json_object_get(access_interface, "inner-vlan-min");
+        if (value) {
+            access_config->access_inner_vlan_min = json_number_value(value);
+            access_config->access_inner_vlan_min &= 4095;
+        }
+        value = json_object_get(access_interface, "inner-vlan-max");
+        if (value) {
+            access_config->access_inner_vlan_max = json_number_value(value);
+            access_config->access_inner_vlan_max &= 4095;
+        }
     }
     if(access_config->access_outer_vlan_min > access_config->access_outer_vlan_max ||
        access_config->access_inner_vlan_min > access_config->access_inner_vlan_max) {
@@ -209,13 +223,17 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     if (json_unpack(access_interface, "{s:s}", "agent-circuit-id", &s) == 0) {
         access_config->agent_circuit_id = strdup(s);
     } else {
-        access_config->agent_circuit_id = strdup(ctx->config.agent_circuit_id);
+        if(ctx->config.agent_circuit_id) {
+            access_config->agent_circuit_id = strdup(ctx->config.agent_circuit_id);
+        }
     }
 
     if (json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
         access_config->agent_remote_id = strdup(s);
     } else {
-        access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
+        if(ctx->config.agent_circuit_id) {
+            access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
+        }
     }
 
     value = json_object_get(access_interface, "rate-up");
@@ -263,14 +281,12 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     } else {
         access_config->ipv6_enable = ctx->config.ipv6_enable;
     }
-#if 0
     value = json_object_get(access_interface, "dhcp");
     if (json_is_boolean(value)) {
         access_config->dhcp_enable = json_boolean_value(value);
     } else {
         access_config->dhcp_enable = ctx->config.dhcp_enable;
     }
-#endif
     value = json_object_get(access_interface, "dhcpv6");
     if (json_is_boolean(value)) {
         access_config->dhcpv6_enable = json_boolean_value(value);
@@ -415,9 +431,48 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         add_secondary_ipv6(ctx, stream_config->ipv6_network_address);
     }
 
+    if (json_unpack(stream, "{s:s}", "destination-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &stream_config->ipv4_destination_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv4-address\n");
+            return false;
+        }
+    }
+
+    if (json_unpack(stream, "{s:s}", "destination-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_destination_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv6-address\n");
+            return false;
+        }
+    }
+
     value = json_object_get(stream, "threaded");
     if (json_is_boolean(value)) {
         stream_config->threaded = json_boolean_value(value);
+    }
+
+    /* Validate configuration */
+    if(stream_config->stream_group_id == 0) {
+        /* RAW stream */
+        if(stream_config->type == STREAM_IPV4) {
+            if(!stream_config->ipv4_destination_address) {
+                fprintf(stderr, "JSON config error: Missing destination-ipv4-address for RAW stream %s\n", stream_config->name);
+                return false;
+            }
+        }
+        if(stream_config->type == STREAM_IPV6) {
+            if(!*(uint64_t*)stream_config->ipv6_destination_address) {
+                fprintf(stderr, "JSON config error: Missing destination-ipv6-address for RAW stream %s\n", stream_config->name);
+                return false;
+            }
+        }
+        if(stream_config->type == STREAM_IPV6PD) {
+            fprintf(stderr, "JSON config error: Invalid type for RAW stream %s\n", stream_config->name);
+            return false;
+        }
+        if(stream_config->direction != STREAM_DIRECTION_DOWN) {
+            fprintf(stderr, "JSON config error: Invalid direction for RAW stream %s\n", stream_config->name);
+            return false;
+        }
     }
     return true;
 }
@@ -588,6 +643,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             if (json_is_number(value)) {
                 ctx->config.lcp_keepalive_retry = json_number_value(value);
             }
+            value = json_object_get(sub, "start-delay");
+            if (json_is_number(value)) {
+                ctx->config.lcp_start_delay = json_number_value(value);
+                if(ctx->config.lcp_start_delay >= 1000) {
+                    fprintf(stderr, "JSON config error: ppp->lcp->start-delay must be < 1000\n");
+                    return false;
+                }
+            }
         }
         sub = json_object_get(section, "ipcp");
         if (json_is_object(sub)) {
@@ -632,7 +695,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             }
         }
     }
-#if 0
+
     /* DHCP Configuration */
     section = json_object_get(root, "dhcp");
     if (json_is_object(section)) {
@@ -640,8 +703,27 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.dhcp_enable = json_boolean_value(value);
         }
+        value = json_object_get(section, "broadcast");
+        if (json_is_boolean(value)) {
+            ctx->config.dhcp_broadcast = json_boolean_value(value);
+        }
+        value = json_object_get(section, "timeout");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_timeout = json_number_value(value);
+        }
+        value = json_object_get(section, "tos");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_tos = json_number_value(value);
+        }
+        value = json_object_get(section, "vlan-priority");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_vlan_priority = json_number_value(value);
+            if(ctx->config.dhcp_vlan_priority > 7) {
+                fprintf(stderr, "JSON config error: Invalid value for dhcp->vlan-priority\n");
+                return false;
+            }
+        }
     }
-#endif
 
     /* DHCPv6 Configuration */
     section = json_object_get(root, "dhcpv6");
@@ -1039,8 +1121,6 @@ void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.username = (char *)g_default_user;
     ctx->config.password = (char *)g_default_pass;
-    ctx->config.agent_remote_id = (char *)g_default_ari;
-    ctx->config.agent_circuit_id = (char *)g_default_aci;
     ctx->config.tx_interval = 5 * MSEC;
     ctx->config.rx_interval = 5 * MSEC;
     ctx->config.io_slots = 1024;
@@ -1070,6 +1150,8 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.ip6cp_enable = true;
     ctx->config.ip6cp_conf_request_timeout = 5;
     ctx->config.ip6cp_conf_request_retry = 10;
+    ctx->config.dhcp_enable = false;
+    ctx->config.dhcp_timeout = 5;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;
     ctx->config.igmp_autostart = true;

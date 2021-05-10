@@ -76,7 +76,7 @@
 #define BBL_SEND_SESSION_IPV6PD     0x00008000
 #define BBL_SEND_ARP_REQUEST        0x00010000
 #define BBL_SEND_ARP_REPLY          0x00020000
-#define BBL_SEND_DHCPREQUEST        0x00040000
+#define BBL_SEND_DHCP_REQUEST       0x00040000
 #define BBL_SEND_ICMPV6_REPLY       0x00080000
 #define BBL_SEND_ICMPV6_NS          0x00100000
 #define BBL_SEND_ICMPV6_NA          0x00200000
@@ -186,7 +186,11 @@ typedef struct bbl_interface_
         struct tpacket_req req_rx;
         struct sockaddr_ll addr;
 
-        uint8_t *buf; /* IO buffer */
+        uint8_t *rx_buf; /* RX buffer */
+        uint16_t rx_len;
+        uint8_t *tx_buf; /* TX buffer */
+        uint16_t tx_len;
+
         uint8_t *ring_tx; /* TX ring buffer */
         uint8_t *ring_rx; /* RX ring buffer */
         uint16_t cursor_tx; /* slot # inside the ring buffer */
@@ -276,6 +280,10 @@ typedef struct bbl_interface_
         uint32_t icmpv6_tx;
         uint32_t icmpv6_rx;
         uint32_t icmpv6_rs_timeout;
+
+        uint32_t dhcp_tx;
+        uint32_t dhcp_rx;
+        uint32_t dhcp_timeout;
 
         uint32_t dhcpv6_tx;
         uint32_t dhcpv6_rx;
@@ -549,6 +557,7 @@ typedef struct bbl_ctx_
         uint16_t lcp_conf_request_retry;
         uint16_t lcp_keepalive_interval;
         uint16_t lcp_keepalive_retry;
+        uint16_t lcp_start_delay;
 
         /* Authentication */
         uint16_t authentication_timeout;
@@ -576,6 +585,10 @@ typedef struct bbl_ctx_
 
         /* DHCP */
         bool dhcp_enable;
+        uint16_t dhcp_timeout;
+        uint8_t dhcp_tos;
+        uint8_t dhcp_vlan_priority;
+        bool dhcp_broadcast;
 
         /* DHCPv6 */
         bool dhcpv6_enable;
@@ -645,6 +658,23 @@ typedef enum {
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
 
+
+/*
+ * DHCP state
+ *
+ * This is a simple not fully RFC conform version
+ * of the DHCP FSM.
+ */
+typedef enum {
+    BBL_DHCP_INIT           = 0,
+    BBL_DHCP_SELECTING      = 1,
+    BBL_DHCP_REQUESTING     = 2,
+    BBL_DHCP_BOUND          = 3,
+    BBL_DHCP_RENEWING       = 4,
+    BBL_DHCP_RELEASE        = 5,
+    BBL_DHCP_MAX
+} __attribute__ ((__packed__)) dhcp_state_t;
+
 typedef struct vlan_session_key_ {
     uint32_t ifindex;
     uint16_t outer_vlan_id;
@@ -686,6 +716,9 @@ typedef struct bbl_session_
     struct timer_ *timer_auth;
     struct timer_ *timer_ipcp;
     struct timer_ *timer_ip6cp;
+    struct timer_ *timer_dhcp_retry;
+    struct timer_ *timer_dhcp_t1;
+    struct timer_ *timer_dhcp_t2;
     struct timer_ *timer_dhcpv6;
     struct timer_ *timer_igmp;
     struct timer_ *timer_zapping;
@@ -781,6 +814,7 @@ typedef struct bbl_session_
     /* IPv4 */
     bool        arp_resolved;
     uint32_t    ip_address;
+    uint32_t    ip_netmask;
     uint32_t    peer_ip_address;
     uint32_t    dns1;
     uint32_t    dns2;
@@ -793,6 +827,22 @@ typedef struct bbl_session_
     ipv6addr_t  ipv6_address;
     ipv6addr_t  ipv6_dns1; /* DNS learned via RA */
     ipv6addr_t  ipv6_dns2; /* DNS learned via RA */
+
+    /* DHCP */
+    dhcp_state_t dhcp_state;
+    uint32_t dhcp_xid;
+    uint32_t dhcp_address;
+    uint32_t dhcp_lease_time;
+    uint32_t dhcp_t1;
+    uint32_t dhcp_t2;
+    uint32_t dhcp_server;
+    uint32_t dhcp_server_identifier;
+    uint8_t  dhcp_server_mac[ETH_ADDR_LEN];
+    struct timespec dhcp_lease_timestamp;
+    struct timespec dhcp_request_timestamp;
+    char *dhcp_client_identifier;
+    char *dhcp_host_name;
+    char *dhcp_domain_name;
 
     /* DHCPv6 */
     ipv6_prefix delegated_ipv6_prefix;
@@ -917,6 +967,15 @@ typedef struct bbl_session_
         uint32_t icmpv6_rx;
         uint32_t icmpv6_tx;
         uint32_t ipv4_fragmented_rx;
+
+        uint32_t dhcp_tx;
+        uint32_t dhcp_rx;
+        uint32_t dhcp_tx_discover;
+        uint32_t dhcp_rx_offer;
+        uint32_t dhcp_tx_request;
+        uint32_t dhcp_rx_ack;
+        uint32_t dhcp_rx_nak;
+        uint32_t dhcp_tx_release;
 
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;

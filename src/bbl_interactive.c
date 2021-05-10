@@ -128,7 +128,7 @@ bbl_format_progress (uint complete, uint current)
 
     if (!complete || !current) {
         memset(buf, ' ', sizeof(buf));
-        goto exit;
+        goto EXIT;
     }
 
     percentage = (float)current / (float)complete;
@@ -140,7 +140,7 @@ bbl_format_progress (uint complete, uint current)
         buf[idx] = ' ';
     }
 
- exit:
+ EXIT:
     buf[PROGRESS_BAR_SIZE] = 0;
     return buf;
 }
@@ -155,7 +155,6 @@ bbl_stats_job (timer_s *timer)
     struct bbl_interface_ *access_if;
     
     bbl_session_s *session;
-    bbl_stream *stream;
 
     int max_x, max_y;
     int i; 
@@ -347,6 +346,7 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "  ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
                 wprintw(stats_win, "  ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
                 wprintw(stats_win, "  DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+                wprintw(stats_win, "  DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
             }
             if(max_y > 80) {
                 wprintw(stats_win, "\nAccess Interface Protocol Timeout Stats\n");
@@ -371,7 +371,7 @@ bbl_stats_job (timer_s *timer)
             if(session->username) {
                 wprintw(stats_win, "\n  Username: %s \n", session->username);
             }
-            wprintw(stats_win, "\n  Session\n");
+            wprintw(stats_win, "\n  Access Client Interface\n");
             wprintw(stats_win, "    Tx Packets %10lu | %7lu PPS | %10lu Kbps\n",
                 session->stats.packets_tx, session->stats.rate_packets_tx.avg, 
                 session->stats.rate_bytes_tx.avg * 8 / 1000);
@@ -381,16 +381,49 @@ bbl_stats_job (timer_s *timer)
 
             if(session->stream) {
                 wprintw(stats_win, "\n  Stream           | Direction | Tx PPS  | Tx Kbps    | Rx PPS  | Rx Kbps    | Loss\n");
+                wprintw(stats_win, "  -------------------------------------------------------------------------------------\n");
 
-                stream = session->stream;
+                uint64_t tx_kbps;
+                uint64_t rx_kbps; 
+                uint64_t stream_sum_up_tx_pps = 0;
+                uint64_t stream_sum_up_tx_kbps = 0;
+                uint64_t stream_sum_up_rx_pps = 0;
+                uint64_t stream_sum_up_rx_kbps = 0;
+                uint64_t stream_sum_up_loss = 0;
+                uint64_t stream_sum_down_tx_pps = 0;
+                uint64_t stream_sum_down_rx_pps = 0;
+                uint64_t stream_sum_down_tx_kbps = 0;
+                uint64_t stream_sum_down_rx_kbps = 0;
+                uint64_t stream_sum_down_loss = 0;
+
+                bbl_stream *stream = session->stream;
                 while(stream) {
+                    tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
+                    rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
                     wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, 
                             stream->direction == STREAM_DIRECTION_UP ? "up" : "down",
-                            stream->rate_packets_tx.avg, stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000,
-                            stream->rate_packets_rx.avg, stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000,
-                            stream->loss);
+                            stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, stream->loss);
+
+                    if(stream->direction == STREAM_DIRECTION_UP) {
+                        stream_sum_up_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_up_tx_kbps += tx_kbps;
+                        stream_sum_up_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_up_rx_kbps += rx_kbps;
+                        stream_sum_up_loss += stream->loss;
+                    } else {
+                        stream_sum_down_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_down_tx_kbps += tx_kbps;
+                        stream_sum_down_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_down_rx_kbps += rx_kbps;
+                        stream_sum_down_loss += stream->loss;
+                    }
                     stream = stream->next;
                 }
+                wprintw(stats_win, "  =====================================================================================\n");
+                wprintw(stats_win, "  SUM              | up        | %7lu | %10lu | %7lu | %10lu | %8lu\n", 
+                        stream_sum_up_tx_pps, stream_sum_up_tx_kbps, stream_sum_up_rx_pps, stream_sum_up_rx_kbps, stream_sum_up_loss);
+                wprintw(stats_win, "                   | down      | %7lu | %10lu | %7lu | %10lu | %8lu\n", 
+                        stream_sum_down_tx_pps, stream_sum_down_tx_kbps, stream_sum_down_rx_pps, stream_sum_down_rx_kbps, stream_sum_down_loss);
             }
         }
     }
@@ -429,9 +462,9 @@ bbl_init_curses (bbl_ctx_s *ctx)
     wrefresh(stats_win);
 
     timer_add_periodic(&ctx->timer_root, &ctx->stats_timer, "Statistics Timer",
-		               0, 100 * MSEC, ctx, bbl_stats_job);
+		               0, 100 * MSEC, ctx, &bbl_stats_job);
     timer_add_periodic(&ctx->timer_root, &ctx->keyboard_timer, "Keyboard Reader",
-		               0, 100 * MSEC, ctx, bbl_read_key_job);
+		               0, 100 * MSEC, ctx, &bbl_read_key_job);
 
     g_interactive = true;
 }
