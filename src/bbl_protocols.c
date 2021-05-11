@@ -7,169 +7,75 @@
  */
 #include "bbl_protocols.h"
 
-
 protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_l2tp_t **_l2tp);
 protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
 
-uint16_t
-bbl_checksum(uint16_t *buf, uint16_t len) {
-         uint32_t sum = 0;
-         uint16_t checksum = 0;
+/*
+ * CHECKSUM
+ * ------------------------------------------------------------------------*/
 
+static uint32_t 
+_checksum(void *buf, ssize_t len) {
+    uint32_t result = 0;
+    uint16_t *cur = buf;
     while (len > 1) {
-        sum += *buf++;
+        result += *cur++;
         len -= 2;
     }
-    /* If any bytes left, pad the bytes and add */
-    if(len > 0) {
-        sum += ((*buf) & htobe16(0xFF00));
+    /*  Add left-over byte, if any */
+    if (len) {
+        result += *(uint8_t*)cur;
     }
-    /* Fold sum to 16 bits: add carrier to result */
+    return result;
+}
+
+static uint32_t 
+_fold(uint32_t sum) {
     while (sum>>16) {
         sum = (sum & 0xffff) + (sum >> 16);
     }
-    /* Calculate one's complement */
-    checksum = ~sum;
-    return checksum;
+    return sum;
 }
 
 uint16_t
-bbl_ipv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t nh, uint8_t *buf, uint16_t len) {
-
-    int i;
-    uint32_t checksum = 0;
-    uint16_t word16;
-    bool padding = false;
-
-    /* The following block ensures that checksum field is ignored */
-    switch(nh) {
-        case IPV6_NEXT_HEADER_UDP:
-            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
-            word16 = ((buf[2]<<8)&0xFF00) + (buf[3]&0xFF); checksum += word16;
-            word16 = ((buf[4]<<8)&0xFF00) + (buf[5]&0xFF); checksum += word16;
-            i = 8;
-            break;
-        case IPV6_NEXT_HEADER_ICMPV6:
-            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
-            i = 4;
-            break;
-        default:
-            i = 0;
-            break;
-    }
-    if (len % 2) {
-        padding = true;
-        len--;
-    }
-    /* Make 16 bit words out of every two adjacent 8 bit words and
-     * calculate the sum of all 16 bit words */
-    for (; i < len; i = i+2) {
-        word16 = ((buf[i]<<8)&0xFF00) + (buf[i+1]&0xFF);
-        checksum += word16;
-    }
-    if(padding) {
-        word16 = (buf[len]<<8)&0xFF00;
-        checksum += word16;
-        len++;
-    }
-
-    /* Add the IPv6 pseudo header which contains the
-     * source and destinations addresses */
-    for (i = 0; i < IPV6_ADDR_LEN; i = i+2) {
-        word16 =((src[i]<<8)) + (src[i+1]);
-        checksum += word16;
-    }
-    for (i = 0; i<IPV6_ADDR_LEN; i = i+2) {
-        word16 = ((dst[i]<<8)) + (dst[i+1]);
-        checksum += word16;
-    }
-
-    /* Add the protocol number and the length of the UDP packet */
-    checksum += nh + len;
-
-    /* Keep only the last 16 bits of the 32 bit calculated sum and add the carries */
-    while (checksum >> 16)
-        checksum = (checksum & 0xffff) + (checksum >> 16);
-
-    /* Take the one's complement of checksum */
-    checksum = ~checksum;
-
-    return (uint16_t)checksum;
+bbl_checksum(uint8_t *buf, uint16_t len) {
+    return ~_fold(_checksum(buf, len));
 }
 
 uint16_t
-bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *buf, uint16_t len) {
-    return bbl_ipv6_checksum(src, dst, IPV6_NEXT_HEADER_UDP, buf, len);
+bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len) { 
+    uint32_t result;
+    result  = htobe16(PROTOCOL_IPV4_UDP);
+    result += htobe16(udp_len);
+    result += _checksum(&src, sizeof(src));
+    result += _checksum(&dst, sizeof(dst));
+    result += _checksum(udp, 6);
+    result += _checksum(udp+8, udp_len-8);
+    return ~_fold(result);
 }
 
 uint16_t
-bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *buf, uint16_t len) {
-    return bbl_ipv6_checksum(src, dst, IPV6_NEXT_HEADER_ICMPV6, buf, len);
+bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp_len) {
+    uint32_t result;
+    result  = htobe16(IPV6_NEXT_HEADER_UDP);
+    result += htobe16(udp_len);
+    result += _checksum(src, sizeof(ipv6addr_t));
+    result += _checksum(dst, sizeof(ipv6addr_t));
+    result += _checksum(udp, 6);
+    result += _checksum(udp+8, udp_len-8);
+    return ~_fold(result);
 }
 
 uint16_t
-bbl_ipv4_checksum(uint32_t src, uint32_t dst, uint8_t proto, uint8_t *buf, uint16_t len) {
-
-    uint8_t *ip8;
-
-    int i;
-    uint32_t checksum = 0;
-    uint16_t word16;
-    bool padding = false;
-
-    /* The following block ensures that checksum field is ignored */
-    switch(proto) {
-        case PROTOCOL_IPV4_UDP:
-            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
-            word16 = ((buf[2]<<8)&0xFF00) + (buf[3]&0xFF); checksum += word16;
-            word16 = ((buf[4]<<8)&0xFF00) + (buf[5]&0xFF); checksum += word16;
-            i = 8;
-            break;
-        default:
-            i = 0;
-            break;
-    }
-    if (len % 2) {
-        padding = true;
-        len--;
-    }    
-    /* Make 16 bit words out of every two adjacent 8 bit words and 
-     * calculate the sum of all 16 bit words */
-    for (; i < len; i = i+2) {
-        word16 = ((buf[i]<<8)&0xFF00) + (buf[i+1]&0xFF);
-        checksum += word16;
-    }
-    if(padding) {
-        word16 = (buf[len]<<8)&0xFF00;
-        checksum += word16;
-        len++;
-    }
-
-    /* Add the IPv4 pseudo header which contains the 
-     * source and destinations addresses */
-    ip8 = (void *)&src;
-    word16 = ((ip8[0]<<8)&0xFF00) + (ip8[1]&0xFF); checksum += word16;
-    word16 = ((ip8[2]<<8)&0xFF00) + (ip8[3]&0xFF); checksum += word16;
-    ip8 = (void *)&dst;
-    word16 = ((ip8[0]<<8)&0xFF00) + (ip8[1]&0xFF); checksum += word16;
-    word16 = ((ip8[2]<<8)&0xFF00) + (ip8[3]&0xFF); checksum += word16;
-
-    /* Add the protocol number and the length of the UDP packet */
-    checksum += proto + len;
-
-    /* Keep only the last 16 bits of the 32 bit calculated sum and add the carries */
-    while (checksum >> 16)
-        checksum = (checksum & 0xffff) + (checksum >> 16);
-    
-    /* Take the one's complement of checksum */
-    checksum = ~checksum;
-
-    return (uint16_t)checksum;
-}
-
-uint16_t
-bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *buf, uint16_t len) {
-    return bbl_ipv4_checksum(src, dst, PROTOCOL_IPV4_UDP, buf, len);
+bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *icmp, uint16_t icmp_len) {
+    uint32_t result;
+    result  = htobe16(IPV6_NEXT_HEADER_ICMPV6);
+    result += htobe16(icmp_len);
+    result += _checksum(src, sizeof(ipv6addr_t));
+    result += _checksum(dst, sizeof(ipv6addr_t));
+    result += _checksum(icmp, 2);
+    result += _checksum(icmp+4, icmp_len-4);
+    return ~_fold(result);
 }
 
 /*
@@ -516,7 +422,7 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
     icmp_len = *len - icmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, icmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum(start, icmp_len);
 
 
     return PROTOCOL_SUCCESS;
@@ -583,7 +489,7 @@ encode_icmp(uint8_t *buf, uint16_t *len,
     icmp_len = *len - icmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, icmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum(start, icmp_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -656,7 +562,7 @@ encode_igmp(uint8_t *buf, uint16_t *len,
     igmp_len = *len - igmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, igmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum(start, igmp_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -672,7 +578,6 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
 
     uint8_t *start = buf;
     uint16_t ipv6_len;
-    uint16_t checksum;
 
     *(uint64_t*)buf = 0;
     *(uint16_t*)buf |= be16toh(ipv6->tos << 4);
@@ -698,16 +603,17 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
         case IPV6_NEXT_HEADER_ICMPV6:
             result = encode_icmpv6(buf, len, (bbl_icmpv6_t*)ipv6->next);
             ipv6_len = *len - ipv6_len;
-            checksum = bbl_ipv6_icmpv6_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
-            *(uint16_t*)(buf + 2) = htobe16(checksum); // update icmpv6 checksum
+            /* Update icmpv6 checksum */
+            *(uint16_t*)(buf + 2) = bbl_ipv6_icmpv6_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
             break;
         case IPV6_NEXT_HEADER_UDP:
             result = encode_udp(buf, len, (bbl_udp_t*)ipv6->next);
             ipv6_len = *len - ipv6_len;
-            *(uint16_t*)(buf + 4) = htobe16(ipv6_len); // update UDP length
+            /* Update UDP length */
+            *(uint16_t*)(buf + 4) = htobe16(ipv6_len);
             if(((bbl_udp_t*)ipv6->next)->protocol != UDP_PROTOCOL_BBL) {
-                checksum = bbl_ipv6_udp_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
-                *(uint16_t*)(buf + 6) = htobe16(checksum); // update UDP checksum
+                /* Update UDP checksum */
+                *(uint16_t*)(buf + 6) = bbl_ipv6_udp_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
             }
             break;
         default:
@@ -734,7 +640,6 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     uint8_t *start = buf;
     uint16_t ipv4_len = *len;
     uint16_t udp_len = *len;
-    uint16_t checksum;
     uint8_t header_len = 5; // header length 20 (4 * 5)
 
     if(ipv4->router_alert_option) {
@@ -794,10 +699,12 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
             udp_len = *len;
             result = encode_udp(buf, len, (bbl_udp_t*)ipv4->next);
             udp_len = *len - udp_len;
-            *(uint16_t*)(buf + 4) = htobe16(udp_len); // update UDP length
-            if(((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_BBL) {
-                checksum = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
-                *(uint16_t*)(buf + 6) = htobe16(checksum); // update UDP checksum
+            /* Update UDP length */
+            *(uint16_t*)(buf + 4) = htobe16(udp_len); 
+            if(((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_BBL &&
+               ((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_L2TP) {
+                /* Update UDP checksum */
+                *(uint16_t*)(buf + 6) = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
             }
             break;
         default:
@@ -810,7 +717,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     *(uint16_t*)(start + 2) = htobe16(ipv4_len);
 
     /* Update checksum */
-    *(uint16_t*)(start + 10) = bbl_checksum((uint16_t*)start, header_len * 4);
+    *(uint16_t*)(start + 10) = bbl_checksum(start, header_len * 4);
 
     return result;
 }
@@ -1106,7 +1013,7 @@ encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp) {
         *(uint16_t*)buf = htobe16(l2tp->offset);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         if(l2tp->offset) { 
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            BUMP_WRITE_BUFFER(buf, len, l2tp->offset);
         }
     }
     if(l2tp->type) {
