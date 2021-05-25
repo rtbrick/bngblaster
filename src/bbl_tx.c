@@ -1370,9 +1370,11 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     arp.target_ip = session->peer_ip_address;
 
     if(session->arp_resolved) {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 300, 0, session, &bbl_arp_timeout);
+        if(ctx->config.arp_interval) {
+            timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
+        }
     } else {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 1, 0, session, &bbl_arp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_timeout, 0, session, &bbl_arp_timeout);
     }
     interface->stats.arp_tx++;
     if(!ctx->stats.first_session_tx.tv_sec) {

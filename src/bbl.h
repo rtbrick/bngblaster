@@ -580,6 +580,10 @@ typedef struct bbl_ctx_
         /* IPv4 (IPoE) */
         bool ipv4_enable;
 
+        /* ARP (IPoE) */
+        uint16_t arp_timeout;
+        uint16_t arp_interval;
+
         /* IPv6 (IPoE) */
         bool ipv6_enable;
 
