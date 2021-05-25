@@ -11,6 +11,7 @@
 #include "bbl_session.h"
 #include "bbl_stream.h"
 #include "bbl_dhcp.h"
+#include "bbl_tx.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -1874,6 +1875,8 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
 void
 bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_arp_t *arp = (bbl_arp_t*)eth->next;
+    bbl_ctx_s *ctx;
+
     if(arp->sender_ip == session->peer_ip_address) {
         if(!session->arp_resolved) {
             memcpy(session->server_mac, arp->sender, ETH_ADDR_LEN);
@@ -1885,8 +1888,14 @@ bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
             }
         } else {
             if(!session->arp_resolved) {
+                ctx = session->interface->ctx;
                 bbl_rx_established_ipoe(eth, interface, session);
                 session->arp_resolved = true;
+                if(ctx->config.arp_interval) {
+                    timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
+                } else {
+                    timer_del(session->timer_arp);
+                }
             }
         }
     }

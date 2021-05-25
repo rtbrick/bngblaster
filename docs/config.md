@@ -369,6 +369,8 @@ This section describes all attributes of the `ipoe` (IP over Ethernet) hierarchy
 Attribute | Description | Default 
 --------- | ----------- | -------
 `ipv4` | Enable/disable IPv4 | true (enabled)
+`arp-timeout` | Initial ARP resolve timeout/retry interval in seconds | 1 
+`arp-interval` | Periodic ARP interval in seconds (0 means disabled) | 300
 `ipv6` | Enable/disable IPv6 | true (enabled)
 
 ## PPPoE

@@ -525,6 +525,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.ipv4_enable = json_boolean_value(value);
         }
+        value = json_object_get(section, "arp-timeout");
+        if (json_is_number(value)) {
+            ctx->config.arp_timeout = json_number_value(value);
+        }
+        value = json_object_get(section, "arp-interval");
+        if (json_is_number(value)) {
+            ctx->config.arp_interval = json_number_value(value);
+        }
         value = json_object_get(section, "ipv6");
         if (json_is_boolean(value)) {
             ctx->config.ipv6_enable = json_boolean_value(value);
@@ -1140,6 +1148,8 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.authentication_timeout = 5;
     ctx->config.authentication_retry = 30;
     ctx->config.ipv4_enable = true;
+    ctx->config.arp_timeout = 1;
+    ctx->config.arp_interval = 300;
     ctx->config.ipv6_enable = true;
     ctx->config.ipcp_enable = true;
     ctx->config.ipcp_request_ip = true;
