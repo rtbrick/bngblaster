@@ -31,7 +31,7 @@ format_mac_address (uint8_t *mac)
     char *ret;
     ret = buffer[idx];
     idx = (idx+1) & 31;
-    snprintf(ret, MAC_STR_LEN, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]); 
+    snprintf(ret, MAC_STR_LEN, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     return ret;
 }
 

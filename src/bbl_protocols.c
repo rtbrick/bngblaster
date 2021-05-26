@@ -14,7 +14,7 @@ protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
  * CHECKSUM
  * ------------------------------------------------------------------------*/
 
-static uint32_t 
+static uint32_t
 _checksum(void *buf, ssize_t len) {
     uint32_t result = 0;
     uint16_t *cur = buf;
@@ -29,7 +29,7 @@ _checksum(void *buf, ssize_t len) {
     return result;
 }
 
-static uint32_t 
+static uint32_t
 _fold(uint32_t sum) {
     while (sum>>16) {
         sum = (sum & 0xffff) + (sum >> 16);
@@ -43,7 +43,7 @@ bbl_checksum(uint8_t *buf, uint16_t len) {
 }
 
 uint16_t
-bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len) { 
+bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len) {
     uint32_t result;
     result  = htobe16(PROTOCOL_IPV4_UDP);
     result += htobe16(udp_len);
@@ -296,7 +296,7 @@ encode_bbl(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = bbl->tos;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    *(uint32_t*)buf = bbl->session_id; 
+    *(uint32_t*)buf = bbl->session_id;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
         *(uint32_t*)buf = bbl->ifindex;
@@ -700,7 +700,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
             result = encode_udp(buf, len, (bbl_udp_t*)ipv4->next);
             udp_len = *len - udp_len;
             /* Update UDP length */
-            *(uint16_t*)(buf + 4) = htobe16(udp_len); 
+            *(uint16_t*)(buf + 4) = htobe16(udp_len);
             if(((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_BBL &&
                ((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_L2TP) {
                 /* Update UDP checksum */
@@ -1012,7 +1012,7 @@ encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp) {
     if(l2tp->with_offset) {
         *(uint16_t*)buf = htobe16(l2tp->offset);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        if(l2tp->offset) { 
+        if(l2tp->offset) {
             BUMP_WRITE_BUFFER(buf, len, l2tp->offset);
         }
     }
@@ -1884,7 +1884,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
     //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
-    
+
     /* Check if version is 6 */
     if(((*buf >> 4) & 0xf) != 6) {
         return DECODE_ERROR;
@@ -1903,7 +1903,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     ipv6->dst = buf;
     BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
 
-    if(ipv6->payload_len > len) { 
+    if(ipv6->payload_len > len) {
         return DECODE_ERROR;
     }
     len = ipv6->payload_len;
@@ -1982,7 +1982,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
 
     ipv4->tos = header->ip_tos;
     ipv4_total_len = be16toh(header->ip_len);
-    if(ipv4_header_len > ipv4_total_len || 
+    if(ipv4_header_len > ipv4_total_len ||
        ipv4_total_len > len)  {
         return DECODE_ERROR;
     }
@@ -2469,7 +2469,7 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
     l2tp->session_id = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
-    
+
     if(l2tp->with_sequence) {
         if(len < 4) return DECODE_ERROR;
         l2tp->ns = be16toh(*(uint16_t*)buf);
@@ -2511,7 +2511,7 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     } else {
         /* L2TP data packet */
         if(len < 4) return DECODE_ERROR;
-        
+
         l2tp->payload = buf;
         l2tp->payload_len = len;
 

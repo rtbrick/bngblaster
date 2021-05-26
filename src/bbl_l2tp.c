@@ -66,13 +66,13 @@ l2tp_session_state_string(l2tp_session_state_t state)
     }
 }
 
-/** 
- * bbl_l2tp_session_delete 
+/**
+ * bbl_l2tp_session_delete
  *
- * This function will free all dynamic memory for the given 
+ * This function will free all dynamic memory for the given
  * l2tp session instance.
- * 
- * @param l2tp_session L2TP session structure to be deleted. 
+ *
+ * @param l2tp_session L2TP session structure to be deleted.
  */
 void
 bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
@@ -97,7 +97,7 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
         }
         /* Remove session from dict */
         dict_remove(ctx->l2tp_session_dict, &l2tp_session->key);
-        
+
         /* Remove session from PPPoE session */
         if(l2tp_session->pppoe_session) {
             l2tp_session->pppoe_session->l2tp_session = NULL;
@@ -114,13 +114,13 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
     }
 }
 
-/** 
- * bbl_l2tp_tunnel_delete 
+/**
+ * bbl_l2tp_tunnel_delete
  *
- * This function will free all dynamic memory for the given 
+ * This function will free all dynamic memory for the given
  * l2tp tunnel instance including corresponding send queues.
- * 
- * @param l2tp_tunnel L2TP tunnel structure to be deleted. 
+ *
+ * @param l2tp_tunnel L2TP tunnel structure to be deleted.
  */
 void
 bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
@@ -174,9 +174,9 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
     }
 }
 
-/** 
- * bbl_l2tp_tunnel_update_state 
- * 
+/**
+ * bbl_l2tp_tunnel_update_state
+ *
  * @param l2tp_tunnel L2TP tunnel structure.
  * @param state New L2TP tunnel state.
  */
@@ -188,7 +188,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
         ctx = l2tp_tunnel->interface->ctx;
 
         LOG(DEBUG, "L2TP Debug (%s) Tunnel %u state changed from %s to %s\n",
-                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
+                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
                     l2tp_tunnel_state_string(l2tp_tunnel->state),
                     l2tp_tunnel_state_string(state));
 
@@ -199,8 +199,8 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
                 ctx->l2tp_tunnels_established_max = ctx->l2tp_tunnels_established;
             }
             LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) established\n",
-                      l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
-                      l2tp_tunnel->peer_name, 
+                      l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                      l2tp_tunnel->peer_name,
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
         } else if (l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
             if(ctx->l2tp_tunnels_established) {
@@ -213,8 +213,8 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
     }
 }
 
-/** 
- * bbl_l2tp_tunnel_tx_job 
+/**
+ * bbl_l2tp_tunnel_tx_job
  */
 void
 bbl_l2tp_tunnel_tx_job (timer_s *timer) {
@@ -279,8 +279,8 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
                     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
                 }
                 /* When congestion occurs (indicated by the triggering of a
-                 * retransmission) one half of the congestion window (CWND) 
-                 * is saved in SSTHRESH, and CWND is set to one. The sender 
+                 * retransmission) one half of the congestion window (CWND)
+                 * is saved in SSTHRESH, and CWND is set to one. The sender
                  * then reenters the slow start phase. */
                 l2tp_tunnel->ssthresh = l2tp_tunnel->cwnd/2;
                 if(!l2tp_tunnel->ssthresh) l2tp_tunnel->ssthresh = 1;
@@ -307,8 +307,8 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
     }
 }
 
-/** 
- * bbl_l2tp_tunnel_control_job 
+/**
+ * bbl_l2tp_tunnel_control_job
  *
  * This function ...
  */
@@ -328,7 +328,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
                 bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
             break;
-        case BBL_L2TP_TUNNEL_ESTABLISHED: 
+        case BBL_L2TP_TUNNEL_ESTABLISHED:
             if(l2tp_tunnel->server->hello_interval) {
                 if(l2tp_tunnel->state_seconds % l2tp_tunnel->server->hello_interval == 0) {
                     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_HELLO);
@@ -357,13 +357,13 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
     }
 }
 
-/** 
- * bbl_l2tp_send 
+/**
+ * bbl_l2tp_send
  *
- * This function send control packets for a given L2TP tunnel. 
- * 
- * @param l2tp_tunnel L2TP tunnel structure. 
- * @param l2tp_session Optional L2TP session structure. 
+ * This function send control packets for a given L2TP tunnel.
+ *
+ * @param l2tp_tunnel L2TP tunnel structure.
+ * @param l2tp_session Optional L2TP session structure.
  *        This parameter is only required of L2TP session packets.
  * @param l2tp_type L2TP message type (SCCRP, ICRP, ...).
  */
@@ -404,10 +404,10 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
     if(l2tp_session) {
         l2tp.session_id = l2tp_session->peer_session_id;
     }
-    /* The Nr. will be set on the fly while sending 
-     * using the latest received Ns. from peer. 
+    /* The Nr. will be set on the fly while sending
+     * using the latest received Ns. from peer.
      * Therfore we need to remember offset to Nr. */
-    l2tp.nr = 0; 
+    l2tp.nr = 0;
     if(eth.vlan_outer) {
         q->ns_offset = 54;
         q->nr_offset = 56;
@@ -446,13 +446,13 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
     }
 }
 
-/** 
- * bbl_l2tp_send_data 
+/**
+ * bbl_l2tp_send_data
  *
- * This function send data packets for a given L2TP session. 
- * 
- * @param l2tp_tunnel L2TP tunnel structure. 
- * @param l2tp_session L2TP session structure. 
+ * This function send data packets for a given L2TP session.
+ *
+ * @param l2tp_tunnel L2TP tunnel structure.
+ * @param l2tp_session L2TP session structure.
  * @param protocol Payload type (IPCP, IPv4, ...).
  * @param next Payload structure.
  */
@@ -531,7 +531,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
     while(l2tp_server) {
         if(l2tp_server->ip == ipv4->dst) {
             LOG(DEBUG, "L2TP Debug (%s) SCCRQ received from %s\n",
-                       l2tp_server->host_name, 
+                       l2tp_server->host_name,
                        format_ipv4_address(&ipv4->src));
             /* Init tunnel ... */
             l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_t));
@@ -556,7 +556,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             if(!l2tp_tunnel->peer_tunnel_id ||
                !l2tp_tunnel->peer_name) {
                 LOG(ERROR, "L2TP Error (%s) Invalid SCCRQ received from %s\n",
-                           l2tp_server->host_name, 
+                           l2tp_server->host_name,
                            format_ipv4_address(&ipv4->src));
                 return bbl_l2tp_tunnel_delete(l2tp_tunnel);
             }
@@ -569,13 +569,13 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                        return bbl_l2tp_tunnel_delete(l2tp_tunnel);
                 }
             }
-            /* Add dummy tunnel session, this session is only used 
+            /* Add dummy tunnel session, this session is only used
              * to search for tunnel using the same dictionary. */
             l2tp_session = calloc(1, sizeof(bbl_l2tp_session_t));
             l2tp_session->state = BBL_L2TP_SESSION_MAX;
             l2tp_session->tunnel = l2tp_tunnel;
             l2tp_session->key.session_id = 0;
-    
+
             /* Assign tunnel id ... */
             while(true) {
                 l2tp_session->key.tunnel_id = ctx->next_tunnel_id++;
@@ -592,7 +592,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             result = dict_insert(ctx->l2tp_session_dict, &l2tp_session->key);
             if (!result.inserted) {
                 LOG(ERROR, "L2TP Error (%s) Failed to add tunnel session\n",
-                            l2tp_tunnel->server->host_name); 
+                            l2tp_tunnel->server->host_name);
                 free(l2tp_session);
                 return bbl_l2tp_tunnel_delete(l2tp_tunnel);
             }
@@ -617,7 +617,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                     /* We are not able to setup a session if no challenge
                      * is received but there is a secret configured! */
                     LOG(ERROR, "L2TP Error (%s) Missing challenge in SCCRQ from %s\n",
-                               l2tp_tunnel->server->host_name, 
+                               l2tp_tunnel->server->host_name,
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
                     l2tp_tunnel->result_code = 2;
                     l2tp_tunnel->error_code = 6;
@@ -629,7 +629,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                     /* We are not able to setup a session if challenge
                      * is received but not secret configured! */
                     LOG(ERROR, "L2TP Error (%s) No secret found but challenge received in SCCRQ from %s\n",
-                               l2tp_tunnel->server->host_name, 
+                               l2tp_tunnel->server->host_name,
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
                     l2tp_tunnel->result_code = 2;
                     l2tp_tunnel->error_code = 6;
@@ -653,7 +653,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             return;
         }
         l2tp_server = l2tp_server->next;
-    }    
+    }
 }
 
 static void
@@ -663,14 +663,14 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
     uint8_t digest[L2TP_MD5_DIGEST_LEN];
     MD5_CTX md5_ctx;
     uint8_t l2tp_type = L2TP_MESSAGE_SCCCN;
- 
+
     UNUSED(ctx);
     UNUSED(eth);
 
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_WAIT_CTR_CONN) {
         if(!bbl_l2tp_avp_decode_tunnel(l2tp, l2tp_tunnel)) {
             LOG(ERROR, "L2TP Error (%s) Invalid SCCCN received from %s\n",
-                       l2tp_tunnel->server->host_name, 
+                       l2tp_tunnel->server->host_name,
                        format_ipv4_address(&l2tp_tunnel->peer_ip));
             bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
             l2tp_tunnel->result_code = 2;
@@ -688,7 +688,7 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                 MD5_Final(digest, &md5_ctx);
                 if (memcmp(digest, l2tp_tunnel->peer_challenge_response, L2TP_MD5_DIGEST_LEN) != 0) {
                     LOG(ERROR, "L2TP Error (%s) Wrong challenge response in SCCCN from %s\n",
-                               l2tp_tunnel->server->host_name, 
+                               l2tp_tunnel->server->host_name,
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
                     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                     l2tp_tunnel->result_code = 2;
@@ -698,7 +698,7 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                 }
             } else {
                 LOG(ERROR, "L2TP Error (%s) Missing challenge response in SCCCN from %s\n",
-                           l2tp_tunnel->server->host_name, 
+                           l2tp_tunnel->server->host_name,
                            format_ipv4_address(&l2tp_tunnel->peer_ip));
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 l2tp_tunnel->result_code = 2;
@@ -769,7 +769,7 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     result = dict_insert(ctx->l2tp_session_dict, &l2tp_session->key);
     if (!result.inserted) {
         LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
-                    l2tp_tunnel->server->host_name); 
+                    l2tp_tunnel->server->host_name);
         free(l2tp_session);
         return ;
     }
@@ -802,10 +802,10 @@ bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     if(l2tp_session->state == BBL_L2TP_SESSION_WAIT_CONN) {
         l2tp_session->state = BBL_L2TP_SESSION_ESTABLISHED;
         LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) established\n",
-                  l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
-                  l2tp_tunnel->peer_name, 
+                  l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                  l2tp_tunnel->peer_name,
                   format_ipv4_address(&l2tp_tunnel->peer_ip),
-                  l2tp_session->key.session_id);    
+                  l2tp_session->key.session_id);
     }
 }
 
@@ -826,10 +826,10 @@ bbl_l2tp_cdn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *i
 
     l2tp_session->state = BBL_L2TP_SESSION_TERMINATED;
     LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) terminated\n",
-            l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, 
-            l2tp_tunnel->peer_name, 
+            l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+            l2tp_tunnel->peer_name,
             format_ipv4_address(&l2tp_tunnel->peer_ip),
-            l2tp_session->key.session_id);   
+            l2tp_session->key.session_id);
 
     bbl_l2tp_session_delete(l2tp_session);
 }
@@ -886,7 +886,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             pap_tx.code = PAP_CODE_ACK;
             pap_tx.identifier = pap_rx->identifier;
             pap_tx.reply_message = reply_message;
-            pap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message), 
+            pap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message),
                 L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
             break;
@@ -896,7 +896,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             chap_tx.code = CHAP_CODE_SUCCESS;
             chap_tx.identifier = chap_rx->identifier;
             chap_tx.reply_message = reply_message;
-            chap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message), 
+            chap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message),
                 L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
             break;
@@ -1029,25 +1029,25 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 
 }
 
-/** 
- * bbl_l2tp_handler_rx 
+/**
+ * bbl_l2tp_handler_rx
  *
- * This function handles all received L2TPv2 traffic. 
- * 
- * @param eth Received ethernet packet. 
- * @param l2tp L2TP header of received ethernet packet. 
- * @param interface Receiving interface. 
+ * This function handles all received L2TPv2 traffic.
+ *
+ * @param eth Received ethernet packet.
+ * @param l2tp L2TP header of received ethernet packet.
+ * @param interface Receiving interface.
  */
 void
 bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface) {
     bbl_ctx_s *ctx = interface->ctx;
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
-    bbl_l2tp_session_t *l2tp_session; 
-    bbl_l2tp_tunnel_t *l2tp_tunnel; 
+    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
 
     l2tp_key_t key = {0};
     void **search = NULL;
-    
+
     if(l2tp->type == L2TP_MESSAGE_SCCRQ) {
         return bbl_l2tp_sccrq_rx(eth, l2tp, interface);
     }
@@ -1081,8 +1081,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
         if (l2tp_tunnel->nr == l2tp->ns) {
             /* In-Order packet received */
             LOG(DEBUG, "L2TP Debug (%s) %s received from %s\n",
-                       l2tp_tunnel->server->host_name, 
-                       l2tp_message_string(l2tp->type), 
+                       l2tp_tunnel->server->host_name,
+                       l2tp_message_string(l2tp->type),
                        format_ipv4_address(&ipv4->src));
             /* Update tunnel */
             l2tp_tunnel->peer_ns = l2tp->ns;
@@ -1102,14 +1102,14 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                     break;
                 case BBL_L2TP_CONGESTION_SLOW:
                     l2tp_tunnel->cwnd = 1;
-                    break;                
+                    break;
                 default:
                     /* Adjust tunnel congestion window as defined
                     * in RFC 2661 Appendix A */
                     if(l2tp_tunnel->cwnd < l2tp_tunnel->peer_receive_window) {
                         if(l2tp_tunnel->cwnd < l2tp_tunnel->ssthresh) {
-                            /* Slow Start Phase 
-                            * 
+                            /* Slow Start Phase
+                            *
                             * The congestion window (CWND) increases by 1
                             * for every new ACK received resulting in an
                             * exponential increase.
@@ -1121,8 +1121,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                             *
                             * The congestion window (CWND) increases by 1/CWND
                             * for every new ACK received. resulting in an
-                            * linear increase. The variable cwcount is used 
-                            * track when to increment the congestion window. 
+                            * linear increase. The variable cwcount is used
+                            * track when to increment the congestion window.
                             */
                             l2tp_tunnel->cwcount++;
                             if(l2tp_tunnel->cwcount >= l2tp_tunnel->cwnd) {
@@ -1164,8 +1164,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
             if (L2TP_SEQ_LT(l2tp->ns, l2tp_tunnel->nr)) {
                 /* Duplicate packet received */
                 LOG(DEBUG, "L2TP Debug (%s) Duplicate %s received with Ns. %u (expected %u) from %s\n",
-                           l2tp_tunnel->server->host_name, 
-                           l2tp_message_string(l2tp->type), 
+                           l2tp_tunnel->server->host_name,
+                           l2tp_message_string(l2tp->type),
                            l2tp->ns, l2tp_tunnel->nr,
                            format_ipv4_address(&ipv4->src));
 
@@ -1179,8 +1179,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
             } else {
                 /* Out-of-Order packet received */
                 LOG(DEBUG, "L2TP Debug (%s) Out-of-Order %s received with Ns. %u (expected %u) from %s\n",
-                           l2tp_tunnel->server->host_name, 
-                           l2tp_message_string(l2tp->type), 
+                           l2tp_tunnel->server->host_name,
+                           l2tp_message_string(l2tp->type),
                            l2tp->ns, l2tp_tunnel->nr,
                            format_ipv4_address(&ipv4->src));
 
@@ -1194,10 +1194,10 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
     }
 }
 
-/** 
- * bbl_l2tp_stop_all_tunnel 
+/**
+ * bbl_l2tp_stop_all_tunnel
  *
- * This function greacefully teardowns all L2TP tunnels. 
+ * This function greacefully teardowns all L2TP tunnels.
  */
 void
 bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {

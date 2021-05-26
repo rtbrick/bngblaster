@@ -22,12 +22,12 @@ bbl_session_rate_job (timer_s *timer) {
     bbl_compute_avg_rate(&session->stats.rate_bytes_rx, session->stats.bytes_rx);
 }
 
-/** 
- * bbl_session_get 
+/**
+ * bbl_session_get
  *
  * This function allows to change the state of a session including
- * the required action caused by state changes. 
- * 
+ * the required action caused by state changes.
+ *
  * @param ctx global context
  * @param session_id session-id
  * @return session or NULL if session not found
@@ -42,12 +42,12 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
-/** 
- * bbl_session_update_state 
+/**
+ * bbl_session_update_state
  *
  * This function allows to change the state of a session including
- * the required action caused by state changes. 
- * 
+ * the required action caused by state changes.
+ *
  * @param ctx global context
  * @param session session
  * @param state new session state
@@ -151,7 +151,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         /* L2TP */
                         session->l2tp = false;
                         session->l2tp_session = NULL;
-                        
+
                         /* Session traffic */
                         session->access_ipv4_tx_flow_id = 0;
                         session->access_ipv4_tx_seq = 0;
@@ -236,11 +236,11 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
     }
 }
 
-/** 
- * bbl_session_clear 
+/**
+ * bbl_session_clear
  *
- * This function terminates a session gracefully. 
- * 
+ * This function terminates a session gracefully.
+ *
  * @param ctx global context
  * @param session session
  */
@@ -292,7 +292,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
 {
     bbl_session_s *session;
     bbl_access_config_s *access_config;
-    
+
     dict_insert_result result;
 
     uint32_t i = 1;  /* BNG Blaster internal session identifier */
@@ -301,19 +301,19 @@ bbl_sessions_init(bbl_ctx_s *ctx)
     char snum1[32];
     char snum2[32];
 
-    /* The variable t counts how many sessions are created in one 
+    /* The variable t counts how many sessions are created in one
      * loop over all access configurations and is reset to zero
-     * every time we start from first access profile. If the variable 
-     * is still zero after processing last access profile means 
+     * every time we start from first access profile. If the variable
+     * is still zero after processing last access profile means
      * that all VLAN ranges are exhausted. */
     int t = 0;
-    
-    
+
+
     /* Init list of sessions */
-    ctx->session_list = calloc(ctx->config.sessions, sizeof(session));    
+    ctx->session_list = calloc(ctx->config.sessions, sizeof(session));
     access_config = ctx->config.access_config;
 
-    /* For equal distribution of sessions over access configurations 
+    /* For equal distribution of sessions over access configurations
      * and outer VLAN's, we loop first over all configurations and
      * second over VLAN ranges as per configration. */
     while(i <= ctx->config.sessions) {
@@ -355,7 +355,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 /* This is required to handle untagged interafaces */
                 access_config->exhausted = true;
             }
-            if(access_config->access_outer_vlan > access_config->access_outer_vlan_max || 
+            if(access_config->access_outer_vlan > access_config->access_outer_vlan_max ||
             access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
                 /* VLAN range exhausted */
                 access_config->exhausted = true;
@@ -396,7 +396,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         /* Populate session identifiaction attributes */
         snprintf(snum1, 6, "%d", i);
         snprintf(snum2, 6, "%d", access_config->sessions);
-    
+
         /* Update username */
         s = replace_substring(access_config->username, "{session-global}", snum1);
         session->username = s;
@@ -423,7 +423,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             s = replace_substring(session->agent_remote_id, "{session}", snum2);
             session->agent_remote_id = strdup(s);
         }
-        
+
         /* Update access rates ... */
         session->rate_up = access_config->rate_up;
         session->rate_down = access_config->rate_down;
@@ -434,11 +434,11 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->igmp_version = access_config->igmp_version;
         session->igmp_robustness = 2; /* init robustness with 2 */
         session->zapping_group_max = be32toh(ctx->config.igmp_group) + ((ctx->config.igmp_group_count - 1) * be32toh(ctx->config.igmp_group_iter));
-        
+
         /* Session traffic */
         session->session_traffic = access_config->session_traffic_autostart;
         session->stream_traffic = true;
-        
+
         /* Set access type specifc values */
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             session->mru = ctx->config.ppp_mru;

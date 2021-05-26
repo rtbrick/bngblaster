@@ -2,7 +2,7 @@
  * BNG Blaster (BBL) - DHCP
  *
  * Christian Giese, April 2021
- * 
+ *
  * Copyright (C) 2020-2021, RtBrick, Inc.
  */
 

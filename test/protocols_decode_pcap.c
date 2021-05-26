@@ -1,10 +1,10 @@
 /*
  * BNG Blaster (BBL) - Decode PCAP Test
- * 
- * This simple application is build to test 
+ *
+ * This simple application is build to test
  * and messure the protocols decode functionality
- * of the BNG Blaster by decoding a given PCAP 
- * file and printing some statistics about. 
+ * of the BNG Blaster by decoding a given PCAP
+ * file and printing some statistics about.
  *
  * Christian Giese, January 2021
  *

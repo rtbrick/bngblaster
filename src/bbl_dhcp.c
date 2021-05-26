@@ -12,11 +12,11 @@
 
 extern volatile bool g_teardown;
 
-/** 
- * bbl_dhcp_restart 
+/**
+ * bbl_dhcp_restart
  *
  * This function restarts the DHCP negotiation.
- * 
+ *
  * @param session session
  */
 void
@@ -74,7 +74,7 @@ bbl_dhcp_restart(bbl_session_s *session) {
     session->zapping_count = 0;
     session->zapping_view_start_time.tv_sec = 0;
     session->zapping_view_start_time.tv_nsec = 0;
-}   
+}
 
 void
 bbl_dhcp_t1(timer_s *timer) {
@@ -95,21 +95,21 @@ bbl_dhcp_t2(timer_s *timer) {
     bbl_dhcp_restart(session);
 }
 
-/** 
- * bbl_dhcp_rx 
+/**
+ * bbl_dhcp_rx
  *
  * DHCP packet receive handler.
- * 
+ *
  * @param eth ethernet packet received
  * @param dhcp dhcp header of received packet
  * @param session session
  */
 void
 bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session) {
-    
+
     bbl_interface_s *interface = session->interface;
     bbl_ctx_s *ctx = interface->ctx;
-    
+
     /* Ignore packets with wrong transaction identifier! */
     if(dhcp->header->xid != session->dhcp_xid) {
         return;
@@ -168,7 +168,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 }
                 /* Update session ... */
                 if(session->dhcp_address != session->ip_address) {
-                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->dhcp_address));
                 }
                 session->ip_address = session->dhcp_address;

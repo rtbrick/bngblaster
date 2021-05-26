@@ -1,12 +1,12 @@
 # Traffic Streams
 
-Traffic streams allow to test QoS using BNG Blaster. 
+Traffic streams allow to test QoS using BNG Blaster.
 
 ![BBL Interactive Streams](images/bbl_streams.png "BNG Blaster")
 
 ## Configuration
 
-Following a simple example using streams as described in  
+Following a simple example using streams as described in
 [Configuration](config).
 
 ```json
@@ -37,9 +37,9 @@ Following a simple example using streams as described in
             "outer-vlan-max": 4000,
             "inner-vlan-min": 7,
             "inner-vlan-max": 7,
-            "stream-group-id": 2 
+            "stream-group-id": 2
         }
-     ]  
+     ]
     },
     "sessions": {
         "count": 100
@@ -78,7 +78,7 @@ Following a simple example using streams as described in
         {
             "name": "BestEffort",
             "stream-group-id": 1,
-            "type": "ipv4", 
+            "type": "ipv4",
             "direction": "both",
             "length": 1000,
             "pps": 1000
@@ -86,7 +86,7 @@ Following a simple example using streams as described in
         {
             "name": "Voice",
             "stream-group-id": 1,
-            "type": "ipv4", 
+            "type": "ipv4",
             "direction": "downstream",
             "priority": 128,
             "vlan-priority": 2,
@@ -97,7 +97,7 @@ Following a simple example using streams as described in
         {
             "name": "BestEffort",
             "stream-group-id": 2,
-            "type": "ipv4", 
+            "type": "ipv4",
             "direction": "both",
             "length": 1000,
             "pps": 1
@@ -108,7 +108,7 @@ Following a simple example using streams as described in
 
 ## Check Session Stream Information
 
-The `session-streams` command returns detailed stream statistics per session. 
+The `session-streams` command returns detailed stream statistics per session.
 
 `$ sudo ./cli.py run.sock session-streams session-id 1`
 ```json
@@ -208,26 +208,26 @@ The `session-streams` command returns detailed stream statistics per session.
 }
 ```
 
-The `rx-outer-vlan-pbit` might be wrong depending on network interface driver and 
-optional VLAN offloading. 
+The `rx-outer-vlan-pbit` might be wrong depending on network interface driver and
+optional VLAN offloading.
 
 The measured `rx-delay-nsec-min/max` shows the minimum and maximum calculated delay
-in nanosecond. The delay is calculated by subtracting the send and receive timestamp. 
-The send timestamp is stored in the BBL header (see section Traffic). This calculated 
-result depends also on the actual test environment, configured rx-interval and host IO 
+in nanosecond. The delay is calculated by subtracting the send and receive timestamp.
+The send timestamp is stored in the BBL header (see section Traffic). This calculated
+result depends also on the actual test environment, configured rx-interval and host IO
 delay.
 
-Traffic streams will start as soon as the session is established using the rate as configured 
-starting with sequence number 1 for each flow. The attribute `rx-first-seq` stores the first 
-sequence number received. Assuming the first sequence number received for given flow is 1000 
-combined with a rate of 1000 PPS would mean that it took around 1 second until forwarding is 
-working. After first packet is received for a given flow, for every further packet it checks 
+Traffic streams will start as soon as the session is established using the rate as configured
+starting with sequence number 1 for each flow. The attribute `rx-first-seq` stores the first
+sequence number received. Assuming the first sequence number received for given flow is 1000
+combined with a rate of 1000 PPS would mean that it took around 1 second until forwarding is
+working. After first packet is received for a given flow, for every further packet it checks
 if there is a gap between last and new sequence number which is than reported as loss.
 
-The `rx/tx-accounting-packets` are all packets which should be counted in the session volume 
-accounting of the BNG, meaning session rx/tx packets excluding control traffic. 
+The `rx/tx-accounting-packets` are all packets which should be counted in the session volume
+accounting of the BNG, meaning session rx/tx packets excluding control traffic.
 
-Each flow can be queried separately using jsonpath expression with name and direction or flow-id. 
+Each flow can be queried separately using jsonpath expression with name and direction or flow-id.
 
 `$ sudo ./cli.py run.sock session-streams session-id 1 | jq '."session-streams".streams[] | select(.name == "BE" and .direction == "downstream" )'`
 ```json
@@ -260,16 +260,16 @@ Each flow can be queried separately using jsonpath expression with name and dire
 
 ## RAW Streams
 
-Streams with default `stream-group-id` set to zero are considered as raw streams not 
+Streams with default `stream-group-id` set to zero are considered as raw streams not
 bound to any session which is supported in downstream only. For those streams the
-destination address must be explicitly set. 
+destination address must be explicitly set.
 
 ```json
 {
     "streams": [
         {
             "name": "RAW",
-            "type": "ipv4", 
+            "type": "ipv4",
             "direction": "downstream",
             "priority": 128,
             "network-ipv4-address": "10.0.0.20",
@@ -282,19 +282,19 @@ destination address must be explicitly set.
 ```
 
 If `destination-ipv4-address` is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
-the BNG Blaster will set the the destination MAC address to the corresponding 
+the BNG Blaster will set the the destination MAC address to the corresponding
 multicast MAC address.
 
 ## Threaded Streams
 
-**WARNING**: The threading support is experimental and should be used with caution! 
+**WARNING**: The threading support is experimental and should be used with caution!
 
 With threading enabled, those streams will be started in a dedicated thread per flow. This
-means one thread per session and stream direction. A threaded , bidirectional stream assigned 
-to 10 sessions will therefore run in 20 threads. 
+means one thread per session and stream direction. A threaded , bidirectional stream assigned
+to 10 sessions will therefore run in 20 threads.
 
-In most environments we see that 200.000 PPS single threaded is working. Depending on actual setup this 
-can be also more. With threaded streams we are also able to scale up to three million PPS or more. 
+In most environments we see that 200.000 PPS single threaded is working. Depending on actual setup this
+can be also more. With threaded streams we are also able to scale up to three million PPS or more.
 
 ## Start/Stop Session Stream Information
 
@@ -304,7 +304,7 @@ using the commands `stream-traffic-enabled` and `stream-traffic-disabled`.
 `$ sudo ./cli.py run.sock stream-traffic-disabled session-id 1`
 
 Those commands start/stop the traffic for all sessions if invoked without
-session identifier. 
+session identifier.
 
 `$ sudo ./cli.py run.sock stream-traffic-disabled`
 

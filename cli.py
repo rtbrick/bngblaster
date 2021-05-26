@@ -3,7 +3,7 @@
 BNG Blaster Control Socket Client
 
 Simple script to interact with the BNG Blaster
-control socket JSON RPC API. 
+control socket JSON RPC API.
 
 Christian Giese, January 2021
 
@@ -21,7 +21,7 @@ BNG Blaster Control Socket Client
 
 {c} <socket> <command> [arguments]
 
-Examples: 
+Examples:
     {c} run.sock session-info session-id 1
     {c} run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
     {c} run.sock igmp-info session-id 1

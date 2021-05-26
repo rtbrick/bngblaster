@@ -47,13 +47,13 @@ bbl_key64_hash (const void* k)
     return hash;
 }
 
-/** 
- * bbl_ctx_add 
- * 
+/**
+ * bbl_ctx_add
+ *
  * Allocate global context which is used as top-level data structure.
- * 
+ *
  * @return global context
- */ 
+ */
 bbl_ctx_s *
 bbl_ctx_add (void)
 {
@@ -86,13 +86,13 @@ bbl_ctx_add (void)
     return ctx;
 }
 
-/** 
- * bbl_ctx_del 
- * 
- * Delete global context and free dynamic memory. 
- * 
+/**
+ * bbl_ctx_del
+ *
+ * Delete global context and free dynamic memory.
+ *
  * @param ctx global context
- */ 
+ */
 void
 bbl_ctx_del (bbl_ctx_s *ctx) {
     bbl_access_config_s *access_config = ctx->config.access_config;
