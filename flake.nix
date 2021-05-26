@@ -42,8 +42,11 @@
             version = "0.52";
             src = lib.cleanSource ./.;
 
-            cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ];
+            doCheck = true;
+            cmakeFlags =
+              [ "-DCMAKE_BUILD_TYPE=Release" "-DBNGBLASTER_TESTS=ON" ];
 
+            checkInputs = [ pkgs.cmocka pkgs.libpcap ];
             nativeBuildInputs = buildTools;
             buildInputs = dependencies ++ [ packages.libdict ];
           };
