@@ -49,7 +49,9 @@ if(BNGBLASTER_NETMAP)
     target_link_libraries(bngblaster netmap)
 endif()
 
-target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+    target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+endif()
 target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -m64 -mtune=generic)
 set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
