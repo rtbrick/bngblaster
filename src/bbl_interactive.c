@@ -35,11 +35,11 @@ uint8_t g_access_if_selected = 0;
 /* This global variable is used to switch between views. */
 bbl_ui_view g_view_selected = 0;
 /* This global variable is used to switch vetween sessions in some views. */
-uint32_t g_session_selected = 1; 
+uint32_t g_session_selected = 1;
 
 extern const char banner[];
 
-void 
+void
 bbl_init_stats_win()
 {
     wclear(stats_win);
@@ -153,11 +153,11 @@ bbl_stats_job (timer_s *timer)
 {
     bbl_ctx_s *ctx = timer->data;
     struct bbl_interface_ *access_if;
-    
+
     bbl_session_s *session;
 
     int max_x, max_y;
-    int i; 
+    int i;
 
     access_if = ctx->op.access_if[g_access_if_selected];
 
@@ -180,7 +180,7 @@ bbl_stats_job (timer_s *timer)
             } else {
                 wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
                 wprintw(stats_win, "%s", bbl_format_progress(ctx->sessions, ctx->sessions_established));
-                wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));    
+                wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
             }
             wprintw(stats_win, "]\n");
 
@@ -226,7 +226,7 @@ bbl_stats_job (timer_s *timer)
             if(dict_count(ctx->li_flow_dict)) {
                 wprintw(stats_win, "\nLI Statistics\n");
                 wprintw(stats_win, "  Flows                     %10lu\n", dict_count(ctx->li_flow_dict));
-                wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",  
+                wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",
                     ctx->op.network_if->stats.li_rx, ctx->op.network_if->stats.rate_li_rx.avg);
             }
             if(ctx->config.l2tp_server) {
@@ -235,15 +235,15 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "  Established %10lu\n", ctx->l2tp_tunnels_established);
                 wprintw(stats_win, "  Sessions    %10lu\n", ctx->l2tp_sessions);
                 wprintw(stats_win, "  Packets:\n");
-                wprintw(stats_win, "    Tx Control              %10lu Retries: %lu\n", 
+                wprintw(stats_win, "    Tx Control              %10lu Retries: %lu\n",
                     ctx->op.network_if->stats.l2tp_control_tx, ctx->op.network_if->stats.l2tp_control_retry);
-                wprintw(stats_win, "    Rx Control              %10lu Duplicate: %lu Out-of-Order: %lu\n", 
-                    ctx->op.network_if->stats.l2tp_control_rx, 
-                    ctx->op.network_if->stats.l2tp_control_rx_dup, 
+                wprintw(stats_win, "    Rx Control              %10lu Duplicate: %lu Out-of-Order: %lu\n",
+                    ctx->op.network_if->stats.l2tp_control_rx,
+                    ctx->op.network_if->stats.l2tp_control_rx_dup,
                     ctx->op.network_if->stats.l2tp_control_rx_ooo);
-                wprintw(stats_win, "    Tx Data                 %10lu (%7lu PPS)\n", 
+                wprintw(stats_win, "    Tx Data                 %10lu (%7lu PPS)\n",
                     ctx->op.network_if->stats.l2tp_data_tx, ctx->op.network_if->stats.rate_l2tp_data_tx.avg);
-                wprintw(stats_win, "    Rx Data                 %10lu (%7lu PPS)\n", 
+                wprintw(stats_win, "    Rx Data                 %10lu (%7lu PPS)\n",
                     ctx->op.network_if->stats.l2tp_data_rx, ctx->op.network_if->stats.rate_l2tp_data_tx.avg);
             }
 
@@ -259,7 +259,7 @@ bbl_stats_job (timer_s *timer)
                 } else {
                     wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
                     wprintw(stats_win, "%s", bbl_format_progress(ctx->stats.session_traffic_flows, ctx->stats.session_traffic_flows_verified));
-                    wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));   
+                    wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
                 }
                 wprintw(stats_win, "]\n");
             }
@@ -268,10 +268,10 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, " %s", ctx->op.network_if->name);
             wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
             wprintw(stats_win, " )\n  Tx Packets                %10lu |%7lu PPS %10lu Kbps\n",
-                ctx->op.network_if->stats.packets_tx, ctx->op.network_if->stats.rate_packets_tx.avg, 
+                ctx->op.network_if->stats.packets_tx, ctx->op.network_if->stats.rate_packets_tx.avg,
                 ctx->op.network_if->stats.rate_bytes_tx.avg * 8 / 1000);
             wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
-                ctx->op.network_if->stats.packets_rx, ctx->op.network_if->stats.rate_packets_rx.avg, 
+                ctx->op.network_if->stats.packets_rx, ctx->op.network_if->stats.rate_packets_rx.avg,
                 ctx->op.network_if->stats.rate_bytes_rx.avg * 8 / 1000);
             wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
                 ctx->op.network_if->stats.session_ipv4_tx, ctx->op.network_if->stats.rate_session_ipv4_tx.avg);
@@ -300,14 +300,14 @@ bbl_stats_job (timer_s *timer)
                     wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
-                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name); 
+                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
                 }
             }
             wprintw(stats_win, " )\n  Tx Packets                %10lu |%7lu PPS %10lu Kbps\n",
-                access_if->stats.packets_tx, access_if->stats.rate_packets_tx.avg, 
+                access_if->stats.packets_tx, access_if->stats.rate_packets_tx.avg,
                 access_if->stats.rate_bytes_tx.avg * 8 / 1000);
             wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
-                access_if->stats.packets_rx, access_if->stats.rate_packets_rx.avg, 
+                access_if->stats.packets_rx, access_if->stats.rate_packets_rx.avg,
                 access_if->stats.rate_bytes_rx.avg * 8 / 1000);
             wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
                 access_if->stats.session_ipv4_tx, access_if->stats.rate_session_ipv4_tx.avg);
@@ -373,10 +373,10 @@ bbl_stats_job (timer_s *timer)
             }
             wprintw(stats_win, "\n  Access Client Interface\n");
             wprintw(stats_win, "    Tx Packets %10lu | %7lu PPS | %10lu Kbps\n",
-                session->stats.packets_tx, session->stats.rate_packets_tx.avg, 
+                session->stats.packets_tx, session->stats.rate_packets_tx.avg,
                 session->stats.rate_bytes_tx.avg * 8 / 1000);
             wprintw(stats_win, "    Rx Packets %10lu | %7lu PPS | %10lu Kbps\n",
-                session->stats.packets_rx, session->stats.rate_packets_rx.avg, 
+                session->stats.packets_rx, session->stats.rate_packets_rx.avg,
                 session->stats.rate_bytes_rx.avg * 8 / 1000);
 
             if(session->stream) {
@@ -384,7 +384,7 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "  -------------------------------------------------------------------------------------\n");
 
                 uint64_t tx_kbps;
-                uint64_t rx_kbps; 
+                uint64_t rx_kbps;
                 uint64_t stream_sum_up_tx_pps = 0;
                 uint64_t stream_sum_up_tx_kbps = 0;
                 uint64_t stream_sum_up_rx_pps = 0;
@@ -400,7 +400,7 @@ bbl_stats_job (timer_s *timer)
                 while(stream) {
                     tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
                     rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
-                    wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, 
+                    wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name,
                             stream->direction == STREAM_DIRECTION_UP ? "up" : "down",
                             stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, stream->loss);
 
@@ -420,9 +420,9 @@ bbl_stats_job (timer_s *timer)
                     stream = stream->next;
                 }
                 wprintw(stats_win, "  =====================================================================================\n");
-                wprintw(stats_win, "  SUM              | up        | %7lu | %10lu | %7lu | %10lu | %8lu\n", 
+                wprintw(stats_win, "  SUM              | up        | %7lu | %10lu | %7lu | %10lu | %8lu\n",
                         stream_sum_up_tx_pps, stream_sum_up_tx_kbps, stream_sum_up_rx_pps, stream_sum_up_rx_kbps, stream_sum_up_loss);
-                wprintw(stats_win, "                   | down      | %7lu | %10lu | %7lu | %10lu | %8lu\n", 
+                wprintw(stats_win, "                   | down      | %7lu | %10lu | %7lu | %10lu | %8lu\n",
                         stream_sum_down_tx_pps, stream_sum_down_tx_kbps, stream_sum_down_rx_pps, stream_sum_down_rx_kbps, stream_sum_down_loss);
             }
         }

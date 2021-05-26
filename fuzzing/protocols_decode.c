@@ -1,6 +1,6 @@
 /*
- * BNG Blaster Protocols Decode Fuzzing 
- * 
+ * BNG Blaster Protocols Decode Fuzzing
+ *
  * Author(s): Christian Giese
  *
  * Copyright (C) 2016 - 2020, RtBrick, Inc.
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
     /* find file size */
     len = lseek(fd, 0, SEEK_END);
-    assert(len); 
+    assert(len);
 
     /* jump back to beginning */
     lseek(fd, 0, SEEK_SET);

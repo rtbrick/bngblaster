@@ -344,12 +344,12 @@ typedef struct bbl_access_config_
         bool exhausted;
         uint32_t sessions; /* per access config session counter */
         struct bbl_interface_ *access_if;
-        
+
         char *interface;
 
         bbl_access_type_t access_type; /* pppoe or ipoe */
         bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
-        
+
         uint16_t stream_group_id;
 
         uint16_t access_outer_vlan;
@@ -433,7 +433,7 @@ typedef struct bbl_ctx_
 
     bbl_session_s **session_list; /* list for sessions */
 
-    dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */ 
+    dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
     dict *stream_flow_dict; /* hashtable for traffic stream flows */
@@ -490,7 +490,7 @@ typedef struct bbl_ctx_
 
         uint64_t tx_interval; /* TX interval in nsec */
         uint64_t rx_interval; /* RX interval in nsec */
-        
+
         uint16_t io_slots;
         uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 

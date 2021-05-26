@@ -114,8 +114,8 @@ bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __at
 ssize_t
 bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
-    json_t *root = json_pack("{ss si s{si si}}", 
-                             "status", "ok", 
+    json_t *root = json_pack("{ss si s{si si}}",
+                             "status", "ok",
                              "code", 200,
                              "session-traffic",
                              "total-flows", ctx->stats.session_traffic_flows,
@@ -228,7 +228,7 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
         group->send = true;
         session->send_requests |= BBL_SEND_IGMP;
         bbl_session_tx_qnode_insert(session);
-        LOG(IGMP, "IGMP (ID: %u) join %s\n", 
+        LOG(IGMP, "IGMP (ID: %u) join %s\n",
             session->session_id, format_ipv4_address(&group->group));
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     } else {
@@ -284,7 +284,7 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
         group->last_mc_rx_time.tv_nsec = 0;
         session->send_requests |= BBL_SEND_IGMP;
         bbl_session_tx_qnode_insert(session);
-        LOG(IGMP, "IGMP (ID: %u) leave %s\n", 
+        LOG(IGMP, "IGMP (ID: %u) leave %s\n",
             session->session_id, format_ipv4_address(&group->group));
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     } else {
@@ -300,7 +300,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     bbl_igmp_group_s *group = NULL;
     uint32_t delay = 0;
     uint32_t ms;
-    
+
     struct timespec time_diff;
     int i, i2;
 
@@ -308,7 +308,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
-    
+
     session = bbl_session_get(ctx, session_id);
     if(session) {
         groups = json_array();
@@ -322,12 +322,12 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_array_append(sources, json_string(format_ipv4_address(&group->source[i2])));
                     }
                 }
-                record = json_pack("{ss so si si}", 
-                                "group", format_ipv4_address(&group->group), 
+                record = json_pack("{ss so si si}",
+                                "group", format_ipv4_address(&group->group),
                                 "sources", sources,
                                 "packets", group->packets,
                                 "loss", group->loss);
-                
+
                 switch (group->state) {
                     case IGMP_GROUP_IDLE:
                         json_object_set(record, "state", json_string("idle"));
@@ -368,8 +368,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                 json_array_append(groups, record);
             }
         }
-        root = json_pack("{ss si so}", 
-                        "status", "ok", 
+        root = json_pack("{ss si so}",
+                        "status", "ok",
                         "code", 200,
                         "igmp-groups", groups);
         if(root) {
@@ -378,7 +378,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");
             json_decref(groups);
-        }        
+        }
         return result;
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -388,8 +388,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
 ssize_t
 bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
-    json_t *root = json_pack("{ss si s{si si si si}}", 
-                             "status", "ok", 
+    json_t *root = json_pack("{ss si s{si si si si}}",
+                             "status", "ok",
                              "code", 200,
                              "session-counters",
                              "sessions", ctx->config.sessions,
@@ -409,7 +409,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     json_t *root;
     json_t *session_traffic = NULL;
     bbl_session_s *session;
-    
+
     struct timespec now;
 
     const char *ipv4 = NULL;
@@ -435,7 +435,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
-    
+
     session = bbl_session_get(ctx, session_id);
     if(session) {
         if(session->ip_address) {
@@ -485,7 +485,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             if(session->network_ipv4_rx_first_seq) flows_verified++;
             if(session->network_ipv6_rx_first_seq) flows_verified++;
             if(session->network_ipv6pd_rx_first_seq) flows_verified++;
-            
+
             session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                         "total-flows", flows,
                         "verified-flows", flows_verified,
@@ -516,8 +516,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         }
 
         if(session->access_type == ACCESS_TYPE_PPPOE) {
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}", 
-                        "status", "ok", 
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
+                        "status", "ok",
                         "code", 200,
                         "session-information",
                         "type", "pppoe",
@@ -555,8 +555,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             if(seconds <= session->dhcp_lease_time) lease_expire = session->dhcp_lease_time - seconds;
             if(seconds <= session->dhcp_t1) lease_expire_t1 = session->dhcp_t1 - seconds;
             if(seconds <= session->dhcp_t2) lease_expire_t2 = session->dhcp_t2 - seconds;
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si ss* ss* si si si so*}}", 
-                        "status", "ok", 
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si ss* ss* si si si so*}}",
+                        "status", "ok",
                         "code", 200,
                         "session-information",
                         "type", "ipoe",
@@ -621,15 +621,15 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
         if(ctx->op.access_if[i]->access) {
             type = "access";
         }
-        interface = json_pack("{ss si ss}", 
-                            "name", ctx->op.access_if[i]->name, 
+        interface = json_pack("{ss si ss}",
+                            "name", ctx->op.access_if[i]->name,
                             "ifindex", ctx->op.access_if[i]->ifindex,
                             "type", type);
         json_array_append(interfaces, interface);
     }
 
-    root = json_pack("{ss si so}", 
-                    "status", "ok", 
+    root = json_pack("{ss si so}",
+                    "status", "ok",
                     "code", 200,
                     "interfaces", interfaces);
     if(root) {
@@ -797,13 +797,13 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unu
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
         if(li_flow) {
-            flow = json_pack("{ss si ss si ss ss ss si si si si si si si si si si si si}", 
+            flow = json_pack("{ss si ss si ss ss ss si si si si si si si si si si si si}",
                                 "source-address", format_ipv4_address(&li_flow->src_ipv4),
                                 "source-port", li_flow->src_port,
-                                "destination-address", format_ipv4_address(&li_flow->dst_ipv4), 
+                                "destination-address", format_ipv4_address(&li_flow->dst_ipv4),
                                 "destination-port", li_flow->dst_port,
-                                "direction", bbl_li_direction_string(li_flow->direction), 
-                                "packet-type", bbl_li_packet_type_string(li_flow->packet_type), 
+                                "direction", bbl_li_direction_string(li_flow->direction),
+                                "packet-type", bbl_li_packet_type_string(li_flow->packet_type),
                                 "sub-packet-type", bbl_li_sub_packet_type_string(li_flow->sub_packet_type),
                                 "liid", li_flow->liid,
                                 "bytes-rx", li_flow->bytes_rx,
@@ -821,8 +821,8 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unu
         }
     }
     dict_itor_free(itor);
-    root = json_pack("{ss si so}", 
-                     "status", "ok", 
+    root = json_pack("{ss si so}",
+                     "status", "ok",
                      "code", 200,
                      "li-flows", flows);
     if(root) {
@@ -839,7 +839,7 @@ ssize_t
 bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root, *tunnels, *tunnel;
-    
+
     bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
     bbl_l2tp_tunnel_t *l2tp_tunnel;
 
@@ -847,15 +847,15 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 
     while(l2tp_server) {
         CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
-            
+
             tunnel = json_pack("{ss ss ss si si ss ss ss ss si si si si si si si}",
                                 "state", l2tp_tunnel_state_string(l2tp_tunnel->state),
                                 "server-name", l2tp_server->host_name,
-                                "server-address", format_ipv4_address(&l2tp_server->ip), 
+                                "server-address", format_ipv4_address(&l2tp_server->ip),
                                 "tunnel-id", l2tp_tunnel->tunnel_id,
                                 "peer-tunnel-id", l2tp_tunnel->peer_tunnel_id,
-                                "peer-name", string_or_na(l2tp_tunnel->peer_name),      
-                                "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip), 
+                                "peer-name", string_or_na(l2tp_tunnel->peer_name),
+                                "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip),
                                 "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
                                 "secret", string_or_na(l2tp_server->secret),
                                 "control-packets-rx", l2tp_tunnel->stats.control_rx,
@@ -870,8 +870,8 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
         l2tp_server = l2tp_server->next;
     }
 
-    root = json_pack("{ss si so}", 
-                     "status", "ok", 
+    root = json_pack("{ss si so}",
+                     "status", "ok",
                      "code", 200,
                      "l2tp-tunnels", tunnels);
     if(root) {
@@ -884,10 +884,10 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
     return result;
 }
 
-json_t * 
+json_t *
 l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
     char *proxy_auth_response = NULL;
-    
+
     if(l2tp_session->proxy_auth_response) {
         if(l2tp_session->proxy_auth_type == L2TP_PROXY_AUTH_TYPE_PAP) {
             proxy_auth_response = (char*)l2tp_session->proxy_auth_response;
@@ -896,7 +896,7 @@ l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
         }
     }
 
-    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss si si si si}", 
+    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss si si si si}",
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
@@ -975,8 +975,8 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
             l2tp_server = l2tp_server->next;
         }
     }
-    root = json_pack("{ss si so}", 
-                     "status", "ok", 
+    root = json_pack("{ss si so}",
+                     "status", "ok",
                      "code", 200,
                      "l2tp-sessions", sessions);
     if(root) {
@@ -1085,8 +1085,8 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
             json_array_append(json_streams, json_stream);
             stream = stream->next;
         }
-        root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}", 
-                        "status", "ok", 
+        root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}",
+                        "status", "ok",
                         "code", 200,
                         "session-streams",
                         "session-id", session->session_id,
@@ -1246,10 +1246,10 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                     goto CLOSE;
                                 }
                             } else {
-                                /* Deprecated! 
-                                 * For backward compatibility with version 0.4.X, we still 
-                                 * support per session commands using VLAN index instead of 
-                                 * new session-id. */ 
+                                /* Deprecated!
+                                 * For backward compatibility with version 0.4.X, we still
+                                 * support per session commands using VLAN index instead of
+                                 * new session-id. */
                                 value = json_object_get(arguments, "ifindex");
                                 if (value) {
                                     if(json_is_number(value)) {
@@ -1323,7 +1323,7 @@ bbl_ctrl_socket_open (bbl_ctx_s *ctx) {
     }
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
-    
+
     unlink(ctx->ctrl_socket_path);
     if (bind(ctx->ctrl_socket, (struct sockaddr *)&addr, SUN_LEN(&addr)) != 0) {
         fprintf(stderr, "Error: Failed to bind ctrl socket %s (error %d)\n", ctx->ctrl_socket_path, errno);

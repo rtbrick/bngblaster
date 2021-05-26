@@ -18,9 +18,9 @@ sudo dpkg -i <package>
 
 ### Dependencies
 
-The BNG Blaster has dependencies to the RtBrick libdict fork 
-(https://github.com/rtbrick/libdict) and the following standard 
-dependencies: 
+The BNG Blaster has dependencies to the RtBrick libdict fork
+(https://github.com/rtbrick/libdict) and the following standard
+dependencies:
 ```
 sudo apt install -y cmake \
     libcunit1-dev \
@@ -31,8 +31,8 @@ sudo apt install -y cmake \
 
 ### Build
 
-Per default cmake (`cmake .`) will build the BNG Blaster as release 
-version with optimization and without debug symbols. 
+Per default cmake (`cmake .`) will build the BNG Blaster as release
+version with optimization and without debug symbols.
 ```
 mkdir build
 cd build
@@ -41,7 +41,7 @@ make all
 ```
 
 Alternative it is also possible to build a debug
-version for detailed troubleshooting using gdb. 
+version for detailed troubleshooting using gdb.
 ```
 mkdir build
 cd build
@@ -50,9 +50,9 @@ make all
 ```
 
 There are also CPack files generated which allows to easily generate a debian
-package by just executing `cpack` from build directory. 
+package by just executing `cpack` from build directory.
 
-It is also recommended to provide the GIT commit details to be included in the 
+It is also recommended to provide the GIT commit details to be included in the
 manually build version as shown below:
 ```
 cmake -DGIT_REF=`git rev-parse --abbrev-ref HEAD` -DGIT_SHA=`git rev-parse HEAD` ..
@@ -67,9 +67,9 @@ GIT:
 IO Modes: packet_mmap_raw (default), packet_mmap, raw
 ```
 
-### Install 
+### Install
 
-Then BNG Blaster can be installed using make install target.  
+Then BNG Blaster can be installed using make install target.
 ```
 sudo make install
 ```
@@ -81,7 +81,7 @@ Building and running unit tests requires CMocka to be installed:
 sudo apt install libcmocka-dev
 ```
 
-The option `BNGBLASTER_TESTS` enables to build unit tests. 
+The option `BNGBLASTER_TESTS` enables to build unit tests.
 ```
 cmake -DCMAKE_BUILD_TYPE=Debug -DBNGBLASTER_TESTS=ON .
 make all

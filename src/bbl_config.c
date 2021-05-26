@@ -342,7 +342,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         }
     } else {
         fprintf(stderr, "JSON config error: Missing value for stream->type\n");
-        return false;    
+        return false;
     }
 
     if (json_unpack(stream, "{s:s}", "direction", &s) == 0) {
@@ -358,7 +358,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         }
     } else {
         stream_config->direction = STREAM_DIRECTION_BOTH;
-        return false;    
+        return false;
     }
 
     if (json_unpack(stream, "{s:s}", "name", &s) == 0) {
@@ -542,12 +542,12 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     /* PPPoE Configuration */
     section = json_object_get(root, "pppoe");
     if (json_is_object(section)) {
-        /* Deprecated ... 
+        /* Deprecated ...
          * PPPoE sessions, max-outstanding, start
          * and stop rate was moved to section session
          * as all those values apply to PPPoE and IPoE
          * but for compatibility they are still supported
-         * here as well for some time. 
+         * here as well for some time.
          */
         value = json_object_get(section, "sessions");
         if (json_is_number(value)) {
@@ -609,7 +609,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         sub = json_object_get(section, "authentication");
         if (json_is_object(sub)) {
             if (json_unpack(sub, "{s:s}", "username", &s) == 0) {
-                ctx->config.username = strdup(s);   
+                ctx->config.username = strdup(s);
             }
             if (json_unpack(sub, "{s:s}", "password", &s) == 0) {
                 ctx->config.password = strdup(s);
@@ -954,7 +954,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         }
         sub = json_object_get(section, "access");
         if (json_is_array(sub)) {
-            /* Config is provided as array (multiple access ranges) */ 
+            /* Config is provided as array (multiple access ranges) */
             size = json_array_size(sub);
             for (i = 0; i < size; i++) {
                 if(!access_config) {
@@ -1069,7 +1069,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             if (json_is_number(value)) {
                 l2tp_server->data_control_tos = json_number_value(value);
             }
-        }   
+        }
     } else if (json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
     }
@@ -1077,7 +1077,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     /* Traffic Streams Configuration */
     section = json_object_get(root, "streams");
     if (json_is_array(section)) {
-        /* Config is provided as array (multiple streams) */ 
+        /* Config is provided as array (multiple streams) */
         size = json_array_size(section);
         for (i = 0; i < size; i++) {
             if(!stream_config) {
@@ -1101,8 +1101,8 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
  *
  * This functions is population the BBL context
  * from given JSON configuration file returning
- * true is successfull or false if failed with 
- * error message printed to stderr. 
+ * true is successfull or false if failed with
+ * error message printed to stderr.
  */
 bool
 bbl_config_load_json (char *filename, bbl_ctx_s *ctx) {
@@ -1123,7 +1123,7 @@ bbl_config_load_json (char *filename, bbl_ctx_s *ctx) {
 /* bbl_config_load_json
  *
  * This functions is population the BBL context
- * with default configuration values. 
+ * with default configuration values.
  */
 void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {

@@ -66,7 +66,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
         }
 
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
-        if(decode_result == PROTOCOL_SUCCESS) {            
+        if(decode_result == PROTOCOL_SUCCESS) {
             vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
             if(eth->vlan_outer != vlan) {
                 /* The outer VLAN is stripped from header */
@@ -220,7 +220,7 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
             /* Dump the packet into pcap file. */
             if (ctx->pcap.write_buf) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                          buf, len, interface->pcap_index, 
+                                          buf, len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
             }
             frame_ptr = interface->io.ring_tx + (interface->io.cursor_tx * interface->io.req_tx.tp_frame_size);
@@ -269,13 +269,13 @@ bbl_io_raw_tx_job (timer_s *timer) {
             /* Dump the packet into pcap file. */
             if (ctx->pcap.write_buf) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                          interface->io.tx_buf, interface->io.tx_len, interface->pcap_index, 
+                                          interface->io.tx_buf, interface->io.tx_len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
             }
         }
         interface->io.tx_len = 0;
     }
-    pcapng_fflush(ctx);    
+    pcapng_fflush(ctx);
 }
 
 bool
@@ -304,14 +304,14 @@ bbl_io_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_le
         interface->stats.sendto_failed++;
         return false;
     }
-    return true;   
+    return true;
 }
 
-/** 
- * bbl_io_send 
- * 
+/**
+ * bbl_io_send
+ *
  * Send single packet trough given interface.
- * 
+ *
  * @param interface interface.
  * @param packet packet to be send
  * @param packet_len packet length
@@ -344,7 +344,7 @@ bbl_io_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
         /* Dump the packet into pcap file. */
         if (ctx->pcap.write_buf) {
             pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                    packet, packet_len, interface->pcap_index, 
+                                    packet, packet_len, interface->pcap_index,
                                     PCAPNG_EPB_FLAGS_OUTBOUND);
             pcapng_fflush(ctx);
         }
@@ -352,9 +352,9 @@ bbl_io_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
     return result;
 }
 
-/** 
- * bbl_io_add_interface 
- * 
+/**
+ * bbl_io_add_interface
+ *
  * @param ctx global context
  * @param interface interface.
  */
@@ -364,14 +364,14 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     size_t ring_size;
     char timer_name[32];
     struct ifreq ifr;
-    int version = TPACKET_V2; 
+    int version = TPACKET_V2;
     int qdisc_bypass = 1;
     int slots = ctx->config.io_slots;
 
     interface->io.mode = ctx->config.io_mode;
     interface->io.rx_buf = malloc(IO_BUFFER_LEN);
     interface->io.tx_buf = malloc(IO_BUFFER_LEN);
-    
+
 #ifdef BNGBLASTER_NETMAP
     if(interface->io.mode == IO_MODE_NETMAP) {
         return bbl_io_netmap_add_interface(ctx, interface);
@@ -463,14 +463,14 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
 
     /*
      * Setup TX ringbuffer.
-     * 
+     *
      *  The following are conditions that are checked in packet_set_ring
-    
+
      *  tp_block_size must be a multiple of PAGE_SIZE (1)
      *  tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
      *  tp_frame_size must be a multiple of TPACKET_ALIGNMENT
      *  tp_frame_nr   must be exactly frames_per_block*tp_block_nr
-     *  
+     *
      *  Note that tp_block_size should be chosen to be a power of two or there will
      *  be a waste of memory.
      */

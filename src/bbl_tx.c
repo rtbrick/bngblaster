@@ -55,7 +55,7 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
             return WRONG_PROTOCOL_STATE;
         }
     }
-     
+
     session->stats.access_ipv6_tx++;
     interface->stats.session_ipv6_tx++;
 
@@ -168,7 +168,7 @@ bbl_encode_packet_network_session_ipv6pd (bbl_interface_s *interface, bbl_sessio
             return WRONG_PROTOCOL_STATE;
         }
     }
-    
+
     session->stats.network_ipv6pd_tx++;
     interface->stats.session_ipv6pd_tx++;
 
@@ -756,7 +756,7 @@ protocol_error_t
 bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ip6cp_t ip6cp = {0};
@@ -1195,11 +1195,11 @@ bbl_dhcp_timeout (timer_s *timer)
 {
     bbl_session_s *session = timer->data;
 
-    if(session->dhcp_state == BBL_DHCP_INIT || 
+    if(session->dhcp_state == BBL_DHCP_INIT ||
        session->dhcp_state == BBL_DHCP_BOUND) {
         /* Wrong state */
         return;
-    } 
+    }
 
     session->send_requests = BBL_SEND_DHCP_REQUEST;
     bbl_session_tx_qnode_insert(session);
@@ -1262,7 +1262,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     header.ciaddr = session->ip_address;
     memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
     /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
-     * elapsed time, in seconds, since the client sent its first 
+     * elapsed time, in seconds, since the client sent its first
      * BOOTREQUEST message. */
     clock_gettime(CLOCK_MONOTONIC, &now);
     if(session->dhcp_request_timestamp.tv_sec) {
@@ -1354,7 +1354,7 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     bbl_ctx_s *ctx;
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
-    
+
     interface = session->interface;
     ctx = interface->ctx;
 
@@ -1658,12 +1658,12 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     return result;
 }
 
-/** 
- * bbl_tx 
+/**
+ * bbl_tx
  *
- * This function should be called as long a send buffer is available or 
- * return code is not EMPTY. 
- * 
+ * This function should be called as long a send buffer is available or
+ * return code is not EMPTY.
+ *
  * @param ctx pointer to ethernet header structure of received packet
  * @param interface pointer to interface on which packet was received
  * @param buf send buffer where packet can be crafted

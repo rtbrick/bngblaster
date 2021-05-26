@@ -89,11 +89,11 @@ bbl_add_session_packets_ipv4_l2tp (bbl_ctx_s *ctx, bbl_session_s *session)
     bbl.flow_id = session->network_ipv4_tx_flow_id;
     bbl.direction = BBL_DIRECTION_DOWN;
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
-    
+
     if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
         return false;
     }
-    session->network_ipv4_tx_packet_len = len;      
+    session->network_ipv4_tx_packet_len = len;
     return true;
 }
 
@@ -674,7 +674,7 @@ bbl_rx_dhcpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                             memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
                         }
                     }
-                    if(session->l2tp == false && ctx->config.session_traffic_ipv6pd_pps && 
+                    if(session->l2tp == false && ctx->config.session_traffic_ipv6pd_pps &&
                        ctx->op.network_if && ctx->op.network_if->ip6.len) {
                         /* Start IPv6 PD Session Traffic */
                         if(bbl_add_session_packets_ipv6(ctx, session, true)) {
@@ -861,7 +861,7 @@ bbl_rx_icmpv6(bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *sessi
                         memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
                     }
                 }
-                if(session->l2tp == false && ctx->config.session_traffic_ipv6_pps && 
+                if(session->l2tp == false && ctx->config.session_traffic_ipv6_pps &&
                    ctx->op.network_if && ctx->op.network_if->ip6.len) {
                     /* Start IPv6 Session Traffic */
                     if(bbl_add_session_packets_ipv6(ctx, session, false)) {
@@ -1135,7 +1135,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
 
     char substring[16];
     char *tok;
-    
+
     l2tp_key_t key = {0};
     void **search = NULL;
 
@@ -1160,7 +1160,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                                 if(search) {
                                     session->l2tp_session = *search;
                                     session->l2tp_session->pppoe_session = session;
-                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n", 
+                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
                                         session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
                                 }
                             }
@@ -1202,7 +1202,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
 
     char substring[16];
     char *tok;
-    
+
     l2tp_key_t key = {0};
     void **search = NULL;
 
@@ -1245,7 +1245,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                                 if(search) {
                                     session->l2tp_session = *search;
                                     session->l2tp_session->pppoe_session = session;
-                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n", 
+                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
                                         session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
                                 }
                             }
@@ -1574,7 +1574,7 @@ bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_rx_established(eth, interface, session);
-                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->ip_address));
                     break;
                 default:
@@ -1799,7 +1799,7 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                 if(pppoed->service_name_len) {
                     if(session->pppoe_service_name_len) {
                         /* Compare service name */
-                        if(pppoed->service_name_len != session->pppoe_service_name_len || 
+                        if(pppoed->service_name_len != session->pppoe_service_name_len ||
                            memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
                             LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADO\n", session->session_id);
                             return;
@@ -1815,7 +1815,7 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                     return;
                 }
                 if(session->pppoe_host_uniq) {
-                    if(pppoed->host_uniq_len != sizeof(uint64_t) || 
+                    if(pppoed->host_uniq_len != sizeof(uint64_t) ||
                        *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
                         LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in PADO\n", session->session_id);
                         return;
@@ -1831,13 +1831,13 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
             if(session->session_state == BBL_PPPOE_REQUEST) {
                 if(pppoed->session_id) {
                     if(session->pppoe_host_uniq) {
-                        if(pppoed->host_uniq_len != sizeof(uint64_t) || 
+                        if(pppoed->host_uniq_len != sizeof(uint64_t) ||
                            *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
                             LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in PADS\n", session->session_id);
                             return;
                         }
                     }
-                    if(pppoed->service_name_len != session->pppoe_service_name_len || 
+                    if(pppoed->service_name_len != session->pppoe_service_name_len ||
                         memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
                         LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
                         return;
@@ -1854,7 +1854,7 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                         session->send_requests = BBL_SEND_LCP_REQUEST;
                         session->lcp_request_code = PPP_CODE_CONF_REQUEST;
                         bbl_session_tx_qnode_insert(session);
-                    }                    
+                    }
                 } else {
                     LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADS\n", session->session_id);
                     return;
@@ -2008,11 +2008,11 @@ bbl_rx_handler_access_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *int
     }
 }
 
-/** 
- * bbl_rx_handler_access 
+/**
+ * bbl_rx_handler_access
  *
  * This function handles all packets received on access interfaces.
- * 
+ *
  * @param eth pointer to ethernet header structure of received packet
  * @param interface pointer to interface on which packet was received
  */
@@ -2037,10 +2037,10 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             return bbl_rx_handler_access_broadcast(eth, interface);
         }
     } else {
-        /* The session-id is mapped into the last 3 bytes of 
+        /* The session-id is mapped into the last 3 bytes of
          * the client MAC address. The original approach using
-         * VLAN identifiers was not working reliable as some NIC 
-         * drivers strip outer VLAN and it is also possible to have 
+         * VLAN identifiers was not working reliable as some NIC
+         * drivers strip outer VLAN and it is also possible to have
          * multiple session per VLAN (N:1). */
         session_id |= eth->dst[5];
         session_id |= eth->dst[4] << 8;
@@ -2155,11 +2155,11 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
 }
 
-/** 
- * bbl_rx_handler_network 
+/**
+ * bbl_rx_handler_network
  *
  * This function handles all packets received on network interfaces.
- * 
+ *
  * @param eth pointer to ethernet header structure of received packet
  * @param interface pointer to interface on which packet was received
  */
@@ -2182,7 +2182,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         case ETH_TYPE_IPV4:
             if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
                 /* Drop wrong MAC */
-                return;   
+                return;
             }
             ipv4 = (bbl_ipv4_t*)eth->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
