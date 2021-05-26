@@ -1,5 +1,5 @@
 {
-  inputs.nixpgks.url = "github:NixOS/nixpkgs";
+  inputs.nixpgks.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   outputs = { self, nixpkgs, flake-utils, ... }@inputs:
