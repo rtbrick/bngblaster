@@ -4,6 +4,7 @@
  * Christian Giese, February 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_L2TP_H__

@@ -15,6 +15,7 @@
  * https://www.kernel.org/doc/Documentation/networking/packet_mmap.txt
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_IO_H__
