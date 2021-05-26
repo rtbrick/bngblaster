@@ -9,6 +9,7 @@
  * Christian Giese, January 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <stdio.h>
 #include <stdlib.h>
