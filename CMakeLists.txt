@@ -1,6 +1,6 @@
 # BNG Blaster
 #
-# For Debug Build Try below command 
+# For Debug Build Try below command
 #cmake -DCMAKE_BUILD_TYPE=Debug .
 cmake_minimum_required (VERSION 3.0)
 project(bngblaster LANGUAGES C VERSION 0.0.0)
@@ -25,10 +25,12 @@ endif()
 FILE(GLOB BBL_SOURCES src/*.c)
 add_executable(bngblaster ${BBL_SOURCES})
 
-# libdict will be statically linked 
+# libdict will be statically linked
 find_library(libdict NAMES libdict.a REQUIRED)
 
-target_link_libraries(bngblaster curses crypto jansson ${libdict} m)
+set(CURSES_NEED_NCURSES TRUE)
+include(FindCurses)
+target_link_libraries(bngblaster ${CURSES_LIBRARIES} crypto jansson ${libdict} m)
 
 SET(PLATFORM_SPECIFIC_LIBS "-lpthread")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
