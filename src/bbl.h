@@ -688,7 +688,7 @@ typedef struct vlan_session_key_ {
 
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
-#define BBL_STREAM_FLOW_HASHTABLE_SIZE 32771 /* is a prime number */
+#define BBL_STREAM_FLOW_HASHTABLE_SIZE 128993 /* is a prime number */
 
 /*
  * Client Session to a BNG device.
