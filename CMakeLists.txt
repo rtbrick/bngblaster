@@ -23,7 +23,7 @@ else()
 endif()
 
 FILE(GLOB BBL_SOURCES src/*.c)
-list(SORT BLL_SOURCES)
+list(SORT BBL_SOURCES)
 # Deterministic randomness for symbol name creation
 foreach(_file ${BBL_SOURCES})
     file(SHA1 ${_file} checksum)
