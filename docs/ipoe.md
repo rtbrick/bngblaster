@@ -1,10 +1,10 @@
 # IPoE
 
 The BNG Blaster is able to emulate IP over Ethernet (IPoE)
-subscribers with static and dynamic address assignment 
-supporting 1:1 and N:1 VLAN mode. 
+subscribers with static and dynamic address assignment
+supporting 1:1 and N:1 VLAN mode.
 
-**INFO**: Currently there is only IPv4 support for IPoE. 
+**INFO**: Currently there is only IPv4 support for IPoE.
 
 ## Static Addresses
 
@@ -31,9 +31,9 @@ statically as shown in the example below.
 }
 ```
 
-## DHCP 
+## DHCP
 
-The most common case for IPoE is using DHCP as shown below. 
+The most common case for IPoE is using DHCP as shown below.
 
 ```json
 {
@@ -45,7 +45,7 @@ The most common case for IPoE is using DHCP as shown below.
             "outer-vlan": 7,
             "vlan-mode": "N:1"
         }
-     ]  
+     ]
     },
     "dhcp": {
         "enable": true,

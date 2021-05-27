@@ -5,6 +5,7 @@
  * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "bbl.h"
@@ -152,7 +153,7 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
 void
 bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
-    struct bbl_interface_ *access_if;    
+    struct bbl_interface_ *access_if;
     int i;
 
     printf("%s", banner);
@@ -177,11 +178,11 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("  Established:  %10u\n", ctx->l2tp_tunnels_established_max);
             printf("  Sessions:     %10u\n", ctx->l2tp_sessions_max);
             printf("  Packets:\n");
-            printf("    TX Control:      %10u packets (%u retries)\n", 
+            printf("    TX Control:      %10u packets (%u retries)\n",
                 ctx->op.network_if->stats.l2tp_control_tx, ctx->op.network_if->stats.l2tp_control_retry);
-            printf("    RX Control:      %10u packets (%u duplicate %u out-of-order)\n", 
-                ctx->op.network_if->stats.l2tp_control_rx, 
-                ctx->op.network_if->stats.l2tp_control_rx_dup, 
+            printf("    RX Control:      %10u packets (%u duplicate %u out-of-order)\n",
+                ctx->op.network_if->stats.l2tp_control_rx,
+                ctx->op.network_if->stats.l2tp_control_rx_dup,
                 ctx->op.network_if->stats.l2tp_control_rx_ooo);
             printf("    TX Data:         %10lu packets\n", ctx->op.network_if->stats.l2tp_data_tx);
             printf("    RX Data:         %10lu packets\n", ctx->op.network_if->stats.l2tp_data_rx);
@@ -311,7 +312,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
 void
 bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
-    struct bbl_interface_ *access_if;    
+    struct bbl_interface_ *access_if;
     int i;
 
     json_t *root               = NULL;
@@ -518,7 +519,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 void
 bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
 {
-    uint8_t idx; 
+    uint8_t idx;
     uint64_t div;
     uint64_t sum;
 

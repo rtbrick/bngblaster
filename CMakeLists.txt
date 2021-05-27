@@ -1,8 +1,8 @@
 # BNG Blaster
 #
-# For Debug Build Try below command 
+# For Debug Build Try below command
 #cmake -DCMAKE_BUILD_TYPE=Debug .
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.10)
 project(bngblaster LANGUAGES C VERSION 0.0.0)
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
@@ -10,6 +10,8 @@ option(BNGBLASTER_NETMAP "Build with netmap support" OFF)
 
 configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in"
                 "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
+
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug Build")
@@ -20,18 +22,26 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-
-
 FILE(GLOB BBL_SOURCES src/*.c)
+list(SORT BLL_SOURCES)
+# Deterministic randomness for symbol name creation
+foreach(_file ${BBL_SOURCES})
+    file(SHA1 ${_file} checksum)
+    string(SUBSTRING ${checksum} 0 8 checksum)
+    set_property(SOURCE ${_file} APPEND_STRING PROPERTY COMPILE_FLAGS "-frandom-seed=0x${checksum}")
+endforeach()
 add_executable(bngblaster ${BBL_SOURCES})
 
-# libdict will be statically linked 
+# libdict will be statically linked
 find_library(libdict NAMES libdict.a REQUIRED)
 
-target_link_libraries(bngblaster curses crypto jansson ${libdict} m)
+set(CURSES_NEED_NCURSES TRUE)
+include(FindCurses)
+target_link_libraries(bngblaster ${CURSES_LIBRARIES} crypto jansson ${libdict} m)
 
 SET(PLATFORM_SPECIFIC_LIBS "-lpthread")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+
 
 # add experimental netmap support
 if(BNGBLASTER_NETMAP)
@@ -39,7 +49,11 @@ if(BNGBLASTER_NETMAP)
     target_link_libraries(bngblaster netmap)
 endif()
 
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+    target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+endif()
 target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -m64 -mtune=generic)
+set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 # Build tests only if required
 if(BNGBLASTER_TESTS)

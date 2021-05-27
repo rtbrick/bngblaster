@@ -1,7 +1,7 @@
 # Reports
 
-The BNG Blaster is able to generate detailed result reports 
-at the end of of the test execution. 
+The BNG Blaster is able to generate detailed result reports
+at the end of of the test execution.
 
 ## Standard Output Reports
 
@@ -10,12 +10,12 @@ at the end of of the test execution.
       ____   __   ____         _        __                                  ,/
      / __ \ / /_ / __ ) _____ (_)_____ / /__                              ,'/
     / /_/ // __// __  |/ ___// // ___// //_/                            ,' /
-   / _, _// /_ / /_/ // /   / // /__ / ,<                             ,'  /_____,    
-  /_/ |_| \__//_____//_/   /_/ \___//_/|_|                          .'____    ,'   
+   / _, _// /_ / /_/ // /   / // /__ / ,<                             ,'  /_____,
+  /_/ |_| \__//_____//_/   /_/ \___//_/|_|                          .'____    ,'
       ____   _   _  ______   ____   _               _                    /  ,'
      / __ ) / | / // ____/  / __ ) / /____ _ _____ / /_ ___   ____      / ,'
     / __  |/  |/ // / __   / __  |/ // __ `// ___// __// _ \ / ___/    /,'
-   / /_/ // /|  // /_/ /  / /_/ // // /_/ /(__  )/ /_ /  __// /       / 
+   / /_/ // /|  // /_/ /  / /_/ // // /_/ /(__  )/ /_ /  __// /       /
   /_____//_/ |_/ \____/  /_____//_/ \__,_//____/ \__/ \___//_/
 
 Report:
@@ -113,8 +113,8 @@ Session Traffic:
 
 ## JSON Reports
 
-A detailed JSON report is generated if enabled using the optional argument `-J <filename>` 
-as shown in the example below.  
+A detailed JSON report is generated if enabled using the optional argument `-J <filename>`
+as shown in the example below.
 
 ```json
 {
@@ -250,9 +250,9 @@ as shown in the example below.
 ## Session Traffic Statistics
 
 Those statistics are related to the test traffic send between PPPoE sessions
-and the network interface.  
+and the network interface.
 
-Flow | Description  
+Flow | Description
 ---- | -----------
 Access RX | Network traffic received on access interface (downstream)
 Access TX | Network traffic send from access interface (Upstream)
@@ -265,11 +265,11 @@ Counts the verified traffic flows per type and direction.
 
 The `Access IPv4` tells how many sessions have successfully received
 session verification traffic IPv4 traffic on the access interface. Similar
-for IPv6 or IPv6PD (prefix delegation). Session verification traffic received 
-on the network interface is counted similar using the `Network IP...` statistics. 
+for IPv6 or IPv6PD (prefix delegation). Session verification traffic received
+on the network interface is counted similar using the `Network IP...` statistics.
 
-Assuming session traffic is enabled for IPv4, IPv6 and IPv6PD, in this case 
-all statics should be equal matching the number of sessions. 
+Assuming session traffic is enabled for IPv4, IPv6 and IPv6PD, in this case
+all statics should be equal matching the number of sessions.
 
 *Example report output for 100 sessions:*
 ```
@@ -325,8 +325,8 @@ JSON:
 }
 ```
 
-The flow verification status can be also queried via 
-global control socket command `session-traffic`. 
+The flow verification status can be also queried via
+global control socket command `session-traffic`.
 
 `$ cat command.json | jq .`
 ```json
@@ -349,10 +349,10 @@ global control socket command `session-traffic`.
 
 ### First Sequence Number Received
 
-If session traffic is enabled, the BNG Blaster will start sending bidirectional 
-traffic between PPPoE session and network interface as soon as the session is 
-established using the rate as configured starting with sequence number 1 for 
-each flow. 
+If session traffic is enabled, the BNG Blaster will start sending bidirectional
+traffic between PPPoE session and network interface as soon as the session is
+established using the rate as configured starting with sequence number 1 for
+each flow.
 
 *Example config output with 1 packet per second:*
 ```json
@@ -365,9 +365,9 @@ each flow.
 }
 ```
 
-Assuming the first sequence number received for given flow is 5 
-combined with a rate of 1 PPS would mean that it took between 4 
-and 5 seconds until forwarding is working. 
+Assuming the first sequence number received for given flow is 5
+combined with a rate of 1 PPS would mean that it took between 4
+and 5 seconds until forwarding is working.
 
 *Example report output with 1 packet per second:*
 ```
