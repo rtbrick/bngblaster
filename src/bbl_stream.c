@@ -4,6 +4,7 @@
  * Christian Giese, March 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "bbl.h"
@@ -79,7 +80,7 @@ FREE:
 
 bool
 bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
-    
+
     bbl_ctx_s *ctx = stream->interface->ctx;
     bbl_session_s *session = stream->session;
     bbl_stream_config *config = stream->config;
@@ -102,7 +103,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;   
+    pppoe.session_id = session->pppoe_session_id;
     udp.src = BBL_UDP_PORT;
     udp.dst = BBL_UDP_PORT;
     udp.protocol = UDP_PROTOCOL_BBL;
@@ -188,7 +189,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
 
 bool
 bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
-    
+
     bbl_ctx_s *ctx = stream->interface->ctx;
     bbl_session_s *session = stream->session;
     bbl_stream_config *config = stream->config;
@@ -235,8 +236,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
                     ipv4.dst = ctx->op.network_if->ip;
-                }        
-            }    
+                }
+            }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -314,7 +315,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     eth.vlan_outer = ctx->config.network_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = 0;
-    
+
     udp.src = BBL_UDP_PORT;
     udp.dst = BBL_UDP_PORT;
     udp.protocol = UDP_PROTOCOL_BBL;
@@ -344,7 +345,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
                 /* All IPv4 multicast addresses start with 1110 */
                 if((ipv4.dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
                     /* Generate multicast destination MAC */
-                    *(uint32_t*)(&mac[2]) = ipv4.dst; 
+                    *(uint32_t*)(&mac[2]) = ipv4.dst;
                     mac[0] = 0x01;
                     mac[2] = 0x5e;
                     mac[3] &= 0x7f;
@@ -466,7 +467,7 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     ipv4.ttl = 64;
     ipv4.tos = config->priority;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
-    ipv4.next = &udp; 
+    ipv4.next = &udp;
     udp.src = BBL_UDP_PORT;
     udp.dst = BBL_UDP_PORT;
     udp.protocol = UDP_PROTOCOL_BBL;
@@ -522,7 +523,7 @@ bbl_stream_build_packet(bbl_stream *stream) {
                     default:
                         break;
                 }
-            }        
+            }
         } else if (stream->session->access_type == ACCESS_TYPE_IPOE) {
             if(stream->direction == STREAM_DIRECTION_UP) {
                 return bbl_stream_build_access_ipoe_packet(stream);
@@ -584,7 +585,7 @@ bbl_stream_tx_thread (void *thread_data) {
         }
         if(!stream->buf) {
             if(!bbl_stream_build_packet(stream)) {
-                LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name); 
+                LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
                 sleep.tv_nsec = 100 * MSEC;
                 nanosleep(&sleep, &rem);
                 continue;
@@ -626,7 +627,7 @@ bbl_stream_tx_thread (void *thread_data) {
                 LOG(IO, "Sendto failed with errno: %i\n", errno);
                 sleep.tv_nsec = 1 * MSEC;
                 nanosleep(&sleep, &rem);
-                clock_gettime(CLOCK_MONOTONIC, &now); 
+                clock_gettime(CLOCK_MONOTONIC, &now);
                 *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
                 *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
                 continue;
@@ -697,7 +698,7 @@ bbl_stream_tx_job (timer_s *timer) {
     }
     if(!stream->buf) {
         if(!bbl_stream_build_packet(stream)) {
-            LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name); 
+            LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
             return;
         }
     }
@@ -776,7 +777,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
-    
+
     pthread_t thread_id;
 
     config = ctx->config.stream_config;
@@ -785,7 +786,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
         if(config->stream_group_id == access_config->stream_group_id) {
 
             if(!ctx->op.network_if) {
-                LOG(ERROR, "Failed to add stream because of missing network interface\n"); 
+                LOG(ERROR, "Failed to add stream because of missing network interface\n");
                 return false;
             }
 
@@ -806,7 +807,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
                 result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
-                    LOG(ERROR, "Failed to insert stream %s\n", config->name); 
+                    LOG(ERROR, "Failed to insert stream %s\n", config->name);
                     free(stream);
                     return false;
                 }
@@ -827,7 +828,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
-                LOG(DEBUG, "Traffic stream %s added in upstream with %u PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec); 
+                LOG(DEBUG, "Traffic stream %s added in upstream with %u PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
@@ -840,7 +841,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
                 result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
-                    LOG(ERROR, "Failed to insert stream %s\n", config->name); 
+                    LOG(ERROR, "Failed to insert stream %s\n", config->name);
                     free(stream);
                     return false;
                 }
@@ -861,7 +862,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
-                LOG(DEBUG, "Traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec); 
+                LOG(DEBUG, "Traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
         }
@@ -881,13 +882,13 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
-    
+
     pthread_t thread_id;
 
     config = ctx->config.stream_config;
 
     if(!ctx->op.network_if) {
-        LOG(ERROR, "Failed to add raw stream because of missing network interface\n"); 
+        LOG(ERROR, "Failed to add raw stream because of missing network interface\n");
         return false;
     }
     while(config) {
@@ -907,7 +908,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
                 result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
-                    LOG(ERROR, "Failed to insert stream %s\n", config->name); 
+                    LOG(ERROR, "Failed to insert stream %s\n", config->name);
                     free(stream);
                     return false;
                 }
@@ -919,7 +920,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
-                LOG(DEBUG, "RAW traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec); 
+                LOG(DEBUG, "RAW traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
         }

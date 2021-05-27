@@ -2,7 +2,7 @@
 
 The BNG Blaster can be used to emulate a mediation device providing detailed statistics
 about the received flows. Today only the BCM QMX LI header format is supported but further
-headers can be easily integrated. 
+headers can be easily integrated.
 
 *BCM QMX LI Header Format*
 ```
@@ -13,8 +13,8 @@ headers can be easily integrated.
 ```
 
 The functionality is automatically enabled on the network interface
-and works combined with sessions in one instance or as standalone 
-mediation device as shown in the following example. 
+and works combined with sessions in one instance or as standalone
+mediation device as shown in the following example.
 
 ```json
 {
@@ -30,7 +30,7 @@ mediation device as shown in the following example.
 }
 ```
 
-The received flows can be queried using the control socket. 
+The received flows can be queried using the control socket.
 
 `$ sudo ./cli.py run.sock li-flows`
 ```json
@@ -85,7 +85,7 @@ The received flows can be queried using the control socket.
 ```
 
 The `packets-rx-ipv4-host-internal` refers to the IPv4 protocol number 61 (any host internal protocol)
-which is used by some network testers as default type for traffic streams. 
-The same is valid for `packets-rx-ipv6-host-internal` which refers to next header 61 and 
+which is used by some network testers as default type for traffic streams.
+The same is valid for `packets-rx-ipv6-host-internal` which refers to next header 61 and
 `packets-rx-ipv6-no-next-header` with next header 59.
 

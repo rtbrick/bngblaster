@@ -7,6 +7,7 @@
  * https://github.com/luigirizzo/netmap
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_NETMAP_H__
