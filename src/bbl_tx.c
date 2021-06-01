@@ -688,6 +688,8 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
+            session->stats.dhcpv6_tx_solicit++;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
             dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
             dhcpv6.server_duid_len = 0;
             dhcpv6.ia_na_option_len = 0;
@@ -695,18 +697,28 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
             break;
         case BBL_DHCP_REQUESTING:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
+            session->stats.dhcpv6_tx_request++;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RENEWING:
             dhcpv6.type = DHCPV6_MESSAGE_RENEW;
+            session->stats.dhcpv6_tx_renew++;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
+            session->stats.dhcpv6_tx_release++;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
             dhcpv6.oro = false;
             break;
         default:
             return WRONG_PROTOCOL_STATE;
     }
     timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
+
+    session->stats.dhcpv6_tx++;
+    interface->stats.dhcpv6_tx++;
+
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -1359,6 +1371,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     }
 
     timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+    session->stats.dhcp_tx++;
     interface->stats.dhcp_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);

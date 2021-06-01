@@ -145,8 +145,6 @@ bbl_dhcpv6_t2(timer_s *timer) {
 void
 bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *session) {
 
-    LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6 received\n", session->session_id);
-
     bbl_interface_s *interface = session->interface;
     bbl_ctx_s *ctx = interface->ctx;
 
@@ -173,7 +171,6 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
         session->dhcpv6_ia_pd_option_len = dhcpv6->ia_pd_option_len;
     }
 
-    session->stats.dhcpv6_rx++;
     if(dhcpv6->type == DHCPV6_MESSAGE_REPLY) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Reply received\n", session->session_id);
         session->stats.dhcpv6_rx_reply++;

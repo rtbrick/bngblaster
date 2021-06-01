@@ -150,12 +150,16 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
     bbl_interface_s *interface = session->interface;
     bbl_ctx_s *ctx = interface->ctx;
 
+    /* Ignore packets received in wrong state */
+    if(session->dhcp_state == BBL_DHCP_INIT) {
+        return;
+    }
+
     /* Ignore packets with wrong transaction identifier! */
     if(dhcp->header->xid != session->dhcp_xid) {
         return;
     }
 
-    session->stats.dhcp_rx++;
     switch(dhcp->type) {
         case DHCP_MESSAGE_OFFER:
             session->stats.dhcp_rx_offer++;

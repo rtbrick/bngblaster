@@ -317,6 +317,7 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
         case DHCPV6_UDP_CLIENT:
         case DHCPV6_UDP_SERVER:
             interface->stats.dhcpv6_rx++;
+            session->stats.dhcpv6_rx++;
             return bbl_dhcpv6_rx(eth, (bbl_dhcpv6_t*)udp->next, session);
         case BBL_UDP_PORT:
             bbl = (bbl_bbl_t*)udp->next;
@@ -569,8 +570,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_t*)ipv4->next;
             if (udp->protocol == UDP_PROTOCOL_DHCP) {
-                session->stats.dhcp_rx++;
                 interface->stats.dhcp_rx++;
+                session->stats.dhcp_rx++;
                 return bbl_dhcp_rx(eth, (bbl_dhcp_t*)udp->next, session);
             }
             if(udp->protocol == UDP_PROTOCOL_BBL) {
