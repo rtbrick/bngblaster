@@ -183,7 +183,7 @@ Attribute | Description | Default
 `ipcp` | Optionally enable/disable PPP IPCP per access configuration
 `ip6cp` | Optionally enable/disable PPP IP6CP per access configuration
 `ipv4` | Optionally enable/disable IPoE IPv4 per access configuration
-`ipv6` | Optionally enable/disable IPoE IPv4 per access configuration
+`ipv6` | Optionally enable/disable IPoE IPv6 per access configuration
 `dhcp` | Optionally enable/disable DHCP per access configuration
 `dhcpv6` | Optionally enable/disable DHCPv6 per access configuration
 `stream-group-id` | Optional stream group identifier

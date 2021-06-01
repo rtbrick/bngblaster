@@ -23,6 +23,8 @@
 #include "bbl_logging.h"
 #include "bbl_io.h"
 #include "bbl_stream.h"
+#include "bbl_dhcp.h"
+#include "bbl_dhcpv6.h"
 #include <sys/stat.h>
 
 /* Global Variables */
@@ -519,9 +521,7 @@ bbl_ctrl_job (timer_s *timer)
                             if(session->access_config->ipv4_enable) {
                                 if(session->access_config->dhcp_enable) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
-                                    session->dhcp_state = BBL_DHCP_SELECTING;
-                                    session->dhcp_xid = rand();
-                                    session->send_requests |= BBL_SEND_DHCP_REQUEST;
+                                    bbl_dhcp_start(session);
                                 } else if (session->ip_address && session->peer_ip_address) {
                                     /* Start IPoE session by sending ARP request if local and
                                      * remote IP addresses are already provided. */
@@ -529,8 +529,13 @@ bbl_ctrl_job (timer_s *timer)
                                 }
                             }
                             if(session->access_config->ipv6_enable) {
-                                /* Start IPoE session by sending RS. */
-                                session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                if(session->access_config->dhcpv6_enable) {
+                                    /* Start IPoE session by sending DHCPv6 request if enabled. */
+                                    bbl_dhcpv6_start(session);
+                                } else {
+                                    /* Start IPoE session by sending RS. */
+                                    session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                }
                             }
                             break;
                     }

@@ -592,7 +592,7 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
         pppoe.next = &ipv6;
     } else {
         /* IPoE */
-        eth.type = PROTOCOL_IPV6;
+        eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
     ipv6.dst = (void*)ipv6_multicast_all_routers;
@@ -612,7 +612,8 @@ bbl_dhcpv6_timeout (timer_s *timer)
     bbl_interface_s *interface;
     session = timer->data;
     interface = session->interface;
-    if(!session->dhcpv6_received) {
+    if(!(session->dhcpv6_state == BBL_DHCP_BOUND || 
+         session->dhcpv6_state == BBL_DHCP_INIT)) {
         interface->stats.dhcpv6_timeout++;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
         bbl_session_tx_qnode_insert(session);
@@ -630,21 +631,25 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     bbl_udp_t udp = {0};
     bbl_dhcpv6_t dhcpv6 = {0};
 
+    if(session->dhcpv6_state == BBL_DHCP_INIT ||
+       session->dhcpv6_state == BBL_DHCP_BOUND) {
+        return IGNORED;
+    }
+
     interface = session->interface;
     ctx = interface->ctx;
     interface->stats.dhcpv6_tx++;
 
-    eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
             return WRONG_PROTOCOL_STATE;
         }
+        eth.dst = session->server_mac;
+        eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
         eth.type = ETH_TYPE_PPPOE_SESSION;
         eth.next = &pppoe;
         pppoe.session_id = session->pppoe_session_id;
@@ -652,38 +657,56 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         pppoe.next = &ipv6;
     } else {
         /* IPoE */
-        eth.type = PROTOCOL_IPV6;
+        eth.dst = (void*)ipv6_multicast_mac_dhcp;
+        eth.vlan_outer_priority = ctx->config.dhcpv6_vlan_priority;
+        eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
-    ipv6.dst = (void*)ipv6_multicast_all_routers;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
+    ipv6.dst = (void*)ipv6_multicast_all_dhcp;
     ipv6.src = (void*)session->link_local_ipv6_address;
-    ipv6.ttl = 255;
+    ipv6.ttl = 64;
+    ipv6.tos = ctx->config.dhcpv6_tc;
     ipv6.protocol = IPV6_NEXT_HEADER_UDP;
     ipv6.next = &udp;
     udp.dst = DHCPV6_UDP_SERVER;
     udp.src = DHCPV6_UDP_CLIENT;
     udp.protocol = UDP_PROTOCOL_DHCPV6;
     udp.next = &dhcpv6;
-    dhcpv6.type = session->dhcpv6_type;
-    dhcpv6.transaction_id = rand();
-    dhcpv6.client_duid = session->duid;
+    dhcpv6.xid = session->dhcpv6_xid;
+    dhcpv6.client_duid = session->dhcpv6_duid;
     dhcpv6.client_duid_len = DUID_LEN;
-    dhcpv6.delegated_prefix_iaid = rand();
-    dhcpv6.delegated_prefix = &session->delegated_ipv6_prefix;
-    if(dhcpv6.type == DHCPV6_MESSAGE_REQUEST) {
-        if(session->server_duid_len) {
-            dhcpv6.server_duid = session->server_duid;
-            dhcpv6.server_duid_len = session->server_duid_len;
-        }
-        if(session->dhcpv6_ia_pd_option_len) {
-            dhcpv6.ia_pd_option = session->dhcpv6_ia_pd_option;
-            dhcpv6.ia_pd_option_len = session->dhcpv6_ia_pd_option_len;
-        }
-    } else {
-        dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
-        dhcpv6.oro = true;
+    dhcpv6.server_duid = session->dhcpv6_server_duid;
+    dhcpv6.server_duid_len = session->dhcpv6_server_duid_len;
+    dhcpv6.ia_na_iaid = session->dhcpv6_ia_na_iaid;
+    dhcpv6.ia_na_option = session->dhcpv6_ia_na_option;
+    dhcpv6.ia_na_option_len = session->dhcpv6_ia_na_option_len;
+    dhcpv6.ia_pd_iaid = session->dhcpv6_ia_pd_iaid;
+    dhcpv6.ia_pd_option = session->dhcpv6_ia_pd_option;
+    dhcpv6.ia_pd_option_len = session->dhcpv6_ia_pd_option_len;
+    dhcpv6.oro = true;
+    switch (session->dhcpv6_state) {
+        case BBL_DHCP_SELECTING:
+            dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
+            dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
+            dhcpv6.server_duid_len = 0;
+            dhcpv6.ia_na_option_len = 0;
+            dhcpv6.ia_pd_option_len = 0;
+            break;
+        case BBL_DHCP_REQUESTING:
+            dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
+            break;
+        case BBL_DHCP_RENEWING:
+            dhcpv6.type = DHCPV6_MESSAGE_RENEW;
+            break;
+        case BBL_DHCP_RELEASE:
+            dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
+            dhcpv6.oro = false;
+            break;
+        default:
+            return WRONG_PROTOCOL_STATE;
     }
-    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", 5, 0, session, &bbl_dhcpv6_timeout);
+    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -1323,11 +1346,12 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
         case BBL_DHCP_RELEASE:
             dhcp.type = DHCP_MESSAGE_RELEASE;
             session->stats.dhcp_tx_release++;
+            session->dhcp_state = BBL_DHCP_INIT;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
             if(session->session_state == BBL_TERMINATING) {
-                bbl_session_update_state(ctx, session, BBL_TERMINATED);
+                bbl_session_clear(ctx, session);
             }
             break;
         default:

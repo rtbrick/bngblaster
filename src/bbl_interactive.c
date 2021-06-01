@@ -19,6 +19,7 @@
 
 typedef enum {
     UI_VIEW_DEFAULT = 0,
+    UI_VIEW_ACCESS_IF_STATS,
     UI_VIEW_STREAMS,
     UI_VIEW_MAX,
 } __attribute__ ((__packed__)) bbl_ui_view;
@@ -27,6 +28,8 @@ typedef enum {
 /* ncurses */
 WINDOW *stats_win = NULL;
 WINDOW *log_win = NULL;
+
+int stats_win_postion;
 
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
@@ -156,16 +159,11 @@ bbl_stats_job (timer_s *timer)
     struct bbl_interface_ *access_if;
 
     bbl_session_s *session;
-
-    int max_x, max_y;
     int i;
 
     access_if = ctx->op.access_if[g_access_if_selected];
 
     wmove(stats_win, 14, 0);
-    getmaxyx(stats_win, max_y, max_x);
-
-    (void)max_x;
 
     if(g_view_selected == UI_VIEW_DEFAULT) {
 
@@ -205,8 +203,24 @@ bbl_stats_job (timer_s *timer)
                     ctx->stats.cps, ctx->stats.cps_min, ctx->stats.cps_avg, ctx->stats.cps_max);
             wprintw(stats_win, "  Flapped     %10lu\n", ctx->sessions_flapped);
 
+            /* DHCP */
+            if(ctx->dhcp_requested || ctx->dhcp_established_max) {
+                wprintw(stats_win, "\nDHCP\n");
+                wprintw(stats_win, "  Sessions    %10lu\n", ctx->dhcp_requested);
+                wprintw(stats_win, "  Established %10lu [", ctx->dhcp_established);
+                if(ctx->dhcp_requested == ctx->dhcp_established) {
+                    wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
+                    wprintw(stats_win, "%s", bbl_format_progress(ctx->dhcp_requested, ctx->dhcp_established));
+                    wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+                } else {
+                    wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
+                    wprintw(stats_win, "%s", bbl_format_progress(ctx->dhcp_requested, ctx->dhcp_established));
+                    wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
+                }
+                wprintw(stats_win, "]\n");
+            }
             /* DHCPv6 */
-            if(ctx->config.dhcpv6_enable) {
+            if(ctx->dhcpv6_requested || ctx->dhcpv6_established_max) {
                 wprintw(stats_win, "\nDHCPv6\n");
                 wprintw(stats_win, "  Sessions    %10lu\n", ctx->dhcpv6_requested);
                 wprintw(stats_win, "  Established %10lu [", ctx->dhcpv6_established);
@@ -329,38 +343,47 @@ bbl_stats_job (timer_s *timer)
                 access_if->stats.mc_rx, access_if->stats.rate_mc_rx.avg,
                 access_if->stats.mc_loss);
 
-            /* Protocol stats */
-            if(max_y > 70) {
-                wprintw(stats_win, "\nAccess Interface Protocol Packet Stats\n");
-                wprintw(stats_win, "  ARP    TX: %10u RX: %10u\n", access_if->stats.arp_tx, access_if->stats.arp_rx);
-                wprintw(stats_win, "  PADI   TX: %10u RX: %10u\n", access_if->stats.padi_tx, 0);
-                wprintw(stats_win, "  PADO   TX: %10u RX: %10u\n", 0, access_if->stats.pado_rx);
-                wprintw(stats_win, "  PADR   TX: %10u RX: %10u\n", access_if->stats.padr_tx, 0);
-                wprintw(stats_win, "  PADS   TX: %10u RX: %10u\n", 0, access_if->stats.pads_rx);
-                wprintw(stats_win, "  PADT   TX: %10u RX: %10u\n", access_if->stats.padt_tx, access_if->stats.padt_rx);
-                wprintw(stats_win, "  LCP    TX: %10u RX: %10u\n", access_if->stats.lcp_tx, access_if->stats.lcp_rx);
-                wprintw(stats_win, "  PAP    TX: %10u RX: %10u\n", access_if->stats.pap_tx, access_if->stats.pap_rx);
-                wprintw(stats_win, "  CHAP   TX: %10u RX: %10u\n", access_if->stats.chap_tx, access_if->stats.chap_rx);
-                wprintw(stats_win, "  IPCP   TX: %10u RX: %10u\n", access_if->stats.ipcp_tx, access_if->stats.ipcp_rx);
-                wprintw(stats_win, "  IP6CP  TX: %10u RX: %10u\n", access_if->stats.ip6cp_tx, access_if->stats.ip6cp_rx);
-                wprintw(stats_win, "  IGMP   TX: %10u RX: %10u\n", access_if->stats.igmp_tx, access_if->stats.igmp_rx);
-                wprintw(stats_win, "  ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
-                wprintw(stats_win, "  ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
-                wprintw(stats_win, "  DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
-                wprintw(stats_win, "  DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
-            }
-            if(max_y > 80) {
-                wprintw(stats_win, "\nAccess Interface Protocol Timeout Stats\n");
-                wprintw(stats_win, "  LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
-                wprintw(stats_win, "  LCP Request:      %10u\n", access_if->stats.lcp_timeout);
-                wprintw(stats_win, "  IPCP Request:     %10u\n", access_if->stats.ipcp_timeout);
-                wprintw(stats_win, "  IP6CP Request:    %10u\n", access_if->stats.ip6cp_timeout);
-                wprintw(stats_win, "  PAP:              %10u\n", access_if->stats.pap_timeout);
-                wprintw(stats_win, "  CHAP:             %10u\n", access_if->stats.chap_timeout);
-                wprintw(stats_win, "  ICMPv6 RS:        %10u\n", access_if->stats.dhcpv6_timeout);
-                wprintw(stats_win, "  DHCPv6 Request:   %10u\n", access_if->stats.dhcpv6_timeout);
-            }
+
         }
+    } else if(g_view_selected == UI_VIEW_ACCESS_IF_STATS) {
+        if(access_if) {
+            wprintw(stats_win, "\nAccess Interface Protocol Stats (");
+            wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
+            wprintw(stats_win, " %s", access_if->name);
+            wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+            wprintw(stats_win, " )\n");
+            /* Protocol stats */
+            wprintw(stats_win, "\nPacket Stats\n");
+            wprintw(stats_win, "  ARP    TX: %10u RX: %10u\n", access_if->stats.arp_tx, access_if->stats.arp_rx);
+            wprintw(stats_win, "  PADI   TX: %10u RX: %10u\n", access_if->stats.padi_tx, 0);
+            wprintw(stats_win, "  PADO   TX: %10u RX: %10u\n", 0, access_if->stats.pado_rx);
+            wprintw(stats_win, "  PADR   TX: %10u RX: %10u\n", access_if->stats.padr_tx, 0);
+            wprintw(stats_win, "  PADS   TX: %10u RX: %10u\n", 0, access_if->stats.pads_rx);
+            wprintw(stats_win, "  PADT   TX: %10u RX: %10u\n", access_if->stats.padt_tx, access_if->stats.padt_rx);
+            wprintw(stats_win, "  LCP    TX: %10u RX: %10u\n", access_if->stats.lcp_tx, access_if->stats.lcp_rx);
+            wprintw(stats_win, "  PAP    TX: %10u RX: %10u\n", access_if->stats.pap_tx, access_if->stats.pap_rx);
+            wprintw(stats_win, "  CHAP   TX: %10u RX: %10u\n", access_if->stats.chap_tx, access_if->stats.chap_rx);
+            wprintw(stats_win, "  IPCP   TX: %10u RX: %10u\n", access_if->stats.ipcp_tx, access_if->stats.ipcp_rx);
+            wprintw(stats_win, "  IP6CP  TX: %10u RX: %10u\n", access_if->stats.ip6cp_tx, access_if->stats.ip6cp_rx);
+            wprintw(stats_win, "  IGMP   TX: %10u RX: %10u\n", access_if->stats.igmp_tx, access_if->stats.igmp_rx);
+            wprintw(stats_win, "  ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
+            wprintw(stats_win, "  ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
+            wprintw(stats_win, "  DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+            wprintw(stats_win, "  DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
+
+            wprintw(stats_win, "\nTimeout Stats\n");
+            wprintw(stats_win, "  LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
+            wprintw(stats_win, "  LCP Request:      %10u\n", access_if->stats.lcp_timeout);
+            wprintw(stats_win, "  IPCP Request:     %10u\n", access_if->stats.ipcp_timeout);
+            wprintw(stats_win, "  IP6CP Request:    %10u\n", access_if->stats.ip6cp_timeout);
+            wprintw(stats_win, "  PAP:              %10u\n", access_if->stats.pap_timeout);
+            wprintw(stats_win, "  CHAP:             %10u\n", access_if->stats.chap_timeout);
+            wprintw(stats_win, "  ICMPv6 RS:        %10u\n", access_if->stats.dhcpv6_timeout);
+            wprintw(stats_win, "  DHCPv6 Request:   %10u\n", access_if->stats.dhcpv6_timeout);
+        } else {
+            wprintw(stats_win, "\nAccess Interface Protocol Stats");
+        }
+
     } else if(g_view_selected == UI_VIEW_STREAMS) {
         wprintw(stats_win, "\nSession Stream Stats ( Session-Id: ", g_session_selected);
         wattron(stats_win, COLOR_PAIR(COLOR_GREEN));

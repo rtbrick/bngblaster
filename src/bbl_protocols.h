@@ -19,6 +19,8 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 
+#define RTBRICK                         50058
+
 #define BBL_MAGIC_NUMBER                0x5274427269636b21
 #define BBL_UDP_PORT                    65056
 #define BBL_HEADER_LEN                  48
@@ -221,12 +223,13 @@ typedef struct ipv6_prefix_ {
 static const ipv6addr_t ipv6_link_local_prefix = {0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static const ipv6addr_t ipv6_multicast_all_nodes = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 static const ipv6addr_t ipv6_multicast_all_routers = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
-static const ipv6addr_t ipv6_multicast_solicited_node = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+static const ipv6addr_t ipv6_multicast_all_dhcp = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02};
 
 /* MAC Addresses */
 static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static const uint8_t multicast_mac[ETH_ADDR_LEN] =  { 0x01, 0x00, 0x5e, 0x00, 0x00, 0x00};
 static const uint8_t ipv6_multicast_mac[ETH_ADDR_LEN] =  { 0x33, 0x33, 0xff, 0x00, 0x00, 0x10};
+static const uint8_t ipv6_multicast_mac_dhcp[ETH_ADDR_LEN] =  { 0x33, 0x33, 0x00, 0x01, 0x00, 0x02};
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
@@ -667,19 +670,31 @@ typedef struct bbl_icmpv6_ {
 
 typedef struct bbl_dhcpv6_ {
     uint8_t      type;
-    uint32_t     transaction_id;
+    uint32_t     xid;
     uint8_t     *client_duid;
     uint8_t      client_duid_len;
     uint8_t     *server_duid;
     uint8_t      server_duid_len;
-    bool         rapid;
-    bool         oro;
-    uint32_t     delegated_prefix_iaid;
-    ipv6_prefix *delegated_prefix;
-    uint8_t     *ia_pd_option;
-    uint8_t      ia_pd_option_len;
     ipv6addr_t  *dns1;
     ipv6addr_t  *dns2;
+    bool         rapid;
+    bool         oro;
+    uint8_t     *ia_na_option;
+    uint8_t      ia_na_option_len;
+    uint32_t     ia_na_iaid;
+    ipv6addr_t  *ia_na_address;
+    uint32_t     ia_na_t1;
+    uint32_t     ia_na_t2;
+    uint32_t     ia_na_preferred_lifetime;
+    uint32_t     ia_na_valid_lifetime;
+    uint8_t     *ia_pd_option;
+    uint8_t      ia_pd_option_len;
+    uint32_t     ia_pd_iaid;
+    ipv6_prefix *ia_pd_prefix;
+    uint32_t     ia_pd_t1;
+    uint32_t     ia_pd_t2;
+    uint32_t     ia_pd_preferred_lifetime;
+    uint32_t     ia_pd_valid_lifetime;
 } bbl_dhcpv6_t;
 
 struct dhcp_header {

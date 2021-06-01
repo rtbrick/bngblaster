@@ -1165,6 +1165,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.dhcp_timeout = 5;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;
+    ctx->config.dhcpv6_timeout = 5;
     ctx->config.igmp_autostart = true;
     ctx->config.igmp_version = IGMP_VERSION_3;
     ctx->config.igmp_start_delay = 1;

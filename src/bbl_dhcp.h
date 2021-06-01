@@ -11,6 +11,12 @@
 #define __BBL_DHCP_H__
 
 void
+bbl_dhcp_stop(bbl_session_s *session);
+
+void
+bbl_dhcp_start(bbl_session_s *session);
+
+void
 bbl_dhcp_restart(bbl_session_s *session);
 
 void
