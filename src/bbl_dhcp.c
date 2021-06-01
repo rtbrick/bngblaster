@@ -11,51 +11,19 @@
 #include "bbl_dhcp.h"
 #include "bbl_session.h"
 
-extern volatile bool g_teardown;
-
 /**
- * bbl_dhcp_restart
+ * bbl_dhcp_stop
  *
- * This function restarts the DHCP negotiation.
+ * This function stops the DHCP negotiation.
  *
  * @param session session
  */
 void
-bbl_dhcp_restart(bbl_session_s *session) {
+bbl_dhcp_stop(bbl_session_s *session) {
     bbl_interface_s *interface = session->interface;
+    bbl_ctx_s *ctx = interface->ctx;
 
-    LOG(DHCP, "DHCP (ID: %u) Restart DHCP\n", session->session_id);
-
-    bbl_session_update_state(interface->ctx, session, BBL_IPOE_SETUP);
-
-    /* Reset DHCP */
-    timer_del(session->timer_dhcp_retry);
-    timer_del(session->timer_dhcp_t1);
-    timer_del(session->timer_dhcp_t2);
-
-    session->dhcp_state = BBL_DHCP_SELECTING;
-    session->dhcp_xid = rand();
-    session->dhcp_address = 0;
-    session->dhcp_lease_time = 0;
-    session->dhcp_t1 = 0;
-    session->dhcp_t2 = 0;
-    session->dhcp_server = 0;
-    session->dhcp_server_identifier = 0;
-    memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
-    session->dhcp_lease_timestamp.tv_sec = 0;
-    session->dhcp_lease_timestamp.tv_nsec = 0;
-    session->dhcp_request_timestamp.tv_sec = 0;
-    session->dhcp_request_timestamp.tv_nsec = 0;
-    if(session->dhcp_host_name) {
-        free(session->dhcp_host_name);
-        session->dhcp_host_name = NULL;
-    }
-    if(session->dhcp_host_name) {
-        free(session->dhcp_domain_name);
-        session->dhcp_domain_name = NULL;
-    }
-    session->send_requests |= BBL_SEND_DHCP_REQUEST;
-    bbl_session_tx_qnode_insert(session);
+    LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     /* Reset session IP configuration */
     session->ip_address = 0;
@@ -75,6 +43,76 @@ bbl_dhcp_restart(bbl_session_s *session) {
     session->zapping_count = 0;
     session->zapping_view_start_time.tv_sec = 0;
     session->zapping_view_start_time.tv_nsec = 0;
+
+    /* Reset DHCP */
+    timer_del(session->timer_dhcp_retry);
+    timer_del(session->timer_dhcp_t1);
+    timer_del(session->timer_dhcp_t2);
+    session->dhcp_address = 0;
+    session->dhcp_lease_time = 0;
+    session->dhcp_t1 = 0;
+    session->dhcp_t2 = 0;
+    session->dhcp_server = 0;
+    session->dhcp_server_identifier = 0;
+    memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
+    session->dhcp_lease_timestamp.tv_sec = 0;
+    session->dhcp_lease_timestamp.tv_nsec = 0;
+    session->dhcp_request_timestamp.tv_sec = 0;
+    session->dhcp_request_timestamp.tv_nsec = 0;
+    if(session->dhcp_host_name) {
+        free(session->dhcp_host_name);
+        session->dhcp_host_name = NULL;
+    }
+    if(session->dhcp_domain_name) {
+        free(session->dhcp_domain_name);
+        session->dhcp_domain_name = NULL;
+    }
+
+    if(session->dhcp_established && ctx->dhcp_established) {
+        ctx->dhcp_established--;
+    }
+    session->dhcp_established = false;
+    if(session->dhcp_requested && ctx->dhcp_requested) {
+        ctx->dhcp_requested--;
+    }
+    session->dhcp_requested = false;
+}
+
+/**
+ * bbl_dhcp_start
+ *
+ * This function starts the DHCP negotiation.
+ *
+ * @param session session
+ */
+void
+bbl_dhcp_start(bbl_session_s *session) {
+
+    if(!session->dhcp_requested) {
+        session->dhcp_requested = true;
+        session->interface->ctx->dhcp_requested++;
+
+        /* Init DHCP */
+        session->dhcp_state = BBL_DHCP_SELECTING;
+        session->dhcp_xid = rand();
+        session->send_requests |= BBL_SEND_DHCP_REQUEST;
+
+        LOG(DHCP, "DHCP (ID: %u) Start DHCP\n", session->session_id);
+    }
+}
+
+/**
+ * bbl_dhcp_restart
+ *
+ * This function restarts the DHCP negotiation.
+ *
+ * @param session session
+ */
+void
+bbl_dhcp_restart(bbl_session_s *session) {
+    bbl_dhcp_stop(session);
+    bbl_dhcp_start(session);
+    bbl_session_tx_qnode_insert(session);
 }
 
 void
@@ -85,7 +123,7 @@ bbl_dhcp_t1(timer_s *timer) {
         session->dhcp_request_timestamp.tv_sec = 0;
         session->dhcp_request_timestamp.tv_nsec = 0;
         session->dhcp_state = BBL_DHCP_RENEWING;
-        session->send_requests = BBL_SEND_DHCP_REQUEST;
+        session->send_requests |= BBL_SEND_DHCP_REQUEST;
         bbl_session_tx_qnode_insert(session);
     }
 }
@@ -93,13 +131,14 @@ bbl_dhcp_t1(timer_s *timer) {
 void
 bbl_dhcp_t2(timer_s *timer) {
     bbl_session_s *session = timer->data;
+    LOG(DHCP, "DHCP (ID: %u) Lease expired\n", session->session_id);
     bbl_dhcp_restart(session);
 }
 
 /**
  * bbl_dhcp_rx
  *
- * DHCP packet receive handler.
+ * DHCP packet receive handler for IPoE sessions.
  *
  * @param eth ethernet packet received
  * @param dhcp dhcp header of received packet
@@ -116,6 +155,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
         return;
     }
 
+    session->stats.dhcp_rx++;
     switch(dhcp->type) {
         case DHCP_MESSAGE_OFFER:
             session->stats.dhcp_rx_offer++;
@@ -156,7 +196,6 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
             break;
         case BBL_DHCP_REQUESTING:
             if(dhcp->type == DHCP_MESSAGE_ACK) {
-                session->dhcp_state = BBL_DHCP_BOUND;
                 session->dhcp_address = dhcp->header->yiaddr;
                 session->dhcp_server = dhcp->header->siaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
@@ -205,6 +244,16 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 }
                 session->dhcp_t1 = 0.5 * session->dhcp_lease_time; if(!session->dhcp_t1) session->dhcp_t1 = 1;
                 session->dhcp_t2 = 0.875 * session->dhcp_lease_time; if(!session->dhcp_t2) session->dhcp_t2 = 1;
+
+                session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
+                if(!session->dhcp_established) {
+                    session->dhcpv6_established = true;
+                    ctx->dhcp_established++;
+                    if(ctx->dhcp_established > ctx->dhcp_established_max) {
+                        ctx->dhcp_established_max = ctx->dhcp_established;
+                    }
+                }
+                session->dhcp_state = BBL_DHCP_BOUND;
                 timer_add(&ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
                 timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;

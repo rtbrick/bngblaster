@@ -26,6 +26,8 @@
 #include "bbl_logging.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
+#include "bbl_dhcp.h"
+#include "bbl_dhcpv6.h"
 
 #define BACKLOG 4
 #define INPUT_BUFFER 1024
@@ -428,9 +430,12 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     int flows = 0;
     int flows_verified = 0;
     uint32_t seconds = 0;
-    uint32_t lease_expire = 0;
-    uint32_t lease_expire_t1 = 0;
-    uint32_t lease_expire_t2 = 0;
+    uint32_t dhcp_lease_expire = 0;
+    uint32_t dhcp_lease_expire_t1 = 0;
+    uint32_t dhcp_lease_expire_t2 = 0;
+    uint32_t dhcpv6_lease_expire = 0;
+    uint32_t dhcpv6_lease_expire_t1 = 0;
+    uint32_t dhcpv6_lease_expire_t2 = 0;
 
     if(session_id == 0) {
         /* session-id is mandatory */
@@ -517,7 +522,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         }
 
         if(session->access_type == ACCESS_TYPE_PPPOE) {
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
                         "status", "ok",
                         "code", 200,
                         "session-information",
@@ -541,6 +546,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "ipv6-delegated-prefix", ipv6pd,
                         "ipv6-dns1", ipv6_dns1,
                         "ipv6-dns2", ipv6_dns2,
+                        "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
                         "dhcpv6-dns1", dhcpv6_dns1,
                         "dhcpv6-dns2", dhcpv6_dns2,
                         "tx-packets", session->stats.packets_tx,
@@ -553,10 +559,18 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             if(session->dhcp_lease_timestamp.tv_sec && now.tv_sec > session->dhcp_lease_timestamp.tv_sec) {
                 seconds = now.tv_sec - session->dhcp_lease_timestamp.tv_sec;
             }
-            if(seconds <= session->dhcp_lease_time) lease_expire = session->dhcp_lease_time - seconds;
-            if(seconds <= session->dhcp_t1) lease_expire_t1 = session->dhcp_t1 - seconds;
-            if(seconds <= session->dhcp_t2) lease_expire_t2 = session->dhcp_t2 - seconds;
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si ss* ss* si si si so*}}",
+            if(seconds <= session->dhcp_lease_time) dhcp_lease_expire = session->dhcp_lease_time - seconds;
+            if(seconds <= session->dhcp_t1) dhcp_lease_expire_t1 = session->dhcp_t1 - seconds;
+            if(seconds <= session->dhcp_t2) dhcp_lease_expire_t2 = session->dhcp_t2 - seconds;
+
+            if(session->dhcpv6_lease_timestamp.tv_sec && now.tv_sec > session->dhcpv6_lease_timestamp.tv_sec) {
+                seconds = now.tv_sec - session->dhcpv6_lease_timestamp.tv_sec;
+            }
+            if(seconds <= session->dhcpv6_lease_time) dhcpv6_lease_expire = session->dhcpv6_lease_time - seconds;
+            if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
+            if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
+
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* si si si so*}}",
                         "status", "ok",
                         "code", 200,
                         "session-information",
@@ -581,15 +595,30 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "dhcp-state", dhcp_state_string(session->dhcp_state),
                         "dhcp-server", format_ipv4_address(&session->dhcp_server_identifier),
                         "dhcp-lease-time", session->dhcp_lease_time,
-                        "dhcp-lease-expire", lease_expire,
-                        "dhcp-lease-expire-t1", lease_expire_t1,
-                        "dhcp-lease-expire-t2", lease_expire_t2,
+                        "dhcp-lease-expire", dhcp_lease_expire,
+                        "dhcp-lease-expire-t1", dhcp_lease_expire_t1,
+                        "dhcp-lease-expire-t2", dhcp_lease_expire_t2,
+                        "dhcp-tx", session->stats.dhcp_tx,
+                        "dhcp-rx", session->stats.dhcp_rx,
                         "dhcp-tx-discover", session->stats.dhcp_tx_discover,
-                        "dhcp-tx-request", session->stats.dhcp_tx_request,
-                        "dhcp-tx-release", session->stats.dhcp_tx_release,
                         "dhcp-rx-offer", session->stats.dhcp_rx_offer,
+                        "dhcp-tx-request", session->stats.dhcp_tx_request,
                         "dhcp-rx-ack", session->stats.dhcp_rx_ack,
                         "dhcp-rx-nak", session->stats.dhcp_rx_nak,
+                        "dhcp-tx-release", session->stats.dhcp_tx_release,
+                        "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
+                        "dhcpv6-lease-time", session->dhcpv6_lease_time,
+                        "dhcpv6-lease-expire", dhcpv6_lease_expire,
+                        "dhcpv6-lease-expire-t1", dhcpv6_lease_expire_t1,
+                        "dhcpv6-lease-expire-t2", dhcpv6_lease_expire_t2,
+                        "dhcpv6-tx", session->stats.dhcpv6_tx,
+                        "dhcpv6-rx", session->stats.dhcpv6_rx,
+                        "dhcpv6-tx-solicit", session->stats.dhcpv6_tx_solicit,
+                        "dhcpv6-rx-advertise", session->stats.dhcpv6_rx_advertise,
+                        "dhcpv6-tx-request", session->stats.dhcpv6_tx_request,
+                        "dhcpv6-rx-reply", session->stats.dhcpv6_rx_reply,
+                        "dhcpv6-tx-renew", session->stats.dhcpv6_tx_renew,
+                        "dhcpv6-tx-release", session->stats.dhcpv6_tx_release,
                         "dhcpv6-dns1", dhcpv6_dns1,
                         "dhcpv6-dns2", dhcpv6_dns2,
                         "tx-packets", session->stats.packets_tx,
@@ -688,7 +717,7 @@ bbl_ctrl_session_ncp_open(bbl_session_s *session, bool ipcp) {
 }
 
 static void
-bbl_ctrl_session_ncp_close(bbl_ctx_s *ctx, bbl_session_s *session, bool ipcp) {
+bbl_ctrl_session_ncp_close(bbl_session_s *session, bool ipcp) {
     if(session->session_state == BBL_ESTABLISHED ||
        session->session_state == BBL_PPP_NETWORK) {
         if(ipcp) {
@@ -702,25 +731,18 @@ bbl_ctrl_session_ncp_close(bbl_ctx_s *ctx, bbl_session_s *session, bool ipcp) {
                 session->dns2 = 0;
                 bbl_session_tx_qnode_insert(session);
             }
-        } else {
-            /* ip6cp */
+        } else { /* ip6cp */
             if(session->ip6cp_state == BBL_PPP_OPENED) {
                 session->ip6cp_state = BBL_PPP_TERMINATE;
                 session->ip6cp_request_code = PPP_CODE_TERM_REQUEST;
                 session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+                /* Stop IPv6 */
                 session->ipv6_prefix.len = 0;
-                session->delegated_ipv6_prefix.len = 0;
                 session->icmpv6_ra_received = false;
-                session->dhcpv6_type = DHCPV6_MESSAGE_SOLICIT;
-                session->dhcpv6_ia_pd_option_len = 0;
-                if(session->dhcpv6_received) {
-                    ctx->dhcpv6_established--;
-                }
-                session->dhcpv6_received = false;
-                if(session->dhcpv6_requested) {
-                    ctx->dhcpv6_requested--;
-                }
-                session->dhcpv6_requested = false;
+                memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
+                memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
+                /* Stop DHCPv6 */
+                bbl_dhcpv6_stop(session);
                 bbl_session_tx_qnode_insert(session);
             }
         }
@@ -738,7 +760,7 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
                 if(open) {
                     bbl_ctrl_session_ncp_open(session, ipcp);
                 } else {
-                    bbl_ctrl_session_ncp_close(ctx, session, ipcp);
+                    bbl_ctrl_session_ncp_close(session, ipcp);
                 }
             } else {
                 return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
@@ -756,7 +778,7 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
                     if(open) {
                         bbl_ctrl_session_ncp_open(session, ipcp);
                     } else {
-                        bbl_ctrl_session_ncp_close(ctx, session, ipcp);
+                        bbl_ctrl_session_ncp_close(session, ipcp);
                     }
                 }
             }

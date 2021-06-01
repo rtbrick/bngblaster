@@ -417,6 +417,9 @@ typedef struct bbl_ctx_
     uint32_t sessions_terminated;
     uint32_t sessions_flapped;
 
+    uint32_t dhcp_requested;
+    uint32_t dhcp_established;
+    uint32_t dhcp_established_max;
     uint32_t dhcpv6_requested;
     uint32_t dhcpv6_established;
     uint32_t dhcpv6_established_max;
@@ -590,14 +593,17 @@ typedef struct bbl_ctx_
 
         /* DHCP */
         bool dhcp_enable;
+        bool dhcp_broadcast;
         uint16_t dhcp_timeout;
         uint8_t dhcp_tos;
         uint8_t dhcp_vlan_priority;
-        bool dhcp_broadcast;
 
         /* DHCPv6 */
         bool dhcpv6_enable;
         bool dhcpv6_rapid_commit;
+        uint16_t dhcpv6_timeout;
+        uint8_t dhcpv6_tc;
+        uint8_t dhcpv6_vlan_priority;
 
         /* IGMP */
         bool igmp_autostart;
@@ -725,6 +731,8 @@ typedef struct bbl_session_
     struct timer_ *timer_dhcp_t1;
     struct timer_ *timer_dhcp_t2;
     struct timer_ *timer_dhcpv6;
+    struct timer_ *timer_dhcpv6_t1;
+    struct timer_ *timer_dhcpv6_t2;
     struct timer_ *timer_igmp;
     struct timer_ *timer_zapping;
     struct timer_ *timer_icmpv6;
@@ -830,11 +838,15 @@ typedef struct bbl_session_
     ipv6addr_t  link_local_ipv6_address;
     ipv6_prefix ipv6_prefix;
     ipv6addr_t  ipv6_address;
+    ipv6_prefix delegated_ipv6_prefix;
+    ipv6addr_t  delegated_ipv6_address;
     ipv6addr_t  ipv6_dns1; /* DNS learned via RA */
     ipv6addr_t  ipv6_dns2; /* DNS learned via RA */
 
     /* DHCP */
     dhcp_state_t dhcp_state;
+    bool dhcp_requested;
+    bool dhcp_established;
     uint32_t dhcp_xid;
     uint32_t dhcp_address;
     uint32_t dhcp_lease_time;
@@ -850,18 +862,26 @@ typedef struct bbl_session_
     char *dhcp_domain_name;
 
     /* DHCPv6 */
-    ipv6_prefix delegated_ipv6_prefix;
-    ipv6addr_t  delegated_ipv6_address;
-    uint8_t     duid[DUID_LEN];
-    uint8_t     server_duid[DHCPV6_BUFFER];
-    uint8_t     server_duid_len;
-    bool        dhcpv6_requested;
-    bool        dhcpv6_received;
-    uint8_t     dhcpv6_type;
-    uint8_t     dhcpv6_ia_pd_option[DHCPV6_BUFFER];
-    uint8_t     dhcpv6_ia_pd_option_len;
-    ipv6addr_t  dhcpv6_dns1;
-    ipv6addr_t  dhcpv6_dns2;
+    dhcp_state_t dhcpv6_state;
+    bool dhcpv6_requested;
+    bool dhcpv6_established;
+    uint8_t dhcpv6_duid[DUID_LEN];
+    uint8_t dhcpv6_server_duid[DHCPV6_BUFFER];
+    uint8_t dhcpv6_server_duid_len;
+    ipv6addr_t dhcpv6_dns1;
+    ipv6addr_t dhcpv6_dns2;
+    uint32_t dhcpv6_xid;
+    uint32_t dhcpv6_lease_time;
+    uint32_t dhcpv6_t1;
+    uint32_t dhcpv6_t2;
+    uint32_t dhcpv6_ia_na_iaid;
+    uint32_t dhcpv6_ia_pd_iaid;
+    uint8_t dhcpv6_ia_na_option[DHCPV6_BUFFER];
+    uint8_t dhcpv6_ia_na_option_len;
+    uint8_t dhcpv6_ia_pd_option[DHCPV6_BUFFER];
+    uint8_t dhcpv6_ia_pd_option_len;
+    struct timespec dhcpv6_lease_timestamp;
+    struct timespec dhcpv6_request_timestamp;
 
     /* IGMP */
     bool     igmp_autostart;
@@ -981,6 +1001,15 @@ typedef struct bbl_session_
         uint32_t dhcp_rx_ack;
         uint32_t dhcp_rx_nak;
         uint32_t dhcp_tx_release;
+
+        uint32_t dhcpv6_tx;
+        uint32_t dhcpv6_rx;
+        uint32_t dhcpv6_tx_solicit;
+        uint32_t dhcpv6_rx_advertise;
+        uint32_t dhcpv6_tx_request;
+        uint32_t dhcpv6_rx_reply;
+        uint32_t dhcpv6_tx_renew;
+        uint32_t dhcpv6_tx_release;
 
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;

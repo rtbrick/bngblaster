@@ -90,9 +90,18 @@ protocol_error_t
 encode_dhcpv6(uint8_t *buf, uint16_t *len,
               bbl_dhcpv6_t *dhcpv6) {
 
-    *(uint32_t*)buf = dhcpv6->transaction_id;
+    /* Transaction ID */
+    *(uint32_t*)buf = htobe32(dhcpv6->xid);
     *buf = dhcpv6->type;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    /* Elapsed Time */
+    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_ELAPSED_TIME);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(sizeof(uint16_t));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    /* Client Identifier */
     if(dhcpv6->client_duid_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_CLIENTID);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -101,6 +110,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         memcpy(buf, dhcpv6->client_duid, dhcpv6->client_duid_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->client_duid_len);
     }
+    /* Server Identifier */
     if(dhcpv6->server_duid_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_SERVERID);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -109,12 +119,34 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         memcpy(buf, dhcpv6->server_duid, dhcpv6->server_duid_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->server_duid_len);
     }
+    /* Rapid Commit */
     if(dhcpv6->rapid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_RAPID_COMMIT);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = 0;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
+    /* IA_NA */
+    if(dhcpv6->ia_na_option_len) {
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(dhcpv6->ia_na_option_len);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        memcpy(buf, dhcpv6->ia_pd_option, dhcpv6->ia_na_option_len);
+        BUMP_WRITE_BUFFER(buf, len, dhcpv6->ia_na_option_len);
+    } else if(dhcpv6->ia_na_iaid) {
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(12);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint32_t*)buf = dhcpv6->ia_na_iaid;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        *(uint32_t*)buf = 0; // T1
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        *(uint32_t*)buf = 0; // T2
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+    /* IA_PD */
     if(dhcpv6->ia_pd_option_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_PD);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -122,12 +154,12 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         memcpy(buf, dhcpv6->ia_pd_option, dhcpv6->ia_pd_option_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->ia_pd_option_len);
-    } else if(dhcpv6->delegated_prefix_iaid) {
+    } else if(dhcpv6->ia_pd_iaid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_PD);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(41);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = dhcpv6->delegated_prefix_iaid;
+        *(uint32_t*)buf = dhcpv6->ia_pd_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint32_t*)buf = 0; // T1
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
@@ -141,9 +173,10 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint32_t*)buf = 0; // valid lifetime
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        memcpy(buf, dhcpv6->delegated_prefix, sizeof(ipv6_prefix));
+        memset(buf, 0x0, sizeof(ipv6_prefix));
         BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6_prefix));
     }
+    /* Option Request Option */
     if(dhcpv6->oro) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_ORO);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -152,6 +185,13 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_DNS_SERVERS);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
+    /* Vendor Class Option */
+    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_CLASS);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint32_t*)buf = htobe32(RTBRICK);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     return PROTOCOL_SUCCESS;
 }
 
@@ -1538,9 +1578,9 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     dhcpv6 = (bbl_dhcpv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcpv6_t));
     memset(dhcpv6, 0x0, sizeof(bbl_dhcpv6_t));
 
-    dhcpv6->transaction_id = be32toh(*(uint32_t*)buf);
-    dhcpv6->type = dhcpv6->transaction_id >> 24;
-    dhcpv6->transaction_id &= DHCPV6_TYPE_MASK;
+    dhcpv6->xid = be32toh(*(uint32_t*)buf);
+    dhcpv6->type = dhcpv6->xid >> 24;
+    dhcpv6->xid &= DHCPV6_TYPE_MASK;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
 
     while(len >= 4) {
@@ -1555,6 +1595,19 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
             case DHCPV6_OPTION_RAPID_COMMIT:
                 dhcpv6->rapid = true;
                 break;
+            case DHCPV6_OPTION_IA_NA:
+                if(option_len < 40) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_na_option = buf;
+                dhcpv6->ia_na_option_len = option_len;
+                option = be16toh(*(uint16_t*)(buf+12));
+                if(option == 5) {
+                    dhcpv6->ia_na_address = (ipv6addr_t*)(buf+16);
+                    dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint16_t*)(buf+32));
+                    dhcpv6->ia_na_valid_lifetime = be32toh(*(uint16_t*)(buf+36));
+                }
+                break;
             case DHCPV6_OPTION_IA_PD:
                 if(option_len < 41) {
                     return DECODE_ERROR;
@@ -1563,7 +1616,9 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 dhcpv6->ia_pd_option_len = option_len;
                 option = be16toh(*(uint16_t*)(buf+12));
                 if(option == 26) {
-                    dhcpv6->delegated_prefix = (ipv6_prefix*)(buf+24);
+                    dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint16_t*)(buf+16));
+                    dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint16_t*)(buf+20));
+                    dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+24);
                 }
                 break;
             case DHCPV6_OPTION_SERVERID:

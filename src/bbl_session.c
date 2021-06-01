@@ -61,7 +61,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
         if(session->session_state == BBL_ESTABLISHED && ctx->sessions_established) {
             /* Decrement sessions established if old state is established. */
             ctx->sessions_established--;
-            if(session->dhcpv6_received) {
+            if(session->dhcpv6_established) {
                 ctx->dhcpv6_established--;
             }
             if(session->dhcpv6_requested) {
@@ -73,6 +73,9 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             ctx->sessions_established++;
             if(ctx->sessions_established > ctx->sessions_established_max) ctx->sessions_established_max = ctx->sessions_established;
             if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
+            if(ctx->sessions_established == ctx->sessions) {
+                LOG(NORMAL, "ALL SESSIONS ESTABLISHED\n");
+            }
         }
         if(state == BBL_PPP_TERMINATING) {
             session->ipcp_state = BBL_PPP_CLOSED;
@@ -135,12 +138,15 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->ipv6_prefix.len = 0;
                         session->delegated_ipv6_prefix.len = 0;
                         session->icmpv6_ra_received = false;
+                        session->dhcpv6_requested = false;
+                        session->dhcpv6_established = false;
+                        session->dhcpv6_state = BBL_DHCP_INIT;
+                        session->dhcpv6_ia_na_option_len = 0;
+                        session->dhcpv6_ia_pd_option_len = 0;
+                        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+                        memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
                         memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
                         memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-                        session->dhcpv6_requested = false;
-                        session->dhcpv6_received = false;
-                        session->dhcpv6_type = DHCPV6_MESSAGE_SOLICIT;
-                        session->dhcpv6_ia_pd_option_len = 0;
                         memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
                         memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
                         session->zapping_joined_group = NULL;
@@ -248,6 +254,8 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
 void
 bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
 {
+    session_state_t new_state = BBL_TERMINATED;
+
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         switch(session->session_state) {
             case BBL_IDLE:
@@ -275,16 +283,28 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
         }
     } else {
         if(session->dhcp_state > BBL_DHCP_SELECTING) {
-            bbl_session_update_state(ctx, session, BBL_TERMINATING);
-            session->dhcp_state = BBL_DHCP_RELEASE;
-            session->dhcp_xid = rand();
-            session->dhcp_request_timestamp.tv_sec = 0;
-            session->dhcp_request_timestamp.tv_nsec = 0;
-            session->send_requests |= BBL_SEND_DHCP_REQUEST;
-            bbl_session_tx_qnode_insert(session);
-        } else {
-            bbl_session_update_state(ctx, session, BBL_TERMINATED);
+            new_state = BBL_TERMINATING;
+            if(session->dhcp_state != BBL_DHCP_RELEASE) {
+                session->dhcp_state = BBL_DHCP_RELEASE;
+                session->dhcp_xid = rand();
+                session->dhcp_request_timestamp.tv_sec = 0;
+                session->dhcp_request_timestamp.tv_nsec = 0;
+                session->send_requests |= BBL_SEND_DHCP_REQUEST;
+                bbl_session_tx_qnode_insert(session);
+            }
         }
+        if(session->dhcpv6_state > BBL_DHCP_SELECTING) {
+            new_state = BBL_TERMINATING;
+            if(session->dhcpv6_state != BBL_DHCP_RELEASE) {
+                session->dhcpv6_state = BBL_DHCP_RELEASE;
+                session->dhcpv6_xid = rand() & 0xffffff;
+                session->dhcpv6_request_timestamp.tv_sec = 0;
+                session->dhcpv6_request_timestamp.tv_nsec = 0;
+                session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+            }
+            bbl_session_tx_qnode_insert(session);
+        }
+        bbl_session_update_state(ctx, session, new_state);
     }
 }
 
@@ -389,10 +409,22 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->client_mac[4] = i>>8;
         session->client_mac[5] = i;
 
+        /* Init link-local IPv6 address */
+        session->link_local_ipv6_address[0] = 0xfe;
+        session->link_local_ipv6_address[1] = 0x80;
+        session->link_local_ipv6_address[8] = 0xff;
+        session->link_local_ipv6_address[9] = 0xff;
+        session->link_local_ipv6_address[10] = 0xff;
+        session->link_local_ipv6_address[11] = 0xff;
+        session->link_local_ipv6_address[12] = 0xff;        
+        session->link_local_ipv6_address[13] = session->client_mac[3];
+        session->link_local_ipv6_address[14] = session->client_mac[4];
+        session->link_local_ipv6_address[15] = session->client_mac[5];
+
         /* Set DHCPv6 DUID */
-        session->duid[1] = 3;
-        session->duid[3] = 1;
-        memcpy(&session->duid[4], session->client_mac, ETH_ADDR_LEN);
+        session->dhcpv6_duid[1] = 3;
+        session->dhcpv6_duid[3] = 1;
+        memcpy(&session->dhcpv6_duid[4], session->client_mac, ETH_ADDR_LEN);
 
         /* Populate session identifiaction attributes */
         snprintf(snum1, 6, "%d", i);
