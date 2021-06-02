@@ -1187,12 +1187,9 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     for(i = 0; i < ctx->sessions; i++) {
         session = ctx->session_list[i];
         if(session && session->session_state != BBL_ESTABLISHED) {
-            json_session = json_pack("{si ss sb sb sb}",
+            json_session = json_pack("{si ss}",
                                      "session-id", session->session_id,
-                                     "session-state", session_state_string(session->session_state),
-                                     "icmpv6-ra-received", session->icmpv6_ra_received,
-                                     "arp-resolved", session->arp_resolved
-                                     );
+                                     "session-state", session_state_string(session->session_state));
             json_array_append(json_sessions, json_session);
         }
     }

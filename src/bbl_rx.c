@@ -442,6 +442,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
         if(!session->icmpv6_ra_received) {
             /* The first RA received ... */
+            session->icmpv6_ra_received = true;
             if(icmpv6->prefix.len) {
                 memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
@@ -464,7 +465,6 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                 bbl_dhcpv6_start(session);
             }
         }
-        session->icmpv6_ra_received = true;
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         session->send_requests |= BBL_SEND_ICMPV6_NA;
     }
