@@ -595,6 +595,8 @@ typedef struct bbl_ctx_
         bool dhcp_enable;
         bool dhcp_broadcast;
         uint16_t dhcp_timeout;
+        uint8_t dhcp_retry;
+        uint8_t dhcp_release_retry;
         uint8_t dhcp_tos;
         uint8_t dhcp_vlan_priority;
 
@@ -602,6 +604,7 @@ typedef struct bbl_ctx_
         bool dhcpv6_enable;
         bool dhcpv6_rapid_commit;
         uint16_t dhcpv6_timeout;
+        uint8_t dhcpv6_retry;
         uint8_t dhcpv6_tc;
         uint8_t dhcpv6_vlan_priority;
 
@@ -847,6 +850,7 @@ typedef struct bbl_session_
     dhcp_state_t dhcp_state;
     bool dhcp_requested;
     bool dhcp_established;
+    uint8_t  dhcp_retry;
     uint32_t dhcp_xid;
     uint32_t dhcp_address;
     uint32_t dhcp_lease_time;
@@ -865,6 +869,7 @@ typedef struct bbl_session_
     dhcp_state_t dhcpv6_state;
     bool dhcpv6_requested;
     bool dhcpv6_established;
+    uint8_t dhcpv6_retry;
     uint8_t dhcpv6_duid[DUID_LEN];
     uint8_t dhcpv6_server_duid[DHCPV6_BUFFER];
     uint8_t dhcpv6_server_duid_len;

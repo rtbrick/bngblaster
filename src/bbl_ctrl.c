@@ -1172,6 +1172,44 @@ bbl_ctrl_stream_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t
     return bbl_ctrl_stream_traffic(fd, ctx, session_id, false);
 }
 
+ssize_t
+bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+
+    ssize_t result = 0;
+    json_t *root, *json_session, *json_sessions;
+
+    bbl_session_s *session;
+    uint32_t i;
+
+    json_sessions = json_array();
+
+    /* Iterate over all sessions */
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session && session->session_state != BBL_ESTABLISHED) {
+            json_session = json_pack("{si ss sb sb sb}",
+                                     "session-id", session->session_id,
+                                     "session-state", session_state_string(session->session_state),
+                                     "icmpv6-ra-received", session->icmpv6_ra_received,
+                                     "arp-resolved", session->arp_resolved
+                                     );
+            json_array_append(json_sessions, json_session);
+        }
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "session-pending", json_sessions);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(json_sessions);
+    }
+    return result;
+}
 
 struct action {
     char *name;
@@ -1206,6 +1244,7 @@ struct action actions[] = {
     {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
     {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
     {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
+    {"sessions-pending", bbl_ctrl_sessions_pending},
     {NULL, NULL},
 };
 

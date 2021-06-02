@@ -4,8 +4,6 @@ The BNG Blaster is able to emulate IP over Ethernet (IPoE)
 subscribers with static and dynamic address assignment
 supporting 1:1 and N:1 VLAN mode.
 
-**INFO**: Currently there is only IPv4 support for IPoE.
-
 ## Static Addresses
 
 Static addresses means that the IP address and gateway is assigned

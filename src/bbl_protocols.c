@@ -1601,11 +1601,14 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 }
                 dhcpv6->ia_na_option = buf;
                 dhcpv6->ia_na_option_len = option_len;
+                dhcpv6->ia_na_iaid = *(uint32_t*)buf;
+                dhcpv6->ia_na_t1 = be32toh(*(uint32_t*)(buf+4));
+                dhcpv6->ia_na_t2 = be32toh(*(uint32_t*)(buf+8));
                 option = be16toh(*(uint16_t*)(buf+12));
                 if(option == 5) {
                     dhcpv6->ia_na_address = (ipv6addr_t*)(buf+16);
-                    dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint16_t*)(buf+32));
-                    dhcpv6->ia_na_valid_lifetime = be32toh(*(uint16_t*)(buf+36));
+                    dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+32));
+                    dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+36));
                 }
                 break;
             case DHCPV6_OPTION_IA_PD:
@@ -1614,10 +1617,13 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 }
                 dhcpv6->ia_pd_option = buf;
                 dhcpv6->ia_pd_option_len = option_len;
+                dhcpv6->ia_pd_iaid = *(uint32_t*)buf;
+                dhcpv6->ia_pd_t1 = be32toh(*(uint32_t*)(buf+4));
+                dhcpv6->ia_pd_t2 = be32toh(*(uint32_t*)(buf+8));
                 option = be16toh(*(uint16_t*)(buf+12));
                 if(option == 26) {
-                    dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint16_t*)(buf+16));
-                    dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint16_t*)(buf+20));
+                    dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
+                    dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
                     dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+24);
                 }
                 break;

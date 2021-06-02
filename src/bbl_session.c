@@ -58,16 +58,30 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
 {
     if(session->session_state != state) {
         /* State has changed ... */
-        if(session->session_state == BBL_ESTABLISHED && ctx->sessions_established) {
+        if(session->session_state == BBL_ESTABLISHED) {
             /* Decrement sessions established if old state is established. */
-            ctx->sessions_established--;
+            if(ctx->sessions_established) {
+                ctx->sessions_established--;
+            }
+            if(session->dhcp_established) {
+                session->dhcp_established = false;
+                ctx->dhcp_established--;
+            }
+            if(session->dhcp_requested) {
+                session->dhcp_requested = false;
+                ctx->dhcp_requested--;
+            }
             if(session->dhcpv6_established) {
+                session->dhcpv6_established = false;
                 ctx->dhcpv6_established--;
             }
             if(session->dhcpv6_requested) {
+                session->dhcpv6_requested = false;
                 ctx->dhcpv6_requested--;
             }
-        } else if(state == BBL_ESTABLISHED) {
+        } 
+                
+        if(state == BBL_ESTABLISHED) {
             /* Increment sessions established and decrement outstanding
              * if new state is established. */
             ctx->sessions_established++;
@@ -76,12 +90,10 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             if(ctx->sessions_established == ctx->sessions) {
                 LOG(NORMAL, "ALL SESSIONS ESTABLISHED\n");
             }
-        }
-        if(state == BBL_PPP_TERMINATING) {
+        } else if(state == BBL_PPP_TERMINATING) {
             session->ipcp_state = BBL_PPP_CLOSED;
             session->ip6cp_state = BBL_PPP_CLOSED;
-        }
-        if(state == BBL_TERMINATED) {
+        } else if(state == BBL_TERMINATED) {
             /* Stop all session tiemrs */
             timer_del(session->timer_arp);
             timer_del(session->timer_padi);
@@ -95,6 +107,8 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             timer_del(session->timer_dhcp_t1);
             timer_del(session->timer_dhcp_t2);
             timer_del(session->timer_dhcpv6);
+            timer_del(session->timer_dhcpv6_t1);
+            timer_del(session->timer_dhcpv6_t2);
             timer_del(session->timer_igmp);
             timer_del(session->timer_zapping);
             timer_del(session->timer_icmpv6);
@@ -289,6 +303,7 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
                 session->dhcp_xid = rand();
                 session->dhcp_request_timestamp.tv_sec = 0;
                 session->dhcp_request_timestamp.tv_nsec = 0;
+                session->dhcp_retry = 0;
                 session->send_requests |= BBL_SEND_DHCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
             }
@@ -300,9 +315,10 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
                 session->dhcpv6_xid = rand() & 0xffffff;
                 session->dhcpv6_request_timestamp.tv_sec = 0;
                 session->dhcpv6_request_timestamp.tv_nsec = 0;
+                session->dhcpv6_retry = 0;
                 session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+                bbl_session_tx_qnode_insert(session);
             }
-            bbl_session_tx_qnode_insert(session);
         }
         bbl_session_update_state(ctx, session, new_state);
     }

@@ -14,6 +14,8 @@ https://github.com/rtbrick/bngblaster/releases
 sudo dpkg -i <package>
 ```
 
+This command installs the BNG Blaster to `/usr/sbin/bngblaster`. 
+
 ## Build from Sources
 
 ### Dependencies
@@ -72,6 +74,16 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw
 Then BNG Blaster can be installed using make install target.
 ```
 sudo make install
+```
+
+This command installs the BNG Blaster to `/usr/local/sbin/bngblaster`. 
+
+An existing version installed from debian package in `/usr/sbin` is 
+not automatically replaced or removed here and should be deleted manually
+before install. Otherwise it might be possible that two versions remain
+in parallel. 
+```
+sudo rm /usr/sbin/bngblaster
 ```
 
 ### Build and Run Unit Tests
