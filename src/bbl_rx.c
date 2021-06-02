@@ -1526,19 +1526,19 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     ctx = interface->ctx;
 
-    if(*eth->dst & 0x01) {
+    if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
+        /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
+        session_id = bbl_rx_session_id_from_broadcast(eth, interface);
+        if(!session_id) {
+            return bbl_rx_handler_access_broadcast(eth, interface);
+        }
+    } else if(*eth->dst & 0x01) {
         /* Ethernet frames with a value of 1 in the least-significant bit 
          * of the first octet of the destination MAC address are treated 
          * as multicast frames- */
         session_id = bbl_rx_session_id_from_vlan(eth, interface);
         if(!session_id) {
             return bbl_rx_handler_access_multicast(eth, interface);
-        }
-    } else if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
-        /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
-        session_id = bbl_rx_session_id_from_broadcast(eth, interface);
-        if(!session_id) {
-            return bbl_rx_handler_access_broadcast(eth, interface);
         }
     } else {
         /* The session-id is mapped into the last 3 bytes of
