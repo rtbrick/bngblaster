@@ -247,9 +247,9 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    IP6CP  TX: %10u RX: %10u\n", access_if->stats.ip6cp_tx, access_if->stats.ip6cp_rx);
             printf("    IGMP   TX: %10u RX: %10u\n", access_if->stats.igmp_tx, access_if->stats.igmp_rx);
             printf("    ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
-            printf("    ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
-            printf("    DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
             printf("    DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
+            printf("    DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+            printf("    ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
             printf("    IPv4 Fragmented       RX: %10u\n", access_if->stats.ipv4_fragmented_rx);
             printf("\n  Access Interface Protocol Timeout Stats:\n");
             printf("    LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
@@ -258,8 +258,9 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    IP6CP Request:    %10u\n", access_if->stats.ip6cp_timeout);
             printf("    PAP:              %10u\n", access_if->stats.pap_timeout);
             printf("    CHAP:             %10u\n", access_if->stats.chap_timeout);
-            printf("    ICMPv6 RS:        %10u\n", access_if->stats.dhcpv6_timeout);
+            printf("    DHCPv6 Request:   %10u\n", access_if->stats.dhcp_timeout);
             printf("    DHCPv6 Request:   %10u\n", access_if->stats.dhcpv6_timeout);
+            printf("    ICMPv6 RS:        %10u\n", access_if->stats.icmpv6_rs_timeout);
         }
     }
 
@@ -341,6 +342,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     json_object_set(jobj, "setup-rate-cps-min", json_real(ctx->stats.cps_min));
     json_object_set(jobj, "setup-rate-cps-avg", json_real(ctx->stats.cps_avg));
     json_object_set(jobj, "setup-rate-cps-max", json_real(ctx->stats.cps_max));
+    json_object_set(jobj, "dhcp-sessions-established", json_integer(ctx->dhcp_established_max));
     json_object_set(jobj, "dhcpv6-sessions-established", json_integer(ctx->dhcpv6_established_max));
 
     jobj_array = json_array();
@@ -440,10 +442,12 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_protocols, "igmp-rx", json_integer(access_if->stats.igmp_rx));
             json_object_set(jobj_protocols, "icmp-tx", json_integer(access_if->stats.icmp_tx));
             json_object_set(jobj_protocols, "icmp-rx", json_integer(access_if->stats.icmp_rx));
-            json_object_set(jobj_protocols, "icmpv6-tx", json_integer(access_if->stats.icmpv6_tx));
-            json_object_set(jobj_protocols, "icmpv6-rx", json_integer(access_if->stats.icmpv6_rx));
+            json_object_set(jobj_protocols, "dhcp-tx", json_integer(access_if->stats.dhcp_tx));
+            json_object_set(jobj_protocols, "dhcp-rx", json_integer(access_if->stats.dhcp_rx));
             json_object_set(jobj_protocols, "dhcpv6-tx", json_integer(access_if->stats.dhcpv6_tx));
             json_object_set(jobj_protocols, "dhcpv6-rx", json_integer(access_if->stats.dhcpv6_rx));
+            json_object_set(jobj_protocols, "icmpv6-tx", json_integer(access_if->stats.icmpv6_tx));
+            json_object_set(jobj_protocols, "icmpv6-rx", json_integer(access_if->stats.icmpv6_rx));
             json_object_set(jobj_protocols, "ipv4-fragmented-rx", json_integer(access_if->stats.ipv4_fragmented_rx));
             json_object_set(jobj_protocols, "lcp-echo-timeout", json_integer(access_if->stats.lcp_echo_timeout));
             json_object_set(jobj_protocols, "lcp-request-timeout", json_integer(access_if->stats.lcp_timeout));
@@ -451,8 +455,9 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_protocols, "ip6cp-request-timeout", json_integer(access_if->stats.ip6cp_timeout));
             json_object_set(jobj_protocols, "pap-timeout", json_integer(access_if->stats.pap_timeout));
             json_object_set(jobj_protocols, "chap-timeout", json_integer(access_if->stats.chap_timeout));
-            json_object_set(jobj_protocols, "icmpv6-rs-timeout", json_integer(access_if->stats.dhcpv6_timeout));
+            json_object_set(jobj_protocols, "dhcp-timeout", json_integer(access_if->stats.dhcp_timeout));
             json_object_set(jobj_protocols, "dhcpv6-timeout", json_integer(access_if->stats.dhcpv6_timeout));
+            json_object_set(jobj_protocols, "icmpv6-rs-timeout", json_integer(access_if->stats.dhcpv6_timeout));
             json_object_set(jobj_access_if, "protocol-stats", jobj_protocols);
             json_array_append(jobj_array, jobj_access_if);
         }

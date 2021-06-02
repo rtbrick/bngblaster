@@ -720,6 +720,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.dhcp_timeout = json_number_value(value);
         }
+        value = json_object_get(section, "retry");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_retry = json_number_value(value);
+        }
+        value = json_object_get(section, "release-retry");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_release_retry = json_number_value(value);
+        }
         value = json_object_get(section, "tos");
         if (json_is_number(value)) {
             ctx->config.dhcp_tos = json_number_value(value);
@@ -744,6 +752,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "rapid-commit");
         if (json_is_boolean(value)) {
             ctx->config.dhcpv6_rapid_commit = json_boolean_value(value);
+        }
+        value = json_object_get(section, "timeout");
+        if (json_is_number(value)) {
+            ctx->config.dhcpv6_timeout = json_number_value(value);
+        }
+        value = json_object_get(section, "retry");
+        if (json_is_number(value)) {
+            ctx->config.dhcpv6_retry = json_number_value(value);
         }
     }
 
@@ -1163,9 +1179,12 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.ip6cp_conf_request_retry = 10;
     ctx->config.dhcp_enable = false;
     ctx->config.dhcp_timeout = 5;
+    ctx->config.dhcp_retry = 10;
+    ctx->config.dhcp_release_retry = 3;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;
     ctx->config.dhcpv6_timeout = 5;
+    ctx->config.dhcpv6_retry = 10;
     ctx->config.igmp_autostart = true;
     ctx->config.igmp_version = IGMP_VERSION_3;
     ctx->config.igmp_start_delay = 1;

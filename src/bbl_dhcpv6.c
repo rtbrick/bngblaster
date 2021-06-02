@@ -11,6 +11,7 @@
 #include "bbl_dhcpv6.h"
 #include "bbl_session.h"
 #include "bbl_session_traffic.h"
+#include "bbl_rx.h"
 
 /**
  * bbl_dhcpv6_stop
@@ -92,7 +93,7 @@ bbl_dhcpv6_start(bbl_session_s *session) {
             session->dhcpv6_ia_pd_iaid = session->dhcpv6_ia_na_iaid + 1;
         }
         if(!session->dhcpv6_ia_pd_iaid) session->dhcpv6_ia_na_iaid = 2;
-
+        session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
 
         LOG(DHCP, "DHCPv6 (ID: %u) Start DHCPv6\n", session->session_id);
@@ -121,6 +122,7 @@ bbl_dhcpv6_t1(timer_s *timer) {
         session->dhcpv6_request_timestamp.tv_sec = 0;
         session->dhcpv6_request_timestamp.tv_nsec = 0;
         session->dhcpv6_state = BBL_DHCP_RENEWING;
+        session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
         bbl_session_tx_qnode_insert(session);
     }
@@ -184,6 +186,11 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
         } 
         /* Establish DHCPv6 */
         if(!session->dhcpv6_established) {
+            session->dhcpv6_established = true;
+            ctx->dhcpv6_established++;
+            if(ctx->dhcpv6_established > ctx->dhcpv6_established_max) {
+                ctx->dhcpv6_established_max = ctx->dhcpv6_established;
+            }
             if(dhcpv6->dns1) {
                 memcpy(&session->dhcpv6_dns1, dhcpv6->dns1, IPV6_ADDR_LEN);
                 if(dhcpv6->dns2) {
@@ -212,15 +219,10 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
             }
-            ctx->dhcpv6_established++;
-            if(ctx->dhcpv6_established > ctx->dhcpv6_established_max) {
-                ctx->dhcpv6_established_max = ctx->dhcpv6_established;
-            }
         }
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
         session->dhcpv6_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
         session->dhcpv6_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
-        session->dhcpv6_established = true;
         session->dhcpv6_state = BBL_DHCP_BOUND;
         if(session->dhcpv6_t1) {
             timer_add(&ctx->timer_root, &session->timer_dhcpv6_t1, "DHCPv6 T1", session->dhcpv6_t1, 0, session, &bbl_dhcpv6_t1);
@@ -228,13 +230,14 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
         if(session->dhcpv6_t2) {
             timer_add(&ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", session->dhcpv6_t2, 0, session, &bbl_dhcpv6_t2);
         }
-        session->icmpv6_ra_received = false;
+        bbl_rx_established_ipoe(eth, interface, session);
         session->send_requests |= BBL_SEND_ICMPV6_RS;
         bbl_session_tx_qnode_insert(session);
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Advertise received\n", session->session_id);
         session->stats.dhcpv6_rx_advertise++;
         session->dhcpv6_state = BBL_DHCP_REQUESTING;
+        session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
         bbl_session_tx_qnode_insert(session);
     }

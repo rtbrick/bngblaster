@@ -342,8 +342,6 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "  Rx Multicast Packets      %10lu |%7lu PPS %10lu Loss\n",
                 access_if->stats.mc_rx, access_if->stats.rate_mc_rx.avg,
                 access_if->stats.mc_loss);
-
-
         }
     } else if(g_view_selected == UI_VIEW_ACCESS_IF_STATS) {
         if(access_if) {
@@ -367,9 +365,9 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "  IP6CP  TX: %10u RX: %10u\n", access_if->stats.ip6cp_tx, access_if->stats.ip6cp_rx);
             wprintw(stats_win, "  IGMP   TX: %10u RX: %10u\n", access_if->stats.igmp_tx, access_if->stats.igmp_rx);
             wprintw(stats_win, "  ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
-            wprintw(stats_win, "  ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
-            wprintw(stats_win, "  DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
             wprintw(stats_win, "  DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
+            wprintw(stats_win, "  DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
+            wprintw(stats_win, "  ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
 
             wprintw(stats_win, "\nTimeout Stats\n");
             wprintw(stats_win, "  LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
@@ -378,8 +376,9 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "  IP6CP Request:    %10u\n", access_if->stats.ip6cp_timeout);
             wprintw(stats_win, "  PAP:              %10u\n", access_if->stats.pap_timeout);
             wprintw(stats_win, "  CHAP:             %10u\n", access_if->stats.chap_timeout);
-            wprintw(stats_win, "  ICMPv6 RS:        %10u\n", access_if->stats.dhcpv6_timeout);
+            wprintw(stats_win, "  DHCP Request:     %10u\n", access_if->stats.dhcp_timeout);
             wprintw(stats_win, "  DHCPv6 Request:   %10u\n", access_if->stats.dhcpv6_timeout);
+            wprintw(stats_win, "  ICMPv6 RS:        %10u\n", access_if->stats.icmpv6_rs_timeout);
         } else {
             wprintw(stats_win, "\nAccess Interface Protocol Stats");
         }

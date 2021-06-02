@@ -399,7 +399,7 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
 
     if(session->access_config->ipv4_enable) {
         if(!session->arp_resolved || 
-           (session->access_config->dhcp_enable && session->dhcp_state != BBL_DHCP_BOUND)) {
+           (session->access_config->dhcp_enable && session->dhcp_state < BBL_DHCP_BOUND)) {
             ipv4 = false;
         }
     }

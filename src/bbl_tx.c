@@ -10,6 +10,8 @@
 
 #include "bbl.h"
 #include "bbl_session.h"
+#include "bbl_dhcp.h"
+#include "bbl_dhcpv6.h"
 
 protocol_error_t
 bbl_encode_packet_session_ipv4 (bbl_session_s *session)
@@ -610,13 +612,28 @@ bbl_dhcpv6_timeout (timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     session = timer->data;
     interface = session->interface;
+    ctx = interface->ctx;
+
     if(!(session->dhcpv6_state == BBL_DHCP_BOUND || 
          session->dhcpv6_state == BBL_DHCP_INIT)) {
         interface->stats.dhcpv6_timeout++;
-        session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
-        bbl_session_tx_qnode_insert(session);
+        if(session->dhcpv6_retry < ctx->config.dhcpv6_retry) {
+            session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
+                session->dhcpv6_state = session->dhcpv6_state == BBL_DHCP_INIT;
+                if(session->session_state == BBL_TERMINATING) {
+                    bbl_session_clear(ctx, session);
+                }
+            } else {
+                bbl_dhcpv6_restart(session);
+            }
+        }
     }
 }
 
@@ -638,7 +655,6 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
 
     interface = session->interface;
     ctx = interface->ctx;
-    interface->stats.dhcpv6_tx++;
 
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
@@ -714,6 +730,9 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         default:
             return WRONG_PROTOCOL_STATE;
     }
+
+    session->dhcpv6_retry++;
+
     timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
 
     session->stats.dhcpv6_tx++;
@@ -1229,16 +1248,20 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
 void
 bbl_dhcp_timeout (timer_s *timer)
 {
-    bbl_session_s *session = timer->data;
-
-    if(session->dhcp_state == BBL_DHCP_INIT ||
-       session->dhcp_state == BBL_DHCP_BOUND) {
-        /* Wrong state */
-        return;
+    bbl_session_s *session;
+    bbl_interface_s *interface;
+    session = timer->data;
+    interface = session->interface;
+    if(!(session->dhcp_state == BBL_DHCP_INIT ||
+         session->dhcp_state == BBL_DHCP_BOUND)) {
+        interface->stats.dhcp_timeout++;
+        if(session->dhcp_retry < interface->ctx->config.dhcp_retry) {
+            session->send_requests |= BBL_SEND_DHCP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            bbl_dhcp_restart(session);
+        }
     }
-
-    session->send_requests = BBL_SEND_DHCP_REQUEST;
-    bbl_session_tx_qnode_insert(session);
 }
 
 protocol_error_t
@@ -1358,19 +1381,28 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
         case BBL_DHCP_RELEASE:
             dhcp.type = DHCP_MESSAGE_RELEASE;
             session->stats.dhcp_tx_release++;
-            session->dhcp_state = BBL_DHCP_INIT;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
-            if(session->session_state == BBL_TERMINATING) {
-                bbl_session_clear(ctx, session);
-            }
             break;
         default:
             return IGNORED;
     }
 
-    timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+    session->dhcp_retry++;
+    if(dhcp.type == DHCP_MESSAGE_RELEASE) {
+        if(session->dhcp_retry < ctx->config.dhcp_release_retry) {
+            timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 1, 0, session, &bbl_dhcp_timeout);
+        } else {
+            session->dhcp_state = BBL_DHCP_INIT;
+            if(session->session_state == BBL_TERMINATING) {
+                bbl_session_clear(ctx, session);
+            }
+        }
+    } else {
+        timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+    }
+
     session->stats.dhcp_tx++;
     interface->stats.dhcp_tx++;
 
