@@ -218,6 +218,9 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
                 session->delegated_ipv6_address[15] = 0x01;
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
+                if(session->access_type == ACCESS_TYPE_PPPOE && session->l2tp == false) {
+                    bbl_session_traffic_start_ipv6pd(ctx, session);
+                }
             }
         }
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
