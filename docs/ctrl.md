@@ -60,44 +60,49 @@ the actual command which is invoked with optional arguments.
         "lcp-state": "Opened",
         "ipcp-state": "Opened",
         "ip6cp-state": "Opened",
-        "ipv4-address": "10.10.10.1",
+        "ipv4-address": "10.100.128.0",
         "ipv4-dns1": "10.0.0.3",
         "ipv4-dns2": "10.0.0.4",
         "ipv6-prefix": "fc66:1000:1::/64",
         "ipv6-delegated-prefix": "fc66:2000::/56",
         "ipv6-dns1": "fc66::3",
         "ipv6-dns2": "fc66::4",
+        "dhcpv6-state": "Bound",
         "dhcpv6-dns1": "fc66::3",
         "dhcpv6-dns2": "fc66::4",
+        "tx-packets": 30,
+        "rx-packets": 26,
+        "rx-fragmented-packets": 0,
         "session-traffic": {
-            "first-seq-rx-access-ipv4": 1,
-            "first-seq-rx-access-ipv6": 1,
+            "total-flows": 6,
+            "verified-flows": 6,
+            "first-seq-rx-access-ipv4": 2,
+            "first-seq-rx-access-ipv6": 2,
             "first-seq-rx-access-ipv6pd": 1,
-            "first-seq-rx-network-ipv4": 1,
-            "first-seq-rx-network-ipv6": 1,
+            "first-seq-rx-network-ipv4": 2,
+            "first-seq-rx-network-ipv6": 2,
             "first-seq-rx-network-ipv6pd": 1,
-            "access-tx-session-packets": 28,
-            "access-rx-session-packets": 28,
+            "access-tx-session-packets": 5,
+            "access-rx-session-packets": 4,
             "access-rx-session-packets-loss": 0,
-            "network-tx-session-packets": 28,
-            "network-rx-session-packets": 28,
+            "network-tx-session-packets": 5,
+            "network-rx-session-packets": 4,
             "network-rx-session-packets-loss": 0,
-            "access-tx-session-packets-ipv6": 28,
-            "access-rx-session-packets-ipv6": 28,
+            "access-tx-session-packets-ipv6": 5,
+            "access-rx-session-packets-ipv6": 4,
             "access-rx-session-packets-ipv6-loss": 0,
-            "network-tx-session-packets-ipv6": 28,
-            "network-rx-session-packets-ipv6": 28,
+            "network-tx-session-packets-ipv6": 5,
+            "network-rx-session-packets-ipv6": 4,
             "network-rx-session-packets-ipv6-loss": 0,
-            "access-tx-session-packets-ipv6pd": 28,
-            "access-rx-session-packets-ipv6pd": 28,
+            "access-tx-session-packets-ipv6pd": 4,
+            "access-rx-session-packets-ipv6pd": 4,
             "access-rx-session-packets-ipv6pd-loss": 0,
-            "network-tx-session-packets-ipv6pd": 28,
-            "network-rx-session-packets-ipv6pd": 28,
+            "network-tx-session-packets-ipv6pd": 4,
+            "network-rx-session-packets-ipv6pd": 4,
             "network-rx-session-packets-ipv6pd-loss": 0
         }
     }
 }
-
 ```
 
 The response contains at least the status element with the value `ok` and status code `2xx`
@@ -130,6 +135,7 @@ Attribute | Description
 `multicast-traffic-start` | Start sending multicast traffic from network interface
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
 `li-flows` | List all LI flows with detailed statistics
+`sessions-pending` | List all sessions not established
 
 ### Session Commands
 
@@ -156,10 +162,10 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 --------- | ----------- | ------------------- | ------------------
 `session-info` | Session information | |
 `terminate` | Terminate session | |
-`ipcp-open`| Open IPCP | |
-`ipcp-close` |Close IPCP | |
+`ipcp-open` | Open IPCP | |
+`ipcp-close` | Close IPCP | |
 `ip6cp-open`| Open IP6CP | |
-`ip6cp-close` |Close IP6CP | |
+`ip6cp-close` | Close IP6CP | |
 `session-traffic-enabled` | Enable session traffic | |
 `session-traffic-disabled` | Disable session traffic | |
 `session-streams` | Session traffic stream information | |
