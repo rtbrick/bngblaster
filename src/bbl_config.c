@@ -724,6 +724,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.dhcp_retry = json_number_value(value);
         }
+        value = json_object_get(section, "release-interval");
+        if (json_is_number(value)) {
+            ctx->config.dhcp_release_interval = json_number_value(value);
+        }
         value = json_object_get(section, "release-retry");
         if (json_is_number(value)) {
             ctx->config.dhcp_release_retry = json_number_value(value);
@@ -1180,6 +1184,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.dhcp_enable = false;
     ctx->config.dhcp_timeout = 5;
     ctx->config.dhcp_retry = 10;
+    ctx->config.dhcp_release_interval = 3;
     ctx->config.dhcp_release_retry = 3;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;

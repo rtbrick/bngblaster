@@ -1392,7 +1392,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     session->dhcp_retry++;
     if(dhcp.type == DHCP_MESSAGE_RELEASE) {
         if(session->dhcp_retry < ctx->config.dhcp_release_retry) {
-            timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 1, 0, session, &bbl_dhcp_timeout);
+            timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_release_interval, 0, session, &bbl_dhcp_timeout);
         } else {
             session->dhcp_state = BBL_DHCP_INIT;
             if(session->session_state == BBL_TERMINATING) {

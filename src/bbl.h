@@ -596,6 +596,7 @@ typedef struct bbl_ctx_
         bool dhcp_broadcast;
         uint16_t dhcp_timeout;
         uint8_t dhcp_retry;
+        uint8_t dhcp_release_interval;
         uint8_t dhcp_release_retry;
         uint8_t dhcp_tos;
         uint8_t dhcp_vlan_priority;
