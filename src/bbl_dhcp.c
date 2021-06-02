@@ -254,7 +254,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
 
                 session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
                 if(!session->dhcp_established) {
-                    session->dhcpv6_established = true;
+                    session->dhcp_established = true;
                     ctx->dhcp_established++;
                     if(ctx->dhcp_established > ctx->dhcp_established_max) {
                         ctx->dhcp_established_max = ctx->dhcp_established;

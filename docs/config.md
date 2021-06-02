@@ -464,6 +464,7 @@ Attribute | Description | Default
 `broadcast` | DHCP broadcast flag | false
 `timeout` | DHCP timeout in seconds | 5
 `retry` | DHCP retry | 10
+`release-interval` | DHCP release interval | 1
 `release-retry` | DHCP release retry | 3
 `tos` | IPv4 TOS for all DHCP control traffic | 0
 `vlan-priority` | VLAN PBIT for all DHCP control traffic | 0
