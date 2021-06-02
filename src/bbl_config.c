@@ -1184,7 +1184,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.dhcp_enable = false;
     ctx->config.dhcp_timeout = 5;
     ctx->config.dhcp_retry = 10;
-    ctx->config.dhcp_release_interval = 3;
+    ctx->config.dhcp_release_interval = 1;
     ctx->config.dhcp_release_retry = 3;
     ctx->config.dhcpv6_enable = true;
     ctx->config.dhcpv6_rapid_commit = true;
