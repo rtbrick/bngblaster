@@ -1313,7 +1313,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     header.htype = 1; /* fixed set to ethernet */
     header.hlen = 6;
     header.xid = session->dhcp_xid;
-    if(ctx->config.dhcp_broadcast && session->dhcp_state != BBL_DHCP_RELEASE) {
+    if(ctx->config.dhcp_broadcast && session->dhcp_state < BBL_DHCP_BOUND) {
         header.flags = htobe16(1 << 15);
         eth.dst = (uint8_t*)broadcast_mac;
         ipv4.dst = IPV4_BROADCAST;
