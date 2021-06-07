@@ -164,11 +164,11 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
         memcpy(session->dhcpv6_server_duid, dhcpv6->server_duid, dhcpv6->server_duid_len);
         session->dhcpv6_server_duid_len = dhcpv6->server_duid_len;
     }
-    if(dhcpv6->ia_na_option_len && dhcpv6->ia_na_option_len < DHCPV6_BUFFER) {
+    if(dhcpv6->ia_na_address && dhcpv6->ia_na_option_len && dhcpv6->ia_na_option_len < DHCPV6_BUFFER) {
         memcpy(session->dhcpv6_ia_na_option, dhcpv6->ia_na_option, dhcpv6->ia_na_option_len);
         session->dhcpv6_ia_na_option_len = dhcpv6->ia_na_option_len;
     }
-    if(dhcpv6->ia_pd_option_len && dhcpv6->ia_pd_option_len < DHCPV6_BUFFER) {
+    if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len && dhcpv6->ia_pd_option_len && dhcpv6->ia_pd_option_len < DHCPV6_BUFFER) {
         memcpy(session->dhcpv6_ia_pd_option, dhcpv6->ia_pd_option, dhcpv6->ia_pd_option_len);
         session->dhcpv6_ia_pd_option_len = dhcpv6->ia_pd_option_len;
     }

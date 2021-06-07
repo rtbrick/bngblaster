@@ -1556,6 +1556,88 @@ decode_igmp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+static protocol_error_t
+decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
+
+    uint16_t ia_option;
+    uint16_t ia_option_len;
+    
+    if(len < 12) {
+        return DECODE_ERROR;
+    }
+    dhcpv6->ia_na_option = buf;
+    dhcpv6->ia_na_option_len = len;
+    dhcpv6->ia_na_iaid = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_na_t1 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_na_t2 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    while(len >= 4) {
+        ia_option = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        ia_option_len = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(ia_option_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(ia_option) {
+            case DHCPV6_OPTION_IAADDR:
+                if(ia_option_len < 24) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_na_address = (ipv6addr_t*)(buf);
+                dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
+                dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, ia_option_len);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+static protocol_error_t
+decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
+
+    uint16_t ia_option;
+    uint16_t ia_option_len;
+    
+    if(len < 12) {
+        return DECODE_ERROR;
+    }
+    dhcpv6->ia_pd_option = buf;
+    dhcpv6->ia_pd_option_len = len;
+    dhcpv6->ia_pd_iaid = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_pd_t1 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_pd_t2 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    while(len >= 4) {
+        ia_option = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        ia_option_len = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(ia_option_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(ia_option) {
+            case DHCPV6_OPTION_IAPREFIX:
+                if(ia_option_len < 25) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf));
+                dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+4));
+                dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+8);
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, ia_option_len);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
 /*
  * decode_dhcpv6
  */
@@ -1596,35 +1678,13 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 dhcpv6->rapid = true;
                 break;
             case DHCPV6_OPTION_IA_NA:
-                if(option_len < 40) {
+                if(decode_dhcpv6_ia_na(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
-                }
-                dhcpv6->ia_na_option = buf;
-                dhcpv6->ia_na_option_len = option_len;
-                dhcpv6->ia_na_iaid = *(uint32_t*)buf;
-                dhcpv6->ia_na_t1 = be32toh(*(uint32_t*)(buf+4));
-                dhcpv6->ia_na_t2 = be32toh(*(uint32_t*)(buf+8));
-                option = be16toh(*(uint16_t*)(buf+12));
-                if(option == 5) {
-                    dhcpv6->ia_na_address = (ipv6addr_t*)(buf+16);
-                    dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+32));
-                    dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+36));
                 }
                 break;
             case DHCPV6_OPTION_IA_PD:
-                if(option_len < 41) {
+                if(decode_dhcpv6_ia_pd(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
-                }
-                dhcpv6->ia_pd_option = buf;
-                dhcpv6->ia_pd_option_len = option_len;
-                dhcpv6->ia_pd_iaid = *(uint32_t*)buf;
-                dhcpv6->ia_pd_t1 = be32toh(*(uint32_t*)(buf+4));
-                dhcpv6->ia_pd_t2 = be32toh(*(uint32_t*)(buf+8));
-                option = be16toh(*(uint16_t*)(buf+12));
-                if(option == 26) {
-                    dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
-                    dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
-                    dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+24);
                 }
                 break;
             case DHCPV6_OPTION_SERVERID:
