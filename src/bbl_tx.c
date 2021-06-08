@@ -647,11 +647,18 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     bbl_ipv6_t ipv6 = {0};
     bbl_udp_t udp = {0};
     bbl_dhcpv6_t dhcpv6 = {0};
+    access_line_t access_line = {0};
 
     if(session->dhcpv6_state == BBL_DHCP_INIT ||
        session->dhcpv6_state == BBL_DHCP_BOUND) {
         return IGNORED;
     }
+
+    access_line.aci = session->agent_circuit_id;
+    access_line.ari = session->agent_remote_id;
+    access_line.up = session->rate_up;
+    access_line.down = session->rate_down;
+    access_line.dsl_type = session->dsl_type;
 
     interface = session->interface;
     ctx = interface->ctx;
@@ -705,27 +712,30 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         case BBL_DHCP_SELECTING:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
             session->stats.dhcpv6_tx_solicit++;
-            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
             dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
             dhcpv6.server_duid_len = 0;
             dhcpv6.ia_na_option_len = 0;
             dhcpv6.ia_pd_option_len = 0;
+            dhcpv6.access_line = &access_line;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
             break;
         case BBL_DHCP_REQUESTING:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
             session->stats.dhcpv6_tx_request++;
+            dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RENEWING:
             dhcpv6.type = DHCPV6_MESSAGE_RENEW;
             session->stats.dhcpv6_tx_renew++;
+            dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
             session->stats.dhcpv6_tx_release++;
-            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
             dhcpv6.oro = false;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
             break;
         default:
             return WRONG_PROTOCOL_STATE;
@@ -1335,6 +1345,9 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     if((session->agent_circuit_id || session->agent_remote_id) && session->dhcp_state != BBL_DHCP_RELEASE) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
+        access_line.up = session->rate_up;
+        access_line.down = session->rate_down;
+        access_line.dsl_type = session->dsl_type;
         dhcp.access_line = &access_line;
     }
 

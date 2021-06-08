@@ -83,12 +83,59 @@ bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *icmp, uint16_t
  * ENCODE
  * ------------------------------------------------------------------------*/
 
+static uint16_t 
+encode_dhcpv6_access_line(uint8_t *buf, access_line_t *access_line) {
+    uint16_t len = 0;
+    uint16_t *option_len; 
+
+    /* DHCPv6 Vendor Option (17) */
+    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_OPTS);
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+    option_len = (uint16_t*)buf;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+    *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+
+    if(access_line->up) {
+        *(uint16_t*)buf = htobe16(ACCESS_LINE_ACT_UP);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint32_t*)buf = htobe32(access_line->up);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->down) {
+        *(uint16_t*)buf = htobe16(ACCESS_LINE_ACT_DOWN);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint32_t*)buf = htobe32(access_line->down);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->dsl_type) {
+        *(uint16_t*)buf = htobe16(ACCESS_LINE_DSL_TYPE);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint32_t*)buf = htobe32(access_line->dsl_type);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+
+    if(len > 8) {
+        *option_len = htobe16(len-4);
+        return len;
+    }
+    return 0;
+}
+
 /*
  * encode_dhcpv6
  */
 protocol_error_t
 encode_dhcpv6(uint8_t *buf, uint16_t *len,
               bbl_dhcpv6_t *dhcpv6) {
+
+    uint16_t value_len;
 
     /* Transaction ID */
     *(uint32_t*)buf = htobe32(dhcpv6->xid);
@@ -192,7 +239,84 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint32_t*)buf = htobe32(RTBRICK);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    if(dhcpv6->access_line) {
+        if(dhcpv6->access_line->aci) {
+            /* DHCPv6 Interface-Id Option (18) */
+            *(uint16_t*)buf = htobe16(DHCPV6_OPTION_INTERFACE_ID);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            value_len = strnlen(dhcpv6->access_line->aci, UINT8_MAX);
+            *(uint16_t*)buf = htobe16(value_len);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            memcpy(buf, dhcpv6->access_line->aci, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+        }
+        if(dhcpv6->access_line->ari) {
+            /* DHCPv6 Remote-ID Option (37) */
+            *(uint16_t*)buf = htobe16(DHCPV6_OPTION_REMOTE_ID);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            value_len = strnlen(dhcpv6->access_line->ari, UINT16_MAX);
+             *(uint16_t*)buf = htobe16(value_len+4);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+            memcpy(buf, dhcpv6->access_line->ari, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+        }
+        /* DHCPv6 Vendor Option (17)
+         * See TR-177 chapter 5.6.1 and TR-101 Appendix B */
+        value_len = encode_dhcpv6_access_line(buf, dhcpv6->access_line);
+        BUMP_WRITE_BUFFER(buf, len, value_len);
+    }
     return PROTOCOL_SUCCESS;
+}
+
+static uint8_t 
+encode_dhcp_access_line(uint8_t *buf, access_line_t *access_line) {
+    uint8_t len = 0;
+    uint8_t *option_len; 
+    uint8_t *data_len; 
+
+    *buf = DHCP_RELAY_AGENT_VENDOR_SUBOPT;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+    option_len = buf;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+    *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    data_len = buf;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+
+    if(access_line->up) {
+        *buf = ACCESS_LINE_ACT_UP;
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *buf = sizeof(uint32_t);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(access_line->up);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->down) {
+        *buf = ACCESS_LINE_ACT_DOWN;
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *buf = sizeof(uint32_t);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(access_line->down);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->dsl_type) {
+        *buf = ACCESS_LINE_DSL_TYPE;
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *buf = sizeof(uint32_t);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(access_line->dsl_type);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+
+    if(len > 7) {
+        *option_len = len-2;
+        *data_len = len-7;
+        return len;
+    }
+    return 0;
 }
 
 /*
@@ -204,7 +328,7 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
 
     if(!dhcp->header) return ENCODE_ERROR;
 
-    uint8_t  str_len;
+    uint8_t  value_len;
     uint8_t  option_len;
     uint8_t *option_len_ptr;
 
@@ -285,23 +409,27 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         if(dhcp->access_line->aci) {
             *buf = ACCESS_LINE_ACI;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            str_len = strnlen(dhcp->access_line->aci, UINT8_MAX);
-            *buf = str_len;
+            value_len = strnlen(dhcp->access_line->aci, UINT8_MAX);
+            *buf = value_len;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            memcpy(buf, dhcp->access_line->aci, str_len);
-            BUMP_WRITE_BUFFER(buf, len, str_len);
-            option_len += str_len + 2;
+            memcpy(buf, dhcp->access_line->aci, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+            option_len += value_len + 2;
         }
         if(dhcp->access_line->ari) {
             *buf = ACCESS_LINE_ARI;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            str_len = strnlen(dhcp->access_line->ari, UINT8_MAX);
-            *buf = str_len;
+            value_len = strnlen(dhcp->access_line->ari, UINT8_MAX);
+            *buf = value_len;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            memcpy(buf, dhcp->access_line->ari, str_len);
-            BUMP_WRITE_BUFFER(buf, len, str_len);
-            option_len += str_len + 2;
+            memcpy(buf, dhcp->access_line->ari, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+            option_len += value_len + 2;
         }
+        /* See TR-101 Appendix B */
+        value_len = encode_dhcp_access_line(buf, dhcp->access_line);
+        option_len += value_len;
+        BUMP_WRITE_BUFFER(buf, len, value_len);
         *option_len_ptr = option_len;
     }
 
@@ -1124,8 +1252,8 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
     uint16_t *pppoe_len_field;
     uint16_t *vendor_len_field;
     uint16_t  pppoe_len = 0;
-    uint16_t  vendor_len = 0;
-    uint8_t   str_len = 0;
+    uint16_t  vendor_len;
+    uint8_t   str_len;
 
     /* Set version and type to 1 */
     *buf = 17;
