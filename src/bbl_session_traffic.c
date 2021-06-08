@@ -456,12 +456,12 @@ bbl_session_traffic_start_ipv6pd(bbl_ctx_s *ctx, bbl_session_s *session) {
 
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv6_pps && *(uint64_t*)session->delegated_ipv6_address &&
+    if(ctx->config.session_traffic_ipv6pd_pps && *(uint64_t*)session->delegated_ipv6_address &&
         ctx->op.network_if && *(uint64_t*)ctx->op.network_if->ip6.address) {
         /* Start IPv6 PD Session Traffic */
         if(bbl_session_traffic_add_ipv6(ctx, session, true)) {
-            if(ctx->config.session_traffic_ipv6_pps > 1) {
-                tx_interval = 1000000000 / ctx->config.session_traffic_ipv6_pps;
+            if(ctx->config.session_traffic_ipv6pd_pps > 1) {
+                tx_interval = 1000000000 / ctx->config.session_traffic_ipv6pd_pps;
                 if(tx_interval < ctx->config.tx_interval) {
                     /* It is not possible to send faster than TX interval. */
                     tx_interval = ctx->config.tx_interval;
