@@ -19,6 +19,7 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 
+#define BROADBAND_FORUM                 3561
 #define RTBRICK                         50058
 
 #define BBL_MAGIC_NUMBER                0x5274427269636b21
@@ -165,6 +166,7 @@
 #define DHCP_UDP_CLIENT                 68
 #define DHCP_UDP_SERVER                 67
 #define DHCP_MAGIC_COOKIE               htobe32(0x63825363)
+#define DHCP_RELAY_AGENT_VENDOR_SUBOPT  9
 
 #define DHCPV6_TRANS_ID_LEN             3
 #define DHCPV6_TYPE_MASK                0x00ffffff
@@ -310,6 +312,7 @@ typedef enum dhcpv6_option_code_ {
     DHCPV6_OPTION_DOMAIN_LIST           = 24,
     DHCPV6_OPTION_IA_PD                 = 25,
     DHCPV6_OPTION_IAPREFIX              = 26,
+    DHCPV6_OPTION_REMOTE_ID             = 37,
     DHCPV6_OPTION_MAX,
 } dhcpv6_option_code;
 
@@ -669,32 +672,33 @@ typedef struct bbl_icmpv6_ {
 } bbl_icmpv6_t;
 
 typedef struct bbl_dhcpv6_ {
-    uint8_t      type;
-    uint32_t     xid;
-    uint8_t     *client_duid;
-    uint8_t      client_duid_len;
-    uint8_t     *server_duid;
-    uint8_t      server_duid_len;
-    ipv6addr_t  *dns1;
-    ipv6addr_t  *dns2;
-    bool         rapid;
-    bool         oro;
-    uint8_t     *ia_na_option;
-    uint8_t      ia_na_option_len;
-    uint32_t     ia_na_iaid;
-    ipv6addr_t  *ia_na_address;
-    uint32_t     ia_na_t1;
-    uint32_t     ia_na_t2;
-    uint32_t     ia_na_preferred_lifetime;
-    uint32_t     ia_na_valid_lifetime;
-    uint8_t     *ia_pd_option;
-    uint8_t      ia_pd_option_len;
-    uint32_t     ia_pd_iaid;
-    ipv6_prefix *ia_pd_prefix;
-    uint32_t     ia_pd_t1;
-    uint32_t     ia_pd_t2;
-    uint32_t     ia_pd_preferred_lifetime;
-    uint32_t     ia_pd_valid_lifetime;
+    uint8_t        type;
+    uint32_t       xid;
+    uint8_t       *client_duid;
+    uint8_t        client_duid_len;
+    uint8_t       *server_duid;
+    uint8_t        server_duid_len;
+    ipv6addr_t    *dns1;
+    ipv6addr_t    *dns2;
+    bool           rapid;
+    bool           oro;
+    uint8_t       *ia_na_option;
+    uint8_t        ia_na_option_len;
+    uint32_t       ia_na_iaid;
+    ipv6addr_t    *ia_na_address;
+    uint32_t       ia_na_t1;
+    uint32_t       ia_na_t2;
+    uint32_t       ia_na_preferred_lifetime;
+    uint32_t       ia_na_valid_lifetime;
+    uint8_t       *ia_pd_option;
+    uint8_t        ia_pd_option_len;
+    uint32_t       ia_pd_iaid;
+    ipv6_prefix   *ia_pd_prefix;
+    uint32_t       ia_pd_t1;
+    uint32_t       ia_pd_t2;
+    uint32_t       ia_pd_preferred_lifetime;
+    uint32_t       ia_pd_valid_lifetime;
+    access_line_t *access_line;
 } bbl_dhcpv6_t;
 
 struct dhcp_header {
