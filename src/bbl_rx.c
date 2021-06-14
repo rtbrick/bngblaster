@@ -463,6 +463,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                 bbl_rx_established_ipoe(eth, interface, session);
             } else if(icmpv6->other && ctx->config.dhcpv6_enable) {
                 bbl_dhcpv6_start(session);
+                bbl_session_tx_qnode_insert(session);
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
