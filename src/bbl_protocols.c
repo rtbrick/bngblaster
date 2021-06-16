@@ -1424,6 +1424,101 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_cfm
+ */
+protocol_error_t
+encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
+
+    uint8_t max_ma_str_len = 45;
+
+    if(cfm->type != CFM_TYPE_CCM) {
+        /* Currently only CFM CC is supported */
+        return ENCODE_ERROR;
+    }
+
+    *buf = cfm->md_level << 5; /* CFM MD level and version */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = cfm->type; /* CFM OpCode */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Set CFM CC interval fixed to 1s (4) */
+    *buf = 4;
+    if(cfm->rdi) {
+        /* Set RDI bit */
+        *buf |= 128;
+    }
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    
+    /* Remember first TLV offset position */
+    *buf = 70;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    memset(buf, 0x0, 70);
+
+    /* Sequence Number */
+    *(uint32_t*)buf = htobe32(cfm->seq);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    /* MA Identifier */
+    *(uint16_t*)buf = htobe16(cfm->ma_id);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* MD Name */
+    *buf = cfm->md_name_format;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    if(cfm->md_name_format != CMF_MD_NAME_FORMAT_NONE) {
+        if(cfm->md_name_len > 32) cfm->md_name_len = 32;
+        *buf = cfm->md_name_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, cfm->md_name, cfm->md_name_len);
+        BUMP_WRITE_BUFFER(buf, len, cfm->md_name_len);
+        max_ma_str_len -= cfm->md_name_len + 1;
+    }
+    /* MA Name */
+    *buf = cfm->ma_name_format;
+    if(cfm->ma_name_len > max_ma_str_len) cfm->ma_name_len = max_ma_str_len;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = cfm->ma_name_len;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    memcpy(buf, cfm->ma_name, cfm->ma_name_len);
+    BUMP_WRITE_BUFFER(buf, len, max_ma_str_len);
+
+    /* Y.1731 */
+    BUMP_WRITE_BUFFER(buf, len, 16);
+
+    /* CFM TLVs */
+
+    /* Sender ID TLV */
+    *buf = 1; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint16_t*)buf = htobe16(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Port Status TLV */
+    *buf = 2; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint16_t*)buf = htobe16(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 2; /* UP */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Interface Status TLV */
+    *buf = 4; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint16_t*)buf = htobe16(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 1; /* UP */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* End TLV */
+    *buf = 0; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_ethernet
  */
 protocol_error_t
@@ -1478,6 +1573,8 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             return encode_ipv4(buf, len, (bbl_ipv4_t*)eth->next);
         case ETH_TYPE_IPV6:
             return encode_ipv6(buf, len, (bbl_ipv6_t*)eth->next);
+        case ETH_TYPE_CFM:
+            return encode_cfm(buf, len, (bbl_cfm_t*)eth->next);
         default:
             return UNKNOWN_PROTOCOL;
     }

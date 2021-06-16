@@ -127,15 +127,19 @@ Attribute | Description
 `interfaces` | List all interfaces with index
 `session-counters` | Return session counters
 `terminate` | Terminate all sessions similar to sending SIGINT (ctr+c)
-`session-traffic` | Display session traffic statistics | |
+`session-traffic` | Display session traffic statistics
 `session-traffic-enabled` | Enable session traffic for all sessions
 `session-traffic-disabled` | Disable session traffic for all sessions
-`stream-traffic-enabled` | Enable stream traffic for all sessions | |
-`stream-traffic-disabled` | Disable stream traffic for all sessions | |
+`stream-traffic-enabled` | Enable stream traffic for all sessions
+`stream-traffic-disabled` | Disable stream traffic for all sessions
 `multicast-traffic-start` | Start sending multicast traffic from network interface
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
 `li-flows` | List all LI flows with detailed statistics
 `sessions-pending` | List all sessions not established
+`cfm-cc-start` | Start EOAM CFM CC
+`cfm-cc-stop` | Stop EOAM CFM CC
+`cfm-cc-rdi-on` | Set EOAM CFM CC RDI
+`cfm-cc-rdi-off` | Unset EOAM CFM CC RDI
 
 ### Session Commands
 
@@ -174,6 +178,10 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
 `igmp-leave` | Leave group | `group` |
 `igmp-info` | IGMP information | |
+`cfm-cc-start` | Start EOAM CFM CC
+`cfm-cc-stop` | Stop EOAM CFM CC
+`cfm-cc-rdi-on` | Set EOAM CFM CC RDI
+`cfm-cc-rdi-off` | Unset EOAM CFM CC RDI
 
 The `session-id` is the same as used for `{session-global}` in the
 configuration section. This number starts with 1 and is increased

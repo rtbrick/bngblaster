@@ -473,6 +473,19 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             session->agent_remote_id = strdup(s);
         }
 
+        /* Update CFM */
+        if(access_config->cfm_cc) {
+            session->cfm_cc = true;
+            session->cfm_level = access_config->cfm_level;
+            session->cfm_ma_id = access_config->cfm_ma_id;
+            if(access_config->cfm_ma_name) {
+                s = replace_substring(access_config->cfm_ma_name, "{session-global}", snum1);
+                session->cfm_ma_name = s;
+                s = replace_substring(session->cfm_ma_name, "{session}", snum2);
+                session->cfm_ma_name = strdup(s);
+            }
+        }
+
         /* Update access rates ... */
         session->rate_up = access_config->rate_up;
         session->rate_down = access_config->rate_down;

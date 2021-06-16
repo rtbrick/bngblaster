@@ -390,6 +390,15 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
 }
 
 void
+bbl_cfm_cc(timer_s *timer) {
+    bbl_session_s *session = timer->data;
+    if(session->session_state == BBL_ESTABLISHED && session->cfm_cc) {
+        session->send_requests |= BBL_SEND_CFM_CC;
+        bbl_session_network_tx_qnode_insert(session);
+    }
+}
+
+void
 bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_ctx_s *ctx = interface->ctx;
@@ -427,6 +436,10 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
             if(session->access_config->ipv6_enable) {
                 bbl_session_traffic_start_ipv6(ctx, session);
                 bbl_session_traffic_start_ipv6pd(ctx, session);
+            }
+            if(session->cfm_cc) {
+                /* Start CFM CC (currently fixed set to 1s) */
+                timer_add_periodic(&ctx->timer_root, &session->timer_cfm_cc, "CFM-CC", 1, 0, session, &bbl_cfm_cc);
             }
         }
     }
