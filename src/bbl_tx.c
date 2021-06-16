@@ -1507,8 +1507,10 @@ bbl_encode_packet_cfm_cc (bbl_session_s *session)
     cfm.md_name_format = CMF_MD_NAME_FORMAT_NONE;
     cfm.ma_id = session->cfm_ma_id;
     cfm.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
-    cfm.ma_name_len = strlen(session->cfm_ma_name);
-    cfm.ma_name = (uint8_t*)session->cfm_ma_name;
+    if(session->cfm_ma_name) {
+        cfm.ma_name_len = strlen(session->cfm_ma_name);
+        cfm.ma_name = (uint8_t*)session->cfm_ma_name;
+    }
     session->interface->stats.cfm_cc_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }

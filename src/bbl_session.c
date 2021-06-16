@@ -324,6 +324,33 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
     }
 }
 
+static void
+update_strings(char **target, char *source, uint32_t *i, bbl_access_config_s *access_config)
+{
+    static char snum1[32];
+    static char snum2[32];
+    static char si1[32];
+    static char si2[32];
+    char *s;
+
+    if(i && access_config) {
+        /* Init iterator */
+        snprintf(snum1, sizeof(snum1), "%d", *i);
+        snprintf(snum2, sizeof(snum2), "%d", access_config->sessions);
+        snprintf(si1, sizeof(si1), "%d", access_config->i1);
+        access_config->i1 += access_config->i1_step;
+        snprintf(si2, sizeof(si2), "%d", access_config->i2);
+        access_config->i2 += access_config->i2_step;
+    }
+    if(target && source) {
+        s = replace_substring(source, "{session-global}", snum1);
+        s = replace_substring(s, "{session}", snum2);
+        s = replace_substring(s, "{i1}", si1);
+        s = replace_substring(s, "{i2}", si2);
+        if(s) *target = strdup(s);
+    }
+}
+
 bool
 bbl_sessions_init(bbl_ctx_s *ctx)
 {
@@ -333,10 +360,6 @@ bbl_sessions_init(bbl_ctx_s *ctx)
     dict_insert_result result;
 
     uint32_t i = 1;  /* BNG Blaster internal session identifier */
-
-    char *s;
-    char snum1[32];
-    char snum2[32];
 
     /* The variable t counts how many sessions are created in one
      * loop over all access configurations and is reset to zero
@@ -442,48 +465,27 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->dhcpv6_duid[3] = 1;
         memcpy(&session->dhcpv6_duid[4], session->client_mac, ETH_ADDR_LEN);
 
-        /* Populate session identifiaction attributes */
-        snprintf(snum1, 6, "%d", i);
-        snprintf(snum2, 6, "%d", access_config->sessions);
+        /* Init string variables/iterators */
+        update_strings(NULL, NULL, &i, access_config);
 
         /* Update username */
-        s = replace_substring(access_config->username, "{session-global}", snum1);
-        session->username = s;
-        s = replace_substring(session->username, "{session}", snum2);
-        session->username = strdup(s);
+        update_strings(&session->username, access_config->username, NULL, NULL);
 
         /* Update password */
-        s = replace_substring(access_config->password, "{session-global}", snum1);
-        session->password = s;
-        s = replace_substring(session->password, "{session}", snum2);
-        session->password = strdup(s);
+        update_strings(&session->password, access_config->password, NULL, NULL);
 
         /* Update ACI */
-        if(access_config->agent_circuit_id) {
-            s = replace_substring(access_config->agent_circuit_id, "{session-global}", snum1);
-            session->agent_circuit_id = s;
-            s = replace_substring(session->agent_circuit_id, "{session}", snum2);
-            session->agent_circuit_id = strdup(s);
-        }
+        update_strings(&session->agent_circuit_id, access_config->agent_circuit_id, NULL, NULL);
+
         /* Update ARI */
-        if(access_config->agent_remote_id) {
-            s = replace_substring(access_config->agent_remote_id, "{session-global}", snum1);
-            session->agent_remote_id = s;
-            s = replace_substring(session->agent_remote_id, "{session}", snum2);
-            session->agent_remote_id = strdup(s);
-        }
+        update_strings(&session->agent_remote_id, access_config->agent_remote_id, NULL, NULL);
 
         /* Update CFM */
         if(access_config->cfm_cc) {
             session->cfm_cc = true;
             session->cfm_level = access_config->cfm_level;
             session->cfm_ma_id = access_config->cfm_ma_id;
-            if(access_config->cfm_ma_name) {
-                s = replace_substring(access_config->cfm_ma_name, "{session-global}", snum1);
-                session->cfm_ma_name = s;
-                s = replace_substring(session->cfm_ma_name, "{session}", snum2);
-                session->cfm_ma_name = strdup(s);
-            }
+            update_strings(&session->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);
         }
 
         /* Update access rates ... */

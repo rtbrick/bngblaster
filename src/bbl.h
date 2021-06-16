@@ -399,6 +399,12 @@ typedef struct bbl_access_config_
     uint16_t cfm_ma_id;
     char *cfm_ma_name;
 
+    /* Iterator */
+    uint32_t i1;
+    uint32_t i1_step;
+    uint32_t i2;
+    uint32_t i2_step;
+
     void *next; /* pointer to next access config element */
 } bbl_access_config_s;
 

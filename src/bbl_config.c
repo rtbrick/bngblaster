@@ -93,6 +93,31 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     const char *s = NULL;
     uint32_t ipv4;
 
+    value = json_object_get(access_interface, "i1-start");
+    if (value) {
+        access_config->i1 = json_number_value(value);
+    } else {
+        access_config->i1 = 1;
+    }
+    value = json_object_get(access_interface, "i1-step");
+    if (value) {
+        access_config->i1_step = json_number_value(value);
+    } else {
+        access_config->i1_step = 1;
+    }
+    value = json_object_get(access_interface, "i2-start");
+    if (value) {
+        access_config->i2 = json_number_value(value);
+    } else {
+        access_config->i2 = 1;
+    }
+    value = json_object_get(access_interface, "i2-step");
+    if (value) {
+        access_config->i2_step = json_number_value(value);
+    } else {
+        access_config->i2_step = 1;
+    }
+
     if (json_unpack(access_interface, "{s:s}", "type", &s) == 0) {
         if (strcmp(s, "pppoe") == 0) {
             access_config->access_type = ACCESS_TYPE_PPPOE;
