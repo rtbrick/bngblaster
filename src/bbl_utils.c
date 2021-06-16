@@ -83,43 +83,51 @@ format_ipv6_prefix (ipv6_prefix *addr6)
 }
 
 char *
-replace_substring (const char* s,
+replace_substring (const char* source,
                    const char* old,
                    const char* new)
 {
-    static char result[STRLEN_MAX];
-
-    int i, cnt = 0;
-    size_t new_len = strlen(new);
-    size_t old_len = strlen(old);
-
-    /* Counting the number of times old
-     * occur in the string*/
-    for (i = 0; s[i] != '\0'; i++) {
-        if (strstr(&s[i], old) == &s[i]) {
-            cnt++;
-            /* Jumping to index after the old word */
-            i += old_len - 1;
-        }
-    }
-
-    /* Check if string fits into buffer */
-    if((i + cnt * (new_len - old_len) + 1) >= STRLEN_MAX) {
+    if(!(source && old && new)) {
         return NULL;
     }
 
-    i = 0;
-    while (*s) {
-        /* Compare the substring with the result */
-        if (strstr(s, old) == s) {
-            strcpy(&result[i], new);
-            i += new_len;
-            s += old_len;
+    static char buffer[4][STRLEN_MAX];
+    static int idx = 0;
+    char  *result = buffer[idx];
+    char  *result_pos = result;
+    size_t result_len = 0;
+
+    idx = (idx+1) & 4;
+    
+    size_t new_len = strlen(new);
+    size_t old_len = strlen(old);
+
+    const char *cur = source;
+    const char *sub;
+    size_t c;
+
+    while(cur && *cur != '\0') {
+        sub = strstr(cur, old);
+        if(sub) {
+            c = sub - cur;
+            result_len += c + new_len;
+            if(result_len < STRLEN_MAX) {
+                memcpy(result_pos, cur, c);
+                result_pos += c;
+                memcpy(result_pos, new, new_len);
+                result_pos += new_len;
+            }
+            cur = sub + old_len;
         } else {
-            result[i++] = *s++;
+            c = strlen(cur);
+            result_len += c;
+            if(result_len < STRLEN_MAX) { 
+                memcpy(result_pos, cur, c);
+                result_pos += c;
+            }
+            cur = NULL;
         }
     }
-
-    result[i] = '\0';
+    *result_pos = '\0';
     return result;
 }

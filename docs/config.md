@@ -191,6 +191,10 @@ Attribute | Description | Default
 `cfm-level` | Set EOAM CFM maintenance domain level | 0
 `cfm-ma-id` | Set EOAM CFM maintenance association identifier | 0
 `cfm-ma-name` | Set EOAM CFM maintenance association short name
+`i1-start` | Iterator for usage in strings `{i1}` | 1
+`i1-step` | Iterator step per session | 1
+`i2-start` | Iterator for usage in strings `{i2}` | 1
+`i2-step` | Iterator step per session | 1
 
 For all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
