@@ -81,6 +81,7 @@
 #define BBL_SEND_ICMPV6_REPLY       0x00080000
 #define BBL_SEND_ICMPV6_NS          0x00100000
 #define BBL_SEND_ICMPV6_NA          0x00200000
+#define BBL_SEND_CFM_CC             0x00400000
 
 /* Network Interface */
 #define BBL_IF_SEND_ARP_REQUEST     0x00000001
@@ -252,6 +253,8 @@ typedef struct bbl_interface_
         /* Packet Stats */
         uint32_t arp_tx;
         uint32_t arp_rx;
+        uint32_t cfm_cc_tx;
+        uint32_t cfm_cc_rx;
         uint32_t padi_tx;
         uint32_t pado_rx;
         uint32_t padr_tx;
@@ -342,55 +345,61 @@ typedef struct bbl_interface_
 
 typedef struct bbl_access_config_
 {
-        bool exhausted;
-        uint32_t sessions; /* per access config session counter */
-        struct bbl_interface_ *access_if;
+    bool exhausted;
+    uint32_t sessions; /* per access config session counter */
+    struct bbl_interface_ *access_if;
 
-        char *interface;
+    char *interface;
 
-        bbl_access_type_t access_type; /* pppoe or ipoe */
-        bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
+    bbl_access_type_t access_type; /* pppoe or ipoe */
+    bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
 
-        uint16_t stream_group_id;
+    uint16_t stream_group_id;
 
-        uint16_t access_outer_vlan;
-        uint16_t access_outer_vlan_min;
-        uint16_t access_outer_vlan_max;
-        uint16_t access_inner_vlan;
-        uint16_t access_inner_vlan_min;
-        uint16_t access_inner_vlan_max;
-        uint16_t access_third_vlan;
+    uint16_t access_outer_vlan;
+    uint16_t access_outer_vlan_min;
+    uint16_t access_outer_vlan_max;
+    uint16_t access_inner_vlan;
+    uint16_t access_inner_vlan_min;
+    uint16_t access_inner_vlan_max;
+    uint16_t access_third_vlan;
 
-        /* Static */
-        uint32_t static_ip;
-        uint32_t static_ip_iter;
-        uint32_t static_gateway;
-        uint32_t static_gateway_iter;
+    /* Static */
+    uint32_t static_ip;
+    uint32_t static_ip_iter;
+    uint32_t static_gateway;
+    uint32_t static_gateway_iter;
 
-        /* Authentication */
-        char *username;
-        char *password;
-        uint16_t authentication_protocol;
+    /* Authentication */
+    char *username;
+    char *password;
+    uint16_t authentication_protocol;
 
-        /* Access Line */
-        char *agent_remote_id;
-        char *agent_circuit_id;
-        uint32_t rate_up;
-        uint32_t rate_down;
-        uint32_t dsl_type;
+    /* Access Line */
+    char *agent_remote_id;
+    char *agent_circuit_id;
+    uint32_t rate_up;
+    uint32_t rate_down;
+    uint32_t dsl_type;
 
-        /* Protocols */
-        bool ipcp_enable;
-        bool ip6cp_enable;
-        bool ipv4_enable;
-        bool ipv6_enable;
-        bool dhcp_enable;
-        bool dhcpv6_enable;
-        bool igmp_autostart;
-        uint8_t igmp_version;
-        bool session_traffic_autostart;
+    /* Protocols */
+    bool ipcp_enable;
+    bool ip6cp_enable;
+    bool ipv4_enable;
+    bool ipv6_enable;
+    bool dhcp_enable;
+    bool dhcpv6_enable;
+    bool igmp_autostart;
+    uint8_t igmp_version;
+    bool session_traffic_autostart;
 
-        void *next; /* pointer to next access config element */
+    /* CFM CC */
+    bool cfm_cc;
+    uint8_t cfm_level;
+    uint16_t cfm_ma_id;
+    char *cfm_ma_name;
+
+    void *next; /* pointer to next access config element */
 } bbl_access_config_s;
 
 /*
@@ -745,6 +754,7 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv6;
     struct timer_ *timer_session_traffic_ipv6pd;
     struct timer_ *timer_rate;
+    struct timer_ *timer_cfm_cc;
 
     bbl_access_type_t access_type;
 
@@ -781,6 +791,14 @@ typedef struct bbl_session_
     /* Ethernet */
     uint8_t server_mac[ETH_ADDR_LEN];
     uint8_t client_mac[ETH_ADDR_LEN];
+
+    /* CFM */
+    bool cfm_cc;
+    bool cfm_rdi;
+    uint32_t cfm_seq;
+    uint8_t cfm_level;
+    uint16_t cfm_ma_id;
+    char *cfm_ma_name;
 
     /* PPPoE */
     uint16_t pppoe_session_id;

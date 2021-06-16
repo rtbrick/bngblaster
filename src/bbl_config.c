@@ -321,6 +321,30 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     if (value) {
         access_config->stream_group_id = json_number_value(value);
     }
+
+    value = json_object_get(access_interface, "cfm-cc");
+    if (json_is_boolean(value)) {
+        access_config->cfm_cc = json_boolean_value(value);
+    }
+    value = json_object_get(access_interface, "cfm-level");
+    if (value) {
+        access_config->cfm_level = json_number_value(value);
+        if(access_config->cfm_level > 7) {
+            fprintf(stderr, "JSON config error: Invalid value for access->cfm-level\n");
+            return false;
+        }
+    }
+    value = json_object_get(access_interface, "cfm-ma-id");
+    if (value) {
+        access_config->cfm_ma_id = json_number_value(value);
+    }
+    if (json_unpack(access_interface, "{s:s}", "cfm-ma-name", &s) == 0) {
+        access_config->cfm_ma_name = strdup(s);
+    } else if (access_config->cfm_cc) {
+        fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
+        return false;
+    }
+
     return true;
 }
 

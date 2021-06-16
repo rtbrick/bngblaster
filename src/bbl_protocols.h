@@ -42,6 +42,7 @@
 #define ETH_TYPE_ARP                    0x0806
 #define ETH_TYPE_IPV4                   0x0800
 #define ETH_TYPE_IPV6                   0x86dd
+#define ETH_TYPE_CFM                    0x8902
 
 #define ETH_ADDR_LEN                    6
 #define ETH_VLAN_ID_MAX                 4095
@@ -203,6 +204,11 @@
 #define L2TP_NH_TYPE_VALUE              18
 
 #define QMX_LI_UDP_PORT                 49152
+
+#define CFM_TYPE_CCM                    1
+#define CMF_MD_NAME_FORMAT_NONE         1
+#define CMF_MD_NAME_FORMAT_STRING       4
+#define CMF_MA_NAME_FORMAT_STRING       2
 
 #define MAX_VLANS                       3
 
@@ -797,6 +803,20 @@ typedef struct bbl_qmx_li_ {
     void        *payload; // LI payload
     uint16_t     payload_len; // LI payload length
 } bbl_qmx_li_t;
+
+typedef struct bbl_cfm_ {
+    uint8_t     type;
+    uint32_t    seq;
+    bool        rdi;
+    uint8_t     md_level;
+    uint8_t     md_name_format;
+    uint8_t     md_name_len;
+    uint8_t    *md_name;
+    uint16_t    ma_id;
+    uint8_t     ma_name_format;
+    uint8_t     ma_name_len;
+    uint8_t    *ma_name;
+} bbl_cfm_t;
 
 /*
  * decode_ethernet

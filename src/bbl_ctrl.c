@@ -1208,6 +1208,75 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     return result;
 }
 
+ssize_t
+bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
+            session->cfm_cc = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                session->cfm_cc = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+ssize_t
+bbl_ctrl_cfm_cc_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_cfm_cc_start_stop(fd, ctx, session_id, true);
+}
+
+ssize_t
+bbl_ctrl_cfm_cc_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_cfm_cc_start_stop(fd, ctx, session_id, false);
+}
+
+ssize_t
+bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
+            session->cfm_rdi = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                session->cfm_rdi = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+ssize_t
+bbl_ctrl_cfm_cc_rdi_on(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, true);
+}
+
+ssize_t
+bbl_ctrl_cfm_cc_rdi_off(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, false);
+}
+
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1242,6 +1311,10 @@ struct action actions[] = {
     {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
     {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
     {"sessions-pending", bbl_ctrl_sessions_pending},
+    {"cfm-cc-start", bbl_ctrl_cfm_cc_start},
+    {"cfm-cc-stop", bbl_ctrl_cfm_cc_stop},
+    {"cfm-cc-rdi-on", bbl_ctrl_cfm_cc_rdi_on},
+    {"cfm-cc-rdi-off", bbl_ctrl_cfm_cc_rdi_off},
     {NULL, NULL},
 };
 

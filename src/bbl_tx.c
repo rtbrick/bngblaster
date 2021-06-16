@@ -1489,6 +1489,31 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
 }
 
 protocol_error_t
+bbl_encode_packet_cfm_cc (bbl_session_s *session)
+{
+    bbl_ethernet_header_t eth = {0};
+    bbl_cfm_t cfm = {0};
+    eth.dst = session->server_mac;
+    eth.src = session->client_mac;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.vlan_three = session->access_third_vlan;
+    eth.type = ETH_TYPE_CFM;
+    eth.next = &cfm;
+    cfm.type = CFM_TYPE_CCM;
+    cfm.seq = session->cfm_seq++;
+    cfm.rdi = session->cfm_rdi;
+    cfm.md_level = session->cfm_level;
+    cfm.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    cfm.ma_id = session->cfm_ma_id;
+    cfm.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
+    cfm.ma_name_len = strlen(session->cfm_ma_name);
+    cfm.ma_name = (uint8_t*)session->cfm_ma_name;
+    session->interface->stats.cfm_cc_tx++;
+    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+}
+
+protocol_error_t
 bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *accounting)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
@@ -1561,6 +1586,9 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     } else if (session->send_requests & BBL_SEND_DHCP_REQUEST) {
         result = bbl_encode_packet_dhcp(session);
         session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
+    } else if (session->send_requests & BBL_SEND_CFM_CC) {
+        result = bbl_encode_packet_cfm_cc(session);
+        session->send_requests &= ~BBL_SEND_CFM_CC;
     } else {
         session->send_requests = 0;
     }

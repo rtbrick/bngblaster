@@ -187,8 +187,10 @@ Attribute | Description | Default
 `dhcp` | Optionally enable/disable DHCP per access configuration
 `dhcpv6` | Optionally enable/disable DHCPv6 per access configuration
 `stream-group-id` | Optional stream group identifier
-
-**WARNING**: DHCP (IPv4) is currently not supported!
+`cfm-cc` | Optionally enable/disable EOAM CFM CC (IPoE only) | false
+`cfm-level` | Set EOAM CFM maintenance domain level | 0
+`cfm-ma-id` | Set EOAM CFM maintenance association identifier | 0
+`cfm-ma-name` | Set EOAM CFM maintenance association short name
 
 For all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
