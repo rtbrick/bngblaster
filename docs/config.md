@@ -186,6 +186,8 @@ Attribute | Description | Default
 `ipv6` | Optionally enable/disable IPoE IPv6 per access configuration
 `dhcp` | Optionally enable/disable DHCP per access configuration
 `dhcpv6` | Optionally enable/disable DHCPv6 per access configuration
+`igmp-autostart` | Optionally overwrite IGMP autostart per access configuration
+`igmp-version` | Optionally overwrite IGMP protocol version (1, 2 or 3) per access configuration
 `stream-group-id` | Optional stream group identifier
 `cfm-cc` | Optionally enable/disable EOAM CFM CC (IPoE only) | false
 `cfm-level` | Set EOAM CFM maintenance domain level | 0
@@ -492,6 +494,7 @@ This section describes all attributes of the `igmp` hierarchy.
 
 Attribute | Description | Default
 --------- | ----------- | -------
+`autostart` | Automatically join after session is established | true
 `version` | IGMP protocol version (1, 2 or 3) | 3
 `combined-leave-join` | Combine leave and join records within a single IGMPv3 report | true
 `start-delay` | Delay between session established and initial IGMP join in seconds | 1
