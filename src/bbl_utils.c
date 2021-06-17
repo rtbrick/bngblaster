@@ -24,10 +24,18 @@ val2key (struct keyval_ *keyval, uint val)
     return "Unknown";
 }
 
+/** 
+ * format_mac_address
+ *
+ * Format an MAC address as string in one of 16 static buffers.
+ *
+ * @param mac IPv4 address bytes
+ * @return MAC address string
+ */
 char *
 format_mac_address (uint8_t *mac)
 {
-    static char buffer[32][MAC_STR_LEN];
+    static char buffer[16][MAC_STR_LEN];
     static int idx = 0;
     char *ret;
     ret = buffer[idx];
@@ -36,8 +44,13 @@ format_mac_address (uint8_t *mac)
     return ret;
 }
 
-/*
- * Format an IPv4 address as string in one of 16 buffers.
+/** 
+ * format_ipv4_address
+ *
+ * Format an IPv4 address as string in one of 32 static buffers.
+ *
+ * @param addr4 IPv4 address bytes
+ * @return IPv4 address string
  */
 char *
 format_ipv4_address (uint32_t *addr4)
@@ -51,8 +64,13 @@ format_ipv4_address (uint32_t *addr4)
     return ret;
 }
 
-/*
- * Format an IPv6 address as string in one of 16 buffers.
+/** 
+ * format_ipv6_address
+ *
+ * Format an IPv6 address as string in one of 16 static buffers.
+ *
+ * @param addr6 IPv6 address bytes
+ * @return IPv6 address string
  */
 char *
 format_ipv6_address (ipv6addr_t *addr6)
@@ -66,8 +84,13 @@ format_ipv6_address (ipv6addr_t *addr6)
     return ret;
 }
 
-/*
- * Format an IPv6 prefix as string in one of 16 buffers.
+/** 
+ * format_ipv6_prefix
+ *
+ * Format an IPv6 prefix as string in one of 16 static buffers.
+ *
+ * @param addr6 IPv6 prefix bytes
+ * @return IPv6 prefix string
  */
 char *
 format_ipv6_prefix (ipv6_prefix *addr6)
@@ -82,6 +105,16 @@ format_ipv6_prefix (ipv6_prefix *addr6)
     return ret;
 }
 
+/** 
+ * replace_substring
+ * 
+ * Replace subscrtring in one of 4 static buffers.
+ *
+ * @param source source string
+ * @param old subsctring to search for
+ * @param new subsctring to replace with
+ * @return new string
+ */
 char *
 replace_substring (const char* source,
                    const char* old,
