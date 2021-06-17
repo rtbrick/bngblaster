@@ -373,7 +373,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
 {
     bbl_session_s *session;
     bbl_access_config_s *access_config;
-
+    bbl_access_line_profile_s *access_line_profile;
     dict_insert_result result;
 
     uint32_t i = 1;  /* BNG Blaster internal session identifier */
@@ -565,6 +565,18 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             }
             timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
         }
+
+        if(access_config->access_line_profile_id) {
+            access_line_profile = ctx->config.access_line_profile;
+            while(access_line_profile) {
+                if(access_line_profile->access_line_profile_id == access_config->access_line_profile_id) {
+                    session->access_line_profile = access_line_profile;
+                    break;
+                }
+                access_line_profile = access_line_profile->next;
+            }
+        }
+
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
         i++;
 NEXT:

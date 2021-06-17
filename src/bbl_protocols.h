@@ -420,8 +420,8 @@ typedef enum access_line_codes_ {
     // broadband forum tr101
     ACCESS_LINE_ACI                      = 0x01,  // Agent Circuit ID
     ACCESS_LINE_ARI                      = 0x02,  // Agent Remote ID
-    ACCESS_AGG_ACC_CIRCUIT_ID_ASCII      = 0x03,  // Access-Aggregation-Circuit-ID-ASCII
-    ACCESS_AGG_ACC_CIRCUIT_ID_BIN        = 0x06,  // Access-Aggregation-Circuit-ID-ASCII
+    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII = 0x03,  // Access-Aggregation-Circuit-ID-ASCII
+    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_BIN   = 0x06,  // Access-Aggregation-Circuit-ID-BINARY
     ACCESS_LINE_ACT_UP                   = 0x81,  // Actual Data Rate Upstream
     ACCESS_LINE_ACT_DOWN                 = 0x82,  // Actual Data Rate Downstream
     ACCESS_LINE_MIN_UP                   = 0x83,  // Minimum Data Rate Upstream
@@ -462,6 +462,7 @@ typedef struct access_line_ {
     uint32_t up;        // Actual Data Rate Upstream
     uint32_t down;      // Actual Data Rate Downstream
     uint32_t dsl_type;  // DSL Type
+    void    *profile;
 } access_line_t;
 
 /*

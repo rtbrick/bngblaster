@@ -88,6 +88,138 @@ add_secondary_ipv6(bbl_ctx_s *ctx, ipv6addr_t ipv6) {
 }
 
 static bool
+json_parse_access_line_profile (json_t *config, bbl_access_line_profile_s *profile) {
+    json_t *value = NULL;
+
+    value = json_object_get(config, "access-line-profile-id");
+    if (value) {
+        profile->access_line_profile_id = json_number_value(value);
+    } else {
+        fprintf(stderr, "Config error: Missing value for access-line-profiles->access-line-profile-id\n");
+        return false;
+    }
+
+    value = json_object_get(config, "act-up");
+    if (value) {
+        profile->act_up = json_number_value(value);
+    }
+    value = json_object_get(config, "act-down");
+    if (value) {
+        profile->act_down = json_number_value(value);
+    }
+    value = json_object_get(config, "min-up");
+    if (value) {
+        profile->min_up = json_number_value(value);
+    }
+    value = json_object_get(config, "min-down");
+    if (value) {
+        profile->min_down = json_number_value(value);
+    }
+    value = json_object_get(config, "att-up");
+    if (value) {
+        profile->att_up = json_number_value(value);
+    }
+    value = json_object_get(config, "att-down");
+    if (value) {
+        profile->att_down = json_number_value(value);
+    }
+    value = json_object_get(config, "min-up-low");
+    if (value) {
+        profile->min_up_low = json_number_value(value);
+    }
+    value = json_object_get(config, "min-down-low");
+    if (value) {
+        profile->min_down_low = json_number_value(value);
+    }
+    value = json_object_get(config, "max-interl-delay-up");
+    if (value) {
+        profile->max_interl_delay_up = json_number_value(value);
+    }
+    value = json_object_get(config, "act-interl-delay-up");
+    if (value) {
+        profile->act_interl_delay_up = json_number_value(value);
+    }
+    value = json_object_get(config, "max-interl-delay-down");
+    if (value) {
+        profile->max_interl_delay_down = json_number_value(value);
+    }
+    value = json_object_get(config, "act-interl-delay-down");
+    if (value) {
+        profile->act_interl_delay_down = json_number_value(value);
+    }
+    value = json_object_get(config, "data-link-encaps");
+    if (value) {
+        profile->data_link_encaps = json_number_value(value);
+    }
+    value = json_object_get(config, "dsl-type");
+    if (value) {
+        profile->dsl_type = json_number_value(value);
+    }
+    value = json_object_get(config, "pon-type");
+    if (value) {
+        profile->pon_type = json_number_value(value);
+    }
+    value = json_object_get(config, "etr-up");
+    if (value) {
+        profile->etr_up = json_number_value(value);
+    }
+    value = json_object_get(config, "etr-down");
+    if (value) {
+        profile->etr_down = json_number_value(value);
+    }
+    value = json_object_get(config, "attetr-up");
+    if (value) {
+        profile->attetr_up = json_number_value(value);
+    }
+    value = json_object_get(config, "attetr-down");
+    if (value) {
+        profile->attetr_down = json_number_value(value);
+    }
+    value = json_object_get(config, "gdr-up");
+    if (value) {
+        profile->gdr_up = json_number_value(value);
+    }
+    value = json_object_get(config, "gdr-down");
+    if (value) {
+        profile->gdr_down = json_number_value(value);
+    }
+    value = json_object_get(config, "attgdr-up");
+    if (value) {
+        profile->attgdr_up = json_number_value(value);
+    }
+    value = json_object_get(config, "attgdr-down");
+    if (value) {
+        profile->attgdr_down = json_number_value(value);
+    }
+    value = json_object_get(config, "ont-onu-avg-down");
+    if (value) {
+        profile->ont_onu_avg_down = json_number_value(value);
+    }
+    value = json_object_get(config, "ont-onu-peak-down");
+    if (value) {
+        profile->ont_onu_peak_down = json_number_value(value);
+    }
+    value = json_object_get(config, "ont-onu-max-up");
+    if (value) {
+        profile->ont_onu_max_up = json_number_value(value);
+    }
+    value = json_object_get(config, "ont-onu-ass-up");
+    if (value) {
+        profile->ont_onu_ass_up = json_number_value(value);
+    }
+    value = json_object_get(config, "pon-max-up");
+    if (value) {
+        profile->pon_max_up = json_number_value(value);
+    }
+    value = json_object_get(config, "pon-max-down");
+    if (value) {
+        profile->pon_max_down = json_number_value(value);
+    }
+
+    return true;
+}
+
+static bool
 json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_access_config_s *access_config) {
     json_t *value = NULL;
     const char *s = NULL;
@@ -281,6 +413,11 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         access_config->dsl_type = json_number_value(value);
     } else {
         access_config->dsl_type = ctx->config.dsl_type;
+    }
+
+    value = json_object_get(access_interface, "access-line-profile-id");
+    if (value) {
+        access_config->access_line_profile_id = json_number_value(value);
     }
 
     value = json_object_get(access_interface, "ipcp");
@@ -534,9 +671,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     const char *s;
     uint32_t ipv4;
     int i, size;
-    bbl_access_config_s *access_config  = NULL;
-    bbl_stream_config   *stream_config  = NULL;
-    bbl_l2tp_server_t   *l2tp_server    = NULL;
+    bbl_access_config_s         *access_config          = NULL;
+    bbl_access_line_profile_s   *access_line_profile    = NULL;
+    bbl_stream_config           *stream_config          = NULL;
+    bbl_l2tp_server_t           *l2tp_server            = NULL;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -1159,6 +1297,26 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             }
             memset(stream_config, 0x0, sizeof(bbl_stream_config));
             if(!json_parse_stream(ctx, json_array_get(section, i), stream_config)) {
+                return false;
+            }
+        }
+    }
+
+    /* Access Line Profiles Configuration */
+    section = json_object_get(root, "access-line-profiles");
+    if (json_is_array(section)) {
+        /* Config is provided as array (multiple access-line-profiles) */
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            if(!access_line_profile) {
+                ctx->config.access_line_profile = malloc(sizeof(bbl_access_line_profile_s));
+                access_line_profile = ctx->config.access_line_profile;
+            } else {
+                access_line_profile->next = malloc(sizeof(bbl_access_line_profile_s));
+                access_line_profile = access_line_profile->next;
+            }
+            memset(access_line_profile, 0x0, sizeof(bbl_access_line_profile_s));
+            if(!json_parse_access_line_profile(json_array_get(section, i), access_line_profile)) {
                 return false;
             }
         }
