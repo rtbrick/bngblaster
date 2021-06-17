@@ -616,13 +616,11 @@ Attribute | Description | Default
 
 ## Access-Line-Profiles
 
-This section describes all attributes of the `access-line-profiles` hierarchy
-as explained in [Traffic Streams](streams).
+This section describes all attributes of the `access-line-profiles` hierarchy.
 
 Attribute | Description | Default
 --------- | ----------- | -------
-
-`access-line-profile-id` | Mandatory access-line-profile identifier |
+`access-line-profile-id` | Mandatory access-line-profile identifier
 `act-up` | Actual Data Rate Upstream | 0
 `act-down` | Actual Data Rate Downstream | 0
 `min-up` | Minimum Data Rate Upstream | 0
