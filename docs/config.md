@@ -189,6 +189,7 @@ Attribute | Description | Default
 `igmp-autostart` | Optionally overwrite IGMP autostart per access configuration
 `igmp-version` | Optionally overwrite IGMP protocol version (1, 2 or 3) per access configuration
 `stream-group-id` | Optional stream group identifier
+`access-line-profile-id` | Optional access-line-profile identifier
 `cfm-cc` | Optionally enable/disable EOAM CFM CC (IPoE only) | false
 `cfm-level` | Set EOAM CFM maintenance domain level | 0
 `cfm-ma-id` | Set EOAM CFM maintenance association identifier | 0
@@ -450,18 +451,6 @@ Attribute | Description | Default
 `conf-request-timeout` | IP6CP configuration request timeout in seconds | 5
 `conf-request-retry` | IP6CP configuration request max retry | 10
 
-## Access-Line
-
-This section describes all attributes of the `access-line` hierarchy.
-
-Attribute | Description | Default
---------- | ----------- | -------
-`agent-circuit-id` | Agent-Circuit-Id | 0.0.0.0/0.0.0.0 eth 0:{session-global}
-`agent-remote-id` | Agent-Remote-Id | DEU.RTBRICK.{session-global}
-`rate-up` | Actual-Data-Rate-Upstream | 0
-`rate-down` | Actual-Data-Rate-Downstream | 0
-`dsl-type` | DSL-Type | 0
-
 ## DHCP
 
 This section describes all attributes of the `dhcp` hierarchy.
@@ -612,3 +601,108 @@ For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner 
 
 The `pps` option has priority over `bps` where second is only a helper to calculate the `pps`
 based on given `bps` and `length`.
+
+## Access-Line
+
+This section describes all attributes of the `access-line` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`agent-circuit-id` | Agent-Circuit-Id | 0.0.0.0/0.0.0.0 eth 0:{session-global}
+`agent-remote-id` | Agent-Remote-Id | DEU.RTBRICK.{session-global}
+`rate-up` | Actual Data Rate Upstream | 0
+`rate-down` | Actual Data Rate Downstream | 0
+`dsl-type` | DSL-Type | 0
+
+## Access-Line-Profiles
+
+This section describes all attributes of the `access-line-profiles` hierarchy
+as explained in [Traffic Streams](streams).
+
+Attribute | Description | Default
+--------- | ----------- | -------
+
+`access-line-profile-id` | Mandatory access-line-profile identifier |
+`act-up` | Actual Data Rate Upstream | 0
+`act-down` | Actual Data Rate Downstream | 0
+`min-up` | Minimum Data Rate Upstream | 0
+`min-down` | Minimum Data Rate Downstream | 0
+`att-up` | Attainable DataRate Upstream | 0
+`att-down` | Attainable DataRate Downstream | 0
+`max-up` | Maximum Data Rate Upstream | 0
+`max-down` | Maximum Data Rate Downstream | 0
+`min-up-low` | Min Data Rate Upstream in low power state | 0
+`min-down-low` | Min Data Rate Downstream in low power state | 0
+`max-interl-delay-up` | Max Interleaving Delay Upstream | 0
+`act-interl-delay-up` | Actual Interleaving Delay Upstream | 0
+`max-interl-delay-down` | Max Interleaving Delay Downstream | 0
+`act-interl-delay-down` | Actual Interleaving Delay Downstream | 0
+`data-link-encaps` | Data Link Encapsulation | 0
+`dsl-type` | DSL Type | 0
+`pon-type` | PON Access Type | 0
+`etr-up` | Expected Throughput (ETR) Upstream | 0
+`etr-down` | Expected Throughput (ETR) Downstream | 0
+`attetr-up` | Attainable Expected Throughput (ATTETR) Upstream | 0
+`attetr-down` | Attainable Expected Throughput (ATTETR) Downstream | 0
+`gdr-up` | Gamma Data Rate (GDR) Upstream | 0
+`gdr-down` | Gamma Data Rate (GDR) Downstream | 0
+`attgdr-up` | Attainable Gamma Data Rate (ATTGDR) Upstream | 0
+`attgdr-down` | Attainable Gamma Data Rate (ATTGDR) Downstream | 0
+`ont-onu-avg-down` | ONT/ONU Average Data Rate Downstream | 0
+`ont-onu-peak-down` | ONT/ONUPeak Data Rate Downstream | 0
+`ont-onu-max-up` | ONT/ONU Maximum Data Rate Upstream | 0
+`ont-onu-ass-up` | ONT/ONU Assured Data Rate Upstream | 0
+`pon-max-up` | PON Tree Maximum Data Rate Upstream | 0
+`pon-max-down` | PON Tree Maximum Data Rate Downstream | 0
+
+Attributes with value set to 0 will not be send. 
+
+The values for `rate-up`, `rate-down` and `dsl-type` defined in the 
+access-line or interface section have priority over those defined 
+here.
+
+```json
+{
+    "access-line-profiles": [
+        {
+            "access-line-profile-id": 1,
+            "act-up": 2000,
+            "act-down": 16000,
+            "min-up": 64,
+            "min-down": 1024,
+            "att-up": 2048,
+            "att-down": 16384,
+            "max-up": 2040,
+            "max-down": 16380,
+            "min-up-low": 32,
+            "min-down-low": 1024,
+            "max-interl-delay-up": 100,
+            "act-interl-delay-up": 10,
+            "max-interl-delay-down": 100,
+            "act-interl-delay-down": 10,
+            "data-link-encaps": 525061,
+            "dsl-type": 5,
+        },
+        {
+            "access-line-profile-id": 2,
+            "act-up": 40000,
+            "act-down": 100000,
+            "pon-type": 1,
+            "etr-up": 40000,
+            "etr-down": 100000,
+            "attetr-up": 40000,
+            "attetr-down": 100000,
+            "gdr-up": 40000,
+            "gdr-down": 100000,
+            "attgdr-up": 40000,
+            "attgdr-down": 100000,
+            "ont-onu-avg-down": 100000,
+            "ont-onu-peak-down": 100000,
+            "ont-onu-max-up": 40000,
+            "ont-onu-ass-up": 40000,
+            "pon-max-up": 1000000,
+            "pon-max-down": 2400000
+        }
+    ]
+}
+```
