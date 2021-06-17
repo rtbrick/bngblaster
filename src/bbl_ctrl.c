@@ -38,24 +38,6 @@ extern volatile bool g_teardown_request;
 typedef ssize_t callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
 
 const char *
-session_state_string(uint32_t state) {
-    switch(state) {
-        case BBL_IDLE: return "Idle";
-        case BBL_IPOE_SETUP: return "IPoE Setup";
-        case BBL_PPPOE_INIT: return "PPPoE Init";
-        case BBL_PPPOE_REQUEST: return "PPPoE Request";
-        case BBL_PPP_LINK: return "PPP Link";
-        case BBL_PPP_AUTH: return "PPP Authentication";
-        case BBL_PPP_NETWORK: return "PPP Network";
-        case BBL_ESTABLISHED: return "Established";
-        case BBL_PPP_TERMINATING: return "PPP Terminating";
-        case BBL_TERMINATING: return "Terminating";
-        case BBL_TERMINATED: return "Terminated";
-        default: return "N/A";
-    }
-}
-
-const char *
 ppp_state_string(uint32_t state) {
     switch(state) {
         case BBL_PPP_CLOSED: return "Closed";

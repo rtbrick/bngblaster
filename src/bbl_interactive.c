@@ -391,8 +391,15 @@ bbl_stats_job (timer_s *timer)
         wprintw(stats_win, " )\n", g_session_selected);
         session = bbl_session_get(ctx, g_session_selected);
         if(session) {
+            wprintw(stats_win, "\n     State: %s \n", session_state_string(session->session_state));
             if(session->username) {
-                wprintw(stats_win, "\n  Username: %s \n", session->username);
+                wprintw(stats_win, "  Username: %s \n", session->username);
+            }
+            if(session->agent_remote_id) {
+                wprintw(stats_win, "       ARI: %s \n", session->agent_remote_id);
+            }
+            if(session->agent_remote_id) {
+                wprintw(stats_win, "       ACI: %s \n", session->agent_circuit_id);
             }
             wprintw(stats_win, "\n  Access Client Interface\n");
             wprintw(stats_win, "    Tx Packets %10lu | %7lu PPS | %10lu Kbps\n",
