@@ -10,6 +10,9 @@
 #ifndef __BBL_SESSIONS_H__
 #define __BBL_SESSIONS_H__
 
+const char *
+session_state_string(uint32_t state);
+
 bbl_session_s *
 bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id);
 
