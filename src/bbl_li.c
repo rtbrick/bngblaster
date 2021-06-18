@@ -4,6 +4,7 @@
  * Christian Giese, February 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "bbl.h"
@@ -41,14 +42,14 @@ bbl_li_sub_packet_type_string(uint8_t sub_packet_type)
     }
 }
 
-/** 
- * bbl_l2tp_handler_rx 
+/**
+ * bbl_l2tp_handler_rx
  *
- * This function handles all received L2TPv2 traffic. 
- * 
- * @param eth Received ethernet packet. 
- * @param l2tp L2TP header of received ethernet packet. 
- * @param interface Receiving interface. 
+ * This function handles all received L2TPv2 traffic.
+ *
+ * @param eth Received ethernet packet.
+ * @param l2tp L2TP header of received ethernet packet.
+ * @param interface Receiving interface.
  */
 void
 bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_interface_s *interface) {
@@ -59,7 +60,7 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
     bbl_pppoe_session_t *inner_pppoe;
     bbl_ipv4_t *inner_ipv4 = NULL;
     bbl_ipv6_t *inner_ipv6 = NULL;
-    bbl_li_flow_t *li_flow; 
+    bbl_li_flow_t *li_flow;
 
     dict_insert_result result;
     void **search = NULL;
@@ -99,7 +100,7 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
             inner_ipv4 = (bbl_ipv4_t*)inner_pppoe->next;
         } else if(inner_pppoe->protocol == PROTOCOL_IPV6) {
             inner_ipv6 = (bbl_ipv6_t*)inner_pppoe->next;
-        } 
+        }
     } else if(inner_eth->type == ETH_TYPE_IPV4) {
         inner_ipv4 = (bbl_ipv4_t*)eth->next;
     } else if(inner_eth->type == PROTOCOL_IPV6) {

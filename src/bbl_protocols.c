@@ -4,177 +4,130 @@
  * Christian Giese, July 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
+#include "bbl.h"
 #include "bbl_protocols.h"
-
 
 protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_l2tp_t **_l2tp);
 protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
 
-uint16_t
-bbl_checksum(uint16_t *buf, uint16_t len) {
-         uint32_t sum = 0;
-         uint16_t checksum = 0;
+/*
+ * CHECKSUM
+ * ------------------------------------------------------------------------*/
 
+static uint32_t
+_checksum(void *buf, ssize_t len) {
+    uint32_t result = 0;
+    uint16_t *cur = buf;
     while (len > 1) {
-        sum += *buf++;
+        result += *cur++;
         len -= 2;
     }
-    /* If any bytes left, pad the bytes and add */
-    if(len > 0) {
-        sum += ((*buf) & htobe16(0xFF00));
+    /*  Add left-over byte, if any */
+    if (len) {
+        result += *(uint8_t*)cur;
     }
-    /* Fold sum to 16 bits: add carrier to result */
+    return result;
+}
+
+static uint32_t
+_fold(uint32_t sum) {
     while (sum>>16) {
         sum = (sum & 0xffff) + (sum >> 16);
     }
-    /* Calculate one's complement */
-    checksum = ~sum;
-    return checksum;
+    return sum;
 }
 
 uint16_t
-bbl_ipv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t nh, uint8_t *buf, uint16_t len) {
-
-    int i;
-    uint32_t checksum = 0;
-    uint16_t word16;
-    bool padding = false;
-
-    /* The following block ensures that checksum field is ignored */
-    switch(nh) {
-        case IPV6_NEXT_HEADER_UDP:
-            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
-            word16 = ((buf[2]<<8)&0xFF00) + (buf[3]&0xFF); checksum += word16;
-            word16 = ((buf[4]<<8)&0xFF00) + (buf[5]&0xFF); checksum += word16;
-            i = 8;
-            break;
-        case IPV6_NEXT_HEADER_ICMPV6:
-            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
-            i = 4;
-            break;
-        default:
-            i = 0;
-            break;
-    }
-    if (len % 2) {
-        padding = true;
-        len--;
-    }
-    /* Make 16 bit words out of every two adjacent 8 bit words and
-     * calculate the sum of all 16 bit words */
-    for (; i < len; i = i+2) {
-        word16 = ((buf[i]<<8)&0xFF00) + (buf[i+1]&0xFF);
-        checksum += word16;
-    }
-    if(padding) {
-        word16 = (buf[len]<<8)&0xFF00;
-        checksum += word16;
-        len++;
-    }
-
-    /* Add the IPv6 pseudo header which contains the
-     * source and destinations addresses */
-    for (i = 0; i < IPV6_ADDR_LEN; i = i+2) {
-        word16 =((src[i]<<8)) + (src[i+1]);
-        checksum += word16;
-    }
-    for (i = 0; i<IPV6_ADDR_LEN; i = i+2) {
-        word16 = ((dst[i]<<8)) + (dst[i+1]);
-        checksum += word16;
-    }
-
-    /* Add the protocol number and the length of the UDP packet */
-    checksum += nh + len;
-
-    /* Keep only the last 16 bits of the 32 bit calculated sum and add the carries */
-    while (checksum >> 16)
-        checksum = (checksum & 0xffff) + (checksum >> 16);
-
-    /* Take the one's complement of checksum */
-    checksum = ~checksum;
-
-    return (uint16_t)checksum;
+bbl_checksum(uint8_t *buf, uint16_t len) {
+    return ~_fold(_checksum(buf, len));
 }
 
 uint16_t
-bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *buf, uint16_t len) {
-    return bbl_ipv6_checksum(src, dst, IPV6_NEXT_HEADER_UDP, buf, len);
+bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len) {
+    uint32_t result;
+    result  = htobe16(PROTOCOL_IPV4_UDP);
+    result += htobe16(udp_len);
+    result += _checksum(&src, sizeof(src));
+    result += _checksum(&dst, sizeof(dst));
+    result += _checksum(udp, 6);
+    result += _checksum(udp+8, udp_len-8);
+    return ~_fold(result);
 }
 
 uint16_t
-bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *buf, uint16_t len) {
-    return bbl_ipv6_checksum(src, dst, IPV6_NEXT_HEADER_ICMPV6, buf, len);
+bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp_len) {
+    uint32_t result;
+    result  = htobe16(IPV6_NEXT_HEADER_UDP);
+    result += htobe16(udp_len);
+    result += _checksum(src, sizeof(ipv6addr_t));
+    result += _checksum(dst, sizeof(ipv6addr_t));
+    result += _checksum(udp, 6);
+    result += _checksum(udp+8, udp_len-8);
+    return ~_fold(result);
 }
 
 uint16_t
-bbl_ipv4_checksum(uint32_t src, uint32_t dst, uint8_t proto, uint8_t *buf, uint16_t len) {
-
-    uint8_t *ip8;
-
-    int i;
-    uint32_t checksum = 0;
-    uint16_t word16;
-    bool padding = false;
-
-    /* The following block ensures that checksum field is ignored */
-    switch(proto) {
-        case PROTOCOL_IPV4_UDP:
-            word16 = ((buf[0]<<8)&0xFF00) + (buf[1]&0xFF); checksum += word16;
-            word16 = ((buf[2]<<8)&0xFF00) + (buf[3]&0xFF); checksum += word16;
-            word16 = ((buf[4]<<8)&0xFF00) + (buf[5]&0xFF); checksum += word16;
-            i = 8;
-            break;
-        default:
-            i = 0;
-            break;
-    }
-    if (len % 2) {
-        padding = true;
-        len--;
-    }    
-    /* Make 16 bit words out of every two adjacent 8 bit words and 
-     * calculate the sum of all 16 bit words */
-    for (; i < len; i = i+2) {
-        word16 = ((buf[i]<<8)&0xFF00) + (buf[i+1]&0xFF);
-        checksum += word16;
-    }
-    if(padding) {
-        word16 = (buf[len]<<8)&0xFF00;
-        checksum += word16;
-        len++;
-    }
-
-    /* Add the IPv4 pseudo header which contains the 
-     * source and destinations addresses */
-    ip8 = (void *)&src;
-    word16 = ((ip8[0]<<8)&0xFF00) + (ip8[1]&0xFF); checksum += word16;
-    word16 = ((ip8[2]<<8)&0xFF00) + (ip8[3]&0xFF); checksum += word16;
-    ip8 = (void *)&dst;
-    word16 = ((ip8[0]<<8)&0xFF00) + (ip8[1]&0xFF); checksum += word16;
-    word16 = ((ip8[2]<<8)&0xFF00) + (ip8[3]&0xFF); checksum += word16;
-
-    /* Add the protocol number and the length of the UDP packet */
-    checksum += proto + len;
-
-    /* Keep only the last 16 bits of the 32 bit calculated sum and add the carries */
-    while (checksum >> 16)
-        checksum = (checksum & 0xffff) + (checksum >> 16);
-    
-    /* Take the one's complement of checksum */
-    checksum = ~checksum;
-
-    return (uint16_t)checksum;
-}
-
-uint16_t
-bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *buf, uint16_t len) {
-    return bbl_ipv4_checksum(src, dst, PROTOCOL_IPV4_UDP, buf, len);
+bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *icmp, uint16_t icmp_len) {
+    uint32_t result;
+    result  = htobe16(IPV6_NEXT_HEADER_ICMPV6);
+    result += htobe16(icmp_len);
+    result += _checksum(src, sizeof(ipv6addr_t));
+    result += _checksum(dst, sizeof(ipv6addr_t));
+    result += _checksum(icmp, 2);
+    result += _checksum(icmp+4, icmp_len-4);
+    return ~_fold(result);
 }
 
 /*
  * ENCODE
  * ------------------------------------------------------------------------*/
+
+static uint16_t 
+encode_dhcpv6_access_line(uint8_t *buf, access_line_t *access_line) {
+    uint16_t len = 0;
+    uint16_t *option_len; 
+
+    /* DHCPv6 Vendor Option (17) */
+    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_OPTS);
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+    option_len = (uint16_t*)buf;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+    *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+
+    if(access_line->up) {
+        *(uint16_t*)buf = htobe16(ACCESS_LINE_ACT_UP);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint32_t*)buf = htobe32(access_line->up);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->down) {
+        *(uint16_t*)buf = htobe16(ACCESS_LINE_ACT_DOWN);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint32_t*)buf = htobe32(access_line->down);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->dsl_type) {
+        *(uint16_t*)buf = htobe16(ACCESS_LINE_DSL_TYPE);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint16_t));
+        *(uint32_t*)buf = htobe32(access_line->dsl_type);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+
+    if(len > 8) {
+        *option_len = htobe16(len-4);
+        return len;
+    }
+    return 0;
+}
 
 /*
  * encode_dhcpv6
@@ -183,9 +136,20 @@ protocol_error_t
 encode_dhcpv6(uint8_t *buf, uint16_t *len,
               bbl_dhcpv6_t *dhcpv6) {
 
-    *(uint32_t*)buf = dhcpv6->transaction_id;
+    uint16_t value_len;
+
+    /* Transaction ID */
+    *(uint32_t*)buf = htobe32(dhcpv6->xid);
     *buf = dhcpv6->type;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    /* Elapsed Time */
+    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_ELAPSED_TIME);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(sizeof(uint16_t));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    /* Client Identifier */
     if(dhcpv6->client_duid_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_CLIENTID);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -194,6 +158,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         memcpy(buf, dhcpv6->client_duid, dhcpv6->client_duid_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->client_duid_len);
     }
+    /* Server Identifier */
     if(dhcpv6->server_duid_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_SERVERID);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -202,12 +167,34 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         memcpy(buf, dhcpv6->server_duid, dhcpv6->server_duid_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->server_duid_len);
     }
+    /* Rapid Commit */
     if(dhcpv6->rapid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_RAPID_COMMIT);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = 0;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
+    /* IA_NA */
+    if(dhcpv6->ia_na_option_len) {
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(dhcpv6->ia_na_option_len);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        memcpy(buf, dhcpv6->ia_pd_option, dhcpv6->ia_na_option_len);
+        BUMP_WRITE_BUFFER(buf, len, dhcpv6->ia_na_option_len);
+    } else if(dhcpv6->ia_na_iaid) {
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(12);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint32_t*)buf = dhcpv6->ia_na_iaid;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        *(uint32_t*)buf = 0; // T1
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        *(uint32_t*)buf = 0; // T2
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+    /* IA_PD */
     if(dhcpv6->ia_pd_option_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_PD);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -215,12 +202,12 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         memcpy(buf, dhcpv6->ia_pd_option, dhcpv6->ia_pd_option_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->ia_pd_option_len);
-    } else if(dhcpv6->delegated_prefix_iaid) {
+    } else if(dhcpv6->ia_pd_iaid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_PD);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(41);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = dhcpv6->delegated_prefix_iaid;
+        *(uint32_t*)buf = dhcpv6->ia_pd_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint32_t*)buf = 0; // T1
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
@@ -234,9 +221,10 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint32_t*)buf = 0; // valid lifetime
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        memcpy(buf, dhcpv6->delegated_prefix, sizeof(ipv6_prefix));
+        memset(buf, 0x0, sizeof(ipv6_prefix));
         BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6_prefix));
     }
+    /* Option Request Option */
     if(dhcpv6->oro) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_ORO);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -245,7 +233,91 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_DNS_SERVERS);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
+    /* Vendor Class Option */
+    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_CLASS);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint32_t*)buf = htobe32(RTBRICK);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    if(dhcpv6->access_line) {
+        if(dhcpv6->access_line->aci) {
+            /* DHCPv6 Interface-Id Option (18) */
+            *(uint16_t*)buf = htobe16(DHCPV6_OPTION_INTERFACE_ID);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            value_len = strnlen(dhcpv6->access_line->aci, UINT8_MAX);
+            *(uint16_t*)buf = htobe16(value_len);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            memcpy(buf, dhcpv6->access_line->aci, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+        }
+        if(dhcpv6->access_line->ari) {
+            /* DHCPv6 Remote-ID Option (37) */
+            *(uint16_t*)buf = htobe16(DHCPV6_OPTION_REMOTE_ID);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            value_len = strnlen(dhcpv6->access_line->ari, UINT16_MAX);
+             *(uint16_t*)buf = htobe16(value_len+4);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+            memcpy(buf, dhcpv6->access_line->ari, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+        }
+        /* DHCPv6 Vendor Option (17)
+         * See TR-177 chapter 5.6.1 and TR-101 Appendix B */
+        value_len = encode_dhcpv6_access_line(buf, dhcpv6->access_line);
+        BUMP_WRITE_BUFFER(buf, len, value_len);
+    }
     return PROTOCOL_SUCCESS;
+}
+
+static uint8_t 
+encode_dhcp_access_line(uint8_t *buf, access_line_t *access_line) {
+    uint8_t len = 0;
+    uint8_t *option_len; 
+    uint8_t *data_len; 
+
+    *buf = DHCP_RELAY_AGENT_VENDOR_SUBOPT;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+    option_len = buf;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+    *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    data_len = buf;
+    BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+
+    if(access_line->up) {
+        *buf = ACCESS_LINE_ACT_UP;
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *buf = sizeof(uint32_t);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(access_line->up);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->down) {
+        *buf = ACCESS_LINE_ACT_DOWN;
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *buf = sizeof(uint32_t);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(access_line->down);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+    if(access_line->dsl_type) {
+        *buf = ACCESS_LINE_DSL_TYPE;
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *buf = sizeof(uint32_t);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(access_line->dsl_type);
+        BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
+    }
+
+    if(len > 7) {
+        *option_len = len-2;
+        *data_len = len-7;
+        return len;
+    }
+    return 0;
 }
 
 /*
@@ -257,7 +329,7 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
 
     if(!dhcp->header) return ENCODE_ERROR;
 
-    uint8_t  str_len;
+    uint8_t  value_len;
     uint8_t  option_len;
     uint8_t *option_len_ptr;
 
@@ -338,23 +410,27 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         if(dhcp->access_line->aci) {
             *buf = ACCESS_LINE_ACI;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            str_len = strnlen(dhcp->access_line->aci, UINT8_MAX);
-            *buf = str_len;
+            value_len = strnlen(dhcp->access_line->aci, UINT8_MAX);
+            *buf = value_len;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            memcpy(buf, dhcp->access_line->aci, str_len);
-            BUMP_WRITE_BUFFER(buf, len, str_len);
-            option_len += str_len + 2;
+            memcpy(buf, dhcp->access_line->aci, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+            option_len += value_len + 2;
         }
         if(dhcp->access_line->ari) {
             *buf = ACCESS_LINE_ARI;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            str_len = strnlen(dhcp->access_line->ari, UINT8_MAX);
-            *buf = str_len;
+            value_len = strnlen(dhcp->access_line->ari, UINT8_MAX);
+            *buf = value_len;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-            memcpy(buf, dhcp->access_line->ari, str_len);
-            BUMP_WRITE_BUFFER(buf, len, str_len);
-            option_len += str_len + 2;
+            memcpy(buf, dhcp->access_line->ari, value_len);
+            BUMP_WRITE_BUFFER(buf, len, value_len);
+            option_len += value_len + 2;
         }
+        /* See TR-101 Appendix B */
+        value_len = encode_dhcp_access_line(buf, dhcp->access_line);
+        option_len += value_len;
+        BUMP_WRITE_BUFFER(buf, len, value_len);
         *option_len_ptr = option_len;
     }
 
@@ -390,7 +466,7 @@ encode_bbl(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *buf = bbl->tos;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    *(uint32_t*)buf = bbl->session_id; 
+    *(uint32_t*)buf = bbl->session_id;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
         *(uint32_t*)buf = bbl->ifindex;
@@ -516,7 +592,7 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
     icmp_len = *len - icmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, icmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum(start, icmp_len);
 
 
     return PROTOCOL_SUCCESS;
@@ -583,7 +659,7 @@ encode_icmp(uint8_t *buf, uint16_t *len,
     icmp_len = *len - icmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, icmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum(start, icmp_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -656,7 +732,7 @@ encode_igmp(uint8_t *buf, uint16_t *len,
     igmp_len = *len - igmp_len;
 
     /* Update checksum */
-    *(uint16_t*)(start + 2) = bbl_checksum((uint16_t*)start, igmp_len);
+    *(uint16_t*)(start + 2) = bbl_checksum(start, igmp_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -672,7 +748,6 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
 
     uint8_t *start = buf;
     uint16_t ipv6_len;
-    uint16_t checksum;
 
     *(uint64_t*)buf = 0;
     *(uint16_t*)buf |= be16toh(ipv6->tos << 4);
@@ -698,16 +773,17 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
         case IPV6_NEXT_HEADER_ICMPV6:
             result = encode_icmpv6(buf, len, (bbl_icmpv6_t*)ipv6->next);
             ipv6_len = *len - ipv6_len;
-            checksum = bbl_ipv6_icmpv6_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
-            *(uint16_t*)(buf + 2) = htobe16(checksum); // update icmpv6 checksum
+            /* Update icmpv6 checksum */
+            *(uint16_t*)(buf + 2) = bbl_ipv6_icmpv6_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
             break;
         case IPV6_NEXT_HEADER_UDP:
             result = encode_udp(buf, len, (bbl_udp_t*)ipv6->next);
             ipv6_len = *len - ipv6_len;
-            *(uint16_t*)(buf + 4) = htobe16(ipv6_len); // update UDP length
+            /* Update UDP length */
+            *(uint16_t*)(buf + 4) = htobe16(ipv6_len);
             if(((bbl_udp_t*)ipv6->next)->protocol != UDP_PROTOCOL_BBL) {
-                checksum = bbl_ipv6_udp_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
-                *(uint16_t*)(buf + 6) = htobe16(checksum); // update UDP checksum
+                /* Update UDP checksum */
+                *(uint16_t*)(buf + 6) = bbl_ipv6_udp_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
             }
             break;
         default:
@@ -734,7 +810,6 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     uint8_t *start = buf;
     uint16_t ipv4_len = *len;
     uint16_t udp_len = *len;
-    uint16_t checksum;
     uint8_t header_len = 5; // header length 20 (4 * 5)
 
     if(ipv4->router_alert_option) {
@@ -794,10 +869,12 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
             udp_len = *len;
             result = encode_udp(buf, len, (bbl_udp_t*)ipv4->next);
             udp_len = *len - udp_len;
-            *(uint16_t*)(buf + 4) = htobe16(udp_len); // update UDP length
-            if(((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_BBL) {
-                checksum = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
-                *(uint16_t*)(buf + 6) = htobe16(checksum); // update UDP checksum
+            /* Update UDP length */
+            *(uint16_t*)(buf + 4) = htobe16(udp_len);
+            if(((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_BBL &&
+               ((bbl_udp_t*)ipv4->next)->protocol != UDP_PROTOCOL_L2TP) {
+                /* Update UDP checksum */
+                *(uint16_t*)(buf + 6) = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
             }
             break;
         default:
@@ -810,7 +887,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     *(uint16_t*)(start + 2) = htobe16(ipv4_len);
 
     /* Update checksum */
-    *(uint16_t*)(start + 10) = bbl_checksum((uint16_t*)start, header_len * 4);
+    *(uint16_t*)(start + 10) = bbl_checksum(start, header_len * 4);
 
     return result;
 }
@@ -1105,8 +1182,8 @@ encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp) {
     if(l2tp->with_offset) {
         *(uint16_t*)buf = htobe16(l2tp->offset);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        if(l2tp->offset) { 
-            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        if(l2tp->offset) {
+            BUMP_WRITE_BUFFER(buf, len, l2tp->offset);
         }
     }
     if(l2tp->type) {
@@ -1176,8 +1253,10 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
     uint16_t *pppoe_len_field;
     uint16_t *vendor_len_field;
     uint16_t  pppoe_len = 0;
-    uint16_t  vendor_len = 0;
-    uint8_t   str_len = 0;
+    uint16_t  vendor_len;
+    uint8_t   str_len;
+
+    bbl_access_line_profile_s *access_line_profile;
 
     /* Set version and type to 1 */
     *buf = 17;
@@ -1224,6 +1303,8 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
             pppoe_len += pppoe->ac_cookie_len;
         }
         if(pppoe->access_line) {
+            access_line_profile = pppoe->access_line->profile;
+
             *(uint16_t*)buf = htobe16(PPPOE_TAG_VENDOR);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
             vendor_len_field = (uint16_t*)buf;
@@ -1251,30 +1332,304 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, str_len);
                 vendor_len += 2 + str_len;
             }
-            if(pppoe->access_line->up) {
+            if(pppoe->access_line->up || (access_line_profile && access_line_profile->act_up)) {
                 *buf = ACCESS_LINE_ACT_UP;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = 4;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(pppoe->access_line->up);
+                if(pppoe->access_line->up) {
+                    *(uint32_t*)buf = htobe32(pppoe->access_line->up);
+                } else {
+                    *(uint32_t*)buf = htobe32(access_line_profile->act_up);
+                }
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
-            if(pppoe->access_line->down) {
+            if(pppoe->access_line->down || (access_line_profile && access_line_profile->act_down)) {
                 *buf = ACCESS_LINE_ACT_DOWN;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = 4;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(pppoe->access_line->down);
+                if(pppoe->access_line->down) {
+                    *(uint32_t*)buf = htobe32(pppoe->access_line->down);
+                } else {
+                    *(uint32_t*)buf = htobe32(access_line_profile->act_down);
+                }
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
-            if(pppoe->access_line->down) {
+            if(pppoe->access_line->dsl_type || (access_line_profile && access_line_profile->dsl_type)) {
                 *buf = ACCESS_LINE_DSL_TYPE;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = 4;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(pppoe->access_line->dsl_type);
+                if(pppoe->access_line->dsl_type) {
+                    *(uint32_t*)buf = htobe32(pppoe->access_line->dsl_type);
+                } else {
+                    *(uint32_t*)buf = htobe32(access_line_profile->dsl_type);
+                }
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->min_up) {
+                *buf = ACCESS_LINE_MIN_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->min_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->min_down) {
+                *buf = ACCESS_LINE_MIN_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->min_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->att_up) {
+                *buf = ACCESS_LINE_ATT_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->att_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->att_down) {
+                *buf = ACCESS_LINE_ATT_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->att_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->max_up) {
+                *buf = ACCESS_LINE_MAX_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->max_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->max_down) {
+                *buf = ACCESS_LINE_MAX_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->max_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->min_up_low) {
+                *buf = ACCESS_LINE_MIN_UP_LOW;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->min_up_low);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->min_down_low) {
+                *buf = ACCESS_LINE_MIN_DOWN_LOW;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->min_down_low);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->max_interl_delay_up) {
+                *buf = ACCESS_LINE_MAX_INTERL_DELAY_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->max_interl_delay_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->act_interl_delay_up) {
+                *buf = ACCESS_LINE_ACT_INTERL_DELAY_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->act_interl_delay_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->max_interl_delay_down) {
+                *buf = ACCESS_LINE_MAX_INTERL_DELAY_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->max_interl_delay_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->act_interl_delay_down) {
+                *buf = ACCESS_LINE_ACT_INTERL_DELAY_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->act_interl_delay_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->data_link_encaps) {
+                *buf = ACCESS_LINE_DATA_LINK_ENCAPS;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                /* (1)byte   + (1)byte  + (1)byte
+                 * data link   encaps 1   encaps 2 */;
+                *(uint32_t*)buf = htobe32(access_line_profile->data_link_encaps);
+                *buf = 3;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 5;
+            }
+            if(access_line_profile && access_line_profile->dsl_type) {
+                *buf = ACCESS_LINE_DSL_TYPE;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->dsl_type);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->pon_type) {
+                *buf = ACCESS_LINE_PON_TYPE;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->pon_type);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->etr_up) {
+                *buf = ACCESS_LINE_ETR_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->etr_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->etr_down) {
+                *buf = ACCESS_LINE_ETR_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->etr_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->attetr_up) {
+                *buf = ACCESS_LINE_ATTETR_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->attetr_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->attetr_down) {
+                *buf = ACCESS_LINE_ATTETR_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->attetr_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->gdr_up) {
+                *buf = ACCESS_LINE_GDR_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->gdr_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->gdr_down) {
+                *buf = ACCESS_LINE_GDR_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->gdr_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->attgdr_up) {
+                *buf = ACCESS_LINE_ATTGDR_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->attgdr_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->attgdr_down) {
+                *buf = ACCESS_LINE_ATTGDR_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->attgdr_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->ont_onu_avg_down) {
+                *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_avg_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->ont_onu_peak_down) {
+                *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_peak_down);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->ont_onu_max_up) {
+                *buf = ACCESS_LINE_ONT_ONU_MAX_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_max_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->ont_onu_ass_up) {
+                *buf = ACCESS_LINE_ONT_ONU_ASS_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_ass_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->pon_max_up) {
+                *buf = ACCESS_LINE_PON_MAX_UP;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->pon_max_up);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            if(access_line_profile && access_line_profile->pon_max_down) {
+                *buf = ACCESS_LINE_PON_MAX_DOWN;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 4;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint32_t*)buf = htobe32(access_line_profile->pon_max_down);
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
@@ -1348,6 +1703,101 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_cfm
+ */
+protocol_error_t
+encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
+
+    uint8_t max_ma_str_len = 45;
+
+    if(cfm->type != CFM_TYPE_CCM) {
+        /* Currently only CFM CC is supported */
+        return ENCODE_ERROR;
+    }
+
+    *buf = cfm->md_level << 5; /* CFM MD level and version */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = cfm->type; /* CFM OpCode */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Set CFM CC interval fixed to 1s (4) */
+    *buf = 4;
+    if(cfm->rdi) {
+        /* Set RDI bit */
+        *buf |= 128;
+    }
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    
+    /* Remember first TLV offset position */
+    *buf = 70;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    memset(buf, 0x0, 70);
+
+    /* Sequence Number */
+    *(uint32_t*)buf = htobe32(cfm->seq);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    /* MA Identifier */
+    *(uint16_t*)buf = htobe16(cfm->ma_id);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* MD Name */
+    *buf = cfm->md_name_format;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    if(cfm->md_name_format != CMF_MD_NAME_FORMAT_NONE) {
+        if(cfm->md_name_len > 32) cfm->md_name_len = 32;
+        *buf = cfm->md_name_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, cfm->md_name, cfm->md_name_len);
+        BUMP_WRITE_BUFFER(buf, len, cfm->md_name_len);
+        max_ma_str_len -= cfm->md_name_len + 1;
+    }
+    /* MA Name */
+    *buf = cfm->ma_name_format;
+    if(cfm->ma_name_len > max_ma_str_len) cfm->ma_name_len = max_ma_str_len;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = cfm->ma_name_len;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    memcpy(buf, cfm->ma_name, cfm->ma_name_len);
+    BUMP_WRITE_BUFFER(buf, len, max_ma_str_len);
+
+    /* Y.1731 */
+    BUMP_WRITE_BUFFER(buf, len, 16);
+
+    /* CFM TLVs */
+
+    /* Sender ID TLV */
+    *buf = 1; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint16_t*)buf = htobe16(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Port Status TLV */
+    *buf = 2; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint16_t*)buf = htobe16(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 2; /* UP */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Interface Status TLV */
+    *buf = 4; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *(uint16_t*)buf = htobe16(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 1; /* UP */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* End TLV */
+    *buf = 0; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_ethernet
  */
 protocol_error_t
@@ -1402,6 +1852,8 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             return encode_ipv4(buf, len, (bbl_ipv4_t*)eth->next);
         case ETH_TYPE_IPV6:
             return encode_ipv6(buf, len, (bbl_ipv6_t*)eth->next);
+        case ETH_TYPE_CFM:
+            return encode_cfm(buf, len, (bbl_cfm_t*)eth->next);
         default:
             return UNKNOWN_PROTOCOL;
     }
@@ -1608,6 +2060,88 @@ decode_igmp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+static protocol_error_t
+decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
+
+    uint16_t ia_option;
+    uint16_t ia_option_len;
+    
+    if(len < 12) {
+        return DECODE_ERROR;
+    }
+    dhcpv6->ia_na_option = buf;
+    dhcpv6->ia_na_option_len = len;
+    dhcpv6->ia_na_iaid = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_na_t1 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_na_t2 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    while(len >= 4) {
+        ia_option = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        ia_option_len = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(ia_option_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(ia_option) {
+            case DHCPV6_OPTION_IAADDR:
+                if(ia_option_len < 24) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_na_address = (ipv6addr_t*)(buf);
+                dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
+                dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, ia_option_len);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+static protocol_error_t
+decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
+
+    uint16_t ia_option;
+    uint16_t ia_option_len;
+    
+    if(len < 12) {
+        return DECODE_ERROR;
+    }
+    dhcpv6->ia_pd_option = buf;
+    dhcpv6->ia_pd_option_len = len;
+    dhcpv6->ia_pd_iaid = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_pd_t1 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->ia_pd_t2 = be32toh(*(uint32_t*)(buf));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    while(len >= 4) {
+        ia_option = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        ia_option_len = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(ia_option_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(ia_option) {
+            case DHCPV6_OPTION_IAPREFIX:
+                if(ia_option_len < 25) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf));
+                dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+4));
+                dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+8);
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, ia_option_len);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
 /*
  * decode_dhcpv6
  */
@@ -1630,9 +2164,9 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     dhcpv6 = (bbl_dhcpv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcpv6_t));
     memset(dhcpv6, 0x0, sizeof(bbl_dhcpv6_t));
 
-    dhcpv6->transaction_id = be32toh(*(uint32_t*)buf);
-    dhcpv6->type = dhcpv6->transaction_id >> 24;
-    dhcpv6->transaction_id &= DHCPV6_TYPE_MASK;
+    dhcpv6->xid = be32toh(*(uint32_t*)buf);
+    dhcpv6->type = dhcpv6->xid >> 24;
+    dhcpv6->xid &= DHCPV6_TYPE_MASK;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
 
     while(len >= 4) {
@@ -1647,15 +2181,14 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
             case DHCPV6_OPTION_RAPID_COMMIT:
                 dhcpv6->rapid = true;
                 break;
-            case DHCPV6_OPTION_IA_PD:
-                if(option_len < 41) {
+            case DHCPV6_OPTION_IA_NA:
+                if(decode_dhcpv6_ia_na(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
                 }
-                dhcpv6->ia_pd_option = buf;
-                dhcpv6->ia_pd_option_len = option_len;
-                option = be16toh(*(uint16_t*)(buf+12));
-                if(option == 26) {
-                    dhcpv6->delegated_prefix = (ipv6_prefix*)(buf+24);
+                break;
+            case DHCPV6_OPTION_IA_PD:
+                if(decode_dhcpv6_ia_pd(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
                 }
                 break;
             case DHCPV6_OPTION_SERVERID:
@@ -1977,7 +2510,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
     //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
-    
+
     /* Check if version is 6 */
     if(((*buf >> 4) & 0xf) != 6) {
         return DECODE_ERROR;
@@ -1996,7 +2529,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     ipv6->dst = buf;
     BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
 
-    if(ipv6->payload_len > len) { 
+    if(ipv6->payload_len > len) {
         return DECODE_ERROR;
     }
     len = ipv6->payload_len;
@@ -2075,7 +2608,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
 
     ipv4->tos = header->ip_tos;
     ipv4_total_len = be16toh(header->ip_len);
-    if(ipv4_header_len > ipv4_total_len || 
+    if(ipv4_header_len > ipv4_total_len ||
        ipv4_total_len > len)  {
         return DECODE_ERROR;
     }
@@ -2562,7 +3095,7 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
     l2tp->session_id = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
-    
+
     if(l2tp->with_sequence) {
         if(len < 4) return DECODE_ERROR;
         l2tp->ns = be16toh(*(uint16_t*)buf);
@@ -2604,7 +3137,7 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     } else {
         /* L2TP data packet */
         if(len < 4) return DECODE_ERROR;
-        
+
         l2tp->payload = buf;
         l2tp->payload_len = len;
 

@@ -5,10 +5,13 @@
  * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "bbl.h"
 #include "bbl_session.h"
+#include "bbl_dhcp.h"
+#include "bbl_dhcpv6.h"
 
 protocol_error_t
 bbl_encode_packet_session_ipv4 (bbl_session_s *session)
@@ -55,7 +58,7 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
             return WRONG_PROTOCOL_STATE;
         }
     }
-     
+
     session->stats.access_ipv6_tx++;
     interface->stats.session_ipv6_tx++;
 
@@ -168,7 +171,7 @@ bbl_encode_packet_network_session_ipv6pd (bbl_interface_s *interface, bbl_sessio
             return WRONG_PROTOCOL_STATE;
         }
     }
-    
+
     session->stats.network_ipv6pd_tx++;
     interface->stats.session_ipv6pd_tx++;
 
@@ -591,7 +594,7 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
         pppoe.next = &ipv6;
     } else {
         /* IPoE */
-        eth.type = PROTOCOL_IPV6;
+        eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
     ipv6.dst = (void*)ipv6_multicast_all_routers;
@@ -609,12 +612,28 @@ bbl_dhcpv6_timeout (timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
     session = timer->data;
     interface = session->interface;
-    if(!session->dhcpv6_received) {
+    ctx = interface->ctx;
+
+    if(!(session->dhcpv6_state == BBL_DHCP_BOUND || 
+         session->dhcpv6_state == BBL_DHCP_INIT)) {
         interface->stats.dhcpv6_timeout++;
-        session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
-        bbl_session_tx_qnode_insert(session);
+        if(session->dhcpv6_retry < ctx->config.dhcpv6_retry) {
+            session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
+                session->dhcpv6_state = session->dhcpv6_state == BBL_DHCP_INIT;
+                if(session->session_state == BBL_TERMINATING) {
+                    bbl_session_clear(ctx, session);
+                }
+            } else {
+                bbl_dhcpv6_restart(session);
+            }
+        }
     }
 }
 
@@ -628,22 +647,32 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     bbl_ipv6_t ipv6 = {0};
     bbl_udp_t udp = {0};
     bbl_dhcpv6_t dhcpv6 = {0};
+    access_line_t access_line = {0};
+
+    if(session->dhcpv6_state == BBL_DHCP_INIT ||
+       session->dhcpv6_state == BBL_DHCP_BOUND) {
+        return IGNORED;
+    }
+
+    access_line.aci = session->agent_circuit_id;
+    access_line.ari = session->agent_remote_id;
+    access_line.up = session->rate_up;
+    access_line.down = session->rate_down;
+    access_line.dsl_type = session->dsl_type;
 
     interface = session->interface;
     ctx = interface->ctx;
-    interface->stats.dhcpv6_tx++;
 
-    eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
             return WRONG_PROTOCOL_STATE;
         }
+        eth.dst = session->server_mac;
+        eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
         eth.type = ETH_TYPE_PPPOE_SESSION;
         eth.next = &pppoe;
         pppoe.session_id = session->pppoe_session_id;
@@ -651,38 +680,74 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         pppoe.next = &ipv6;
     } else {
         /* IPoE */
-        eth.type = PROTOCOL_IPV6;
+        eth.dst = (void*)ipv6_multicast_mac_dhcp;
+        eth.vlan_outer_priority = ctx->config.dhcpv6_vlan_priority;
+        eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
-    ipv6.dst = (void*)ipv6_multicast_all_routers;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
+    ipv6.dst = (void*)ipv6_multicast_all_dhcp;
     ipv6.src = (void*)session->link_local_ipv6_address;
-    ipv6.ttl = 255;
+    ipv6.ttl = 64;
+    ipv6.tos = ctx->config.dhcpv6_tc;
     ipv6.protocol = IPV6_NEXT_HEADER_UDP;
     ipv6.next = &udp;
     udp.dst = DHCPV6_UDP_SERVER;
     udp.src = DHCPV6_UDP_CLIENT;
     udp.protocol = UDP_PROTOCOL_DHCPV6;
     udp.next = &dhcpv6;
-    dhcpv6.type = session->dhcpv6_type;
-    dhcpv6.transaction_id = rand();
-    dhcpv6.client_duid = session->duid;
+    dhcpv6.xid = session->dhcpv6_xid;
+    dhcpv6.client_duid = session->dhcpv6_duid;
     dhcpv6.client_duid_len = DUID_LEN;
-    dhcpv6.delegated_prefix_iaid = rand();
-    dhcpv6.delegated_prefix = &session->delegated_ipv6_prefix;
-    if(dhcpv6.type == DHCPV6_MESSAGE_REQUEST) {
-        if(session->server_duid_len) {
-            dhcpv6.server_duid = session->server_duid;
-            dhcpv6.server_duid_len = session->server_duid_len;
-        }
-        if(session->dhcpv6_ia_pd_option_len) {
-            dhcpv6.ia_pd_option = session->dhcpv6_ia_pd_option;
-            dhcpv6.ia_pd_option_len = session->dhcpv6_ia_pd_option_len;
-        }
-    } else {
-        dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
-        dhcpv6.oro = true;
+    dhcpv6.server_duid = session->dhcpv6_server_duid;
+    dhcpv6.server_duid_len = session->dhcpv6_server_duid_len;
+    dhcpv6.ia_na_iaid = session->dhcpv6_ia_na_iaid;
+    dhcpv6.ia_na_option = session->dhcpv6_ia_na_option;
+    dhcpv6.ia_na_option_len = session->dhcpv6_ia_na_option_len;
+    dhcpv6.ia_pd_iaid = session->dhcpv6_ia_pd_iaid;
+    dhcpv6.ia_pd_option = session->dhcpv6_ia_pd_option;
+    dhcpv6.ia_pd_option_len = session->dhcpv6_ia_pd_option_len;
+    dhcpv6.oro = true;
+    switch (session->dhcpv6_state) {
+        case BBL_DHCP_SELECTING:
+            dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
+            session->stats.dhcpv6_tx_solicit++;
+            dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
+            dhcpv6.server_duid_len = 0;
+            dhcpv6.ia_na_option_len = 0;
+            dhcpv6.ia_pd_option_len = 0;
+            dhcpv6.access_line = &access_line;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
+            break;
+        case BBL_DHCP_REQUESTING:
+            dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
+            session->stats.dhcpv6_tx_request++;
+            dhcpv6.access_line = &access_line;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
+            break;
+        case BBL_DHCP_RENEWING:
+            dhcpv6.type = DHCPV6_MESSAGE_RENEW;
+            session->stats.dhcpv6_tx_renew++;
+            dhcpv6.access_line = &access_line;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
+            break;
+        case BBL_DHCP_RELEASE:
+            dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
+            session->stats.dhcpv6_tx_release++;
+            dhcpv6.oro = false;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
+            break;
+        default:
+            return WRONG_PROTOCOL_STATE;
     }
-    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", 5, 0, session, &bbl_dhcpv6_timeout);
+
+    session->dhcpv6_retry++;
+
+    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
+
+    session->stats.dhcpv6_tx++;
+    interface->stats.dhcpv6_tx++;
+
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -756,7 +821,7 @@ protocol_error_t
 bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
-    
+
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ip6cp_t ip6cp = {0};
@@ -1079,6 +1144,7 @@ bbl_encode_padi (bbl_session_s *session)
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
         access_line.dsl_type = session->dsl_type;
+        access_line.profile = session->access_line_profile;
         pppoe.access_line = &access_line;
     }
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -1123,6 +1189,7 @@ bbl_encode_padr (bbl_session_s *session)
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
         access_line.dsl_type = session->dsl_type;
+        access_line.profile = session->access_line_profile;
         pppoe.access_line = &access_line;
     }
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -1193,16 +1260,20 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
 void
 bbl_dhcp_timeout (timer_s *timer)
 {
-    bbl_session_s *session = timer->data;
-
-    if(session->dhcp_state == BBL_DHCP_INIT || 
-       session->dhcp_state == BBL_DHCP_BOUND) {
-        /* Wrong state */
-        return;
-    } 
-
-    session->send_requests = BBL_SEND_DHCP_REQUEST;
-    bbl_session_tx_qnode_insert(session);
+    bbl_session_s *session;
+    bbl_interface_s *interface;
+    session = timer->data;
+    interface = session->interface;
+    if(!(session->dhcp_state == BBL_DHCP_INIT ||
+         session->dhcp_state == BBL_DHCP_BOUND)) {
+        interface->stats.dhcp_timeout++;
+        if(session->dhcp_retry < interface->ctx->config.dhcp_retry) {
+            session->send_requests |= BBL_SEND_DHCP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            bbl_dhcp_restart(session);
+        }
+    }
 }
 
 protocol_error_t
@@ -1254,7 +1325,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     header.htype = 1; /* fixed set to ethernet */
     header.hlen = 6;
     header.xid = session->dhcp_xid;
-    if(ctx->config.dhcp_broadcast && session->dhcp_state != BBL_DHCP_RELEASE) {
+    if(ctx->config.dhcp_broadcast && session->dhcp_state < BBL_DHCP_BOUND) {
         header.flags = htobe16(1 << 15);
         eth.dst = (uint8_t*)broadcast_mac;
         ipv4.dst = IPV4_BROADCAST;
@@ -1262,7 +1333,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     header.ciaddr = session->ip_address;
     memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
     /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
-     * elapsed time, in seconds, since the client sent its first 
+     * elapsed time, in seconds, since the client sent its first
      * BOOTREQUEST message. */
     clock_gettime(CLOCK_MONOTONIC, &now);
     if(session->dhcp_request_timestamp.tv_sec) {
@@ -1276,6 +1347,9 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
     if((session->agent_circuit_id || session->agent_remote_id) && session->dhcp_state != BBL_DHCP_RELEASE) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
+        access_line.up = session->rate_up;
+        access_line.down = session->rate_down;
+        access_line.dsl_type = session->dsl_type;
         dhcp.access_line = &access_line;
     }
 
@@ -1325,15 +1399,26 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
-            if(session->session_state == BBL_TERMINATING) {
-                bbl_session_update_state(ctx, session, BBL_TERMINATED);
-            }
             break;
         default:
             return IGNORED;
     }
 
-    timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+    session->dhcp_retry++;
+    if(dhcp.type == DHCP_MESSAGE_RELEASE) {
+        if(session->dhcp_retry < ctx->config.dhcp_release_retry) {
+            timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_release_interval, 0, session, &bbl_dhcp_timeout);
+        } else {
+            session->dhcp_state = BBL_DHCP_INIT;
+            if(session->session_state == BBL_TERMINATING) {
+                bbl_session_clear(ctx, session);
+            }
+        }
+    } else {
+        timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+    }
+
+    session->stats.dhcp_tx++;
     interface->stats.dhcp_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -1354,7 +1439,7 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     bbl_ctx_s *ctx;
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
-    
+
     interface = session->interface;
     ctx = interface->ctx;
 
@@ -1370,9 +1455,11 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     arp.target_ip = session->peer_ip_address;
 
     if(session->arp_resolved) {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 300, 0, session, &bbl_arp_timeout);
+        if(ctx->config.arp_interval) {
+            timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
+        }
     } else {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", 1, 0, session, &bbl_arp_timeout);
+        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_timeout, 0, session, &bbl_arp_timeout);
     }
     interface->stats.arp_tx++;
     if(!ctx->stats.first_session_tx.tv_sec) {
@@ -1400,6 +1487,33 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
     arp.target = session->server_mac;
     arp.target_ip = session->peer_ip_address;
     session->interface->stats.arp_tx++;
+    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+}
+
+protocol_error_t
+bbl_encode_packet_cfm_cc (bbl_session_s *session)
+{
+    bbl_ethernet_header_t eth = {0};
+    bbl_cfm_t cfm = {0};
+    eth.dst = session->server_mac;
+    eth.src = session->client_mac;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.vlan_three = session->access_third_vlan;
+    eth.type = ETH_TYPE_CFM;
+    eth.next = &cfm;
+    cfm.type = CFM_TYPE_CCM;
+    cfm.seq = session->cfm_seq++;
+    cfm.rdi = session->cfm_rdi;
+    cfm.md_level = session->cfm_level;
+    cfm.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    cfm.ma_id = session->cfm_ma_id;
+    cfm.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
+    if(session->cfm_ma_name) {
+        cfm.ma_name_len = strlen(session->cfm_ma_name);
+        cfm.ma_name = (uint8_t*)session->cfm_ma_name;
+    }
+    session->interface->stats.cfm_cc_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -1476,6 +1590,9 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
     } else if (session->send_requests & BBL_SEND_DHCP_REQUEST) {
         result = bbl_encode_packet_dhcp(session);
         session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
+    } else if (session->send_requests & BBL_SEND_CFM_CC) {
+        result = bbl_encode_packet_cfm_cc(session);
+        session->send_requests &= ~BBL_SEND_CFM_CC;
     } else {
         session->send_requests = 0;
     }
@@ -1656,12 +1773,12 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     return result;
 }
 
-/** 
- * bbl_tx 
+/**
+ * bbl_tx
  *
- * This function should be called as long a send buffer is available or 
- * return code is not EMPTY. 
- * 
+ * This function should be called as long a send buffer is available or
+ * return code is not EMPTY.
+ *
  * @param ctx pointer to ethernet header structure of received packet
  * @param interface pointer to interface on which packet was received
  * @param buf send buffer where packet can be crafted

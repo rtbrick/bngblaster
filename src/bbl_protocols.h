@@ -4,6 +4,7 @@
  * Christian Giese, July 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_PROTOCOLS_H__
@@ -17,6 +18,9 @@
 #include <string.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
+
+#define BROADBAND_FORUM                 3561
+#define RTBRICK                         50058
 
 #define BBL_MAGIC_NUMBER                0x5274427269636b21
 #define BBL_UDP_PORT                    65056
@@ -38,6 +42,7 @@
 #define ETH_TYPE_ARP                    0x0806
 #define ETH_TYPE_IPV4                   0x0800
 #define ETH_TYPE_IPV6                   0x86dd
+#define ETH_TYPE_CFM                    0x8902
 
 #define ETH_ADDR_LEN                    6
 #define ETH_VLAN_ID_MAX                 4095
@@ -162,6 +167,7 @@
 #define DHCP_UDP_CLIENT                 68
 #define DHCP_UDP_SERVER                 67
 #define DHCP_MAGIC_COOKIE               htobe32(0x63825363)
+#define DHCP_RELAY_AGENT_VENDOR_SUBOPT  9
 
 #define DHCPV6_TRANS_ID_LEN             3
 #define DHCPV6_TYPE_MASK                0x00ffffff
@@ -199,6 +205,11 @@
 
 #define QMX_LI_UDP_PORT                 49152
 
+#define CFM_TYPE_CCM                    1
+#define CMF_MD_NAME_FORMAT_NONE         1
+#define CMF_MD_NAME_FORMAT_STRING       4
+#define CMF_MA_NAME_FORMAT_STRING       2
+
 #define MAX_VLANS                       3
 
 #define BUMP_BUFFER(_buf, _len, _size) \
@@ -220,12 +231,13 @@ typedef struct ipv6_prefix_ {
 static const ipv6addr_t ipv6_link_local_prefix = {0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static const ipv6addr_t ipv6_multicast_all_nodes = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 static const ipv6addr_t ipv6_multicast_all_routers = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
-static const ipv6addr_t ipv6_multicast_solicited_node = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+static const ipv6addr_t ipv6_multicast_all_dhcp = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02};
 
 /* MAC Addresses */
 static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static const uint8_t multicast_mac[ETH_ADDR_LEN] =  { 0x01, 0x00, 0x5e, 0x00, 0x00, 0x00};
 static const uint8_t ipv6_multicast_mac[ETH_ADDR_LEN] =  { 0x33, 0x33, 0xff, 0x00, 0x00, 0x10};
+static const uint8_t ipv6_multicast_mac_dhcp[ETH_ADDR_LEN] =  { 0x33, 0x33, 0x00, 0x01, 0x00, 0x02};
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
@@ -306,6 +318,7 @@ typedef enum dhcpv6_option_code_ {
     DHCPV6_OPTION_DOMAIN_LIST           = 24,
     DHCPV6_OPTION_IA_PD                 = 25,
     DHCPV6_OPTION_IAPREFIX              = 26,
+    DHCPV6_OPTION_REMOTE_ID             = 37,
     DHCPV6_OPTION_MAX,
 } dhcpv6_option_code;
 
@@ -407,8 +420,8 @@ typedef enum access_line_codes_ {
     // broadband forum tr101
     ACCESS_LINE_ACI                      = 0x01,  // Agent Circuit ID
     ACCESS_LINE_ARI                      = 0x02,  // Agent Remote ID
-    ACCESS_AGG_ACC_CIRCUIT_ID_ASCII      = 0x03,  // Access-Aggregation-Circuit-ID-ASCII
-    ACCESS_AGG_ACC_CIRCUIT_ID_BIN        = 0x06,  // Access-Aggregation-Circuit-ID-ASCII
+    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII = 0x03,  // Access-Aggregation-Circuit-ID-ASCII
+    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_BIN   = 0x06,  // Access-Aggregation-Circuit-ID-BINARY
     ACCESS_LINE_ACT_UP                   = 0x81,  // Actual Data Rate Upstream
     ACCESS_LINE_ACT_DOWN                 = 0x82,  // Actual Data Rate Downstream
     ACCESS_LINE_MIN_UP                   = 0x83,  // Minimum Data Rate Upstream
@@ -449,6 +462,7 @@ typedef struct access_line_ {
     uint32_t up;        // Actual Data Rate Upstream
     uint32_t down;      // Actual Data Rate Downstream
     uint32_t dsl_type;  // DSL Type
+    void    *profile;
 } access_line_t;
 
 /*
@@ -665,20 +679,33 @@ typedef struct bbl_icmpv6_ {
 } bbl_icmpv6_t;
 
 typedef struct bbl_dhcpv6_ {
-    uint8_t      type;
-    uint32_t     transaction_id;
-    uint8_t     *client_duid;
-    uint8_t      client_duid_len;
-    uint8_t     *server_duid;
-    uint8_t      server_duid_len;
-    bool         rapid;
-    bool         oro;
-    uint32_t     delegated_prefix_iaid;
-    ipv6_prefix *delegated_prefix;
-    uint8_t     *ia_pd_option;
-    uint8_t      ia_pd_option_len;
-    ipv6addr_t  *dns1;
-    ipv6addr_t  *dns2;
+    uint8_t        type;
+    uint32_t       xid;
+    uint8_t       *client_duid;
+    uint8_t        client_duid_len;
+    uint8_t       *server_duid;
+    uint8_t        server_duid_len;
+    ipv6addr_t    *dns1;
+    ipv6addr_t    *dns2;
+    bool           rapid;
+    bool           oro;
+    uint8_t       *ia_na_option;
+    uint8_t        ia_na_option_len;
+    uint32_t       ia_na_iaid;
+    ipv6addr_t    *ia_na_address;
+    uint32_t       ia_na_t1;
+    uint32_t       ia_na_t2;
+    uint32_t       ia_na_preferred_lifetime;
+    uint32_t       ia_na_valid_lifetime;
+    uint8_t       *ia_pd_option;
+    uint8_t        ia_pd_option_len;
+    uint32_t       ia_pd_iaid;
+    ipv6_prefix   *ia_pd_prefix;
+    uint32_t       ia_pd_t1;
+    uint32_t       ia_pd_t2;
+    uint32_t       ia_pd_preferred_lifetime;
+    uint32_t       ia_pd_valid_lifetime;
+    access_line_t *access_line;
 } bbl_dhcpv6_t;
 
 struct dhcp_header {
@@ -777,6 +804,20 @@ typedef struct bbl_qmx_li_ {
     void        *payload; // LI payload
     uint16_t     payload_len; // LI payload length
 } bbl_qmx_li_t;
+
+typedef struct bbl_cfm_ {
+    uint8_t     type;
+    uint32_t    seq;
+    bool        rdi;
+    uint8_t     md_level;
+    uint8_t     md_name_format;
+    uint8_t     md_name_len;
+    uint8_t    *md_name;
+    uint16_t    ma_id;
+    uint8_t     ma_name_format;
+    uint8_t     ma_name_len;
+    uint8_t    *ma_name;
+} bbl_cfm_t;
 
 /*
  * decode_ethernet

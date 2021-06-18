@@ -4,6 +4,7 @@
  * Christian Giese, Match 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_STREAM_H__
@@ -31,7 +32,7 @@ typedef struct bbl_stream_config_
 
     uint32_t pps;
     uint16_t length;
-    uint8_t  priority; /* IPv4 TOS or IPv6 TC */ 
+    uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
 
     uint32_t ipv4_network_address; /* overwrite default IPv4 network address */
@@ -67,7 +68,7 @@ typedef struct bbl_stream_
     uint64_t send_window_packets;
     struct timespec send_window_start;
 
-    uint8_t rx_priority; /* IPv4 TOS or IPv6 TC */ 
+    uint8_t rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t rx_outer_vlan_pbit;
     uint8_t rx_inner_vlan_pbit;
 

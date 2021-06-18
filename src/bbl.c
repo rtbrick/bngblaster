@@ -1,14 +1,15 @@
 /*
  * BNG BLaster (BBL) - Main File
- * 
- * The BNG Blaster is a test tool to simulate thousands 
- * of PPPoE or IPoE subscribers including IPTV, L2TPv2, 
+ *
+ * The BNG Blaster is a test tool to simulate thousands
+ * of PPPoE or IPoE subscribers including IPTV, L2TPv2,
  * traffic verification and convergence testing capabilities.
  *
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "bbl.h"
@@ -22,6 +23,8 @@
 #include "bbl_logging.h"
 #include "bbl_io.h"
 #include "bbl_stream.h"
+#include "bbl_dhcp.h"
+#include "bbl_dhcpv6.h"
 #include <sys/stat.h>
 
 /* Global Variables */
@@ -151,7 +154,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             udp.next = &bbl;
             if(ctx->config.multicast_traffic_len > 76) {
                 bbl.padding = ctx->config.multicast_traffic_len - 76;
-            } 
+            }
             bbl.type = BBL_TYPE_MULTICAST;
             bbl.direction = BBL_DIRECTION_DOWN;
             bbl.tos = ctx->config.multicast_traffic_tos;
@@ -226,8 +229,8 @@ bbl_interface_unlock_all(bbl_ctx_s *ctx) {
     }
 }
 
-/** 
- * bbl_add_interface 
+/**
+ * bbl_add_interface
  *
  * @param ctx global context
  * @param interface interface.
@@ -291,7 +294,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
      * selected per default. */
     if(!bbl_io_add_interface(ctx, interface)) {
         LOG(ERROR, "Failed to add interface %s\n", interface->name);
-        return NULL;     
+        return NULL;
     }
 
     /*
@@ -303,8 +306,8 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
     return interface;
 }
 
-/** 
- * bbl_add_access_interfaces 
+/**
+ * bbl_add_access_interfaces
  *
  * @param ctx global context
  */
@@ -435,7 +438,7 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
-    if(ctx->sessions) { 
+    if(ctx->sessions) {
         if(ctx->sessions_terminated >= ctx->sessions) {
             /* Now close all L2TP tunnels ... */
             if(ctx->l2tp_tunnels == 0) {
@@ -492,7 +495,7 @@ bbl_ctrl_job (timer_s *timer)
             }
         }
     } else {
-        /* Setup phase ... 
+        /* Setup phase ...
          * Iterate over all idle session (list of pending sessions)
          * and start as much as permitted per interval based on max
          * outstanding and setup rate. Sessions started will be removed
@@ -518,18 +521,21 @@ bbl_ctrl_job (timer_s *timer)
                             if(session->access_config->ipv4_enable) {
                                 if(session->access_config->dhcp_enable) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
-                                    session->dhcp_state = BBL_DHCP_SELECTING;
-                                    session->dhcp_xid = rand();
-                                    session->send_requests |= BBL_SEND_DHCP_REQUEST;
+                                    bbl_dhcp_start(session);
                                 } else if (session->ip_address && session->peer_ip_address) {
-                                    /* Start IPoE session by sending ARP request if local and 
+                                    /* Start IPoE session by sending ARP request if local and
                                      * remote IP addresses are already provided. */
                                     session->send_requests |= BBL_SEND_ARP_REQUEST;
                                 }
                             }
                             if(session->access_config->ipv6_enable) {
-                                /* Start IPoE session by sending RS. */
-                                session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                if(session->access_config->dhcpv6_enable) {
+                                    /* Start IPoE session by sending DHCPv6 request if enabled. */
+                                    bbl_dhcpv6_start(session);
+                                } else {
+                                    /* Start IPoE session by sending RS. */
+                                    session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                }
                             }
                             break;
                     }
@@ -768,7 +774,7 @@ main (int argc, char *argv[])
             exit(1);
         }
     }
-    
+
     /*
      * Start smear job. Use a crazy nsec bucket '12345678', such that we do not accidentally smear ourselves.
      */

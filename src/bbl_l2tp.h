@@ -4,6 +4,7 @@
  * Christian Giese, February 2021
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_L2TP_H__
@@ -82,13 +83,13 @@ typedef struct bbl_l2tp_server_
     char *secret;
     char *host_name;
 
-    /* Pointer to next L2TP server 
+    /* Pointer to next L2TP server
      * configuration (simple list). */
-    void *next; 
+    void *next;
 
-    /* List of L2TP tunnel instances 
+    /* List of L2TP tunnel instances
      * for the corresponding server. */
-    CIRCLEQ_HEAD(bbl_l2tp_server__, bbl_l2tp_tunnel_) tunnel_qhead; 
+    CIRCLEQ_HEAD(bbl_l2tp_server__, bbl_l2tp_tunnel_) tunnel_qhead;
 } bbl_l2tp_server_t;
 
 /* L2TP Session Key */
@@ -126,8 +127,8 @@ typedef struct bbl_l2tp_tunnel_
 {
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
 
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_session_) session_qhead; 
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_queue_) txq_qhead; 
+    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_session_) session_qhead;
+    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_queue_) txq_qhead;
 
     /* Pointer to corresponding network interface */
     struct bbl_interface_ *interface;
@@ -142,7 +143,7 @@ typedef struct bbl_l2tp_tunnel_
     /* L2TP tunnel state */
     l2tp_tunnel_state_t state;
     uint32_t state_seconds;
-    
+
     uint16_t tunnel_id;
     uint16_t peer_tunnel_id;
     uint16_t next_session_id;
@@ -191,7 +192,7 @@ typedef struct bbl_l2tp_tunnel_
     uint16_t challenge_response_len;
     uint16_t peer_challenge_response_len;
 
-    /* The following members must be freed 
+    /* The following members must be freed
      * if tunnel is destroyed! */
 
     uint8_t *challenge;
@@ -252,7 +253,7 @@ typedef struct bbl_l2tp_session_
     uint16_t error_code;
     char* error_message;
 
-    /* The following members must be freed 
+    /* The following members must be freed
      * if session is destroyed! */
 
     char *proxy_auth_name;

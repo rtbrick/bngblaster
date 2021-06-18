@@ -4,6 +4,7 @@
  * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 
@@ -112,7 +113,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
         if (nm_ring_empty(ring)) {
             interface->stats.no_tx_buffer++;
             break;
-        } 
+        }
         i = ring->cur;
         buf = (uint8_t*)NETMAP_BUF(ring, ring->slot[i].buf_idx);
 
@@ -126,7 +127,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
             /* Dump the packet into pcap file. */
             if (ctx->pcap.write_buf) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                          buf, len, interface->pcap_index, 
+                                          buf, len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
             }
         }
@@ -137,11 +138,11 @@ bbl_io_netmap_tx_job (timer_s *timer)
     }
 }
 
-/** 
- * bbl_io_netmap_send 
- * 
+/**
+ * bbl_io_netmap_send
+ *
  * Send single packet trough given interface.
- * 
+ *
  * @param interface interface.
  * @param packet packet to be send
  * @param packet_len packet length
@@ -161,12 +162,12 @@ bbl_io_netmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet
     memcpy(buf, packet, packet_len);
     ring->slot[i].len = packet_len;
     ring->head = ring->cur = nm_ring_next(ring, i);
-    return true;   
+    return true;
 }
 
-/** 
- * bbl_io_netmap_add_interface 
- * 
+/**
+ * bbl_io_netmap_add_interface
+ *
  * @param ctx global context
  * @param interface interface.
  */
