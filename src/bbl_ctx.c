@@ -79,10 +79,10 @@ bbl_ctx_add (void)
     ctx->flow_id = 1;
 
     /* Initialize hash table dictionaries. */
-    ctx->vlan_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_SESSION_HASHTABLE_SIZE);
-    ctx->l2tp_session_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_SESSION_HASHTABLE_SIZE);
-    ctx->li_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_LI_HASHTABLE_SIZE);
-    ctx->stream_flow_dict = hashtable2_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_STREAM_FLOW_HASHTABLE_SIZE);
+    ctx->vlan_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_SESSION_HASHTABLE_SIZE);
+    ctx->l2tp_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_SESSION_HASHTABLE_SIZE);
+    ctx->li_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_LI_HASHTABLE_SIZE);
+    ctx->stream_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_STREAM_FLOW_HASHTABLE_SIZE);
 
     return ctx;
 }
