@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.10)
 project(bngbalster-fuzzing C)
 
 set(CMAKE_C_COMPILER "afl-gcc")

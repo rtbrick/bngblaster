@@ -5,6 +5,7 @@
  * Christian Giese, October 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef __BBL_H__
@@ -80,6 +81,7 @@
 #define BBL_SEND_ICMPV6_REPLY       0x00080000
 #define BBL_SEND_ICMPV6_NS          0x00100000
 #define BBL_SEND_ICMPV6_NA          0x00200000
+#define BBL_SEND_CFM_CC             0x00400000
 
 /* Network Interface */
 #define BBL_IF_SEND_ARP_REQUEST     0x00000001
@@ -251,6 +253,8 @@ typedef struct bbl_interface_
         /* Packet Stats */
         uint32_t arp_tx;
         uint32_t arp_rx;
+        uint32_t cfm_cc_tx;
+        uint32_t cfm_cc_rx;
         uint32_t padi_tx;
         uint32_t pado_rx;
         uint32_t padr_tx;
@@ -341,56 +345,114 @@ typedef struct bbl_interface_
 
 typedef struct bbl_access_config_
 {
-        bool exhausted;
-        uint32_t sessions; /* per access config session counter */
-        struct bbl_interface_ *access_if;
-        
-        char *interface;
+    bool exhausted;
+    uint32_t sessions; /* per access config session counter */
+    struct bbl_interface_ *access_if;
 
-        bbl_access_type_t access_type; /* pppoe or ipoe */
-        bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
-        
-        uint16_t stream_group_id;
+    char *interface;
 
-        uint16_t access_outer_vlan;
-        uint16_t access_outer_vlan_min;
-        uint16_t access_outer_vlan_max;
-        uint16_t access_inner_vlan;
-        uint16_t access_inner_vlan_min;
-        uint16_t access_inner_vlan_max;
-        uint16_t access_third_vlan;
+    bbl_access_type_t access_type; /* pppoe or ipoe */
+    bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
 
-        /* Static */
-        uint32_t static_ip;
-        uint32_t static_ip_iter;
-        uint32_t static_gateway;
-        uint32_t static_gateway_iter;
+    uint16_t stream_group_id;
 
-        /* Authentication */
-        char *username;
-        char *password;
-        uint16_t authentication_protocol;
+    uint16_t access_outer_vlan;
+    uint16_t access_outer_vlan_min;
+    uint16_t access_outer_vlan_max;
+    uint16_t access_inner_vlan;
+    uint16_t access_inner_vlan_min;
+    uint16_t access_inner_vlan_max;
+    uint16_t access_third_vlan;
 
-        /* Access Line */
-        char *agent_remote_id;
-        char *agent_circuit_id;
-        uint32_t rate_up;
-        uint32_t rate_down;
-        uint32_t dsl_type;
+    /* Static */
+    uint32_t static_ip;
+    uint32_t static_ip_iter;
+    uint32_t static_gateway;
+    uint32_t static_gateway_iter;
 
-        /* Protocols */
-        bool ipcp_enable;
-        bool ip6cp_enable;
-        bool ipv4_enable;
-        bool ipv6_enable;
-        bool dhcp_enable;
-        bool dhcpv6_enable;
-        bool igmp_autostart;
-        uint8_t igmp_version;
-        bool session_traffic_autostart;
+    /* Authentication */
+    char *username;
+    char *password;
+    uint16_t authentication_protocol;
 
-        void *next; /* pointer to next access config element */
+    /* Access Line */
+    char *agent_remote_id;
+    char *agent_circuit_id;
+    uint32_t rate_up;
+    uint32_t rate_down;
+    uint32_t dsl_type;
+
+    uint16_t access_line_profile_id;
+
+    /* Protocols */
+    bool ipcp_enable;
+    bool ip6cp_enable;
+    bool ipv4_enable;
+    bool ipv6_enable;
+    bool dhcp_enable;
+    bool dhcpv6_enable;
+    bool igmp_autostart;
+    uint8_t igmp_version;
+    bool session_traffic_autostart;
+
+    /* CFM CC */
+    bool cfm_cc;
+    uint8_t cfm_level;
+    uint16_t cfm_ma_id;
+    char *cfm_ma_name;
+
+    /* Iterator */
+    uint32_t i1;
+    uint32_t i1_step;
+    uint32_t i2;
+    uint32_t i2_step;
+
+    void *next; /* pointer to next access config element */
 } bbl_access_config_s;
+
+typedef struct bbl_access_line_profile_
+{
+    uint16_t access_line_profile_id;
+
+    // broadband forum tr101
+
+    uint32_t act_up; /* Actual Data Rate Upstream */
+    uint32_t act_down; /* Actual Data Rate Downstream */
+    uint32_t min_up; /* Minimum Data Rate Upstream */
+    uint32_t min_down; /* Minimum Data Rate Downstream */
+    uint32_t att_up; /* Attainable DataRate Upstream */
+    uint32_t att_down; /* Attainable DataRate Downstream */
+    uint32_t max_up; /* Maximum Data Rate Upstream */
+    uint32_t max_down; /* Maximum Data Rate Downstream */
+    uint32_t min_up_low; /* Min Data Rate Upstream in low power state */
+    uint32_t min_down_low; /* Min Data Rate Downstream in low power state */
+    uint32_t max_interl_delay_up; /* Max Interleaving Delay Upstream */
+    uint32_t act_interl_delay_up; /* Actual Interleaving Delay Upstream */
+    uint32_t max_interl_delay_down; /* Max Interleaving Delay Downstream */
+    uint32_t act_interl_delay_down; /* Actual Interleaving Delay Downstream */
+    uint32_t data_link_encaps; /* Data Link Encapsulation */
+    uint32_t dsl_type; /* DSL Type */
+
+    // draft-lihawi-ancp-protocol-access-extension-04
+
+    uint32_t pon_type; /* PON-Access-Type */
+    uint32_t etr_up; /* Expected Throughput (ETR) Upstream */
+    uint32_t etr_down; /* Expected Throughput (ETR) Downstream */
+    uint32_t attetr_up; /* Attainable Expected Throughput (ATTETR) Upstream */
+    uint32_t attetr_down; /* Attainable Expected Throughput (ATTETR) Downstream */
+    uint32_t gdr_up; /* Gamma Data Rate (GDR) Upstream */
+    uint32_t gdr_down; /* Gamma Data Rate (GDR) Downstream */
+    uint32_t attgdr_up; /* Attainable Gamma Data Rate (ATTGDR) Upstream */
+    uint32_t attgdr_down; /* Attainable Gamma Data Rate (ATTGDR) Downstream */
+    uint32_t ont_onu_avg_down; /* ONT/ONU-Average-Data-Rate-Downstream */
+    uint32_t ont_onu_peak_down; /* ONT/ONU-Peak-Data-Rate-Downstream */
+    uint32_t ont_onu_max_up; /* ONT/ONU-Maximum-Data-Rate-Upstream */
+    uint32_t ont_onu_ass_up; /* ONT/ONU-Assured-Data-Rate-Upstream */
+    uint32_t pon_max_up; /* PON-Tree-Maximum-Data-Rate-Upstream */
+    uint32_t pon_max_down; /* PON-Tree-Maximum-Data-Rate-Downstream */
+
+    void *next; /* pointer to next access line profile element */
+} bbl_access_line_profile_s;
 
 /*
  * BBL context. Top level data structure.
@@ -416,6 +478,9 @@ typedef struct bbl_ctx_
     uint32_t sessions_terminated;
     uint32_t sessions_flapped;
 
+    uint32_t dhcp_requested;
+    uint32_t dhcp_established;
+    uint32_t dhcp_established_max;
     uint32_t dhcpv6_requested;
     uint32_t dhcpv6_established;
     uint32_t dhcpv6_established_max;
@@ -433,7 +498,7 @@ typedef struct bbl_ctx_
 
     bbl_session_s **session_list; /* list for sessions */
 
-    dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */ 
+    dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
     dict *stream_flow_dict; /* hashtable for traffic stream flows */
@@ -490,7 +555,7 @@ typedef struct bbl_ctx_
 
         uint64_t tx_interval; /* TX interval in nsec */
         uint64_t rx_interval; /* RX interval in nsec */
-        
+
         uint16_t io_slots;
         uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
@@ -512,6 +577,9 @@ typedef struct bbl_ctx_
 
         /* Access Interfaces  */
         bbl_access_config_s *access_config;
+
+        /* Access Line Profiles */
+        void *access_line_profile;
 
         /* Traffic Streams */
         void *stream_config;
@@ -580,19 +648,30 @@ typedef struct bbl_ctx_
         /* IPv4 (IPoE) */
         bool ipv4_enable;
 
+        /* ARP (IPoE) */
+        uint16_t arp_timeout;
+        uint16_t arp_interval;
+
         /* IPv6 (IPoE) */
         bool ipv6_enable;
 
         /* DHCP */
         bool dhcp_enable;
+        bool dhcp_broadcast;
         uint16_t dhcp_timeout;
+        uint8_t dhcp_retry;
+        uint8_t dhcp_release_interval;
+        uint8_t dhcp_release_retry;
         uint8_t dhcp_tos;
         uint8_t dhcp_vlan_priority;
-        bool dhcp_broadcast;
 
         /* DHCPv6 */
         bool dhcpv6_enable;
         bool dhcpv6_rapid_commit;
+        uint16_t dhcpv6_timeout;
+        uint8_t dhcpv6_retry;
+        uint8_t dhcpv6_tc;
+        uint8_t dhcpv6_vlan_priority;
 
         /* IGMP */
         bool igmp_autostart;
@@ -683,7 +762,7 @@ typedef struct vlan_session_key_ {
 
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
-#define BBL_STREAM_FLOW_HASHTABLE_SIZE 32771 /* is a prime number */
+#define BBL_STREAM_FLOW_HASHTABLE_SIZE 128993 /* is a prime number */
 
 /*
  * Client Session to a BNG device.
@@ -720,6 +799,8 @@ typedef struct bbl_session_
     struct timer_ *timer_dhcp_t1;
     struct timer_ *timer_dhcp_t2;
     struct timer_ *timer_dhcpv6;
+    struct timer_ *timer_dhcpv6_t1;
+    struct timer_ *timer_dhcpv6_t2;
     struct timer_ *timer_igmp;
     struct timer_ *timer_zapping;
     struct timer_ *timer_icmpv6;
@@ -728,6 +809,7 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv6;
     struct timer_ *timer_session_traffic_ipv6pd;
     struct timer_ *timer_rate;
+    struct timer_ *timer_cfm_cc;
 
     bbl_access_type_t access_type;
 
@@ -761,9 +843,19 @@ typedef struct bbl_session_
     uint32_t rate_down;
     uint32_t dsl_type;
 
+    void *access_line_profile;
+    
     /* Ethernet */
     uint8_t server_mac[ETH_ADDR_LEN];
     uint8_t client_mac[ETH_ADDR_LEN];
+
+    /* CFM */
+    bool cfm_cc;
+    bool cfm_rdi;
+    uint32_t cfm_seq;
+    uint8_t cfm_level;
+    uint16_t cfm_ma_id;
+    char *cfm_ma_name;
 
     /* PPPoE */
     uint16_t pppoe_session_id;
@@ -825,11 +917,16 @@ typedef struct bbl_session_
     ipv6addr_t  link_local_ipv6_address;
     ipv6_prefix ipv6_prefix;
     ipv6addr_t  ipv6_address;
+    ipv6_prefix delegated_ipv6_prefix;
+    ipv6addr_t  delegated_ipv6_address;
     ipv6addr_t  ipv6_dns1; /* DNS learned via RA */
     ipv6addr_t  ipv6_dns2; /* DNS learned via RA */
 
     /* DHCP */
     dhcp_state_t dhcp_state;
+    bool dhcp_requested;
+    bool dhcp_established;
+    uint8_t  dhcp_retry;
     uint32_t dhcp_xid;
     uint32_t dhcp_address;
     uint32_t dhcp_lease_time;
@@ -845,18 +942,27 @@ typedef struct bbl_session_
     char *dhcp_domain_name;
 
     /* DHCPv6 */
-    ipv6_prefix delegated_ipv6_prefix;
-    ipv6addr_t  delegated_ipv6_address;
-    uint8_t     duid[DUID_LEN];
-    uint8_t     server_duid[DHCPV6_BUFFER];
-    uint8_t     server_duid_len;
-    bool        dhcpv6_requested;
-    bool        dhcpv6_received;
-    uint8_t     dhcpv6_type;
-    uint8_t     dhcpv6_ia_pd_option[DHCPV6_BUFFER];
-    uint8_t     dhcpv6_ia_pd_option_len;
-    ipv6addr_t  dhcpv6_dns1;
-    ipv6addr_t  dhcpv6_dns2;
+    dhcp_state_t dhcpv6_state;
+    bool dhcpv6_requested;
+    bool dhcpv6_established;
+    uint8_t dhcpv6_retry;
+    uint8_t dhcpv6_duid[DUID_LEN];
+    uint8_t dhcpv6_server_duid[DHCPV6_BUFFER];
+    uint8_t dhcpv6_server_duid_len;
+    ipv6addr_t dhcpv6_dns1;
+    ipv6addr_t dhcpv6_dns2;
+    uint32_t dhcpv6_xid;
+    uint32_t dhcpv6_lease_time;
+    uint32_t dhcpv6_t1;
+    uint32_t dhcpv6_t2;
+    uint32_t dhcpv6_ia_na_iaid;
+    uint32_t dhcpv6_ia_pd_iaid;
+    uint8_t dhcpv6_ia_na_option[DHCPV6_BUFFER];
+    uint8_t dhcpv6_ia_na_option_len;
+    uint8_t dhcpv6_ia_pd_option[DHCPV6_BUFFER];
+    uint8_t dhcpv6_ia_pd_option_len;
+    struct timespec dhcpv6_lease_timestamp;
+    struct timespec dhcpv6_request_timestamp;
 
     /* IGMP */
     bool     igmp_autostart;
@@ -976,6 +1082,15 @@ typedef struct bbl_session_
         uint32_t dhcp_rx_ack;
         uint32_t dhcp_rx_nak;
         uint32_t dhcp_tx_release;
+
+        uint32_t dhcpv6_tx;
+        uint32_t dhcpv6_rx;
+        uint32_t dhcpv6_tx_solicit;
+        uint32_t dhcpv6_rx_advertise;
+        uint32_t dhcpv6_tx_request;
+        uint32_t dhcpv6_rx_reply;
+        uint32_t dhcpv6_tx_renew;
+        uint32_t dhcpv6_tx_release;
 
         uint64_t access_ipv4_rx;
         uint64_t access_ipv4_tx;

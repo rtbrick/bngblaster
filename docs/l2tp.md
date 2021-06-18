@@ -1,8 +1,8 @@
 # L2TPv2
 
-The BNG Blaster is able to emulate L2TPv2 (RFC2661) LNS servers to 
-be able to test the L2TPv2 LAC functionality of the BNG device under 
-test. 
+The BNG Blaster is able to emulate L2TPv2 (RFC2661) LNS servers to
+be able to test the L2TPv2 LAC functionality of the BNG device under
+test.
 
 ## Configuration
 
@@ -290,7 +290,7 @@ Following an example with 30 L2TP LNS servers.
 
 ## Receive Session Information
 
-The `l2tp-sessions` command returns all L2TP sessions. 
+The `l2tp-sessions` command returns all L2TP sessions.
 
 `$ sudo ./cli.py run.sock l2tp-sessions`
 ```json
@@ -322,26 +322,26 @@ The `l2tp-sessions` command returns all L2TP sessions.
 ```
 
 This output can be also filtered to return only sessions
-of a given tunnel. 
+of a given tunnel.
 
-`sudo ./cli.py run.sock l2tp-sessions tunnel-id 1` 
+`sudo ./cli.py run.sock l2tp-sessions tunnel-id 1`
 
-It is also possible to display a single session. 
+It is also possible to display a single session.
 
 `$ sudo ./cli.py run.sock l2tp-sessions tunnel-id 1 session-id 1`
 
-## RFC5515 
+## RFC5515
 
 The Agent-Circuit-Id and Agent-Remote-Id AVP defined in RFC5515
 is supported and stored for each session if received. Received
 CSUN messages are processed correctly and via control socket it
-is possible to send also CSURQ requests to the LAC. 
+is possible to send also CSURQ requests to the LAC.
 
 ## Variable Data Header
 
-The L2TP protocol allows different data header options resulting in 
-variable header lengths. The most common options can be tested with just 
-four servers as shown in the example below. 
+The L2TP protocol allows different data header options resulting in
+variable header lengths. The most common options can be tested with just
+four servers as shown in the example below.
 
 ```json
 {

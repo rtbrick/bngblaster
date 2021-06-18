@@ -4,6 +4,7 @@
  * Hannes Gredler, July 2020
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include <errno.h>
@@ -565,7 +566,7 @@ timer_walk (timer_root_s *root)
                 if (timespec_compare(&timer->expire, &min) == -1) {
                     min.tv_sec = timer->expire.tv_sec;
                     min.tv_nsec = timer->expire.tv_nsec;
-                    LOG(TIMER_DETAIL, "New minimum sleep (%s) timer, found %s\n", 
+                    LOG(TIMER_DETAIL, "New minimum sleep (%s) timer, found %s\n",
                         timer->name, timespec_format(&min));
                 }
 
