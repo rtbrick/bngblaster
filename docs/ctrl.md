@@ -2,8 +2,8 @@
 
 The control socket is an unix domain stream socket which allows the control daemon to
 interact with the BNG Blaster using JSON RPC. This interface was primary developed for
-then BNG Blaster Controller but can be also used manually or by other tools like the
-simple CLI tool (`cli.py`) for interactive communication with the BNG Blaster.
+the BNG Blaster Controller but can be also used manually or by other tools like the
+simple CLI tool `bngblaster-cli` for interactive communication with the BNG Blaster.
 
 The control socket will be optionally enabled by providing the path to the socket file
 using the argument `-S` (`bngblaster -S test.socket`).
@@ -118,6 +118,37 @@ if request was successfully. The status can be also set to `warning` or
 }
 ```
 
+## BNG Blaster CLI
+
+The python script `bngblaster-cli` provides a simple CLI tool
+for interactive communication with the BNG Blaster.
+
+```
+$ sudo bngblaster-cli 
+BNG Blaster Control Socket Client
+
+bngblaster-cli <socket> <command> [arguments]
+
+Examples:
+    bngblaster-cli run.sock session-info session-id 1
+    bngblaster-cli run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
+    bngblaster-cli run.sock igmp-info session-id 1
+    bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
+```
+
+`$ sudo bngblaster-cli run.sock session-counters | jq .`
+```json
+{
+  "status": "ok",
+  "code": 200,
+  "session-counters": {
+    "sessions": 1,
+    "sessions-established": 1,
+    "sessions-flapped": 0,
+    "dhcpv6-sessions-established": 1
+  }
+}
+```
 ## Control Socket Commands
 
 ### Global Commands
@@ -218,4 +249,4 @@ session-id for which a connect speed update is requested.
 
 This command can be executed as shown below using the CLI tool.
 
-`$ sudo ./cli.py run.sock l2tp-csurq tunnel-id 1 sessions [1,2,3,4]`
+`$ sudo bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2,3,4]`
