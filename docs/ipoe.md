@@ -61,7 +61,7 @@ The most common case for IPoE is using DHCPv4/v6 as shown below.
 The control socket command `session-info session-id <id>` provides
 detailed information for IPOE sessions. 
 
-`$ sudo bngblaster-cli run.sock session-info session-id 1`
+`$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .`
 ```json
 {
     "status": "ok",
@@ -70,7 +70,7 @@ detailed information for IPOE sessions.
         "type": "ipoe",
         "session-id": 1,
         "session-state": "Established",
-        "interface": "veth1",
+        "interface": "eth1",
         "outer-vlan": 8,
         "inner-vlan": 1,
         "mac": "02:00:00:00:00:01",

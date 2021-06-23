@@ -4,8 +4,6 @@ The BNG Blaster is able to emulate L2TPv2 (RFC2661) LNS servers to
 be able to test the L2TPv2 LAC functionality of the BNG device under
 test.
 
-## Configuration
-
 Following an example with 30 L2TP LNS servers.
 
 ```json
