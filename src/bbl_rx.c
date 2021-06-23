@@ -958,8 +958,10 @@ bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                    session->send_requests |= BBL_SEND_ICMPV6_RS;
-                    bbl_session_tx_qnode_insert(session);
+                    if(session->l2tp == false) {
+                        session->send_requests |= BBL_SEND_ICMPV6_RS;
+                        bbl_session_tx_qnode_insert(session);
+                    }
                     break;
                 default:
                     break;
@@ -990,8 +992,10 @@ bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                    session->send_requests |= BBL_SEND_ICMPV6_RS;
-                    bbl_session_tx_qnode_insert(session);
+                    if(session->l2tp == false) {
+                        session->send_requests |= BBL_SEND_ICMPV6_RS;
+                        bbl_session_tx_qnode_insert(session);
+                    }
                     break;
                 default:
                     break;
