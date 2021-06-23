@@ -139,6 +139,26 @@ Therefore the interface MTU should be increased using the following commands.
 sudo ip link set mtu 9000 dev <interface>
 ```
 
+This can be also archived via netplan using the following configuration for each BNG Blaster
+interface. 
+
+```yaml
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth1:
+      dhcp4: no
+      dhcp6: no
+      link-local: []
+      mtu: 9000
+    eth2:
+      dhcp4: no
+      dhcp6: no
+      link-local: []
+      mtu: 9000
+```
+
 ### Network Interface
 
 `"interfaces": { "network": { ... } }`
