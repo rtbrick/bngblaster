@@ -63,6 +63,7 @@ if(BNGBLASTER_TESTS)
 endif()
 
 install(TARGETS bngblaster DESTINATION sbin)
+install(PROGRAMS bngblaster-cli DESTINATION sbin)
 
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")

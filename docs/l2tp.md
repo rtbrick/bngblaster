@@ -260,7 +260,7 @@ Following an example with 30 L2TP LNS servers.
 
 ## Receive Tunnel Information
 
-`$ sudo ./cli.py run.sock l2tp-tunnels`
+`$ sudo bngblaster-cli run.sock l2tp-tunnels`
 ```json
 {
     "status": "ok",
@@ -292,7 +292,7 @@ Following an example with 30 L2TP LNS servers.
 
 The `l2tp-sessions` command returns all L2TP sessions.
 
-`$ sudo ./cli.py run.sock l2tp-sessions`
+`$ sudo bngblaster-cli run.sock l2tp-sessions`
 ```json
 {
     "status": "ok",
@@ -324,11 +324,11 @@ The `l2tp-sessions` command returns all L2TP sessions.
 This output can be also filtered to return only sessions
 of a given tunnel.
 
-`sudo ./cli.py run.sock l2tp-sessions tunnel-id 1`
+`sudo bngblaster-cli run.sock l2tp-sessions tunnel-id 1`
 
 It is also possible to display a single session.
 
-`$ sudo ./cli.py run.sock l2tp-sessions tunnel-id 1 session-id 1`
+`$ sudo bngblaster-cli run.sock l2tp-sessions tunnel-id 1 session-id 1`
 
 ## RFC5515
 
