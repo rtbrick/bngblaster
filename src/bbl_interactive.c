@@ -48,8 +48,12 @@ bbl_init_stats_win()
 {
     wclear(stats_win);
     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-    wprintw(stats_win, "F1: Select View    F2: Select Session  F3: Select Interface\n");
-    wprintw(stats_win, "F7: Start Traffic  F8: Stop Traffic    F9: Terminate Sessions\n");
+    wprintw(stats_win, "F1: Select View  F7/F8: Start/Stop Traffic  F9: Terminate Sessions\n");
+    if(g_view_selected == UI_VIEW_STREAMS) {
+        wprintw(stats_win, "Left/Right: Select Session\n");
+    } else {
+        wprintw(stats_win, "Left/Right: Select Interface\n");
+    }
     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
     wprintw(stats_win, "%s", banner);
 }
@@ -88,17 +92,32 @@ bbl_read_key_job (timer_s *timer)
             }
             bbl_init_stats_win();
             break;
-        case KEY_F(2):
-            g_session_selected++;
-            if(g_session_selected > ctx->sessions) {
-                g_session_selected = 1;
+        case KEY_LEFT:
+            if(g_view_selected == UI_VIEW_STREAMS) {
+                if(g_session_selected > 1) {
+                    g_session_selected--;
+                } else {
+                    g_session_selected = ctx->sessions;
+                }
+            } else {
+                if(g_access_if_selected == 0) {
+                    g_access_if_selected = ctx->op.access_if_count;
+                }
+                g_access_if_selected--;
             }
             bbl_init_stats_win();
             break;
-        case KEY_F(6):
-            g_access_if_selected++;
-            if(g_access_if_selected >= ctx->op.access_if_count) {
-                g_access_if_selected = 0;
+        case KEY_RIGHT:
+            if(g_view_selected == UI_VIEW_STREAMS) {
+                g_session_selected++;
+                if(g_session_selected > ctx->sessions) {
+                    g_session_selected = 1;
+                }
+            } else {
+                g_access_if_selected++;
+                if(g_access_if_selected >= ctx->op.access_if_count) {
+                    g_access_if_selected = 0;
+                }
             }
             bbl_init_stats_win();
             break;
@@ -346,11 +365,16 @@ bbl_stats_job (timer_s *timer)
     } else if(g_view_selected == UI_VIEW_ACCESS_IF_STATS) {
         if(access_if) {
             wprintw(stats_win, "\nAccess Interface Protocol Stats (");
-            wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-            wprintw(stats_win, " %s", access_if->name);
-            wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+            for(i = 0; i < ctx->op.access_if_count; i++) {
+                if(i == g_access_if_selected) {
+                    wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
+                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
+                    wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+                } else {
+                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
+                }
+            }
             wprintw(stats_win, " )\n");
-            /* Protocol stats */
             wprintw(stats_win, "\nPacket Stats\n");
             wprintw(stats_win, "  ARP    TX: %10u RX: %10u\n", access_if->stats.arp_tx, access_if->stats.arp_rx);
             wprintw(stats_win, "  PADI   TX: %10u RX: %10u\n", access_if->stats.padi_tx, 0);
