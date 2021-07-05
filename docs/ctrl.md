@@ -124,7 +124,7 @@ The python script `bngblaster-cli` provides a simple CLI tool
 for interactive communication with the BNG Blaster.
 
 ```
-$ sudo bngblaster-cli 
+$ sudo bngblaster-cli
 BNG Blaster Control Socket Client
 
 bngblaster-cli <socket> <command> [arguments]
@@ -159,10 +159,10 @@ Attribute | Description
 `session-counters` | Return session counters
 `terminate` | Terminate all sessions similar to sending SIGINT (ctr+c)
 `session-traffic` | Display session traffic statistics
-`session-traffic-enabled` | Enable session traffic for all sessions
-`session-traffic-disabled` | Disable session traffic for all sessions
-`stream-traffic-enabled` | Enable stream traffic for all sessions
-`stream-traffic-disabled` | Disable stream traffic for all sessions
+`session-traffic-start` (Alias: `session-traffic-enabled`) | Start sending session traffic for all sessions
+`session-traffic-stop` (Alias: `session-traffic-disabled`) | Stop sending session traffic for all sessions
+`stream-traffic-start` (Alias: `stream-traffic-enabled`)  | Start sending stream traffic for all sessions
+`stream-traffic-stop` (Alias: `stream-traffic-disabled`) | Stop sending stream traffic for all sessions
 `multicast-traffic-start` | Start sending multicast traffic from network interface
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
 `li-flows` | List all LI flows with detailed statistics
@@ -201,11 +201,11 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `ipcp-close` | Close IPCP | |
 `ip6cp-open`| Open IP6CP | |
 `ip6cp-close` | Close IP6CP | |
-`session-traffic-enabled` | Enable session traffic | |
-`session-traffic-disabled` | Disable session traffic | |
+`session-traffic-start` (Alias: `session-traffic-enabled`) | Enable session traffic | |
+`session-traffic-stop` (Alias: `session-traffic-disabled`) | Disable session traffic | |
 `session-streams` | Session traffic stream information | |
-`stream-traffic-enabled` | Enable session stream traffic | |
-`stream-traffic-disabled` | Disable session stream traffic | |
+`stream-traffic-start` (Alias: `stream-traffic-enabled`) | Enable session stream traffic | |
+`stream-traffic-stop` (Alias: `stream-traffic-disabled`) | Disable session stream traffic | |
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
 `igmp-leave` | Leave group | `group` |
 `igmp-info` | IGMP information | |
