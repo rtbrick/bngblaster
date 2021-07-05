@@ -385,6 +385,10 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
      */
     interface->io.fd_tx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
     if (interface->io.fd_tx == -1) {
+        if (errno == EPERM) {
+            LOG(ERROR, "socket() for interface %s Permission denied: Are you root?\n", interface->name);
+            return false;
+        }
         LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
         return false;
     }
