@@ -565,6 +565,10 @@ bbl_stream_tx_thread (void *thread_data) {
     /* Open new TX socket for thread. */
     fd_tx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
     if (fd_tx == -1) {
+        if (errno == EPERM) {
+            LOG(ERROR, "socket() for interface %s Permission denied: Are you root?\n", interface->name);
+            return NULL;
+        }
         LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
         return NULL;
     }
