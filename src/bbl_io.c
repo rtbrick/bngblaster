@@ -62,8 +62,8 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
 
         /* Dump the packet into pcap file. */
         if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
-				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
 
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
@@ -128,7 +128,7 @@ bbl_io_raw_rx_job (timer_s *timer) {
 
     while (true) {
         recv_result = recvfrom(interface->io.fd_rx, interface->io.rx_buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
-		if(recv_result < 14 || recv_result > IO_BUFFER_LEN) {
+        if(recv_result < 14 || recv_result > IO_BUFFER_LEN) {
             break;
         }
         interface->stats.packets_rx++;
@@ -136,8 +136,8 @@ bbl_io_raw_rx_job (timer_s *timer) {
 
         /* Dump the packet into pcap file. */
         if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
-				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
 
         decode_result = decode_ethernet(interface->io.rx_buf, interface->io.rx_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);

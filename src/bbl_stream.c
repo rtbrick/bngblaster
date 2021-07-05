@@ -34,14 +34,14 @@ bbl_stream_can_send(bbl_stream *stream) {
                     }
                     break;
                 case STREAM_IPV6:
-                    if(session->ip6cp_state == BBL_PPP_OPENED && 
-                       session->icmpv6_ra_received && 
+                    if(session->ip6cp_state == BBL_PPP_OPENED &&
+                       session->icmpv6_ra_received &&
                        *(uint64_t*)session->ipv6_address) {
                         return true;
                     }
                     break;
                 case STREAM_IPV6PD:
-                    if(session->ip6cp_state == BBL_PPP_OPENED && 
+                    if(session->ip6cp_state == BBL_PPP_OPENED &&
                        session->icmpv6_ra_received &&
                        *(uint64_t*)session->delegated_ipv6_address &&
                        session->dhcpv6_state >= BBL_DHCP_BOUND) {
@@ -59,7 +59,7 @@ bbl_stream_can_send(bbl_stream *stream) {
                     }
                     break;
                 case STREAM_IPV6:
-                    if(*(uint64_t*)session->ipv6_address && 
+                    if(*(uint64_t*)session->ipv6_address &&
                        session->icmpv6_ra_received) {
                         return true;
                     }
