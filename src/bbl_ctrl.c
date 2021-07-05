@@ -1179,7 +1179,7 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     root = json_pack("{ss si so}",
                      "status", "ok",
                      "code", 200,
-                     "session-pending", json_sessions);
+                     "sessions-pending", json_sessions);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
