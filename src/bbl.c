@@ -645,19 +645,15 @@ main (int argc, char *argv[])
                 interactive = true;
                 break;
             case 'S':
-		        ctx->ctrl_socket_path = optarg;
+                ctx->ctrl_socket_path = optarg;
                 break;
             case 'f':
-		        ctx->config.interface_lock_force = true;
+                ctx->config.interface_lock_force = true;
                 break;
             default:
                 bbl_print_usage();
                 exit(1);
         }
-    }
-    if (geteuid() != 0) {
-        fprintf(stderr, "Error: Must be run with root privileges\n");
-	    exit(1);
     }
 
     if(!config_file) {
