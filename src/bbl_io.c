@@ -438,7 +438,7 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     }
 
     ifr.ifr_flags |= IFF_PROMISC;
-    if (ioctl(interface->io.fd_rx, SIOCSIFFLAGS, ifr) == -1){
+    if (ioctl(interface->io.fd_rx, SIOCSIFFLAGS, &ifr) == -1){
         LOG(ERROR, "Setting socket flags error %s (%d) when setting promiscuous mode for interface %s\n",
         strerror(errno), errno, interface->name);
         return false;
