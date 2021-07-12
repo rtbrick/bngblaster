@@ -188,15 +188,22 @@ ssize_t
 bbl_ctrl_total_session_login_time(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     int64_t i;
     ssize_t result = 0;
-    // int total_min, total_max;
-    // int control_min, control_max;
     uint64_t tmp_seq;
+
+    uint64_t ipcp_min = UINT64_MAX, ipcp_max = 0;
+    uint64_t ipcpv6_min = UINT64_MAX, ipcpv6_max = 0;
+    uint64_t dhcpv6pd_min = UINT64_MAX, dhcpv6pd_max = 0;
+
     uint64_t network_traffic_min = UINT64_MAX, network_traffic_max = 0;
     uint64_t network_trafficv6_min = UINT64_MAX, network_trafficv6_max = 0;
     uint64_t network_trafficv6pd_min = UINT64_MAX, network_trafficv6pd_max = 0;
     uint64_t access_traffic_min = UINT64_MAX, access_traffic_max = 0;
     uint64_t access_trafficv6_min = UINT64_MAX, access_trafficv6_max = 0;
     uint64_t access_trafficv6pd_min = UINT64_MAX, access_trafficv6pd_max = 0;
+
+    uint64_t total_v4_min = UINT64_MAX, total_v4_max = 0;
+    uint64_t total_v6_min = UINT64_MAX, total_v6_max = 0;
+    uint64_t total_v6pd_min = UINT64_MAX, total_v6pd_max = 0;
 
     bbl_session_s *session;
 
@@ -229,22 +236,37 @@ bbl_ctrl_total_session_login_time(int fd, bbl_ctx_s *ctx, uint32_t session_id __
         set_min(network_trafficv6pd_min, tmp_seq);
     }
 
-    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si }}",
+    json_t *root = json_pack("{ss si s{s{si si si si si si} s{si si si si si si si si si si si si} s{si, si, si}}}",
         "status", "ok",
         "code", 200,
         "session-login-time-summary",
-            "access-traffic-min", access_traffic_min,
-            "access-trafficv6-min", access_trafficv6_min,
-            "access-trafficv6pd-min", access_trafficv6pd_min,
-            "access-traffic-max", access_traffic_max,
-            "access-trafficv6-max", access_trafficv6_max,
-            "access-trafficv6pd-max", access_trafficv6pd_max,
-            "network-traffic-min", network_traffic_min,
-            "network-trafficv6-min", network_trafficv6_min,
-            "network-trafficv6pd-min", network_trafficv6pd_min,
-            "network-traffic-max", network_traffic_max,
-            "network-trafficv6-max", network_trafficv6_max,
-            "network-trafficv6pd-max", network_trafficv6pd_max);
+            "control-plane",
+                "ipcp-min", ipcp_min,
+                "ipcp-max", ipcp_max,
+                "ipv6cp-min", ipv6cp_min,
+                "ipv6cp-max", ipv6cp_max,
+                "dhcpv6pd-min", dhcpv6pd_min,
+                "dhcpv6pd-max", dhcpv6pd_max,
+            "data-plane",
+                "access-traffic-min", access_traffic_min,
+                "access-trafficv6-min", access_trafficv6_min,
+                "access-trafficv6pd-min", access_trafficv6pd_min,
+                "access-traffic-max", access_traffic_max,
+                "access-trafficv6-max", access_trafficv6_max,
+                "access-trafficv6pd-max", access_trafficv6pd_max,
+                "network-traffic-min", network_traffic_min,
+                "network-trafficv6-min", network_trafficv6_min,
+                "network-trafficv6pd-min", network_trafficv6pd_min,
+                "network-traffic-max", network_traffic_max,
+                "network-trafficv6-max", network_trafficv6_max,
+                "network-trafficv6pd-max", network_trafficv6pd_max,
+            "total",
+                "v4-min", total_v4_min,
+                "v4-max", total_v4_max,
+                "v6-min", total_v6_min,
+                "v6-max", total_v6_max,
+                "v6pd-min", total_v6pd_min,
+                "v6pd-max", total_v6pd_max);
 
 
     if (root) {
