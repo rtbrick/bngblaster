@@ -123,3 +123,26 @@ Test project
 
 Total Test time (real) =   0.00 sec
 ```
+
+### Running bngblaster
+
+bngblaster needs permissions to send raw packets and change network interface
+settings. The easiest way to run bngblaster is either as the root user or with
+sudo:
+
+```cli
+# As root
+bngblaster -C config.json -I
+
+# As a normal user:
+sudo bngblaster -C config.json -I
+```
+
+A third option is to set capabilities on the binary with e.g. `setcap`:
+
+```cli
+sudo setcap cap_net_raw,cap_net_admin,cap_dac_read_search+eip /path/to/bngblaster
+
+# As either root or a normal user:
+bngblaster -C config.json -I
+```
