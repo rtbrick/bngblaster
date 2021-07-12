@@ -147,6 +147,34 @@ bbl_ctrl_session_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_
 }
 
 ssize_t
+bbl_ctrl_setup_summary(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+
+    json_t *root = json_pack("{ss si s{si si si si si s{sf sf sf sf sf} si}}",
+        "status", "ok",
+        "code", 200,
+        "setup-summary",
+            "total", ctx->sessions,
+            "established", ctx->sessions_established,
+            "outstanding", ctx->sessions_outstanding,
+            "terminated", ctx->sessions_terminated,
+            "setup-time", ctx->stats.setup_time,
+            "setup-rate",
+                "min", ctx->stats.cps_min,
+                "avg", ctx->stats.cps_avg,
+                "max", ctx->stats.cps_max,
+                "sum", ctx->stats.cps_sum,
+                "count", ctx->stats.cps_count,
+            "flapped", ctx->sessions_flapped);
+    if (root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+
+    return result;
+}
+
+ssize_t
 bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
     const char *s;
@@ -1391,6 +1419,7 @@ struct action actions[] = {
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
+    {"setup-summary", bbl_ctrl_setup_summary},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start},
     {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop},
     {"igmp-join", bbl_ctrl_igmp_join},
