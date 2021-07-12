@@ -39,8 +39,8 @@ set(CURSES_NEED_NCURSES TRUE)
 include(FindCurses)
 target_link_libraries(bngblaster ${CURSES_LIBRARIES} crypto jansson ${libdict} m)
 
-SET(PLATFORM_SPECIFIC_LIBS "-lpthread")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+set(PLATFORM_SPECIFIC_LIBS "-lpthread")
+string(APPEND CMAKE_C_FLAGS "-pthread")
 
 
 # add experimental netmap support
