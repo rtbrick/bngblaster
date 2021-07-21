@@ -62,8 +62,8 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
 
         /* Dump the packet into pcap file. */
         if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
-				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
 
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
@@ -128,7 +128,7 @@ bbl_io_raw_rx_job (timer_s *timer) {
 
     while (true) {
         recv_result = recvfrom(interface->io.fd_rx, interface->io.rx_buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
-		if(recv_result < 14 || recv_result > IO_BUFFER_LEN) {
+        if(recv_result < 14 || recv_result > IO_BUFFER_LEN) {
             break;
         }
         interface->stats.packets_rx++;
@@ -136,8 +136,8 @@ bbl_io_raw_rx_job (timer_s *timer) {
 
         /* Dump the packet into pcap file. */
         if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
-				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
 
         decode_result = decode_ethernet(interface->io.rx_buf, interface->io.rx_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
@@ -353,6 +353,36 @@ bbl_io_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
     return result;
 }
 
+/* Taken and adapted from
+* https://stackoverflow.com/questions/41678219/how-to-properly-put-network-interface-into-promiscuous-mode-on-linux
+*
+* This prevents the ioctl get flags / set flags race condition
+*/
+int
+set_promisc(const char *ifname) {
+    struct packet_mreq mreq = {0};
+    int sfd;
+
+    /* This socket is only opened, but not closed. Closing the socket would reset
+    * its flags - effectively removing the just added promisc mode.
+    * We want to keep the interface in promisc mode until the end of the program.
+    */
+    if ((sfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
+        LOG(ERROR, "unable to open control socket for promisc activation\n");
+        return -1;
+    }
+
+    mreq.mr_ifindex = if_nametoindex(ifname);
+    mreq.mr_type = PACKET_MR_PROMISC;
+
+    if (mreq.mr_ifindex == 0) {
+        LOG(ERROR, "unable to get interface index for %s\n", ifname);
+        return -1;
+    }
+
+    return setsockopt(sfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
+}
+
 /**
  * bbl_io_add_interface
  *
@@ -364,7 +394,6 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
 
     size_t ring_size;
     char timer_name[32];
-    struct ifreq ifr;
     int version = TPACKET_V2;
     int qdisc_bypass = 1;
     int slots = ctx->config.io_slots;
@@ -385,6 +414,10 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
      */
     interface->io.fd_tx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
     if (interface->io.fd_tx == -1) {
+        if (errno == EPERM) {
+            LOG(ERROR, "socket() for interface %s Permission denied: Are you root?\n", interface->name);
+            return false;
+        }
         LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
         return false;
     }
@@ -425,18 +458,9 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     }
 
     /* Set the interface to promiscuous mode. Only for the RX FD. */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(interface->io.fd_rx, SIOCGIFFLAGS, &ifr) == -1) {
-        LOG(ERROR, "Getting socket flags error %s (%d) when setting promiscuous mode for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return false;
-    }
 
-    ifr.ifr_flags |= IFF_PROMISC;
-    if (ioctl(interface->io.fd_rx, SIOCSIFFLAGS, ifr) == -1){
-        LOG(ERROR, "Setting socket flags error %s (%d) when setting promiscuous mode for interface %s\n",
-        strerror(errno), errno, interface->name);
+    if (set_promisc(interface->name) != 0) {
+        LOG(ERROR, "Failed to put interface %s in promiscuous mode\n", interface->name);
         return false;
     }
 
