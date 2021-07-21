@@ -853,7 +853,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     bbl_udp_t   *udp;
     bbl_bbl_t   *bbl;
 
-    char reply_message[sizeof(L2TP_REPLY_MESSAGE)+6];
+    char reply_message[sizeof(L2TP_REPLY_MESSAGE)+16];
 
     bbl_stream *stream;
     void **search = NULL;
