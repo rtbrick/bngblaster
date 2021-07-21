@@ -507,7 +507,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
                         "status", "ok",
                         "code", 200,
-                        "session-information",
+                        "session-info",
                         "type", "pppoe",
                         "session-id", session->session_id,
                         "session-state", session_state_string(session->session_state),
@@ -555,7 +555,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* si si si so*}}",
                         "status", "ok",
                         "code", 200,
-                        "session-information",
+                        "session-info",
                         "type", "ipoe",
                         "session-id", session->session_id,
                         "session-state", session_state_string(session->session_state),
@@ -1179,7 +1179,7 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     root = json_pack("{ss si so}",
                      "status", "ok",
                      "code", 200,
-                     "session-pending", json_sessions);
+                     "sessions-pending", json_sessions);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
