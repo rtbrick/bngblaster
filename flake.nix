@@ -37,14 +37,14 @@
             nativeBuildInputs = buildTools;
 
           };
-          bngblaster = pkgs.stdenv.mkDerivation {
+          bngblaster = pkgs.stdenv.mkDerivation rec {
             pname = "bngblaster";
             version = "0.52";
             src = lib.cleanSource ./.;
 
             doCheck = true;
-            cmakeFlags =
-              [ "-DCMAKE_BUILD_TYPE=Release" "-DBNGBLASTER_TESTS=ON" ];
+            cmakeFlags = [ "-DCMAKE_BUILD_TYPE=Release" ]
+              ++ (if doCheck then [ "-DBNGBLASTER_TESTS=ON" ] else [ ]);
 
             checkInputs = [ pkgs.cmocka pkgs.libpcap ];
             nativeBuildInputs = buildTools;
