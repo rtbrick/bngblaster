@@ -35,11 +35,6 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
     if (!interface) {
         return;
     }
-    ctx = interface->ctx;
-
-
-    /* Get RX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
     frame_ptr = interface->io.ring_rx + (interface->io.cursor_rx * interface->io.req_rx.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
@@ -52,7 +47,13 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
             LOG(IO, "Failed to RX poll interface %s", interface->name);
         }
         interface->stats.poll_rx++;
+        return;
     }
+
+    ctx = interface->ctx;
+
+    /* Get RX timestamp */
+    clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
     while ((tphdr->tp_status & TP_STATUS_USER)) {
         eth_start = (uint8_t*)tphdr + tphdr->tp_mac;
