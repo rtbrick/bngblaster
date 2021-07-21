@@ -432,29 +432,33 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     } else {
         access_config->ip6cp_enable = ctx->config.ip6cp_enable;
     }
-    value = json_object_get(access_interface, "ipv4");
-    if (json_is_boolean(value)) {
-        access_config->ipv4_enable = json_boolean_value(value);
-    } else {
-        access_config->ipv4_enable = ctx->config.ipv4_enable;
-    }
-    value = json_object_get(access_interface, "ipv6");
-    if (json_is_boolean(value)) {
-        access_config->ipv6_enable = json_boolean_value(value);
-    } else {
-        access_config->ipv6_enable = ctx->config.ipv6_enable;
-    }
     value = json_object_get(access_interface, "dhcp");
     if (json_is_boolean(value)) {
         access_config->dhcp_enable = json_boolean_value(value);
     } else {
         access_config->dhcp_enable = ctx->config.dhcp_enable;
     }
+    value = json_object_get(access_interface, "ipv4");
+    if (json_is_boolean(value)) {
+        access_config->ipv4_enable = json_boolean_value(value);
+    } else {
+        if (access_config->dhcp_enable || access_config->static_ip) {
+            access_config->ipv4_enable = ctx->config.ipv4_enable;
+        } else {
+            access_config->ipv4_enable = false;
+        }
+    }
     value = json_object_get(access_interface, "dhcpv6");
     if (json_is_boolean(value)) {
         access_config->dhcpv6_enable = json_boolean_value(value);
     } else {
         access_config->dhcpv6_enable = ctx->config.dhcpv6_enable;
+    }
+    value = json_object_get(access_interface, "ipv6");
+    if (json_is_boolean(value)) {
+        access_config->ipv6_enable = json_boolean_value(value);
+    } else {
+        access_config->ipv6_enable = ctx->config.ipv6_enable;
     }
     value = json_object_get(access_interface, "igmp-autostart");
     if (json_is_boolean(value)) {
@@ -506,7 +510,6 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
-
     return true;
 }
 
