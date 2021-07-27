@@ -110,7 +110,7 @@ Following a simple example using streams as described in
 
 The `session-streams` command returns detailed stream statistics per session.
 
-`$ sudo ./cli.py run.sock session-streams session-id 1`
+`$ sudo bngblaster-cli run.sock session-streams session-id 1`
 ```json
 {
     "status": "ok",
@@ -229,7 +229,7 @@ accounting of the BNG, meaning session rx/tx packets excluding control traffic.
 
 Each flow can be queried separately using jsonpath expression with name and direction or flow-id.
 
-`$ sudo ./cli.py run.sock session-streams session-id 1 | jq '."session-streams".streams[] | select(.name == "BE" and .direction == "downstream" )'`
+`$ sudo bngblaster-cli run.sock session-streams session-id 1 | jq '."session-streams".streams[] | select(.name == "BE" and .direction == "downstream" )'`
 ```json
 {
   "name": "BE",
@@ -301,10 +301,10 @@ can be also more. With threaded streams we are also able to scale up to three mi
 Session stream traffic can be started/stopped dynamically
 using the commands `stream-traffic-enabled` and `stream-traffic-disabled`.
 
-`$ sudo ./cli.py run.sock stream-traffic-disabled session-id 1`
+`$ sudo bngblaster-cli run.sock stream-traffic-disabled session-id 1`
 
 Those commands start/stop the traffic for all sessions if invoked without
 session identifier.
 
-`$ sudo ./cli.py run.sock stream-traffic-disabled`
+`$ sudo bngblaster-cli run.sock stream-traffic-disabled`
 

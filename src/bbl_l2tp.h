@@ -249,9 +249,14 @@ typedef struct bbl_l2tp_session_
     uint8_t ipcp_state;
     uint8_t ip6cp_state;
 
-    uint16_t result_code;
-    uint16_t error_code;
-    char* error_message;
+    uint16_t result_code; /* RFC2661 Result Code */
+    uint16_t error_code; /* RFC2661 Error Code */
+    char* error_message; /* RFC2661 Error Message */
+
+    uint16_t disconnect_code; /* RFC3145 Disconnect Cause Code */
+    uint16_t disconnect_protocol; /* RFC3145 Disconnect Cause Protocol */
+    uint16_t disconnect_direction; /* RFC3145 Disconnect Cause Direction */
+    char* disconnect_message; /* RFC3145 Disconnect Cause Message */
 
     /* The following members must be freed
      * if session is destroyed! */
@@ -272,6 +277,8 @@ const char* l2tp_message_string(l2tp_message_type type);
 const char* l2tp_tunnel_state_string(l2tp_tunnel_state_t state);
 const char* l2tp_session_state_string(l2tp_session_state_t state);
 
+void bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session);
+void bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t state);
 void bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type);
 void bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface);
 void bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx);
