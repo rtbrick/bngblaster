@@ -126,6 +126,47 @@ bbl_l2tp_avp_encode_result_code(uint8_t **_buf, uint16_t *len,
     *_buf = buf;
 }
 
+static void
+bbl_l2tp_avp_encode_disconnect_code(uint8_t **_buf, uint16_t *len,
+                                    bbl_l2tp_session_t *l2tp_session) {
+    uint8_t *avp_len_field;
+    uint16_t avp_len = L2TP_AVP_HDR_LEN;
+    uint8_t *buf = *_buf;
+
+    if(!l2tp_session->disconnect_code) {
+        return;
+    }
+
+    avp_len_field = buf;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(L2TP_AVP_PPP_DISCONNECT_CODE);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    *(uint16_t*)buf = htobe16(l2tp_session->disconnect_code);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    avp_len += 2;
+
+    *(uint16_t*)buf = htobe16(l2tp_session->disconnect_protocol);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    avp_len += 2;
+
+    *buf = l2tp_session->disconnect_direction;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    avp_len += 1;
+
+    if(l2tp_session->disconnect_message) {
+        memcpy(buf, l2tp_session->disconnect_message, strlen(l2tp_session->disconnect_message));
+        BUMP_WRITE_BUFFER(buf, len, strlen(l2tp_session->disconnect_message));
+        avp_len += strlen(l2tp_session->disconnect_message);
+    }
+
+    *(uint16_t*)avp_len_field = htobe16(avp_len);
+    *_buf = buf;
+}
+
+
 /* bbl_l2tp_avp_unhide */
 static bool
 bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
@@ -813,6 +854,8 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
                                                 l2tp_session->result_code,
                                                 l2tp_session->error_code,
                                                 l2tp_session->error_message);
+                /* RFC3145 PPP Disconnect Cause Code AVP */                
+                bbl_l2tp_avp_encode_disconnect_code(&buf, len, l2tp_session);
             }
             break;
         case L2TP_MESSAGE_CSURQ:

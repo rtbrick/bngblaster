@@ -873,6 +873,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_t*)l2tp->next;
             if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
+                l2tp_session->disconnect_code = 3;
+                l2tp_session->disconnect_protocol = 0;
+                l2tp_session->disconnect_direction = 1;
                 bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
                 return bbl_l2tp_session_delete(l2tp_session);
             }
