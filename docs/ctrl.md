@@ -228,7 +228,7 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `l2tp-sessions` | L2TP session information | | `tunnel-id`, `session-id`
 `l2tp-csurq`| Send L2TP CSURQ | `tunnel-id` | `sessions`
 `l2tp-tunnel-terminate` | Terminate L2TP tunnel | `tunnel-id` | `result-code`, `error-code`, `error-message`
-`l2tp-session-terminate` | Terminate L2TP session | `session-id` | `result-code`, `error-code`, `error-message`, `disconnect-code`, `disconnect-protocol`, ``disconnect-direction`, `disconnect-message`
+`l2tp-session-terminate` | Terminate L2TP session | `session-id` | `result-code`, `error-code`, `error-message`, `disconnect-code`, `disconnect-protocol`, `disconnect-direction`, `disconnect-message`
 
 The L2TP CSURQ command expects the local tunnel-id and a list of remote
 session-id for which a connect speed update is requested.
