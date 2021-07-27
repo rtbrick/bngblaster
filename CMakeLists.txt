@@ -39,8 +39,8 @@ set(CURSES_NEED_NCURSES TRUE)
 include(FindCurses)
 target_link_libraries(bngblaster ${CURSES_LIBRARIES} crypto jansson ${libdict} m)
 
-SET(PLATFORM_SPECIFIC_LIBS "-lpthread")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+set(PLATFORM_SPECIFIC_LIBS "-lpthread")
+string(APPEND CMAKE_C_FLAGS "-pthread")
 
 
 # add experimental netmap support
@@ -63,6 +63,7 @@ if(BNGBLASTER_TESTS)
 endif()
 
 install(TARGETS bngblaster DESTINATION sbin)
+install(PROGRAMS bngblaster-cli DESTINATION sbin)
 
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")

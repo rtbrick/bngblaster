@@ -2093,6 +2093,7 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
                 dhcpv6->ia_na_address = (ipv6addr_t*)(buf);
                 dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
                 dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
+                break;
             default:
                 break;
         }
@@ -2134,6 +2135,7 @@ decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
                 dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf));
                 dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+4));
                 dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+8);
+                break;
             default:
                 break;
         }

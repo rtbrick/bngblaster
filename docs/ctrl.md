@@ -2,8 +2,8 @@
 
 The control socket is an unix domain stream socket which allows the control daemon to
 interact with the BNG Blaster using JSON RPC. This interface was primary developed for
-then BNG Blaster Controller but can be also used manually or by other tools like the
-simple CLI tool (`cli.py`) for interactive communication with the BNG Blaster.
+the BNG Blaster Controller but can be also used manually or by other tools like the
+simple CLI tool `bngblaster-cli` for interactive communication with the BNG Blaster.
 
 The control socket will be optionally enabled by providing the path to the socket file
 using the argument `-S` (`bngblaster -S test.socket`).
@@ -46,7 +46,7 @@ the actual command which is invoked with optional arguments.
 {
     "status": "ok",
     "code": 200,
-    "session-information": {
+    "session-info": {
         "type": "pppoe",
         "session-id": 1,
         "session-state": "Established",
@@ -118,6 +118,37 @@ if request was successfully. The status can be also set to `warning` or
 }
 ```
 
+## BNG Blaster CLI
+
+The python script `bngblaster-cli` provides a simple CLI tool
+for interactive communication with the BNG Blaster.
+
+```
+$ sudo bngblaster-cli
+BNG Blaster Control Socket Client
+
+bngblaster-cli <socket> <command> [arguments]
+
+Examples:
+    bngblaster-cli run.sock session-info session-id 1
+    bngblaster-cli run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
+    bngblaster-cli run.sock igmp-info session-id 1
+    bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
+```
+
+`$ sudo bngblaster-cli run.sock session-counters | jq .`
+```json
+{
+  "status": "ok",
+  "code": 200,
+  "session-counters": {
+    "sessions": 1,
+    "sessions-established": 1,
+    "sessions-flapped": 0,
+    "dhcpv6-sessions-established": 1
+  }
+}
+```
 ## Control Socket Commands
 
 ### Global Commands
@@ -128,10 +159,10 @@ Attribute | Description
 `session-counters` | Return session counters
 `terminate` | Terminate all sessions similar to sending SIGINT (ctr+c)
 `session-traffic` | Display session traffic statistics
-`session-traffic-enabled` | Enable session traffic for all sessions
-`session-traffic-disabled` | Disable session traffic for all sessions
-`stream-traffic-enabled` | Enable stream traffic for all sessions
-`stream-traffic-disabled` | Disable stream traffic for all sessions
+`session-traffic-start` (Alias: `session-traffic-enabled`) | Start sending session traffic for all sessions
+`session-traffic-stop` (Alias: `session-traffic-disabled`) | Stop sending session traffic for all sessions
+`stream-traffic-start` (Alias: `stream-traffic-enabled`)  | Start sending stream traffic for all sessions
+`stream-traffic-stop` (Alias: `stream-traffic-disabled`) | Stop sending stream traffic for all sessions
 `multicast-traffic-start` | Start sending multicast traffic from network interface
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
 `li-flows` | List all LI flows with detailed statistics
@@ -170,11 +201,11 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `ipcp-close` | Close IPCP | |
 `ip6cp-open`| Open IP6CP | |
 `ip6cp-close` | Close IP6CP | |
-`session-traffic-enabled` | Enable session traffic | |
-`session-traffic-disabled` | Disable session traffic | |
+`session-traffic-start` (Alias: `session-traffic-enabled`) | Enable session traffic | |
+`session-traffic-stop` (Alias: `session-traffic-disabled`) | Disable session traffic | |
 `session-streams` | Session traffic stream information | |
-`stream-traffic-enabled` | Enable session stream traffic | |
-`stream-traffic-disabled` | Disable session stream traffic | |
+`stream-traffic-start` (Alias: `stream-traffic-enabled`) | Enable session stream traffic | |
+`stream-traffic-stop` (Alias: `stream-traffic-disabled`) | Disable session stream traffic | |
 `igmp-join` | Join group | `group` | `source1`, `source2`, `source3`
 `igmp-leave` | Leave group | `group` |
 `igmp-info` | IGMP information | |
@@ -196,6 +227,8 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `l2tp-tunnels` | L2TP tunnel information | |
 `l2tp-sessions` | L2TP session information | | `tunnel-id`, `session-id`
 `l2tp-csurq`| Send L2TP CSURQ | `tunnel-id` | `sessions`
+`l2tp-tunnel-terminate` | Terminate L2TP tunnel | `tunnel-id` | `result-code`, `error-code`, `error-message`
+`l2tp-session-terminate` | Terminate L2TP session | `session-id` | `result-code`, `error-code`, `error-message`, `disconnect-code`, `disconnect-protocol`, ``disconnect-direction`, `disconnect-message`
 
 The L2TP CSURQ command expects the local tunnel-id and a list of remote
 session-id for which a connect speed update is requested.
@@ -218,4 +251,8 @@ session-id for which a connect speed update is requested.
 
 This command can be executed as shown below using the CLI tool.
 
-`$ sudo ./cli.py run.sock l2tp-csurq tunnel-id 1 sessions [1,2,3,4]`
+`$ sudo bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2,3,4]`
+
+The L2TP session terminate command allows to test result (RFC2661) and disconnect (RFC3145) codes. 
+
+`$ sudo bngblaster-cli run.sock l2tp-session-terminate session-id 1 result-code 2 error-message "LCP request" disconnect-code 3 disconnect-message "LCP terminate request"`

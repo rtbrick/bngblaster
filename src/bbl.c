@@ -301,7 +301,7 @@ bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
      * Timer to compute periodic rates.
      */
     timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-		               &bbl_compute_interface_rate_job);
+                       &bbl_compute_interface_rate_job);
 
     return interface;
 }
@@ -606,10 +606,10 @@ main (int argc, char *argv[])
                 bbl_print_usage();
                 exit(0);
             case 'P':
-		        ctx->pcap.filename = optarg;
+                ctx->pcap.filename = optarg;
                 break;
             case 'J':
-		        ctx->config.json_report_filename = optarg;
+                ctx->config.json_report_filename = optarg;
                 break;
             case 'C':
                 config_file = optarg;
@@ -618,7 +618,7 @@ main (int argc, char *argv[])
                 log_enable(optarg);
                 break;
             case 'L':
-		        g_log_file = optarg;
+                g_log_file = optarg;
                 break;
             case 'u':
                 username = optarg;
@@ -645,19 +645,15 @@ main (int argc, char *argv[])
                 interactive = true;
                 break;
             case 'S':
-		        ctx->ctrl_socket_path = optarg;
+                ctx->ctrl_socket_path = optarg;
                 break;
             case 'f':
-		        ctx->config.interface_lock_force = true;
+                ctx->config.interface_lock_force = true;
                 break;
             default:
                 bbl_print_usage();
                 exit(1);
         }
-    }
-    if (geteuid() != 0) {
-        fprintf(stderr, "Error: Must be run with root privileges\n");
-	    exit(1);
     }
 
     if(!config_file) {

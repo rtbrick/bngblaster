@@ -16,9 +16,18 @@ import os
 import json
 import ast
 
+
+def error(*args, **kwargs):
+    """print error and exit"""
+    print(*args, file=sys.stderr, **kwargs)
+    sys.exit(1)
+
+
 def usage():
-    print("""
-BNG Blaster Control Socket Client
+    error("""BNG Blaster CLI Tool
+
+The CLI tool is a simple control socket client
+for interactive communication with the BNG Blaster.
 
 {c} <socket> <command> [arguments]
 
@@ -27,13 +36,7 @@ Examples:
     {c} run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
     {c} run.sock igmp-info session-id 1
     {c} run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
-
 """.format(c=sys.argv[0]))
-    sys.exit(1)
-
-def error(*args, **kwargs):
-    """print error and exit"""
-    print(*args, file=sys.stderr, **kwargs)
     sys.exit(1)
 
 
