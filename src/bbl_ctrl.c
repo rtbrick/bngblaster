@@ -1017,7 +1017,7 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
         l2tp_session = *search;
         l2tp_tunnel = l2tp_session->tunnel;
         if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
-            return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+            return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
         }
         sessions = json_object_get(arguments, "sessions");
         if (json_is_array(sessions)) {
@@ -1038,6 +1038,119 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
         }
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+    }
+}
+
+
+ssize_t
+bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_t *l2tp_session;
+    l2tp_key_t l2tp_key = {0};
+    void **search = NULL;
+
+    int l2tp_tunnel_id = 0;
+    int result_code;
+    int error_code;
+    char *error_message;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
+    }
+    l2tp_key.tunnel_id = l2tp_tunnel_id;
+    search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+    if(search) {
+        l2tp_session = *search;
+        l2tp_tunnel = l2tp_session->tunnel;
+        if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
+        }
+        bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+        if (json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
+            result_code = 1;
+        }
+        l2tp_tunnel->result_code = result_code;
+        if (json_unpack(arguments, "{s:i}", "error-code", &error_code) != 0) {
+            error_code = 0;
+        }
+        l2tp_tunnel->error_code = error_code;
+        if (json_unpack(arguments, "{s:s}", "error-message", &error_message) != 0) {
+            error_message = NULL;
+        }
+        l2tp_tunnel->error_message = error_message;
+        bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
+    }
+}
+
+ssize_t
+bbl_ctrl_l2tp_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
+    bbl_session_s *session;
+    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_t *l2tp_session;
+
+    int result_code;
+    int error_code;
+    char *error_message;
+    int disconnect_code;
+    int disconnect_protocol;
+    int disconnect_direction;
+    char* disconnect_message;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
+        l2tp_session = session->l2tp_session;
+        if(!l2tp_session) {
+            return bbl_ctrl_status(fd, "error", 400, "no L2TP session");
+        }
+        l2tp_tunnel = l2tp_session->tunnel;
+        if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
+        }
+        if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 400, "session not established");
+        }
+        if (json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
+            result_code = 2;
+        }
+        l2tp_session->result_code = result_code;
+        if (json_unpack(arguments, "{s:i}", "error-code", &error_code) != 0) {
+            error_code = 0;
+        }
+        l2tp_session->error_code = error_code;
+        if (json_unpack(arguments, "{s:s}", "error-message", &error_message) != 0) {
+            error_message = NULL;
+        }
+        l2tp_session->error_message = error_message;
+        if (json_unpack(arguments, "{s:i}", "disconnect-code", &disconnect_code) != 0) {
+            disconnect_code = 0;
+        }
+        l2tp_session->disconnect_code = disconnect_code;
+        if (json_unpack(arguments, "{s:i}", "disconnect-protocol", &disconnect_protocol) != 0) {
+            disconnect_protocol = 0;
+        }
+        l2tp_session->disconnect_protocol = disconnect_protocol;
+        if (json_unpack(arguments, "{s:i}", "disconnect-direction", &disconnect_direction) != 0) {
+            disconnect_direction = 0;
+        }
+        l2tp_session->disconnect_direction = disconnect_direction;
+        if (json_unpack(arguments, "{s:s}", "disconnect-message", &disconnect_message) != 0) {
+            disconnect_message = NULL;
+        }
+        l2tp_session->disconnect_message = disconnect_message;
+        bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        bbl_l2tp_session_delete(l2tp_session);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
     }
 }
 
@@ -1287,6 +1400,8 @@ struct action actions[] = {
     {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
     {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
     {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
+    {"l2tp-tunnel-terminate", bbl_ctrl_l2tp_tunnel_terminate},
+    {"l2tp-session-terminate", bbl_ctrl_l2tp_session_terminate},
     {"session-streams", bbl_ctrl_session_streams},
     {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start},
     {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
