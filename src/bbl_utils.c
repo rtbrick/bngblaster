@@ -39,7 +39,7 @@ format_mac_address (uint8_t *mac)
     static int idx = 0;
     char *ret;
     ret = buffer[idx];
-    idx = (idx+1) & 31;
+    idx = (idx+1) & 15;
     snprintf(ret, MAC_STR_LEN, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     return ret;
 }
@@ -130,7 +130,7 @@ replace_substring (const char* source,
     char  *result_pos = result;
     size_t result_len = 0;
 
-    idx = (idx+1) & 4;
+    idx = (idx+1) & 3;
     
     size_t new_len = strlen(new);
     size_t old_len = strlen(old);
