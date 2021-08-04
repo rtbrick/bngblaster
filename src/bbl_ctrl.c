@@ -629,6 +629,13 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     int i;
 
     interfaces = json_array();
+    if(ctx->op.network_if) {
+        interface = json_pack("{ss si ss}",
+                            "name", ctx->op.network_if->name,
+                            "ifindex", ctx->op.network_if->ifindex,
+                            "type", "network");
+        json_array_append(interfaces, interface);
+    }
     for(i=0; i < ctx->op.access_if_count; i++) {
         if(ctx->op.access_if[i]->access) {
             type = "access";
