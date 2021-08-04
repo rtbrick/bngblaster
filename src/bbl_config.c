@@ -420,17 +420,12 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         access_config->access_line_profile_id = json_number_value(value);
     }
 
+    /* IPv4 settings */
     value = json_object_get(access_interface, "ipcp");
     if (json_is_boolean(value)) {
         access_config->ipcp_enable = json_boolean_value(value);
     } else {
         access_config->ipcp_enable = ctx->config.ipcp_enable;
-    }
-    value = json_object_get(access_interface, "ip6cp");
-    if (json_is_boolean(value)) {
-        access_config->ip6cp_enable = json_boolean_value(value);
-    } else {
-        access_config->ip6cp_enable = ctx->config.ip6cp_enable;
     }
     value = json_object_get(access_interface, "dhcp");
     if (json_is_boolean(value)) {
@@ -442,11 +437,27 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     if (json_is_boolean(value)) {
         access_config->ipv4_enable = json_boolean_value(value);
     } else {
-        if (access_config->dhcp_enable || access_config->static_ip) {
-            access_config->ipv4_enable = ctx->config.ipv4_enable;
-        } else {
+        access_config->ipv4_enable = ctx->config.ipv4_enable;
+    }
+    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
+        /* Disable IPv4 on PPPoE if IPCP is disabled. */
+        if (!access_config->ipcp_enable) {
             access_config->ipv4_enable = false;
         }
+    } else {
+        /* Disable IPv4 on IPoE if neither DHCP is enabled or 
+         * a static IPv4 address is configured. */
+        if (!(access_config->dhcp_enable || access_config->static_ip)) {
+            access_config->ipv4_enable = false;
+        }
+    }
+
+    /* IPv6 settings */
+    value = json_object_get(access_interface, "ip6cp");
+    if (json_is_boolean(value)) {
+        access_config->ip6cp_enable = json_boolean_value(value);
+    } else {
+        access_config->ip6cp_enable = ctx->config.ip6cp_enable;
     }
     value = json_object_get(access_interface, "dhcpv6");
     if (json_is_boolean(value)) {
@@ -460,6 +471,13 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     } else {
         access_config->ipv6_enable = ctx->config.ipv6_enable;
     }
+    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
+        /* Disable IPv4 on PPPoE if IP6CP is disabled. */
+        if (!access_config->ip6cp_enable) {
+            access_config->ipv6_enable = false;
+        }
+    }
+
     value = json_object_get(access_interface, "igmp-autostart");
     if (json_is_boolean(value)) {
         access_config->igmp_autostart = json_boolean_value(value);
