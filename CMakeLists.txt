@@ -62,6 +62,8 @@ if(BNGBLASTER_TESTS)
     add_subdirectory(test)
 endif()
 
+set(CMAKE_INSTALL_PREFIX /usr)
+
 install(TARGETS bngblaster DESTINATION sbin)
 install(PROGRAMS bngblaster-cli DESTINATION sbin)
 
