@@ -80,9 +80,15 @@ bbl_igmp_zapping(timer_s *timer)
 
     uint32_t ms;
 
-    if(session->session_state != BBL_ESTABLISHED ||
-       session->ipcp_state != BBL_PPP_OPENED) {
-        return;
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(session->session_state != BBL_ESTABLISHED ||
+            session->ipcp_state != BBL_PPP_OPENED) {
+            return;
+        }
+    } else {
+        if(session->session_state != BBL_ESTABLISHED) {
+            return;
+        }
     }
 
     if(!session->zapping_joined_group || !session->zapping_leaved_group) {
