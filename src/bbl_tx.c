@@ -194,7 +194,11 @@ bbl_igmp_timeout(timer_s *timer)
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
-        session->ipcp_state != BBL_PPP_OPENED) {
+            session->ipcp_state != BBL_PPP_OPENED) {
+            return;
+        }
+    } else {
+        if(session->session_state != BBL_ESTABLISHED) {
             return;
         }
     }
@@ -258,7 +262,7 @@ bbl_encode_packet_igmp (bbl_session_s *session)
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         /* Check session and IPCP (PPP IPv4) state to prevent sending IGMP request
-        * after session or IPCP has closed. */
+         * after session or IPCP has closed. */
         if(session->session_state != BBL_ESTABLISHED || session->ipcp_state != BBL_PPP_OPENED) {
             session->send_requests &= ~BBL_SEND_IGMP;
             return WRONG_PROTOCOL_STATE;
@@ -270,6 +274,10 @@ bbl_encode_packet_igmp (bbl_session_s *session)
         pppoe.next = &ipv4;
     } else {
         /* IPoE */
+        if(session->session_state != BBL_ESTABLISHED) {
+            session->send_requests &= ~BBL_SEND_IGMP;
+            return WRONG_PROTOCOL_STATE;
+        }
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ipv4;
     }
