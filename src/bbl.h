@@ -568,6 +568,8 @@ typedef struct bbl_ctx_
         char network_if[IFNAMSIZ];
         uint32_t network_ip;
         uint32_t network_gateway;
+        uint8_t gateway_mac[ETH_ADDR_LEN];
+
         ipv6_prefix network_ip6;
         ipv6_prefix network_gateway6;
         uint16_t network_vlan;

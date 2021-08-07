@@ -171,6 +171,7 @@ Attribute | Description | Default
 `address-ipv6` | Local network interface IPv6 address (implicitly /64) | -
 `gateway-ipv6` | Gateway network interface IPv6 address (implicitly /64)
 `vlan` | Network interface VLAN | 0 (untagged)
+`gateway-mac`| Optional set gateway MAC address manually 
 
 ### Access Interfaces
 
