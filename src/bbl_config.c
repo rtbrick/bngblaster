@@ -1180,6 +1180,19 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 ctx->config.network_vlan = json_number_value(value);
                 ctx->config.network_vlan &= 4095;
             }
+            if (json_unpack(sub, "{s:s}", "gateway-mac", &s) == 0) {
+                if (sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                        &ctx->config.gateway_mac[0],
+                        &ctx->config.gateway_mac[1],
+                        &ctx->config.gateway_mac[2],
+                        &ctx->config.gateway_mac[3],
+                        &ctx->config.gateway_mac[4],
+                        &ctx->config.gateway_mac[5]) < 6) 
+                {
+                    fprintf(stderr, "JSON config error: Invalid value for network->gateway-mac\n");
+                    return false;
+                }
+            }
         }
         sub = json_object_get(section, "access");
         if (json_is_array(sub)) {
