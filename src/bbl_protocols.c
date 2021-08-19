@@ -1816,7 +1816,11 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
 
     /* Add VLAN header */
     if(eth->vlan_outer) {
-        *(uint16_t*)buf = htobe16(ETH_TYPE_VLAN);
+        if(eth->qinq) {
+            *(uint16_t*)buf = htobe16(ETH_TYPE_QINQ);
+        } else {
+            *(uint16_t*)buf = htobe16(ETH_TYPE_VLAN);
+        }
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         eth->vlan_outer |= eth->vlan_outer_priority << 13;
         *(uint16_t*)buf = htobe16(eth->vlan_outer);

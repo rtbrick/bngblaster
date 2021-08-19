@@ -182,6 +182,7 @@ Attribute | Description | Default
 `interface` | Access interface name (e.g. eth0, ...)
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
 `vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
+`qinq` | Set outer VLAN ethertype to QinQ (0x88a8) | false
 `outer-vlan-min` | Outer VLAN minimum value | 0 (untagged)
 `outer-vlan-max` | Outer VLAN maximum value | 0 (untagged)
 `outer-vlan` |Set outer-vlan-min/max equally
