@@ -588,7 +588,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     value = json_object_get(stream, "length");
     if (value) {
         stream_config->length = json_number_value(value);
-        if(stream_config->length < 76 || stream_config->length > 1500) {
+        if(stream_config->length < 76 || stream_config->length > 9000) {
             fprintf(stderr, "JSON config error: Invalid value for stream->length\n");
             return false;
         }
