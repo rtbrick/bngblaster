@@ -610,7 +610,7 @@ Attribute | Description | Default
 `direction` | Mandatory stream direction (`upstream`, `downstream` or `both`) | `both`
 `priority` | IPv4 TOS / IPv6 TC | 0
 `vlan-priority` | VLAN priority | 0
-`length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
+`length` | Layer 3 (IP + payload) traffic length (76 - 9000) | 128
 `pps` | Stream traffic rate in packets per second | 1
 `bps` | Stream traffic rate in bits per second (layer 3) |
 `network-ipv4-address` | Overwrite network interface IPv4 address |
