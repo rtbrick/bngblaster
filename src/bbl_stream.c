@@ -104,6 +104,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
@@ -212,6 +213,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;

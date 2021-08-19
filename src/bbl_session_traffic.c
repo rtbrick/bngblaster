@@ -192,6 +192,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -242,6 +243,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
 
     eth.dst = ctx->op.network_if->gateway_mac;
     eth.src = ctx->op.network_if->mac;
+    eth.qinq = false;
     eth.vlan_outer = ctx->config.network_vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV4;
@@ -312,6 +314,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -375,6 +378,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
 
     eth.dst = ctx->op.network_if->gateway_mac;
     eth.src = ctx->op.network_if->mac;
+    eth.qinq = false;
     eth.vlan_outer = ctx->config.network_vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV6;

@@ -277,6 +277,10 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         return false;
     }
 
+    value = json_object_get(access_interface, "qinq");
+    if (json_is_boolean(value)) {
+        access_config->qinq = json_boolean_value(value);
+    }
     value = json_object_get(access_interface, "outer-vlan");
     if (json_is_number(value)) {
         access_config->access_outer_vlan_min = json_number_value(value);
@@ -1175,11 +1179,6 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 }
                 ctx->config.network_gateway6.len = 64;
             }
-            value = json_object_get(sub, "vlan");
-            if (json_is_number(value)) {
-                ctx->config.network_vlan = json_number_value(value);
-                ctx->config.network_vlan &= 4095;
-            }
             if (json_unpack(sub, "{s:s}", "gateway-mac", &s) == 0) {
                 if (sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                         &ctx->config.gateway_mac[0],
@@ -1192,6 +1191,11 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                     fprintf(stderr, "JSON config error: Invalid value for network->gateway-mac\n");
                     return false;
                 }
+            }
+            value = json_object_get(sub, "vlan");
+            if (json_is_number(value)) {
+                ctx->config.network_vlan = json_number_value(value);
+                ctx->config.network_vlan &= 4095;
             }
         }
         sub = json_object_get(section, "access");

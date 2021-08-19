@@ -471,6 +471,7 @@ typedef struct access_line_ {
 typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; // destination MAC address
     uint8_t  *src; // source MAC address
+    bool      qinq; // ethertype 0x88a8
     uint16_t  vlan_outer; // outer VLAN identifier
     uint16_t  vlan_inner; // inner VLAN identifier
     uint16_t  vlan_three; // third VLAN
