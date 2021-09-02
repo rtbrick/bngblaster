@@ -20,7 +20,7 @@
 typedef enum {
     UI_VIEW_DEFAULT = 0,
     UI_VIEW_ACCESS_IF_STATS,
-    UI_VIEW_STREAMS,
+    UI_VIEW_SESSION,
     UI_VIEW_MAX,
 } __attribute__ ((__packed__)) bbl_ui_view;
 
@@ -49,7 +49,7 @@ bbl_init_stats_win()
     wclear(stats_win);
     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
     wprintw(stats_win, "F1: Select View  F7/F8: Start/Stop Traffic  F9: Terminate Sessions\n");
-    if(g_view_selected == UI_VIEW_STREAMS) {
+    if(g_view_selected == UI_VIEW_SESSION) {
         wprintw(stats_win, "Left/Right: Select Session\n");
     } else {
         wprintw(stats_win, "Left/Right: Select Interface\n");
@@ -93,7 +93,7 @@ bbl_read_key_job (timer_s *timer)
             bbl_init_stats_win();
             break;
         case KEY_LEFT:
-            if(g_view_selected == UI_VIEW_STREAMS) {
+            if(g_view_selected == UI_VIEW_SESSION) {
                 if(g_session_selected > 1) {
                     g_session_selected--;
                 } else {
@@ -108,7 +108,7 @@ bbl_read_key_job (timer_s *timer)
             bbl_init_stats_win();
             break;
         case KEY_RIGHT:
-            if(g_view_selected == UI_VIEW_STREAMS) {
+            if(g_view_selected == UI_VIEW_SESSION) {
                 g_session_selected++;
                 if(g_session_selected > ctx->sessions) {
                     g_session_selected = 1;
@@ -407,8 +407,8 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "\nAccess Interface Protocol Stats");
         }
 
-    } else if(g_view_selected == UI_VIEW_STREAMS) {
-        wprintw(stats_win, "\nSession Stream Stats ( Session-Id: ", g_session_selected);
+    } else if(g_view_selected == UI_VIEW_SESSION) {
+        wprintw(stats_win, "\nSession and Streams ( Session-Id: ", g_session_selected);
         wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
         wprintw(stats_win, "%u", g_session_selected);
         wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
@@ -424,6 +424,15 @@ bbl_stats_job (timer_s *timer)
             }
             if(session->agent_remote_id) {
                 wprintw(stats_win, "       ACI: %s \n", session->agent_circuit_id);
+            }
+            if(session->connections_status_message || session->reply_message) {
+                wprintw(stats_win, "\n");
+                if(session->reply_message) {
+                    wprintw(stats_win, "  Reply-Message: %s \n", session->reply_message);
+                }
+                if(session->connections_status_message) {
+                    wprintw(stats_win, "  Connection-Status-Message: %s \n", session->connections_status_message);
+                }
             }
             wprintw(stats_win, "\n  Access Client Interface\n");
             wprintw(stats_win, "    Tx Packets %10lu | %7lu PPS | %10lu Kbps\n",

@@ -186,6 +186,15 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->zapping_view_start_time.tv_sec = 0;
                         session->zapping_view_start_time.tv_nsec = 0;
 
+                        if(session->reply_message) {
+                            free(session->reply_message);
+                            session->reply_message = NULL;
+                        }
+                        if(session->connections_status_message) {
+                            free(session->connections_status_message);
+                            session->connections_status_message = NULL;
+                        }
+
                         /* L2TP */
                         session->l2tp = false;
                         session->l2tp_session = NULL;

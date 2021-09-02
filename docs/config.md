@@ -449,6 +449,8 @@ Attribute | Description | Default
 `keepalive-interval` | LCP echo request interval in seconds (0 means disabled) | 30
 `keepalive-retry` | PPP LCP echo request max retry | 3
 `start-delay` | PPP LCP initial request delay in milliseconds | 0
+`ignore-vendor-specific` | Ignore LCP vendor specific requests | false
+`connection-status-message` | Accept LCP connection status messages | false
 
 ### PPP IPCP
 

@@ -630,6 +630,8 @@ typedef struct bbl_ctx_
         uint16_t lcp_keepalive_interval;
         uint16_t lcp_keepalive_retry;
         uint16_t lcp_start_delay;
+        bool lcp_vendor_ignore;
+        bool lcp_connection_status_message;
 
         /* Authentication */
         uint16_t authentication_timeout;
@@ -884,6 +886,9 @@ typedef struct bbl_session_
     uint16_t    peer_mru;
     uint16_t    auth_protocol; /* PAP or CHAP */
     uint8_t     auth_retries;
+
+    char       *reply_message;
+    char       *connections_status_message;
 
     /* IPCP */
     ppp_state_t ipcp_state;
