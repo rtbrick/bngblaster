@@ -48,6 +48,8 @@
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
 
+#define OUI_LEN                         3 
+
 #define IPV4_RF                         0x8000 /* reserved fragment flag */
 #define IPV4_DF                         0x4000 /* dont fragment flag */
 #define IPV4_MF                         0x2000 /* more fragments flag */
@@ -534,7 +536,7 @@ typedef struct bbl_lcp_ {
     uint16_t    mru;
     uint16_t    auth;
     uint32_t    magic;
-    uint32_t    vendor_oui;
+    uint8_t     vendor_oui[OUI_LEN];
     uint8_t     vendor_kind;
     uint8_t    *vendor_value;
     uint16_t    vendor_value_len;

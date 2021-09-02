@@ -1161,8 +1161,8 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                 memcpy(session->connections_status_message, lcp->vendor_value, lcp->vendor_value_len);
                 session->connections_status_message[lcp->vendor_value_len] = 0;
                 session->lcp_response_code = PPP_CODE_VENDOR_SPECIFIC;
-                *(uint32_t*)(session->lcp_options+3) = lcp->vendor_oui;
                 *(uint32_t*)session->lcp_options = session->magic_number;
+                memcpy(session->lcp_options+sizeof(uint32_t), lcp->vendor_oui, OUI_LEN);
                 session->lcp_options[7] = 2;
                 session->lcp_options_len = 8;
             } else {

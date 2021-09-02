@@ -2999,10 +2999,9 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
                 return DECODE_ERROR;
             }
             lcp->magic = *(uint32_t*)buf;
-            BUMP_BUFFER(buf, lcp_len, 3);
-            lcp->vendor_oui = *(uint32_t*)buf;
-            lcp->vendor_oui &= 0xffffff;
             BUMP_BUFFER(buf, lcp_len, sizeof(uint32_t));
+            memcpy(lcp->vendor_oui, buf, OUI_LEN);
+            BUMP_BUFFER(buf, lcp_len, OUI_LEN);
             lcp->vendor_kind = *buf;
             BUMP_BUFFER(buf, lcp_len, sizeof(uint8_t));
             lcp->vendor_value = buf;
