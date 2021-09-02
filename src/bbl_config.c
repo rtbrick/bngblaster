@@ -872,6 +872,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                     return false;
                 }
             }
+            value = json_object_get(sub, "ignore-vendor-specific");
+            if (json_is_boolean(value)) {
+                ctx->config.lcp_vendor_ignore = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "connection-status-message");
+            if (json_is_boolean(value)) {
+                ctx->config.lcp_connection_status_message = json_boolean_value(value);
+            }
         }
         sub = json_object_get(section, "ipcp");
         if (json_is_object(sub)) {

@@ -83,6 +83,7 @@
 #define ICMP_TYPE_ECHO_REPLY            0x00
 #define ICMP_TYPE_ECHO_REQUEST          0x08
 
+#define PPP_CODE_VENDOR_SPECIFIC        0
 #define PPP_CODE_CONF_REQUEST           1
 #define PPP_CODE_CONF_ACK               2
 #define PPP_CODE_CONF_NAK               3
@@ -533,6 +534,12 @@ typedef struct bbl_lcp_ {
     uint16_t    mru;
     uint16_t    auth;
     uint32_t    magic;
+    uint32_t    vendor_oui;
+    uint8_t     vendor_kind;
+    uint8_t    *vendor_value;
+    uint16_t    vendor_value_len;
+    uint8_t    *start;
+    uint16_t    len;
 } bbl_lcp_t;
 
 /*

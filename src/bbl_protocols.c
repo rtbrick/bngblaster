@@ -2964,6 +2964,9 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
     lcp = (bbl_lcp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_lcp_t));
     memset(lcp, 0x0, sizeof(bbl_lcp_t));
 
+    lcp->start = buf;
+    lcp->len = len;
+
     lcp->code = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     lcp->identifier = *buf;
@@ -2990,6 +2993,21 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
     lcp->options_len = lcp_len;
 
     switch(lcp->code) {
+        case PPP_CODE_VENDOR_SPECIFIC:
+            /* RFC 2153 */
+            if(lcp_len < 8) {
+                return DECODE_ERROR;
+            }
+            lcp->magic = *(uint32_t*)buf;
+            BUMP_BUFFER(buf, lcp_len, 3);
+            lcp->vendor_oui = *(uint32_t*)buf;
+            lcp->vendor_oui &= 0xffffff;
+            BUMP_BUFFER(buf, lcp_len, sizeof(uint32_t));
+            lcp->vendor_kind = *buf;
+            BUMP_BUFFER(buf, lcp_len, sizeof(uint8_t));
+            lcp->vendor_value = buf;
+            lcp->vendor_value_len = lcp_len;
+            break;
         case PPP_CODE_ECHO_REQUEST:
         case PPP_CODE_ECHO_REPLY:
             if(lcp_len>=4) {
