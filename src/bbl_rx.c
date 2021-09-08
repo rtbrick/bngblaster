@@ -1153,7 +1153,10 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                 return;
             } 
             if(ctx->config.lcp_connection_status_message && 
-               lcp->vendor_kind == 1 && lcp->vendor_value_len) {
+               lcp->vendor_kind == 1 && lcp->vendor_value_len > 2) {
+                /* Skip the 2 byte option header (type, length) */
+                lcp->vendor_value_len -= 2;
+                lcp->vendor_value += 2;
                 if(session->connections_status_message) {
                     free(session->connections_status_message);
                 }
