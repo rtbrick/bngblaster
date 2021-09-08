@@ -1816,7 +1816,11 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
 
     /* Add VLAN header */
     if(eth->vlan_outer) {
-        *(uint16_t*)buf = htobe16(ETH_TYPE_VLAN);
+        if(eth->qinq) {
+            *(uint16_t*)buf = htobe16(ETH_TYPE_QINQ);
+        } else {
+            *(uint16_t*)buf = htobe16(ETH_TYPE_VLAN);
+        }
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         eth->vlan_outer |= eth->vlan_outer_priority << 13;
         *(uint16_t*)buf = htobe16(eth->vlan_outer);
@@ -2960,6 +2964,9 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
     lcp = (bbl_lcp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_lcp_t));
     memset(lcp, 0x0, sizeof(bbl_lcp_t));
 
+    lcp->start = buf;
+    lcp->len = len;
+
     lcp->code = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     lcp->identifier = *buf;
@@ -2986,6 +2993,20 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
     lcp->options_len = lcp_len;
 
     switch(lcp->code) {
+        case PPP_CODE_VENDOR_SPECIFIC:
+            /* RFC 2153 */
+            if(lcp_len < 8) {
+                return DECODE_ERROR;
+            }
+            lcp->magic = *(uint32_t*)buf;
+            BUMP_BUFFER(buf, lcp_len, sizeof(uint32_t));
+            memcpy(lcp->vendor_oui, buf, OUI_LEN);
+            BUMP_BUFFER(buf, lcp_len, OUI_LEN);
+            lcp->vendor_kind = *buf;
+            BUMP_BUFFER(buf, lcp_len, sizeof(uint8_t));
+            lcp->vendor_value = buf;
+            lcp->vendor_value_len = lcp_len;
+            break;
         case PPP_CODE_ECHO_REQUEST:
         case PPP_CODE_ECHO_REPLY:
             if(lcp_len>=4) {

@@ -715,6 +715,8 @@ main (int argc, char *argv[])
             exit(1);
         }
         ctx->op.network_if->access = false;
+        /* Copy gateway MAC from config (default 00:00:00:00:00:00) */
+        memcpy(ctx->op.network_if->gateway_mac, ctx->config.gateway_mac, ETH_ADDR_LEN);
         if(ctx->config.network_ip && ctx->config.network_gateway) {
             if(ctx->config.network_ip && ctx->config.network_gateway) {
                 ctx->op.network_if->ip = ctx->config.network_ip;

@@ -504,7 +504,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         }
 
         if(session->access_type == ACCESS_TYPE_PPPOE) {
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
                         "status", "ok",
                         "code", 200,
                         "session-info",
@@ -518,6 +518,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "username", session->username,
                         "agent-circuit-id", session->agent_circuit_id,
                         "agent-remote-id", session->agent_remote_id,
+                        "reply-message", session->reply_message,
+                        "connection-status-message", session->connections_status_message,
                         "lcp-state", ppp_state_string(session->lcp_state),
                         "ipcp-state", ppp_state_string(session->ipcp_state),
                         "ip6cp-state", ppp_state_string(session->ip6cp_state),

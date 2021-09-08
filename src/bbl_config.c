@@ -277,6 +277,10 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
         return false;
     }
 
+    value = json_object_get(access_interface, "qinq");
+    if (json_is_boolean(value)) {
+        access_config->qinq = json_boolean_value(value);
+    }
     value = json_object_get(access_interface, "outer-vlan");
     if (json_is_number(value)) {
         access_config->access_outer_vlan_min = json_number_value(value);
@@ -584,7 +588,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     value = json_object_get(stream, "length");
     if (value) {
         stream_config->length = json_number_value(value);
-        if(stream_config->length < 76 || stream_config->length > 1500) {
+        if(stream_config->length < 76 || stream_config->length > 9000) {
             fprintf(stderr, "JSON config error: Invalid value for stream->length\n");
             return false;
         }
@@ -867,6 +871,14 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                     fprintf(stderr, "JSON config error: ppp->lcp->start-delay must be < 1000\n");
                     return false;
                 }
+            }
+            value = json_object_get(sub, "ignore-vendor-specific");
+            if (json_is_boolean(value)) {
+                ctx->config.lcp_vendor_ignore = json_boolean_value(value);
+            }
+            value = json_object_get(sub, "connection-status-message");
+            if (json_is_boolean(value)) {
+                ctx->config.lcp_connection_status_message = json_boolean_value(value);
             }
         }
         sub = json_object_get(section, "ipcp");
@@ -1174,6 +1186,19 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                     return false;
                 }
                 ctx->config.network_gateway6.len = 64;
+            }
+            if (json_unpack(sub, "{s:s}", "gateway-mac", &s) == 0) {
+                if (sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                        &ctx->config.gateway_mac[0],
+                        &ctx->config.gateway_mac[1],
+                        &ctx->config.gateway_mac[2],
+                        &ctx->config.gateway_mac[3],
+                        &ctx->config.gateway_mac[4],
+                        &ctx->config.gateway_mac[5]) < 6) 
+                {
+                    fprintf(stderr, "JSON config error: Invalid value for network->gateway-mac\n");
+                    return false;
+                }
             }
             value = json_object_get(sub, "vlan");
             if (json_is_number(value)) {

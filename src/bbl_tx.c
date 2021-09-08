@@ -194,7 +194,11 @@ bbl_igmp_timeout(timer_s *timer)
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
-        session->ipcp_state != BBL_PPP_OPENED) {
+            session->ipcp_state != BBL_PPP_OPENED) {
+            return;
+        }
+    } else {
+        if(session->session_state != BBL_ESTABLISHED) {
             return;
         }
     }
@@ -250,6 +254,7 @@ bbl_encode_packet_igmp (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -258,7 +263,7 @@ bbl_encode_packet_igmp (bbl_session_s *session)
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         /* Check session and IPCP (PPP IPv4) state to prevent sending IGMP request
-        * after session or IPCP has closed. */
+         * after session or IPCP has closed. */
         if(session->session_state != BBL_ESTABLISHED || session->ipcp_state != BBL_PPP_OPENED) {
             session->send_requests &= ~BBL_SEND_IGMP;
             return WRONG_PROTOCOL_STATE;
@@ -270,6 +275,10 @@ bbl_encode_packet_igmp (bbl_session_s *session)
         pppoe.next = &ipv4;
     } else {
         /* IPoE */
+        if(session->session_state != BBL_ESTABLISHED) {
+            session->send_requests &= ~BBL_SEND_IGMP;
+            return WRONG_PROTOCOL_STATE;
+        }
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ipv4;
     }
@@ -418,6 +427,7 @@ bbl_encode_packet_icmp_reply (bbl_session_s *session)
         session->interface->stats.icmp_tx++;
         eth.dst = session->server_mac;
         eth.src = session->client_mac;
+        eth.qinq = session->access_config->qinq;
         eth.vlan_outer = session->vlan_key.outer_vlan_id;
         eth.vlan_inner = session->vlan_key.inner_vlan_id;
         eth.vlan_three = session->access_third_vlan;
@@ -478,6 +488,7 @@ bbl_encode_packet_pap_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -528,6 +539,7 @@ bbl_encode_packet_chap_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -578,6 +590,7 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -664,6 +677,7 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     ctx = interface->ctx;
 
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -797,6 +811,7 @@ bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -832,6 +847,7 @@ bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -900,6 +916,7 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -946,6 +963,7 @@ bbl_encode_packet_ipcp_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1015,6 +1033,7 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1057,6 +1076,7 @@ bbl_encode_packet_lcp_response (bbl_session_s *session) {
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1121,6 +1141,7 @@ bbl_encode_padi (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1165,6 +1186,7 @@ bbl_encode_padr (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1209,6 +1231,7 @@ bbl_encode_padt (bbl_session_s *session)
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1301,6 +1324,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
 
     eth.dst = session->dhcp_server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1444,6 +1468,7 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
     ctx = interface->ctx;
 
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1476,6 +1501,7 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
     bbl_arp_t arp = {0};
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -1497,6 +1523,7 @@ bbl_encode_packet_cfm_cc (bbl_session_s *session)
     bbl_cfm_t cfm = {0};
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;

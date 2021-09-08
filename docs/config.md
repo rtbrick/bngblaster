@@ -171,6 +171,7 @@ Attribute | Description | Default
 `address-ipv6` | Local network interface IPv6 address (implicitly /64) | -
 `gateway-ipv6` | Gateway network interface IPv6 address (implicitly /64)
 `vlan` | Network interface VLAN | 0 (untagged)
+`gateway-mac`| Optional set gateway MAC address manually 
 
 ### Access Interfaces
 
@@ -181,6 +182,7 @@ Attribute | Description | Default
 `interface` | Access interface name (e.g. eth0, ...)
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
 `vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
+`qinq` | Set outer VLAN ethertype to QinQ (0x88a8) | false
 `outer-vlan-min` | Outer VLAN minimum value | 0 (untagged)
 `outer-vlan-max` | Outer VLAN maximum value | 0 (untagged)
 `outer-vlan` |Set outer-vlan-min/max equally
@@ -447,6 +449,8 @@ Attribute | Description | Default
 `keepalive-interval` | LCP echo request interval in seconds (0 means disabled) | 30
 `keepalive-retry` | PPP LCP echo request max retry | 3
 `start-delay` | PPP LCP initial request delay in milliseconds | 0
+`ignore-vendor-specific` | Ignore LCP vendor specific requests | false
+`connection-status-message` | Accept LCP connection status messages | false
 
 ### PPP IPCP
 
@@ -608,7 +612,7 @@ Attribute | Description | Default
 `direction` | Mandatory stream direction (`upstream`, `downstream` or `both`) | `both`
 `priority` | IPv4 TOS / IPv6 TC | 0
 `vlan-priority` | VLAN priority | 0
-`length` | Layer 3 (IP + payload) traffic length (76 - 1500) | 128
+`length` | Layer 3 (IP + payload) traffic length (76 - 9000) | 128
 `pps` | Stream traffic rate in packets per second | 1
 `bps` | Stream traffic rate in bits per second (layer 3) |
 `network-ipv4-address` | Overwrite network interface IPv4 address |

@@ -96,8 +96,24 @@ detailed explained in the configuration section.
 }
 ```
 
+## LCP Vendor Extension
+
+This chapter refers to RFC 2153 PPP vendor extensions.
+
+Per default all LCP vendor specific requests will be rejected sending a
+LCP code reject message. With `ppp->lcp->ignore-vendor-specific` enabled,
+those messages will be ignored as required to emulate different CPE 
+behaviors.
+
+The option `ppp->lcp->connection-status-message` allows to accept LCP vendor requests 
+with any OUI if kind is set to `1` by responding with vendor request of 
+kind `2`. The OUI from request is copied to response in this case.
+The value from request is stored in the session as `connection-status-message`.
+
+## PPPoE Session Information
+
 The control socket command `session-info session-id <id>` provides
-detailed information for IPOE sessions. 
+detailed information for PPPoE sessions. 
 
 `$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .`
 ```json
