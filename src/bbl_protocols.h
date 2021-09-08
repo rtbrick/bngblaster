@@ -48,6 +48,8 @@
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
 
+#define OUI_LEN                         3 
+
 #define IPV4_RF                         0x8000 /* reserved fragment flag */
 #define IPV4_DF                         0x4000 /* dont fragment flag */
 #define IPV4_MF                         0x2000 /* more fragments flag */
@@ -83,6 +85,7 @@
 #define ICMP_TYPE_ECHO_REPLY            0x00
 #define ICMP_TYPE_ECHO_REQUEST          0x08
 
+#define PPP_CODE_VENDOR_SPECIFIC        0
 #define PPP_CODE_CONF_REQUEST           1
 #define PPP_CODE_CONF_ACK               2
 #define PPP_CODE_CONF_NAK               3
@@ -471,6 +474,7 @@ typedef struct access_line_ {
 typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; // destination MAC address
     uint8_t  *src; // source MAC address
+    bool      qinq; // ethertype 0x88a8
     uint16_t  vlan_outer; // outer VLAN identifier
     uint16_t  vlan_inner; // inner VLAN identifier
     uint16_t  vlan_three; // third VLAN
@@ -532,6 +536,12 @@ typedef struct bbl_lcp_ {
     uint16_t    mru;
     uint16_t    auth;
     uint32_t    magic;
+    uint8_t     vendor_oui[OUI_LEN];
+    uint8_t     vendor_kind;
+    uint8_t    *vendor_value;
+    uint16_t    vendor_value_len;
+    uint8_t    *start;
+    uint16_t    len;
 } bbl_lcp_t;
 
 /*

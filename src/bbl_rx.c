@@ -80,9 +80,15 @@ bbl_igmp_zapping(timer_s *timer)
 
     uint32_t ms;
 
-    if(session->session_state != BBL_ESTABLISHED ||
-       session->ipcp_state != BBL_PPP_OPENED) {
-        return;
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(session->session_state != BBL_ESTABLISHED ||
+            session->ipcp_state != BBL_PPP_OPENED) {
+            return;
+        }
+    } else {
+        if(session->session_state != BBL_ESTABLISHED) {
+            return;
+        }
     }
 
     if(!session->zapping_joined_group || !session->zapping_leaved_group) {
@@ -750,6 +756,14 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                         }
                     }
                 }
+                if(pap->reply_message_len) {
+                    if(session->reply_message) {
+                        free(session->reply_message);
+                    }
+                    session->reply_message = malloc(pap->reply_message_len+1);
+                    memcpy(session->reply_message, pap->reply_message, pap->reply_message_len);
+                    session->reply_message[pap->reply_message_len] = 0;
+                }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
                 if(ctx->config.ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
@@ -834,6 +848,14 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                             }
                         }
                     }
+                }
+                if(chap->reply_message_len) {
+                    if(session->reply_message) {
+                        free(session->reply_message);
+                    }
+                    session->reply_message = malloc(chap->reply_message_len+1);
+                    memcpy(session->reply_message, chap->reply_message, chap->reply_message_len);
+                    session->reply_message[chap->reply_message_len] = 0;
                 }
                 bbl_session_update_state(ctx, session, BBL_PPP_NETWORK);
                 if(ctx->config.ipcp_enable) {
@@ -1126,6 +1148,40 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     lcp = (bbl_lcp_t*)pppoes->next;
 
     switch(lcp->code) {
+        case PPP_CODE_VENDOR_SPECIFIC:
+            if(ctx->config.lcp_vendor_ignore) {
+                return;
+            } 
+            if(ctx->config.lcp_connection_status_message && 
+               lcp->vendor_kind == 1 && lcp->vendor_value_len > 2) {
+                /* Skip the 2 byte option header (type, length) */
+                lcp->vendor_value_len -= 2;
+                lcp->vendor_value += 2;
+                if(session->connections_status_message) {
+                    free(session->connections_status_message);
+                }
+                session->connections_status_message = malloc(lcp->vendor_value_len+1);
+                memcpy(session->connections_status_message, lcp->vendor_value, lcp->vendor_value_len);
+                session->connections_status_message[lcp->vendor_value_len] = 0;
+                session->lcp_response_code = PPP_CODE_VENDOR_SPECIFIC;
+                *(uint32_t*)session->lcp_options = session->magic_number;
+                memcpy(session->lcp_options+sizeof(uint32_t), lcp->vendor_oui, OUI_LEN);
+                session->lcp_options[7] = 2;
+                session->lcp_options_len = 8;
+            } else {
+                session->lcp_response_code = PPP_CODE_CODE_REJECT;
+                if(lcp->len > PPP_OPTIONS_BUFFER) {
+                    memcpy(session->lcp_options, lcp->start, PPP_OPTIONS_BUFFER);
+                    session->lcp_options_len = PPP_OPTIONS_BUFFER;
+                } else {
+                    memcpy(session->lcp_options, lcp->start, lcp->len);
+                    session->lcp_options_len = lcp->len;
+                }
+            }
+            session->lcp_peer_identifier = lcp->identifier;
+            session->send_requests |= BBL_SEND_LCP_RESPONSE;
+            bbl_session_tx_qnode_insert(session);
+            break;
         case PPP_CODE_CONF_REQUEST:
             session->auth_protocol = lcp->auth;
             if(session->access_config->authentication_protocol) {
@@ -1247,6 +1303,17 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
             bbl_session_tx_qnode_insert(session);
             break;
         default:
+            session->lcp_response_code = PPP_CODE_CODE_REJECT;
+            if(lcp->len > PPP_OPTIONS_BUFFER) {
+                memcpy(session->lcp_options, lcp->start, PPP_OPTIONS_BUFFER);
+                session->lcp_options_len = PPP_OPTIONS_BUFFER;
+            } else {
+                memcpy(session->lcp_options, lcp->start, lcp->len);
+                session->lcp_options_len = lcp->len;
+            }
+            session->lcp_peer_identifier = lcp->identifier;
+            session->send_requests |= BBL_SEND_LCP_RESPONSE;
+            bbl_session_tx_qnode_insert(session);
             break;
     }
 }

@@ -364,6 +364,8 @@ typedef struct bbl_access_config_
     uint16_t access_inner_vlan_max;
     uint16_t access_third_vlan;
 
+    bool qinq; /* use ethertype 0x8818 */
+    
     /* Static */
     uint32_t static_ip;
     uint32_t static_ip_iter;
@@ -568,6 +570,8 @@ typedef struct bbl_ctx_
         char network_if[IFNAMSIZ];
         uint32_t network_ip;
         uint32_t network_gateway;
+        uint8_t gateway_mac[ETH_ADDR_LEN];
+
         ipv6_prefix network_ip6;
         ipv6_prefix network_gateway6;
         uint16_t network_vlan;
@@ -626,6 +630,8 @@ typedef struct bbl_ctx_
         uint16_t lcp_keepalive_interval;
         uint16_t lcp_keepalive_retry;
         uint16_t lcp_start_delay;
+        bool lcp_vendor_ignore;
+        bool lcp_connection_status_message;
 
         /* Authentication */
         uint16_t authentication_timeout;
@@ -880,6 +886,9 @@ typedef struct bbl_session_
     uint16_t    peer_mru;
     uint16_t    auth_protocol; /* PAP or CHAP */
     uint8_t     auth_retries;
+
+    char       *reply_message;
+    char       *connections_status_message;
 
     /* IPCP */
     ppp_state_t ipcp_state;
