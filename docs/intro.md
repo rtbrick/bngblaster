@@ -25,12 +25,12 @@ $ bngblaster --help
       ____   __   ____         _        __                                  ,/
      / __ \ / /_ / __ ) _____ (_)_____ / /__                              ,'/
     / /_/ // __// __  |/ ___// // ___// //_/                            ,' /
-   / _, _// /_ / /_/ // /   / // /__ / ,<                             ,'  /_____,
-  /_/ |_| \__//_____//_/   /_/ \___//_/|_|                          .'____    ,'
+   / _, _// /_ / /_/ // /   / // /__ / ,<                             ,'  /_____,    
+  /_/ |_| \__//_____//_/   /_/ \___//_/|_|                          .'____    ,'   
       ____   _   _  ______   ____   _               _                    /  ,'
      / __ ) / | / // ____/  / __ ) / /____ _ _____ / /_ ___   ____      / ,'
     / __  |/  |/ // / __   / __  |/ // __ `// ___// __// _ \ / ___/    /,'
-   / /_/ // /|  // /_/ /  / /_/ // // /_/ /(__  )/ /_ /  __// /       /
+   / /_/ // /|  // /_/ /  / /_/ // // /_/ /(__  )/ /_ /  __// /       / 
   /_____//_/ |_/ \____/  /_____//_/ \__,_//____/ \__/ \___//_/
 
 Usage: bngblaster [OPTIONS]
@@ -38,7 +38,7 @@ Usage: bngblaster [OPTIONS]
   -v --version
   -h --help
   -C --config <args>
-  -l --logging debug|error|igmp|io|pppoe|normal|pcap|timer|timer-detail|ip|loss|l2tp|dhcp
+  -l --logging debug|error|igmp|io|pppoe|info|pcap|timer|timer-detail|ip|loss|l2tp|dhcp
   -L --log-file <args>
   -u --username <args>
   -p --password <args>
@@ -51,6 +51,7 @@ Usage: bngblaster [OPTIONS]
   -z --mc-zapping-interval <args>
   -S --control-socket <args>
   -I --interactive
+  -b --hide-banner
   -f --force
 ```
 

@@ -85,10 +85,18 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
             eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            if(interface->access) {
-                bbl_rx_handler_access(eth, interface);
-            } else {
-                bbl_rx_handler_network(eth, interface);
+            switch(interface->type) {
+                case INTERFACE_TYPE_ACCESS:
+                    bbl_rx_handler_access(eth, interface);
+                    break;
+                case INTERFACE_TYPE_NETWORK:
+                    bbl_rx_handler_network(eth, interface);
+                    break;
+                case INTERFACE_TYPE_A10NSP:
+                    bbl_rx_handler_a10nsp(eth, interface);
+                    break;
+                default:
+                    break;
             }
         } else if (decode_result == UNKNOWN_PROTOCOL) {
             interface->stats.packets_rx_drop_unknown++;
@@ -146,10 +154,18 @@ bbl_io_raw_rx_job (timer_s *timer) {
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
             eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            if(interface->access) {
-                bbl_rx_handler_access(eth, interface);
-            } else {
-                bbl_rx_handler_network(eth, interface);
+            switch(interface->type) {
+                case INTERFACE_TYPE_ACCESS:
+                    bbl_rx_handler_access(eth, interface);
+                    break;
+                case INTERFACE_TYPE_NETWORK:
+                    bbl_rx_handler_network(eth, interface);
+                    break;
+                case INTERFACE_TYPE_A10NSP:
+                    bbl_rx_handler_a10nsp(eth, interface);
+                    break;
+                default:
+                    break;
             }
         } else if (decode_result == UNKNOWN_PROTOCOL) {
             interface->stats.packets_rx_drop_unknown++;
@@ -355,19 +371,19 @@ bbl_io_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
 }
 
 /* Taken and adapted from
-* https://stackoverflow.com/questions/41678219/how-to-properly-put-network-interface-into-promiscuous-mode-on-linux
-*
-* This prevents the ioctl get flags / set flags race condition
-*/
-int
+ * https://stackoverflow.com/questions/41678219/how-to-properly-put-network-interface-into-promiscuous-mode-on-linux
+ *
+ * This prevents the ioctl get flags / set flags race condition
+ */
+static int
 set_promisc(const char *ifname) {
     struct packet_mreq mreq = {0};
     int sfd;
 
     /* This socket is only opened, but not closed. Closing the socket would reset
-    * its flags - effectively removing the just added promisc mode.
-    * We want to keep the interface in promisc mode until the end of the program.
-    */
+     * its flags - effectively removing the just added promisc mode.
+     * We want to keep the interface in promisc mode until the end of the program.
+     */
     if ((sfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
         LOG(ERROR, "unable to open control socket for promisc activation\n");
         return -1;

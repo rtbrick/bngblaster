@@ -16,7 +16,7 @@ packet it checks if there is a gap between last and new sequence number which is
 reported as loss. The loss logging option (-l loss) allows also to search for the missing
 packets in the corresponding capture files (see test.log).
 
-It is also possible to start a dedicated BNG Blaster instance to generate mutlicast
+It is also possible to start a dedicated BNG Blaster instance to generate multicast
 traffic which can be consumed by multiple BNG Blaster instances. The BNG Blaster
 header allows to do the same measurements on traffic generated from same or different
 BNG Blaster instance.
@@ -47,6 +47,44 @@ delay in milliseconds.
 
 The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms) for more
 precise IGMP join/leave delay measurements.
+
+It is also possible to generate multicast traffic using RAW streams as shown in the 
+example below:
+
+```json
+{    
+    "streams": [
+        {
+            "name": "MC1",
+            "type": "ipv4",
+            "direction": "downstream",
+            "priority": 128,
+            "network-ipv4-address": "1.1.1.1",
+            "destination-ipv4-address": "239.0.0.1",
+            "length": 256,
+            "pps": 1,
+            "network-interface": "eth1"
+        },
+        {
+            "name": "MC2",
+            "type": "ipv4",
+            "direction": "downstream",
+            "priority": 128,
+            "network-ipv4-address": "2.2.2.2",
+            "destination-ipv4-address": "239.0.0.2",
+            "length": 256,
+            "pps": 1,
+            "network-interface": "eth2"
+        }
+    ]
+}
+```
+
+Using RAW streams allows to generate streams distributed over multiple network interfaces. 
+Setting the `destination-ipv4-address` to an multicast IPv4 address is enough to generate
+proper multicast streams. All headers including the BNG Blaster header will be automatically
+set for multicast. Therefore such streams can be also used to measure the IGMP join and leave 
+delay.
 
 ## Manual Join/Leave Testing
 

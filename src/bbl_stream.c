@@ -8,6 +8,7 @@
  */
 
 #include "bbl.h"
+#include "bbl_session.h"
 #include "bbl_stream.h"
 #include "bbl_stats.h"
 #include "bbl_io.h"
@@ -102,6 +103,23 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
+    /* *
+     * The corresponding network interfaces will be selected
+     * in the following order:
+     * - "network-interface" from stream section
+     * - "network-interface" from access interface section
+     * - first network interface from network section (default)
+     */
+    bbl_interface_s *network_if;
+    if(config->network_interface) {
+        network_if = bbl_get_network_interface(ctx, config->network_interface);
+    } else {
+        network_if = session->network_interface;
+    }
+    if(!network_if) {
+        return false;
+    }
+
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -138,7 +156,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = ctx->op.network_if->ip;
+                    ipv4.dst = network_if->ip;
                 }
             }
             ipv4.ttl = 64;
@@ -167,7 +185,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                 if(*(uint64_t*)stream->config->ipv6_network_address) {
                     ipv6.dst = stream->config->ipv6_network_address;
                 } else {
-                    ipv6.dst = ctx->op.network_if->ip6.address;
+                    ipv6.dst = network_if->ip6.address;
                 }
             }
             ipv6.src = session->ipv6_address;
@@ -211,6 +229,23 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
+    /* *
+     * The corresponding network interfaces will be selected
+     * in the following order:
+     * - "network-interface" from stream section
+     * - "network-interface" from access interface section
+     * - first network interface from network section (default)
+     */
+    bbl_interface_s *network_if;
+    if(config->network_interface) {
+        network_if = bbl_get_network_interface(ctx, config->network_interface);
+    } else {
+        network_if = session->network_interface;
+    }
+    if(!network_if) {
+        return false;
+    }
+
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -245,7 +280,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = ctx->op.network_if->ip;
+                    ipv4.dst = network_if->ip;
                 }
             }
             ipv4.ttl = 64;
@@ -274,7 +309,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 if(*(uint64_t*)stream->config->ipv6_network_address) {
                     ipv6.dst = stream->config->ipv6_network_address;
                 } else {
-                    ipv6.dst = ctx->op.network_if->ip6.address;
+                    ipv6.dst = network_if->ip6.address;
                 }
             }
             ipv6.src = session->ipv6_address;
@@ -306,7 +341,6 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
 bool
 bbl_stream_build_network_packet(bbl_stream *stream) {
 
-    bbl_ctx_s *ctx = stream->interface->ctx;
     bbl_session_s *session = stream->session;
     bbl_stream_config *config = stream->config;
 
@@ -320,9 +354,11 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
 
     uint8_t mac[ETH_ADDR_LEN] = {0};
 
-    eth.dst = ctx->op.network_if->gateway_mac;
-    eth.src = ctx->op.network_if->mac;
-    eth.vlan_outer = ctx->config.network_vlan;
+    bbl_interface_s *network_if = stream->interface;
+
+    eth.dst = network_if->gateway_mac;
+    eth.src = network_if->mac;
+    eth.vlan_outer = network_if->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = 0;
 
@@ -347,7 +383,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             if(stream->config->ipv4_network_address) {
                 ipv4.src = stream->config->ipv4_network_address;
             } else {
-                ipv4.src = ctx->op.network_if->ip;
+                ipv4.src = network_if->ip;
             }
             /* Destination address */
             if(stream->config->ipv4_destination_address) {
@@ -388,7 +424,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             if(*(uint64_t*)stream->config->ipv6_network_address) {
                 ipv6.src = stream->config->ipv6_network_address;
             } else {
-                ipv6.src = ctx->op.network_if->ip6.address;
+                ipv6.src = network_if->ip6.address;
             }
             /* Destination address */
             if(*(uint64_t*)stream->config->ipv6_destination_address) {
@@ -432,13 +468,14 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
 bool
 bbl_stream_build_l2tp_packet(bbl_stream *stream) {
 
-    bbl_ctx_s *ctx = stream->interface->ctx;
     bbl_session_s *session = stream->session;
     bbl_stream_config *config = stream->config;
 
     bbl_l2tp_session_t *l2tp_session = stream->session->l2tp_session;
     bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
-
+    
+    struct bbl_interface_ *interface = l2tp_tunnel->interface;
+    
     uint16_t buf_len;
 
     bbl_ethernet_header_t eth = {0};
@@ -449,9 +486,9 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
-    eth.dst = ctx->op.network_if->gateway_mac;
-    eth.src = ctx->op.network_if->mac;
-    eth.vlan_outer = ctx->config.network_vlan;
+    eth.dst = interface->gateway_mac;
+    eth.src = interface->mac;
+    eth.vlan_outer = interface->vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
@@ -796,10 +833,27 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
     config = ctx->config.stream_config;
 
+    /* *
+     * The corresponding network interfaces will be selected
+     * in the following order:
+     * - "network-interface" from stream section
+     * - "network-interface" from access interface section
+     * - first network interface from network section (default)
+     */
+    bbl_interface_s *network_if;
+    if(config->network_interface) {
+        network_if = bbl_get_network_interface(ctx, config->network_interface);
+    } else {
+        network_if = session->network_interface;
+    }
+    if(!network_if) {
+        return false;
+    }
+
     while(config) {
         if(config->stream_group_id == access_config->stream_group_id) {
 
-            if(!ctx->op.network_if) {
+            if(!network_if) {
                 LOG(ERROR, "Failed to add stream because of missing network interface\n");
                 return false;
             }
@@ -850,7 +904,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 stream->flow_seq = 1;
                 stream->config = config;
                 stream->direction = STREAM_DIRECTION_DOWN;
-                stream->interface = ctx->op.network_if;
+                stream->interface = network_if;
                 stream->session = session;
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
                 result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
@@ -891,6 +945,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
     bbl_stream_config *config;
     bbl_stream *stream;
+    bbl_interface_s *network_if;
 
     dict_insert_result result;
 
@@ -901,12 +956,12 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
     config = ctx->config.stream_config;
 
-    if(!ctx->op.network_if) {
-        LOG(ERROR, "Failed to add raw stream because of missing network interface\n");
-        return false;
-    }
     while(config) {
         if(config->stream_group_id == 0) {
+            network_if = bbl_get_network_interface(ctx, config->network_interface);
+            if(!network_if) {
+                return false;
+            }
             if(config->pps == 1) {
                 timer_sec = 1;
             } else {
@@ -918,7 +973,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                 stream->flow_seq = 1;
                 stream->config = config;
                 stream->direction = STREAM_DIRECTION_DOWN;
-                stream->interface = ctx->op.network_if;
+                stream->interface = network_if;
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
                 result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
@@ -943,4 +998,3 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
     return true;
 }
-

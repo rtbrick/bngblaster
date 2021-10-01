@@ -8,6 +8,7 @@
  */
 
 #include "bbl.h"
+#include "bbl_session.h"
 
 void
 bbl_session_traffic_ipv4(timer_s *timer)
@@ -92,8 +93,9 @@ bbl_session_traffic_ipv6pd(timer_s *timer)
     }
 }
 
-bool
-bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session)
+static bool
+bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session, 
+                                  struct bbl_interface_ *network_if)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t l2tp_ipv4 = {0};
@@ -113,9 +115,9 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session)
     }
     buf = session->network_ipv4_tx_packet_template;
 
-    eth.dst = ctx->op.network_if->gateway_mac;
-    eth.src = ctx->op.network_if->mac;
-    eth.vlan_outer = ctx->config.network_vlan;
+    eth.dst = network_if->gateway_mac;
+    eth.src = network_if->mac;
+    eth.vlan_outer = network_if->vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
@@ -176,6 +178,17 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     uint8_t *buf;
     uint16_t len = 0;
 
+    bbl_interface_s *network_if;
+
+    if(session->l2tp_session) {
+        network_if = session->l2tp_session->tunnel->interface;
+    } else {
+        network_if = session->network_interface;
+    }
+    if(!network_if) {
+        return false;
+    }
+
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
@@ -207,7 +220,11 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ip;
     }
-    ip.dst = ctx->op.network_if->ip;
+    if(session->l2tp_session) {
+        ip.dst = L2TP_IPCP_IP_LOCAL;
+    } else {
+        ip.dst = network_if->ip;
+    }
     ip.src = session->ip_address;
     ip.offset = IPV4_DF;
     ip.ttl = 64;
@@ -231,7 +248,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     session->access_ipv4_tx_packet_len = len;
 
     if(session->l2tp_session) {
-        return bbl_session_traffic_add_ipv4_l2tp(ctx, session);
+        return bbl_session_traffic_add_ipv4_l2tp(ctx, session, network_if);
     }
 
     /* Prepare Network to Access (Session) Packet */
@@ -241,15 +258,15 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     }
     buf = session->network_ipv4_tx_packet_template;
 
-    eth.dst = ctx->op.network_if->gateway_mac;
-    eth.src = ctx->op.network_if->mac;
+    eth.dst = network_if->gateway_mac;
+    eth.src = network_if->mac;
     eth.qinq = false;
-    eth.vlan_outer = ctx->config.network_vlan;
+    eth.vlan_outer = network_if->vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ip;
     ip.dst = session->ip_address;
-    ip.src = ctx->op.network_if->ip;
+    ip.src = network_if->ip;
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;
@@ -275,6 +292,11 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
     bbl_bbl_t bbl = {0};
     uint8_t *buf;
     uint16_t len = 0;
+
+    bbl_interface_s *network_if = session->network_interface;
+    if(!(network_if && *(uint64_t*)network_if->ip6.address)) {
+        return false;
+    }
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -329,7 +351,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ip;
     }
-    ip.dst = ctx->op.network_if->ip6.address;
+    ip.dst = network_if->ip6.address;
     ip.ttl = 64;
     ip.protocol = IPV6_NEXT_HEADER_UDP;
     ip.next = &udp;
@@ -376,14 +398,14 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         bbl.flow_id = session->network_ipv6_tx_flow_id;
     }
 
-    eth.dst = ctx->op.network_if->gateway_mac;
-    eth.src = ctx->op.network_if->mac;
+    eth.dst = network_if->gateway_mac;
+    eth.src = network_if->mac;
     eth.qinq = false;
-    eth.vlan_outer = ctx->config.network_vlan;
+    eth.vlan_outer = network_if->vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV6;
     eth.next = &ip;
-    ip.src = ctx->op.network_if->ip6.address;
+    ip.src = network_if->ip6.address;
     bbl.direction = BBL_DIRECTION_DOWN;
 
     if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
@@ -402,8 +424,7 @@ bbl_session_traffic_start_ipv4(bbl_ctx_s *ctx, bbl_session_s *session) {
 
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
-        ctx->op.network_if && ctx->op.network_if->ip) {
+    if(ctx->config.session_traffic_ipv4_pps && session->ip_address && ctx->interfaces.network_if_count) {
         /* Start IPv4 Session Traffic */
         if(bbl_session_traffic_add_ipv4(ctx, session)) {
             if(ctx->config.session_traffic_ipv4_pps > 1) {
@@ -431,8 +452,7 @@ bbl_session_traffic_start_ipv6(bbl_ctx_s *ctx, bbl_session_s *session) {
 
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv6_pps && *(uint64_t*)session->ipv6_address &&
-        ctx->op.network_if && *(uint64_t*)ctx->op.network_if->ip6.address) {
+    if(ctx->config.session_traffic_ipv6_pps && *(uint64_t*)session->ipv6_address && ctx->interfaces.network_if_count) {
         /* Start IPv6 Session Traffic */
         if(bbl_session_traffic_add_ipv6(ctx, session, false)) {
             if(ctx->config.session_traffic_ipv6_pps > 1) {
@@ -460,8 +480,7 @@ bbl_session_traffic_start_ipv6pd(bbl_ctx_s *ctx, bbl_session_s *session) {
 
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv6pd_pps && *(uint64_t*)session->delegated_ipv6_address &&
-        ctx->op.network_if && *(uint64_t*)ctx->op.network_if->ip6.address) {
+    if(ctx->config.session_traffic_ipv6pd_pps && *(uint64_t*)session->delegated_ipv6_address && ctx->interfaces.network_if_count) {
         /* Start IPv6 PD Session Traffic */
         if(bbl_session_traffic_add_ipv6(ctx, session, true)) {
             if(ctx->config.session_traffic_ipv6pd_pps > 1) {
