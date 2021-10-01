@@ -16,6 +16,9 @@
 
 #define L2TP_IPCP_IP_LOCAL          168495882
 #define L2TP_IPCP_IP_REMOTE         168430090
+#define L2TP_IPCP_DNS1              168561674
+#define L2TP_IPCP_DNS2              168627466
+
 #define L2TP_TX_WAIT_MS             10
 
 #define L2TP_PROXY_AUTH_TYPE_PAP    3

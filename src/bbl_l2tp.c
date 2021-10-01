@@ -908,8 +908,6 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             ipcp_rx = (bbl_ipcp_t*)l2tp->next;
             memset(&ipcp_tx, 0x0, sizeof(bbl_ipcp_t));
             if(ipcp_rx->code == PPP_CODE_CONF_REQUEST) {
-                ipcp_rx->options = NULL;
-                ipcp_rx->options_len = 0;
                 if(ipcp_rx->address == L2TP_IPCP_IP_REMOTE) {
                     ipcp_rx->code = PPP_CODE_CONF_ACK;
                     if(l2tp_session->ipcp_state == BBL_PPP_LOCAL_ACK) {
@@ -923,11 +921,17 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                         bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ipcp_tx);
                     }
                 } else {
+                    ipcp_rx->options = NULL;
+                    ipcp_rx->options_len = 0;
                     ipcp_rx->code = PPP_CODE_CONF_NAK;
                     ipcp_rx->address = L2TP_IPCP_IP_REMOTE;
                     ipcp_rx->option_address = true;
-                    ipcp_rx->option_dns1 = false;
-                    ipcp_rx->option_dns2 = false;
+                    if(ipcp_rx->option_dns1) {
+                        ipcp_rx->dns1 = L2TP_IPCP_DNS1;
+                    }
+                    if(ipcp_rx->option_dns2) {
+                        ipcp_rx->dns2 = L2TP_IPCP_DNS2;
+                    }
                 }
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, ipcp_rx);
             } else if (ipcp_rx->code == PPP_CODE_CONF_ACK) {

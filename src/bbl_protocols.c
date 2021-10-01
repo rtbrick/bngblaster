@@ -2912,12 +2912,15 @@ decode_ppp_ipcp(uint8_t *buf, uint16_t len,
                 }
                 switch (ipcp_option_type) {
                     case PPP_IPCP_OPTION_ADDRESS:
+                        ipcp->option_address = true;
                         ipcp->address = *(uint32_t*)buf;
                         break;
                     case PPP_IPCP_OPTION_DNS1:
+                        ipcp->option_dns1 = true;
                         ipcp->dns1 = *(uint32_t*)buf;
                         break;
                     case PPP_IPCP_OPTION_DNS2:
+                        ipcp->option_dns2 = true;
                         ipcp->dns2 = *(uint32_t*)buf;
                         break;
                     default:
