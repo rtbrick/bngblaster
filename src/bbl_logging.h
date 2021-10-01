@@ -27,7 +27,7 @@ enum {
     TIMER_DETAIL,
     IO,
     PPPOE,
-    NORMAL,
+    INFO,
     ERROR,
     PCAP,
     IP,

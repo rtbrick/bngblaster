@@ -144,8 +144,6 @@
 #define IPV4_MC_ALL_ROUTERS             0x020000e0 /* 224.0.0.2 */
 #define IPV4_MC_IGMP                    0x160000e0 /* 224.0.0.22 */
 
-#define ICMP_DATA_BUFFER                64
-
 #define ARP_REQUEST                     1
 #define ARP_REPLY                       2
 
@@ -244,6 +242,7 @@ static const uint8_t ipv6_multicast_mac_dhcp[ETH_ADDR_LEN] =  { 0x33, 0x33, 0x00
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
+    SEND_ERROR,
     DECODE_ERROR,
     ENCODE_ERROR,
     UNKNOWN_PROTOCOL,
@@ -494,6 +493,8 @@ typedef struct bbl_pppoe_discovery_ {
     uint16_t       session_id;
     uint8_t       *service_name;
     uint16_t       service_name_len;
+    uint8_t       *ac_name;
+    uint16_t       ac_name_len;    
     uint8_t       *ac_cookie;
     uint16_t       ac_cookie_len;
     uint8_t       *host_uniq;

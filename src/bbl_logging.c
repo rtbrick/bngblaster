@@ -21,7 +21,7 @@ struct keyval_ log_names[] = {
     { IGMP,          "igmp" },
     { IO,            "io" },
     { PPPOE,         "pppoe" },
-    { NORMAL,        "normal" },
+    { INFO,          "info" },
     { PCAP,          "pcap" },
     { TIMER,         "timer" },
     { TIMER_DETAIL,  "timer-detail" },

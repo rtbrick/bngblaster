@@ -414,51 +414,6 @@ bbl_encode_packet_igmp (bbl_session_s *session)
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet_icmp_reply (bbl_session_s *session)
-{
-    bbl_ethernet_header_t eth = {0};
-    bbl_pppoe_session_t pppoe = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_icmp_t icmp = {0};
-
-    if(session->icmp_reply_destination) {
-        session->stats.icmp_tx++;
-        session->interface->stats.icmp_tx++;
-        eth.dst = session->server_mac;
-        eth.src = session->client_mac;
-        eth.qinq = session->access_config->qinq;
-        eth.vlan_outer = session->vlan_key.outer_vlan_id;
-        eth.vlan_inner = session->vlan_key.inner_vlan_id;
-        eth.vlan_three = session->access_third_vlan;
-        if(session->access_type == ACCESS_TYPE_PPPOE) {
-            eth.type = ETH_TYPE_PPPOE_SESSION;
-            eth.next = &pppoe;
-            pppoe.session_id = session->pppoe_session_id;
-            pppoe.protocol = PROTOCOL_IPV4;
-            pppoe.next = &ipv4;
-        } else {
-            /* IPoE */
-            eth.type = ETH_TYPE_IPV4;
-            eth.next = &ipv4;
-        }
-        ipv4.dst = session->icmp_reply_destination;
-        ipv4.src = session->ip_address;
-        ipv4.ttl = 64;
-        ipv4.protocol = PROTOCOL_IPV4_ICMP;
-        ipv4.next = &icmp;
-        icmp.type = session->icmp_reply_type;
-        icmp.data = session->icmp_reply_data;
-        icmp.data_len = session->icmp_reply_data_len;
-        session->icmp_reply_destination = 0;
-        session->icmp_reply_type = 0;
-        session->icmp_reply_data_len = 0;
-        return encode_ethernet(session->write_buf, &session->write_idx, &eth);
-    } else {
-        return PROTOCOL_SUCCESS;
-    }
-}
-
 void
 bbl_pap_timeout (timer_s *timer)
 {
@@ -1593,10 +1548,7 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
     } else if (session->send_requests & BBL_SEND_IGMP) {
         result = bbl_encode_packet_igmp(session);
-    } else if (session->send_requests & BBL_SEND_ICMP_REPLY) {
-        result = bbl_encode_packet_icmp_reply(session);
-        session->send_requests &= ~BBL_SEND_ICMP_REPLY;
-    } else if (session->send_requests & BBL_SEND_SESSION_IPV4) {
+    }  else if (session->send_requests & BBL_SEND_SESSION_IPV4) {
         result = bbl_encode_packet_session_ipv4(session);
         session->send_requests &= ~BBL_SEND_SESSION_IPV4;
         *accounting = true;
@@ -1668,7 +1620,7 @@ bbl_network_nd_timeout (timer_s *timer)
     interface->send_requests |= BBL_IF_SEND_ICMPV6_NS;
 }
 
-protocol_error_t
+static protocol_error_t
 bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
@@ -1677,13 +1629,10 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     bbl_ipv6_t ipv6 = {0};
     bbl_icmpv6_t icmpv6 = {0};
 
-    bbl_secondary_ip_s *secondary_ip;
-    bbl_secondary_ip6_s *secondary_ip6;
-
     *len = 0;
 
     eth.src = interface->mac;
-    eth.vlan_outer = interface->ctx->config.network_vlan;
+    eth.vlan_outer = interface->vlan;
     if(interface->send_requests & BBL_IF_SEND_ARP_REQUEST) {
         interface->send_requests &= ~BBL_IF_SEND_ARP_REQUEST;
         eth.type = ETH_TYPE_ARP;
@@ -1698,39 +1647,6 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
             timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, &bbl_network_arp_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
-    } else if(interface->send_requests & BBL_IF_SEND_ARP_REPLY) {
-        interface->send_requests &= ~BBL_IF_SEND_ARP_REPLY;
-        eth.dst = interface->gateway_mac;
-        eth.type = ETH_TYPE_ARP;
-        eth.next = &arp;
-        arp.code = ARP_REPLY;
-        arp.sender = interface->mac;
-        arp.sender_ip = interface->arp_reply_ip;
-        arp.target = interface->gateway_mac;
-        arp.target_ip = interface->gateway;
-        result = encode_ethernet(buf, len, &eth);
-    } else if(interface->send_requests & BBL_IF_SEND_SEC_ARP_REPLY) {
-        secondary_ip = interface->ctx->config.secondary_ip_addresses;
-        while(secondary_ip) {
-            if(secondary_ip->arp_reply) {
-                secondary_ip->arp_reply = false;
-                eth.dst = interface->gateway_mac;
-                eth.type = ETH_TYPE_ARP;
-                eth.next = &arp;
-                arp.code = ARP_REPLY;
-                arp.sender = interface->mac;
-                arp.sender_ip = secondary_ip->ip;
-                arp.target = interface->gateway_mac;
-                arp.target_ip = interface->gateway;
-                result = encode_ethernet(buf, len, &eth);
-                break;
-            }
-            secondary_ip = secondary_ip->next;
-        }
-        if(!secondary_ip) {
-            /* Stop if we reach end of secondary IP address list */
-            interface->send_requests &= ~BBL_IF_SEND_SEC_ARP_REPLY;
-        }
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NS) {
         interface->send_requests &= ~BBL_IF_SEND_ICMPV6_NS;
         if(*(uint32_t*)interface->gateway_mac == 0) {
@@ -1754,45 +1670,6 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
             timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, &bbl_network_nd_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
-    } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NA) {
-        interface->send_requests &= ~BBL_IF_SEND_ICMPV6_NA;
-        eth.dst = interface->gateway_mac;
-        eth.type = ETH_TYPE_IPV6;
-        eth.next = &ipv6;
-        ipv6.src = interface->ip6.address;
-        ipv6.dst = interface->icmpv6_src;
-        ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
-        ipv6.next = &icmpv6;
-        ipv6.ttl = 255;
-        icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
-        memcpy(icmpv6.prefix.address, interface->ip6.address, IPV6_ADDR_LEN);
-        icmpv6.mac = interface->mac;
-        result = encode_ethernet(buf, len, &eth);
-    } else if(interface->send_requests & BBL_IF_SEND_SEC_ICMPV6_NA) {
-        secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
-        while(secondary_ip6) {
-            if(secondary_ip6->icmpv6_na) {
-                secondary_ip6->icmpv6_na = false;
-                eth.dst = interface->gateway_mac;
-                eth.type = ETH_TYPE_IPV6;
-                eth.next = &ipv6;
-                ipv6.src = secondary_ip6->ip;
-                ipv6.dst = secondary_ip6->icmpv6_src;
-                ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
-                ipv6.next = &icmpv6;
-                ipv6.ttl = 255;
-                icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
-                memcpy(icmpv6.prefix.address, secondary_ip6->ip, IPV6_ADDR_LEN);
-                icmpv6.mac = interface->mac;
-                result = encode_ethernet(buf, len, &eth);
-                break;
-            }
-            secondary_ip6 = secondary_ip6->next;
-        }
-        if(!secondary_ip6) {
-            /* Stop if we reach end of secondary IP address list */
-            interface->send_requests &= ~BBL_IF_SEND_SEC_ICMPV6_NA;
-        }
     } else {
         interface->send_requests = 0;
     }
@@ -1812,11 +1689,11 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
  * @param len length of the crafted packet
  */
 protocol_error_t
-bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
+bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = EMPTY; /* EMPTY means that everthing was send */
     bbl_session_s *session;
-    bbl_l2tp_queue_t *q;
+    bbl_l2tp_queue_t *l2tpq;
 
     bool accounting;
 
@@ -1825,86 +1702,101 @@ bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         return bbl_encode_interface_packet(interface, buf, len);
     }
 
-    if(interface->access) { /* Access interfaces ... */
-        /* Write per session frames. */
-        if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
-            session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
-
-            if(session->send_requests != 0) {
-                accounting = false;
-                result = bbl_encode_packet(session, buf, len, &accounting);
-                if(result == PROTOCOL_SUCCESS) {
-                    session->stats.packets_tx++;
-                    session->stats.bytes_tx += *len;
-                    if(accounting) {
-                        session->stats.accounting_packets_tx++;
-                        session->stats.accounting_bytes_tx += *len;
-                    }
-                }
-                /* Remove only from TX queue if all requests are processed! */
-                if(session->send_requests == 0) {
-                    bbl_session_tx_qnode_remove(session);
-                } else {
-                    /* Move to the end. */
-                    bbl_session_tx_qnode_remove(session);
-                    bbl_session_tx_qnode_insert(session);
-                }
-            } else {
-                bbl_session_tx_qnode_remove(session);
-            }
-            return result;
-        }
-    } else { /* Network interfaces ... */
-        /* Write per session frames. */
-        if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
-            session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
-            if(session->network_send_requests != 0) {
-                result = bbl_encode_network_packet(interface, session, buf, len);
-                /* Remove only from TX queue if all requests are processed! */
-                if(session->network_send_requests == 0) {
-                    bbl_session_network_tx_qnode_remove(session);
-                } else {
-                    /* Move to the end. */
-                    bbl_session_network_tx_qnode_remove(session);
-                    bbl_session_network_tx_qnode_insert(session);
-                }
-            } else {
-                bbl_session_network_tx_qnode_remove(session);
-            }
-            return result;
-        }
-        /* Write L2TP frames. */
-        if (!CIRCLEQ_EMPTY(&interface->l2tp_tx_qhead)) {
-            /* Pop element from queue. */
-            q = CIRCLEQ_FIRST(&interface->l2tp_tx_qhead);
-            CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
-            CIRCLEQ_NEXT(q, tx_qnode) = NULL;
-            CIRCLEQ_PREV(q, tx_qnode) = NULL;
-            /* Copy packet from queue to ring buffer. */
-            memcpy(buf, q->packet, q->packet_len);
-            *len = q->packet_len;
-            if(q->data) {
-                free(q);
-            }
+    /* Send packets from interface send buffer. */
+    if(!bbl_send_is_empty(interface)) {
+        *len = bbl_send_from_buffer(interface, buf);
+        if(*len) {
             return PROTOCOL_SUCCESS;
+        } else {
+            return SEND_ERROR;
         }
-        /* Write Multicast frames. */
-        if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic ) {
-            if(interface->mc_packet_cursor < ctx->config.igmp_group_count) {
-                memcpy(buf, interface->mc_packets + (interface->mc_packet_cursor*interface->mc_packet_len), interface->mc_packet_len);
-                *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
-                *(uint32_t*)(buf + (interface->mc_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-                *(uint32_t*)(buf + (interface->mc_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-                *len = interface->mc_packet_len;
-                interface->mc_packet_cursor++;
-                return PROTOCOL_SUCCESS;
-            } else {
-                /* This must be the last send operation in this function to fill up remaining slots
-                * with multicast traffic but all other types of traffic have priority. */
-                interface->mc_packet_cursor = 0;
-                interface->mc_packet_seq++;
+    }
+
+    switch(interface->type) {
+        case INTERFACE_TYPE_ACCESS:
+            /* Write per session frames. */
+            if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
+                session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
+
+                if(session->send_requests != 0) {
+                    accounting = false;
+                    result = bbl_encode_packet(session, buf, len, &accounting);
+                    if(result == PROTOCOL_SUCCESS) {
+                        session->stats.packets_tx++;
+                        session->stats.bytes_tx += *len;
+                        if(accounting) {
+                            session->stats.accounting_packets_tx++;
+                            session->stats.accounting_bytes_tx += *len;
+                        }
+                    }
+                    /* Remove only from TX queue if all requests are processed! */
+                    if(session->send_requests == 0) {
+                        bbl_session_tx_qnode_remove(session);
+                    } else {
+                        /* Move to the end. */
+                        bbl_session_tx_qnode_remove(session);
+                        bbl_session_tx_qnode_insert(session);
+                    }
+                } else {
+                    bbl_session_tx_qnode_remove(session);
+                }
+                return result;
             }
-        }
+            break;
+        case INTERFACE_TYPE_NETWORK:
+            /* Write per session frames. */
+            if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
+                session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
+                if(session->network_send_requests != 0) {
+                    result = bbl_encode_network_packet(interface, session, buf, len);
+                    /* Remove only from TX queue if all requests are processed! */
+                    if(session->network_send_requests == 0) {
+                        bbl_session_network_tx_qnode_remove(session);
+                    } else {
+                        /* Move to the end. */
+                        bbl_session_network_tx_qnode_remove(session);
+                        bbl_session_network_tx_qnode_insert(session);
+                    }
+                } else {
+                    bbl_session_network_tx_qnode_remove(session);
+                }
+                return result;
+            }
+            /* Write L2TP frames. */
+            if (!CIRCLEQ_EMPTY(&interface->l2tp_tx_qhead)) {
+                /* Pop element from queue. */
+                l2tpq = CIRCLEQ_FIRST(&interface->l2tp_tx_qhead);
+                CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, l2tpq, tx_qnode);
+                CIRCLEQ_NEXT(l2tpq, tx_qnode) = NULL;
+                CIRCLEQ_PREV(l2tpq, tx_qnode) = NULL;
+                /* Copy packet from queue to ring buffer. */
+                memcpy(buf, l2tpq->packet, l2tpq->packet_len);
+                *len = l2tpq->packet_len;
+                if(l2tpq->data) {
+                    free(l2tpq);
+                }
+                return PROTOCOL_SUCCESS;
+            }
+            /* Write Multicast frames. */
+            if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic ) {
+                if(interface->mc_packet_cursor < ctx->config.igmp_group_count) {
+                    memcpy(buf, interface->mc_packets + (interface->mc_packet_cursor*interface->mc_packet_len), interface->mc_packet_len);
+                    *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
+                    *(uint32_t*)(buf + (interface->mc_packet_len - 8)) = interface->tx_timestamp.tv_sec;
+                    *(uint32_t*)(buf + (interface->mc_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+                    *len = interface->mc_packet_len;
+                    interface->mc_packet_cursor++;
+                    return PROTOCOL_SUCCESS;
+                } else {
+                    /* This must be the last send operation in this function to fill up remaining slots
+                    * with multicast traffic but all other types of traffic have priority. */
+                    interface->mc_packet_cursor = 0;
+                    interface->mc_packet_seq++;
+                }
+            }
+            break;
+        default:
+            break;
     }
     return result;
 }

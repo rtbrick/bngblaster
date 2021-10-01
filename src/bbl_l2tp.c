@@ -10,6 +10,7 @@
 #include "bbl.h"
 #include "bbl_l2tp_avp.h"
 #include "bbl_stream.h"
+#include "bbl_session.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -387,7 +388,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
-    eth.vlan_outer = ctx->config.network_vlan;
+    eth.vlan_outer = interface->vlan;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.dst = l2tp_tunnel->peer_ip;
@@ -471,7 +472,7 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
     uint16_t len = 0;
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
-    eth.vlan_outer = interface->ctx->config.network_vlan;
+    eth.vlan_outer = interface->vlan;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.dst = l2tp_tunnel->peer_ip;
@@ -1034,7 +1035,6 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
         default:
             break;
     }
-
 }
 
 /**

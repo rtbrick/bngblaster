@@ -20,4 +20,7 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
 void
 bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
 
+void
+bbl_rx_handler_a10nsp(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
+
 #endif

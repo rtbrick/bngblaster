@@ -11,30 +11,24 @@
  * Copyright (C) 2020-2021, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
-#include "bbl_ctx.h"
-#include "bbl_config.h"
-#include "bbl_session.h"
 #include "bbl_pcap.h"
-#include "bbl_stats.h"
 #include "bbl_interactive.h"
 #include "bbl_ctrl.h"
-#include "bbl_logging.h"
-#include "bbl_io.h"
 #include "bbl_stream.h"
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
-#include <sys/stat.h>
 
 /* Global Variables */
 bool g_interactive = false; // interactive mode using ncurses
+bool g_init_phase = true;
+bool g_banner = true;
+
 char *g_log_file = NULL;
 
 volatile bool g_teardown = false;
 volatile bool g_teardown_request = false;
 volatile uint8_t g_teardown_request_count = 0;
-
 
 
 const char banner[] = "\n"
@@ -51,58 +45,16 @@ const char banner[] = "\n"
 
 
 void
-teardown_handler (int sig)
+teardown_handler(int sig)
 {
-    LOG(NORMAL, "Received signal %s (%d), initiating teardown\n", strsignal(sig), sig);
+    LOG(INFO, "Received signal %s (%d), initiating teardown\n", strsignal(sig), sig);
     g_teardown = true;
     g_teardown_request = true;
     g_teardown_request_count++;
 }
 
-void
-bbl_session_tx_qnode_insert (bbl_session_s *session)
-{
-    bbl_interface_s *interface = session->interface;
-    if(CIRCLEQ_NEXT(session, session_tx_qnode)) {
-        return;
-    }
-    CIRCLEQ_INSERT_TAIL(&interface->session_tx_qhead, session, session_tx_qnode);
-}
-
-void
-bbl_session_tx_qnode_remove (bbl_session_s *session)
-{
-    bbl_interface_s *interface = session->interface;
-    CIRCLEQ_REMOVE(&interface->session_tx_qhead, session, session_tx_qnode);
-    CIRCLEQ_NEXT(session, session_tx_qnode) = NULL;
-    CIRCLEQ_PREV(session, session_tx_qnode) = NULL;
-}
-
-void
-bbl_session_network_tx_qnode_insert (bbl_session_s *session)
-{
-    bbl_interface_s *interface = session->interface->ctx->op.network_if;
-    if(CIRCLEQ_NEXT(session, session_network_tx_qnode)) {
-        return;
-    }
-    if(interface) {
-        CIRCLEQ_INSERT_TAIL(&interface->session_tx_qhead, session, session_network_tx_qnode);
-    }
-}
-
-void
-bbl_session_network_tx_qnode_remove (bbl_session_s *session)
-{
-    bbl_interface_s *interface = session->interface->ctx->op.network_if;
-    if(interface) {
-        CIRCLEQ_REMOVE(&interface->session_tx_qhead, session, session_network_tx_qnode);
-        CIRCLEQ_NEXT(session, session_network_tx_qnode) = NULL;
-        CIRCLEQ_PREV(session, session_network_tx_qnode) = NULL;
-    }
-}
-
-bool
-bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
+static bool
+bbl_add_multicast_packets(bbl_ctx_s *ctx)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t ip = {0};
@@ -116,6 +68,13 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
 
     int i;
     uint16_t len = 0;
+
+    struct bbl_interface_ *interface;
+
+    interface = bbl_get_network_interface(ctx, ctx->config.multicast_traffic_network_interface);
+    if(!interface) {
+        return false;
+    }
 
     if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
         interface->mc_packets = malloc(ctx->config.igmp_group_count * 2000);
@@ -139,7 +98,7 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
             mac[3] &= 0x7f;
             eth.src = interface->mac;
             eth.dst = mac;
-            eth.vlan_outer = ctx->config.network_vlan;
+            eth.vlan_outer = interface->vlan;
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ip;
             ip.src = source;
@@ -170,181 +129,10 @@ bbl_add_multicast_packets (bbl_ctx_s *ctx, bbl_interface_s *interface)
     return true;
 }
 
-bool
-bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name) {
-
-    FILE *lock_file;
-    char  lock_path[128];
-    int   lock_pid;
-    char  proc_pid_path[32];
-
-    struct stat sts;
-    pid_t pid = getpid();
-
-    snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface_name);
-    lock_file = fopen(lock_path, "r");
-    if(lock_file) {
-        // lock file exists
-        if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
-            snprintf(proc_pid_path, 32, "/proc/%d", lock_pid);
-            if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
-                LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
-                if(!ctx->config.interface_lock_force) return false;
-            }
-        } else {
-            LOG(ERROR, "Invalid interface lock file %s\n", lock_path);
-            if(!ctx->config.interface_lock_force) return false;
-        }
-        fclose(lock_file);
-    }
-    /* crate lock file */
-    lock_pid = pid;
-    lock_file = fopen(lock_path, "w");
-    if(!lock_file) {
-        LOG(ERROR, "Failed to open interface lock file %s\n", lock_path);
-        return false;
-    }
-    fprintf(lock_file, "%d", lock_pid);
-    fclose(lock_file);
-    return true;
-}
-
-void
-bbl_interface_unlock_all(bbl_ctx_s *ctx) {
-    char  lock_path[128];
-    bbl_interface_s *interface;
-    int i;
-
-    if(ctx->op.network_if) {
-        interface = ctx->op.network_if;
-        snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface->name);
-        remove(lock_path);
-    }
-    for(i = 0; i < ctx->op.access_if_count; i++) {
-        interface = ctx->op.access_if[i];
-        if(interface) {
-            snprintf(lock_path, 128, "/tmp/bngblaster_%s.lock", interface->name);
-            remove(lock_path);
-        }
-    }
-}
-
-/**
- * bbl_add_interface
- *
- * @param ctx global context
- * @param interface interface.
- */
-bbl_interface_s *
-bbl_add_interface (bbl_ctx_s *ctx, char *interface_name)
-{
-    bbl_interface_s *interface;
-    struct ifreq ifr;
-
-    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-    if(!bbl_interface_lock(ctx, interface_name)) {
-        return NULL;
-    }
-
-    interface = calloc(1, sizeof(bbl_interface_s));
-    if (!interface) {
-        LOG(ERROR, "No memory for interface %s\n", interface_name);
-        return NULL;
-    }
-
-    interface->name = strdup(interface_name);
-    interface->ctx = ctx;
-    CIRCLEQ_INSERT_TAIL(&ctx->interface_qhead, interface, interface_qnode);
-
-    interface->pcap_index = ctx->pcap.index;
-    ctx->pcap.index++;
-
-    /*
-     * List for sessions who want to transmit.
-     */
-    CIRCLEQ_INIT(&interface->session_tx_qhead);
-    CIRCLEQ_INIT(&interface->l2tp_tx_qhead);
-
-    /*
-     * Obtain the interface MAC address.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
-    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
-        LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
-        return NULL;
-    }
-    memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
-
-    /*
-     * Obtain the interface index.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
-        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
-        return NULL;
-    }
-    interface->ifindex = ifr.ifr_ifindex;
-
-    /* The BNG Blaster supports multiple IO modes where packet_mmap is
-     * selected per default. */
-    if(!bbl_io_add_interface(ctx, interface)) {
-        LOG(ERROR, "Failed to add interface %s\n", interface->name);
-        return NULL;
-    }
-
-    /*
-     * Timer to compute periodic rates.
-     */
-    timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-                       &bbl_compute_interface_rate_job);
-
-    return interface;
-}
-
-/**
- * bbl_add_access_interfaces
- *
- * @param ctx global context
- */
-bool
-bbl_add_access_interfaces (bbl_ctx_s *ctx) {
-    bbl_access_config_s *access_config = ctx->config.access_config;
-    struct bbl_interface_ *access_if;
-    int i;
-
-    while(access_config) {
-        for(i = 0; i < ctx->op.access_if_count; i++) {
-            if(ctx->op.access_if[i]->name) {
-                if (strcmp(ctx->op.access_if[i]->name, access_config->interface) == 0) {
-                    /* Interface already added! */
-                    access_config->access_if = ctx->op.access_if[i];
-                    goto NEXT;
-                }
-            }
-        }
-        access_if = bbl_add_interface(ctx, access_config->interface);
-        if (!access_if) {
-            LOG(ERROR, "Failed to add access interface %s\n", access_config->interface);
-            return false;
-        }
-        access_if->access = true;
-        access_config->access_if = access_if;
-        ctx->op.access_if[ctx->op.access_if_count++] = access_if;
-NEXT:
-        access_config = access_config->next;
-    }
-    return true;
-}
-
 /*
  * Command line options.
  */
-const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:If";
+const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:Ibf";
 static struct option long_options[] = {
     { "version",                no_argument,        NULL, 'v' },
     { "help",                   no_argument,        NULL, 'h' },
@@ -362,11 +150,12 @@ static struct option long_options[] = {
     { "mc-zapping-interval",    required_argument,  NULL, 'z' },
     { "control-socket",         required_argument,  NULL, 'S' },
     { "interactive",            no_argument,        NULL, 'I' },
+    { "hide-banner",            no_argument,        NULL, 'b' },
     { "force",                  no_argument,        NULL, 'f' },
     { NULL,                     0,                  NULL,  0 }
 };
 
-char *
+static char *
 bbl_print_usage_arg (struct option *option)
 {
     if (option->has_arg == 1) {
@@ -379,7 +168,7 @@ bbl_print_usage_arg (struct option *option)
     return "";
 }
 
-void
+static void
 bbl_print_version (void)
 {
     if(sizeof(BNGBLASTER_VERSION)-1) {
@@ -398,7 +187,7 @@ bbl_print_version (void)
     printf("\n");
 }
 
-void
+static void
 bbl_print_usage (void)
 {
     int idx;
@@ -433,8 +222,10 @@ bbl_ctrl_job (timer_s *timer)
 {
     bbl_ctx_s *ctx = timer->data;
     bbl_session_s *session;
+    bbl_interface_s *interface;
     int rate = 0;
     uint32_t i;
+
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
@@ -496,7 +287,25 @@ bbl_ctrl_job (timer_s *timer)
         }
     } else {
         /* Setup phase ...
-         * Iterate over all idle session (list of pending sessions)
+         * Wait for all network interfaces to be resolved. */
+        if(g_init_phase) {
+            LOG(INFO, "Resolve network interfaces\n");
+            for(i = 0; i < ctx->interfaces.network_if_count; i++) {
+                interface = ctx->interfaces.network_if[i];
+                if(interface->gateway_resolve_wait == false) {
+                    continue;
+                }
+                if(interface->gateway6.len && !interface->icmpv6_nd_resolved) {
+                    return;
+                }
+                if(interface->gateway && !interface->arp_resolved) {
+                    return;
+                }
+            }
+            g_init_phase = false;
+            LOG(INFO, "Start sessions\n");
+        }
+        /* Iterate over all idle session (list of pending sessions)
          * and start as much as permitted per interval based on max
          * outstanding and setup rate. Sessions started will be removed
          * from idle list. */
@@ -554,6 +363,13 @@ bbl_ctrl_job (timer_s *timer)
     }
 }
 
+/**
+ * @brief BNG BLASTER MAIN FUNCTION
+ * 
+ * @param argc number of argument values
+ * @param argv argument values
+ * @return int return code
+ */
 int
 main (int argc, char *argv[])
 {
@@ -578,21 +394,15 @@ main (int argc, char *argv[])
         exit(1);
     }
 
-    /*
-     * Clear logging global array.
-     */
+    /* Clear logging global array. */
     memset(log_id, 0, sizeof(struct log_id_) * LOG_ID_MAX);
-    log_id[NORMAL].enable = true;
+    log_id[INFO].enable = true;
     log_id[ERROR].enable = true;
 
-    /*
-     * Seed pseudo random generator.
-     */
+    /* Seed pseudo random generator. */
     srand(time(0));
 
-    /*
-     * Process config options.
-     */
+    /* Process config options. */
     while (true) {
         ch = getopt_long(argc, argv, optstring, long_options, &long_index);
         if (ch == -1) {
@@ -650,6 +460,9 @@ main (int argc, char *argv[])
             case 'f':
                 ctx->config.interface_lock_force = true;
                 break;
+            case 'b':
+                g_banner = false;
+                break;
             default:
                 bbl_print_usage();
                 exit(1);
@@ -666,9 +479,7 @@ main (int argc, char *argv[])
     exit(0);
 #endif
 
-    /*
-     * Init config.
-     */
+    /* Init config. */
     bbl_config_init_defaults(ctx);
     if(!bbl_config_load_json(config_file, ctx)) {
         fprintf(stderr, "Error: Failed to load configuration file %s\n", config_file);
@@ -688,69 +499,35 @@ main (int argc, char *argv[])
     if(igmp_group_count) ctx->config.igmp_group_count = atoi(igmp_group_count);
     if(igmp_zap_interval) ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
-    /*
-     * Start curses.
-     */
+    /* Start curses. */
     if (interactive) {
         bbl_init_curses(ctx);
     }
 
-    /*
-     * Add access interfaces.
-     */
-    if(!bbl_add_access_interfaces(ctx)) {
+    /* Add interfaces. */
+    if(!bbl_add_interfaces(ctx)) {
         if (interactive) endwin();
-        fprintf(stderr, "Error: Failed to add access interfaces\n");
+        fprintf(stderr, "Error: Failed to add interfaces\n");
         exit(1);
     }
 
-    /*
-     * Add network interface.
-     */
-    if (strlen(ctx->config.network_if)) {
-        ctx->op.network_if = bbl_add_interface(ctx, ctx->config.network_if);
-        if (!ctx->op.network_if) {
-            if (interactive) endwin();
-            fprintf(stderr, "Error: Failed to add network interface\n");
-            exit(1);
-        }
-        ctx->op.network_if->access = false;
-        /* Copy gateway MAC from config (default 00:00:00:00:00:00) */
-        memcpy(ctx->op.network_if->gateway_mac, ctx->config.gateway_mac, ETH_ADDR_LEN);
-        if(ctx->config.network_ip && ctx->config.network_gateway) {
-            if(ctx->config.network_ip && ctx->config.network_gateway) {
-                ctx->op.network_if->ip = ctx->config.network_ip;
-                ctx->op.network_if->gateway = ctx->config.network_gateway;
-                /* Send initial ARP request */
-                ctx->op.network_if->send_requests |= BBL_IF_SEND_ARP_REQUEST;
-            }
-            /* Add Multicast traffic */
-            if(!bbl_add_multicast_packets(ctx, ctx->op.network_if)) {
-                if (interactive) endwin();
-                fprintf(stderr, "Error: Failed to add multicast traffic\n");
-                exit(1);
-            }
-            ctx->multicast_traffic = true;
-            ctx->op.network_if->mc_packet_seq = 1;
-        }
-        if(ctx->config.network_ip6.len && ctx->config.network_gateway6.len) {
-            memcpy(&ctx->op.network_if->ip6, &ctx->config.network_ip6, sizeof(ipv6_prefix));
-            memcpy(&ctx->op.network_if->gateway6, &ctx->config.network_gateway6, sizeof(ipv6_prefix));
-            /* Send initial ICMPv6 NS */
-            ctx->op.network_if->send_requests |= BBL_IF_SEND_ICMPV6_NS;
-        }
-        bbl_stream_raw_add(ctx);
+    /* Add traffic. */
+    if(!bbl_add_multicast_packets(ctx)) {
+        if (interactive) endwin();
+        fprintf(stderr, "Error: Failed to add multicast traffic\n");
+        exit(1);
+    }
+    if(!bbl_stream_raw_add(ctx)) {
+        if (interactive) endwin();
+        fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
+        exit(1);
     }
 
-    /*
-     * Setup resources in case PCAP dumping is desired.
-     */
+    /* Setup resources in case PCAP dumping is desired. */
     pcapng_init(ctx);
 
-    /*
-     * Setup test.
-     */
-    if(ctx->op.access_if_count) {
+    /* Setup test. */
+    if(ctx->interfaces.access_if_count) {
         if(!bbl_sessions_init(ctx)) {
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
@@ -758,14 +535,10 @@ main (int argc, char *argv[])
         };
     }
 
-    /*
-     * Setup control job.
-     */
+    /* Setup control job. */
     timer_add_periodic(&ctx->timer_root, &ctx->control_timer, "Control Timer", 1, 0, ctx, &bbl_ctrl_job);
 
-    /*
-     * Setup control socket and job
-     */
+    /* Setup control socket and job */
     if(ctx->ctrl_socket_path) {
         if(!bbl_ctrl_socket_open(ctx)) {
             if (interactive) endwin();
@@ -773,14 +546,11 @@ main (int argc, char *argv[])
         }
     }
 
-    /*
-     * Start smear job. Use a crazy nsec bucket '12345678', such that we do not accidentally smear ourselves.
-     */
+    /* Start smear job. Use a crazy nsec bucket '12345678', 
+     * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
 
-    /*
-     * Start event loop.
-     */
+    /* Start event loop. */
     log_open();
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
@@ -790,23 +560,17 @@ main (int argc, char *argv[])
     }
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_stop);
 
-    /*
-     * Stop curses. Do this before the final reports.
-     */
+    /* Stop curses. Do this before the final reports. */
     if(g_interactive) {
         endwin();
     }
 
-    /*
-     * Generate reports.
-     */
+    /* Generate reports. */
     bbl_stats_generate(ctx, &stats);
     bbl_stats_stdout(ctx, &stats);
     bbl_stats_json(ctx, &stats);
 
-    /*
-     * Cleanup ressources.
-     */
+    /* Cleanup ressources. */
     bbl_interface_unlock_all(ctx);
     log_close();
     if(ctx->ctrl_socket_path) {
