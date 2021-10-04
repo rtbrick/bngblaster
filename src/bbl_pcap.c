@@ -175,7 +175,7 @@ pcapng_open (bbl_ctx_s *ctx)
                 return;
         }
     } else {
-        LOG(NORMAL, "opened pcap-file %s\n", ctx->pcap.filename);
+        LOG(INFO, "opened pcap-file %s\n", ctx->pcap.filename);
     }
 }
 

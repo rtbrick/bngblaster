@@ -33,6 +33,48 @@ session_state_string(uint32_t state) {
 }
 
 void
+bbl_session_tx_qnode_insert(bbl_session_s *session)
+{
+    bbl_interface_s *interface = session->interface;
+    if(CIRCLEQ_NEXT(session, session_tx_qnode)) {
+        return;
+    }
+    CIRCLEQ_INSERT_TAIL(&interface->session_tx_qhead, session, session_tx_qnode);
+}
+
+void
+bbl_session_tx_qnode_remove(bbl_session_s *session)
+{
+    bbl_interface_s *interface = session->interface;
+    CIRCLEQ_REMOVE(&interface->session_tx_qhead, session, session_tx_qnode);
+    CIRCLEQ_NEXT(session, session_tx_qnode) = NULL;
+    CIRCLEQ_PREV(session, session_tx_qnode) = NULL;
+}
+
+void
+bbl_session_network_tx_qnode_insert(bbl_session_s *session)
+{
+    bbl_interface_s *interface = session->network_interface;
+    if(CIRCLEQ_NEXT(session, session_network_tx_qnode)) {
+        return;
+    }
+    if(interface) {
+        CIRCLEQ_INSERT_TAIL(&interface->session_tx_qhead, session, session_network_tx_qnode);
+    }
+}
+
+void
+bbl_session_network_tx_qnode_remove(bbl_session_s *session)
+{
+    bbl_interface_s *interface = session->network_interface;
+    if(interface) {
+        CIRCLEQ_REMOVE(&interface->session_tx_qhead, session, session_network_tx_qnode);
+        CIRCLEQ_NEXT(session, session_network_tx_qnode) = NULL;
+        CIRCLEQ_PREV(session, session_network_tx_qnode) = NULL;
+    }
+}
+
+void
 bbl_session_rate_job (timer_s *timer) {
     bbl_session_s *session = timer->data;
     bbl_compute_avg_rate(&session->stats.rate_packets_tx, session->stats.packets_tx);
@@ -105,7 +147,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             if(ctx->sessions_established > ctx->sessions_established_max) ctx->sessions_established_max = ctx->sessions_established;
             if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
             if(ctx->sessions_established == ctx->sessions) {
-                LOG(NORMAL, "ALL SESSIONS ESTABLISHED\n");
+                LOG(INFO, "ALL SESSIONS ESTABLISHED\n");
             }
         } else if(state == BBL_PPP_TERMINATING) {
             session->ipcp_state = BBL_PPP_CLOSED;
@@ -442,7 +484,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 access_config->exhausted = true;
             }
             if(access_config->access_outer_vlan > access_config->access_outer_vlan_max ||
-            access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
+               access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
                 /* VLAN range exhausted */
                 access_config->exhausted = true;
                 goto NEXT;
@@ -549,6 +591,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             }
         }
         session->interface = access_config->access_if;
+        session->network_interface = bbl_get_network_interface(ctx, access_config->network_interface);
         session->session_state = BBL_IDLE;
         CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
         ctx->sessions++;
@@ -604,4 +647,3 @@ NEXT:
     }
     return true;
 }
-

@@ -627,32 +627,34 @@ ssize_t
 bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root, *interfaces, *interface;
-    char *type = "network";
     int i;
 
     interfaces = json_array();
-    if(ctx->op.network_if) {
+    for(i=0; i < ctx->interfaces.network_if_count; i++) {
         interface = json_pack("{ss si ss}",
-                            "name", ctx->op.network_if->name,
-                            "ifindex", ctx->op.network_if->ifindex,
+                            "name", ctx->interfaces.network_if[i]->name,
+                            "ifindex", ctx->interfaces.network_if[i]->ifindex,
                             "type", "network");
         json_array_append(interfaces, interface);
     }
-    for(i=0; i < ctx->op.access_if_count; i++) {
-        if(ctx->op.access_if[i]->access) {
-            type = "access";
-        }
+    for(i=0; i < ctx->interfaces.access_if_count; i++) {
         interface = json_pack("{ss si ss}",
-                            "name", ctx->op.access_if[i]->name,
-                            "ifindex", ctx->op.access_if[i]->ifindex,
-                            "type", type);
+                            "name", ctx->interfaces.access_if[i]->name,
+                            "ifindex", ctx->interfaces.access_if[i]->ifindex,
+                            "type", "access");
         json_array_append(interfaces, interface);
     }
-
+    for(i=0; i < ctx->interfaces.a10nsp_if_count; i++) {
+        interface = json_pack("{ss si ss}",
+                            "name", ctx->interfaces.a10nsp_if[i]->name,
+                            "ifindex", ctx->interfaces.a10nsp_if[i]->ifindex,
+                            "type", "a10nsp");
+        json_array_append(interfaces, interface);
+    }
     root = json_pack("{ss si so}",
-                    "status", "ok",
-                    "code", 200,
-                    "interfaces", interfaces);
+                     "status", "ok",
+                     "code", 200,
+                     "interfaces", interfaces);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
@@ -679,7 +681,7 @@ bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* 
         /* Terminate all sessions ... */
         g_teardown = true;
         g_teardown_request = true;
-        LOG(NORMAL, "Teardown request\n");
+        LOG(INFO, "Teardown request\n");
         return bbl_ctrl_status(fd, "ok", 200, "terminate all sessions");
     }
 }
@@ -1498,8 +1500,8 @@ bbl_ctrl_socket_job (timer_s *timer) {
                                     }
                                 } else {
                                     /* Use first interface as default. */
-                                    if(ctx->op.access_if[0]) {
-                                        key.ifindex = ctx->op.access_if[0]->ifindex;
+                                    if(ctx->interfaces.access_if[0]) {
+                                        key.ifindex = ctx->interfaces.access_if[0]->ifindex;
                                     }
                                 }
                                 value = json_object_get(arguments, "outer-vlan");
@@ -1578,7 +1580,7 @@ bbl_ctrl_socket_open (bbl_ctx_s *ctx) {
 
     timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_timer, "CTRL Socket Timer", 0, 100 * MSEC, ctx, &bbl_ctrl_socket_job);
 
-    LOG(NORMAL, "Opened control socket %s\n", ctx->ctrl_socket_path);
+    LOG(INFO, "Opened control socket %s\n", ctx->ctrl_socket_path);
     return true;
 }
 

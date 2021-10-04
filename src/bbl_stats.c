@@ -55,10 +55,14 @@ void
 bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
     bbl_session_s *session;
+    struct bbl_interface_ *interface;
+
     uint32_t i;
 
     uint32_t join_delays = 0;
     uint32_t leave_delays = 0;
+
+    float pps;
 
     bbl_stats_update_cps(ctx);
 
@@ -143,17 +147,51 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             if(session->network_ipv6pd_rx_first_seq > stats->max_network_ipv6pd_rx_first_seq) stats->max_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
         }
     }
+
+    if(ctx->config.session_traffic_ipv4_pps) {
+        pps = ctx->config.session_traffic_ipv4_pps;
+        stats->min_access_ipv4_rx_seconds = stats->min_access_ipv4_rx_first_seq / pps;
+        stats->max_access_ipv4_rx_seconds = stats->max_access_ipv4_rx_first_seq / pps;
+        stats->min_network_ipv4_rx_seconds = stats->min_network_ipv4_rx_first_seq / pps;
+        stats->max_network_ipv4_rx_seconds = stats->max_network_ipv4_rx_first_seq / pps;
+    }
+    if(ctx->config.session_traffic_ipv6_pps) {
+        pps = ctx->config.session_traffic_ipv6_pps;
+        stats->min_access_ipv6_rx_seconds = stats->min_access_ipv6_rx_first_seq / pps;
+        stats->max_access_ipv6_rx_seconds = stats->max_access_ipv6_rx_first_seq / pps;
+        stats->min_network_ipv6_rx_seconds = stats->min_network_ipv6_rx_first_seq / pps;
+        stats->max_network_ipv6_rx_seconds = stats->max_network_ipv6_rx_first_seq / pps;
+    }
+    if(ctx->config.session_traffic_ipv6pd_pps) {
+        pps = ctx->config.session_traffic_ipv6pd_pps;
+        stats->min_access_ipv6pd_rx_seconds = stats->min_access_ipv6pd_rx_first_seq / pps;
+        stats->max_access_ipv6pd_rx_seconds = stats->max_access_ipv6pd_rx_first_seq / pps;
+        stats->min_network_ipv6pd_rx_seconds = stats->min_network_ipv6pd_rx_first_seq / pps;
+        stats->max_network_ipv6pd_rx_seconds = stats->max_network_ipv6pd_rx_first_seq / pps;
+    }
     if(join_delays) {
         stats->avg_join_delay = stats->avg_join_delay / join_delays;
     }
     if(leave_delays) {
         stats->avg_leave_delay = stats->avg_leave_delay / leave_delays;
     }
+
+    for(i = 0; i < ctx->interfaces.network_if_count; i++) {
+        interface = ctx->interfaces.network_if[i];
+        stats->l2tp_control_tx += interface->stats.l2tp_control_tx;
+        stats->l2tp_control_rx += interface->stats.l2tp_control_rx;
+        stats->l2tp_control_rx_dup += interface->stats.l2tp_control_rx_dup;
+        stats->l2tp_control_rx_ooo += interface->stats.l2tp_control_rx_ooo;
+        stats->l2tp_control_retry += interface->stats.l2tp_control_retry;
+        stats->l2tp_data_tx += interface->stats.l2tp_data_tx;
+        stats->l2tp_data_rx += interface->stats.l2tp_data_rx;
+        stats->li_rx += interface->stats.li_rx;
+    }
 }
 
 void
 bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
-    struct bbl_interface_ *access_if;
+    struct bbl_interface_ *interface;
     int i;
 
     printf("%s", banner);
@@ -166,101 +204,118 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
            ctx->stats.cps, ctx->stats.cps_min, ctx->stats.cps_avg, ctx->stats.cps_max);
     printf("Flapped: %u\n", ctx->sessions_flapped);
 
-    if(ctx->op.network_if) {
-        if(dict_count(ctx->li_flow_dict)) {
-            printf("\nLI Statistics:\n");
-            printf("  Flows:        %10lu\n", dict_count(ctx->li_flow_dict));
-            printf("  RX Packets:   %10lu\n", ctx->op.network_if->stats.li_rx);
-        }
-        if(ctx->config.l2tp_server) {
-            printf("\nL2TP LNS Statistics:\n");
-            printf("  Tunnels:      %10u\n", ctx->l2tp_tunnels_max);
-            printf("  Established:  %10u\n", ctx->l2tp_tunnels_established_max);
-            printf("  Sessions:     %10u\n", ctx->l2tp_sessions_max);
-            printf("  Packets:\n");
-            printf("    TX Control:      %10u packets (%u retries)\n",
-                ctx->op.network_if->stats.l2tp_control_tx, ctx->op.network_if->stats.l2tp_control_retry);
-            printf("    RX Control:      %10u packets (%u duplicate %u out-of-order)\n",
-                ctx->op.network_if->stats.l2tp_control_rx,
-                ctx->op.network_if->stats.l2tp_control_rx_dup,
-                ctx->op.network_if->stats.l2tp_control_rx_ooo);
-            printf("    TX Data:         %10lu packets\n", ctx->op.network_if->stats.l2tp_data_tx);
-            printf("    RX Data:         %10lu packets\n", ctx->op.network_if->stats.l2tp_data_rx);
-        }
-        printf("\nNetwork Interface ( %s ):\n", ctx->op.network_if->name);
-        printf("  TX:                %10lu packets\n", ctx->op.network_if->stats.packets_tx);
-        printf("  RX:                %10lu packets\n", ctx->op.network_if->stats.packets_rx);
-        printf("  TX Session:        %10lu packets\n", ctx->op.network_if->stats.session_ipv4_tx);
-        printf("  RX Session:        %10lu packets (%lu loss)\n", ctx->op.network_if->stats.session_ipv4_rx,
-               ctx->op.network_if->stats.session_ipv4_loss);
-        printf("  TX Session IPv6:   %10lu packets\n", ctx->op.network_if->stats.session_ipv6_tx);
-        printf("  RX Session IPv6:   %10lu packets (%lu loss)\n", ctx->op.network_if->stats.session_ipv6_rx,
-               ctx->op.network_if->stats.session_ipv6_loss);
-        printf("  TX Session IPv6PD: %10lu packets\n", ctx->op.network_if->stats.session_ipv6pd_tx);
-        printf("  RX Session IPv6PD: %10lu packets (%lu loss)\n", ctx->op.network_if->stats.session_ipv6pd_rx,
-               ctx->op.network_if->stats.session_ipv6pd_loss);
-        printf("  TX Multicast:      %10lu packets\n", ctx->op.network_if->stats.mc_tx);
-        printf("  RX Drop Unknown:   %10lu packets\n", ctx->op.network_if->stats.packets_rx_drop_unknown);
-        printf("  TX Encode Error:   %10lu\n", ctx->op.network_if->stats.encode_errors);
-        printf("  RX Decode Error:   %10lu packets\n", ctx->op.network_if->stats.packets_rx_drop_decode_error);
-        printf("  TX Send Failed:    %10lu\n", ctx->op.network_if->stats.sendto_failed);
-        printf("  TX No Buffer:      %10lu\n", ctx->op.network_if->stats.no_tx_buffer);
-        printf("  TX Poll Kernel:    %10lu\n", ctx->op.network_if->stats.poll_tx);
-        printf("  RX Poll Kernel:    %10lu\n", ctx->op.network_if->stats.poll_rx);
+    if(dict_count(ctx->li_flow_dict)) {
+        printf("\nLI Statistics:\n");
+        printf("  Flows:        %10lu\n", dict_count(ctx->li_flow_dict));
+        printf("  RX Packets:   %10lu\n", stats->li_rx);
+    }
+    if(ctx->config.l2tp_server) {
+        printf("\nL2TP LNS Statistics:\n");
+        printf("  Tunnels:      %10u\n", ctx->l2tp_tunnels_max);
+        printf("  Established:  %10u\n", ctx->l2tp_tunnels_established_max);
+        printf("  Sessions:     %10u\n", ctx->l2tp_sessions_max);
+        printf("  Packets:\n");
+        printf("    TX Control:      %10u packets (%u retries)\n",
+            stats->l2tp_control_tx, stats->l2tp_control_retry);
+        printf("    RX Control:      %10u packets (%u duplicate %u out-of-order)\n",
+            stats->l2tp_control_rx, stats->l2tp_control_rx_dup, stats->l2tp_control_rx_ooo);
+        printf("    TX Data:         %10lu packets\n", stats->l2tp_data_tx);
+        printf("    RX Data:         %10lu packets\n", stats->l2tp_data_rx);
     }
 
-    for(i=0; i < ctx->op.access_if_count; i++) {
-        access_if = ctx->op.access_if[i];
-        if(access_if) {
-            printf("\nAccess Interface ( %s ):\n", access_if->name);
-            printf("  TX:                %10lu packets\n", access_if->stats.packets_tx);
-            printf("  RX:                %10lu packets\n", access_if->stats.packets_rx);
-            printf("  TX Session:        %10lu packets\n", access_if->stats.session_ipv4_tx);
-            printf("  RX Session:        %10lu packets (%lu loss, %lu wrong session)\n", access_if->stats.session_ipv4_rx,
-                access_if->stats.session_ipv4_loss, access_if->stats.session_ipv4_wrong_session);
-            printf("  TX Session IPv6:   %10lu packets\n", access_if->stats.session_ipv6_tx);
-            printf("  RX Session IPv6:   %10lu packets (%lu loss, %lu wrong session)\n", access_if->stats.session_ipv6_rx,
-                access_if->stats.session_ipv6_loss, access_if->stats.session_ipv6_wrong_session);
-            printf("  TX Session IPv6PD: %10lu packets\n", access_if->stats.session_ipv6pd_tx);
-            printf("  RX Session IPv6PD: %10lu packets (%lu loss, %lu wrong session)\n", access_if->stats.session_ipv6pd_rx,
-                access_if->stats.session_ipv6pd_loss, access_if->stats.session_ipv6pd_wrong_session);
-            printf("  RX Multicast:      %10lu packets (%lu loss)\n", access_if->stats.mc_rx,
-                access_if->stats.mc_loss);
-            printf("  RX Drop Unknown:   %10lu packets\n", access_if->stats.packets_rx_drop_unknown);
-            printf("  TX Encode Error:   %10lu packets\n", access_if->stats.encode_errors);
-            printf("  RX Decode Error:   %10lu packets\n", access_if->stats.packets_rx_drop_decode_error);
-            printf("  TX Send Failed:    %10lu\n", access_if->stats.sendto_failed);
-            printf("  TX No Buffer:      %10lu\n", access_if->stats.no_tx_buffer);
-            printf("  TX Poll Kernel:    %10lu\n", access_if->stats.poll_tx);
-            printf("  RX Poll Kernel:    %10lu\n", access_if->stats.poll_rx);
+    for(i=0; i < ctx->interfaces.network_if_count; i++) {
+        interface = ctx->interfaces.network_if[i];
+        if(interface) {
+            printf("\nNetwork Interface ( %s ):\n", interface->name);
+            printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
+            printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
+            printf("  TX Session:        %10lu packets\n", 
+                interface->stats.session_ipv4_tx);
+            printf("  RX Session:        %10lu packets (%lu loss)\n", 
+                interface->stats.session_ipv4_rx, interface->stats.session_ipv4_loss);
+            printf("  TX Session IPv6:   %10lu packets\n", 
+                interface->stats.session_ipv6_tx);
+            printf("  RX Session IPv6:   %10lu packets (%lu loss)\n", 
+                interface->stats.session_ipv6_rx, interface->stats.session_ipv6_loss);
+            printf("  TX Session IPv6PD: %10lu packets\n", 
+                interface->stats.session_ipv6pd_tx);
+            printf("  RX Session IPv6PD: %10lu packets (%lu loss)\n", 
+                interface->stats.session_ipv6pd_rx, interface->stats.session_ipv6pd_loss);
+            printf("  TX Multicast:      %10lu packets\n", 
+                interface->stats.mc_tx);
+            printf("  RX Drop Unknown:   %10lu packets\n", 
+                interface->stats.packets_rx_drop_unknown);
+            printf("  TX Encode Error:   %10lu\n", interface->stats.encode_errors);
+            printf("  RX Decode Error:   %10lu packets\n", 
+                interface->stats.packets_rx_drop_decode_error);
+            printf("  TX Send Failed:    %10lu\n", interface->stats.sendto_failed);
+            printf("  TX No Buffer:      %10lu\n", interface->stats.no_tx_buffer);
+            printf("  TX Poll Kernel:    %10lu\n", interface->stats.poll_tx);
+            printf("  RX Poll Kernel:    %10lu\n", interface->stats.poll_rx);
+        }
+    }
+
+    for(i=0; i < ctx->interfaces.access_if_count; i++) {
+        interface = ctx->interfaces.access_if[i];
+        if(interface) {
+            printf("\nAccess Interface ( %s ):\n", interface->name);
+            printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
+            printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
+            printf("  TX Session:        %10lu packets\n", interface->stats.session_ipv4_tx);
+            printf("  RX Session:        %10lu packets (%lu loss, %lu wrong session)\n", interface->stats.session_ipv4_rx,
+                interface->stats.session_ipv4_loss, interface->stats.session_ipv4_wrong_session);
+            printf("  TX Session IPv6:   %10lu packets\n", interface->stats.session_ipv6_tx);
+            printf("  RX Session IPv6:   %10lu packets (%lu loss, %lu wrong session)\n", interface->stats.session_ipv6_rx,
+                interface->stats.session_ipv6_loss, interface->stats.session_ipv6_wrong_session);
+            printf("  TX Session IPv6PD: %10lu packets\n", interface->stats.session_ipv6pd_tx);
+            printf("  RX Session IPv6PD: %10lu packets (%lu loss, %lu wrong session)\n", interface->stats.session_ipv6pd_rx,
+                interface->stats.session_ipv6pd_loss, interface->stats.session_ipv6pd_wrong_session);
+            printf("  RX Multicast:      %10lu packets (%lu loss)\n", interface->stats.mc_rx,
+                interface->stats.mc_loss);
+            printf("  RX Drop Unknown:   %10lu packets\n", interface->stats.packets_rx_drop_unknown);
+            printf("  TX Encode Error:   %10lu packets\n", interface->stats.encode_errors);
+            printf("  RX Decode Error:   %10lu packets\n", interface->stats.packets_rx_drop_decode_error);
+            printf("  TX Send Failed:    %10lu\n", interface->stats.sendto_failed);
+            printf("  TX No Buffer:      %10lu\n", interface->stats.no_tx_buffer);
+            printf("  TX Poll Kernel:    %10lu\n", interface->stats.poll_tx);
+            printf("  RX Poll Kernel:    %10lu\n", interface->stats.poll_rx);
             printf("\n  Access Interface Protocol Packet Stats:\n");
-            printf("    ARP    TX: %10u RX: %10u\n", access_if->stats.arp_tx, access_if->stats.arp_rx);
-            printf("    PADI   TX: %10u RX: %10u\n", access_if->stats.padi_tx, 0);
-            printf("    PADO   TX: %10u RX: %10u\n", 0, access_if->stats.pado_rx);
-            printf("    PADR   TX: %10u RX: %10u\n", access_if->stats.padr_tx, 0);
-            printf("    PADS   TX: %10u RX: %10u\n", 0, access_if->stats.pads_rx);
-            printf("    PADT   TX: %10u RX: %10u\n", access_if->stats.padt_tx, access_if->stats.padt_rx);
-            printf("    LCP    TX: %10u RX: %10u\n", access_if->stats.lcp_tx, access_if->stats.lcp_rx);
-            printf("    PAP    TX: %10u RX: %10u\n", access_if->stats.pap_tx, access_if->stats.pap_rx);
-            printf("    CHAP   TX: %10u RX: %10u\n", access_if->stats.chap_tx, access_if->stats.chap_rx);
-            printf("    IPCP   TX: %10u RX: %10u\n", access_if->stats.ipcp_tx, access_if->stats.ipcp_rx);
-            printf("    IP6CP  TX: %10u RX: %10u\n", access_if->stats.ip6cp_tx, access_if->stats.ip6cp_rx);
-            printf("    IGMP   TX: %10u RX: %10u\n", access_if->stats.igmp_tx, access_if->stats.igmp_rx);
-            printf("    ICMP   TX: %10u RX: %10u\n", access_if->stats.icmp_tx, access_if->stats.icmp_rx);
-            printf("    DHCP   TX: %10u RX: %10u\n", access_if->stats.dhcp_tx, access_if->stats.dhcp_rx);
-            printf("    DHCPv6 TX: %10u RX: %10u\n", access_if->stats.dhcpv6_tx, access_if->stats.dhcpv6_rx);
-            printf("    ICMPv6 TX: %10u RX: %10u\n", access_if->stats.icmpv6_tx, access_if->stats.icmpv6_rx);
-            printf("    IPv4 Fragmented       RX: %10u\n", access_if->stats.ipv4_fragmented_rx);
+            printf("    ARP    TX: %10u RX: %10u\n", interface->stats.arp_tx, interface->stats.arp_rx);
+            printf("    PADI   TX: %10u RX: %10u\n", interface->stats.padi_tx, 0);
+            printf("    PADO   TX: %10u RX: %10u\n", 0, interface->stats.pado_rx);
+            printf("    PADR   TX: %10u RX: %10u\n", interface->stats.padr_tx, 0);
+            printf("    PADS   TX: %10u RX: %10u\n", 0, interface->stats.pads_rx);
+            printf("    PADT   TX: %10u RX: %10u\n", interface->stats.padt_tx, interface->stats.padt_rx);
+            printf("    LCP    TX: %10u RX: %10u\n", interface->stats.lcp_tx, interface->stats.lcp_rx);
+            printf("    PAP    TX: %10u RX: %10u\n", interface->stats.pap_tx, interface->stats.pap_rx);
+            printf("    CHAP   TX: %10u RX: %10u\n", interface->stats.chap_tx, interface->stats.chap_rx);
+            printf("    IPCP   TX: %10u RX: %10u\n", interface->stats.ipcp_tx, interface->stats.ipcp_rx);
+            printf("    IP6CP  TX: %10u RX: %10u\n", interface->stats.ip6cp_tx, interface->stats.ip6cp_rx);
+            printf("    IGMP   TX: %10u RX: %10u\n", interface->stats.igmp_tx, interface->stats.igmp_rx);
+            printf("    ICMP   TX: %10u RX: %10u\n", interface->stats.icmp_tx, interface->stats.icmp_rx);
+            printf("    DHCP   TX: %10u RX: %10u\n", interface->stats.dhcp_tx, interface->stats.dhcp_rx);
+            printf("    DHCPv6 TX: %10u RX: %10u\n", interface->stats.dhcpv6_tx, interface->stats.dhcpv6_rx);
+            printf("    ICMPv6 TX: %10u RX: %10u\n", interface->stats.icmpv6_tx, interface->stats.icmpv6_rx);
+            printf("    IPv4 Fragmented       RX: %10u\n", interface->stats.ipv4_fragmented_rx);
             printf("\n  Access Interface Protocol Timeout Stats:\n");
-            printf("    LCP Echo Request: %10u\n", access_if->stats.lcp_echo_timeout);
-            printf("    LCP Request:      %10u\n", access_if->stats.lcp_timeout);
-            printf("    IPCP Request:     %10u\n", access_if->stats.ipcp_timeout);
-            printf("    IP6CP Request:    %10u\n", access_if->stats.ip6cp_timeout);
-            printf("    PAP:              %10u\n", access_if->stats.pap_timeout);
-            printf("    CHAP:             %10u\n", access_if->stats.chap_timeout);
-            printf("    DHCPv6 Request:   %10u\n", access_if->stats.dhcp_timeout);
-            printf("    DHCPv6 Request:   %10u\n", access_if->stats.dhcpv6_timeout);
-            printf("    ICMPv6 RS:        %10u\n", access_if->stats.icmpv6_rs_timeout);
+            printf("    LCP Echo Request: %10u\n", interface->stats.lcp_echo_timeout);
+            printf("    LCP Request:      %10u\n", interface->stats.lcp_timeout);
+            printf("    IPCP Request:     %10u\n", interface->stats.ipcp_timeout);
+            printf("    IP6CP Request:    %10u\n", interface->stats.ip6cp_timeout);
+            printf("    PAP:              %10u\n", interface->stats.pap_timeout);
+            printf("    CHAP:             %10u\n", interface->stats.chap_timeout);
+            printf("    DHCPv6 Request:   %10u\n", interface->stats.dhcp_timeout);
+            printf("    DHCPv6 Request:   %10u\n", interface->stats.dhcpv6_timeout);
+            printf("    ICMPv6 RS:        %10u\n", interface->stats.icmpv6_rs_timeout);
+        }
+    }
+
+    for(i=0; i < ctx->interfaces.a10nsp_if_count; i++) {
+        interface = ctx->interfaces.a10nsp_if[i];
+        if(interface) {
+            printf("\nA10NSP Interface ( %s ):\n", interface->name);
+            printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
+            printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
         }
     }
 
@@ -270,7 +325,8 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         printf("    IPv4    PPS:    %8u\n", ctx->config.session_traffic_ipv4_pps);
         printf("    IPv6    PPS:    %8u\n", ctx->config.session_traffic_ipv6_pps);
         printf("    IPv6PD  PPS:    %8u\n", ctx->config.session_traffic_ipv6pd_pps);
-        printf("  Verified Traffic Flows: %u/%u\n", ctx->stats.session_traffic_flows_verified, ctx->stats.session_traffic_flows);
+        printf("  Verified Traffic Flows: %u/%u\n", 
+            ctx->stats.session_traffic_flows_verified, ctx->stats.session_traffic_flows);
         printf("    Access  IPv4:   %8u\n", stats->sessions_access_ipv4_rx);
         printf("    Access  IPv6:   %8u\n", stats->sessions_access_ipv6_rx);
         printf("    Access  IPv6PD: %8u\n", stats->sessions_access_ipv6pd_rx);
@@ -278,12 +334,24 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         printf("    Network IPv6:   %8u\n", stats->sessions_network_ipv6_rx);
         printf("    Network IPv6PD: %8u\n", stats->sessions_network_ipv6pd_rx);
         printf("  First Sequence Number Received:\n");
-        printf("    Access  IPv4    MIN: %8lu MAX: %8lu\n", stats->min_access_ipv4_rx_first_seq, stats->max_access_ipv4_rx_first_seq);
-        printf("    Access  IPv6    MIN: %8lu MAX: %8lu\n", stats->min_access_ipv6_rx_first_seq, stats->max_access_ipv6_rx_first_seq);
-        printf("    Access  IPv6PD  MIN: %8lu MAX: %8lu\n", stats->min_access_ipv6pd_rx_first_seq, stats->max_access_ipv6pd_rx_first_seq);
-        printf("    Network IPv4    MIN: %8lu MAX: %8lu\n", stats->min_network_ipv4_rx_first_seq, stats->max_network_ipv4_rx_first_seq);
-        printf("    Network IPv6    MIN: %8lu MAX: %8lu\n", stats->min_network_ipv6_rx_first_seq, stats->max_network_ipv6_rx_first_seq);
-        printf("    Network IPv6PD  MIN: %8lu MAX: %8lu\n", stats->min_network_ipv6pd_rx_first_seq, stats->max_network_ipv6pd_rx_first_seq);
+        printf("    Access  IPv4    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+            stats->min_access_ipv4_rx_first_seq, stats->min_access_ipv4_rx_seconds,
+            stats->max_access_ipv4_rx_first_seq, stats->max_access_ipv4_rx_seconds);
+        printf("    Access  IPv6    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+            stats->min_access_ipv6_rx_first_seq, stats->min_access_ipv6_rx_seconds,
+            stats->max_access_ipv6_rx_first_seq, stats->max_access_ipv6_rx_seconds);
+        printf("    Access  IPv6PD  MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+            stats->min_access_ipv6pd_rx_first_seq, stats->min_access_ipv6pd_rx_seconds, 
+            stats->max_access_ipv6pd_rx_first_seq, stats->max_access_ipv6pd_rx_seconds);
+        printf("    Network IPv4    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+            stats->min_network_ipv4_rx_first_seq, stats->min_network_ipv4_rx_seconds,
+            stats->max_network_ipv4_rx_first_seq, stats->max_network_ipv4_rx_seconds);
+        printf("    Network IPv6    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+            stats->min_network_ipv6_rx_first_seq, stats->min_network_ipv6_rx_seconds,
+            stats->max_network_ipv6_rx_first_seq, stats->max_network_ipv6_rx_seconds);
+        printf("    Network IPv6PD  MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+            stats->min_network_ipv6pd_rx_first_seq, stats->min_network_ipv6pd_rx_seconds,
+            stats->max_network_ipv6pd_rx_first_seq, stats->max_network_ipv6pd_rx_seconds);
     }
 
     if(ctx->config.igmp_group_count > 1) {
@@ -313,7 +381,8 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
 void
 bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
-    struct bbl_interface_ *access_if;
+    struct bbl_interface_ *interface;
+
     int i;
 
     json_t *root               = NULL;
@@ -321,6 +390,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     json_t *jobj_array         = NULL;
     json_t *jobj_access_if     = NULL;
     json_t *jobj_network_if    = NULL;
+    json_t *jobj_a10nsp_if     = NULL;
     json_t *jobj_l2tp          = NULL;
     json_t *jobj_li            = NULL;
     json_t *jobj_straffic      = NULL;
@@ -346,123 +416,155 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     json_object_set(jobj, "dhcpv6-sessions-established", json_integer(ctx->dhcpv6_established_max));
 
     jobj_array = json_array();
-    if (ctx->op.network_if) {
-        if(dict_count(ctx->li_flow_dict)) {
-            jobj_li = json_object();
-            json_object_set(jobj_li, "flows", json_integer(dict_count(ctx->li_flow_dict)));
-            json_object_set(jobj_li, "rx-packets", json_integer(ctx->op.network_if->stats.li_rx));
-            json_object_set(jobj, "li-statistics", jobj_li);
+    for(i=0; i < ctx->interfaces.network_if_count; i++) {
+        interface = ctx->interfaces.network_if[i];
+        if (interface) {
+            if(dict_count(ctx->li_flow_dict)) {
+                jobj_li = json_object();
+                json_object_set(jobj_li, "flows", json_integer(dict_count(ctx->li_flow_dict)));
+                json_object_set(jobj_li, "rx-packets", json_integer(interface->stats.li_rx));
+                json_object_set(jobj, "li-statistics", jobj_li);
+            }
+            if(ctx->config.l2tp_server) {
+                jobj_l2tp = json_object();
+                json_object_set(jobj_l2tp, "tunnels", json_integer(ctx->l2tp_tunnels_max));
+                json_object_set(jobj_l2tp, "tunnels-established", json_integer(ctx->l2tp_tunnels_established_max));
+                json_object_set(jobj_l2tp, "sessions", json_integer(ctx->l2tp_sessions_max));
+                json_object_set(jobj_l2tp, "tx-control-packets", json_integer(interface->stats.l2tp_control_tx));
+                json_object_set(jobj_l2tp, "tx-control-packets-retry", json_integer(interface->stats.l2tp_control_retry));
+                json_object_set(jobj_l2tp, "rx-control-packets", json_integer(interface->stats.l2tp_control_rx));
+                json_object_set(jobj_l2tp, "rx-control-packets-duplicate", json_integer(interface->stats.l2tp_control_rx_dup));
+                json_object_set(jobj_l2tp, "rx-control-packets-out-of-order", json_integer(interface->stats.l2tp_control_rx_ooo));
+                json_object_set(jobj_l2tp, "tx-data-packets", json_integer(interface->stats.l2tp_data_tx));
+                json_object_set(jobj_l2tp, "rx-data-packets", json_integer(interface->stats.l2tp_data_rx));
+                json_object_set(jobj, "l2tp", jobj_l2tp);
+            }
+            jobj_network_if = json_object();
+            json_object_set(jobj_network_if, "name", json_string(interface->name));
+            json_object_set(jobj_network_if, "tx-packets", json_integer(interface->stats.packets_tx));
+            json_object_set(jobj_network_if, "rx-packets", json_integer(interface->stats.packets_rx));
+            json_object_set(jobj_network_if, "tx-session-packets", json_integer(interface->stats.session_ipv4_tx));
+            json_object_set(jobj_network_if, "rx-session-packets", json_integer(interface->stats.session_ipv4_rx));
+            json_object_set(jobj_network_if, "rx-session-packets-loss", json_integer(interface->stats.session_ipv4_loss));
+            json_object_set(jobj_network_if, "tx-session-packets-avg-pps-max", json_integer(interface->stats.rate_session_ipv4_tx.avg_max));
+            json_object_set(jobj_network_if, "rx-session-packets-avg-pps-max", json_integer(interface->stats.rate_session_ipv4_rx.avg_max));
+            json_object_set(jobj_network_if, "tx-session-packets-ipv6", json_integer(interface->stats.session_ipv6_tx));
+            json_object_set(jobj_network_if, "rx-session-packets-ipv6", json_integer(interface->stats.session_ipv6_rx));
+            json_object_set(jobj_network_if, "rx-session-packets-ipv6-loss", json_integer(interface->stats.session_ipv6_loss));
+            json_object_set(jobj_network_if, "tx-session-packets-avg-pps-max-ipv6", json_integer(interface->stats.rate_session_ipv6_tx.avg_max));
+            json_object_set(jobj_network_if, "rx-session-packets-avg-pps-max-ipv6", json_integer(interface->stats.rate_session_ipv6_rx.avg_max));
+            json_object_set(jobj_network_if, "tx-session-packets-ipv6pd", json_integer(interface->stats.session_ipv6pd_tx));
+            json_object_set(jobj_network_if, "rx-session-packets-ipv6pd", json_integer(interface->stats.session_ipv6pd_rx));
+            json_object_set(jobj_network_if, "rx-session-packets-ipv6pd-loss", json_integer(interface->stats.session_ipv6pd_loss));
+            json_object_set(jobj_network_if, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(interface->stats.rate_session_ipv6pd_tx.avg_max));
+            json_object_set(jobj_network_if, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(interface->stats.rate_session_ipv6pd_rx.avg_max));
+            json_object_set(jobj_network_if, "tx-multicast-packets", json_integer(interface->stats.mc_tx));
+            json_array_append(jobj_array, jobj_network_if);
         }
-        if(ctx->config.l2tp_server) {
-            jobj_l2tp = json_object();
-            json_object_set(jobj_l2tp, "tunnels", json_integer(ctx->l2tp_tunnels_max));
-            json_object_set(jobj_l2tp, "tunnels-established", json_integer(ctx->l2tp_tunnels_established_max));
-            json_object_set(jobj_l2tp, "sessions", json_integer(ctx->l2tp_sessions_max));
-            json_object_set(jobj_l2tp, "tx-control-packets", json_integer(ctx->op.network_if->stats.l2tp_control_tx));
-            json_object_set(jobj_l2tp, "tx-control-packets-retry", json_integer(ctx->op.network_if->stats.l2tp_control_retry));
-            json_object_set(jobj_l2tp, "rx-control-packets", json_integer(ctx->op.network_if->stats.l2tp_control_rx));
-            json_object_set(jobj_l2tp, "rx-control-packets-duplicate", json_integer(ctx->op.network_if->stats.l2tp_control_rx_dup));
-            json_object_set(jobj_l2tp, "rx-control-packets-out-of-order", json_integer(ctx->op.network_if->stats.l2tp_control_rx_ooo));
-            json_object_set(jobj_l2tp, "tx-data-packets", json_integer(ctx->op.network_if->stats.l2tp_data_tx));
-            json_object_set(jobj_l2tp, "rx-data-packets", json_integer(ctx->op.network_if->stats.l2tp_data_rx));
-            json_object_set(jobj, "l2tp", jobj_l2tp);
-        }
-        jobj_network_if = json_object();
-        json_object_set(jobj_network_if, "name", json_string(ctx->op.network_if->name));
-        json_object_set(jobj_network_if, "tx-packets", json_integer(ctx->op.network_if->stats.packets_tx));
-        json_object_set(jobj_network_if, "rx-packets", json_integer(ctx->op.network_if->stats.packets_rx));
-        json_object_set(jobj_network_if, "tx-session-packets", json_integer(ctx->op.network_if->stats.session_ipv4_tx));
-        json_object_set(jobj_network_if, "rx-session-packets", json_integer(ctx->op.network_if->stats.session_ipv4_rx));
-        json_object_set(jobj_network_if, "rx-session-packets-loss", json_integer(ctx->op.network_if->stats.session_ipv4_loss));
-        json_object_set(jobj_network_if, "tx-session-packets-avg-pps-max", json_integer(ctx->op.network_if->stats.rate_session_ipv4_tx.avg_max));
-        json_object_set(jobj_network_if, "rx-session-packets-avg-pps-max", json_integer(ctx->op.network_if->stats.rate_session_ipv4_rx.avg_max));
-        json_object_set(jobj_network_if, "tx-session-packets-ipv6", json_integer(ctx->op.network_if->stats.session_ipv6_tx));
-        json_object_set(jobj_network_if, "rx-session-packets-ipv6", json_integer(ctx->op.network_if->stats.session_ipv6_rx));
-        json_object_set(jobj_network_if, "rx-session-packets-ipv6-loss", json_integer(ctx->op.network_if->stats.session_ipv6_loss));
-        json_object_set(jobj_network_if, "tx-session-packets-avg-pps-max-ipv6", json_integer(ctx->op.network_if->stats.rate_session_ipv6_tx.avg_max));
-        json_object_set(jobj_network_if, "rx-session-packets-avg-pps-max-ipv6", json_integer(ctx->op.network_if->stats.rate_session_ipv6_rx.avg_max));
-        json_object_set(jobj_network_if, "tx-session-packets-ipv6pd", json_integer(ctx->op.network_if->stats.session_ipv6pd_tx));
-        json_object_set(jobj_network_if, "rx-session-packets-ipv6pd", json_integer(ctx->op.network_if->stats.session_ipv6pd_rx));
-        json_object_set(jobj_network_if, "rx-session-packets-ipv6pd-loss", json_integer(ctx->op.network_if->stats.session_ipv6pd_loss));
-        json_object_set(jobj_network_if, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(ctx->op.network_if->stats.rate_session_ipv6pd_tx.avg_max));
-        json_object_set(jobj_network_if, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(ctx->op.network_if->stats.rate_session_ipv6pd_rx.avg_max));
-        json_object_set(jobj_network_if, "tx-multicast-packets", json_integer(ctx->op.network_if->stats.mc_tx));
-        json_array_append(jobj_array, jobj_network_if);
     }
     json_object_set(jobj, "network-interfaces", jobj_array);
 
     jobj_array = json_array();
-    for(i=0; i < ctx->op.access_if_count; i++) {
-        access_if = ctx->op.access_if[i];
-        if (access_if) {
+    for(i=0; i < ctx->interfaces.access_if_count; i++) {
+        interface = ctx->interfaces.access_if[i];
+        if (interface) {
             jobj_access_if = json_object();
-            json_object_set(jobj_access_if, "name", json_string(access_if->name));
-            json_object_set(jobj_access_if, "tx-packets", json_integer(access_if->stats.packets_tx));
-            json_object_set(jobj_access_if, "rx-packets", json_integer(access_if->stats.packets_rx));
-            json_object_set(jobj_access_if, "tx-session-packets", json_integer(access_if->stats.session_ipv4_tx));
-            json_object_set(jobj_access_if, "rx-session-packets", json_integer(access_if->stats.session_ipv4_rx));
-            json_object_set(jobj_access_if, "rx-session-packets-loss", json_integer(access_if->stats.session_ipv4_loss));
-            json_object_set(jobj_access_if, "rx-session-packets-wrong-session", json_integer(access_if->stats.session_ipv4_wrong_session));
-            json_object_set(jobj_access_if, "tx-session-packets-avg-pps-max", json_integer(access_if->stats.rate_session_ipv4_tx.avg_max));
-            json_object_set(jobj_access_if, "rx-session-packets-avg-pps-max", json_integer(access_if->stats.rate_session_ipv4_rx.avg_max));
-            json_object_set(jobj_access_if, "tx-session-packets-ipv6", json_integer(access_if->stats.session_ipv6_tx));
-            json_object_set(jobj_access_if, "rx-session-packets-ipv6", json_integer(access_if->stats.session_ipv6_rx));
-            json_object_set(jobj_access_if, "rx-session-packets-ipv6-loss", json_integer(access_if->stats.session_ipv6_loss));
-            json_object_set(jobj_access_if, "rx-session-packets-ipv6-wrong-session", json_integer(access_if->stats.session_ipv6_wrong_session));
-            json_object_set(jobj_access_if, "tx-session-packets-avg-pps-max-ipv6", json_integer(access_if->stats.rate_session_ipv6_tx.avg_max));
-            json_object_set(jobj_access_if, "rx-session-packets-avg-pps-max-ipv6", json_integer(access_if->stats.rate_session_ipv6_rx.avg_max));
-            json_object_set(jobj_access_if, "tx-session-packets-ipv6pd", json_integer(access_if->stats.session_ipv6pd_tx));
-            json_object_set(jobj_access_if, "rx-session-packets-ipv6pd", json_integer(access_if->stats.session_ipv6pd_rx));
-            json_object_set(jobj_access_if, "rx-session-packets-ipv6pd-loss", json_integer(access_if->stats.session_ipv6pd_loss));
-            json_object_set(jobj_access_if, "rx-session-packets-ipv6pd-wrong-session", json_integer(access_if->stats.session_ipv6pd_wrong_session));
-            json_object_set(jobj_access_if, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(access_if->stats.rate_session_ipv6pd_tx.avg_max));
-            json_object_set(jobj_access_if, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(access_if->stats.rate_session_ipv6pd_rx.avg_max));
-            json_object_set(jobj_access_if, "rx-multicast-packets", json_integer(access_if->stats.mc_rx));
-            json_object_set(jobj_access_if, "rx-multicast-packets-loss", json_integer(access_if->stats.mc_loss));
+            json_object_set(jobj_access_if, "name", json_string(interface->name));
+            json_object_set(jobj_access_if, "tx-packets", json_integer(interface->stats.packets_tx));
+            json_object_set(jobj_access_if, "rx-packets", json_integer(interface->stats.packets_rx));
+            json_object_set(jobj_access_if, "tx-session-packets", json_integer(interface->stats.session_ipv4_tx));
+            json_object_set(jobj_access_if, "rx-session-packets", json_integer(interface->stats.session_ipv4_rx));
+            json_object_set(jobj_access_if, "rx-session-packets-loss", json_integer(interface->stats.session_ipv4_loss));
+            json_object_set(jobj_access_if, "rx-session-packets-wrong-session", json_integer(interface->stats.session_ipv4_wrong_session));
+            json_object_set(jobj_access_if, "tx-session-packets-avg-pps-max", json_integer(interface->stats.rate_session_ipv4_tx.avg_max));
+            json_object_set(jobj_access_if, "rx-session-packets-avg-pps-max", json_integer(interface->stats.rate_session_ipv4_rx.avg_max));
+            json_object_set(jobj_access_if, "tx-session-packets-ipv6", json_integer(interface->stats.session_ipv6_tx));
+            json_object_set(jobj_access_if, "rx-session-packets-ipv6", json_integer(interface->stats.session_ipv6_rx));
+            json_object_set(jobj_access_if, "rx-session-packets-ipv6-loss", json_integer(interface->stats.session_ipv6_loss));
+            json_object_set(jobj_access_if, "rx-session-packets-ipv6-wrong-session", json_integer(interface->stats.session_ipv6_wrong_session));
+            json_object_set(jobj_access_if, "tx-session-packets-avg-pps-max-ipv6", json_integer(interface->stats.rate_session_ipv6_tx.avg_max));
+            json_object_set(jobj_access_if, "rx-session-packets-avg-pps-max-ipv6", json_integer(interface->stats.rate_session_ipv6_rx.avg_max));
+            json_object_set(jobj_access_if, "tx-session-packets-ipv6pd", json_integer(interface->stats.session_ipv6pd_tx));
+            json_object_set(jobj_access_if, "rx-session-packets-ipv6pd", json_integer(interface->stats.session_ipv6pd_rx));
+            json_object_set(jobj_access_if, "rx-session-packets-ipv6pd-loss", json_integer(interface->stats.session_ipv6pd_loss));
+            json_object_set(jobj_access_if, "rx-session-packets-ipv6pd-wrong-session", json_integer(interface->stats.session_ipv6pd_wrong_session));
+            json_object_set(jobj_access_if, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(interface->stats.rate_session_ipv6pd_tx.avg_max));
+            json_object_set(jobj_access_if, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(interface->stats.rate_session_ipv6pd_rx.avg_max));
+            json_object_set(jobj_access_if, "rx-multicast-packets", json_integer(interface->stats.mc_rx));
+            json_object_set(jobj_access_if, "rx-multicast-packets-loss", json_integer(interface->stats.mc_loss));
             jobj_protocols = json_object();
-            json_object_set(jobj_protocols, "arp-tx", json_integer(access_if->stats.arp_tx));
-            json_object_set(jobj_protocols, "arp-rx", json_integer(access_if->stats.arp_rx));
-            json_object_set(jobj_protocols, "padi-tx", json_integer(access_if->stats.padi_tx));
-            json_object_set(jobj_protocols, "pado-rx", json_integer(access_if->stats.pado_rx));
-            json_object_set(jobj_protocols, "padr-tx", json_integer(access_if->stats.padr_tx));
-            json_object_set(jobj_protocols, "pads-rx", json_integer(access_if->stats.pads_rx));
-            json_object_set(jobj_protocols, "padt-tx", json_integer(access_if->stats.padt_tx));
-            json_object_set(jobj_protocols, "padt-rx", json_integer(access_if->stats.padt_rx));
-            json_object_set(jobj_protocols, "lcp-tx", json_integer(access_if->stats.lcp_tx));
-            json_object_set(jobj_protocols, "lcp-rx", json_integer(access_if->stats.lcp_rx));
-            json_object_set(jobj_protocols, "pap-tx", json_integer(access_if->stats.pap_tx));
-            json_object_set(jobj_protocols, "pap-rx", json_integer(access_if->stats.pap_rx));
-            json_object_set(jobj_protocols, "chap-tx", json_integer(access_if->stats.chap_tx));
-            json_object_set(jobj_protocols, "chap-rx", json_integer(access_if->stats.chap_rx));
-            json_object_set(jobj_protocols, "ipcp-tx", json_integer(access_if->stats.ipcp_tx));
-            json_object_set(jobj_protocols, "ipcp-rx", json_integer(access_if->stats.ipcp_rx));
-            json_object_set(jobj_protocols, "ip6cp-tx", json_integer(access_if->stats.ip6cp_tx));
-            json_object_set(jobj_protocols, "ip6cp-rx", json_integer(access_if->stats.ip6cp_rx));
-            json_object_set(jobj_protocols, "igmp-tx", json_integer(access_if->stats.igmp_tx));
-            json_object_set(jobj_protocols, "igmp-rx", json_integer(access_if->stats.igmp_rx));
-            json_object_set(jobj_protocols, "icmp-tx", json_integer(access_if->stats.icmp_tx));
-            json_object_set(jobj_protocols, "icmp-rx", json_integer(access_if->stats.icmp_rx));
-            json_object_set(jobj_protocols, "dhcp-tx", json_integer(access_if->stats.dhcp_tx));
-            json_object_set(jobj_protocols, "dhcp-rx", json_integer(access_if->stats.dhcp_rx));
-            json_object_set(jobj_protocols, "dhcpv6-tx", json_integer(access_if->stats.dhcpv6_tx));
-            json_object_set(jobj_protocols, "dhcpv6-rx", json_integer(access_if->stats.dhcpv6_rx));
-            json_object_set(jobj_protocols, "icmpv6-tx", json_integer(access_if->stats.icmpv6_tx));
-            json_object_set(jobj_protocols, "icmpv6-rx", json_integer(access_if->stats.icmpv6_rx));
-            json_object_set(jobj_protocols, "ipv4-fragmented-rx", json_integer(access_if->stats.ipv4_fragmented_rx));
-            json_object_set(jobj_protocols, "lcp-echo-timeout", json_integer(access_if->stats.lcp_echo_timeout));
-            json_object_set(jobj_protocols, "lcp-request-timeout", json_integer(access_if->stats.lcp_timeout));
-            json_object_set(jobj_protocols, "ipcp-request-timeout", json_integer(access_if->stats.ipcp_timeout));
-            json_object_set(jobj_protocols, "ip6cp-request-timeout", json_integer(access_if->stats.ip6cp_timeout));
-            json_object_set(jobj_protocols, "pap-timeout", json_integer(access_if->stats.pap_timeout));
-            json_object_set(jobj_protocols, "chap-timeout", json_integer(access_if->stats.chap_timeout));
-            json_object_set(jobj_protocols, "dhcp-timeout", json_integer(access_if->stats.dhcp_timeout));
-            json_object_set(jobj_protocols, "dhcpv6-timeout", json_integer(access_if->stats.dhcpv6_timeout));
-            json_object_set(jobj_protocols, "icmpv6-rs-timeout", json_integer(access_if->stats.dhcpv6_timeout));
+            json_object_set(jobj_protocols, "arp-tx", json_integer(interface->stats.arp_tx));
+            json_object_set(jobj_protocols, "arp-rx", json_integer(interface->stats.arp_rx));
+            json_object_set(jobj_protocols, "padi-tx", json_integer(interface->stats.padi_tx));
+            json_object_set(jobj_protocols, "pado-rx", json_integer(interface->stats.pado_rx));
+            json_object_set(jobj_protocols, "padr-tx", json_integer(interface->stats.padr_tx));
+            json_object_set(jobj_protocols, "pads-rx", json_integer(interface->stats.pads_rx));
+            json_object_set(jobj_protocols, "padt-tx", json_integer(interface->stats.padt_tx));
+            json_object_set(jobj_protocols, "padt-rx", json_integer(interface->stats.padt_rx));
+            json_object_set(jobj_protocols, "lcp-tx", json_integer(interface->stats.lcp_tx));
+            json_object_set(jobj_protocols, "lcp-rx", json_integer(interface->stats.lcp_rx));
+            json_object_set(jobj_protocols, "pap-tx", json_integer(interface->stats.pap_tx));
+            json_object_set(jobj_protocols, "pap-rx", json_integer(interface->stats.pap_rx));
+            json_object_set(jobj_protocols, "chap-tx", json_integer(interface->stats.chap_tx));
+            json_object_set(jobj_protocols, "chap-rx", json_integer(interface->stats.chap_rx));
+            json_object_set(jobj_protocols, "ipcp-tx", json_integer(interface->stats.ipcp_tx));
+            json_object_set(jobj_protocols, "ipcp-rx", json_integer(interface->stats.ipcp_rx));
+            json_object_set(jobj_protocols, "ip6cp-tx", json_integer(interface->stats.ip6cp_tx));
+            json_object_set(jobj_protocols, "ip6cp-rx", json_integer(interface->stats.ip6cp_rx));
+            json_object_set(jobj_protocols, "igmp-tx", json_integer(interface->stats.igmp_tx));
+            json_object_set(jobj_protocols, "igmp-rx", json_integer(interface->stats.igmp_rx));
+            json_object_set(jobj_protocols, "icmp-tx", json_integer(interface->stats.icmp_tx));
+            json_object_set(jobj_protocols, "icmp-rx", json_integer(interface->stats.icmp_rx));
+            json_object_set(jobj_protocols, "dhcp-tx", json_integer(interface->stats.dhcp_tx));
+            json_object_set(jobj_protocols, "dhcp-rx", json_integer(interface->stats.dhcp_rx));
+            json_object_set(jobj_protocols, "dhcpv6-tx", json_integer(interface->stats.dhcpv6_tx));
+            json_object_set(jobj_protocols, "dhcpv6-rx", json_integer(interface->stats.dhcpv6_rx));
+            json_object_set(jobj_protocols, "icmpv6-tx", json_integer(interface->stats.icmpv6_tx));
+            json_object_set(jobj_protocols, "icmpv6-rx", json_integer(interface->stats.icmpv6_rx));
+            json_object_set(jobj_protocols, "ipv4-fragmented-rx", json_integer(interface->stats.ipv4_fragmented_rx));
+            json_object_set(jobj_protocols, "lcp-echo-timeout", json_integer(interface->stats.lcp_echo_timeout));
+            json_object_set(jobj_protocols, "lcp-request-timeout", json_integer(interface->stats.lcp_timeout));
+            json_object_set(jobj_protocols, "ipcp-request-timeout", json_integer(interface->stats.ipcp_timeout));
+            json_object_set(jobj_protocols, "ip6cp-request-timeout", json_integer(interface->stats.ip6cp_timeout));
+            json_object_set(jobj_protocols, "pap-timeout", json_integer(interface->stats.pap_timeout));
+            json_object_set(jobj_protocols, "chap-timeout", json_integer(interface->stats.chap_timeout));
+            json_object_set(jobj_protocols, "dhcp-timeout", json_integer(interface->stats.dhcp_timeout));
+            json_object_set(jobj_protocols, "dhcpv6-timeout", json_integer(interface->stats.dhcpv6_timeout));
+            json_object_set(jobj_protocols, "icmpv6-rs-timeout", json_integer(interface->stats.dhcpv6_timeout));
             json_object_set(jobj_access_if, "protocol-stats", jobj_protocols);
             json_array_append(jobj_array, jobj_access_if);
         }
     }
     json_object_set(jobj, "access-interfaces", jobj_array);
+
+    jobj_array = json_array();
+    for(i=0; i < ctx->interfaces.a10nsp_if_count; i++) {
+        interface = ctx->interfaces.a10nsp_if[i];
+        if (interface) {
+            jobj_a10nsp_if = json_object();
+            json_object_set(jobj_a10nsp_if, "name", json_string(interface->name));
+            json_object_set(jobj_a10nsp_if, "tx-packets", json_integer(interface->stats.packets_tx));
+            json_object_set(jobj_a10nsp_if, "rx-packets", json_integer(interface->stats.packets_rx));
+            json_object_set(jobj_a10nsp_if, "tx-session-packets", json_integer(interface->stats.session_ipv4_tx));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets", json_integer(interface->stats.session_ipv4_rx));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-loss", json_integer(interface->stats.session_ipv4_loss));
+            json_object_set(jobj_a10nsp_if, "tx-session-packets-avg-pps-max", json_integer(interface->stats.rate_session_ipv4_tx.avg_max));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-avg-pps-max", json_integer(interface->stats.rate_session_ipv4_rx.avg_max));
+            json_object_set(jobj_a10nsp_if, "tx-session-packets-ipv6", json_integer(interface->stats.session_ipv6_tx));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-ipv6", json_integer(interface->stats.session_ipv6_rx));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-ipv6-loss", json_integer(interface->stats.session_ipv6_loss));
+            json_object_set(jobj_a10nsp_if, "tx-session-packets-avg-pps-max-ipv6", json_integer(interface->stats.rate_session_ipv6_tx.avg_max));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-avg-pps-max-ipv6", json_integer(interface->stats.rate_session_ipv6_rx.avg_max));
+            json_object_set(jobj_a10nsp_if, "tx-session-packets-ipv6pd", json_integer(interface->stats.session_ipv6pd_tx));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-ipv6pd", json_integer(interface->stats.session_ipv6pd_rx));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-ipv6pd-loss", json_integer(interface->stats.session_ipv6pd_loss));
+            json_object_set(jobj_a10nsp_if, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(interface->stats.rate_session_ipv6pd_tx.avg_max));
+            json_object_set(jobj_a10nsp_if, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(interface->stats.rate_session_ipv6pd_rx.avg_max));
+            json_object_set(jobj_a10nsp_if, "tx-multicast-packets", json_integer(interface->stats.mc_tx));
+            json_array_append(jobj_array, jobj_a10nsp_if);
+        }
+    }
+    json_object_set(jobj, "a10nsp-interfaces", jobj_array);
 
     if(ctx->stats.session_traffic_flows) {
         jobj_straffic = json_object();
@@ -489,6 +591,18 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         json_object_set(jobj_straffic, "first-seq-rx-network-ipv6-max", json_integer(stats->max_network_ipv6_rx_first_seq));
         json_object_set(jobj_straffic, "first-seq-rx-network-ipv6pd-min", json_integer(stats->min_network_ipv6pd_rx_first_seq));
         json_object_set(jobj_straffic, "first-seq-rx-network-ipv6pd-max", json_integer(stats->max_network_ipv6pd_rx_first_seq));
+        json_object_set(jobj_straffic, "first-seq-rx-access-ipv4-min-seconds", json_real(stats->min_access_ipv4_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-access-ipv4-max-seconds", json_real(stats->max_access_ipv4_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-access-ipv6-min-seconds", json_real(stats->min_access_ipv6_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-access-ipv6-max-seconds", json_real(stats->max_access_ipv6_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-access-ipv6pd-min-seconds", json_real(stats->min_access_ipv6pd_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-access-ipv6pd-max-seconds", json_real(stats->max_access_ipv6pd_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-network-ipv4-min-seconds", json_real(stats->min_network_ipv4_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-network-ipv4-max-seconds", json_real(stats->max_network_ipv4_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-network-ipv6-min-seconds", json_real(stats->min_network_ipv6_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-network-ipv6-max-seconds", json_real(stats->max_network_ipv6_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-network-ipv6pd-min-seconds", json_real(stats->min_network_ipv6pd_rx_seconds));
+        json_object_set(jobj_straffic, "first-seq-rx-network-ipv6pd-max-seconds", json_real(stats->max_network_ipv6pd_rx_seconds));
         json_object_set(jobj, "session-traffic", jobj_straffic);
     }
     if(ctx->config.igmp_group_count > 1) {
@@ -563,14 +677,18 @@ bbl_compute_interface_rate_job (timer_s *timer)
     bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
     bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
     bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
-    if(!interface->access) {
+
+    if(interface->type == INTERFACE_TYPE_ACCESS || interface->type == INTERFACE_TYPE_NETWORK) {
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
+        bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
+    }
+
+    if(interface->type == INTERFACE_TYPE_NETWORK) {
         bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
