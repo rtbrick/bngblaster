@@ -51,8 +51,19 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# Editor Files
+.vscode
+
 # Build Files
 build/
 
+# Test Files
+test/Testing/Temporary
+fuzzing/*/.cur_input
+
 # SonarQube
 .scannerwork
+sonar-project.properties
+
+# Config Files
+config

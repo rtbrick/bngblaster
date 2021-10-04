@@ -92,7 +92,7 @@ typedef struct bbl_l2tp_server_
 
     /* List of L2TP tunnel instances
      * for the corresponding server. */
-    CIRCLEQ_HEAD(bbl_l2tp_server__, bbl_l2tp_tunnel_) tunnel_qhead;
+    CIRCLEQ_HEAD(tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
 } bbl_l2tp_server_t;
 
 /* L2TP Session Key */
@@ -117,21 +117,13 @@ typedef struct bbl_l2tp_queue_
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) tx_qnode; /* TX request */
 } bbl_l2tp_queue_t;
 
-/* L2TP Data TX Queue Entry */
-typedef struct bbl_l2tp_data_queue_
-{
-    uint8_t *packet;
-    uint16_t packet_len;
-    CIRCLEQ_ENTRY(bbl_l2tp_data_queue_) tx_qnode; /* TX request */
-} bbl_l2tp_data_queue_t;
-
 /* L2TP Tunnel Instance */
 typedef struct bbl_l2tp_tunnel_
 {
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
 
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel__, bbl_l2tp_session_) session_qhead;
-    CIRCLEQ_HEAD(bbl_l2tp_tunnel___, bbl_l2tp_queue_) txq_qhead;
+    CIRCLEQ_HEAD(session_, bbl_l2tp_session_) session_qhead;
+    CIRCLEQ_HEAD(txq_, bbl_l2tp_queue_) txq_qhead;
 
     /* Pointer to corresponding network interface */
     struct bbl_interface_ *interface;

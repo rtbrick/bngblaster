@@ -39,6 +39,7 @@ typedef struct bbl_stream_config_
     ipv6addr_t ipv6_network_address; /* overwrite default IPv6 network address */
     uint32_t ipv4_destination_address; /* overwrite IPv4 destination address */
     ipv6addr_t ipv6_destination_address; /* overwrite IPv6 destination address */
+    char *network_interface;
 
     bool threaded;
     void *next; /* next bbl_stream_config */

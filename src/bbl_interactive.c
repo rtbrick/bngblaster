@@ -24,7 +24,6 @@ typedef enum {
     UI_VIEW_MAX,
 } __attribute__ ((__packed__)) bbl_ui_view;
 
-
 /* ncurses */
 WINDOW *stats_win = NULL;
 WINDOW *log_win = NULL;
@@ -33,13 +32,16 @@ int stats_win_postion;
 
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
+extern volatile bool g_banner;
 
 /* This global variable is used to switch between access interfaces. */
-uint8_t g_access_if_selected = 0;
+uint8_t g_access_if_selected  = 0;
+uint8_t g_network_if_selected = 0;
+uint8_t g_a10nsp_if_selected  = 0;
 /* This global variable is used to switch between views. */
-bbl_ui_view g_view_selected = 0;
+bbl_ui_view g_view_selected   = 0;
 /* This global variable is used to switch vetween sessions in some views. */
-uint32_t g_session_selected = 1;
+uint32_t g_session_selected   = 1;
 
 extern const char banner[];
 
@@ -52,10 +54,12 @@ bbl_init_stats_win()
     if(g_view_selected == UI_VIEW_SESSION) {
         wprintw(stats_win, "Left/Right: Select Session\n");
     } else {
-        wprintw(stats_win, "Left/Right: Select Interface\n");
+        wprintw(stats_win, "F2: Select Network Interface  Left/Right: Select Access Interface\n");
     }
     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
-    wprintw(stats_win, "%s", banner);
+    if(g_banner) {
+        wprintw(stats_win, "%s", banner);
+    }
 }
 
 static void
@@ -90,7 +94,30 @@ bbl_read_key_job (timer_s *timer)
             if(g_view_selected >= UI_VIEW_MAX) {
                 g_view_selected = UI_VIEW_DEFAULT;
             }
+            /* Skip access interface and session views
+             * if there is no access interface. */
+            if(ctx->interfaces.access_if_count == 0) {
+                switch (g_view_selected) {
+                    case UI_VIEW_ACCESS_IF_STATS:
+                        g_view_selected = UI_VIEW_DEFAULT;
+                        break;
+                    case UI_VIEW_SESSION:
+                        g_view_selected = UI_VIEW_DEFAULT;
+                        break;
+                    default:
+                        break;
+                }
+            }
             bbl_init_stats_win();
+            break;
+        case KEY_F(2):
+            if(ctx->interfaces.network_if_count > 1) {
+                g_network_if_selected++;
+                if(g_network_if_selected >= ctx->interfaces.network_if_count) {
+                    g_network_if_selected = 0;
+                }
+                bbl_init_stats_win();
+            }
             break;
         case KEY_LEFT:
             if(g_view_selected == UI_VIEW_SESSION) {
@@ -101,7 +128,7 @@ bbl_read_key_job (timer_s *timer)
                 }
             } else {
                 if(g_access_if_selected == 0) {
-                    g_access_if_selected = ctx->op.access_if_count;
+                    g_access_if_selected = ctx->interfaces.access_if_count;
                 }
                 g_access_if_selected--;
             }
@@ -115,7 +142,7 @@ bbl_read_key_job (timer_s *timer)
                 }
             } else {
                 g_access_if_selected++;
-                if(g_access_if_selected >= ctx->op.access_if_count) {
+                if(g_access_if_selected >= ctx->interfaces.access_if_count) {
                     g_access_if_selected = 0;
                 }
             }
@@ -123,16 +150,16 @@ bbl_read_key_job (timer_s *timer)
             break;
         case KEY_F(7):
             enable_disable_traffic(ctx, true);
-            LOG(NORMAL, "Start traffic\n");
+            LOG(INFO, "Start traffic\n");
             break;
         case KEY_F(8):
             enable_disable_traffic(ctx, false);
-            LOG(NORMAL, "Stop traffic\n");
+            LOG(INFO, "Stop traffic\n");
             break;
         case KEY_F(9):
             g_teardown = true;
             g_teardown_request = true;
-            LOG(NORMAL, "Teardown request\n");
+            LOG(INFO, "Teardown request\n");
             break;
         default:
 	        break;
@@ -143,11 +170,11 @@ bbl_read_key_job (timer_s *timer)
  * Format a progress bar.
  */
 char *
-bbl_format_progress (uint complete, uint current)
+bbl_format_progress (uint16_t complete, uint16_t current)
 {
     static char buf[PROGRESS_BAR_SIZE+1];
     float percentage;
-    uint idx;
+    uint16_t idx;
 
     if (!complete || !current) {
         memset(buf, ' ', sizeof(buf));
@@ -176,13 +203,19 @@ bbl_stats_job (timer_s *timer)
 {
     bbl_ctx_s *ctx = timer->data;
     struct bbl_interface_ *access_if;
+    struct bbl_interface_ *network_if;
 
     bbl_session_s *session;
     int i;
 
-    access_if = ctx->op.access_if[g_access_if_selected];
+    access_if = ctx->interfaces.access_if[g_access_if_selected];
+    network_if = ctx->interfaces.network_if[g_network_if_selected];
 
-    wmove(stats_win, 14, 0);
+    if(g_banner) {
+        wmove(stats_win, 14, 0);
+    } else {
+        wmove(stats_win, 2, 0);
+    }
 
     if(g_view_selected == UI_VIEW_DEFAULT) {
 
@@ -256,12 +289,12 @@ bbl_stats_job (timer_s *timer)
             }
         }
 
-        if (ctx->op.network_if) {
+        if(network_if) {
             if(dict_count(ctx->li_flow_dict)) {
                 wprintw(stats_win, "\nLI Statistics\n");
                 wprintw(stats_win, "  Flows                     %10lu\n", dict_count(ctx->li_flow_dict));
                 wprintw(stats_win, "  Rx Packets                %10lu (%7lu PPS)\n",
-                    ctx->op.network_if->stats.li_rx, ctx->op.network_if->stats.rate_li_rx.avg);
+                    network_if->stats.li_rx, network_if->stats.rate_li_rx.avg);
             }
             if(ctx->config.l2tp_server) {
                 wprintw(stats_win, "\nL2TP LNS Statistics\n");
@@ -270,15 +303,15 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "  Sessions    %10lu\n", ctx->l2tp_sessions);
                 wprintw(stats_win, "  Packets:\n");
                 wprintw(stats_win, "    Tx Control              %10lu Retries: %lu\n",
-                    ctx->op.network_if->stats.l2tp_control_tx, ctx->op.network_if->stats.l2tp_control_retry);
+                    network_if->stats.l2tp_control_tx, network_if->stats.l2tp_control_retry);
                 wprintw(stats_win, "    Rx Control              %10lu Duplicate: %lu Out-of-Order: %lu\n",
-                    ctx->op.network_if->stats.l2tp_control_rx,
-                    ctx->op.network_if->stats.l2tp_control_rx_dup,
-                    ctx->op.network_if->stats.l2tp_control_rx_ooo);
+                    network_if->stats.l2tp_control_rx,
+                    network_if->stats.l2tp_control_rx_dup,
+                    network_if->stats.l2tp_control_rx_ooo);
                 wprintw(stats_win, "    Tx Data                 %10lu (%7lu PPS)\n",
-                    ctx->op.network_if->stats.l2tp_data_tx, ctx->op.network_if->stats.rate_l2tp_data_tx.avg);
+                    network_if->stats.l2tp_data_tx, network_if->stats.rate_l2tp_data_tx.avg);
                 wprintw(stats_win, "    Rx Data                 %10lu (%7lu PPS)\n",
-                    ctx->op.network_if->stats.l2tp_data_rx, ctx->op.network_if->stats.rate_l2tp_data_tx.avg);
+                    network_if->stats.l2tp_data_rx, network_if->stats.rate_l2tp_data_tx.avg);
             }
 
             if(access_if && ctx->stats.session_traffic_flows) {
@@ -298,43 +331,49 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "]\n");
             }
             wprintw(stats_win, "\nNetwork Interface (");
-            wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-            wprintw(stats_win, " %s", ctx->op.network_if->name);
-            wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+            for(i = 0; i < ctx->interfaces.network_if_count; i++) {
+                if(i == g_network_if_selected) {
+                    wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
+                    wprintw(stats_win, " %s", ctx->interfaces.network_if[i]->name);
+                    wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+                } else {
+                    wprintw(stats_win, " %s", ctx->interfaces.network_if[i]->name);
+                }
+            }
             wprintw(stats_win, " )\n  Tx Packets                %10lu |%7lu PPS %10lu Kbps\n",
-                ctx->op.network_if->stats.packets_tx, ctx->op.network_if->stats.rate_packets_tx.avg,
-                ctx->op.network_if->stats.rate_bytes_tx.avg * 8 / 1000);
+                network_if->stats.packets_tx, network_if->stats.rate_packets_tx.avg,
+                network_if->stats.rate_bytes_tx.avg * 8 / 1000);
             wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
-                ctx->op.network_if->stats.packets_rx, ctx->op.network_if->stats.rate_packets_rx.avg,
-                ctx->op.network_if->stats.rate_bytes_rx.avg * 8 / 1000);
+                network_if->stats.packets_rx, network_if->stats.rate_packets_rx.avg,
+                network_if->stats.rate_bytes_rx.avg * 8 / 1000);
             wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
-                ctx->op.network_if->stats.session_ipv4_tx, ctx->op.network_if->stats.rate_session_ipv4_tx.avg);
+                network_if->stats.session_ipv4_tx, network_if->stats.rate_session_ipv4_tx.avg);
             wprintw(stats_win, "  Rx Session Packets        %10lu |%7lu PPS %10lu Loss\n",
-                ctx->op.network_if->stats.session_ipv4_rx, ctx->op.network_if->stats.rate_session_ipv4_rx.avg,
-                ctx->op.network_if->stats.session_ipv4_loss);
+                network_if->stats.session_ipv4_rx, network_if->stats.rate_session_ipv4_rx.avg,
+                network_if->stats.session_ipv4_loss);
             wprintw(stats_win, "  Tx Session Packets IPv6   %10lu |%7lu PPS\n",
-                ctx->op.network_if->stats.session_ipv6_tx, ctx->op.network_if->stats.rate_session_ipv6_tx.avg);
+                network_if->stats.session_ipv6_tx, network_if->stats.rate_session_ipv6_tx.avg);
             wprintw(stats_win, "  Rx Session Packets IPv6   %10lu |%7lu PPS %10lu Loss\n",
-                ctx->op.network_if->stats.session_ipv6_rx, ctx->op.network_if->stats.rate_session_ipv6_rx.avg,
-                ctx->op.network_if->stats.session_ipv6_loss);
+                network_if->stats.session_ipv6_rx, network_if->stats.rate_session_ipv6_rx.avg,
+                network_if->stats.session_ipv6_loss);
             wprintw(stats_win, "  Tx Session Packets IPv6PD %10lu |%7lu PPS\n",
-                ctx->op.network_if->stats.session_ipv6pd_tx, ctx->op.network_if->stats.rate_session_ipv6pd_tx.avg);
+                network_if->stats.session_ipv6pd_tx, network_if->stats.rate_session_ipv6pd_tx.avg);
             wprintw(stats_win, "  Rx Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss\n",
-                ctx->op.network_if->stats.session_ipv6pd_rx, ctx->op.network_if->stats.rate_session_ipv6pd_rx.avg,
-                ctx->op.network_if->stats.session_ipv6pd_loss);
+                network_if->stats.session_ipv6pd_rx, network_if->stats.rate_session_ipv6pd_rx.avg,
+                network_if->stats.session_ipv6pd_loss);
             wprintw(stats_win, "  Tx Multicast Packets      %10lu |%7lu PPS\n",
-                ctx->op.network_if->stats.mc_tx, ctx->op.network_if->stats.rate_mc_tx.avg);
+                network_if->stats.mc_tx, network_if->stats.rate_mc_tx.avg);
         }
 
         if(access_if) {
             wprintw(stats_win, "\nAccess Interface (");
-            for(i = 0; i < ctx->op.access_if_count; i++) {
+            for(i = 0; i < ctx->interfaces.access_if_count; i++) {
                 if(i == g_access_if_selected) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
+                    wprintw(stats_win, " %s", ctx->interfaces.access_if[i]->name);
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
-                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
+                    wprintw(stats_win, " %s", ctx->interfaces.access_if[i]->name);
                 }
             }
             wprintw(stats_win, " )\n  Tx Packets                %10lu |%7lu PPS %10lu Kbps\n",
@@ -365,13 +404,13 @@ bbl_stats_job (timer_s *timer)
     } else if(g_view_selected == UI_VIEW_ACCESS_IF_STATS) {
         if(access_if) {
             wprintw(stats_win, "\nAccess Interface Protocol Stats (");
-            for(i = 0; i < ctx->op.access_if_count; i++) {
+            for(i = 0; i < ctx->interfaces.access_if_count; i++) {
                 if(i == g_access_if_selected) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
+                    wprintw(stats_win, " %s", ctx->interfaces.access_if[i]->name);
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
-                    wprintw(stats_win, " %s", ctx->op.access_if[i]->name);
+                    wprintw(stats_win, " %s", ctx->interfaces.access_if[i]->name);
                 }
             }
             wprintw(stats_win, " )\n");
