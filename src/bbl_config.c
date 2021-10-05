@@ -636,6 +636,21 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
     if (json_is_boolean(value)) {
         a10nsp_config->qinq = json_boolean_value(value);
     }
+
+    if (json_unpack(a10nsp_interface, "{s:s}", "mac", &s) == 0) {
+        if (sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                &a10nsp_config->mac[0],
+                &a10nsp_config->mac[1],
+                &a10nsp_config->mac[2],
+                &a10nsp_config->mac[3],
+                &a10nsp_config->mac[4],
+                &a10nsp_config->mac[5]) < 6) 
+        {
+            fprintf(stderr, "JSON config error: Invalid value for a10nsp->mac\n");
+            return false;
+        }
+    }
+
     return true;
 }
 
