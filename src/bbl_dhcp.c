@@ -54,7 +54,7 @@ bbl_dhcp_stop(bbl_session_s *session) {
     session->dhcp_t2 = 0;
     session->dhcp_server = 0;
     session->dhcp_server_identifier = 0;
-    memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
+    memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
     session->dhcp_lease_timestamp.tv_sec = 0;
     session->dhcp_lease_timestamp.tv_nsec = 0;
     session->dhcp_request_timestamp.tv_sec = 0;

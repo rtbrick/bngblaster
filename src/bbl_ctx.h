@@ -172,12 +172,12 @@ typedef struct bbl_ctx_
         uint32_t static_gateway_iter;
 
         /* Authentication */
-        char *username;
-        char *password;
+        const char *username;
+        const char *password;
 
         /* Access Line */
-        char *agent_remote_id;
-        char *agent_circuit_id;
+        const char *agent_remote_id;
+        const char *agent_circuit_id;
         uint32_t rate_up;
         uint32_t rate_down;
         uint32_t dsl_type;

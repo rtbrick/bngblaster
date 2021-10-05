@@ -16,8 +16,6 @@
 
 const char g_default_user[] = "user{session-global}@rtbrick.com";
 const char g_default_pass[] = "test";
-const char g_default_ari[] = "DEU.RTBRICK.{session-global}";
-const char g_default_aci[] = "0.0.0.0/0.0.0.0 eth 0:{session-global}";
 
 static void
 add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
@@ -1523,7 +1521,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
  * error message printed to stderr.
  */
 bool
-bbl_config_load_json (char *filename, bbl_ctx_s *ctx) {
+bbl_config_load_json (const char *filename, bbl_ctx_s *ctx) {
     json_t *root = NULL;
     json_error_t error;
     bool result = false;
@@ -1545,8 +1543,8 @@ bbl_config_load_json (char *filename, bbl_ctx_s *ctx) {
  */
 void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {
-    ctx->config.username = (char *)g_default_user;
-    ctx->config.password = (char *)g_default_pass;
+    ctx->config.username = g_default_user;
+    ctx->config.password = g_default_pass;
     ctx->config.tx_interval = 5 * MSEC;
     ctx->config.rx_interval = 5 * MSEC;
     ctx->config.io_slots = 1024;

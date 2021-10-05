@@ -318,8 +318,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_object_set(record, "state", json_string("idle"));
                         if(group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->last_mc_rx_time, &group->leave_tx_time);
-                            ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-                            if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+                            ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+                            if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
                             delay = (time_diff.tv_sec * 1000) + ms;
                             json_object_set(record, "leave-delay-ms", json_integer(delay));
                         }
@@ -331,8 +331,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_object_set(record, "state", json_string("active"));
                         if(group->first_mc_rx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-                            ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-                            if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+                            ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+                            if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
                             delay = (time_diff.tv_sec * 1000) + ms;
                             json_object_set(record, "join-delay-ms", json_integer(delay));
                         }
@@ -341,8 +341,8 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                         json_object_set(record, "state", json_string("joining"));
                         if(group->first_mc_rx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-                            ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-                            if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+                            ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+                            if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
                             delay = (time_diff.tv_sec * 1000) + ms;
                             json_object_set(record, "join-delay-ms", json_integer(delay));
                         }

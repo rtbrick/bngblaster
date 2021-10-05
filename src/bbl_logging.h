@@ -11,7 +11,7 @@
 #ifndef __BBL_LOGGING_H__
 #define __BBL_LOGGING_H__
 
-extern bool g_interactive; // interactive mode using ncurses
+extern bool g_interactive; /* interactive mode using ncurses */
 
 extern char *g_log_file;
 extern FILE *g_log_fp;

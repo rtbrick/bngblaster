@@ -193,7 +193,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         /* Reset session for reconnect */
                         state = BBL_IDLE;
                         CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
-                        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
+                        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
                         session->pppoe_session_id = 0;
                         if(session->pppoe_ac_cookie) {
                             free(session->pppoe_ac_cookie);
@@ -396,7 +396,7 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
 }
 
 static void
-update_strings(char **target, char *source, uint32_t *i, bbl_access_config_s *access_config)
+update_strings(char **target, const char *source, uint32_t *i, bbl_access_config_s *access_config)
 {
     static char snum1[32];
     static char snum2[32];
@@ -500,9 +500,9 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             LOG(ERROR, "Failed to allocate memory for session %u!\n", i);
             return false;
         }
-        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
-        memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); // init with broadcast MAC
-        session->session_id = i; // BNG Blaster internal session identifier
+        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
+        memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
+        session->session_id = i; /* BNG Blaster internal session identifier */
         session->access_type = access_config->access_type;
         session->vlan_key.ifindex = access_config->access_if->ifindex;
         session->vlan_key.outer_vlan_id= access_config->access_outer_vlan;

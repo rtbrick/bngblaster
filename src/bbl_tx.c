@@ -1107,7 +1107,7 @@ bbl_encode_padi (bbl_session_s *session)
     eth.next = &pppoe;
     pppoe.code = PPPOE_PADI;
     if(session->pppoe_service_name) {
-        pppoe.service_name = (uint8_t*)session->pppoe_service_name;
+        pppoe.service_name = session->pppoe_service_name;
         pppoe.service_name_len = session->pppoe_service_name_len;
     }
     if(session->pppoe_host_uniq) {
@@ -1153,7 +1153,7 @@ bbl_encode_padr (bbl_session_s *session)
     pppoe.ac_cookie = session->pppoe_ac_cookie;
     pppoe.ac_cookie_len = session->pppoe_ac_cookie_len;
     if(session->pppoe_service_name) {
-        pppoe.service_name = (uint8_t*)session->pppoe_service_name;
+        pppoe.service_name = session->pppoe_service_name;
         pppoe.service_name_len = session->pppoe_service_name_len;
     }
     if(session->pppoe_host_uniq) {

@@ -385,7 +385,7 @@ typedef struct bbl_session_
         uint64_t network_ipv6pd_tx;
         uint64_t network_ipv6pd_loss;
 
-        uint32_t flapped; // flap counter
+        uint32_t flapped; /* flap counter */
     } stats;
 
 } bbl_session_s;

@@ -224,7 +224,7 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
             MD5_Final(digest, &ctx);
         }
     }
-    *cursor = 0; // set finale zero
+    *cursor = 0; /* set finale zero */
     return true;
 }
 

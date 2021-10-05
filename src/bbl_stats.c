@@ -28,9 +28,9 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
 		     &ctx->stats.last_session_established,
 		     &ctx->stats.first_session_tx);
 
-        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
-        ctx->stats.setup_time = (time_diff.tv_sec * 1000) + ms; // Setup time in milliseconds
+        ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+        if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
+        ctx->stats.setup_time = (time_diff.tv_sec * 1000) + ms; /* Setup time in milliseconds */
 
         x = ctx->sessions_established_max;
         y = ctx->stats.setup_time;

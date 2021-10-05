@@ -110,10 +110,10 @@ bbl_igmp_zapping(timer_s *timer)
     group = session->zapping_joined_group;
     if(group->first_mc_rx_time.tv_sec) {
         timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+        ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+        if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
         join_delay = (time_diff.tv_sec * 1000) + ms;
-        if(!join_delay) join_delay = 1; // join delay must be at least one millisecond
+        if(!join_delay) join_delay = 1; /* join delay must be at least one millisecond */
         session->zapping_join_delay_sum += join_delay;
         session->zapping_join_delay_count++;
         if(join_delay > session->stats.max_join_delay) session->stats.max_join_delay = join_delay;
@@ -158,10 +158,10 @@ bbl_igmp_zapping(timer_s *timer)
     group = session->zapping_leaved_group;
     if(group->group && group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
         timespec_sub(&time_diff, &group->last_mc_rx_time, &group->leave_tx_time);
-        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+        ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+        if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
         leave_delay = (time_diff.tv_sec * 1000) + ms;
-        if(!leave_delay) leave_delay = 1; // leave delay must be at least one millisecond
+        if(!leave_delay) leave_delay = 1; /* leave delay must be at least one millisecond */
         session->zapping_leave_delay_sum += leave_delay;
         session->zapping_leave_delay_count++;
         if(leave_delay > session->stats.max_leave_delay) session->stats.max_leave_delay = leave_delay;
@@ -720,6 +720,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
 
     char substring[16];
     char *tok;
+    char *save = NULL;
 
     l2tp_key_t key = {0};
     void **search = NULL;
@@ -735,10 +736,10 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                         session->l2tp = true;
                         memset(substring, 0x0, sizeof(substring));
                         memcpy(substring, pap->reply_message+21, pap->reply_message_len-21);
-                        tok = strtok(substring, ":");
+                        tok = strtok_r(substring, ":", &save);
                         if(tok) {
                             key.tunnel_id = atoi(tok);
-                            tok = strtok(0, ":");
+                            tok = strtok_r(0, ":", &save);
                             if(tok) {
                                 key.session_id = atoi(tok);
                                 search = dict_search(ctx->l2tp_session_dict, &key);
@@ -795,6 +796,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
 
     char substring[16];
     char *tok;
+    char *save = NULL;
 
     l2tp_key_t key = {0};
     void **search = NULL;
@@ -828,10 +830,10 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                         session->l2tp = true;
                         memset(substring, 0x0, sizeof(substring));
                         memcpy(substring, chap->reply_message+21, chap->reply_message_len-21);
-                        tok = strtok(substring, ":");
+                        tok = strtok_r(substring, ":", &save);
                         if(tok) {
                             key.tunnel_id = atoi(tok);
-                            tok = strtok(0, ":");
+                            tok = strtok_r(0, ":", &save);
                             if(tok) {
                                 key.session_id = atoi(tok);
                                 search = dict_search(ctx->l2tp_session_dict, &key);
@@ -1608,7 +1610,7 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     ctx = interface->ctx;
 
-    if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
+    if(memcmp(eth->dst, broadcast_mac, ETH_ADDR_LEN) == 0) {
         /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
         session_id = bbl_rx_session_id_from_broadcast(eth, interface);
         if(!session_id) {

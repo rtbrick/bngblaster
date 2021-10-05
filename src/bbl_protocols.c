@@ -189,9 +189,9 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_na_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T1
+        *(uint32_t*)buf = 0; /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T2
+        *(uint32_t*)buf = 0; /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
     /* IA_PD */
@@ -209,17 +209,17 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_pd_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T1
+        *(uint32_t*)buf = 0; /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T2
+        *(uint32_t*)buf = 0; /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IAPREFIX);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint16_t*)buf = htobe16(25); // length
+        *(uint16_t*)buf = htobe16(25); /* length */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = 0; // preferred lifetime
+        *(uint32_t*)buf = 0; /* preferred lifetime */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // valid lifetime
+        *(uint32_t*)buf = 0; /* valid lifetime */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         memset(buf, 0x0, sizeof(ipv6_prefix));
         BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6_prefix));
@@ -563,9 +563,9 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
-                *(uint8_t*)buf = 1; /* Source link-layer address */
+                *buf = 1; /* Source link-layer address */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint8_t*)buf = 1; /* Length (1 = 8 byte) */
+                *buf = 1; /* Length (1 = 8 byte) */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
@@ -576,9 +576,9 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
-                *(uint8_t*)buf = 2; /* Target link-layer address */
+                *buf = 2; /* Target link-layer address */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint8_t*)buf = 1; /* Length (1 = 8 byte) */
+                *buf = 1; /* Length (1 = 8 byte) */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
@@ -810,7 +810,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
     uint8_t *start = buf;
     uint16_t ipv4_len = *len;
     uint16_t udp_len = *len;
-    uint8_t header_len = 5; // header length 20 (4 * 5)
+    uint8_t header_len = 5; /* header length 20 (4 * 5) */
 
     if(ipv4->router_alert_option) {
         header_len++;
@@ -1697,7 +1697,7 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
     }
 
     pppoe_len = *len - pppoe_len;
-    pppoe_len += 2; // PPP header
+    pppoe_len += 2; /* PPP header */
     *pppoe_len_field = htobe16(pppoe_len);
     return result;
 }
@@ -1889,7 +1889,7 @@ decode_icmp(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     icmp->code = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
-    BUMP_BUFFER(buf, len, sizeof(uint16_t)); // checksum
+    BUMP_BUFFER(buf, len, sizeof(uint16_t)); /* checksum */
 
     if(len) {
         icmp->data = buf;
@@ -1925,7 +1925,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     icmpv6->code = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
-    BUMP_BUFFER(buf, len, sizeof(uint16_t)); // checksum
+    BUMP_BUFFER(buf, len, sizeof(uint16_t)); /* checksum */
 
     if(len) {
         icmpv6->data = buf;
@@ -1937,7 +1937,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             if(len < 12) {
                 return DECODE_ERROR;
             }
-            BUMP_BUFFER(buf, len, sizeof(uint8_t)); // hop limit
+            BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
             flags = *buf;
             if(flags & ICMPV6_FLAGS_OTHER_CONFIG) icmpv6->other = true;
             BUMP_BUFFER(buf, len, 11);
@@ -1972,7 +1972,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             if(len < 20) {
                 return DECODE_ERROR;
             }
-            BUMP_BUFFER(buf, len, sizeof(uint32_t)); // flags / reserved
+            BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* flags / reserved */
             memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
             break;
         default:
@@ -3389,7 +3389,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
     pppoe->session_id = be16toh(header->session_id);
-    pppoe_len = be16toh(header->len) - 2; // - 2 byte PPP header
+    pppoe_len = be16toh(header->len) - 2; /* - 2 byte PPP header */
     pppoe->protocol = be16toh(header->protocol);
     if(pppoe_len > len) {
         return DECODE_ERROR;

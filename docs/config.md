@@ -702,11 +702,11 @@ This section describes all attributes of the `access-line` hierarchy.
 
 Attribute | Description | Default
 --------- | ----------- | -------
-`agent-circuit-id` | Agent-Circuit-Id | 0.0.0.0/0.0.0.0 eth 0:{session-global}
-`agent-remote-id` | Agent-Remote-Id | DEU.RTBRICK.{session-global}
-`rate-up` | Actual Data Rate Upstream | 0
-`rate-down` | Actual Data Rate Downstream | 0
-`dsl-type` | DSL-Type | 0
+`agent-circuit-id` | Agent-Circuit-Id |
+`agent-remote-id` | Agent-Remote-Id |
+`rate-up` | Actual Data Rate Upstream |
+`rate-down` | Actual Data Rate Downstream |
+`dsl-type` | DSL-Type |
 
 ## Access-Line-Profiles
 
