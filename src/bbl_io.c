@@ -76,6 +76,9 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
                 eth->vlan_inner_priority = eth->vlan_outer_priority;
                 eth->vlan_outer = vlan;
                 eth->vlan_outer_priority = tphdr->tp_vlan_tci >> 13;
+                if(tphdr->tp_vlan_tpid == ETH_TYPE_QINQ) {
+                    eth->qinq = true;
+                }
             }
 #if 0
             /* Copy RX timestamp */

@@ -167,7 +167,71 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
     return true;
 }
 
-bool
+static bool
+bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session, 
+                                    struct bbl_interface_ *a10nsp_if)
+{
+    bbl_ethernet_header_t eth = {0};
+    bbl_pppoe_session_t pppoe = {0};
+    bbl_ipv4_t ip = {0};
+    bbl_udp_t udp = {0};
+    bbl_bbl_t bbl = {0};
+    uint8_t *buf;
+    uint16_t len = 0;
+
+    bbl_a10nsp_session_t *a10nsp_session = session->a10nsp_session;
+
+    if(!session->network_ipv4_tx_packet_template) {
+        session->network_ipv4_tx_packet_template = malloc(DATA_TRAFFIC_MAX_LEN);
+    }
+    buf = session->network_ipv4_tx_packet_template;
+
+    eth.dst = session->client_mac;
+    eth.src = a10nsp_if->mac;
+    eth.vlan_outer = a10nsp_session->s_vlan;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.qinq = a10nsp_if->qinq;
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        eth.type = ETH_TYPE_PPPOE_SESSION;
+        eth.next = &pppoe;
+        pppoe.session_id = session->pppoe_session_id;
+        pppoe.protocol = PROTOCOL_IPV4;
+        pppoe.next = &ip;
+    } else {
+        /* IPoE */
+        eth.type = ETH_TYPE_IPV4;
+        eth.next = &ip;
+    }
+    ip.dst = session->ip_address;
+    ip.src = A10NSP_IP_LOCAL;
+    ip.ttl = 64;
+    ip.protocol = PROTOCOL_IPV4_UDP;
+    ip.next = &udp;
+    udp.src = BBL_UDP_PORT;
+    udp.dst = BBL_UDP_PORT;
+    udp.protocol = UDP_PROTOCOL_BBL;
+    udp.next = &bbl;
+    bbl.type = BBL_TYPE_UNICAST_SESSION;
+    bbl.session_id = session->session_id;
+    bbl.ifindex = session->interface->ifindex;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
+    session->network_ipv4_tx_seq = 1;
+    if(!session->network_ipv4_tx_flow_id) {
+        ctx->stats.session_traffic_flows++;
+    }
+    session->network_ipv4_tx_flow_id = ctx->flow_id++;
+    bbl.flow_id = session->network_ipv4_tx_flow_id;
+    bbl.direction = BBL_DIRECTION_DOWN;
+    bbl.sub_type = BBL_SUB_TYPE_IPV4;
+    if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
+        return false;
+    }
+    session->network_ipv4_tx_packet_len = len;
+    return true;
+}
+
+static bool
 bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
@@ -222,6 +286,8 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     }
     if(session->l2tp_session) {
         ip.dst = L2TP_IPCP_IP_LOCAL;
+    } else if (session->a10nsp_session) {
+        ip.dst = A10NSP_IP_LOCAL;
     } else {
         ip.dst = network_if->ip;
     }
@@ -249,6 +315,8 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
 
     if(session->l2tp_session) {
         return bbl_session_traffic_add_ipv4_l2tp(ctx, session, network_if);
+    } else if (session->a10nsp_session) {
+        return bbl_session_traffic_add_ipv4_a10nsp(ctx, session, network_if);
     }
 
     /* Prepare Network to Access (Session) Packet */
@@ -282,7 +350,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     return true;
 }
 
-bool
+static bool
 bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_pd)
 {
     bbl_ethernet_header_t eth = {0};
@@ -424,7 +492,8 @@ bbl_session_traffic_start_ipv4(bbl_ctx_s *ctx, bbl_session_s *session) {
 
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv4_pps && session->ip_address && ctx->interfaces.network_if_count) {
+    if(ctx->config.session_traffic_ipv4_pps && session->ip_address && 
+       (ctx->interfaces.network_if_count || session->a10nsp_session)) {
         /* Start IPv4 Session Traffic */
         if(bbl_session_traffic_add_ipv4(ctx, session)) {
             if(ctx->config.session_traffic_ipv4_pps > 1) {

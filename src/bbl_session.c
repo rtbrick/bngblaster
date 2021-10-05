@@ -181,6 +181,9 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             session->ipcp_state = BBL_PPP_CLOSED;
             session->ip6cp_state = BBL_PPP_CLOSED;
 
+            /* Cleanup A10NSP session */
+            bbl_a10nsp_session_free(session);
+
             /* Increment sessions terminated if new state is terminated. */
             if(g_teardown) {
                 ctx->sessions_terminated++;

@@ -621,6 +621,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 static bool
 json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10nsp_config_s *a10nsp_config) {
     const char *s = NULL;
+    json_t *value = NULL;
 
     UNUSED(ctx);
 
@@ -630,6 +631,26 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
         fprintf(stderr, "JSON config error: Missing value for a10nsp->interface\n");
         return false;
     }
+
+    value = json_object_get(a10nsp_interface, "qinq");
+    if (json_is_boolean(value)) {
+        a10nsp_config->qinq = json_boolean_value(value);
+    }
+
+    if (json_unpack(a10nsp_interface, "{s:s}", "mac", &s) == 0) {
+        if (sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                &a10nsp_config->mac[0],
+                &a10nsp_config->mac[1],
+                &a10nsp_config->mac[2],
+                &a10nsp_config->mac[3],
+                &a10nsp_config->mac[4],
+                &a10nsp_config->mac[5]) < 6) 
+        {
+            fprintf(stderr, "JSON config error: Invalid value for a10nsp->mac\n");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -685,6 +706,10 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
 
     if (json_unpack(stream, "{s:s}", "network-interface", &s) == 0) {
         stream_config->network_interface = strdup(s);
+    }
+
+    if (json_unpack(stream, "{s:s}", "a10nsp-interface", &s) == 0) {
+        stream_config->a10nsp_interface = strdup(s);
     }
 
     value = json_object_get(stream, "length");
