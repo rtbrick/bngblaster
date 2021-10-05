@@ -98,6 +98,10 @@ typedef struct bbl_session_
     bool l2tp;
     bbl_l2tp_session_t *l2tp_session;
 
+    /* Set to true if session is connected to 
+     * BNG Blaster A10NSP Interface */
+    bbl_a10nsp_session_t *a10nsp_session;
+
     /* Authentication */
     char *username;
     char *password;

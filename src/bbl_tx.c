@@ -1795,6 +1795,31 @@ bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 }
             }
             break;
+        case INTERFACE_TYPE_A10NSP:
+            /* Write per session frames. */
+            if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
+                session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
+                if(session->network_send_requests != 0) {
+                    result = bbl_encode_network_packet(interface, session, buf, len);
+                    if(result == PROTOCOL_SUCCESS) {
+                        if(session->a10nsp_session) {
+                            session->a10nsp_session->stats.packets_tx++;
+                        }
+                    }
+                    /* Remove only from TX queue if all requests are processed! */
+                    if(session->network_send_requests == 0) {
+                        bbl_session_network_tx_qnode_remove(session);
+                    } else {
+                        /* Move to the end. */
+                        bbl_session_network_tx_qnode_remove(session);
+                        bbl_session_network_tx_qnode_insert(session);
+                    }
+                } else {
+                    bbl_session_network_tx_qnode_remove(session);
+                }
+                return result;
+            }
+            break;
         default:
             break;
     }

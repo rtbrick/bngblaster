@@ -3202,6 +3202,82 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     return ret_val;
 }
 
+static protocol_error_t
+decode_pppoe_vendor(uint8_t *buf, uint16_t len,
+                    uint8_t *sp, uint16_t sp_len,
+                    bbl_pppoe_discovery_t *pppoe) {
+    
+    uint32_t vendor;
+    uint8_t tlv_type;
+    uint8_t tlv_length;
+
+    access_line_t *access_line;
+
+    if(len < sizeof(uint32_t)) {
+        return DECODE_ERROR;
+    }
+
+    vendor = be32toh(*(uint32_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    if(vendor != BROADBAND_FORUM_VENDOR_ID) {
+        return PROTOCOL_SUCCESS;
+    }
+
+    if(sp_len < sizeof(access_line_t)) {
+        return DECODE_ERROR;
+    }
+
+    access_line = (access_line_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(access_line_t));
+    memset(access_line, 0x0, sizeof(access_line_t));
+    pppoe->access_line = access_line;
+    while(len > 2) {
+        tlv_type = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        tlv_length = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        switch (tlv_type) {
+            case ACCESS_LINE_ACI:
+                if(sp_len > tlv_length) {
+                    access_line->aci = (void*)sp;
+                    memcpy(sp, buf, tlv_length);
+                    /* zero terminate string */
+                    sp += tlv_length; *sp = 0; sp++;
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ARI:
+                if(sp_len > tlv_length) {
+                    access_line->ari = (void*)sp;
+                    memcpy(sp, buf, tlv_length);
+                    /* zero terminate string */
+                    sp += tlv_length; *sp = 0; sp++;
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ACT_UP:
+                if(tlv_length == sizeof(uint32_t)) {
+                    access_line->up = be32toh(*(uint32_t*)buf);
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ACT_DOWN:
+                if(tlv_length == sizeof(uint32_t)) {
+                    access_line->down = be32toh(*(uint32_t*)buf);
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, tlv_length);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
 /*
  * decode_pppoe_discovery
  *
@@ -3267,6 +3343,11 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
             case PPPOE_TAG_AC_COOKIE:
                 pppoe->ac_cookie = buf;
                 pppoe->ac_cookie_len = pppoe_tag_len;
+                break;
+            case PPPOE_TAG_VENDOR:
+                if(decode_pppoe_vendor(buf, pppoe_tag_len, sp, sp_len, pppoe) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
+                }
                 break;
             default:
                 break;
@@ -3414,6 +3495,9 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     if(eth->type == ETH_TYPE_VLAN || eth->type == ETH_TYPE_QINQ) {
         if(len < 4) {
             return DECODE_ERROR;
+        }
+        if(eth->type == ETH_TYPE_QINQ) {
+            eth->qinq = true;
         }
         eth->vlan_outer_priority = *buf >> 5;
         eth->vlan_outer = be16toh(*(uint16_t*)buf);

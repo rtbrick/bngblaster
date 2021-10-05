@@ -134,5 +134,6 @@ typedef enum {
 typedef struct bbl_ctx_ bbl_ctx_s;
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_session_ bbl_session_s;
+typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
 
 #endif
