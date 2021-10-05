@@ -76,8 +76,8 @@
 #define PROTOCOL_IP6CP                  0x8057
 #define PROTOCOL_IPV4                   0x0021
 #define PROTOCOL_IPV6                   0x0057
-#define PROTOCOL_PAP                    0xc023 // Password Authentication Protocol
-#define PROTOCOL_CHAP                   0xc223 // Challenge Handshake Authentication Protocol
+#define PROTOCOL_PAP                    0xc023 /* Password Authentication Protocol */
+#define PROTOCOL_CHAP                   0xc223 /* Challenge Handshake Authentication Protocol */
 #define PROTOCOL_IPV4_ICMP              0x01
 #define PROTOCOL_IPV4_IGMP              0x02
 #define PROTOCOL_IPV4_TCP               0x06
@@ -421,51 +421,54 @@ typedef enum dhcp_option_code_ {
 } dhcp_option_code;
 
 typedef enum access_line_codes_ {
-    // broadband forum tr101
-    ACCESS_LINE_ACI                      = 0x01,  // Agent Circuit ID
-    ACCESS_LINE_ARI                      = 0x02,  // Agent Remote ID
-    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII = 0x03,  // Access-Aggregation-Circuit-ID-ASCII
-    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_BIN   = 0x06,  // Access-Aggregation-Circuit-ID-BINARY
-    ACCESS_LINE_ACT_UP                   = 0x81,  // Actual Data Rate Upstream
-    ACCESS_LINE_ACT_DOWN                 = 0x82,  // Actual Data Rate Downstream
-    ACCESS_LINE_MIN_UP                   = 0x83,  // Minimum Data Rate Upstream
-    ACCESS_LINE_MIN_DOWN                 = 0x84,  // Minimum Data Rate Downstream
-    ACCESS_LINE_ATT_UP                   = 0x85,  // Attainable DataRate Upstream
-    ACCESS_LINE_ATT_DOWN                 = 0x86,  // Attainable DataRate Downstream
-    ACCESS_LINE_MAX_UP                   = 0x87,  // Maximum Data Rate Upstream
-    ACCESS_LINE_MAX_DOWN                 = 0x88,  // Maximum Data Rate Downstream
-    ACCESS_LINE_MIN_UP_LOW               = 0x89,  // Min Data Rate Upstream in low power state
-    ACCESS_LINE_MIN_DOWN_LOW             = 0x8a,  // Min Data Rate Downstream in low power state
-    ACCESS_LINE_MAX_INTERL_DELAY_UP      = 0x8b,  // Max Interleaving Delay Upstream
-    ACCESS_LINE_ACT_INTERL_DELAY_UP      = 0x8c,  // Actual Interleaving Delay Upstream
-    ACCESS_LINE_MAX_INTERL_DELAY_DOWN    = 0x8d,  // Max Interleaving Delay Downstream
-    ACCESS_LINE_ACT_INTERL_DELAY_DOWN    = 0x8e,  // Actual Interleaving Delay Downstream
-    ACCESS_LINE_DATA_LINK_ENCAPS         = 0x90,  // Data Link Encapsulation
-    ACCESS_LINE_DSL_TYPE                 = 0x91,  // DSL Type
-    // draft-lihawi-ancp-protocol-access-extension-04
-    ACCESS_LINE_PON_TYPE                 = 0x97,  // PON-Access-Type
-    ACCESS_LINE_ETR_UP                   = 0x9b,  // Expected Throughput (ETR) Upstream
-    ACCESS_LINE_ETR_DOWN                 = 0x9c,  // Expected Throughput (ETR) Downstream
-    ACCESS_LINE_ATTETR_UP                = 0x9d,  // Attainable Expected Throughput (ATTETR) Upstream
-    ACCESS_LINE_ATTETR_DOWN              = 0x9e,  // Attainable Expected Throughput (ATTETR) Downstream
-    ACCESS_LINE_GDR_UP                   = 0x9f,  // Gamma Data Rate (GDR) Upstream
-    ACCESS_LINE_GDR_DOWN                 = 0xa0,  // Gamma Data Rate (GDR) Downstream
-    ACCESS_LINE_ATTGDR_UP                = 0xa1,  // Attainable Gamma Data Rate (ATTGDR) Upstream
-    ACCESS_LINE_ATTGDR_DOWN              = 0xa2,  // Attainable Gamma Data Rate (ATTGDR) Downstream
-    ACCESS_LINE_ONT_ONU_AVG_DOWN         = 0xb0,  // ONT/ONU-Average-Data-Rate-Downstream
-    ACCESS_LINE_ONT_ONU_PEAK_DOWN        = 0xb1,  // ONT/ONU-Peak-Data-Rate-Downstream
-    ACCESS_LINE_ONT_ONU_MAX_UP           = 0xb2,  // ONT/ONU-Maximum-Data-Rate-Upstream
-    ACCESS_LINE_ONT_ONU_ASS_UP           = 0xb3,  // ONT/ONU-Assured-Data-Rate-Upstream
-    ACCESS_LINE_PON_MAX_UP               = 0xb4,  // PON-Tree-Maximum-Data-Rate-Upstream
-    ACCESS_LINE_PON_MAX_DOWN             = 0xb5,  // PON-Tree-Maximum-Data-Rate-Downstream
+    /* broadband forum tr101 */
+
+    ACCESS_LINE_ACI                      = 0x01,  /* Agent Circuit ID */
+    ACCESS_LINE_ARI                      = 0x02,  /* Agent Remote ID */
+    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII = 0x03,  /* Access-Aggregation-Circuit-ID-ASCII */
+    ACCESS_LINE_AGG_ACC_CIRCUIT_ID_BIN   = 0x06,  /* Access-Aggregation-Circuit-ID-BINARY */
+    ACCESS_LINE_ACT_UP                   = 0x81,  /* Actual Data Rate Upstream */
+    ACCESS_LINE_ACT_DOWN                 = 0x82,  /* Actual Data Rate Downstream */
+    ACCESS_LINE_MIN_UP                   = 0x83,  /* Minimum Data Rate Upstream */
+    ACCESS_LINE_MIN_DOWN                 = 0x84,  /* Minimum Data Rate Downstream */
+    ACCESS_LINE_ATT_UP                   = 0x85,  /* Attainable DataRate Upstream */
+    ACCESS_LINE_ATT_DOWN                 = 0x86,  /* Attainable DataRate Downstream */
+    ACCESS_LINE_MAX_UP                   = 0x87,  /* Maximum Data Rate Upstream */
+    ACCESS_LINE_MAX_DOWN                 = 0x88,  /* Maximum Data Rate Downstream */
+    ACCESS_LINE_MIN_UP_LOW               = 0x89,  /* Min Data Rate Upstream in low power state */
+    ACCESS_LINE_MIN_DOWN_LOW             = 0x8a,  /* Min Data Rate Downstream in low power state */
+    ACCESS_LINE_MAX_INTERL_DELAY_UP      = 0x8b,  /* Max Interleaving Delay Upstream */
+    ACCESS_LINE_ACT_INTERL_DELAY_UP      = 0x8c,  /* Actual Interleaving Delay Upstream */
+    ACCESS_LINE_MAX_INTERL_DELAY_DOWN    = 0x8d,  /* Max Interleaving Delay Downstream */
+    ACCESS_LINE_ACT_INTERL_DELAY_DOWN    = 0x8e,  /* Actual Interleaving Delay Downstream */
+    ACCESS_LINE_DATA_LINK_ENCAPS         = 0x90,  /* Data Link Encapsulation */
+    ACCESS_LINE_DSL_TYPE                 = 0x91,  /* DSL Type */
+
+    /* draft-lihawi-ancp-protocol-access-extension-04 */
+
+    ACCESS_LINE_PON_TYPE                 = 0x97,  /* PON-Access-Type */
+    ACCESS_LINE_ETR_UP                   = 0x9b,  /* Expected Throughput (ETR) Upstream */
+    ACCESS_LINE_ETR_DOWN                 = 0x9c,  /* Expected Throughput (ETR) Downstream */
+    ACCESS_LINE_ATTETR_UP                = 0x9d,  /* Attainable Expected Throughput (ATTETR) Upstream */
+    ACCESS_LINE_ATTETR_DOWN              = 0x9e,  /* Attainable Expected Throughput (ATTETR) Downstream */
+    ACCESS_LINE_GDR_UP                   = 0x9f,  /* Gamma Data Rate (GDR) Upstream */
+    ACCESS_LINE_GDR_DOWN                 = 0xa0,  /* Gamma Data Rate (GDR) Downstream */
+    ACCESS_LINE_ATTGDR_UP                = 0xa1,  /* Attainable Gamma Data Rate (ATTGDR) Upstream */
+    ACCESS_LINE_ATTGDR_DOWN              = 0xa2,  /* Attainable Gamma Data Rate (ATTGDR) Downstream */
+    ACCESS_LINE_ONT_ONU_AVG_DOWN         = 0xb0,  /* ONT/ONU-Average-Data-Rate-Downstream */
+    ACCESS_LINE_ONT_ONU_PEAK_DOWN        = 0xb1,  /* ONT/ONU-Peak-Data-Rate-Downstream */
+    ACCESS_LINE_ONT_ONU_MAX_UP           = 0xb2,  /* ONT/ONU-Maximum-Data-Rate-Upstream */
+    ACCESS_LINE_ONT_ONU_ASS_UP           = 0xb3,  /* ONT/ONU-Assured-Data-Rate-Upstream */
+    ACCESS_LINE_PON_MAX_UP               = 0xb4,  /* PON-Tree-Maximum-Data-Rate-Upstream */
+    ACCESS_LINE_PON_MAX_DOWN             = 0xb5,  /* PON-Tree-Maximum-Data-Rate-Downstream */
 } access_line_codes;
 
 typedef struct access_line_ {
-    char    *aci;       // Agent Circuit ID
-    char    *ari;       // Agent Remote ID
-    uint32_t up;        // Actual Data Rate Upstream
-    uint32_t down;      // Actual Data Rate Downstream
-    uint32_t dsl_type;  // DSL Type
+    char    *aci;       /* Agent Circuit ID */
+    char    *ari;       /* Agent Remote ID */
+    uint32_t up;        /* Actual Data Rate Upstream */
+    uint32_t down;      /* Actual Data Rate Downstream */
+    uint32_t dsl_type;  /* DSL Type */
     void    *profile;
 } access_line_t;
 
@@ -473,16 +476,16 @@ typedef struct access_line_ {
  * Ethernet Header Structure
  */
 typedef struct bbl_ethernet_header_ {
-    uint8_t  *dst; // destination MAC address
-    uint8_t  *src; // source MAC address
-    bool      qinq; // ethertype 0x88a8
-    uint16_t  vlan_outer; // outer VLAN identifier
-    uint16_t  vlan_inner; // inner VLAN identifier
-    uint16_t  vlan_three; // third VLAN
-    uint16_t  type; // ethertype
+    uint8_t  *dst; /* destination MAC address */
+    uint8_t  *src; /* source MAC address */
+    bool      qinq; /* ethertype 0x88a8 */
+    uint16_t  vlan_outer; /* outer VLAN identifier */
+    uint16_t  vlan_inner; /* inner VLAN identifier */
+    uint16_t  vlan_three; /* third VLAN */
+    uint16_t  type; /* ethertype */
     uint8_t   vlan_outer_priority;
     uint8_t   vlan_inner_priority;
-    void     *next; // next header
+    void     *next; /* next header */
     uint16_t  length;
     struct timespec timestamp;
 } bbl_ethernet_header_t;
@@ -513,9 +516,9 @@ typedef struct bbl_pppoe_discovery_ {
 typedef struct bbl_pppoe_session_ {
     uint16_t  session_id;
     uint16_t  protocol;
-    void     *next; // next header
-    void     *payload; // PPP payload
-    uint16_t  payload_len; // PPP payload length
+    void     *next; /* next header */
+    void     *payload; /* PPP payload */
+    uint16_t  payload_len; /* PPP payload length */
 } bbl_pppoe_session_t;
 
 
@@ -612,10 +615,10 @@ typedef struct bbl_ipv4_ {
     uint16_t    offset;
     uint8_t     ttl;
     uint8_t     protocol;
-    void       *next; // next header
-    void       *payload; // IPv4 payload
-    uint16_t    payload_len; // IPv4 payload length
-    bool        router_alert_option; // add router alert option if true
+    void       *next; /* next header */
+    void       *payload; /* IPv4 payload */
+    uint16_t    payload_len; /* IPv4 payload length */
+    bool        router_alert_option; /* add router alert option if true */
 } bbl_ipv4_t;
 
 /*
@@ -627,9 +630,9 @@ typedef struct bbl_ipv6_ {
     uint8_t     tos;
     uint8_t     ttl;
     uint8_t     protocol;
-    void       *next; // next header
-    void       *payload; // IPv6 payload
-    uint16_t    payload_len; // IPv6 payload length
+    void       *next; /* next header */
+    void       *payload; /* IPv6 payload */
+    uint16_t    payload_len; /* IPv6 payload length */
 } bbl_ipv6_t;
 
 /*
@@ -639,9 +642,9 @@ typedef struct bbl_udp_ {
     uint16_t    src;
     uint16_t    dst;
     uint8_t     protocol;
-    void       *next; // next header
-    void       *payload; // UDP payload
-    uint16_t    payload_len; // UDP payload length
+    void       *next; /* next header */
+    void       *payload; /* UDP payload */
+    uint16_t    payload_len; /* UDP payload length */
 } bbl_udp_t;
 
 /*
@@ -773,10 +776,10 @@ typedef struct bbl_dhcp_ {
 } bbl_dhcp_t;
 
 typedef struct bbl_l2tp_ {
-    bool        with_length;     // L Bit
-    bool        with_sequence;   // S Bit
-    bool        with_offset;     // O Bit
-    bool        with_priority;   // P Bit
+    bool        with_length;     /* L Bit */
+    bool        with_sequence;   /* S Bit */
+    bool        with_offset;     /* O Bit */
+    bool        with_priority;   /* P Bit */
     uint16_t    type;
     uint16_t    length;
     uint16_t    tunnel_id;
@@ -785,9 +788,9 @@ typedef struct bbl_l2tp_ {
     uint16_t    nr;
     uint16_t    offset;
     uint16_t    protocol;
-    void       *next; // next header
-    void       *payload; // l2tp payload
-    uint16_t    payload_len; // l2tp payload length
+    void       *next; /* next header */
+    void       *payload; /* l2tp payload */
+    uint16_t    payload_len; /* l2tp payload length */
 } bbl_l2tp_t;
 
 typedef struct bbl_bbl_ {
@@ -813,9 +816,9 @@ typedef struct bbl_qmx_li_ {
     uint8_t      packet_type;
     uint8_t      sub_packet_type;
     uint32_t     liid;
-    void        *next; // next header
-    void        *payload; // LI payload
-    uint16_t     payload_len; // LI payload length
+    void        *next; /* next header */
+    void        *payload; /* LI payload */
+    uint16_t     payload_len; /* LI payload length */
 } bbl_qmx_li_t;
 
 typedef struct bbl_cfm_ {

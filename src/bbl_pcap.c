@@ -81,7 +81,6 @@ pcapng_fflush (bbl_ctx_s *ctx)
                 close(ctx->pcap.fd);
                 pcapng_init(ctx);
                 break;
-            case EAGAIN:
             default:
                 /*
                  * Reset the buffer for unresponsive callers.

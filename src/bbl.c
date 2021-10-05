@@ -20,7 +20,7 @@
 #include "bbl_dhcpv6.h"
 
 /* Global Variables */
-bool g_interactive = false; // interactive mode using ncurses
+bool g_interactive = false; /* interactive mode using ncurses */
 bool g_init_phase = true;
 bool g_banner = true;
 
@@ -379,14 +379,14 @@ main (int argc, char *argv[])
     uint32_t ipv4;
     bbl_stats_t stats = {0};
 
-    char *config_file = NULL;
-    char *username = NULL;
-    char *password = NULL;
-    char *sessions = NULL;
-    char *igmp_group = NULL;
-    char *igmp_source = NULL;
-    char *igmp_group_count = NULL;
-    char *igmp_zap_interval = NULL;
+    const char *config_file = NULL;
+    const char *username = NULL;
+    const char *password = NULL;
+    const char *sessions = NULL;
+    const char *igmp_group = NULL;
+    const char *igmp_source = NULL;
+    const char *igmp_group_count = NULL;
+    const char *igmp_zap_interval = NULL;
     bool  interactive = false;
 
     ctx = bbl_ctx_add();

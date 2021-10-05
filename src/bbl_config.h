@@ -13,7 +13,7 @@ typedef struct bbl_access_line_profile_
 {
     uint16_t access_line_profile_id;
 
-    // broadband forum tr101
+    /* broadband forum tr101 */
 
     uint32_t act_up; /* Actual Data Rate Upstream */
     uint32_t act_down; /* Actual Data Rate Downstream */
@@ -32,7 +32,7 @@ typedef struct bbl_access_line_profile_
     uint32_t data_link_encaps; /* Data Link Encapsulation */
     uint32_t dsl_type; /* DSL Type */
 
-    // draft-lihawi-ancp-protocol-access-extension-04
+    /* draft-lihawi-ancp-protocol-access-extension-04 */
 
     uint32_t pon_type; /* PON-Access-Type */
     uint32_t etr_up; /* Expected Throughput (ETR) Upstream */
@@ -84,8 +84,8 @@ typedef struct bbl_access_config_
     uint32_t static_gateway_iter;
 
     /* Authentication */
-    char *username;
-    char *password;
+    const char *username;
+    const char *password;
     uint16_t authentication_protocol;
 
     /* Access Line */
@@ -152,7 +152,7 @@ typedef struct bbl_a10nsp_config_
 } bbl_a10nsp_config_s;
 
 bool
-bbl_config_load_json(char *filename, bbl_ctx_s *ctx);
+bbl_config_load_json(const char *filename, bbl_ctx_s *ctx);
 
 void
 bbl_config_init_defaults(bbl_ctx_s *ctx);

@@ -34,7 +34,7 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
     snprintf(lock_path, sizeof(lock_path), "/tmp/bngblaster_%s.lock", interface_name);
     lock_file = fopen(lock_path, "r");
     if(lock_file) {
-        // lock file exists
+        /* lock file exists */
         if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
             snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d", lock_pid);
             if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {

@@ -21,13 +21,13 @@ typedef struct bbl_rate_
 } bbl_rate_s;
 
 typedef struct bbl_stats_ {
-    uint32_t min_join_delay; // IGMP join delay
-    uint32_t avg_join_delay; // IGMP join delay
-    uint32_t max_join_delay; // IGMP join delay
+    uint32_t min_join_delay; /* IGMP join delay */
+    uint32_t avg_join_delay; /* IGMP join delay */
+    uint32_t max_join_delay; /* IGMP join delay */
 
-    uint32_t min_leave_delay; // IGMP leave delay
-    uint32_t avg_leave_delay; // IGMP leave delay
-    uint32_t max_leave_delay; // IGMP leave delay
+    uint32_t min_leave_delay; /* IGMP leave delay */
+    uint32_t avg_leave_delay; /* IGMP leave delay */
+    uint32_t max_leave_delay; /* IGMP leave delay */
 
     uint32_t mc_old_rx_after_first_new;
     uint32_t mc_not_received;

@@ -86,16 +86,16 @@ typedef enum {
  */
 typedef enum {
     BBL_IDLE = 0,
-    BBL_IPOE_SETUP,         // IPoE setup
-    BBL_PPPOE_INIT,         // send PADI
-    BBL_PPPOE_REQUEST,      // send PADR
-    BBL_PPP_LINK,           // send LCP requests
-    BBL_PPP_AUTH,           // send authentication requests
-    BBL_PPP_NETWORK,        // send NCP requests
-    BBL_ESTABLISHED,        // established
-    BBL_PPP_TERMINATING,    // send LCP terminate requests
-    BBL_TERMINATING,        // send PADT
-    BBL_TERMINATED,         // terminated
+    BBL_IPOE_SETUP,         /* IPoE setup */
+    BBL_PPPOE_INIT,         /* send PADI */
+    BBL_PPPOE_REQUEST,      /* send PADR */
+    BBL_PPP_LINK,           /* send LCP requests */
+    BBL_PPP_AUTH,           /* send authentication requests */
+    BBL_PPP_NETWORK,        /* send NCP requests */
+    BBL_ESTABLISHED,        /* established */
+    BBL_PPP_TERMINATING,    /* send LCP terminate requests */
+    BBL_TERMINATING,        /* send PADT */
+    BBL_TERMINATED,         /* terminated */
     BBL_MAX
 } __attribute__ ((__packed__)) session_state_t;
 

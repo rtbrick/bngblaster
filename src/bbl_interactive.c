@@ -108,8 +108,6 @@ bbl_read_key_job (timer_s *timer)
             if(ctx->interfaces.access_if_count == 0) {
                 switch (g_view_selected) {
                     case UI_VIEW_ACCESS_IF_STATS:
-                        g_view_selected = UI_VIEW_DEFAULT;
-                        break;
                     case UI_VIEW_SESSION:
                         g_view_selected = UI_VIEW_DEFAULT;
                         break;
