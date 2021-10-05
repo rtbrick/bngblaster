@@ -336,6 +336,8 @@ bbl_a10nsp_rx(bbl_interface_s *interface,
 {
     /* Create A10NSP session if not already present */
     if(!session->a10nsp_session) {
+        LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n", 
+            session->session_id, interface->name, eth->vlan_outer);
         session->a10nsp_session = calloc(1, sizeof(bbl_a10nsp_session_t));
         session->a10nsp_session->session = session;
         session->a10nsp_session->a10nsp_if = interface;
