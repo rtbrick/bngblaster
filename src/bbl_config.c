@@ -621,6 +621,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 static bool
 json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10nsp_config_s *a10nsp_config) {
     const char *s = NULL;
+    json_t *value = NULL;
 
     UNUSED(ctx);
 
@@ -629,6 +630,11 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
     } else {
         fprintf(stderr, "JSON config error: Missing value for a10nsp->interface\n");
         return false;
+    }
+
+    value = json_object_get(a10nsp_interface, "qinq");
+    if (json_is_boolean(value)) {
+        a10nsp_config->qinq = json_boolean_value(value);
     }
     return true;
 }

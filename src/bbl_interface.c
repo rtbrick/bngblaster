@@ -301,6 +301,7 @@ bbl_add_a10nsp_interfaces(bbl_ctx_s *ctx)
         }
         a10nsp_if->type = INTERFACE_TYPE_A10NSP;
         a10nsp_config->a10nsp_if = a10nsp_if;
+        a10nsp_if->qinq = a10nsp_config->qinq;
         if(ctx->interfaces.a10nsp_if_count < BBL_MAX_INTERFACES) {
             ctx->interfaces.a10nsp_if[ctx->interfaces.a10nsp_if_count++] = a10nsp_if;
         } else {

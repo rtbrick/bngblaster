@@ -64,6 +64,7 @@ typedef struct bbl_interface_
     uint32_t ip;
     uint32_t gateway;
     uint16_t vlan;
+    bool     qinq; /* use ethertype 0x8818 */
     uint8_t  mac[ETH_ADDR_LEN];
     uint8_t  gateway_mac[ETH_ADDR_LEN];
 
