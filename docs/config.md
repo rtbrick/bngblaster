@@ -401,6 +401,40 @@ This means that only VLAN min or max is considered as VLAN identifier.
 }
 ```
 
+### A10NSP Interface
+
+`"interfaces": { "a10nsp": { ... } }`
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`interface` | A10nSP interface name (e.g. eth0, ...)
+`qinq` | Set outer VLAN ethertype to QinQ (0x88a8) | false
+`mac`| Optional set gateway interface address manually 
+
+The BNG Blaster supports also multiple A10NSP interfaces
+as shown in the example below.
+
+```json
+{
+    "interfaces": {
+        "tx-interval": 1,
+        "rx-interval": 1,
+        "a10nsp": [
+            {
+                "interface": "eth4",
+                "qinq": true,
+                "mac": "02:00:00:ff:ff:01"
+            },
+            {
+                "interface": "eth5",
+                "qinq": false,
+                "mac": "02:00:00:ff:ff:02"
+            }
+        ],
+    }
+}
+```
+
 ## Sessions
 
 This section describes all attributes of the `sessions` hierarchy.
@@ -649,6 +683,7 @@ Attribute | Description | Default
 `length` | Layer 3 (IP + payload) traffic length (76 - 9000) | 128
 `pps` | Stream traffic rate in packets per second | 1
 `bps` | Stream traffic rate in bits per second (layer 3) |
+`a10nsp-interface` | Select the corresponding A10NSP interface for this stream | 
 `network-interface` | Select the corresponding network interface for this stream | 
 `network-ipv4-address` | Overwrite network interface IPv4 address |
 `network-ipv6-address` | Overwrite network interface IPv6 address |

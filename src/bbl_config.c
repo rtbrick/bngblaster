@@ -708,6 +708,10 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         stream_config->network_interface = strdup(s);
     }
 
+    if (json_unpack(stream, "{s:s}", "a10nsp-interface", &s) == 0) {
+        stream_config->a10nsp_interface = strdup(s);
+    }
+
     value = json_object_get(stream, "length");
     if (value) {
         stream_config->length = json_number_value(value);

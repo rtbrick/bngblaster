@@ -376,3 +376,29 @@ bbl_get_network_interface(bbl_ctx_s *ctx, char *interface_name)
     }
     return NULL;
 }
+
+/**
+ * bbl_get_a10nsp_interface
+ *
+ * @brief This function returns the network interface
+ * with the given name. 
+ * 
+ * @param ctx global context
+ * @param interface interface name
+ * @return interface
+ */
+bbl_interface_s *
+bbl_get_a10nsp_interface(bbl_ctx_s *ctx, char *interface_name)
+{
+    if(!interface_name) {
+        return NULL;
+    }
+    for(int i = 0; i < ctx->interfaces.a10nsp_if_count; i++) {
+        if(ctx->interfaces.a10nsp_if[i]) {
+            if (strcmp(ctx->interfaces.a10nsp_if[i]->name, interface_name) == 0) {
+                return ctx->interfaces.a10nsp_if[i];
+            }
+        }
+    }
+    return NULL;
+}

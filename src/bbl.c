@@ -71,12 +71,12 @@ bbl_add_multicast_packets(bbl_ctx_s *ctx)
 
     struct bbl_interface_ *interface;
 
-    interface = bbl_get_network_interface(ctx, ctx->config.multicast_traffic_network_interface);
-    if(!interface) {
-        return false;
-    }
-
     if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
+        interface = bbl_get_network_interface(ctx, ctx->config.multicast_traffic_network_interface);
+        if(!interface) {
+            return false;
+        }
+
         interface->mc_packets = malloc(ctx->config.igmp_group_count * 2000);
         buf = interface->mc_packets;
 
@@ -124,8 +124,8 @@ bbl_add_multicast_packets(bbl_ctx_s *ctx)
             }
             buf = buf + len;
         }
+        interface->mc_packet_len = len;
     }
-    interface->mc_packet_len = len;
     return true;
 }
 
@@ -499,16 +499,15 @@ main (int argc, char *argv[])
     if(igmp_group_count) ctx->config.igmp_group_count = atoi(igmp_group_count);
     if(igmp_zap_interval) ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
+    /* Add interfaces. */
+    if(!bbl_add_interfaces(ctx)) {
+        fprintf(stderr, "Error: Failed to add interfaces\n");
+        exit(1);
+    }
+
     /* Start curses. */
     if (interactive) {
         bbl_init_curses(ctx);
-    }
-
-    /* Add interfaces. */
-    if(!bbl_add_interfaces(ctx)) {
-        if (interactive) endwin();
-        fprintf(stderr, "Error: Failed to add interfaces\n");
-        exit(1);
     }
 
     /* Add traffic. */
