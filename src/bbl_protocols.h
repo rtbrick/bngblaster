@@ -69,6 +69,8 @@
 #define PPPOE_PADS                      0x65
 #define PPPOE_PADT                      0xa7
 
+#define PPPOE_DEFAULT_MRU               1492
+
 #define PROTOCOL_LCP                    0xc021
 #define PROTOCOL_IPCP                   0x8021
 #define PROTOCOL_IP6CP                  0x8057

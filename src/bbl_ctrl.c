@@ -393,6 +393,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     ssize_t result = 0;
     json_t *root;
     json_t *session_traffic = NULL;
+    json_t *a10nsp_session = NULL;
     bbl_session_s *session;
 
     struct timespec now;
@@ -503,8 +504,20 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
         }
 
+        if(session->a10nsp_session) {
+            a10nsp_session = json_pack("{ss si sb sb ss* ss* si si}",
+                        "interface", session->a10nsp_session->a10nsp_if->name,
+                        "s-vlan", session->a10nsp_session->s_vlan,
+                        "qinq-send", session->a10nsp_session->a10nsp_if->qinq,
+                        "qinq-received", session->a10nsp_session->qinq_received,
+                        "pppoe-aci", session->a10nsp_session->pppoe_aci,
+                        "pppoe-ari", session->a10nsp_session->pppoe_ari,
+                        "tx-packets", session->a10nsp_session->stats.packets_tx,
+                        "rx-packets", session->a10nsp_session->stats.packets_rx);
+        }
+
         if(session->access_type == ACCESS_TYPE_PPPOE) {
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so*}}",
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so* so*}}",
                         "status", "ok",
                         "code", 200,
                         "session-info",
@@ -536,7 +549,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "tx-packets", session->stats.packets_tx,
                         "rx-packets", session->stats.packets_rx,
                         "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
-                        "session-traffic", session_traffic);
+                        "session-traffic", session_traffic,
+                        "a10nsp", a10nsp_session);
 
         } else {
             clock_gettime(CLOCK_MONOTONIC, &now);
@@ -554,7 +568,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
             if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
             if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* si si si so*}}",
+            root = json_pack("{ss si s{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* si si si so* so*}}",
                         "status", "ok",
                         "code", 200,
                         "session-info",
@@ -608,7 +622,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
                         "tx-packets", session->stats.packets_tx,
                         "rx-packets", session->stats.packets_rx,
                         "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
-                        "session-traffic", session_traffic);
+                        "session-traffic", session_traffic,
+                        "a10nsp", a10nsp_session);
         }
         if(root) {
             result = json_dumpfd(root, fd, 0);

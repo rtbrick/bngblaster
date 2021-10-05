@@ -458,6 +458,13 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
     bbl_ctx_s *ctx = interface->ctx;
 
     session->stats.icmpv6_rx++;
+
+    if(session->a10nsp_session) {
+        /* There is currently no IPv6 support 
+         * for A10NSP terminated sessions today. */
+        return;
+    }
+
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
         if(!session->icmpv6_ra_received) {
             /* The first RA received ... */
@@ -474,7 +481,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                         memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
                     }
                 }
-                if(session->access_type == ACCESS_TYPE_PPPOE && session->l2tp == false) {
+                if(session->access_type == ACCESS_TYPE_PPPOE&& session->l2tp == false) {
                     bbl_session_traffic_start_ipv6(ctx, session);
                 }
             }
@@ -913,7 +920,8 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, &bbl_session_timeout);
             }
             if(session->access_config->ipv4_enable) {
-                if(session->l2tp == false && ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
+                if(session->l2tp == false && !session->a10nsp_session && 
+                   ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
                     /* Start IGMP */
                     timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
                 }

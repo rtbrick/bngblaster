@@ -145,6 +145,7 @@ typedef struct bbl_a10nsp_config_
 {
     struct bbl_interface_ *a10nsp_if;
     char *interface;
+    bool qinq;
 
     void *next; /* pointer to next a10nsp config element */
 } bbl_a10nsp_config_s;
