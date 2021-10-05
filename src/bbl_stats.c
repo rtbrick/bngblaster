@@ -316,6 +316,16 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("\nA10NSP Interface ( %s ):\n", interface->name);
             printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
+            printf("  TX Session:        %10lu packets\n", interface->stats.session_ipv4_tx);
+            printf("  RX Session:        %10lu packets (%lu loss, %lu wrong session)\n", interface->stats.session_ipv4_rx,
+                interface->stats.session_ipv4_loss, interface->stats.session_ipv4_wrong_session);
+            printf("  RX Drop Unknown:   %10lu packets\n", interface->stats.packets_rx_drop_unknown);
+            printf("  TX Encode Error:   %10lu packets\n", interface->stats.encode_errors);
+            printf("  RX Decode Error:   %10lu packets\n", interface->stats.packets_rx_drop_decode_error);
+            printf("  TX Send Failed:    %10lu\n", interface->stats.sendto_failed);
+            printf("  TX No Buffer:      %10lu\n", interface->stats.no_tx_buffer);
+            printf("  TX Poll Kernel:    %10lu\n", interface->stats.poll_tx);
+            printf("  RX Poll Kernel:    %10lu\n", interface->stats.poll_rx);
         }
     }
 
@@ -415,30 +425,31 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
     json_object_set(jobj, "dhcp-sessions-established", json_integer(ctx->dhcp_established_max));
     json_object_set(jobj, "dhcpv6-sessions-established", json_integer(ctx->dhcpv6_established_max));
 
+    if(dict_count(ctx->li_flow_dict)) {
+        jobj_li = json_object();
+        json_object_set(jobj_li, "flows", json_integer(dict_count(ctx->li_flow_dict)));
+        json_object_set(jobj_li, "rx-packets", json_integer(stats->li_rx));
+        json_object_set(jobj, "li-statistics", jobj_li);
+    }
+    if(ctx->config.l2tp_server) {
+        jobj_l2tp = json_object();
+        json_object_set(jobj_l2tp, "tunnels", json_integer(ctx->l2tp_tunnels_max));
+        json_object_set(jobj_l2tp, "tunnels-established", json_integer(ctx->l2tp_tunnels_established_max));
+        json_object_set(jobj_l2tp, "sessions", json_integer(ctx->l2tp_sessions_max));
+        json_object_set(jobj_l2tp, "tx-control-packets", json_integer(stats->l2tp_control_tx));
+        json_object_set(jobj_l2tp, "tx-control-packets-retry", json_integer(stats->l2tp_control_retry));
+        json_object_set(jobj_l2tp, "rx-control-packets", json_integer(stats->l2tp_control_rx));
+        json_object_set(jobj_l2tp, "rx-control-packets-duplicate", json_integer(stats->l2tp_control_rx_dup));
+        json_object_set(jobj_l2tp, "rx-control-packets-out-of-order", json_integer(stats->l2tp_control_rx_ooo));
+        json_object_set(jobj_l2tp, "tx-data-packets", json_integer(stats->l2tp_data_tx));
+        json_object_set(jobj_l2tp, "rx-data-packets", json_integer(stats->l2tp_data_rx));
+        json_object_set(jobj, "l2tp", jobj_l2tp);
+    }
+
     jobj_array = json_array();
     for(i=0; i < ctx->interfaces.network_if_count; i++) {
         interface = ctx->interfaces.network_if[i];
         if (interface) {
-            if(dict_count(ctx->li_flow_dict)) {
-                jobj_li = json_object();
-                json_object_set(jobj_li, "flows", json_integer(dict_count(ctx->li_flow_dict)));
-                json_object_set(jobj_li, "rx-packets", json_integer(interface->stats.li_rx));
-                json_object_set(jobj, "li-statistics", jobj_li);
-            }
-            if(ctx->config.l2tp_server) {
-                jobj_l2tp = json_object();
-                json_object_set(jobj_l2tp, "tunnels", json_integer(ctx->l2tp_tunnels_max));
-                json_object_set(jobj_l2tp, "tunnels-established", json_integer(ctx->l2tp_tunnels_established_max));
-                json_object_set(jobj_l2tp, "sessions", json_integer(ctx->l2tp_sessions_max));
-                json_object_set(jobj_l2tp, "tx-control-packets", json_integer(interface->stats.l2tp_control_tx));
-                json_object_set(jobj_l2tp, "tx-control-packets-retry", json_integer(interface->stats.l2tp_control_retry));
-                json_object_set(jobj_l2tp, "rx-control-packets", json_integer(interface->stats.l2tp_control_rx));
-                json_object_set(jobj_l2tp, "rx-control-packets-duplicate", json_integer(interface->stats.l2tp_control_rx_dup));
-                json_object_set(jobj_l2tp, "rx-control-packets-out-of-order", json_integer(interface->stats.l2tp_control_rx_ooo));
-                json_object_set(jobj_l2tp, "tx-data-packets", json_integer(interface->stats.l2tp_data_tx));
-                json_object_set(jobj_l2tp, "rx-data-packets", json_integer(interface->stats.l2tp_data_rx));
-                json_object_set(jobj, "l2tp", jobj_l2tp);
-            }
             jobj_network_if = json_object();
             json_object_set(jobj_network_if, "name", json_string(interface->name));
             json_object_set(jobj_network_if, "tx-packets", json_integer(interface->stats.packets_tx));
@@ -678,9 +689,9 @@ bbl_compute_interface_rate_job (timer_s *timer)
     bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
     bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
 
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
     if(interface->type == INTERFACE_TYPE_ACCESS || interface->type == INTERFACE_TYPE_NETWORK) {
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
         bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
         bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
         bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);

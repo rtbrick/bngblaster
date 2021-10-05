@@ -204,4 +204,7 @@ bbl_add_interfaces(bbl_ctx_s *ctx);
 bbl_interface_s *
 bbl_get_network_interface(bbl_ctx_s *ctx, char *interface_name);
 
+bbl_interface_s *
+bbl_get_a10nsp_interface(bbl_ctx_s *ctx, char *interface_name);
+
 #endif
