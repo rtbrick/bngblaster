@@ -154,6 +154,9 @@ typedef struct bbl_a10nsp_config_
 bool
 bbl_config_load_json(const char *filename, bbl_ctx_s *ctx);
 
+bool
+bbl_config_streams_load_json(const char *filename, bbl_ctx_s *ctx);
+
 void
 bbl_config_init_defaults(bbl_ctx_s *ctx);
 

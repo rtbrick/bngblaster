@@ -121,6 +121,8 @@ typedef struct bbl_ctx_
         uint32_t sessions_established_max;
         uint32_t session_traffic_flows;
         uint32_t session_traffic_flows_verified;
+        uint32_t stream_traffic_flows;
+        uint32_t stream_traffic_flows_verified;
     } stats;
 
     bool multicast_traffic;
@@ -139,6 +141,8 @@ typedef struct bbl_ctx_
         bbl_io_mode_t io_mode;
 
         char *json_report_filename;
+        bool json_report_sessions; /* Include sessions */
+        bool json_report_streams; /* Include streams */
 
         bbl_secondary_ip_s *secondary_ip_addresses;
         bbl_secondary_ip6_s *secondary_ip6_addresses;
