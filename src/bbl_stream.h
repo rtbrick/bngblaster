@@ -99,4 +99,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx);
 void
 bbl_stream_tx_job (timer_s *timer);
 
+json_t *
+bbl_stream_json(bbl_stream *stream);
+
 #endif

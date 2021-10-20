@@ -1610,7 +1610,7 @@ void
 bbl_network_arp_timeout (timer_s *timer)
 {
     bbl_interface_s *interface = timer->data;
-    interface->send_requests |= BBL_SEND_ARP_REQUEST;
+    interface->send_requests |= BBL_IF_SEND_ARP_REQUEST;
 }
 
 void

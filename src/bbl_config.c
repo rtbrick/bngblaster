@@ -11,7 +11,6 @@
 #include "bbl.h"
 #include "bbl_config.h"
 #include "bbl_stream.h"
-#include <jansson.h>
 #include <sys/stat.h>
 
 const char g_default_user[] = "user{session-global}@rtbrick.com";
@@ -40,8 +39,7 @@ add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
                 secondary_ip = secondary_ip->next;
             } else {
                 /* Append secondary address ... */
-                secondary_ip->next = malloc(sizeof(bbl_secondary_ip_s));
-                memset(secondary_ip->next, 0x0, sizeof(bbl_secondary_ip_s));
+                secondary_ip->next = calloc(1, sizeof(bbl_secondary_ip_s));
                 secondary_ip = secondary_ip->next;
                 secondary_ip->ip = ipv4;
                 break;
@@ -49,8 +47,7 @@ add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
         }
     } else {
         /* Add first secondary address */
-        ctx->config.secondary_ip_addresses = malloc(sizeof(bbl_secondary_ip_s));
-        memset(ctx->config.secondary_ip_addresses, 0x0, sizeof(bbl_secondary_ip_s));
+        ctx->config.secondary_ip_addresses = calloc(1, sizeof(bbl_secondary_ip_s));
         ctx->config.secondary_ip_addresses->ip = ipv4;
     }
 }
@@ -78,8 +75,7 @@ add_secondary_ipv6(bbl_ctx_s *ctx, ipv6addr_t ipv6) {
                 secondary_ip6 = secondary_ip6->next;
             } else {
                 /* Append secondary address ... */
-                secondary_ip6->next = malloc(sizeof(bbl_secondary_ip6_s));
-                memset(secondary_ip6->next, 0x0, sizeof(bbl_secondary_ip6_s));
+                secondary_ip6->next = calloc(1, sizeof(bbl_secondary_ip6_s));
                 secondary_ip6 = secondary_ip6->next;
                 memcpy(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN);
                 break;
@@ -87,8 +83,7 @@ add_secondary_ipv6(bbl_ctx_s *ctx, ipv6addr_t ipv6) {
         }
     } else {
         /* Add first secondary address */
-        ctx->config.secondary_ip6_addresses = malloc(sizeof(bbl_secondary_ip6_s));
-        memset(ctx->config.secondary_ip6_addresses, 0x0, sizeof(bbl_secondary_ip6_s));
+        ctx->config.secondary_ip6_addresses = calloc(1, sizeof(bbl_secondary_ip6_s));
         memcpy(ctx->config.secondary_ip6_addresses->ip, ipv6, IPV6_ADDR_LEN);
     }
 }
@@ -1294,21 +1289,19 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             size = json_array_size(sub);
             for (i = 0; i < size; i++) {
                 if (!network_config) {
-                    ctx->config.network_config = malloc(sizeof(bbl_network_config_s));
+                    ctx->config.network_config = calloc(1, sizeof(bbl_network_config_s));
                     network_config = ctx->config.network_config;
                 } else {
-                    network_config->next = malloc(sizeof(bbl_network_config_s));
+                    network_config->next = calloc(1, sizeof(bbl_network_config_s));
                     network_config = network_config->next;
                 }
-                memset(network_config, 0x0, sizeof(bbl_network_config_s));
                 if (!json_parse_network_interface(ctx, json_array_get(sub, i), network_config)) {
                     return false;
                 }
             }
         } else if (json_is_object(sub)) {
             /* Config is provided as object (single network interface) */
-            network_config = malloc(sizeof(bbl_network_config_s));
-            memset(network_config, 0x0, sizeof(bbl_network_config_s));
+            network_config = calloc(1, sizeof(bbl_network_config_s));
             if (!ctx->config.network_config) {
                 ctx->config.network_config = network_config;
             }
@@ -1324,21 +1317,19 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             size = json_array_size(sub);
             for (i = 0; i < size; i++) {
                 if (!access_config) {
-                    ctx->config.access_config = malloc(sizeof(bbl_access_config_s));
+                    ctx->config.access_config = calloc(1, sizeof(bbl_access_config_s));
                     access_config = ctx->config.access_config;
                 } else {
-                    access_config->next = malloc(sizeof(bbl_access_config_s));
+                    access_config->next = calloc(1, sizeof(bbl_access_config_s));
                     access_config = access_config->next;
                 }
-                memset(access_config, 0x0, sizeof(bbl_access_config_s));
                 if (!json_parse_access_interface(ctx, json_array_get(sub, i), access_config)) {
                     return false;
                 }
             }
         } else if (json_is_object(sub)) {
             /* Config is provided as object (single access range) */
-            access_config = malloc(sizeof(bbl_access_config_s));
-            memset(access_config, 0x0, sizeof(bbl_access_config_s));
+            access_config = calloc(1, sizeof(bbl_access_config_s));
             if (!ctx->config.access_config) {
                 ctx->config.access_config = access_config;
             }
@@ -1354,21 +1345,19 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
             size = json_array_size(sub);
             for (i = 0; i < size; i++) {
                 if (!a10nsp_config) {
-                    ctx->config.a10nsp_config = malloc(sizeof(bbl_a10nsp_config_s));
+                    ctx->config.a10nsp_config = calloc(1, sizeof(bbl_a10nsp_config_s));
                     a10nsp_config = ctx->config.a10nsp_config;
                 } else {
-                    a10nsp_config->next = malloc(sizeof(bbl_a10nsp_config_s));
+                    a10nsp_config->next = calloc(1, sizeof(bbl_a10nsp_config_s));
                     a10nsp_config = a10nsp_config->next;
                 }
-                memset(a10nsp_config, 0x0, sizeof(bbl_a10nsp_config_s));
                 if (!json_parse_a10nsp_interface(ctx, json_array_get(sub, i), a10nsp_config)) {
                     return false;
                 }
             }
         } else if (json_is_object(sub)) {
             /* Config is provided as object (single a10nsp interface) */
-            a10nsp_config = malloc(sizeof(bbl_a10nsp_config_s));
-            memset(a10nsp_config, 0x0, sizeof(bbl_a10nsp_config_s));
+            a10nsp_config = calloc(1, sizeof(bbl_a10nsp_config_s));
             if (!ctx->config.a10nsp_config) {
                 ctx->config.a10nsp_config = a10nsp_config;
             }
@@ -1392,13 +1381,12 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         for (i = 0; i < size; i++) {
             sub = json_array_get(section, i);
             if (!l2tp_server) {
-                ctx->config.l2tp_server = malloc(sizeof(bbl_l2tp_server_t));
+                ctx->config.l2tp_server = calloc(1, sizeof(bbl_l2tp_server_t));
                 l2tp_server = ctx->config.l2tp_server;
             } else {
-                l2tp_server->next = malloc(sizeof(bbl_l2tp_server_t));
+                l2tp_server->next = calloc(1, sizeof(bbl_l2tp_server_t));
                 l2tp_server = l2tp_server->next;
             }
-            memset(l2tp_server, 0x0, sizeof(bbl_l2tp_server_t));
             if (json_unpack(sub, "{s:s}", "name", &s) == 0) {
                 l2tp_server->host_name = strdup(s);
             } else {
@@ -1477,13 +1465,12 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         size = json_array_size(section);
         for (i = 0; i < size; i++) {
             if (!stream_config) {
-                ctx->config.stream_config = malloc(sizeof(bbl_stream_config));
+                ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config));
                 stream_config = ctx->config.stream_config;
             } else {
-                stream_config->next = malloc(sizeof(bbl_stream_config));
+                stream_config->next = calloc(1, sizeof(bbl_stream_config));
                 stream_config = stream_config->next;
             }
-            memset(stream_config, 0x0, sizeof(bbl_stream_config));
             if (!json_parse_stream(ctx, json_array_get(section, i), stream_config)) {
                 return false;
             }
@@ -1497,13 +1484,12 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         size = json_array_size(section);
         for (i = 0; i < size; i++) {
             if (!access_line_profile) {
-                ctx->config.access_line_profile = malloc(sizeof(bbl_access_line_profile_s));
+                ctx->config.access_line_profile = calloc(1, sizeof(bbl_access_line_profile_s));
                 access_line_profile = ctx->config.access_line_profile;
             } else {
-                access_line_profile->next = malloc(sizeof(bbl_access_line_profile_s));
+                access_line_profile->next = calloc(1, sizeof(bbl_access_line_profile_s));
                 access_line_profile = access_line_profile->next;
             }
-            memset(access_line_profile, 0x0, sizeof(bbl_access_line_profile_s));
             if (!json_parse_access_line_profile(json_array_get(section, i), access_line_profile)) {
                 return false;
             }
@@ -1513,12 +1499,16 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     return true;
 }
 
-/* bbl_config_load_json
+/**
+ * bbl_config_load_json
  *
- * This functions is population the BBL context
+ * This function populates the BBL context
  * from given JSON configuration file returning
- * true is successfull or false if failed with
- * error message printed to stderr.
+ * true if successfull or false if failed with
+ * error message printed to stderr. 
+ * 
+ * @param ctx JSON filename
+ * @param ctx global context
  */
 bool
 bbl_config_load_json (const char *filename, bbl_ctx_s *ctx) {
@@ -1536,10 +1526,73 @@ bbl_config_load_json (const char *filename, bbl_ctx_s *ctx) {
     return result;
 }
 
-/* bbl_config_load_json
+static bool
+json_parse_config_streams (json_t *root, bbl_ctx_s *ctx) {
+
+    json_t *section = NULL;
+    int i, size;
+
+    bbl_stream_config *stream_config = ctx->config.stream_config;
+
+    if (json_typeof(root) != JSON_OBJECT) {
+        fprintf(stderr, "JSON config error: Configuration root element must object\n");
+        return false;
+    }
+
+    section = json_object_get(root, "streams");
+    if (json_is_array(section)) {
+        /* Config is provided as array (multiple streams) */
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            if (!stream_config) {
+                ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config));
+                stream_config = ctx->config.stream_config;
+            } else {
+                stream_config->next = calloc(1, sizeof(bbl_stream_config));
+                stream_config = stream_config->next;
+            }
+            if (!json_parse_stream(ctx, json_array_get(section, i), stream_config)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/** 
+ * bbl_config_streams_load_json
+ *
+ * This function populates traffic streams
+ * from given JSON stream configuration file returning
+ * true if successfull or false if failed with
+ * error message printed to stderr.
+ * 
+ * @param ctx JSON filename
+ * @param ctx global context
+ */
+bool
+bbl_config_streams_load_json (const char *filename, bbl_ctx_s *ctx) {
+    json_t *root = NULL;
+    json_error_t error;
+    bool result = false;
+
+    root = json_load_file(filename, 0, &error);
+    if (root) {
+        result = json_parse_config_streams(root, ctx);
+        json_decref(root);
+    } else {
+        fprintf(stderr, "JSON stream config error: File %s Line %d: %s\n", filename, error.line, error.text);
+    }
+    return result;
+}
+
+/**
+ * bbl_config_init_defaults
  *
  * This functions is population the BBL context
  * with default configuration values.
+ *
+ * @param ctx global context
  */
 void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {

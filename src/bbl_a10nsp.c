@@ -287,6 +287,7 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                         }
                         if(!stream->rx_first_seq) {
                             stream->rx_first_seq = bbl->flow_seq;
+                            interface->ctx->stats.stream_traffic_flows_verified++;
                         } else {
                             if(stream->rx_last_seq +1 != bbl->flow_seq) {
                                 stream->loss++;

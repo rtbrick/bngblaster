@@ -22,6 +22,7 @@
 /* Global Variables */
 bool g_interactive = false; /* interactive mode using ncurses */
 bool g_init_phase = true;
+bool g_traffic = true;
 bool g_banner = true;
 
 char *g_log_file = NULL;
@@ -132,17 +133,19 @@ bbl_add_multicast_packets(bbl_ctx_s *ctx)
 /*
  * Command line options.
  */
-const char *optstring = "vhC:l:L:u:p:P:J:c:g:s:r:z:S:Ibf";
+const char *optstring = "vhC:T:l:L:u:p:P:j:J:c:g:s:r:z:S:Ibf";
 static struct option long_options[] = {
     { "version",                no_argument,        NULL, 'v' },
     { "help",                   no_argument,        NULL, 'h' },
     { "config",                 required_argument,  NULL, 'C' },
+    { "stream-config",          required_argument,  NULL, 'T' },
     { "logging",                required_argument,  NULL, 'l' },
     { "log-file",               required_argument,  NULL, 'L' },
     { "username",               required_argument,  NULL, 'u' },
     { "password",               required_argument,  NULL, 'p' },
     { "pcap-capture",           required_argument,  NULL, 'P' },
-    { "json-report",            required_argument,  NULL, 'J' },
+    { "json-report-content",    required_argument,  NULL, 'j' },
+    { "json-report-file",       required_argument,  NULL, 'J' },
     { "session-count",          required_argument,  NULL, 'c' },
     { "mc-group",               required_argument,  NULL, 'g' },
     { "mc-source",              required_argument,  NULL, 's' },
@@ -162,7 +165,9 @@ bbl_print_usage_arg (struct option *option)
         if (strcmp(option->name, "logging") == 0) {
             return log_usage();
         }
-
+        if (strcmp(option->name, "json-report-content") == 0) {
+            return " sessions|streams";
+        }
         return " <args>";
     }
     return "";
@@ -226,6 +231,29 @@ bbl_ctrl_job (timer_s *timer)
     int rate = 0;
     uint32_t i;
 
+    /* Setup phase ...
+     * Wait for all network interfaces to be resolved. */
+    if(g_init_phase && !g_teardown) {
+        LOG(INFO, "Resolve network interfaces\n");
+        for(i = 0; i < ctx->interfaces.network_if_count; i++) {
+            interface = ctx->interfaces.network_if[i];
+            if(interface->gateway_resolve_wait == false) {
+                continue;
+            }
+            if(interface->gateway6.len && !interface->icmpv6_nd_resolved) {
+                LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n", 
+                    interface->name, format_ipv6_prefix(&interface->gateway6));
+                return;
+            }
+            if(interface->gateway && !interface->arp_resolved) {
+                LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n", 
+                    interface->name, format_ipv4_address(&interface->gateway));
+                return;
+            }
+        }
+        g_init_phase = false;
+        LOG(INFO, "All network interfaces resolved\n");
+    }
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
@@ -286,25 +314,6 @@ bbl_ctrl_job (timer_s *timer)
             }
         }
     } else {
-        /* Setup phase ...
-         * Wait for all network interfaces to be resolved. */
-        if(g_init_phase) {
-            LOG(INFO, "Resolve network interfaces\n");
-            for(i = 0; i < ctx->interfaces.network_if_count; i++) {
-                interface = ctx->interfaces.network_if[i];
-                if(interface->gateway_resolve_wait == false) {
-                    continue;
-                }
-                if(interface->gateway6.len && !interface->icmpv6_nd_resolved) {
-                    return;
-                }
-                if(interface->gateway && !interface->arp_resolved) {
-                    return;
-                }
-            }
-            g_init_phase = false;
-            LOG(INFO, "Start sessions\n");
-        }
         /* Iterate over all idle session (list of pending sessions)
          * and start as much as permitted per interval based on max
          * outstanding and setup rate. Sessions started will be removed
@@ -380,6 +389,7 @@ main (int argc, char *argv[])
     bbl_stats_t stats = {0};
 
     const char *config_file = NULL;
+    const char *config_streams_file = NULL;
     const char *username = NULL;
     const char *password = NULL;
     const char *sessions = NULL;
@@ -418,11 +428,21 @@ main (int argc, char *argv[])
             case 'P':
                 ctx->pcap.filename = optarg;
                 break;
+            case 'j':
+                if (strcmp("sessions", optarg) == 0) {
+                    ctx->config.json_report_sessions = true;
+                } else if (strcmp("streams", optarg) == 0) {
+                    ctx->config.json_report_streams = true;
+                }
+                break;
             case 'J':
                 ctx->config.json_report_filename = optarg;
                 break;
             case 'C':
                 config_file = optarg;
+                break;
+            case 'T':
+                config_streams_file = optarg;
                 break;
             case 'l':
                 log_enable(optarg);
@@ -485,6 +505,13 @@ main (int argc, char *argv[])
         fprintf(stderr, "Error: Failed to load configuration file %s\n", config_file);
         exit(1);
     }
+    if(config_streams_file) {
+        if(!bbl_config_streams_load_json(config_streams_file, ctx)) {
+            fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_file);
+            exit(1);
+        }
+    }
+
     if(username) ctx->config.username = username;
     if(password) ctx->config.password = password;
     if(sessions) ctx->config.sessions = atoi(sessions);
