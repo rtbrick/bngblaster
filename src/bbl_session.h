@@ -417,4 +417,7 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session);
 bool
 bbl_sessions_init(bbl_ctx_s *ctx);
 
+json_t *
+bbl_session_json(bbl_session_s *session);
+
 #endif
