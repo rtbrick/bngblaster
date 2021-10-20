@@ -10,6 +10,8 @@
 #include "bbl.h"
 #include "bbl_session.h"
 
+extern bool g_traffic;
+
 void
 bbl_session_traffic_ipv4(timer_s *timer)
 {
@@ -31,7 +33,7 @@ bbl_session_traffic_ipv4(timer_s *timer)
             return;
         }
     }
-    if(session->session_traffic) {
+    if(g_traffic && session->session_traffic) {
         session->send_requests |= BBL_SEND_SESSION_IPV4;
         bbl_session_tx_qnode_insert(session);
         session->network_send_requests |= BBL_SEND_SESSION_IPV4;
@@ -56,7 +58,7 @@ bbl_session_traffic_ipv6(timer_s *timer)
             return;
         }
     }
-    if(session->session_traffic) {
+    if(g_traffic && session->session_traffic) {
         if(session->ipv6_prefix.len) {
             session->send_requests |= BBL_SEND_SESSION_IPV6;
             session->network_send_requests |= BBL_SEND_SESSION_IPV6;
@@ -83,7 +85,7 @@ bbl_session_traffic_ipv6pd(timer_s *timer)
             return;
         }
     }
-    if(session->session_traffic) {
+    if(g_traffic && session->session_traffic) {
         if(session->delegated_ipv6_prefix.len) {
             session->send_requests |= BBL_SEND_SESSION_IPV6PD;
             session->network_send_requests |= BBL_SEND_SESSION_IPV6PD;

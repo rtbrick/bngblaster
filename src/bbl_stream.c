@@ -15,10 +15,17 @@
 #include <pthread.h>
 
 extern volatile bool g_teardown;
+extern bool g_init_phase;
+extern bool g_traffic;
 
-bool
+static bool
 bbl_stream_can_send(bbl_stream *stream) {
     bbl_session_s *session = stream->session;
+    
+    if(g_init_phase) {
+        return false;
+    }
+
     if(stream->config->stream_group_id == 0) {
         /* RAW stream */
         return true;
@@ -774,7 +781,7 @@ bbl_stream_tx_thread (void *thread_data) {
             }
         }
 
-        if(stream->session && !stream->session->stream_traffic) {
+        if(!g_traffic || (stream->session && !stream->session->stream_traffic)) {
             /* Close send window */
             stream->send_window_packets = 0;
             sleep.tv_nsec = 10 * MSEC;
@@ -885,7 +892,7 @@ bbl_stream_tx_job (timer_s *timer) {
         }
     }
 
-    if(session && !session->stream_traffic) {
+    if(!g_traffic || (session && !session->stream_traffic)) {
         /* Close send window */
         stream->send_window_packets = 0;
         return;
@@ -1028,6 +1035,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s added in upstream with %u PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             if(config->direction & STREAM_DIRECTION_DOWN) {
@@ -1062,6 +1070,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
@@ -1121,6 +1130,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "RAW traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
@@ -1129,4 +1139,41 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
     }
 
     return true;
+}
+
+json_t *
+bbl_stream_json(bbl_stream *stream) 
+{
+    json_t *root = NULL;
+
+    if(!stream) {
+        return NULL;
+    }
+
+    root = json_pack("{ss* ss si si si si si si si si si si si si si si si si si si sf sf sf}",
+        "name", stream->config->name,
+        "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "downstream",
+        "flow-id", stream->flow_id,
+        "rx-first-seq", stream->rx_first_seq,
+        "rx-last-seq", stream->rx_last_seq,
+        "rx-tos-tc", stream->rx_priority,
+        "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
+        "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
+        "rx-len", stream->rx_len,
+        "tx-len", stream->tx_len,
+        "rx-packets", stream->packets_rx,
+        "tx-packets", stream->packets_tx,
+        "rx-loss", stream->loss,
+        "rx-delay-nsec-min", stream->min_delay_ns,
+        "rx-delay-nsec-max", stream->max_delay_ns,
+        "rx-pps", stream->rate_packets_rx.avg,
+        "tx-pps", stream->rate_packets_tx.avg,
+        "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
+        "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
+        "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
+        "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0,
+        "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
+        "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
+
+    return root;
 }

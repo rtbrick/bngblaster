@@ -22,6 +22,7 @@ IPTV, L2TPv2, QoS, forwarding verification and convergence testing capabilities.
 ```
 $ bngblaster --help
 
+
       ____   __   ____         _        __                                  ,/
      / __ \ / /_ / __ ) _____ (_)_____ / /__                              ,'/
     / /_/ // __// __  |/ ___// // ___// //_/                            ,' /
@@ -38,12 +39,14 @@ Usage: bngblaster [OPTIONS]
   -v --version
   -h --help
   -C --config <args>
+  -T --stream-config <args>
   -l --logging debug|error|igmp|io|pppoe|info|pcap|timer|timer-detail|ip|loss|l2tp|dhcp
   -L --log-file <args>
   -u --username <args>
   -p --password <args>
   -P --pcap-capture <args>
-  -J --json-report <args>
+  -j --json-report-content sessions|streams
+  -J --json-report-file <args>
   -c --session-count <args>
   -g --mc-group <args>
   -s --mc-source <args>
@@ -53,6 +56,7 @@ Usage: bngblaster [OPTIONS]
   -I --interactive
   -b --hide-banner
   -f --force
+
 ```
 
 The BNG Blaster includes an optional interactive mode (`-I`) with realtime stats and

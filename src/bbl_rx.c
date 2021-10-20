@@ -304,6 +304,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
         }
         if(!stream->rx_first_seq) {
             stream->rx_first_seq = bbl->flow_seq;
+            interface->ctx->stats.stream_traffic_flows_verified++;
         } else {
             if(stream->rx_last_seq +1 != bbl->flow_seq) {
                 stream->loss++;
@@ -1878,6 +1879,17 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                         }
                         break;
                     default:
+                        break;
+                }
+            } else {
+                /* Accept RAW streams */
+                switch (bbl->sub_type) {
+                    case BBL_SUB_TYPE_IPV4:
+                        if(ipv4) bbl_rx_stream(interface, eth, bbl, ipv4->tos);
+                        break;
+                    case BBL_SUB_TYPE_IPV6:
+                    case BBL_SUB_TYPE_IPV6PD:
+                        if(ipv6) bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                         break;
                 }
             }
