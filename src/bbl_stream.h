@@ -30,7 +30,7 @@ typedef struct bbl_stream_config_
     bbl_stream_type_t type;
     bbl_stream_direction_t direction;
 
-    uint32_t pps;
+    double pps;
     uint16_t length;
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
