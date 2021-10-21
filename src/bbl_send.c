@@ -87,6 +87,7 @@ bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
         return BBL_SEND_FULL;
     }
     slot = interface->send.ring + interface->send.write;
+    slot->packet_len = 0;
     if(encode_ethernet(slot->packet, &slot->packet_len, eth) == PROTOCOL_SUCCESS) {
         interface->send.write = interface->send.next++;
         if(interface->send.next == interface->send.size) {
