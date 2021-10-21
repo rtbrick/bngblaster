@@ -10,7 +10,8 @@
 #ifndef __BBL_TIMER_H__
 #define __BBL_TIMER_H__
 
-#define MSEC 1000*1000 /* 1 million nanoseconds */
+#define MSEC 1000000 /* 1 million nanoseconds == 1 msec */
+#define SEC 1000000000 /* 1 billion nanoseconds == 1 sec */
 
 /*
  * Top level data structure for timers.

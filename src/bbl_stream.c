@@ -997,11 +997,9 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 return false;
             }
 
-            if(config->pps == 1) {
-                timer_sec = 1;
-            } else {
-                timer_nsec = 1000000000 / config->pps;
-            }
+            timer_nsec = SEC / config->pps;
+            timer_sec = timer_nsec / 1000000000;
+            timer_nsec = timer_nsec % 1000000000;
 
             if(config->direction & STREAM_DIRECTION_UP) {
                 stream = calloc(1, sizeof(bbl_stream));
@@ -1036,7 +1034,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s added in upstream with %u PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
+                LOG(DEBUG, "Traffic stream %s added in upstream with %lf PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
@@ -1071,7 +1069,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
+                LOG(DEBUG, "Traffic stream %s added in downstream with %lf PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
         }
@@ -1103,11 +1101,11 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
             if(!network_if) {
                 return false;
             }
-            if(config->pps == 1) {
-                timer_sec = 1;
-            } else {
-                timer_nsec = 1000000000 / config->pps;
-            }
+
+            timer_nsec = SEC / config->pps;
+            timer_sec = timer_nsec / 1000000000;
+            timer_nsec = timer_nsec % 1000000000;
+
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
                 stream->flow_id = ctx->flow_id++;
@@ -1131,7 +1129,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                 }
                 timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "RAW traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
+                LOG(DEBUG, "RAW traffic stream %s added in downstream with %lf PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
         }

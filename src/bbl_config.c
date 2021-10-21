@@ -729,7 +729,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     value = json_object_get(stream, "pps");
     if (value) {
         stream_config->pps = json_number_value(value);
-        if (stream_config->pps == 0) {
+        if (stream_config->pps <= 0) {
             fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
             return false;
         }

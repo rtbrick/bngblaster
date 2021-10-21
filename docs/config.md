@@ -693,8 +693,8 @@ Attribute | Description | Default
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
 
-The `pps` option has priority over `bps` where second is only a helper to calculate the `pps`
-based on given `bps` and `length`.
+The `pps` option supports also float numbers like 0.1, or 2.5 PPS and has priority over `bps` 
+where second is only a helper to calculate the `pps` based on given `bps` and `length`. 
 
 ## Access-Line
 
