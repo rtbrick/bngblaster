@@ -171,8 +171,8 @@ bbl_read_key_job (timer_s *timer)
 /*
  * Format a progress bar.
  */
-char *
-bbl_format_progress (uint16_t complete, uint16_t current)
+static char *
+bbl_format_progress (uint32_t complete, uint32_t current)
 {
     static char buf[PROGRESS_BAR_SIZE+1];
     float percentage;
