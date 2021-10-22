@@ -81,6 +81,7 @@ void timer_add(timer_root_s *, timer_s **, char *, time_t , long , void *, void 
 void timer_add_periodic(timer_root_s *, timer_s **, char *, time_t , long , void *, void *);
 void timer_del(timer_s *);
 void timer_smear_bucket(timer_root_s *, time_t, long);
+void timer_smear_all_buckets (timer_root_s *root);
 void timer_walk(struct timer_root_ *);
 
 void timespec_add(struct timespec *, struct timespec *, struct timespec *);

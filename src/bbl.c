@@ -576,6 +576,12 @@ main (int argc, char *argv[])
      * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
 
+    /* Smear all buckets. */
+    timer_smear_all_buckets(&ctx->timer_root);
+
+    /* Start threads. */
+    bbl_stream_start_threads(ctx);
+
     /* Start event loop. */
     log_open();
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
@@ -585,6 +591,9 @@ main (int argc, char *argv[])
         timer_walk(&ctx->timer_root);
     }
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_stop);
+
+    /* Stop threads */
+    bbl_stream_stop_threads(ctx);
 
     /* Stop curses. Do this before the final reports. */
     if(g_interactive) {
