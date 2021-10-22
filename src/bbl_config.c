@@ -652,6 +652,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     json_t *value = NULL;
     const char *s = NULL;
     double bps;
+    double number;
 
     if (json_unpack(stream, "{s:s}", "type", &s) == 0) {
         if (strcmp(s, "ipv4") == 0) {
@@ -777,9 +778,20 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         }
     }
 
+    /* Threading */
     value = json_object_get(stream, "threaded");
     if (json_is_boolean(value)) {
         stream_config->threaded = json_boolean_value(value);
+    }
+    value = json_object_get(stream, "thread-group");
+    if (value) {
+        number = json_number_value(value);
+        if(number > 0 && number < 256) {
+            stream_config->thread_group = number;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid thread-group (valid range is 1-255) for stream %s\n", stream_config->name);
+            return false;
+        }
     }
 
     /* Validate configuration */

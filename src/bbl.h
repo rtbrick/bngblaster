@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <jansson.h>
+#include <pthread.h>
 
 #define NCURSES_NOMACROS 1
 #include <curses.h>

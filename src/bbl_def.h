@@ -1,8 +1,8 @@
 #ifndef __BBL_DEF_H__
 #define __BBL_DEF_H__
 
-#define IO_BUFFER_LEN               2048
-#define SCRATCHPAD_LEN              2048
+#define IO_BUFFER_LEN               9216
+#define SCRATCHPAD_LEN              4096
 #define CHALLENGE_LEN               16
 
 #define FILE_PATH_LEN               128
