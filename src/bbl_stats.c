@@ -222,6 +222,13 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
                     stats->min_stream_rx_first_seq = stream->rx_first_seq;
                 }
                 if(stream->rx_first_seq > stats->max_stream_rx_first_seq) stats->max_stream_rx_first_seq = stream->rx_first_seq;
+            
+                if(stats->min_stream_delay_ns) {
+                    if(stream->min_delay_ns < stats->min_stream_delay_ns) stats->min_stream_delay_ns = stream->min_delay_ns;
+                } else {
+                    stats->min_stream_delay_ns = stream->min_delay_ns;
+                }
+                if(stream->max_delay_ns > stats->max_stream_delay_ns) stats->max_stream_delay_ns = stream->max_delay_ns;
             }
         }
     }
@@ -427,9 +434,12 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         printf("  First Sequence Number Received  MIN: %8lu MAX: %8lu\n", 
             stats->min_stream_rx_first_seq,
             stats->max_stream_rx_first_seq);
-        printf("  Flow Packet Loss                MIN: %8lu MAX: %8lu\n", 
+        printf("  Flow Receive Packet Loss        MIN: %8lu MAX: %8lu\n", 
             stats->min_stream_loss,
             stats->max_stream_loss);
+        printf("  Flow Receive Delay (nsec)       MIN: %8lu MAX: %8lu\n", 
+            stats->min_stream_delay_ns,
+            stats->max_stream_delay_ns);
     }
 
     if(ctx->config.igmp_group_count > 1) {
@@ -694,8 +704,10 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         json_object_set(jobj_sub, "verified-flows", json_integer(ctx->stats.stream_traffic_flows_verified));
         json_object_set(jobj_sub, "first-seq-rx-min", json_integer(stats->min_stream_rx_first_seq));
         json_object_set(jobj_sub, "first-seq-rx-max", json_integer(stats->max_stream_rx_first_seq));
-        json_object_set(jobj_sub, "flow-packet-loss-min", json_integer(stats->min_stream_loss));
-        json_object_set(jobj_sub, "flow-packet-loss-max", json_integer(stats->max_stream_loss));
+        json_object_set(jobj_sub, "flow-rx-packet-loss-min", json_integer(stats->min_stream_loss));
+        json_object_set(jobj_sub, "flow-rx-packet-loss-max", json_integer(stats->max_stream_loss));
+        json_object_set(jobj_sub, "flow-rx-delay-min", json_integer(stats->min_stream_delay_ns));
+        json_object_set(jobj_sub, "flow-rx-delay-max", json_integer(stats->max_stream_delay_ns));
         json_object_set(jobj, "traffic-streams", jobj_sub);
     }
 
