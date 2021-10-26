@@ -586,13 +586,25 @@ main (int argc, char *argv[])
     log_open();
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
-    timer_walk(&ctx->timer_root);
-    while(ctx->sessions_terminated < ctx->sessions && g_teardown_request_count < 10) {
+    while(g_teardown_request_count < 10) {
+        if(ctx->sessions) {
+             /* With sessions, wait for all sessions
+              * to be terminated. */
+            if(ctx->sessions_terminated >= ctx->sessions) {
+                break;
+            }
+        } else {
+            /* Without sessions, we can stop immediately
+             * as soon as teardown was requested. */
+            if(g_teardown) {
+                break;
+            }
+        }
         timer_walk(&ctx->timer_root);
     }
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_stop);
 
-    /* Stop threads */
+    /* Stop threads. */
     bbl_stream_stop_threads(ctx);
 
     /* Stop curses. Do this before the final reports. */
