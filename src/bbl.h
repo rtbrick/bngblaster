@@ -67,4 +67,7 @@
 WINDOW *log_win;
 WINDOW *stats_win;
 
+void
+enable_disable_traffic(bbl_ctx_s *ctx, bool status);
+
 #endif

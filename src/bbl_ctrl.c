@@ -33,8 +33,6 @@
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
 
-extern bool g_traffic;
-
 typedef ssize_t callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
 
 static char *
@@ -1134,6 +1132,103 @@ bbl_ctrl_cfm_cc_rdi_off(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arg
     return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, false);
 }
 
+ssize_t
+bbl_ctrl_stream_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root = json_pack("{ss si s{si si}}",
+                             "status", "ok",
+                             "code", 200,
+                             "stream-stats",
+                             "total-flows", ctx->stats.stream_traffic_flows,
+                             "verified-flows", ctx->stats.stream_traffic_flows_verified);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+ssize_t
+bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+    ssize_t result = 0;
+
+    json_t *root;
+    json_t *json_stream = NULL;
+
+    bbl_stream *stream;
+    void **search = NULL;
+
+    int number = 0;
+    uint64_t flow_id;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
+    }
+
+    flow_id = number;
+    search = dict_search(ctx->stream_flow_dict, &flow_id);
+    if(search) {
+        stream = *search;
+        if(stream->thread.thread) {
+            pthread_mutex_lock(&stream->thread.mutex);
+        }
+        json_stream = bbl_stream_json(stream);
+        root = json_pack("{ss si so*}",
+                         "status", "ok",
+                         "code", 200,
+                         "stream-info", json_stream);
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(json_stream);
+        }
+        if(stream->thread.thread) {
+            pthread_mutex_unlock(&stream->thread.mutex);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "stream not found");
+    }
+}
+
+ssize_t
+bbl_ctrl_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
+            session->stream_traffic = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                session->stream_traffic = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+ssize_t
+bbl_ctrl_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    enable_disable_traffic(ctx, true);
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+ssize_t
+bbl_ctrl_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    enable_disable_traffic(ctx, false);
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
 
 struct action {
     char *name;
@@ -1170,11 +1265,15 @@ struct action actions[] = {
     {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
     {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
     {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
+    {"stream-info", bbl_ctrl_stream_info},
+    {"stream-stats", bbl_ctrl_stream_stats},
     {"sessions-pending", bbl_ctrl_sessions_pending},
     {"cfm-cc-start", bbl_ctrl_cfm_cc_start},
     {"cfm-cc-stop", bbl_ctrl_cfm_cc_stop},
     {"cfm-cc-rdi-on", bbl_ctrl_cfm_cc_rdi_on},
     {"cfm-cc-rdi-off", bbl_ctrl_cfm_cc_rdi_off},
+    {"traffic-start", bbl_ctrl_traffic_start},
+    {"traffic-stop", bbl_ctrl_traffic_stop},
     {NULL, NULL},
 };
 

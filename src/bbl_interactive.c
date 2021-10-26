@@ -45,8 +45,6 @@ extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
 extern volatile bool g_banner;
 
-extern bool g_traffic;
-
 /* This global variable is used to switch between access interfaces. */
 uint8_t g_access_if_selected  = 0;
 uint8_t g_network_if_selected = 0;
@@ -81,24 +79,6 @@ bbl_init_stats_win(bbl_ctx_s *ctx)
     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
     if(g_banner) {
         wprintw(stats_win, "%s", banner);
-    }
-}
-
-static void
-enable_disable_traffic(bbl_ctx_s *ctx, bool status)
-{
-    bbl_session_s *session;
-    uint32_t i;
-
-    g_traffic = status;
-
-    /* Iterate over all sessions */
-    for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
-        if(session) {
-            session->session_traffic = status;
-            session->stream_traffic = status;
-        }
     }
 }
 
