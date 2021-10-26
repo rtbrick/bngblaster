@@ -555,7 +555,7 @@ timer_walk (timer_root_s *root)
              * Hitting the first non-expired timer means
              * we're done processing this buckets queue.
              */
-            if ((timespec_compare(&timer->expire, &now) == 1)) {
+            if (timespec_compare(&timer->expire, &now) == 1) {
                 break;
             }
 
@@ -626,7 +626,7 @@ timer_walk (timer_root_s *root)
              * Hitting the first non-expired timer means
              * we're done processing this buckets queue.
              */
-            if ((timespec_compare(&timer->expire, &now) == 1)) {
+            if (timespec_compare(&timer->expire, &now) == 1) {
                 break;
             }
         }
