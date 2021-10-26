@@ -79,6 +79,8 @@ typedef struct bbl_stats_ {
     uint64_t max_stream_loss;
     uint64_t min_stream_rx_first_seq;
     uint64_t max_stream_rx_first_seq;
+    uint64_t min_stream_delay_ns;
+    uint64_t max_stream_delay_ns;
 } bbl_stats_t;
 
 void bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value);
