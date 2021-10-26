@@ -44,7 +44,7 @@ typedef struct bbl_stream_config_
     bool threaded;
     uint8_t thread_group;
 
-    void *next; /* Next stream config */
+    bbl_stream_config *next; /* Next stream config */
 } bbl_stream_config;
 
 typedef struct bbl_stream_
@@ -88,8 +88,15 @@ typedef struct bbl_stream_
     bbl_rate_s rate_packets_tx;
     bbl_rate_s rate_packets_rx;
 
-    void *next; /* Next stream of same session */
-    void *thread_next; /* Next stream in same thread */ 
+    bbl_stream *next; /* Next stream of same session */
+
+    /* Attributes used for threaded streams only! */
+    struct {
+        bbl_stream_thread *thread;
+        bbl_stream *next; /* Next stream in same thread */ 
+        pthread_mutex_t mutex;
+        bool can_send;
+    } thread;
 } bbl_stream;
 
 /* Structure for traffic stream threads
@@ -102,22 +109,30 @@ typedef struct bbl_stream_thread_
      * one thread per stream. */
     uint8_t thread_group;
     pthread_t thread_id;
-    
+    pthread_mutex_t mutex;
+
+    /* True if thread is active! */
     bool active;
 
-    bbl_interface_s *interface;
-    
+    /* Root for thread local timers */
+    struct timer_root_ timer_root; 
+
     /* Timer for synchronice job of thread 
      * counters with main counters. */
     struct timer_ *sync_timer;
 
-    uint32_t stream_count; /* Number of streams in group */
-    bbl_stream *stream;    /* First stream in group */
-    bbl_stream *stream_tail;    /* Last stream in group */
+    /* TX interface */
+    bbl_interface_s *interface;
 
-    /* This variable is true if there are
-     * session streams in this thread. */
-    bool sessions; 
+    /* TX interface file RAW socket */
+    struct {
+        int fd_tx;
+        struct sockaddr_ll addr;
+    } socket;
+
+    uint32_t stream_count; /* Number of streams in group */
+    bbl_stream *stream; /* First stream in group */
+    bbl_stream *stream_tail; /* Last stream in group */
 
     /* Thread counters ... */
 
