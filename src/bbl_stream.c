@@ -724,6 +724,10 @@ bbl_stream_tx_thread (void *thread_data) {
 
     bbl_stream_thread *thread = thread_data;
 
+    pthread_mutex_lock(&thread->mutex);
+    timer_smear_all_buckets(&thread->timer_root);
+    pthread_mutex_unlock(&thread->mutex);
+
     /* Open new TX socket for thread. */
     while(true) {
         pthread_mutex_lock(&thread->mutex);
@@ -746,7 +750,7 @@ bbl_stream_tx_thread (void *thread_data) {
  * @param thread 
  */
 void
-bbl_stream_tx_thread_sync (bbl_stream_thread *thread) {
+bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
     bbl_interface_s *interface = thread->interface;
     bbl_stream *stream = thread->stream;
     bbl_session_s *session = NULL;
@@ -833,7 +837,7 @@ bbl_stream_tx_thread_sync (bbl_stream_thread *thread) {
 }
 
 void
-bbl_stream_tx_thread_sync_timer (timer_s *timer) {
+bbl_stream_tx_thread_sync_timer(timer_s *timer) {
     bbl_stream_thread *thread = timer->data;
     bbl_stream_tx_thread_sync(thread);
 }

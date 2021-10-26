@@ -54,6 +54,24 @@ teardown_handler(int sig)
     g_teardown_request_count++;
 }
 
+void
+enable_disable_traffic(bbl_ctx_s *ctx, bool status)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    g_traffic = status;
+
+    /* Iterate over all sessions */
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session) {
+            session->session_traffic = status;
+            session->stream_traffic = status;
+        }
+    }
+}
+
 static bool
 bbl_add_multicast_packets(bbl_ctx_s *ctx)
 {
