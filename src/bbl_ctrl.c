@@ -1305,7 +1305,7 @@ bbl_ctrl_socket_job (timer_s *timer) {
             }
         } else {
             /* New connection */
-            bzero(buf, sizeof(buf));
+            memset(buf, 0x0, sizeof(buf));
             len = read(fd, buf, INPUT_BUFFER);
             if(len) {
                 root = json_loads((const char*)buf, 0, &error);

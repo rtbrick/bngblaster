@@ -525,7 +525,7 @@ main (int argc, char *argv[])
     }
     if(config_streams_file) {
         if(!bbl_config_streams_load_json(config_streams_file, ctx)) {
-            fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_file);
+            fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_streams_file);
             exit(1);
         }
     }
@@ -576,7 +576,7 @@ main (int argc, char *argv[])
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
             exit(1);
-        };
+        }
     }
 
     /* Setup control job. */

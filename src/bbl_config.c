@@ -1617,8 +1617,8 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
     ctx->config.sessions_max_outstanding = 800;
-    ctx->config.sessions_start_rate = 400,
-    ctx->config.sessions_stop_rate = 400,
+    ctx->config.sessions_start_rate = 400;
+    ctx->config.sessions_stop_rate = 400;
     ctx->config.pppoe_discovery_timeout = 5;
     ctx->config.pppoe_discovery_retry = 10;
     ctx->config.ppp_mru = 1492;
