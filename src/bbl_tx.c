@@ -1778,7 +1778,7 @@ bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                 return PROTOCOL_SUCCESS;
             }
             /* Write Multicast frames. */
-            if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic ) {
+            if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic) {
                 if(interface->mc_packet_cursor < ctx->config.igmp_group_count) {
                     memcpy(buf, interface->mc_packets + (interface->mc_packet_cursor*interface->mc_packet_len), interface->mc_packet_len);
                     *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
@@ -1786,10 +1786,11 @@ bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                     *(uint32_t*)(buf + (interface->mc_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
                     *len = interface->mc_packet_len;
                     interface->mc_packet_cursor++;
+                    interface->stats.mc_tx++;
                     return PROTOCOL_SUCCESS;
                 } else {
                     /* This must be the last send operation in this function to fill up remaining slots
-                    * with multicast traffic but all other types of traffic have priority. */
+                     * with multicast traffic but all other types of traffic have priority. */
                     interface->mc_packet_cursor = 0;
                     interface->mc_packet_seq++;
                 }
