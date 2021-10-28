@@ -272,32 +272,10 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
-    if(ctx->sessions) {
-        if(ctx->sessions_terminated >= ctx->sessions) {
-            /* Now close all L2TP tunnels ... */
-            if(ctx->l2tp_tunnels == 0) {
-                /* Stop event loop to close application! */
-                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
-            } else {
-                bbl_l2tp_stop_all_tunnel(ctx);
-            }
-            return;
-        }
-    } else {
-        /* Network interface only... */
-        if(g_teardown) {
-            if(ctx->l2tp_tunnels == 0) {
-                /* Stop event loop to close application! */
-                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
-            } else {
-                bbl_l2tp_stop_all_tunnel(ctx);
-            }
-            return;
-        }
-        return;
-    }
-
     if(g_teardown) {
+        if(ctx->l2tp_tunnels && ctx->sessions_terminated >= ctx->sessions) {
+            bbl_l2tp_stop_all_tunnel(ctx);
+        }
         /* Teardown phase ... */
         if(g_teardown_request) {
             /* Put all sessions on the teardown list. */
@@ -602,17 +580,19 @@ main (int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
     while(g_teardown_request_count < 10) {
-        if(ctx->sessions) {
-             /* With sessions, wait for all sessions
-              * to be terminated. */
-            if(ctx->sessions_terminated >= ctx->sessions) {
-                break;
-            }
-        } else {
-            /* Without sessions, we can stop immediately
-             * as soon as teardown was requested. */
-            if(g_teardown) {
-                break;
+        if(!ctx->l2tp_tunnels) {
+            if(ctx->sessions) {
+                /* With sessions, wait for all sessions
+                * to be terminated. */
+                if(ctx->sessions_terminated >= ctx->sessions && ctx->l2tp_tunnels == 0) {
+                    break;
+                }
+            } else {
+                /* Without sessions, we can stop immediately
+                * as soon as teardown was requested. */
+                if(g_teardown) {
+                    break;
+                }
             }
         }
         timer_walk(&ctx->timer_root);
