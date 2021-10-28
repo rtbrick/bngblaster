@@ -111,10 +111,7 @@ bbl_add_multicast_packets(bbl_ctx_s *ctx)
             }
             group = htobe32(group);
             /* Generate multicast destination MAC */
-            *(uint32_t*)(&mac[2]) = group;
-            mac[0] = 0x01;
-            mac[2] = 0x5e;
-            mac[3] &= 0x7f;
+            ipv4_multicast_mac(group, mac);
             eth.src = interface->mac;
             eth.dst = mac;
             eth.vlan_outer = interface->vlan;

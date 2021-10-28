@@ -522,10 +522,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
                 /* All IPv4 multicast addresses start with 1110 */
                 if((ipv4.dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
                     /* Generate multicast destination MAC */
-                    *(uint32_t*)(&mac[2]) = ipv4.dst;
-                    mac[0] = 0x01;
-                    mac[2] = 0x5e;
-                    mac[3] &= 0x7f;
+                    ipv4_multicast_mac(ipv4.dst, mac);
                     eth.dst = mac;
                     bbl.type = BBL_TYPE_MULTICAST;
                     bbl.mc_source = ipv4.src;
