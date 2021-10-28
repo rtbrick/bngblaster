@@ -2593,6 +2593,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
 
     /* Init IPv4 header */
     ipv4 = (bbl_ipv4_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv4_t));
+    ipv4->router_alert_option = false;
 
     header = (struct ip*)buf;
 
