@@ -62,4 +62,11 @@ bbl_send_icmp_reply(bbl_interface_s *interface,
                     bbl_ipv4_t *ipv4, 
                     bbl_icmp_t *icmp);
 
+bbl_send_result_t 
+bbl_send_icmpv6_echo_reply(bbl_interface_s *interface,
+                           bbl_session_s *session,
+                           bbl_ethernet_header_t *eth, 
+                           bbl_ipv6_t *ipv6, 
+                           bbl_icmpv6_t *icmpv6);
+
 #endif
