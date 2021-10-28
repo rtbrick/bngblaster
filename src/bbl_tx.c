@@ -538,12 +538,12 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
     bbl_pppoe_session_t pppoe = {0};
     bbl_ipv6_t ipv6 = {0};
     bbl_icmpv6_t icmpv6 = {0};
+    uint8_t mac[ETH_ADDR_LEN];
 
     interface = session->interface;
     ctx = interface->ctx;
     interface->stats.icmpv6_tx++;
 
-    eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
@@ -555,13 +555,17 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
             return WRONG_PROTOCOL_STATE;
         }
+        eth.dst = session->server_mac;
         eth.type = ETH_TYPE_PPPOE_SESSION;
         eth.next = &pppoe;
+
         pppoe.session_id = session->pppoe_session_id;
         pppoe.protocol = PROTOCOL_IPV6;
         pppoe.next = &ipv6;
     } else {
         /* IPoE */
+        ipv6_multicast_mac(ipv6_multicast_all_routers, mac);
+        eth.dst = mac;
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
@@ -616,6 +620,7 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
     bbl_udp_t udp = {0};
     bbl_dhcpv6_t dhcpv6 = {0};
     access_line_t access_line = {0};
+    uint8_t mac[ETH_ADDR_LEN];
 
     if(session->dhcpv6_state == BBL_DHCP_INIT ||
        session->dhcpv6_state == BBL_DHCP_BOUND) {
@@ -649,7 +654,8 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
         pppoe.next = &ipv6;
     } else {
         /* IPoE */
-        eth.dst = (void*)ipv6_multicast_mac_dhcp;
+        ipv6_multicast_mac(ipv6_multicast_all_dhcp, mac);
+        eth.dst = mac;
         eth.vlan_outer_priority = ctx->config.dhcpv6_vlan_priority;
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
@@ -1628,6 +1634,7 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
     bbl_arp_t arp = {0};
     bbl_ipv6_t ipv6 = {0};
     bbl_icmpv6_t icmpv6 = {0};
+    uint8_t mac[ETH_ADDR_LEN];
 
     *len = 0;
 
@@ -1649,15 +1656,12 @@ bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t 
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NS) {
         interface->send_requests &= ~BBL_IF_SEND_ICMPV6_NS;
-        if(*(uint32_t*)interface->gateway_mac == 0) {
-            eth.dst = (uint8_t*)ipv6_multicast_mac;
-        } else {
-            eth.dst = interface->gateway_mac;
-        }
+        ipv6_multicast_mac(interface->gateway6_solicited_node_multicast, mac);
+        eth.dst = mac;
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
         ipv6.src = interface->ip6.address;
-        ipv6.dst = interface->gateway6.address;
+        ipv6.dst = interface->gateway6_solicited_node_multicast;
         ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
         ipv6.next = &icmpv6;
         ipv6.ttl = 255;
