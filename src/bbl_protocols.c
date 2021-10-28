@@ -547,8 +547,6 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
 
     if(icmp->data_len) {
         /* Copy data */
-        *(uint32_t*)buf = 0;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         memcpy(buf, icmp->data, icmp->data_len);
         BUMP_WRITE_BUFFER(buf, len, icmp->data_len);
     } else {
