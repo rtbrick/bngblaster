@@ -21,3 +21,7 @@ See the LICENSE file for more details.
 ## Copyright
 
 Copyright (C) 2020-2021, RtBrick, Inc.
+
+## Contact
+
+bngblaster@rtbrick.com
