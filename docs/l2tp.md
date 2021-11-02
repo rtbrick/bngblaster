@@ -259,6 +259,7 @@ Following an example with 30 L2TP LNS servers.
 ## Receive Tunnel Information
 
 `$ sudo bngblaster-cli run.sock l2tp-tunnels`
+
 ```json
 {
     "status": "ok",
@@ -291,6 +292,7 @@ Following an example with 30 L2TP LNS servers.
 The `l2tp-sessions` command returns all L2TP sessions.
 
 `$ sudo bngblaster-cli run.sock l2tp-sessions`
+
 ```json
 {
     "status": "ok",

@@ -23,7 +23,7 @@ IPTV, L2TPv2 (LNS emulation), L2BSA, QoS, forwarding verification and convergenc
 **Info:** _The BNG Blaster Controller is not yet published but you can send
 a mail to bngblaster@rtbrick.com if you are interested to get early access!_
 
-```
+```cli
 $ bngblaster --help
 
 
