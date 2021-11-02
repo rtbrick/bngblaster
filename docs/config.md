@@ -119,8 +119,8 @@ increase the `io-slots` from the default value of `1024` to `2048` or more.
 
 The supported IO modes are listed with `bngblaster -v` but except
 `packet_mmap_raw` all other modes are currently considered as experimental. In
-the default mode (`packet_mmap_raw`) all packets are received in a packet_mmap
-ring buffer and send directly trough raw sockets.
+the default mode (`packet_mmap_raw`) all packets are received in a Packet MMAP
+ring buffer and send directly trough RAW packet sockets.
 
 **WARNING**: Disable `qdisc-bypass` only if BNG Blaster is not sending traffic!
 
