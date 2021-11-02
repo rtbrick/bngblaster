@@ -103,12 +103,12 @@ Session Traffic:
     Network IPv6:        500
     Network IPv6PD:      500
   First Sequence Number Received:
-    Access  IPv4    MIN:        1 MAX:        2
-    Access  IPv6    MIN:        2 MAX:        2
-    Access  IPv6PD  MIN:        2 MAX:        2
-    Network IPv4    MIN:        1 MAX:        2
-    Network IPv6    MIN:        2 MAX:        2
-    Network IPv6PD  MIN:        2 MAX:        2
+    Access  IPv4    MIN:        1 ( 1.000s) MAX:        2 ( 2.000s)
+    Access  IPv6    MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+    Access  IPv6PD  MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+    Network IPv4    MIN:        1 ( 1.000s) MAX:        2 ( 2.000s)
+    Network IPv6    MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+    Network IPv6PD  MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
 ```
 
 ## JSON Reports
@@ -244,6 +244,10 @@ as shown in the example below.
   }
 }
 ```
+
+The optional argument `-j sessions` allows to include per session statistics 
+in the report file. Similar with `-j streams` which allows to include per stream
+statistics. Both options could be also combined.
 
 ## Interface Statistics
 

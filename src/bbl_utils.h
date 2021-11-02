@@ -21,7 +21,9 @@ char *format_mac_address(uint8_t *mac);
 char *format_ipv4_address(uint32_t *addr4);
 char *format_ipv6_address(ipv6addr_t *addr6);
 char *format_ipv6_prefix(ipv6_prefix *addr6);
-
+void ipv4_multicast_mac(const uint32_t ipv4, uint8_t* mac);
+void ipv6_multicast_mac(const uint8_t *ipv6, uint8_t* mac);
 char *replace_substring (const char* s, const char* old, const char* new);
 const char *val2key (struct keyval_ *keyval, uint val);
+
 #endif

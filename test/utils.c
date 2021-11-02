@@ -77,6 +77,34 @@ test_replace_substring(void **unused) {
     assert_string_equal(replace_substring("1234{long-variable-name}567890", "{long-variable-name}", ""), "1234567890"); 
 }
 
+static void 
+test_ipv4_multicast_mac(void **unused) {
+    (void) unused;
+
+    uint32_t ipv4;
+    uint8_t mac[ETH_ADDR_LEN] = {0};
+    uint8_t mac_expected[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x01, 0x02, 0x03};
+
+    inet_pton(AF_INET, "239.1.2.3", &ipv4);
+    ipv4_multicast_mac(ipv4, mac);
+
+    assert_memory_equal(mac_expected, mac, ETH_ADDR_LEN);
+}
+
+static void 
+test_ipv6_multicast_mac(void **unused) {
+    (void) unused;
+
+    ipv6addr_t ipv6;
+    uint8_t mac[ETH_ADDR_LEN] = {0};
+    uint8_t mac_expected[ETH_ADDR_LEN] = {0x33, 0x33, 0x01, 0x02, 0x03, 0x04};
+
+    inet_pton(AF_INET6, "ff02::0102:0304", ipv6);
+    ipv6_multicast_mac(ipv6, mac);
+
+    assert_memory_equal(mac_expected, mac, ETH_ADDR_LEN);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_val2key),
@@ -85,6 +113,8 @@ int main() {
         cmocka_unit_test(test_format_ipv6_address),
         cmocka_unit_test(test_format_ipv6_prefix),
         cmocka_unit_test(test_replace_substring),
+        cmocka_unit_test(test_ipv4_multicast_mac),
+        cmocka_unit_test(test_ipv6_multicast_mac),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

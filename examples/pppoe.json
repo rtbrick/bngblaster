@@ -1,0 +1,87 @@
+{
+    "interfaces": {
+        "network": {
+            "interface": "eth2",
+            "address": "10.0.0.10",
+            "gateway": "10.0.0.2",
+            "address-ipv6": "fc66:1337:7331:8::10",
+            "gateway-ipv6": "fc66:1337:7331:8::1"
+        },
+        "access": [
+        {
+            "interface": "eth1",
+            "outer-vlan-min": 1000,
+            "outer-vlan-max": 1999,
+            "inner-vlan-min": 7,
+            "inner-vlan-max": 7,
+            "authentication-protocol": "PAP",
+            "access-line-profile-id": 1
+        },
+        {
+            "interface": "eth1",
+            "outer-vlan-min": 2000,
+            "outer-vlan-max": 2999,
+            "inner-vlan-min": 7,
+            "inner-vlan-max": 7,
+            "authentication-protocol": "CHAP",
+            "access-line-profile-id": 1
+        }
+     ]  
+    },
+    "sessions": {
+        "count": 1,
+        "session-time": 0,
+        "max-outstanding": 800,
+        "start-rate": 400,
+        "stop-rate": 400
+    },
+    "pppoe": {
+        "reconnect": true,
+        "discovery-timeout": 3,
+        "discovery-retry": 10,
+        "host-uniq": true,
+        "vlan-priority": 6
+    },
+    "ppp": {
+        "mru": 1492,
+        "authentication": {
+            "username": "user{session-global}@rtbrick.com",
+            "password": "test"
+        }
+    },
+    "dhcpv6": {
+        "enable": true,
+        "rapid-commit": true
+    },
+    "access-line": {
+        "agent-remote-id": "DEU.RTBRICK.{session-global}",
+        "agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:{session-global}"
+    },
+    "access-line-profiles": [
+        {
+            "access-line-profile-id": 1,
+            "act-up": 2000,
+            "act-down": 16000,
+            "min-up": 64,
+            "min-down": 1024,
+            "att-up": 2048,
+            "att-down": 16384,
+            "max-up": 2040,
+            "max-down": 16380,
+            "min-up-low": 32,
+            "min-down-low": 1024,
+            "max-interl-delay-up": 100,
+            "act-interl-delay-up": 101,
+            "max-interl-delay-down": 200,
+            "act-interl-delay-down": 201,
+            "data-link-encaps": 66051,
+            "dsl-type": 5
+        }
+    ],
+    "session-traffic": {
+        "autostart": true,
+        "ipv4-pps": 1,
+        "ipv6-pps": 1,
+        "ipv6pd-pps": 1
+    }
+}

@@ -110,10 +110,10 @@ bbl_igmp_zapping(timer_s *timer)
     group = session->zapping_joined_group;
     if(group->first_mc_rx_time.tv_sec) {
         timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+        ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+        if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
         join_delay = (time_diff.tv_sec * 1000) + ms;
-        if(!join_delay) join_delay = 1; // join delay must be at least one millisecond
+        if(!join_delay) join_delay = 1; /* join delay must be at least one millisecond */
         session->zapping_join_delay_sum += join_delay;
         session->zapping_join_delay_count++;
         if(join_delay > session->stats.max_join_delay) session->stats.max_join_delay = join_delay;
@@ -158,10 +158,10 @@ bbl_igmp_zapping(timer_s *timer)
     group = session->zapping_leaved_group;
     if(group->group && group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
         timespec_sub(&time_diff, &group->last_mc_rx_time, &group->leave_tx_time);
-        ms = time_diff.tv_nsec / 1000000; // convert nanoseconds to milliseconds
-        if(time_diff.tv_nsec % 1000000) ms++; // simple roundup function
+        ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+        if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
         leave_delay = (time_diff.tv_sec * 1000) + ms;
-        if(!leave_delay) leave_delay = 1; // leave delay must be at least one millisecond
+        if(!leave_delay) leave_delay = 1; /* leave delay must be at least one millisecond */
         session->zapping_leave_delay_sum += leave_delay;
         session->zapping_leave_delay_count++;
         if(leave_delay > session->stats.max_leave_delay) session->stats.max_leave_delay = leave_delay;
@@ -304,6 +304,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
         }
         if(!stream->rx_first_seq) {
             stream->rx_first_seq = bbl->flow_seq;
+            interface->ctx->stats.stream_traffic_flows_verified++;
         } else {
             if(stream->rx_last_seq +1 != bbl->flow_seq) {
                 stream->loss++;
@@ -400,7 +401,7 @@ bbl_cfm_cc(timer_s *timer) {
     bbl_session_s *session = timer->data;
     if(session->session_state == BBL_ESTABLISHED && session->cfm_cc) {
         session->send_requests |= BBL_SEND_CFM_CC;
-        bbl_session_network_tx_qnode_insert(session);
+        bbl_session_tx_qnode_insert(session);
     }
 }
 
@@ -458,6 +459,13 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
     bbl_ctx_s *ctx = interface->ctx;
 
     session->stats.icmpv6_rx++;
+
+    if(session->a10nsp_session) {
+        /* There is currently no IPv6 support 
+         * for A10NSP terminated sessions today. */
+        return;
+    }
+
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
         if(!session->icmpv6_ra_received) {
             /* The first RA received ... */
@@ -474,7 +482,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                         memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
                     }
                 }
-                if(session->access_type == ACCESS_TYPE_PPPOE && session->l2tp == false) {
+                if(session->access_type == ACCESS_TYPE_PPPOE&& session->l2tp == false) {
                     bbl_session_traffic_start_ipv6(ctx, session);
                 }
             }
@@ -487,28 +495,8 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         session->send_requests |= BBL_SEND_ICMPV6_NA;
-    }
-}
-
-void
-bbl_rx_icmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
-
-    bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
-
-    if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
-        session->icmp_reply_type = ICMP_TYPE_ECHO_REPLY;
-        session->icmp_reply_destination = ipv4->src;
-        if(icmp->data_len) {
-            if(icmp->data_len > ICMP_DATA_BUFFER) {
-                memcpy(session->icmp_reply_data, icmp->data, ICMP_DATA_BUFFER);
-                session->icmp_reply_data_len = ICMP_DATA_BUFFER;
-            } else {
-                memcpy(session->icmp_reply_data, icmp->data, icmp->data_len);
-                session->icmp_reply_data_len = icmp->data_len;
-            }
-        }
-        session->send_requests |= BBL_SEND_ICMP_REPLY;
-        bbl_session_tx_qnode_insert(session);
+    } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
+        bbl_send_icmpv6_echo_reply(interface, session, eth, ipv6, icmpv6);
     }
 }
 
@@ -561,6 +549,17 @@ bbl_rx_igmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
     }
 }
 
+static void
+bbl_rx_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_session_s *session) {
+    bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
+    if(session->ip_address &&
+       session->ip_address == ipv4->dst &&
+       icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+        /* Send ICMP reply... */
+        bbl_send_icmp_reply(session->interface, session, eth, ipv4, icmp);
+    }
+}
+
 void
 bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface, bbl_session_s *session) {
 
@@ -586,7 +585,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
         case PROTOCOL_IPV4_ICMP:
             session->stats.icmp_rx++;
             interface->stats.icmp_rx++;
-            return bbl_rx_icmp(ipv4, session);
+            return bbl_rx_icmp(eth, ipv4, session);
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_t*)ipv4->next;
             if (udp->protocol == UDP_PROTOCOL_DHCP) {
@@ -724,6 +723,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
 
     char substring[16];
     char *tok;
+    char *save = NULL;
 
     l2tp_key_t key = {0};
     void **search = NULL;
@@ -739,10 +739,10 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                         session->l2tp = true;
                         memset(substring, 0x0, sizeof(substring));
                         memcpy(substring, pap->reply_message+21, pap->reply_message_len-21);
-                        tok = strtok(substring, ":");
+                        tok = strtok_r(substring, ":", &save);
                         if(tok) {
                             key.tunnel_id = atoi(tok);
-                            tok = strtok(0, ":");
+                            tok = strtok_r(0, ":", &save);
                             if(tok) {
                                 key.session_id = atoi(tok);
                                 search = dict_search(ctx->l2tp_session_dict, &key);
@@ -799,6 +799,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
 
     char substring[16];
     char *tok;
+    char *save = NULL;
 
     l2tp_key_t key = {0};
     void **search = NULL;
@@ -832,10 +833,10 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                         session->l2tp = true;
                         memset(substring, 0x0, sizeof(substring));
                         memcpy(substring, chap->reply_message+21, chap->reply_message_len-21);
-                        tok = strtok(substring, ":");
+                        tok = strtok_r(substring, ":", &save);
                         if(tok) {
                             key.tunnel_id = atoi(tok);
-                            tok = strtok(0, ":");
+                            tok = strtok_r(0, ":", &save);
                             if(tok) {
                                 key.session_id = atoi(tok);
                                 search = dict_search(ctx->l2tp_session_dict, &key);
@@ -924,7 +925,8 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, &bbl_session_timeout);
             }
             if(session->access_config->ipv4_enable) {
-                if(session->l2tp == false && ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
+                if(session->l2tp == false && !session->a10nsp_session && 
+                   ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
                     /* Start IGMP */
                     timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
                 }
@@ -1611,7 +1613,7 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
     ctx = interface->ctx;
 
-    if(memcmp(eth->dst, (uint8_t*)broadcast_mac, ETH_ADDR_LEN) == 0) {
+    if(memcmp(eth->dst, broadcast_mac, ETH_ADDR_LEN) == 0) {
         /* Broadcast destination MAC address (ff:ff:ff:ff:ff:ff) */
         session_id = bbl_rx_session_id_from_broadcast(eth, interface);
         if(!session_id) {
@@ -1681,7 +1683,7 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
 }
 
-void
+static void
 bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_secondary_ip_s *secondary_ip;
 
@@ -1693,14 +1695,12 @@ bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         }
         if(arp->code == ARP_REQUEST) {
             if(arp->target_ip == interface->ip) {
-                interface->arp_reply_ip = interface->ip;
-                interface->send_requests |= BBL_IF_SEND_ARP_REPLY;
+                bbl_send_arp_reply(interface, NULL, eth, arp);
             } else {
                 secondary_ip = interface->ctx->config.secondary_ip_addresses;
                 while(secondary_ip) {
                     if(arp->target_ip == secondary_ip->ip) {
-                        secondary_ip->arp_reply = true;
-                        interface->send_requests |= BBL_IF_SEND_SEC_ARP_REPLY;
+                        bbl_send_arp_reply(interface, NULL, eth, arp);
                         return;
                     }
                     secondary_ip = secondary_ip->next;
@@ -1710,7 +1710,7 @@ bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
 }
 
-void
+static void
 bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_ipv6_t *ipv6;
     bbl_icmpv6_t *icmpv6;
@@ -1727,20 +1727,30 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
     if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, interface->ip6.address, IPV6_ADDR_LEN) == 0) {
-            memcpy(interface->icmpv6_src, ipv6->src, IPV6_ADDR_LEN);
-            interface->send_requests |= BBL_IF_SEND_ICMPV6_NA;
+            bbl_send_icmpv6_na(interface, NULL, eth, ipv6, icmpv6);
         } else {
             secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
             while(secondary_ip6) {
                 if(memcmp(icmpv6->prefix.address, secondary_ip6->ip, IPV6_ADDR_LEN) == 0) {
-                    secondary_ip6->icmpv6_na = true;
-                    memcpy(secondary_ip6->icmpv6_src, ipv6->src, IPV6_ADDR_LEN);
-                    interface->send_requests |= BBL_IF_SEND_SEC_ICMPV6_NA;
+                    bbl_send_icmpv6_na(interface, NULL, eth, ipv6, icmpv6);
                     return;
                 }
                 secondary_ip6 = secondary_ip6->next;
             }
         }
+    } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
+        bbl_send_icmpv6_echo_reply(interface, NULL, eth, ipv6, icmpv6);
+    }
+}
+
+static void
+bbl_rx_network_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface) {
+    bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
+    if(interface->ip &&
+       interface->ip == ipv4->dst &&
+       icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+        /* Send ICMP reply... */
+        bbl_send_icmp_reply(interface, NULL, eth, ipv4, icmp);
     }
 }
 
@@ -1783,6 +1793,9 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                 } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
                     return bbl_l2tp_handler_rx(eth, (bbl_l2tp_t*)udp->next, interface);
                 }
+            } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
+                interface->stats.icmp_rx++;
+                return bbl_rx_network_icmp(eth, ipv4, interface);
             }
             break;
         case ETH_TYPE_IPV6:
@@ -1872,9 +1885,51 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                     default:
                         break;
                 }
+            } else {
+                /* Accept RAW streams */
+                switch (bbl->sub_type) {
+                    case BBL_SUB_TYPE_IPV4:
+                        if(ipv4) bbl_rx_stream(interface, eth, bbl, ipv4->tos);
+                        break;
+                    case BBL_SUB_TYPE_IPV6:
+                    case BBL_SUB_TYPE_IPV6PD:
+                        if(ipv6) bbl_rx_stream(interface, eth, bbl, ipv6->tos);
+                        break;
+                }
             }
         }
     } else {
         interface->stats.packets_rx_drop_unknown++;
+    }
+}
+
+/**
+ * bbl_rx_handler_a10nsp
+ *
+ * This function handles all packets received on a10nsp interfaces.
+ *
+ * @param eth pointer to ethernet header structure of received packet
+ * @param interface pointer to interface on which packet was received
+ */
+void
+bbl_rx_handler_a10nsp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+    bbl_ctx_s *ctx;
+    bbl_session_s *session;
+    uint32_t session_id = 0;
+
+    ctx = interface->ctx;
+
+    /* The session-id is mapped into the last 3 bytes of
+     * the client MAC address. The original approach using
+     * VLAN identifiers was not working reliable as some NIC
+     * drivers strip outer VLAN and it is also possible to have
+     * multiple session per VLAN (N:1). */
+    session_id |= eth->src[5];
+    session_id |= eth->src[4] << 8;
+    session_id |= eth->src[3] << 16;
+
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
+        bbl_a10nsp_rx(interface, session, eth);
     }
 }
