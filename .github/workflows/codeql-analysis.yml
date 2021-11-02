@@ -10,7 +10,7 @@
 # supported CodeQL languages.
 #
 name: "CodeQL"
- 
+
 on:
   push:
     branches: [ dev ]
@@ -50,11 +50,11 @@ jobs:
     - name: Download RtBrick libdict
       shell: bash
       run: wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
-      
+
     - name: Install RtBrick libdict
       shell: bash
       run: unzip libdict-debian.zip; sudo dpkg -i libdict_1.0.1_amd64.deb; sudo dpkg -i libdict-dev_1.0.1_amd64.deb
-  
+
     - name: Install Dependencies
       shell: bash
       run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev

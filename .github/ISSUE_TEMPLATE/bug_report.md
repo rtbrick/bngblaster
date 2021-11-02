@@ -13,7 +13,7 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 
-Version (`bngblaster -v`): 
+Version (`bngblaster -v`):
 
 ```
 ```
@@ -22,7 +22,7 @@ JSON configuration:
 ```json
 {
 }
-``` 
+```
 
 Steps to reproduce the behavior:
 1. ...

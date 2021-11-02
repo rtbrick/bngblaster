@@ -373,7 +373,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     }
 
     session = bbl_session_get(ctx, session_id);
-    if(session) {        
+    if(session) {
         session_json = bbl_session_json(session);
         if(!session_json) {
             bbl_ctrl_status(fd, "error", 500, "internal error");

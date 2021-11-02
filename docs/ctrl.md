@@ -9,12 +9,15 @@ The control socket will be optionally enabled by providing the path to the socke
 using the argument `-S` (`bngblaster -S test.socket`).
 
 `$ cat command.json | jq .`
+
 ```json
 {
   "command": "session-counters"
 }
 ```
+
 `$ cat command.json | sudo nc -U test.socket | jq .`
+
 ```json
 {
     "status": "ok",
@@ -32,6 +35,7 @@ Each request must contain at least the `command` element which carries
 the actual command which is invoked with optional arguments.
 
 `$ cat command.json | jq .`
+
 ```json
 {
     "command": "session-info",
@@ -42,6 +46,7 @@ the actual command which is invoked with optional arguments.
 ```
 
 `$ cat command.json | sudo nc -U test.socket | jq .`
+
 ```json
 {
     "status": "ok",
@@ -110,6 +115,7 @@ if request was successfully. The status can be also set to `warning` or
 `error` with corresponding error code and an optional error message.
 
 `$ cat command.json | sudo nc -U test.socket | jq .`
+
 ```json
 {
     "status": "warning",
@@ -123,7 +129,7 @@ if request was successfully. The status can be also set to `warning` or
 The python script `bngblaster-cli` provides a simple CLI tool
 for interactive communication with the BNG Blaster.
 
-```
+```cli
 $ sudo bngblaster-cli
 BNG Blaster Control Socket Client
 
@@ -137,6 +143,7 @@ Examples:
 ```
 
 `$ sudo bngblaster-cli run.sock session-counters | jq .`
+
 ```json
 {
   "status": "ok",
@@ -149,6 +156,7 @@ Examples:
   }
 }
 ```
+
 ## Control Socket Commands
 
 ### Global Commands
@@ -186,6 +194,7 @@ command. For N:1 sessions only `session-id` is supported because multiple sessio
 be assigned to a single VLAN in this mode.
 
 `$ cat command.json | jq .`
+
 ```json
 {
     "command": "session-info",
@@ -238,6 +247,7 @@ The L2TP CSURQ command expects the local tunnel-id and a list of remote
 session-id for which a connect speed update is requested.
 
 `$ cat command.json | jq .`
+
 ```json
 {
     "command": "l2tp-csurq",
@@ -257,6 +267,6 @@ This command can be executed as shown below using the CLI tool.
 
 `$ sudo bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2,3,4]`
 
-The L2TP session terminate command allows to test result (RFC2661) and disconnect (RFC3145) codes. 
+The L2TP session terminate command allows to test result (RFC2661) and disconnect (RFC3145) codes.
 
 `$ sudo bngblaster-cli run.sock l2tp-session-terminate session-id 1 result-code 2 error-message "LCP request" disconnect-code 3 disconnect-message "LCP terminate request"`

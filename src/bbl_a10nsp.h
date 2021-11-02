@@ -29,7 +29,7 @@ typedef struct bbl_a10nsp_session_
 
     char *pppoe_ari;
     char *pppoe_aci;
-    
+
     struct {
         uint64_t packets_tx;
         uint64_t packets_rx;
@@ -41,8 +41,8 @@ void
 bbl_a10nsp_session_free(bbl_session_s *session);
 
 void
-bbl_a10nsp_rx(bbl_interface_s *interface, 
-              bbl_session_s *session, 
+bbl_a10nsp_rx(bbl_interface_s *interface,
+              bbl_session_s *session,
               bbl_ethernet_header_t *eth);
 
 #endif

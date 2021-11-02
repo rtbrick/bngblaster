@@ -26,7 +26,7 @@
 #define PCAPNG_EPB_FLAGS_INBOUND  0x1
 #define PCAPNG_EPB_FLAGS_OUTBOUND 0x2
 
-/* Ethernet (10Mb, 100Mb, 1000Mb, and up); 
+/* Ethernet (10Mb, 100Mb, 1000Mb, and up);
  * the 10MB in the DLT_ name is historical. */
 #define DLT_EN10MB        1 /* Ethernet (10Mb) */
 #define DLT_NULL          0 /* RAW IP */

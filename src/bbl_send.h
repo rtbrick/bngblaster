@@ -2,8 +2,8 @@
  * BNG Blaster (BBL) - Send Functions
  *
  * This interface allows to "directly" send
- * packets to an interface. 
- * 
+ * packets to an interface.
+ *
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
@@ -42,31 +42,31 @@ bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf);
 bbl_send_result_t
 bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth);
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_arp_reply(bbl_interface_s *interface,
                    bbl_session_s *session,
-                   bbl_ethernet_header_t *eth, 
+                   bbl_ethernet_header_t *eth,
                    bbl_arp_t *arp);
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_icmpv6_na(bbl_interface_s *interface,
                    bbl_session_s *session,
-                   bbl_ethernet_header_t *eth, 
-                   bbl_ipv6_t *ipv6, 
+                   bbl_ethernet_header_t *eth,
+                   bbl_ipv6_t *ipv6,
                    bbl_icmpv6_t *icmpv6);
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_icmp_reply(bbl_interface_s *interface,
                     bbl_session_s *session,
-                    bbl_ethernet_header_t *eth, 
-                    bbl_ipv4_t *ipv4, 
+                    bbl_ethernet_header_t *eth,
+                    bbl_ipv4_t *ipv4,
                     bbl_icmp_t *icmp);
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_icmpv6_echo_reply(bbl_interface_s *interface,
                            bbl_session_s *session,
-                           bbl_ethernet_header_t *eth, 
-                           bbl_ipv6_t *ipv6, 
+                           bbl_ethernet_header_t *eth,
+                           bbl_ipv6_t *ipv6,
                            bbl_icmpv6_t *icmpv6);
 
 #endif

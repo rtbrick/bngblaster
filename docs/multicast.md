@@ -24,6 +24,7 @@ BNG Blaster instance.
 The following example shows generates traffic for 100 multicast groups
 with one packet per millisecond for every group as required to measure the join and leave
 delay in milliseconds.
+
 ```json
 {
     "interfaces": {
@@ -48,11 +49,11 @@ delay in milliseconds.
 The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms) for more
 precise IGMP join/leave delay measurements.
 
-It is also possible to generate multicast traffic using RAW streams as shown in the 
+It is also possible to generate multicast traffic using RAW streams as shown in the
 example below:
 
 ```json
-{    
+{
     "streams": [
         {
             "name": "MC1",
@@ -80,18 +81,19 @@ example below:
 }
 ```
 
-Using RAW streams allows to generate streams distributed over multiple network interfaces. 
+Using RAW streams allows to generate streams distributed over multiple network interfaces.
 Setting the `destination-ipv4-address` to an multicast IPv4 address is enough to generate
 proper multicast streams. All headers including the BNG Blaster header will be automatically
-set for multicast. Therefore such streams can be also used to measure the IGMP join and leave 
+set for multicast. Therefore such streams can be also used to measure the IGMP join and leave
 delay.
 
 ## Manual Join/Leave Testing
 
-It is possible to join and leave multicast groups manually using the <<Control Socket>> as
+It is possible to join and leave multicast groups manually using the Control Socket as
 shown in the example below.
 
 `$ sudo bngblaster-cli run.sock igmp-join session-id 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103`
+
 ```json
 {
     "status": "ok"
@@ -99,6 +101,7 @@ shown in the example below.
 ```
 
 `$ sudo bngblaster-cli run.sock igmp-info session-id 1`
+
 ```json
 {
     "status": "ok",
@@ -119,7 +122,8 @@ shown in the example below.
 }
 ```
 
-`$ sudo bngblaster-cli run.sock igmp-leave session-id 1 group 232.1.1.1 `
+`$ sudo bngblaster-cli run.sock igmp-leave session-id 1 group 232.1.1.1`
+
 ```json
 {
     "status": "ok"
@@ -127,6 +131,7 @@ shown in the example below.
 ```
 
 `$ sudo bngblaster-cli run.sock igmp-info session-id 1`
+
 ```json
 {
     "status": "ok",
@@ -165,7 +170,7 @@ sending leave and the last multicast packet received for this group. Multicast p
 received for the leaved group after first packet of joined group is received are counted
 as overlap.
 
-The following <<Configuration>> output shows an example for the `igmp` section
+The following Configuration output shows an example for the `igmp` section
 for a typical zapping test.
 
 ```json
