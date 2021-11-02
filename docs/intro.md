@@ -5,8 +5,8 @@ is often very expensive, resource intensive and provide a lot of administrative 
 to maintain such.
 
 Therefore we decided to build an open source network test software initially focused on BNG 
-and IPTV testing but constantly enhanced and planned for more common network equipment test 
-cases. The BNG Blaster was completely build from scratch, targeted for max scaling with small
+and IPTV testing but constantly enhanced and planned for more common (non-BNG) network equipment 
+testing. The BNG Blaster was completely build from scratch, targeted for max scaling with small
 resource footprint, simple to use and easy to integrate in any test automation infrastructure.
 
 The BNG Blaster is able to simulate more than hundred thousand PPPoE and IPoE subscribers including
