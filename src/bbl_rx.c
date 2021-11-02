@@ -414,13 +414,13 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
     bool ipv6 = true;
 
     if(session->access_config->ipv4_enable) {
-        if(!session->arp_resolved || 
+        if(!session->arp_resolved ||
            (session->access_config->dhcp_enable && session->dhcp_state < BBL_DHCP_BOUND)) {
             ipv4 = false;
         }
     }
     if(session->access_config->ipv6_enable) {
-        if(!session->icmpv6_ra_received || 
+        if(!session->icmpv6_ra_received ||
            (session->access_config->dhcpv6_enable && session->dhcpv6_state < BBL_DHCP_BOUND)) {
             ipv6 = false;
         }
@@ -461,7 +461,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
     session->stats.icmpv6_rx++;
 
     if(session->a10nsp_session) {
-        /* There is currently no IPv6 support 
+        /* There is currently no IPv6 support
          * for A10NSP terminated sessions today. */
         return;
     }
@@ -925,7 +925,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
                 timer_add(&ctx->timer_root, &session->timer_session, "Session", ctx->config.pppoe_session_time, 0, session, &bbl_session_timeout);
             }
             if(session->access_config->ipv4_enable) {
-                if(session->l2tp == false && !session->a10nsp_session && 
+                if(session->l2tp == false && !session->a10nsp_session &&
                    ctx->config.igmp_group && ctx->config.igmp_autostart && ctx->config.igmp_start_delay) {
                     /* Start IGMP */
                     timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", ctx->config.igmp_start_delay, 0, session, &bbl_igmp_initial_join);
@@ -1153,8 +1153,8 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
         case PPP_CODE_VENDOR_SPECIFIC:
             if(ctx->config.lcp_vendor_ignore) {
                 return;
-            } 
-            if(ctx->config.lcp_connection_status_message && 
+            }
+            if(ctx->config.lcp_connection_status_message &&
                lcp->vendor_kind == 1 && lcp->vendor_value_len > 2) {
                 /* Skip the 2 byte option header (type, length) */
                 lcp->vendor_value_len -= 2;
@@ -1620,8 +1620,8 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             return bbl_rx_handler_access_broadcast(eth, interface);
         }
     } else if(*eth->dst & 0x01) {
-        /* Ethernet frames with a value of 1 in the least-significant bit 
-         * of the first octet of the destination MAC address are treated 
+        /* Ethernet frames with a value of 1 in the least-significant bit
+         * of the first octet of the destination MAC address are treated
          * as multicast frames- */
         session_id = bbl_rx_session_id_from_vlan(eth, interface);
         if(!session_id) {

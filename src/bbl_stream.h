@@ -93,7 +93,7 @@ typedef struct bbl_stream_
     /* Attributes used for threaded streams only! */
     struct {
         bbl_stream_thread *thread;
-        bbl_stream *next; /* Next stream in same thread */ 
+        bbl_stream *next; /* Next stream in same thread */
         pthread_mutex_t mutex;
         bool can_send;
     } thread;
@@ -104,8 +104,8 @@ typedef struct bbl_stream_
 typedef struct bbl_stream_thread_
 {
     /* The thread-group allows to assign
-     * multiple streams to one thread. The 
-     * group zero has the special meaning of 
+     * multiple streams to one thread. The
+     * group zero has the special meaning of
      * one thread per stream. */
     uint8_t thread_group;
     pthread_t thread_id;
@@ -115,9 +115,9 @@ typedef struct bbl_stream_thread_
     bool active;
 
     /* Root for thread local timers */
-    struct timer_root_ timer_root; 
+    struct timer_root_ timer_root;
 
-    /* Timer for synchronice job of thread 
+    /* Timer for synchronice job of thread
      * counters with main counters. */
     struct timer_ *sync_timer;
 

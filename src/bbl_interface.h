@@ -74,7 +74,7 @@ typedef struct bbl_interface_
 
     bool icmpv6_nd_resolved;
     bool gateway_resolve_wait;
-    
+
     uint8_t *mc_packets;
     uint16_t mc_packet_len;
     uint64_t mc_packet_seq;
@@ -180,7 +180,7 @@ typedef struct bbl_interface_
         uint64_t l2tp_data_tx;
         bbl_rate_s rate_l2tp_data_rx;
         bbl_rate_s rate_l2tp_data_tx;
-        
+
         uint64_t li_rx;
         bbl_rate_s rate_li_rx;
     } stats;

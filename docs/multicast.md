@@ -48,11 +48,11 @@ delay in milliseconds.
 The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms) for more
 precise IGMP join/leave delay measurements.
 
-It is also possible to generate multicast traffic using RAW streams as shown in the 
+It is also possible to generate multicast traffic using RAW streams as shown in the
 example below:
 
 ```json
-{    
+{
     "streams": [
         {
             "name": "MC1",
@@ -80,10 +80,10 @@ example below:
 }
 ```
 
-Using RAW streams allows to generate streams distributed over multiple network interfaces. 
+Using RAW streams allows to generate streams distributed over multiple network interfaces.
 Setting the `destination-ipv4-address` to an multicast IPv4 address is enough to generate
 proper multicast streams. All headers including the BNG Blaster header will be automatically
-set for multicast. Therefore such streams can be also used to measure the IGMP join and leave 
+set for multicast. Therefore such streams can be also used to measure the IGMP join and leave
 delay.
 
 ## Manual Join/Leave Testing

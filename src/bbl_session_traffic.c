@@ -96,7 +96,7 @@ bbl_session_traffic_ipv6pd(timer_s *timer)
 }
 
 static bool
-bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session, 
+bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
                                   struct bbl_interface_ *network_if)
 {
     bbl_ethernet_header_t eth = {0};
@@ -170,7 +170,7 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
 }
 
 static bool
-bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session, 
+bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
                                     struct bbl_interface_ *a10nsp_if)
 {
     bbl_ethernet_header_t eth = {0};
@@ -494,7 +494,7 @@ bbl_session_traffic_start_ipv4(bbl_ctx_s *ctx, bbl_session_s *session) {
 
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv4_pps && session->ip_address && 
+    if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
        (ctx->interfaces.network_if_count || session->a10nsp_session)) {
         /* Start IPv4 Session Traffic */
         if(bbl_session_traffic_add_ipv4(ctx, session)) {

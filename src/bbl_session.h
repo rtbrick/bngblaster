@@ -98,7 +98,7 @@ typedef struct bbl_session_
     bool l2tp;
     bbl_l2tp_session_t *l2tp_session;
 
-    /* Set to true if session is connected to 
+    /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */
     bbl_a10nsp_session_t *a10nsp_session;
 
@@ -117,7 +117,7 @@ typedef struct bbl_session_
     uint32_t dsl_type;
 
     void *access_line_profile;
-    
+
     /* Ethernet */
     uint8_t server_mac[ETH_ADDR_LEN];
     uint8_t client_mac[ETH_ADDR_LEN];
@@ -390,13 +390,13 @@ typedef struct bbl_session_
 
 } bbl_session_s;
 
-void 
+void
 bbl_session_tx_qnode_insert(struct bbl_session_ *session);
 
-void 
+void
 bbl_session_tx_qnode_remove(struct bbl_session_ *session);
 
-void 
+void
 bbl_session_network_tx_qnode_insert(struct bbl_session_ *session);
 
 void

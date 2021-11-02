@@ -20,7 +20,7 @@ extern bool g_traffic;
 static bool
 bbl_stream_can_send(bbl_stream *stream) {
     bbl_session_s *session = stream->session;
-    
+
     if(g_init_phase) {
         return false;
     }
@@ -601,9 +601,9 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
 
     bbl_l2tp_session_t *l2tp_session = stream->session->l2tp_session;
     bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
-    
+
     struct bbl_interface_ *interface = l2tp_tunnel->interface;
-    
+
     uint16_t buf_len;
 
     bbl_ethernet_header_t eth = {0};
@@ -741,10 +741,10 @@ bbl_stream_tx_thread (void *thread_data) {
 
 /**
  * This function synchronizes the data
- * between TX stream threads and main 
+ * between TX stream threads and main
  * thread.
- * 
- * @param thread 
+ *
+ * @param thread
  */
 void
 bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
@@ -756,7 +756,7 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
     uint64_t bytes_tx;
     uint64_t delta_packets;
     uint64_t delta_bytes;
-    
+
     pthread_mutex_lock(&stream->thread.mutex);
 
     packets_tx = thread->packets_tx;
@@ -766,7 +766,7 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
 
     interface->stats.packets_tx += delta_packets;
     interface->stats.bytes_tx += delta_bytes;
-    
+
     thread->packets_tx_last_sync = packets_tx;
     thread->bytes_tx_last_sync = bytes_tx;
 
@@ -826,11 +826,11 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
             } else {
                 stream->thread.can_send = false;
                 stream->send_window_packets = 0;
-            }        
+            }
         }
         pthread_mutex_unlock(&stream->thread.mutex);
         stream = stream->thread.next;
-    } 
+    }
 }
 
 void
@@ -893,9 +893,9 @@ bbl_stream_thread_create(uint8_t thread_group, bbl_stream *stream) {
 
 /**
  * This function will add a stream to an existing
- * thread or create a new thread based on thread 
- * group. 
- * 
+ * thread or create a new thread based on thread
+ * group.
+ *
  * @param ctx global context
  * @param thread_group thread group
  * @param stream traffic stream
@@ -909,8 +909,8 @@ bbl_stream_add_to_thread(bbl_ctx_s *ctx, uint8_t thread_group, bbl_stream *strea
     if(ctx->stream_thread) {
         thread = ctx->stream_thread;
         while(true) {
-            /* The thread group zero means that this stream 
-             * requests a dedicated thread. The scope of thread 
+            /* The thread group zero means that this stream
+             * requests a dedicated thread. The scope of thread
              * groups is per interface. */
             if(thread_group && thread->thread_group == thread_group &&
                thread->interface == stream->interface) {
@@ -956,13 +956,13 @@ bbl_stream_add_to_thread(bbl_ctx_s *ctx, uint8_t thread_group, bbl_stream *strea
 
 /**
  * This function starts all stream threads.
- * 
+ *
  * @param ctx global context
  * @return true if success and false if failed
  */
 bool
 bbl_stream_start_threads(bbl_ctx_s *ctx) {
-    
+
     bbl_stream_thread *thread = ctx->stream_thread;
 
     while(thread) {
@@ -981,12 +981,12 @@ bbl_stream_start_threads(bbl_ctx_s *ctx) {
 
 /**
  * This function stops all stream threads.
- * 
+ *
  * @param ctx global context
  */
 void
 bbl_stream_stop_threads(bbl_ctx_s *ctx) {
-    
+
     bbl_stream_thread *thread = ctx->stream_thread;
     while(thread) {
         if(thread->active) {
@@ -1161,7 +1161,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
     bbl_stream_config *config;
     bbl_stream *stream;
-    bbl_stream *session_stream; 
+    bbl_stream *session_stream;
     bbl_stream_thread *thread;
 
     dict_insert_result result;
@@ -1232,7 +1232,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                         LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
                         free(stream);
                         return false;
-                    } 
+                    }
                     timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
                     timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
@@ -1273,7 +1273,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                         LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
                         free(stream);
                         return false;
-                    } 
+                    }
                     timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
                     timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
@@ -1337,7 +1337,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                         LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
                         free(stream);
                         return false;
-                    } 
+                    }
                     timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
                     timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
@@ -1355,7 +1355,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 }
 
 json_t *
-bbl_stream_json(bbl_stream *stream) 
+bbl_stream_json(bbl_stream *stream)
 {
     json_t *root = NULL;
 
