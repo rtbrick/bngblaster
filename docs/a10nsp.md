@@ -1,14 +1,14 @@
 # A10NSP
 
-The A10NSP interface emulates an layer two provider interface. The term A10 
-refers to the end-to-end ADSL network reference model from TR-025.  
+The A10NSP interface emulates an layer two provider interface. The term A10
+refers to the end-to-end ADSL network reference model from TR-025.
 
-Following a basic PPPoE/A10NSP configuration example which is 
+Following a basic PPPoE/A10NSP configuration example which is
 detailed explained in the configuration section.
 
 ```json
 {
-    "interfaces": { 
+    "interfaces": {
         "rx-interval": 1,
         "a10nsp": [
             {
@@ -32,7 +32,7 @@ detailed explained in the configuration section.
                 "inner-vlan": 7,
                 "stream-group-id": 1
             }
-        ]  
+        ]
     },
     "pppoe": {
         "reconnect": true,

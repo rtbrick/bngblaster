@@ -237,7 +237,7 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
         step.tv_nsec = step_nsec - (step.tv_sec * 1e9);
 
         LOG(TIMER_DETAIL, "Smear %u timers in bucket %lu.%06lus\n", timer_bucket->timers, sec, nsec);
-        LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n", 
+        LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n",
             now.tv_sec, now.tv_nsec / 1000,
             last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000,
             step.tv_sec, step.tv_nsec / 1000);
@@ -248,7 +248,7 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
         CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
             timespec_add(&timer->expire, &now, &step);
             now = timer->expire;
-            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name, 
+            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
                 timer->expire.tv_sec, timer->expire.tv_nsec / 1000);
         }
 	    return;
@@ -295,7 +295,7 @@ timer_smear_all_buckets (timer_root_s *root)
         CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
             timespec_add(&timer->expire, &now, &step);
             now = timer->expire;
-            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name, 
+            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
                 last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000);
         }
 	    return;
@@ -514,7 +514,7 @@ timespec_compare (struct timespec *ts1, struct timespec *ts2)
 
 /**
  * Process the timer queue.
- * 
+ *
  * @param root timer root
  */
 void

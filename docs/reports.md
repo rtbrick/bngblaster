@@ -245,7 +245,7 @@ as shown in the example below.
 }
 ```
 
-The optional argument `-j sessions` allows to include per session statistics 
+The optional argument `-j sessions` allows to include per session statistics
 in the report file. Similar with `-j streams` which allows to include per stream
 statistics. Both options could be also combined.
 
