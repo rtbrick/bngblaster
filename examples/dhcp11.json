@@ -1,0 +1,45 @@
+{
+    "interfaces": {
+        "network": {
+            "interface": "eth2",
+            "address": "10.0.0.10",
+            "gateway": "10.0.0.2",
+            "address-ipv6": "fc66:1337:7331:8::10",
+            "gateway-ipv6": "fc66:1337:7331:8::1"
+        },
+        "access": [
+        {
+            "interface": "eth1",
+            "type": "ipoe",
+            "outer-vlan-min": 128,
+            "outer-vlan-max": 400,
+            "inner-vlan-min": 7,
+            "inner-vlan-max": 7
+        }
+     ]  
+    },
+    "sessions": {
+        "count": 1,
+        "session-time": 0,
+        "max-outstanding": 800,
+        "start-rate": 400,
+        "stop-rate": 400
+    },
+    "access-line": {
+        "agent-remote-id": "DEU.RTBRICK.{session-global}",
+        "agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:{session-global}"
+    },
+    "dhcp": {
+        "enable": true,
+        "broadcast": false
+    },
+    "dhcpv6": {
+        "enable": true
+    },
+    "session-traffic": {
+        "autostart": true,
+        "ipv4-pps": 1,
+        "ipv6-pps": 1,
+        "ipv6pd-pps": 1
+    }
+}
