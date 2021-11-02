@@ -5,11 +5,11 @@ is often very expensive, resource intensive and provide a lot of administrative 
 to maintain such.
 
 Therefore we decided to build an open source network test software initially focused on BNG 
-and IPTV testing but constantly enhanced and planned for more common (non-BNG) network equipment 
-testing. The BNG Blaster was completely build from scratch, targeted for max scaling with small
+and IPTV testing but constantly enhanced and planned for more common (non-BNG) network testing. 
+The BNG Blaster was completely build from scratch, targeted for max scaling with small
 resource footprint, simple to use and easy to integrate in any test automation infrastructure.
 
-The BNG Blaster is able to simulate more than hundred thousand PPPoE and IPoE subscribers including
+The BNG Blaster is able to simulate more than hundred thousand PPPoE and IPoE (DHCP) subscribers including
 IPTV, L2TPv2 (LNS emulation), L2BSA, QoS, forwarding verification and convergence testing capabilities.
 
 * *High Scaling:* > 100K sessions, > 1M PPS, and > 1M traffic flows
@@ -20,8 +20,8 @@ IPTV, L2TPv2 (LNS emulation), L2BSA, QoS, forwarding verification and convergenc
 * *QoS:* define and analyze traffic streams
 * *Automation:* the BNG Blaster Controller provides an automation friendly REST API and robot keywords
 
-Please send a mail to bngblaster@rtbrick.com if you are interested
-to get access to the BNG Blaster Controller!
+**Info:** _The BNG Blaster Controller is not yet published but you can send
+a mail to bngblaster@rtbrick.com if you are interested to get early access!_
 
 ```
 $ bngblaster --help
@@ -72,31 +72,31 @@ log viewer as shown below.
 
 The BNG Blaster has been completely built from scratch, including user-space implementations of the entire protocol
 stack you need for interfacing with a BNG. It’s core is based on a very simple event loop which serves timers and signals.
-The timers have been built using a constant time (O(1)) library which we built purposely to start, restart and delete the
-protocol session FSM timers quickly and at scale.
+The timers have been built using a lightweight constant time (`O(1)`) library which we built purposely to start, restart 
+and delete the protocol session FSM timers quickly and at scale.
 
-BNG Blaster expects a Linux kernel interface which is up, but not configured with any IP addresses or VLAN as it expects to
-receive and transmit raw ethernet packets.
+The BNG Blaster expects a Linux kernel network interface which is up, but not configured with any IP addresses or VLAN as it 
+expects to receive and transmit RAW ethernet packets. 
 
-BNG Blaster does I/O using high-speed polling timers with a mix of raw sockets and so-called PACKET_RX_RING/PACKET_TX_RING
-abstraction where a userspace program gets a fast-lane into reading and writing to kernel interfaces using a shared ring buffer.
-The shared ring buffer is a memory mapped "window" that is shared between kernel and user-space. This low overhead abstraction
-allows to transmit and receive traffic without doing expensive system calls.
+The BNG Blaster does I/O using high-speed polling timers with a mix of Linux 
+[RAW Packet Sockets](https://man7.org/linux/man-pages/man7/packet.7.html) and 
+[Packet MMAP](https://www.kernel.org/doc/html/latest/networking/packet_mmap.html). 
+
+The second one is a so-called PACKET_RX_RING/PACKET_TX_RING abstraction where a user-space program gets a fast-lane into reading 
+and writing to kernel interfaces using a shared ring buffer. The shared ring buffer is a memory mapped "window" that is shared 
+between kernel and user-space. This low overhead abstraction allows to transmit and receive traffic without doing expensive system calls. 
+Sending and transmitting traffic via Packet MMAP is as easy as just by copying a packet into a buffer and setting a flag.
 
 ![BNG Blaster Architecture](images/bbl_arch.png)
 
 The BNG Blaster supports multiple configurable I/O modes listed with `bngblaster -v` but except `packet_mmap_raw` all other modes
-are currently considered as experimental. In the default mode (`packet_mmap_raw`) all packets are received in a packet_mmap ring
-buffer and send directly trough raw sockets.
-
-Sending and transmitting traffic is as easy as just by copying a packet into a buffer and setting a flag. This is super
-efficient and hence we have measured the I/O performance of up to 1M pps per single CPU thread, which is more than enough
-for our purposes here.
+are currently considered as experimental. In the default mode (`packet_mmap_raw`) all packets are received in a Packet MMAP ring
+buffer and send directly trough RAW packet sockets. This combination was the most efficient in our benchmark tests.
 
 BNG Blasters primary design goal is to simulate thousands of subscriber CPE's with a small hardware resource footprint. Simple
 to use and easy to integrate in our robot test automation infrastructure. This allows to simulate more than hundred thousand
-PPPoE subscribers including IPTV, traffic verification and convergence testing from a single medium scale virtual machine or to
-run the blaster directly from a laptop.
+PPPoE or IPoE (DHCP) subscribers including IPTV, traffic verification and convergence testing from a single medium scale 
+virtual machine or to run the blaster directly from a laptop.
 
 The BNG Blaster provides three types of interfaces. The first interface is called the access interface which emulates the PPPoE
 sessions. The second interface-type is called network interface. This is used for emulating the core-facing side of the
@@ -107,4 +107,9 @@ refers to the end-to-end ADSL network reference model from TR-025.
 
 This allows to verify IP reachability by sending bidirectional traffic between all PPPoE sessions on access-interface and the
 network interface. The network interface is also used to inject downstream multicast test traffic for IPTV tests. It is also 
-possible to send RAW traffic streams between multiple network interfaces.
+possible to send RAW traffic streams between multiple network interfaces without any access interface defined for non-BNG 
+testing. 
+
+One popular example for non-BNG tests with the BNG Blaster is the verification of a BGP full-table by injecting around 1M 
+prefixes and setting up traffic streams for all prefixes with at least one PPS (1M PPS). The BNG Blaster is able to verify
+and analyze every single flow with detailed per flow statistics (receive rate, loss, latency, ...).
