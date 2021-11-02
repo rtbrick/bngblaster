@@ -16,7 +16,7 @@
 #include "bbl.h"
 #include "bbl_timer.h"
 
-/*
+/**
  * Add two timestamps x and y, storing the result in result.
  */
 void
@@ -35,7 +35,7 @@ timespec_add (struct timespec *result, struct timespec *x, struct timespec *y)
   }
 }
 
-/*
+/**
  * Subtract the timestamps x from y, storing the result in result.
  */
 void
@@ -64,7 +64,7 @@ timespec_sub (struct timespec *result, struct timespec *x, struct timespec *y)
     }
 }
 
-/*
+/**
  * Format a timestamp in one of four buffers.
  * This way we can format upto 4 timespecs in one printf() call.
  */
@@ -83,7 +83,7 @@ timespec_format (struct timespec *x)
     return ret;
 }
 
-/*
+/**
  * Enqueue a timer for change processing.
  */
 void
@@ -103,7 +103,7 @@ timer_change (timer_s *timer)
     timer->on_change_list = true;
 }
 
-void
+static void
 timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
 {
     timer_bucket_s *timer_bucket;
@@ -146,6 +146,64 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
 }
 
 /*
+ * Dequeue a timer from its timer_bucket.
+ */
+static void
+timer_dequeue_bucket (timer_s *timer)
+{
+    timer_root_s *timer_root;
+    timer_bucket_s *timer_bucket;
+
+    timer_bucket = timer->timer_bucket;
+    timer_root = timer_bucket->timer_root;
+
+    CIRCLEQ_REMOVE(&timer_bucket->timer_qhead, timer, timer_qnode);
+    timer_bucket->timers--;
+    timer->timer_bucket = NULL;
+
+    /*
+     * If the last timer of a bucket is gone, remove the bucket as well.
+     */
+    if (!timer_bucket->timers) {
+        CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
+
+        LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
+            timer_bucket->sec, timer_bucket->nsec/1000);
+
+        free(timer_bucket);
+        timer_root->buckets--;
+    }
+}
+
+static void
+timer_requeue (timer_s *timer, time_t sec, long nsec)
+{
+    timer_root_s *timer_root;
+    timer_bucket_s *timer_bucket;
+
+    timer_bucket = timer->timer_bucket;
+    timer_root = timer_bucket->timer_root;
+
+    timer_set_expire(timer, sec, nsec);
+
+    /*
+     * If the expiration {sec,nsec} matches the bucket, then simply
+     * timer dequeue and enqueue to keep correct temporal ordering.
+     * If there is no match, do a slightly more expensive
+     * bucket dequeue and enqueue.
+     */
+    if (timer_bucket->sec == sec && timer_bucket->nsec == nsec) {
+        CIRCLEQ_REMOVE(&timer_bucket->timer_qhead, timer, timer_qnode);
+        CIRCLEQ_INSERT_TAIL(&timer_bucket->timer_qhead, timer, timer_qnode);
+    } else {
+        timer_dequeue_bucket(timer);
+        timer_enqueue_bucket(timer_root, timer, sec, nsec);
+    }
+
+    LOG(TIMER_DETAIL, "  Reset %s timer, expire in %lu.%06lus\n", timer->name, sec, nsec/1000);
+}
+
+/**
  * Smear all the timer of a given bucket to expire equi-distant.
  * Call this function periodically to avoid clustering of timers.
  */
@@ -179,8 +237,10 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
         step.tv_nsec = step_nsec - (step.tv_sec * 1e9);
 
         LOG(TIMER_DETAIL, "Smear %u timers in bucket %lu.%06lus\n", timer_bucket->timers, sec, nsec);
-        LOG(TIMER_DETAIL, "Now %s, last expire %s, step %s\n", timespec_format(&now),
-                          timespec_format(&last_timer->expire), timespec_format(&step));
+        LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n", 
+            now.tv_sec, now.tv_nsec / 1000,
+            last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000,
+            step.tv_sec, step.tv_nsec / 1000);
 
         /*
         * Now walk all timers and space them <step> apart.
@@ -188,75 +248,65 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
         CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
             timespec_add(&timer->expire, &now, &step);
             now = timer->expire;
-            LOG(TIMER_DETAIL, "  Smear %s -> expire %s\n", timer->name, timespec_format(&timer->expire));
+            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name, 
+                timer->expire.tv_sec, timer->expire.tv_nsec / 1000);
         }
 	    return;
     }
 }
 
-/*
- * Dequeue a timer from its timer_bucket.
+/**
+ * Smear all the timer of all buckets to expire equi-distant.
  */
 void
-timer_dequeue_bucket (timer_s *timer)
+timer_smear_all_buckets (timer_root_s *root)
 {
-    timer_root_s *timer_root;
     timer_bucket_s *timer_bucket;
-
-    timer_bucket = timer->timer_bucket;
-    timer_root = timer_bucket->timer_root;
-
-    CIRCLEQ_REMOVE(&timer_bucket->timer_qhead, timer, timer_qnode);
-    timer_bucket->timers--;
-    timer->timer_bucket = NULL;
+    timer_s *timer, *last_timer;
+    struct timespec now, diff, step;
+    long step_nsec;
 
     /*
-     * If the last timer of a bucket is gone, remove the bucket as well.
+     * Find the bucket for smearing.
      */
-    if (!timer_bucket->timers) {
-        CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
+    CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
+        /*
+         * Found the bucket. Next compute the timespan between now and last timer.
+         */
+        last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
+        if (!last_timer) {
+            return;
+        }
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        timespec_sub(&diff, &last_timer->expire, &now);
+        step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
+        step.tv_sec = step_nsec / 1e9;
+        step.tv_nsec = step_nsec - (step.tv_sec * 1e9);
 
-        LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
-            timer_bucket->sec, timer_bucket->nsec/1000);
+        LOG(TIMER_DETAIL, "Smear %u timers in bucket %lu.%06lus\n", timer_bucket->timers, timer_bucket->sec, timer_bucket->nsec);
+        LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n",
+            now.tv_sec, now.tv_nsec / 1000,
+            last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000,
+            step.tv_sec, step.tv_nsec / 1000);
 
-        free(timer_bucket);
-        timer_root->buckets--;
+        /*
+        * Now walk all timers and space them <step> apart.
+        */
+        CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
+            timespec_add(&timer->expire, &now, &step);
+            now = timer->expire;
+            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name, 
+                last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000);
+        }
+	    return;
     }
 }
 
-void
-timer_requeue (timer_s *timer, time_t sec, long nsec)
-{
-    timer_root_s *timer_root;
-    timer_bucket_s *timer_bucket;
-
-    timer_bucket = timer->timer_bucket;
-    timer_root = timer_bucket->timer_root;
-
-    timer_set_expire(timer, sec, nsec);
-
-    /*
-     * If the expiration {sec,nsec} matches the bucket, then simply
-     * timer dequeue and enqueue to keep correct temporal ordering.
-     * If there is no match, do a slightly more expensive
-     * bucket dequeue and enqueue.
-     */
-    if (timer_bucket->sec == sec && timer_bucket->nsec == nsec) {
-        CIRCLEQ_REMOVE(&timer_bucket->timer_qhead, timer, timer_qnode);
-        CIRCLEQ_INSERT_TAIL(&timer_bucket->timer_qhead, timer, timer_qnode);
-    } else {
-        timer_dequeue_bucket(timer);
-        timer_enqueue_bucket(timer_root, timer, sec, nsec);
-    }
-
-    LOG(TIMER_DETAIL, "  Reset %s timer, expire in %lu.%06lus\n", timer->name, sec, nsec/1000);
-}
-
-/*
+/**
  * We do not delete timers, but rather dequeue them and move them to
  * the garbage collection queue, where they may get recycled.
  */
-void
+static void
 timer_del_internal (timer_s *timer)
 {
     timer_bucket_s *timer_bucket;
@@ -276,7 +326,7 @@ timer_del_internal (timer_s *timer)
     }
 }
 
-/*
+/**
  * Mark a timer for deletion.
  */
 void
@@ -288,7 +338,7 @@ timer_del (timer_s *timer)
     }
 }
 
-/*
+/**
  * Set timer expiration.
  */
 void
@@ -309,10 +359,10 @@ timer_set_expire (timer_s *timer, time_t sec, long nsec)
     timer->expired = false;
 }
 
-/*
+/**
  * Deferred processing of all timers.
  */
-void
+static void
 timer_process_changes (timer_root_s *root)
 {
     timer_s *timer;
@@ -347,7 +397,7 @@ timer_process_changes (timer_root_s *root)
     }
 }
 
-/*
+/**
  * Enqueue a timer with a given callback function onto the hierarchical timer list.
  */
 void
@@ -369,9 +419,9 @@ timer_add (timer_root_s *root,
     if (timer) {
         timer_requeue(timer, sec, nsec);
         /*
-        * Update data and cb if there was a change.
-        * Do the reformatting of name only during a change due to snprintf() being expensive.
-        */
+         * Update data and cb if there was a change.
+         * Do the reformatting of name only during a change due to snprintf() being expensive.
+         */
         if (timer->data != data || timer->cb != cb) {
             snprintf(timer->name, sizeof(timer->name), "%s", name);
             timer->data = data;
@@ -433,7 +483,7 @@ timer_add_periodic (timer_root_s *root, timer_s **ptimer, char *name,
     }
 }
 
-/*
+/**
  * Compare two timespecs.
  *
  * return -1 if ts1 is older than ts2
@@ -462,8 +512,10 @@ timespec_compare (struct timespec *ts1, struct timespec *ts2)
     return 0;
 }
 
-/*
+/**
  * Process the timer queue.
+ * 
+ * @param root timer root
  */
 void
 timer_walk (timer_root_s *root)
@@ -473,138 +525,132 @@ timer_walk (timer_root_s *root)
     struct timespec now, min, sleep, rem;
     int res;
 
-    while (true) {
+    /*
+     * No buckets filled and we're done.
+     */
+    if (CIRCLEQ_EMPTY(&root->timer_bucket_qhead)) {
+        return;
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    LOG(TIMER_DETAIL, "Walk timer queue, now %lu.%06lus\n",
+        now.tv_sec, now.tv_nsec / 1000);
+    min.tv_sec = 0;
+    min.tv_nsec = 0;
+
+    /*
+     * Walk all buckets.
+     */
+    CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
+
+        LOG(TIMER_DETAIL, "  Checking timer bucket %lu.%06lus\n",
+            timer_bucket->sec, timer_bucket->nsec/1000);
 
         /*
-         * No buckets filled and we're done.
+         * First pass. Call into expired nodes.
          */
-        if (CIRCLEQ_EMPTY(&root->timer_bucket_qhead)) {
-            return;
-        }
-
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        LOG(TIMER_DETAIL, "Walk timer queue, now %s\n", timespec_format(&now));
-        min.tv_sec = 0;
-        min.tv_nsec = 0;
-
-        /*
-         * Walk all buckets.
-         */
-        CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-
-            LOG(TIMER_DETAIL, "  Checking timer bucket %lu.%06lus\n",
-                timer_bucket->sec, timer_bucket->nsec/1000);
+        CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
 
             /*
-             * First pass. Call into expired nodes.
+             * Hitting the first non-expired timer means
+             * we're done processing this buckets queue.
              */
-            CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
+            if (timespec_compare(&timer->expire, &now) == 1) {
+                break;
+            }
 
-                /*
-                 * Hitting the first non-expired timer means
-                 * we're done processing this buckets queue.
-                 */
-                if ((timespec_compare(&timer->expire, &now) == 1)) {
-                    break;
-                }
+            /*
+             * Everything from here one is expired.
+             */
+            timer->expired = true;
 
-                /*
-                 * Everything from here one is expired.
-                 */
-                timer->expired = true;
-
-                /* Execute callback */
-                if (timer->cb) {
-                    LOG(TIMER_DETAIL, "  Firing %s timer\n", timer->name);
+            /* Execute callback */
+            if (timer->cb) {
+                LOG(TIMER_DETAIL, "  Firing %s timer\n", timer->name);
                     (*timer->cb)(timer);
-                }
+            }
 
-                if (timer->periodic) {
-                    /*
-                     * Periodic timers are simple de-queued and
-                     * re-inserted at the tail of this buckets queue.
-                     */
-		            timer_change(timer);
-                } else {
-                    /*
-                     * Everything else gets deleted.
-                     */
-                    timer_del(timer);
-                }
+            if (timer->periodic) {
+                /*
+                 * Periodic timers are simple de-queued and
+                 * re-inserted at the tail of this buckets queue.
+                 */
+                timer_change(timer);
+            } else {
+                /*
+                 * Everything else gets deleted.
+                 */
+                timer_del(timer);
             }
         }
+    }
 
-        /*
-        * Process all changes from the last timer run.
-        */
-        timer_process_changes(root);
+    /*
+     * Process all changes from the last timer run.
+     */
+    timer_process_changes(root);
 
-        /*
-        * Second pass. Figure out min sleep time.
-        */
-        CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-            CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
+    /*
+     * Second pass. Figure out min sleep time.
+     */
+    CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
+        CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
 
-                /*
-                * Ignore deleted timers that wait for change processing.
-                */
-                if (timer->delete) {
-                    continue;
-                }
+            /*
+             * Ignore deleted timers that wait for change processing.
+             */
+            if (timer->delete) {
+                continue;
+            }
 
-                /*
-                * First timer in the queue becomes the actual minimum.
-                */
-                if (min.tv_sec == 0 && min.tv_nsec == 0) {
-                    min.tv_sec = timer->expire.tv_sec;
-                    min.tv_nsec = timer->expire.tv_nsec;
-                }
+            /*
+             * First timer in the queue becomes the actual minimum.
+             */
+            if (min.tv_sec == 0 && min.tv_nsec == 0) {
+                min.tv_sec = timer->expire.tv_sec;
+                min.tv_nsec = timer->expire.tv_nsec;
+            }
 
-                /*
-                 * Find the min timer.
-                 */
-                if (timespec_compare(&timer->expire, &min) == -1) {
-                    min.tv_sec = timer->expire.tv_sec;
-                    min.tv_nsec = timer->expire.tv_nsec;
-                    LOG(TIMER_DETAIL, "New minimum sleep (%s) timer, found %s\n",
-                        timer->name, timespec_format(&min));
-                }
+            /*
+             * Find the min timer.
+             */
+            if (timespec_compare(&timer->expire, &min) == -1) {
+                min.tv_sec = timer->expire.tv_sec;
+                min.tv_nsec = timer->expire.tv_nsec;
+                LOG(TIMER_DETAIL, "New minimum sleep (%s) timer, found %lu.%06lus\n",
+                    timer->name,
+                    min.tv_sec, min.tv_nsec / 1000);
+            }
 
-                /*
-                 * Hitting the first non-expired timer means
-                 * we're done processing this buckets queue.
-                 */
-                if ((timespec_compare(&timer->expire, &now) == 1)) {
-                    break;
-                }
+            /*
+             * Hitting the first non-expired timer means
+             * we're done processing this buckets queue.
+             */
+            if (timespec_compare(&timer->expire, &now) == 1) {
+                break;
             }
         }
+    }
 
-        /*
-        * Calculate the sleep timer.
-        */
-        LOG(TIMER_DETAIL, "  Now %s\n", timespec_format(&now));
-        LOG(TIMER_DETAIL, "  Min %s\n", timespec_format(&min));
+    /*
+     * Calculate the sleep timer.
+     */
+    LOG(TIMER_DETAIL, "  Now %lu.%06lus\n", now.tv_sec, now.tv_nsec / 1000);
+    LOG(TIMER_DETAIL, "  Min %lu.%06lus\n", min.tv_sec, min.tv_nsec / 1000);
 
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        if (timespec_compare(&now, &min) == -1) {
-            timespec_sub(&sleep, &min, &now);
-        } else {
-            //sleep.tv_sec = 0;
-            //sleep.tv_nsec = 1 * MSEC; /* sleep time is negative, sleep at least some time */
-            continue;
-        }
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (timespec_compare(&now, &min) == -1) {
+        timespec_sub(&sleep, &min, &now);
 
-        LOG(TIMER_DETAIL, "  Sleep %s\n", timespec_format(&sleep));
+        LOG(TIMER_DETAIL, "  Sleep %lu.%06lus\n", sleep.tv_sec, sleep.tv_nsec / 1000);
         res = nanosleep(&sleep, &rem);
         if (res == -1) {
             LOG(TIMER, "  nanosleep(): error %s (%d)\n", strerror(errno), errno);
-            return;
         }
     }
 }
 
-/*
+/**
  * Init a timer root.
  */
 void
@@ -628,9 +674,9 @@ timer_flush_root (timer_root_s *timer_root)
      * First step. Walk all timers and move them onto the GC thread.
      */
     CIRCLEQ_FOREACH(timer_bucket, &timer_root->timer_bucket_qhead, timer_bucket_qnode) {
-	CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
-	    timer_del(timer);
-	}
+        CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
+            timer_del(timer);
+        }
     }
     timer_process_changes(timer_root);
 
@@ -640,8 +686,8 @@ timer_flush_root (timer_root_s *timer_root)
     while (!CIRCLEQ_EMPTY(&timer_root->timer_gc_qhead)) {
         timer = CIRCLEQ_FIRST(&timer_root->timer_gc_qhead);
         CIRCLEQ_REMOVE(&timer_root->timer_gc_qhead, timer, timer_qnode);
-	timer_root->gc--;
-	free(timer);
+        timer_root->gc--;
+        free(timer);
     }
 }
 

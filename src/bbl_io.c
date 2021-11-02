@@ -55,7 +55,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
     /* Get RX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
-    while ((tphdr->tp_status & TP_STATUS_USER)) {
+    while (tphdr->tp_status & TP_STATUS_USER) {
         eth_start = (uint8_t*)tphdr + tphdr->tp_mac;
         eth_len = tphdr->tp_len;
         interface->stats.packets_rx++;

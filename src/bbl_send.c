@@ -87,6 +87,7 @@ bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
         return BBL_SEND_FULL;
     }
     slot = interface->send.ring + interface->send.write;
+    slot->packet_len = 0;
     if(encode_ethernet(slot->packet, &slot->packet_len, eth) == PROTOCOL_SUCCESS) {
         interface->send.write = interface->send.next++;
         if(interface->send.next == interface->send.size) {
@@ -186,5 +187,24 @@ bbl_send_icmp_reply(bbl_interface_s *interface,
     swap_ipv4_src_dst(ipv4);
     ipv4->ttl = 64;
     icmp->type = ICMP_TYPE_ECHO_REPLY;
+    return bbl_send_to_buffer(interface, eth);
+}
+
+bbl_send_result_t 
+bbl_send_icmpv6_echo_reply(bbl_interface_s *interface,
+                           bbl_session_s *session,
+                           bbl_ethernet_header_t *eth, 
+                           bbl_ipv6_t *ipv6, 
+                           bbl_icmpv6_t *icmpv6)
+{
+    update_eth(interface, session, eth);
+    ipv6->dst = ipv6->src;
+    if(session) {
+        ipv6->src = session->ipv6_address;
+    } else {
+        ipv6->src = interface->ip6.address;
+    }
+    ipv6->ttl = 255;
+    icmpv6->type = IPV6_ICMPV6_ECHO_REPLY;
     return bbl_send_to_buffer(interface, eth);
 }
