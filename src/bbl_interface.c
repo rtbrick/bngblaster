@@ -14,7 +14,7 @@
  * bbl_interface_lock
  *
  * @brief This functions locks the interface 
- * creating the file "/tmp/bngblaster_<interface>.lock".
+ * creating the file "/run/lock/bngblaster_<interface>.lock".
  * 
  * @param ctx global context
  * @param interface interface
@@ -31,7 +31,7 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
     struct stat sts;
     pid_t pid = getpid();
 
-    snprintf(lock_path, sizeof(lock_path), "/tmp/bngblaster_%s.lock", interface_name);
+    snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", interface_name);
     lock_file = fopen(lock_path, "r");
     if(lock_file) {
         /* lock file exists */
@@ -71,7 +71,7 @@ bbl_interface_unlock_all(bbl_ctx_s *ctx)
 {
     char lock_path[FILE_PATH_LEN];
     for(int i = 0; i < ctx->interfaces.count; i++) {
-        snprintf(lock_path, sizeof(lock_path), "/tmp/bngblaster_%s.lock", ctx->interfaces.names[i]);
+        snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", ctx->interfaces.names[i]);
         remove(lock_path);
     }
 }
