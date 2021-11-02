@@ -14,6 +14,11 @@
 - [Legal Interception](li)
 - [A10NSP](a10nsp)
 
+The BNG Blaster is an open source network test tool which is able to simulate more 
+than hundred thousand PPPoE and IPoE subscribers including IPTV, L2TPv2, QoS, forwarding
+verification and convergence testing capabilities. The BNG Blaster is also contently
+enhanced for more common (non-BNG) network testing.
+
 A short introduction can be found on [YouTube](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster").
 
 ![BBL Interactive](images/bbl_interactive.png "BNG Blaster (Interactive Mode)")
@@ -28,3 +33,7 @@ See the LICENSE file for more details.
 ## Copyright
 
 Copyright (C) 2020-2021, RtBrick, Inc.
+
+## Contact
+
+bngblaster@rtbrick.com
