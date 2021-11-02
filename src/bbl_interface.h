@@ -70,8 +70,9 @@ typedef struct bbl_interface_
 
     ipv6_prefix ip6;
     ipv6_prefix gateway6;
-    bool        icmpv6_nd_resolved;
+    ipv6addr_t gateway6_solicited_node_multicast;
 
+    bool icmpv6_nd_resolved;
     bool gateway_resolve_wait;
     
     uint8_t *mc_packets;

@@ -266,6 +266,10 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
         if(network_config->ip6.len && network_config->gateway6.len) {
             memcpy(&network_if->ip6, &network_config->ip6, sizeof(ipv6_prefix));
             memcpy(&network_if->gateway6, &network_config->gateway6, sizeof(ipv6_prefix));
+            memcpy(&network_if->gateway6_solicited_node_multicast, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
+            memcpy(((uint8_t*)&network_if->gateway6_solicited_node_multicast)+13, 
+                   ((uint8_t*)&network_if->gateway6.address)+13, 3);
+
             /* Send initial ICMPv6 NS */
             network_if->send_requests |= BBL_IF_SEND_ICMPV6_NS;
         }

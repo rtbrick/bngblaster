@@ -54,6 +54,24 @@ teardown_handler(int sig)
     g_teardown_request_count++;
 }
 
+void
+enable_disable_traffic(bbl_ctx_s *ctx, bool status)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    g_traffic = status;
+
+    /* Iterate over all sessions */
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session) {
+            session->session_traffic = status;
+            session->stream_traffic = status;
+        }
+    }
+}
+
 static bool
 bbl_add_multicast_packets(bbl_ctx_s *ctx)
 {
@@ -93,10 +111,7 @@ bbl_add_multicast_packets(bbl_ctx_s *ctx)
             }
             group = htobe32(group);
             /* Generate multicast destination MAC */
-            *(uint32_t*)(&mac[2]) = group;
-            mac[0] = 0x01;
-            mac[2] = 0x5e;
-            mac[3] &= 0x7f;
+            ipv4_multicast_mac(group, mac);
             eth.src = interface->mac;
             eth.dst = mac;
             eth.vlan_outer = interface->vlan;
@@ -257,32 +272,10 @@ bbl_ctrl_job (timer_s *timer)
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
-    if(ctx->sessions) {
-        if(ctx->sessions_terminated >= ctx->sessions) {
-            /* Now close all L2TP tunnels ... */
-            if(ctx->l2tp_tunnels == 0) {
-                /* Stop event loop to close application! */
-                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
-            } else {
-                bbl_l2tp_stop_all_tunnel(ctx);
-            }
-            return;
-        }
-    } else {
-        /* Network interface only... */
-        if(g_teardown) {
-            if(ctx->l2tp_tunnels == 0) {
-                /* Stop event loop to close application! */
-                CIRCLEQ_INIT(&ctx->timer_root.timer_bucket_qhead);
-            } else {
-                bbl_l2tp_stop_all_tunnel(ctx);
-            }
-            return;
-        }
-        return;
-    }
-
     if(g_teardown) {
+        if(ctx->l2tp_tunnels && ctx->sessions_terminated >= ctx->sessions) {
+            bbl_l2tp_stop_all_tunnel(ctx);
+        }
         /* Teardown phase ... */
         if(g_teardown_request) {
             /* Put all sessions on the teardown list. */
@@ -507,7 +500,7 @@ main (int argc, char *argv[])
     }
     if(config_streams_file) {
         if(!bbl_config_streams_load_json(config_streams_file, ctx)) {
-            fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_file);
+            fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_streams_file);
             exit(1);
         }
     }
@@ -558,7 +551,7 @@ main (int argc, char *argv[])
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
             exit(1);
-        };
+        }
     }
 
     /* Setup control job. */
@@ -576,15 +569,38 @@ main (int argc, char *argv[])
      * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
 
+    /* Smear all buckets. */
+    timer_smear_all_buckets(&ctx->timer_root);
+
+    /* Start threads. */
+    bbl_stream_start_threads(ctx);
+
     /* Start event loop. */
     log_open();
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
-    timer_walk(&ctx->timer_root);
-    while(ctx->sessions_terminated < ctx->sessions && g_teardown_request_count < 10) {
+    while(g_teardown_request_count < 10) {
+        if(!ctx->l2tp_tunnels) {
+            if(ctx->sessions) {
+                /* With sessions, wait for all sessions
+                * to be terminated. */
+                if(ctx->sessions_terminated >= ctx->sessions && ctx->l2tp_tunnels == 0) {
+                    break;
+                }
+            } else {
+                /* Without sessions, we can stop immediately
+                * as soon as teardown was requested. */
+                if(g_teardown) {
+                    break;
+                }
+            }
+        }
         timer_walk(&ctx->timer_root);
     }
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_stop);
+
+    /* Stop threads. */
+    bbl_stream_stop_threads(ctx);
 
     /* Stop curses. Do this before the final reports. */
     if(g_interactive) {

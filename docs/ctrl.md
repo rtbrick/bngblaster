@@ -163,6 +163,8 @@ Attribute | Description
 `session-traffic-stop` (Alias: `session-traffic-disabled`) | Stop sending session traffic for all sessions
 `stream-traffic-start` (Alias: `stream-traffic-enabled`)  | Start sending stream traffic for all sessions
 `stream-traffic-stop` (Alias: `stream-traffic-disabled`) | Stop sending stream traffic for all sessions
+`stream-stats` | Display global stream traffic statistics
+`stream-info` | Display stream traffic statistics identified by flow identifier (`flow-id <id>`)
 `multicast-traffic-start` | Start sending multicast traffic from network interface
 `multicast-traffic-stop` | Stop sending multicast traffic from network interface
 `li-flows` | List all LI flows with detailed statistics
@@ -171,6 +173,8 @@ Attribute | Description
 `cfm-cc-stop` | Stop EOAM CFM CC
 `cfm-cc-rdi-on` | Set EOAM CFM CC RDI
 `cfm-cc-rdi-off` | Unset EOAM CFM CC RDI
+`traffic-start` | Start all traffic (session and streams)
+`traffic-stop` | Stop all traffic (session and streams)
 
 ### Session Commands
 

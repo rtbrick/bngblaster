@@ -652,6 +652,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     json_t *value = NULL;
     const char *s = NULL;
     double bps;
+    double number;
 
     if (json_unpack(stream, "{s:s}", "type", &s) == 0) {
         if (strcmp(s, "ipv4") == 0) {
@@ -729,7 +730,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     value = json_object_get(stream, "pps");
     if (value) {
         stream_config->pps = json_number_value(value);
-        if (stream_config->pps == 0) {
+        if (stream_config->pps <= 0) {
             fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
             return false;
         }
@@ -777,9 +778,20 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         }
     }
 
+    /* Threading */
     value = json_object_get(stream, "threaded");
     if (json_is_boolean(value)) {
         stream_config->threaded = json_boolean_value(value);
+    }
+    value = json_object_get(stream, "thread-group");
+    if (value) {
+        number = json_number_value(value);
+        if(number > 0 && number < 256) {
+            stream_config->thread_group = number;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid thread-group (valid range is 1-255) for stream %s\n", stream_config->name);
+            return false;
+        }
     }
 
     /* Validate configuration */
@@ -1605,8 +1617,8 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
     ctx->config.sessions_max_outstanding = 800;
-    ctx->config.sessions_start_rate = 400,
-    ctx->config.sessions_stop_rate = 400,
+    ctx->config.sessions_start_rate = 400;
+    ctx->config.sessions_stop_rate = 400;
     ctx->config.pppoe_discovery_timeout = 5;
     ctx->config.pppoe_discovery_retry = 10;
     ctx->config.ppp_mru = 1492;

@@ -12,7 +12,6 @@
 #include "bbl_stream.h"
 #include "bbl_stats.h"
 #include "bbl_io.h"
-#include <pthread.h>
 
 extern volatile bool g_teardown;
 extern bool g_init_phase;
@@ -91,6 +90,7 @@ FREE:
         stream->buf = NULL;
         stream->tx_len = 0;
     }
+    stream->send_window_packets = 0;
     return false;
 }
 
@@ -220,7 +220,6 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
     }
     return true;
 }
-
 
 bool
 bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
@@ -523,10 +522,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
                 /* All IPv4 multicast addresses start with 1110 */
                 if((ipv4.dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
                     /* Generate multicast destination MAC */
-                    *(uint32_t*)(&mac[2]) = ipv4.dst;
-                    mac[0] = 0x01;
-                    mac[2] = 0x5e;
-                    mac[3] &= 0x7f;
+                    ipv4_multicast_mac(ipv4.dst, mac);
                     eth.dst = mac;
                     bbl.type = BBL_TYPE_MULTICAST;
                     bbl.mc_source = ipv4.src;
@@ -723,148 +719,322 @@ bbl_stream_build_packet(bbl_stream *stream) {
 void *
 bbl_stream_tx_thread (void *thread_data) {
 
-    bbl_stream *stream = thread_data;
-    bbl_interface_s *interface = stream->interface;
+    bbl_stream_thread *thread = thread_data;
 
-    struct timespec send_windwow;
-    struct timespec now;
-    struct timespec sleep;
-    struct timespec rem;
-
-    double d;
-    uint64_t packets;
-    uint64_t packets_expected;
-
-    struct sockaddr_ll addr = {0};
-    int fd_tx;
-    int qdisc_bypass = 1;
+    pthread_mutex_lock(&thread->mutex);
+    timer_smear_all_buckets(&thread->timer_root);
+    pthread_mutex_unlock(&thread->mutex);
 
     /* Open new TX socket for thread. */
-    fd_tx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
-    if (fd_tx == -1) {
-        if (errno == EPERM) {
-            LOG(ERROR, "socket() for interface %s Permission denied: Are you root?\n", interface->name);
-            return NULL;
-        }
-        LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
-    }
-    addr.sll_family = PF_PACKET;
-    addr.sll_ifindex = interface->ifindex;
-    addr.sll_protocol = 0;
-    if (bind(fd_tx, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-        LOG(ERROR, "bind() TX error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
-        return NULL;
-    }
-    if (setsockopt(fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
-        LOG(ERROR, "Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return NULL;
-    }
-
-    while(!g_teardown) {
-        packets = 0;
-
-        if(!bbl_stream_can_send(stream)) {
-            /* Close send window */
-            stream->send_window_packets = 0;
-            sleep.tv_nsec = (100 + (rand() % 900)) * MSEC;
-            nanosleep(&sleep, &rem);
-            continue;
-        }
-        if(!stream->buf) {
-            if(!bbl_stream_build_packet(stream)) {
-                LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
-                sleep.tv_nsec = 100 * MSEC;
-                nanosleep(&sleep, &rem);
-                continue;
-            }
-        }
-
-        if(!g_traffic || (stream->session && !stream->session->stream_traffic)) {
-            /* Close send window */
-            stream->send_window_packets = 0;
-            sleep.tv_nsec = 10 * MSEC;
-            nanosleep(&sleep, &rem);
-            continue;
-        }
-
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        if(stream->send_window_packets == 0) {
-            /* Open new send window */
-            stream->send_window_start.tv_sec = now.tv_sec;
-            stream->send_window_start.tv_nsec = now.tv_nsec;
-            packets = 1;
+    while(true) {
+        pthread_mutex_lock(&thread->mutex);
+        if(thread->active) {
+            pthread_mutex_unlock(&thread->mutex);
+            timer_walk(&thread->timer_root);
         } else {
-            timespec_sub(&send_windwow, &now, &stream->send_window_start);
-            packets_expected = send_windwow.tv_sec * stream->config->pps;
-            d = (send_windwow.tv_nsec / 1000000000.0);
-            packets_expected += d * stream->config->pps;
-
-            if(packets_expected > stream->send_window_packets) {
-                packets = packets_expected - stream->send_window_packets;
-            }
+            pthread_mutex_unlock(&thread->mutex);
+            break;
         }
-
-        /* Update BBL header fields */
-        *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
-        *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
-        while(packets) {
-            *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
-            /* Send packet ... */
-            if (sendto(fd_tx, stream->buf, stream->tx_len, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_ll)) <0 ) {
-                LOG(IO, "Sendto failed with errno: %i\n", errno);
-                sleep.tv_nsec = 1 * MSEC;
-                nanosleep(&sleep, &rem);
-                clock_gettime(CLOCK_MONOTONIC, &now);
-                *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
-                *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
-                continue;
-            }
-            stream->send_window_packets++;
-            stream->packets_tx++;
-            stream->flow_seq++;
-            packets--;
-        }
-        sleep.tv_nsec = 1000; /* 0.001ms */
-        nanosleep(&sleep, &rem);
     }
     return NULL;
 }
 
+/**
+ * This function synchronizes the data
+ * between TX stream threads and main 
+ * thread.
+ * 
+ * @param thread 
+ */
 void
-bbl_stream_tx_thread_counter_sync (timer_s *timer) {
-
-    bbl_stream *stream = timer->data;
-    bbl_session_s *session = stream->session;
-    bbl_interface_s *interface = stream->interface;
+bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
+    bbl_interface_s *interface = thread->interface;
+    bbl_stream *stream = thread->stream;
+    bbl_session_s *session = NULL;
 
     uint64_t packets_tx;
+    uint64_t bytes_tx;
     uint64_t delta_packets;
     uint64_t delta_bytes;
+    
+    pthread_mutex_lock(&stream->thread.mutex);
 
-    packets_tx = stream->packets_tx;
-    delta_packets = packets_tx - stream->packets_tx_last_sync;
-    delta_bytes = delta_packets * stream->tx_len;
+    packets_tx = thread->packets_tx;
+    delta_packets = packets_tx - thread->packets_tx_last_sync;
+    bytes_tx = thread->bytes_tx;
+    delta_bytes = bytes_tx - thread->bytes_tx_last_sync;
 
     interface->stats.packets_tx += delta_packets;
     interface->stats.bytes_tx += delta_bytes;
-    if(session) {
-        if(stream->direction == STREAM_DIRECTION_UP) {
-            session->stats.packets_tx += delta_packets;
-            session->stats.bytes_tx += delta_bytes;
-            session->stats.accounting_packets_tx += delta_packets;
-            session->stats.accounting_bytes_tx += delta_bytes;
-        } else {
-            if(session->l2tp_session) {
-                interface->stats.l2tp_data_tx++;
-                session->l2tp_session->tunnel->stats.data_tx++;
-                session->l2tp_session->stats.data_tx++;
-                session->l2tp_session->stats.data_ipv4_tx++;
+    
+    thread->packets_tx_last_sync = packets_tx;
+    thread->bytes_tx_last_sync = bytes_tx;
+
+    packets_tx = thread->sendto_failed;
+    delta_packets = packets_tx - thread->sendto_failed_last_sync;
+    interface->stats.sendto_failed += delta_packets;
+
+    pthread_mutex_unlock(&stream->thread.mutex);
+
+    while(stream) {
+        pthread_mutex_lock(&stream->thread.mutex);
+        if(stream->session) {
+            session = stream->session;
+            /* Sync counters ... */
+            packets_tx = stream->packets_tx;
+            delta_packets = packets_tx - stream->packets_tx_last_sync;
+            delta_bytes = delta_packets * stream->tx_len;
+            if(stream->direction == STREAM_DIRECTION_UP) {
+                session->stats.packets_tx += delta_packets;
+                session->stats.bytes_tx += delta_bytes;
+                session->stats.accounting_packets_tx += delta_packets;
+                session->stats.accounting_bytes_tx += delta_bytes;
+            } else {
+                if(session->l2tp_session) {
+                    interface->stats.l2tp_data_tx++;
+                    session->l2tp_session->tunnel->stats.data_tx++;
+                    session->l2tp_session->stats.data_tx++;
+                    session->l2tp_session->stats.data_ipv4_tx++;
+                }
             }
+            stream->packets_tx_last_sync = packets_tx;
+
+            /* Sync session states ... */
+            if(bbl_stream_can_send(stream)) {
+                if(!stream->buf) {
+                    if(!bbl_stream_build_packet(stream)) {
+                        LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
+                    }
+                }
+            }
+            if(stream->buf && g_traffic && session->stream_traffic) {
+                stream->thread.can_send = true;
+            } else {
+                stream->thread.can_send = false;
+                stream->send_window_packets = 0;
+            }
+        } else {
+            if(bbl_stream_can_send(stream)) {
+                if(!stream->buf) {
+                    if(!bbl_stream_build_packet(stream)) {
+                        LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
+                    }
+                }
+            }
+            if(stream->buf && g_traffic) {
+                stream->thread.can_send = true;
+            } else {
+                stream->thread.can_send = false;
+                stream->send_window_packets = 0;
+            }        
+        }
+        pthread_mutex_unlock(&stream->thread.mutex);
+        stream = stream->thread.next;
+    } 
+}
+
+void
+bbl_stream_tx_thread_sync_timer(timer_s *timer) {
+    bbl_stream_thread *thread = timer->data;
+    bbl_stream_tx_thread_sync(thread);
+}
+
+static bbl_stream_thread *
+bbl_stream_thread_create(uint8_t thread_group, bbl_stream *stream) {
+    bbl_stream_thread *thread;
+    bbl_interface_s *interface = stream->interface;
+
+    int qdisc_bypass = 1;
+
+    if(thread_group) {
+        LOG(INFO, "Create stream TX thread-group %u\n", thread_group);
+    } else {
+        LOG(INFO, "Create stream TX thread for stream %s\n", stream->config->name);
+    }
+    thread = calloc(1, sizeof(bbl_stream_thread));
+    thread->thread_group = thread_group;
+    thread->interface = interface;
+
+    /* Init thread timer root */
+    timer_init_root(&thread->timer_root);
+
+    /* Init thread mutex */
+    if (pthread_mutex_init(&thread->mutex, NULL) != 0) {
+        LOG(ERROR, "Failed to init stream TX thread mutex\n");
+        return NULL;
+    }
+
+    /* Setup RAW socket */
+    thread->socket.fd_tx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, 0);
+    if (thread->socket.fd_tx == -1) {
+        if (errno == EPERM) {
+            LOG(ERROR, "Thread: socket() for interface %s Permission denied: Are you root?\n", interface->name);
+            return NULL;
+        }
+        LOG(ERROR, "Thread: socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+        return NULL;
+    }
+    thread->socket.addr.sll_family = PF_PACKET;
+    thread->socket.addr.sll_ifindex = interface->ifindex;
+    thread->socket.addr.sll_protocol = 0;
+    if (bind(thread->socket.fd_tx, (struct sockaddr*)&thread->socket.addr, sizeof(thread->socket.addr)) == -1) {
+        LOG(ERROR, "Thread: bind() TX error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        return NULL;
+    }
+    if(interface->ctx->config.qdisc_bypass) {
+        if (setsockopt(thread->socket.fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
+            LOG(ERROR, "Thread: Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+            return NULL;
         }
     }
-    stream->packets_tx_last_sync = packets_tx;
+    return thread;
+}
+
+/**
+ * This function will add a stream to an existing
+ * thread or create a new thread based on thread 
+ * group. 
+ * 
+ * @param ctx global context
+ * @param thread_group thread group
+ * @param stream traffic stream
+ */
+static bbl_stream_thread*
+bbl_stream_add_to_thread(bbl_ctx_s *ctx, uint8_t thread_group, bbl_stream *stream) {
+
+    bbl_stream_thread *thread;
+
+    /* Search for existing thread group or create a new one */
+    if(ctx->stream_thread) {
+        thread = ctx->stream_thread;
+        while(true) {
+            /* The thread group zero means that this stream 
+             * requests a dedicated thread. The scope of thread 
+             * groups is per interface. */
+            if(thread_group && thread->thread_group == thread_group &&
+               thread->interface == stream->interface) {
+                break;
+            }
+            if(thread->next) {
+                thread = thread->next;
+            } else {
+                /* Create new thread */
+                thread->next = bbl_stream_thread_create(thread_group, stream);
+                thread = thread->next;
+                if(!thread) {
+                    return NULL;
+                }
+                break;
+            }
+        }
+    } else {
+        /* Create first thread */
+        thread = bbl_stream_thread_create(thread_group, stream);
+        ctx->stream_thread = thread;
+    }
+
+    /* Append stream to thread */
+    if(thread->stream) {
+        thread->stream_tail->thread.next = stream;
+    } else {
+        /* First stream in thread */
+        thread->stream = stream;
+    }
+    thread->stream_tail = stream;
+    thread->stream_count++;
+
+    /* Init stream mutex */
+    if (pthread_mutex_init(&stream->thread.mutex, NULL) != 0) {
+        LOG(ERROR, "Failed to init stream mutex\n");
+        return NULL;
+    }
+
+    stream->thread.thread = thread;
+    return thread;
+}
+
+/**
+ * This function starts all stream threads.
+ * 
+ * @param ctx global context
+ * @return true if success and false if failed
+ */
+bool
+bbl_stream_start_threads(bbl_ctx_s *ctx) {
+    
+    bbl_stream_thread *thread = ctx->stream_thread;
+
+    while(thread) {
+        if(thread->thread_group) {
+            LOG(INFO, "Start stream TX thread-group %u\n", thread->thread_group);
+        } else {
+            LOG(INFO, "Start stream TX thread for stream %s\n", thread->stream->config->name);
+        }
+        thread->active = true;
+        timer_add_periodic(&ctx->timer_root, &thread->sync_timer, "Stream TX Thread Sync", 1, 0, thread, &bbl_stream_tx_thread_sync_timer);
+        pthread_create(&thread->thread_id, NULL, bbl_stream_tx_thread, (void *)thread);
+        thread = thread->next;
+    }
+    return true;
+}
+
+/**
+ * This function stops all stream threads.
+ * 
+ * @param ctx global context
+ */
+void
+bbl_stream_stop_threads(bbl_ctx_s *ctx) {
+    
+    bbl_stream_thread *thread = ctx->stream_thread;
+    while(thread) {
+        if(thread->active) {
+            if(thread->thread_group) {
+                LOG(INFO, "Stop stream TX thread-group %u\n", thread->thread_group);
+            } else {
+                LOG(INFO, "Stop stream TX thread for stream %s\n", thread->stream->config->name);
+            }
+            /* Mark thread as inactive and stop counter sync job */
+            pthread_mutex_lock(&thread->mutex);
+            thread->active = false;
+            pthread_mutex_unlock(&thread->mutex);
+            /* Wait for thread to be stopped */
+            pthread_join(thread->thread_id, NULL);
+            /* Do final sync */
+            bbl_stream_tx_thread_sync(thread);
+        }
+        thread = thread->next;
+    }
+}
+
+uint64_t
+bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
+
+    bbl_ctx_s *ctx = stream->interface->ctx;
+    uint64_t packets = 1;
+    uint64_t packets_expected;
+
+    struct timespec send_windwow;
+
+    if(stream->send_window_packets == 0) {
+        /* Open new send window */
+        stream->send_window_start.tv_sec = now->tv_sec;
+        stream->send_window_start.tv_nsec = now->tv_nsec;
+    } else {
+        timespec_sub(&send_windwow, now, &stream->send_window_start);
+        packets_expected = send_windwow.tv_sec * stream->config->pps;
+        packets_expected += stream->config->pps * ((double)send_windwow.tv_nsec / 1000000000.0);
+
+        if(packets_expected > stream->send_window_packets) {
+            packets = packets_expected - stream->send_window_packets;
+        }
+        if(packets > ctx->config.io_stream_max_ppi) {
+            packets = ctx->config.io_stream_max_ppi;
+        }
+    }
+
+    return packets;
 }
 
 void
@@ -874,15 +1044,11 @@ bbl_stream_tx_job (timer_s *timer) {
     bbl_session_s *session = stream->session;
     bbl_interface_s *interface = stream->interface;
 
-    struct timespec send_windwow;
     struct timespec now;
 
-    double d;
     uint64_t packets = 1;
-    uint64_t packets_expected;
 
     if(!bbl_stream_can_send(stream)) {
-        stream->send_window_packets = 0;
         return;
     }
     if(!stream->buf) {
@@ -899,24 +1065,7 @@ bbl_stream_tx_job (timer_s *timer) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &now);
-    if(stream->send_window_packets == 0) {
-        /* Open new send window */
-        stream->send_window_start.tv_sec = now.tv_sec;
-        stream->send_window_start.tv_nsec = now.tv_nsec;
-    } else {
-        timespec_sub(&send_windwow, &now, &stream->send_window_start);
-        packets_expected = send_windwow.tv_sec * stream->config->pps;
-        d = (send_windwow.tv_nsec / 1000000000.0);
-        packets_expected += d * stream->config->pps;
-
-        if(packets_expected > stream->send_window_packets) {
-            packets = packets_expected - stream->send_window_packets;
-        }
-        if(packets > interface->ctx->config.io_stream_max_ppi) {
-            packets = interface->ctx->config.io_stream_max_ppi;
-        }
-    }
-
+    packets = bbl_stream_send_window(stream, &now);
     /* Update BBL header fields */
     *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
     *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
@@ -949,10 +1098,62 @@ bbl_stream_tx_job (timer_s *timer) {
 }
 
 void
+bbl_stream_tx_job_threaded (timer_s *timer) {
+    bbl_stream *stream = timer->data;
+    bbl_stream_thread *thread = stream->thread.thread;
+
+    struct timespec now;
+
+    uint64_t packets;
+
+    pthread_mutex_lock(&stream->thread.mutex);
+    if(!stream->thread.can_send) {
+        pthread_mutex_unlock(&stream->thread.mutex);
+        return;
+    }
+
+    pthread_mutex_lock(&thread->mutex);
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    packets = bbl_stream_send_window(stream, &now);
+
+    /* Update BBL header fields */
+    *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
+    *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
+    while(packets) {
+        *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
+        /* Send packet ... */
+        if (sendto(thread->socket.fd_tx, stream->buf, stream->tx_len, 0, (struct sockaddr*)&thread->socket.addr, sizeof(struct sockaddr_ll)) <0 ) {
+            LOG(IO, "Thread: Sendto failed with errno: %i\n", errno);
+            thread->sendto_failed++;
+            packets = 0;
+        } else {
+            stream->packets_tx++;
+            stream->send_window_packets++;
+            stream->flow_seq++;
+            packets--;
+            thread->packets_tx++;
+            thread->bytes_tx += stream->tx_len;
+        }
+    }
+    pthread_mutex_unlock(&thread->mutex);
+    pthread_mutex_unlock(&stream->thread.mutex);
+}
+
+void
 bbl_stream_rate_job (timer_s *timer) {
     bbl_stream *stream = timer->data;
     bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
     bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
+}
+
+void
+bbl_stream_rate_job_threaded (timer_s *timer) {
+    bbl_stream *stream = timer->data;
+    pthread_mutex_lock(&stream->thread.mutex);
+    bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
+    bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
+    pthread_mutex_unlock(&stream->thread.mutex);
 }
 
 bool
@@ -960,14 +1161,13 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
     bbl_stream_config *config;
     bbl_stream *stream;
-    bbl_stream *session_stream;
+    bbl_stream *session_stream; 
+    bbl_stream_thread *thread;
 
     dict_insert_result result;
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
-
-    pthread_t thread_id;
 
     config = ctx->config.stream_config;
 
@@ -997,11 +1197,9 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 return false;
             }
 
-            if(config->pps == 1) {
-                timer_sec = 1;
-            } else {
-                timer_nsec = 1000000000 / config->pps;
-            }
+            timer_nsec = SEC / config->pps;
+            timer_sec = timer_nsec / 1000000000;
+            timer_nsec = timer_nsec % 1000000000;
 
             if(config->direction & STREAM_DIRECTION_UP) {
                 stream = calloc(1, sizeof(bbl_stream));
@@ -1029,14 +1227,20 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     session->stream = stream;
                 }
                 if(config->threaded) {
-                    pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, &bbl_stream_tx_thread_counter_sync);
+                    thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
+                    if(!thread) {
+                        LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
+                        free(stream);
+                        return false;
+                    } 
+                    timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
+                    timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s added in upstream with %u PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
+                LOG(DEBUG, "Traffic stream %s added in upstream with %lf PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
@@ -1064,16 +1268,21 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     session->stream = stream;
                 }
                 if(config->threaded) {
-                    pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, &bbl_stream_tx_thread_counter_sync);
+                    thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
+                    if(!thread) {
+                        LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
+                        free(stream);
+                        return false;
+                    } 
+                    timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
+                    timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
+                LOG(DEBUG, "Traffic stream %s added in downstream with %lf PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
-            timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
         }
         config = config->next;
     }
@@ -1086,14 +1295,13 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
     bbl_stream_config *config;
     bbl_stream *stream;
+    bbl_stream_thread *thread;
     bbl_interface_s *network_if;
 
     dict_insert_result result;
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
-
-    pthread_t thread_id;
 
     config = ctx->config.stream_config;
 
@@ -1103,11 +1311,11 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
             if(!network_if) {
                 return false;
             }
-            if(config->pps == 1) {
-                timer_sec = 1;
-            } else {
-                timer_nsec = 1000000000 / config->pps;
-            }
+
+            timer_nsec = SEC / config->pps;
+            timer_sec = timer_nsec / 1000000000;
+            timer_nsec = timer_nsec % 1000000000;
+
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
                 stream->flow_id = ctx->flow_id++;
@@ -1124,16 +1332,21 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                 }
                 *result.datum_ptr = stream;
                 if(config->threaded) {
-                    pthread_create(&thread_id, NULL, bbl_stream_tx_thread, (void *)stream);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, 1, 0, stream, &bbl_stream_tx_thread_counter_sync);
+                    thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
+                    if(!thread) {
+                        LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
+                        free(stream);
+                        return false;
+                    } 
+                    timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
+                    timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
                     timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                    timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 }
-                timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "RAW traffic stream %s added in downstream with %u PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
+                LOG(DEBUG, "RAW traffic stream %s added in downstream with %lf PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
-            timer_smear_bucket(&ctx->timer_root, timer_sec, timer_nsec);
         }
         config = config->next;
     }

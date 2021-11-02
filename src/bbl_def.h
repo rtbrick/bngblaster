@@ -1,8 +1,8 @@
 #ifndef __BBL_DEF_H__
 #define __BBL_DEF_H__
 
-#define IO_BUFFER_LEN               2048
-#define SCRATCHPAD_LEN              2048
+#define IO_BUFFER_LEN               9216
+#define SCRATCHPAD_LEN              4096
 #define CHALLENGE_LEN               16
 
 #define FILE_PATH_LEN               128
@@ -135,5 +135,8 @@ typedef struct bbl_ctx_ bbl_ctx_s;
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_session_ bbl_session_s;
 typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
+typedef struct bbl_stream_thread_ bbl_stream_thread;
+typedef struct bbl_stream_config_ bbl_stream_config;
+typedef struct bbl_stream_ bbl_stream;
 
 #endif

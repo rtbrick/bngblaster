@@ -547,8 +547,6 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
 
     if(icmp->data_len) {
         /* Copy data */
-        *(uint32_t*)buf = 0;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         memcpy(buf, icmp->data, icmp->data_len);
         BUMP_WRITE_BUFFER(buf, len, icmp->data_len);
     } else {
@@ -809,7 +807,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
 
     uint8_t *start = buf;
     uint16_t ipv4_len = *len;
-    uint16_t udp_len = *len;
+    uint16_t udp_len;
     uint8_t header_len = 5; /* header length 20 (4 * 5) */
 
     if(ipv4->router_alert_option) {
@@ -1483,7 +1481,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 *buf = ACCESS_LINE_DATA_LINK_ENCAPS;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 /* (1)byte   + (1)byte  + (1)byte
-                 * data link   encaps 1   encaps 2 */;
+                 * data link   encaps 1   encaps 2 */
                 *(uint32_t*)buf = htobe32(access_line_profile->data_link_encaps);
                 *buf = 3;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
@@ -1883,7 +1881,6 @@ decode_icmp(uint8_t *buf, uint16_t len,
 
     /* Init ICMP header */
     icmp = (bbl_icmp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_icmp_t));
-    //memset(icmp, 0x0, sizeof(bbl_icmp_t));
 
     icmp->type = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
@@ -2444,7 +2441,6 @@ decode_udp(uint8_t *buf, uint16_t len,
 
     /* Init UDP header */
     udp = (bbl_udp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_udp_t));
-    //memset(udp, 0x0, sizeof(bbl_udp_t));
 
     udp->src = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -2515,7 +2511,6 @@ decode_ipv6(uint8_t *buf, uint16_t len,
 
     /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
-    //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
 
     /* Check if version is 6 */
     if(((*buf >> 4) & 0xf) != 6) {
@@ -2596,7 +2591,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
 
     /* Init IPv4 header */
     ipv4 = (bbl_ipv4_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv4_t));
-    //memset(ipv4, 0x0, sizeof(bbl_ipv4_t));
+    ipv4->router_alert_option = false;
 
     header = (struct ip*)buf;
 
@@ -3379,7 +3374,6 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
 
     /* Init PPPoE header */
     pppoe = (bbl_pppoe_session_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_pppoe_session_t));
-    //memset(pppoe, 0x0, sizeof(bbl_pppoe_session_t));
 
     header = (struct pppoe_ppp_session_header*)buf;
     BUMP_BUFFER(buf, len, sizeof(struct pppoe_ppp_session_header));
@@ -3444,7 +3438,6 @@ decode_arp(uint8_t *buf, uint16_t len,
 
     /* Init ARP header */
     arp = (bbl_arp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_arp_t));
-    //memset(arp, 0x0, sizeof(bbl_arp_t));
 
     BUMP_BUFFER(buf, len, 6);
     arp->code = be16toh(*(uint16_t*)buf);

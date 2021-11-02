@@ -4,20 +4,24 @@ Building a BNG from scratch requires a lot of testing but commercial BNG test so
 is often very expensive, resource intensive and provide a lot of administrative overhead
 to maintain such.
 
-Therefore we decided to build our own BNG test solution which is completely build from scratch
-targeted for max scaling with small resource footprint, simple to use and easy to integrate in
-our test automation infrastructure.
+Therefore we decided to build an open source network test software initially focused on BNG 
+and IPTV testing but constantly enhanced and planned for more common network equipment test 
+cases. The BNG Blaster was completely build from scratch, targeted for max scaling with small
+resource footprint, simple to use and easy to integrate in any test automation infrastructure.
 
 The BNG Blaster is able to simulate more than hundred thousand PPPoE and IPoE subscribers including
-IPTV, L2TPv2, QoS, forwarding verification and convergence testing capabilities.
+IPTV, L2TPv2 (LNS emulation), L2BSA, QoS, forwarding verification and convergence testing capabilities.
 
-* *High Scaling:* > 100K sessions
-* *Low CPU and Memory Footprint:* < 100MB memory for 16K sessions
+* *High Scaling:* > 100K sessions, > 1M PPS, and > 1M traffic flows
+* *Low CPU and Memory Footprint:* ~300MB memory for 16K sessions
 * *Portable:* runs on every modern linux, virtual machines and containers
 * *User Space:* all protocols implemented in user-space from scratch and optimized for performance
 * *IPTV:* IGMP version 1, 2 and 3 with automated channel zapping test
 * *QoS:* define and analyze traffic streams
 * *Automation:* the BNG Blaster Controller provides an automation friendly REST API and robot keywords
+
+Please send a mail to bngblaster@rtbrick.com if you are interested
+to get access to the BNG Blaster Controller!
 
 ```
 $ bngblaster --help
@@ -86,19 +90,21 @@ are currently considered as experimental. In the default mode (`packet_mmap_raw`
 buffer and send directly trough raw sockets.
 
 Sending and transmitting traffic is as easy as just by copying a packet into a buffer and setting a flag. This is super
-efficient and hence we have measured the I/O performance of roughly 1M pps per single CPU thread, which is more than enough for
-our purposes here.
+efficient and hence we have measured the I/O performance of up to 1M pps per single CPU thread, which is more than enough
+for our purposes here.
 
 BNG Blasters primary design goal is to simulate thousands of subscriber CPE's with a small hardware resource footprint. Simple
 to use and easy to integrate in our robot test automation infrastructure. This allows to simulate more than hundred thousand
 PPPoE subscribers including IPTV, traffic verification and convergence testing from a single medium scale virtual machine or to
 run the blaster directly from a laptop.
 
-The BNG Blaster provides two types of interfaces. The first interface is called the access interface which emulates the PPPoE
+The BNG Blaster provides three types of interfaces. The first interface is called the access interface which emulates the PPPoE
 sessions. The second interface-type is called network interface. This is used for emulating the core-facing side of the
-internet.
+internet. The last type is called a10nsp interface which emulates an layer two provider interface. The term A10 
+refers to the end-to-end ADSL network reference model from TR-025.  
 
 ![BNG Blaster Interfaces](images/bbl_interfaces.png)
 
 This allows to verify IP reachability by sending bidirectional traffic between all PPPoE sessions on access-interface and the
-network interface. The network interface is also used to inject downstream multicast test traffic for IPTV tests.
+network interface. The network interface is also used to inject downstream multicast test traffic for IPTV tests. It is also 
+possible to send RAW traffic streams between multiple network interfaces.

@@ -78,6 +78,8 @@ typedef struct bbl_ctx_
     int ctrl_socket;
     char *ctrl_socket_path;
 
+    void *stream_thread; /* single linked list of threads */
+
     /* Interfaces */
     struct {
         uint8_t count;
