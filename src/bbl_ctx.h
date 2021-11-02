@@ -87,10 +87,10 @@ typedef struct bbl_ctx_
 
         uint8_t access_if_count;
         struct bbl_interface_ *access_if[BBL_MAX_INTERFACES];
-        
+
         uint8_t network_if_count;
         struct bbl_interface_ *network_if[BBL_MAX_INTERFACES];
-        
+
         uint8_t a10nsp_if_count;
         struct bbl_interface_ *a10nsp_if[BBL_MAX_INTERFACES];
     } interfaces;

@@ -23,7 +23,7 @@ The 64 bit session key is used for all traffic from access (upstream)
 and to access (downstream) interfaces to identify the corresponding
 session which has send or should receive the packet.
 
-```
+```text
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | BNG Blaster Magic Sequence                                    |
@@ -52,7 +52,7 @@ session which has send or should receive the packet.
 
 ### Multicast Traffic
 
-```
+```text
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | BNG Blaster Magic Sequence                                    |
@@ -84,7 +84,8 @@ stored in host byte order for faster processing
 ### BNG Blaster Magic Sequence
 
 The 64 bit magic sequence is the word `RtBrick!` decoded as ASCII:
-```
+
+```text
 0x5274427269636b21
 ```
 
@@ -109,7 +110,7 @@ This number 0 means that sequencing is disabled.
 The 64 bit nanoseconds send timestamp is used for optional latency and
 jitter calculations.
 
-```
+```text
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | Seconds                                                       |
@@ -119,4 +120,3 @@ jitter calculations.
 ```
 
 The timestamp 0 means that timestamps are disabled.
-

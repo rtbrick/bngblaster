@@ -11,7 +11,7 @@
 #include "bbl_stream.h"
 
 void
-bbl_a10nsp_session_free(bbl_session_s *session) 
+bbl_a10nsp_session_free(bbl_session_s *session)
 {
     if(session->a10nsp_session) {
         if(session->a10nsp_session->pppoe_aci) {
@@ -28,7 +28,7 @@ bbl_a10nsp_session_free(bbl_session_s *session)
 static void
 bbl_a10nsp_pppoed_handler(bbl_interface_s *interface,
                           bbl_session_s *session,
-                          bbl_ethernet_header_t *eth) 
+                          bbl_ethernet_header_t *eth)
 {
     bbl_a10nsp_session_t *a10nsp_session = session->a10nsp_session;
     bbl_pppoe_discovery_t *pppoed = (bbl_pppoe_discovery_t*)eth->next;
@@ -44,7 +44,7 @@ bbl_a10nsp_pppoed_handler(bbl_interface_s *interface,
             }
             pppoed->ac_cookie = ac_cookie;
             pppoed->ac_cookie_len = sizeof(ac_cookie);
-            
+
             if(pppoed->access_line) {
                 if(pppoed->access_line->aci) {
                     if(a10nsp_session->pppoe_aci) {
@@ -152,7 +152,7 @@ bbl_a10nsp_ipcp_handler(bbl_interface_s *interface,
     bbl_ipcp_t ipcp_request = {0};
 
     UNUSED(session);
-  
+
     switch(ipcp->code) {
         case PPP_CODE_CONF_REQUEST:
             if(ipcp->address == A10NSP_IP_REMOTE) {
@@ -233,7 +233,7 @@ bbl_a10nsp_ip6cp_handler(bbl_interface_s *interface,
 static void
 bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                           bbl_session_s *session,
-                          bbl_ethernet_header_t *eth) 
+                          bbl_ethernet_header_t *eth)
 {
     bbl_ctx_s *ctx = interface->ctx;
     bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
@@ -254,7 +254,7 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
             break;
         case PROTOCOL_PAP:
             bbl_a10nsp_pap_handler(interface, session, eth);
-            break;            
+            break;
         case PROTOCOL_IPCP:
             bbl_a10nsp_ipcp_handler(interface, session, eth);
             break;
@@ -323,7 +323,7 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
 /**
  * bbl_a10nsp_rx
  *
- * This function handles all received session 
+ * This function handles all received session
  * traffic on a10nsp interfaces.
  *
  * @param interface Receiving interface.
@@ -331,13 +331,13 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
  * @param eth Received ethernet packet.
  */
 void
-bbl_a10nsp_rx(bbl_interface_s *interface, 
-              bbl_session_s *session, 
+bbl_a10nsp_rx(bbl_interface_s *interface,
+              bbl_session_s *session,
               bbl_ethernet_header_t *eth)
 {
     /* Create A10NSP session if not already present */
     if(!session->a10nsp_session) {
-        LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n", 
+        LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n",
             session->session_id, interface->name, eth->vlan_outer);
         session->a10nsp_session = calloc(1, sizeof(bbl_a10nsp_session_t));
         session->a10nsp_session->session = session;

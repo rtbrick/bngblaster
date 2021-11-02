@@ -13,15 +13,15 @@
 /**
  * bbl_interface_lock
  *
- * @brief This functions locks the interface 
+ * @brief This functions locks the interface
  * creating the file "/run/lock/bngblaster_<interface>.lock".
- * 
+ *
  * @param ctx global context
  * @param interface interface
  * @return false if failed to lock (e.g. in use)
  */
 static bool
-bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name) 
+bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
 {
     FILE *lock_file;
     char  lock_path[FILE_PATH_LEN];
@@ -158,7 +158,7 @@ bbl_add_interface(bbl_ctx_s *ctx, char *interface_name)
 
 /**
  * bbl_interface_present
- * 
+ *
  * @param ctx global context
  * @param interface_name interface name
  * @return true if interface is already added
@@ -267,7 +267,7 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
             memcpy(&network_if->ip6, &network_config->ip6, sizeof(ipv6_prefix));
             memcpy(&network_if->gateway6, &network_config->gateway6, sizeof(ipv6_prefix));
             memcpy(&network_if->gateway6_solicited_node_multicast, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
-            memcpy(((uint8_t*)&network_if->gateway6_solicited_node_multicast)+13, 
+            memcpy(((uint8_t*)&network_if->gateway6_solicited_node_multicast)+13,
                    ((uint8_t*)&network_if->gateway6.address)+13, 3);
 
             /* Send initial ICMPv6 NS */
@@ -318,7 +318,7 @@ bbl_add_a10nsp_interfaces(bbl_ctx_s *ctx)
         }
 
         bbl_send_init_interface(a10nsp_if, BBL_SEND_DEFAULT_SIZE);
-        
+
         a10nsp_config = a10nsp_config->next;
     }
     return true;
@@ -329,9 +329,9 @@ bbl_add_a10nsp_interfaces(bbl_ctx_s *ctx)
  *
  * @brief This function will add and initialize
  * all interfaces defined in the configuration.
- * 
+ *
  * @param ctx global context
- * @return true if all interfaces are 
+ * @return true if all interfaces are
  * added and initialised successfully
  */
 bool
@@ -357,9 +357,9 @@ bbl_add_interfaces(bbl_ctx_s *ctx)
  * bbl_get_network_interface
  *
  * @brief This function returns the network interface
- * with the given name or the first interface 
- * if name is NULL. 
- * 
+ * with the given name or the first interface
+ * if name is NULL.
+ *
  * @param ctx global context
  * @param interface interface name
  * @return interface
@@ -374,7 +374,7 @@ bbl_get_network_interface(bbl_ctx_s *ctx, char *interface_name)
                     return ctx->interfaces.network_if[i];
                 }
             } else {
-                return ctx->interfaces.network_if[i]; 
+                return ctx->interfaces.network_if[i];
             }
         }
     }
@@ -385,8 +385,8 @@ bbl_get_network_interface(bbl_ctx_s *ctx, char *interface_name)
  * bbl_get_a10nsp_interface
  *
  * @brief This function returns the network interface
- * with the given name. 
- * 
+ * with the given name.
+ *
  * @param ctx global context
  * @param interface interface name
  * @return interface

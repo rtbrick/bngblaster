@@ -164,8 +164,8 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                 session->dhcpv6_requested = false;
                 ctx->dhcpv6_requested--;
             }
-        } 
-                
+        }
+
         if(state == BBL_ESTABLISHED) {
             /* Increment sessions established and decrement outstanding
              * if new state is established. */
@@ -552,7 +552,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->link_local_ipv6_address[9] = 0xff;
         session->link_local_ipv6_address[10] = 0xff;
         session->link_local_ipv6_address[11] = 0xff;
-        session->link_local_ipv6_address[12] = 0xff;        
+        session->link_local_ipv6_address[12] = 0xff;
         session->link_local_ipv6_address[13] = session->client_mac[3];
         session->link_local_ipv6_address[14] = session->client_mac[4];
         session->link_local_ipv6_address[15] = session->client_mac[5];

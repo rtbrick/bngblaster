@@ -1,6 +1,7 @@
 # Configuration
 
 Following an example configuration file which is explained in detail below.
+
 ```json
 {
     "interfaces": {
@@ -127,7 +128,7 @@ ring buffer and send directly trough RAW packet sockets.
 The interfaces used in BNG Blaster do not need IP addresses configured in the host
 operating system but they need to be in up state.
 
-```
+```cli
 sudo ip link set dev <interface> up
 ```
 
@@ -135,12 +136,12 @@ It is not possible to send packets larger than the interface MTU which is 1500 p
 but for PPPoE with multiple VLAN headers this might be not enough for large packets.
 Therefore the interface MTU should be increased using the following commands.
 
-```
+```cli
 sudo ip link set mtu 9000 dev <interface>
 ```
 
 This can be also archived via netplan using the following configuration for each BNG Blaster
-interface. 
+interface.
 
 ```yaml
 network:
@@ -168,12 +169,12 @@ The number of interfaces is currently limited to 32!
 Attribute | Description | Default
 --------- | ----------- | -------
 `interface` | Network interface name (e.g. eth0, ...)
-`address` | `Local network interface IPv4 address
+`address` | Local network interface IPv4 address
 `gateway` | Gateway network interface IPv4 address
 `address-ipv6` | Local network interface IPv6 address (implicitly /64) | -
 `gateway-ipv6` | Gateway network interface IPv6 address (implicitly /64)
 `vlan` | Network interface VLAN | 0 (untagged)
-`gateway-mac`| Optional set gateway MAC address manually 
+`gateway-mac`| Optional set gateway MAC address manually
 `gateway-resolve-wait` | Sessions will not start until gateways are resolved | true
 
 The BNG Blaster supports also multiple access interfaces
@@ -216,7 +217,7 @@ the option `network-interface` is supported in different sections.
 Attribute | Description | Default
 --------- | ----------- | -------
 `interface` | Access interface name (e.g. eth0, ...)
-`network-interface` | Select the corresponding network interface for this session | 
+`network-interface` | Select the corresponding network interface for this session |
 `type` | Switch the access type between `pppoe` (PPP over Ethernet) and `ipoe` (IP over Ethernet) | pppoe
 `vlan-mode` | Set VLAN mode `1:1` or `N:1` | 1:1
 `qinq` | Set outer VLAN ethertype to QinQ (0x88a8) | false
@@ -261,13 +262,14 @@ Attribute | Description | Default
 For all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
 
-```
+```text
 [ethernet][outer-vlan][inner-vlan][third-vlan][pppoe]...
 ```
 
-**Untagged**
+#### Untagged
 
 With untagged only one session is possible.
+
 ```json
 {
     "access": {
@@ -280,7 +282,8 @@ With untagged only one session is possible.
 }
 ```
 
-**Single Tagged**
+#### Single Tagged
+
 ```json
 {
     "access": {
@@ -293,7 +296,8 @@ With untagged only one session is possible.
 }
 ```
 
-**Double Tagged**
+#### Double Tagged
+
 ```json
 {
     "access": {
@@ -306,7 +310,8 @@ With untagged only one session is possible.
 }
 ```
 
-**Triple Tagged**
+#### Triple Tagged
+
 ```json
 {
     "access": {
@@ -367,7 +372,6 @@ or VLAN ranges as shown in the example below.
 }
 ```
 
-
 Both network and access interfaces are optional but obviously at least
 one interface is required to start the BNG Blaster.
 
@@ -409,7 +413,7 @@ Attribute | Description | Default
 --------- | ----------- | -------
 `interface` | A10nSP interface name (e.g. eth0, ...)
 `qinq` | Set outer VLAN ethertype to QinQ (0x88a8) | false
-`mac`| Optional set gateway interface address manually 
+`mac`| Optional set gateway interface address manually
 
 The BNG Blaster supports also multiple A10NSP interfaces
 as shown in the example below.
@@ -451,6 +455,7 @@ Per default sessions are created by iteration over inner VLAN range first and ou
 Which can be changed by `iterate-vlan-outer` to iterate on outer VLAN first and inner VLAN second.
 
 Therefore the following configuration generates the sessions on VLAN (outer:inner) 1:3, 1:4, 2:3, 2:4 per default or alternative 1:3, 2:3, 1:4, 2:4 with `iterate-vlan-outer` enabled.
+
 ```json
 {
     "outer-vlan-min": 1,
@@ -526,7 +531,7 @@ Attribute | Description | Default
 Attribute | Description | Default
 --------- | ----------- | -------
 `enable` | This option allows to enable or disable the IPCP protocol | true
-`request-ip` | Include IP-Address	with 0.0.0.0 in initial LCP configuration request | true
+`request-ip` | Include IP-Address with 0.0.0.0 in initial LCP configuration request | true
 `request-dns1` | Request Primary DNS Server Address (option 129) | true
 `request-dns2` | Request Secondary DNS Server Address (option 131) | true
 `conf-request-timeout` | IPCP configuration request timeout in seconds | 5
@@ -588,7 +593,7 @@ Attribute | Description | Default
 `send-multicast-traffic` | Generate multicast traffic | false
 `multicast-traffic-length` | Multicast traffic IP length | 76
 `multicast-traffic-tos` | Multicast traffic TOS priority | 0
-`network-interface` | Multicast traffic source interface | 
+`network-interface` | Multicast traffic source interface |
 
 Per default join and leave requests are send using dedicated reports. The option `combined-leave-join` allows
 the combination of leave and join records within a single IGMPv3 report using multiple group records.
@@ -683,8 +688,8 @@ Attribute | Description | Default
 `length` | Layer 3 (IP + payload) traffic length (76 - 9000) | 128
 `pps` | Stream traffic rate in packets per second | 1
 `bps` | Stream traffic rate in bits per second (layer 3) |
-`a10nsp-interface` | Select the corresponding A10NSP interface for this stream | 
-`network-interface` | Select the corresponding network interface for this stream | 
+`a10nsp-interface` | Select the corresponding A10NSP interface for this stream |
+`network-interface` | Select the corresponding network interface for this stream |
 `network-ipv4-address` | Overwrite network interface IPv4 address |
 `network-ipv6-address` | Overwrite network interface IPv6 address |
 `destination-ipv4-address` | Overwrite the IPv4 destination address |
@@ -694,8 +699,8 @@ Attribute | Description | Default
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
 
-The `pps` option supports also float numbers like 0.1, or 2.5 PPS and has priority over `bps` 
-where second is only a helper to calculate the `pps` based on given `bps` and `length`. 
+The `pps` option supports also float numbers like 0.1, or 2.5 PPS and has priority over `bps`
+where second is only a helper to calculate the `pps` based on given `bps` and `length`.
 
 ## Access-Line
 
@@ -748,10 +753,10 @@ Attribute | Description | Default
 `pon-max-up` | PON Tree Maximum Data Rate Upstream | 0
 `pon-max-down` | PON Tree Maximum Data Rate Downstream | 0
 
-Attributes with value set to 0 will not be send. 
+Attributes with value set to 0 will not be send.
 
-The values for `rate-up`, `rate-down` and `dsl-type` defined in the 
-access-line or interface section have priority over those defined 
+The values for `rate-up`, `rate-down` and `dsl-type` defined in the
+access-line or interface section have priority over those defined
 here.
 
 ```json
