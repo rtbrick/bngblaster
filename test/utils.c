@@ -72,12 +72,12 @@ static void
 test_replace_substring(void **unused) {
     (void) unused;
 
-    assert_string_equal(replace_substring("1234{i}90", "{i}", "5678"), "1234567890"); 
-    assert_string_equal(replace_substring("{i1}{i2}{i2}", "{i2}", "2"), "{i1}22"); 
-    assert_string_equal(replace_substring("1234{long-variable-name}567890", "{long-variable-name}", ""), "1234567890"); 
+    assert_string_equal(replace_substring("1234{i}90", "{i}", "5678"), "1234567890");
+    assert_string_equal(replace_substring("{i1}{i2}{i2}", "{i2}", "2"), "{i1}22");
+    assert_string_equal(replace_substring("1234{long-variable-name}567890", "{long-variable-name}", ""), "1234567890");
 }
 
-static void 
+static void
 test_ipv4_multicast_mac(void **unused) {
     (void) unused;
 
@@ -91,7 +91,7 @@ test_ipv4_multicast_mac(void **unused) {
     assert_memory_equal(mac_expected, mac, ETH_ADDR_LEN);
 }
 
-static void 
+static void
 test_ipv6_multicast_mac(void **unused) {
     (void) unused;
 

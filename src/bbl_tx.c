@@ -590,7 +590,7 @@ bbl_dhcpv6_timeout (timer_s *timer)
     interface = session->interface;
     ctx = interface->ctx;
 
-    if(!(session->dhcpv6_state == BBL_DHCP_BOUND || 
+    if(!(session->dhcpv6_state == BBL_DHCP_BOUND ||
          session->dhcpv6_state == BBL_DHCP_INIT)) {
         interface->stats.dhcpv6_timeout++;
         if(session->dhcpv6_retry < ctx->config.dhcpv6_retry) {

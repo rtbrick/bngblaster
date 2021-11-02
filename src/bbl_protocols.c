@@ -84,10 +84,10 @@ bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *icmp, uint16_t
  * ENCODE
  * ------------------------------------------------------------------------*/
 
-static uint16_t 
+static uint16_t
 encode_dhcpv6_access_line(uint8_t *buf, access_line_t *access_line) {
     uint16_t len = 0;
-    uint16_t *option_len; 
+    uint16_t *option_len;
 
     /* DHCPv6 Vendor Option (17) */
     *(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_OPTS);
@@ -272,11 +272,11 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
     return PROTOCOL_SUCCESS;
 }
 
-static uint8_t 
+static uint8_t
 encode_dhcp_access_line(uint8_t *buf, access_line_t *access_line) {
     uint8_t len = 0;
-    uint8_t *option_len; 
-    uint8_t *data_len; 
+    uint8_t *option_len;
+    uint8_t *data_len;
 
     *buf = DHCP_RELAY_AGENT_VENDOR_SUBOPT;
     BUMP_WRITE_BUFFER(buf, &len, sizeof(uint8_t));
@@ -1725,7 +1725,7 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
         *buf |= 128;
     }
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    
+
     /* Remember first TLV offset position */
     *buf = 70;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1765,7 +1765,7 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
     /* CFM TLVs */
 
     /* Sender ID TLV */
-    *buf = 1; 
+    *buf = 1;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *(uint16_t*)buf = htobe16(1);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -1773,7 +1773,7 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
     /* Port Status TLV */
-    *buf = 2; 
+    *buf = 2;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *(uint16_t*)buf = htobe16(1);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -1781,7 +1781,7 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
     /* Interface Status TLV */
-    *buf = 4; 
+    *buf = 4;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *(uint16_t*)buf = htobe16(1);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -1789,7 +1789,7 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
     /* End TLV */
-    *buf = 0; 
+    *buf = 0;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
     return PROTOCOL_SUCCESS;
@@ -2066,7 +2066,7 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
 
     uint16_t ia_option;
     uint16_t ia_option_len;
-    
+
     if(len < 12) {
         return DECODE_ERROR;
     }
@@ -2108,7 +2108,7 @@ decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_t *dhcpv6) {
 
     uint16_t ia_option;
     uint16_t ia_option_len;
-    
+
     if(len < 12) {
         return DECODE_ERROR;
     }
@@ -3201,7 +3201,7 @@ static protocol_error_t
 decode_pppoe_vendor(uint8_t *buf, uint16_t len,
                     uint8_t *sp, uint16_t sp_len,
                     bbl_pppoe_discovery_t *pppoe) {
-    
+
     uint32_t vendor;
     uint8_t tlv_type;
     uint8_t tlv_length;
@@ -3237,7 +3237,7 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
                     memcpy(sp, buf, tlv_length);
                     /* zero terminate string */
                     sp += tlv_length; *sp = 0; sp++;
-                } else { 
+                } else {
                     return DECODE_ERROR;
                 }
                 break;
@@ -3247,21 +3247,21 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
                     memcpy(sp, buf, tlv_length);
                     /* zero terminate string */
                     sp += tlv_length; *sp = 0; sp++;
-                } else { 
+                } else {
                     return DECODE_ERROR;
                 }
                 break;
             case ACCESS_LINE_ACT_UP:
                 if(tlv_length == sizeof(uint32_t)) {
                     access_line->up = be32toh(*(uint32_t*)buf);
-                } else { 
+                } else {
                     return DECODE_ERROR;
                 }
                 break;
             case ACCESS_LINE_ACT_DOWN:
                 if(tlv_length == sizeof(uint32_t)) {
                     access_line->down = be32toh(*(uint32_t*)buf);
-                } else { 
+                } else {
                     return DECODE_ERROR;
                 }
                 break;

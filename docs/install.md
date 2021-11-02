@@ -24,8 +24,8 @@ This command installs the BNG Blaster to `/usr/sbin/bngblaster`.
 
 ### Dependencies
 
-The BNG Blaster has dependencies to the RtBrick 
-[libdict fork](https://github.com/rtbrick/libdict) 
+The BNG Blaster has dependencies to the RtBrick
+[libdict fork](https://github.com/rtbrick/libdict)
 and the following standard dependencies:
 
 ```cli

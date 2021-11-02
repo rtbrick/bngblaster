@@ -48,7 +48,7 @@
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
 
-#define OUI_LEN                         3 
+#define OUI_LEN                         3
 
 #define IPV4_RF                         0x8000 /* reserved fragment flag */
 #define IPV4_DF                         0x4000 /* dont fragment flag */
@@ -498,7 +498,7 @@ typedef struct bbl_pppoe_discovery_ {
     uint8_t       *service_name;
     uint16_t       service_name_len;
     uint8_t       *ac_name;
-    uint16_t       ac_name_len;    
+    uint16_t       ac_name_len;
     uint8_t       *ac_cookie;
     uint16_t       ac_cookie_len;
     uint8_t       *host_uniq;

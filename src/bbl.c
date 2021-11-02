@@ -256,12 +256,12 @@ bbl_ctrl_job (timer_s *timer)
                 continue;
             }
             if(interface->gateway6.len && !interface->icmpv6_nd_resolved) {
-                LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n", 
+                LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n",
                     interface->name, format_ipv6_prefix(&interface->gateway6));
                 return;
             }
             if(interface->gateway && !interface->arp_resolved) {
-                LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n", 
+                LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n",
                     interface->name, format_ipv4_address(&interface->gateway));
                 return;
             }
@@ -367,7 +367,7 @@ bbl_ctrl_job (timer_s *timer)
 
 /**
  * @brief BNG BLASTER MAIN FUNCTION
- * 
+ *
  * @param argc number of argument values
  * @param argv argument values
  * @return int return code
@@ -565,7 +565,7 @@ main (int argc, char *argv[])
         }
     }
 
-    /* Start smear job. Use a crazy nsec bucket '12345678', 
+    /* Start smear job. Use a crazy nsec bucket '12345678',
      * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
 
