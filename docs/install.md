@@ -1,5 +1,8 @@
 # Installation
 
+The BNG Blaster should run on any modern linux distribution
+but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.
+
 ## Install Ubuntu
 
 Install dependencies:
@@ -21,11 +24,17 @@ This command installs the BNG Blaster to `/usr/sbin/bngblaster`.
 
 ### Dependencies
 
-The BNG Blaster has dependencies to the RtBrick [libdict
-fork](https://github.com/rtbrick/libdict) and the following standard
-dependencies:
+The BNG Blaster has dependencies to the RtBrick 
+[libdict fork](https://github.com/rtbrick/libdict) 
+and the following standard dependencies:
 
 ```cli
+# libdict
+wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
+sudo dpkg -i libdict_1.0.1_amd64.deb
+sudo dpkg -i libdict-dev_1.0.1_amd64.deb
+
+# standard dependencies
 sudo apt install -y cmake \
     libcunit1-dev \
     libncurses5-dev \

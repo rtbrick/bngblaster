@@ -66,10 +66,18 @@ bbl_io_netmap_rx_job (timer_s *timer)
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
             eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            if(interface->access) {
-                bbl_rx_handler_access(eth, interface);
-            } else {
-                bbl_rx_handler_network(eth, interface);
+            switch(interface->type) {
+                case INTERFACE_TYPE_ACCESS:
+                    bbl_rx_handler_access(eth, interface);
+                    break;
+                case INTERFACE_TYPE_NETWORK:
+                    bbl_rx_handler_network(eth, interface);
+                    break;
+                case INTERFACE_TYPE_A10NSP:
+                    bbl_rx_handler_a10nsp(eth, interface);
+                    break;
+                default:
+                    break;
             }
         } else if (decode_result == UNKNOWN_PROTOCOL) {
             interface->stats.packets_rx_drop_unknown++;

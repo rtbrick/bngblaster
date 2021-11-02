@@ -164,3 +164,31 @@ replace_substring (const char* source,
     *result_pos = '\0';
     return result;
 }
+
+/** 
+ * ipv4_multicast_mac
+ *
+ * @param ipv4 IPv4 multicast address
+ * @param mac target buffer to store multicast MAC
+ */
+void
+ipv4_multicast_mac(const uint32_t ipv4, uint8_t* mac) {
+    *(uint32_t*)(&mac[2]) = ipv4;
+    mac[0] = 0x01;
+    mac[1] = 0x00;
+    mac[2] = 0x5e;
+    mac[3] &= 0x7f;
+}
+
+/** 
+ * ipv6_multicast_mac
+ *
+ * @param ipv6 IPv6 multicast address
+ * @param mac target buffer to store multicast MAC
+ */
+void
+ipv6_multicast_mac(const uint8_t *ipv6, uint8_t* mac) {
+    *(uint32_t*)(&mac[2]) =*(uint32_t*)(&ipv6[12]);
+    mac[0] = 0x33;
+    mac[1] = 0x33;
+}

@@ -189,9 +189,9 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_na_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T1
+        *(uint32_t*)buf = 0; /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T2
+        *(uint32_t*)buf = 0; /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
     /* IA_PD */
@@ -209,17 +209,17 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_pd_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T1
+        *(uint32_t*)buf = 0; /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // T2
+        *(uint32_t*)buf = 0; /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IAPREFIX);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint16_t*)buf = htobe16(25); // length
+        *(uint16_t*)buf = htobe16(25); /* length */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = 0; // preferred lifetime
+        *(uint32_t*)buf = 0; /* preferred lifetime */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; // valid lifetime
+        *(uint32_t*)buf = 0; /* valid lifetime */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         memset(buf, 0x0, sizeof(ipv6_prefix));
         BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6_prefix));
@@ -547,8 +547,6 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
 
     if(icmp->data_len) {
         /* Copy data */
-        *(uint32_t*)buf = 0;
-        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         memcpy(buf, icmp->data, icmp->data_len);
         BUMP_WRITE_BUFFER(buf, len, icmp->data_len);
     } else {
@@ -563,9 +561,9 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
-                *(uint8_t*)buf = 1; /* Source link-layer address */
+                *buf = 1; /* Source link-layer address */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint8_t*)buf = 1; /* Length (1 = 8 byte) */
+                *buf = 1; /* Length (1 = 8 byte) */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
@@ -576,9 +574,9 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
-                *(uint8_t*)buf = 2; /* Target link-layer address */
+                *buf = 2; /* Target link-layer address */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint8_t*)buf = 1; /* Length (1 = 8 byte) */
+                *buf = 1; /* Length (1 = 8 byte) */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
@@ -809,8 +807,8 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
 
     uint8_t *start = buf;
     uint16_t ipv4_len = *len;
-    uint16_t udp_len = *len;
-    uint8_t header_len = 5; // header length 20 (4 * 5)
+    uint16_t udp_len;
+    uint8_t header_len = 5; /* header length 20 (4 * 5) */
 
     if(ipv4->router_alert_option) {
         header_len++;
@@ -1483,7 +1481,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 *buf = ACCESS_LINE_DATA_LINK_ENCAPS;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 /* (1)byte   + (1)byte  + (1)byte
-                 * data link   encaps 1   encaps 2 */;
+                 * data link   encaps 1   encaps 2 */
                 *(uint32_t*)buf = htobe32(access_line_profile->data_link_encaps);
                 *buf = 3;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
@@ -1697,7 +1695,7 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
     }
 
     pppoe_len = *len - pppoe_len;
-    pppoe_len += 2; // PPP header
+    pppoe_len += 2; /* PPP header */
     *pppoe_len_field = htobe16(pppoe_len);
     return result;
 }
@@ -1883,13 +1881,12 @@ decode_icmp(uint8_t *buf, uint16_t len,
 
     /* Init ICMP header */
     icmp = (bbl_icmp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_icmp_t));
-    //memset(icmp, 0x0, sizeof(bbl_icmp_t));
 
     icmp->type = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     icmp->code = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
-    BUMP_BUFFER(buf, len, sizeof(uint16_t)); // checksum
+    BUMP_BUFFER(buf, len, sizeof(uint16_t)); /* checksum */
 
     if(len) {
         icmp->data = buf;
@@ -1925,7 +1922,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     icmpv6->code = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
-    BUMP_BUFFER(buf, len, sizeof(uint16_t)); // checksum
+    BUMP_BUFFER(buf, len, sizeof(uint16_t)); /* checksum */
 
     if(len) {
         icmpv6->data = buf;
@@ -1937,7 +1934,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             if(len < 12) {
                 return DECODE_ERROR;
             }
-            BUMP_BUFFER(buf, len, sizeof(uint8_t)); // hop limit
+            BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
             flags = *buf;
             if(flags & ICMPV6_FLAGS_OTHER_CONFIG) icmpv6->other = true;
             BUMP_BUFFER(buf, len, 11);
@@ -1972,7 +1969,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             if(len < 20) {
                 return DECODE_ERROR;
             }
-            BUMP_BUFFER(buf, len, sizeof(uint32_t)); // flags / reserved
+            BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* flags / reserved */
             memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
             break;
         default:
@@ -2444,7 +2441,6 @@ decode_udp(uint8_t *buf, uint16_t len,
 
     /* Init UDP header */
     udp = (bbl_udp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_udp_t));
-    //memset(udp, 0x0, sizeof(bbl_udp_t));
 
     udp->src = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -2515,7 +2511,6 @@ decode_ipv6(uint8_t *buf, uint16_t len,
 
     /* Init IPv6 header */
     ipv6 = (bbl_ipv6_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv6_t));
-    //memset(ipv6, 0x0, sizeof(bbl_ipv6_t));
 
     /* Check if version is 6 */
     if(((*buf >> 4) & 0xf) != 6) {
@@ -2596,7 +2591,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
 
     /* Init IPv4 header */
     ipv4 = (bbl_ipv4_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ipv4_t));
-    //memset(ipv4, 0x0, sizeof(bbl_ipv4_t));
+    ipv4->router_alert_option = false;
 
     header = (struct ip*)buf;
 
@@ -3202,6 +3197,82 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     return ret_val;
 }
 
+static protocol_error_t
+decode_pppoe_vendor(uint8_t *buf, uint16_t len,
+                    uint8_t *sp, uint16_t sp_len,
+                    bbl_pppoe_discovery_t *pppoe) {
+    
+    uint32_t vendor;
+    uint8_t tlv_type;
+    uint8_t tlv_length;
+
+    access_line_t *access_line;
+
+    if(len < sizeof(uint32_t)) {
+        return DECODE_ERROR;
+    }
+
+    vendor = be32toh(*(uint32_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    if(vendor != BROADBAND_FORUM_VENDOR_ID) {
+        return PROTOCOL_SUCCESS;
+    }
+
+    if(sp_len < sizeof(access_line_t)) {
+        return DECODE_ERROR;
+    }
+
+    access_line = (access_line_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(access_line_t));
+    memset(access_line, 0x0, sizeof(access_line_t));
+    pppoe->access_line = access_line;
+    while(len > 2) {
+        tlv_type = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        tlv_length = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        switch (tlv_type) {
+            case ACCESS_LINE_ACI:
+                if(sp_len > tlv_length) {
+                    access_line->aci = (void*)sp;
+                    memcpy(sp, buf, tlv_length);
+                    /* zero terminate string */
+                    sp += tlv_length; *sp = 0; sp++;
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ARI:
+                if(sp_len > tlv_length) {
+                    access_line->ari = (void*)sp;
+                    memcpy(sp, buf, tlv_length);
+                    /* zero terminate string */
+                    sp += tlv_length; *sp = 0; sp++;
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ACT_UP:
+                if(tlv_length == sizeof(uint32_t)) {
+                    access_line->up = be32toh(*(uint32_t*)buf);
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ACT_DOWN:
+                if(tlv_length == sizeof(uint32_t)) {
+                    access_line->down = be32toh(*(uint32_t*)buf);
+                } else { 
+                    return DECODE_ERROR;
+                }
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, tlv_length);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
 /*
  * decode_pppoe_discovery
  *
@@ -3268,6 +3339,11 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
                 pppoe->ac_cookie = buf;
                 pppoe->ac_cookie_len = pppoe_tag_len;
                 break;
+            case PPPOE_TAG_VENDOR:
+                if(decode_pppoe_vendor(buf, pppoe_tag_len, sp, sp_len, pppoe) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
+                }
+                break;
             default:
                 break;
         }
@@ -3298,7 +3374,6 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
 
     /* Init PPPoE header */
     pppoe = (bbl_pppoe_session_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_pppoe_session_t));
-    //memset(pppoe, 0x0, sizeof(bbl_pppoe_session_t));
 
     header = (struct pppoe_ppp_session_header*)buf;
     BUMP_BUFFER(buf, len, sizeof(struct pppoe_ppp_session_header));
@@ -3308,7 +3383,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
     pppoe->session_id = be16toh(header->session_id);
-    pppoe_len = be16toh(header->len) - 2; // - 2 byte PPP header
+    pppoe_len = be16toh(header->len) - 2; /* - 2 byte PPP header */
     pppoe->protocol = be16toh(header->protocol);
     if(pppoe_len > len) {
         return DECODE_ERROR;
@@ -3363,7 +3438,6 @@ decode_arp(uint8_t *buf, uint16_t len,
 
     /* Init ARP header */
     arp = (bbl_arp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_arp_t));
-    //memset(arp, 0x0, sizeof(bbl_arp_t));
 
     BUMP_BUFFER(buf, len, 6);
     arp->code = be16toh(*(uint16_t*)buf);
@@ -3414,6 +3488,9 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     if(eth->type == ETH_TYPE_VLAN || eth->type == ETH_TYPE_QINQ) {
         if(len < 4) {
             return DECODE_ERROR;
+        }
+        if(eth->type == ETH_TYPE_QINQ) {
+            eth->qinq = true;
         }
         eth->vlan_outer_priority = *buf >> 5;
         eth->vlan_outer = be16toh(*(uint16_t*)buf);

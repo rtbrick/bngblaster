@@ -81,7 +81,6 @@ pcapng_fflush (bbl_ctx_s *ctx)
                 close(ctx->pcap.fd);
                 pcapng_init(ctx);
                 break;
-            case EAGAIN:
             default:
                 /*
                  * Reset the buffer for unresponsive callers.
@@ -175,7 +174,7 @@ pcapng_open (bbl_ctx_s *ctx)
                 return;
         }
     } else {
-        LOG(NORMAL, "opened pcap-file %s\n", ctx->pcap.filename);
+        LOG(INFO, "opened pcap-file %s\n", ctx->pcap.filename);
     }
 }
 
