@@ -64,6 +64,7 @@ The control socket command `session-info session-id <id>` provides
 detailed information for IPoE sessions.
 
 `$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .`
+
 ```json
 {
     "status": "ok",

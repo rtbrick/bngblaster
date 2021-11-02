@@ -1,6 +1,7 @@
 # Configuration
 
 Following an example configuration file which is explained in detail below.
+
 ```json
 {
     "interfaces": {
@@ -127,7 +128,7 @@ ring buffer and send directly trough RAW packet sockets.
 The interfaces used in BNG Blaster do not need IP addresses configured in the host
 operating system but they need to be in up state.
 
-```
+```cli
 sudo ip link set dev <interface> up
 ```
 
@@ -135,7 +136,7 @@ It is not possible to send packets larger than the interface MTU which is 1500 p
 but for PPPoE with multiple VLAN headers this might be not enough for large packets.
 Therefore the interface MTU should be increased using the following commands.
 
-```
+```cli
 sudo ip link set mtu 9000 dev <interface>
 ```
 
@@ -168,7 +169,7 @@ The number of interfaces is currently limited to 32!
 Attribute | Description | Default
 --------- | ----------- | -------
 `interface` | Network interface name (e.g. eth0, ...)
-`address` | `Local network interface IPv4 address
+`address` | Local network interface IPv4 address
 `gateway` | Gateway network interface IPv4 address
 `address-ipv6` | Local network interface IPv6 address (implicitly /64) | -
 `gateway-ipv6` | Gateway network interface IPv6 address (implicitly /64)
@@ -261,13 +262,14 @@ Attribute | Description | Default
 For all modes it is possible to configure between zero and three VLAN
 tags on the access interface as shown below.
 
-```
+```text
 [ethernet][outer-vlan][inner-vlan][third-vlan][pppoe]...
 ```
 
-**Untagged**
+#### Untagged
 
 With untagged only one session is possible.
+
 ```json
 {
     "access": {
@@ -280,7 +282,8 @@ With untagged only one session is possible.
 }
 ```
 
-**Single Tagged**
+#### Single Tagged
+
 ```json
 {
     "access": {
@@ -293,7 +296,8 @@ With untagged only one session is possible.
 }
 ```
 
-**Double Tagged**
+#### Double Tagged
+
 ```json
 {
     "access": {
@@ -306,7 +310,8 @@ With untagged only one session is possible.
 }
 ```
 
-**Triple Tagged**
+#### Triple Tagged
+
 ```json
 {
     "access": {
@@ -366,7 +371,6 @@ or VLAN ranges as shown in the example below.
     ]
 }
 ```
-
 
 Both network and access interfaces are optional but obviously at least
 one interface is required to start the BNG Blaster.
@@ -451,6 +455,7 @@ Per default sessions are created by iteration over inner VLAN range first and ou
 Which can be changed by `iterate-vlan-outer` to iterate on outer VLAN first and inner VLAN second.
 
 Therefore the following configuration generates the sessions on VLAN (outer:inner) 1:3, 1:4, 2:3, 2:4 per default or alternative 1:3, 2:3, 1:4, 2:4 with `iterate-vlan-outer` enabled.
+
 ```json
 {
     "outer-vlan-min": 1,
@@ -526,7 +531,7 @@ Attribute | Description | Default
 Attribute | Description | Default
 --------- | ----------- | -------
 `enable` | This option allows to enable or disable the IPCP protocol | true
-`request-ip` | Include IP-Address	with 0.0.0.0 in initial LCP configuration request | true
+`request-ip` | Include IP-Address with 0.0.0.0 in initial LCP configuration request | true
 `request-dns1` | Request Primary DNS Server Address (option 129) | true
 `request-dns2` | Request Secondary DNS Server Address (option 131) | true
 `conf-request-timeout` | IPCP configuration request timeout in seconds | 5

@@ -125,6 +125,7 @@ easily merged with the base configuration.
 The `session-streams` command returns detailed stream statistics per session.
 
 `$ sudo bngblaster-cli run.sock session-streams session-id 1`
+
 ```json
 {
     "status": "ok",
@@ -244,6 +245,7 @@ accounting of the BNG, meaning session rx/tx packets excluding control traffic.
 Each flow can be queried separately using jsonpath expression with name and direction or flow-id.
 
 `$ sudo bngblaster-cli run.sock session-streams session-id 1 | jq '."session-streams".streams[] | select(.name == "BE" and .direction == "downstream" )'`
+
 ```json
 {
   "name": "BE",

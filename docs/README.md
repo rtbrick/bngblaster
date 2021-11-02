@@ -1,4 +1,4 @@
-## BNG Blaster Documentation
+# BNG Blaster Documentation
 
 - [Introduction](intro.md)
 - [Installation](install.md)
