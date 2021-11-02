@@ -89,7 +89,7 @@ delay.
 
 ## Manual Join/Leave Testing
 
-It is possible to join and leave multicast groups manually using the Control Socket as
+It is possible to join and leave multicast groups manually using the <<Control Socket>> as
 shown in the example below.
 
 `$ sudo bngblaster-cli run.sock igmp-join session-id 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103`
@@ -170,7 +170,7 @@ sending leave and the last multicast packet received for this group. Multicast p
 received for the leaved group after first packet of joined group is received are counted
 as overlap.
 
-The following Configuration output shows an example for the `igmp` section
+The following <<Configuration>> output shows an example for the `igmp` section
 for a typical zapping test.
 
 ```json
