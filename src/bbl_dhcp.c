@@ -97,7 +97,7 @@ bbl_dhcp_start(bbl_session_s *session) {
         session->dhcp_xid = rand();
         session->dhcp_retry = 0;
         session->send_requests |= BBL_SEND_DHCP_REQUEST;
-        
+
         LOG(DHCP, "DHCP (ID: %u) Start DHCP\n", session->session_id);
     }
 }

@@ -44,17 +44,17 @@ bbl_send_is_full(bbl_interface_s *interface)
 }
 
 /**
- * @brief Receive packet from interface send 
+ * @brief Receive packet from interface send
  * buffer and copy to target buffer (buf).
- * 
+ *
  * @param interface interface
  * @param buf target buffer
  * @return number of bytes copied
  */
 uint16_t
-bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf) 
+bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf)
 {
-    bbl_send_slot_t *slot; 
+    bbl_send_slot_t *slot;
 
     if(interface->send.read == interface->send.write) {
         return 0;
@@ -71,17 +71,17 @@ bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf)
 }
 
 /**
- * @brief Encode packet to interface send 
+ * @brief Encode packet to interface send
  * buffer.
- * 
+ *
  * @param interface interface
  * @param eth ethernet structure
- * @return bbl_send_result_t 
+ * @return bbl_send_result_t
  */
 bbl_send_result_t
-bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth) 
+bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
 {
-    bbl_send_slot_t *slot; 
+    bbl_send_slot_t *slot;
 
     if(interface->send.read == interface->send.next) {
         return BBL_SEND_FULL;
@@ -100,7 +100,7 @@ bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
 }
 
 static void
-swap_eth_src_dst(bbl_ethernet_header_t *eth) 
+swap_eth_src_dst(bbl_ethernet_header_t *eth)
 {
     uint8_t *dst = eth->dst;
     eth->dst = eth->src;
@@ -108,7 +108,7 @@ swap_eth_src_dst(bbl_ethernet_header_t *eth)
 }
 
 static void
-swap_ipv4_src_dst(bbl_ipv4_t *ipv4) 
+swap_ipv4_src_dst(bbl_ipv4_t *ipv4)
 {
     uint32_t dst = ipv4->dst;
     ipv4->dst = ipv4->src;
@@ -116,9 +116,9 @@ swap_ipv4_src_dst(bbl_ipv4_t *ipv4)
 }
 
 static void
-update_eth(bbl_interface_s *interface, 
-           bbl_session_s *session, 
-           bbl_ethernet_header_t *eth) 
+update_eth(bbl_interface_s *interface,
+           bbl_session_s *session,
+           bbl_ethernet_header_t *eth)
 {
     if(session) {
         swap_eth_src_dst(eth);
@@ -136,10 +136,10 @@ update_eth(bbl_interface_s *interface,
     }
 }
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_arp_reply(bbl_interface_s *interface,
                   bbl_session_s *session,
-                  bbl_ethernet_header_t *eth, 
+                  bbl_ethernet_header_t *eth,
                   bbl_arp_t *arp)
 {
     update_eth(interface, session, eth);
@@ -151,11 +151,11 @@ bbl_send_arp_reply(bbl_interface_s *interface,
     return bbl_send_to_buffer(interface, eth);
 }
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_icmpv6_na(bbl_interface_s *interface,
                   bbl_session_s *session,
-                  bbl_ethernet_header_t *eth, 
-                  bbl_ipv6_t *ipv6, 
+                  bbl_ethernet_header_t *eth,
+                  bbl_ipv6_t *ipv6,
                   bbl_icmpv6_t *icmpv6)
 {
     update_eth(interface, session, eth);
@@ -176,11 +176,11 @@ bbl_send_icmpv6_na(bbl_interface_s *interface,
     return bbl_send_to_buffer(interface, eth);
 }
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_icmp_reply(bbl_interface_s *interface,
                    bbl_session_s *session,
-                   bbl_ethernet_header_t *eth, 
-                   bbl_ipv4_t *ipv4, 
+                   bbl_ethernet_header_t *eth,
+                   bbl_ipv4_t *ipv4,
                    bbl_icmp_t *icmp)
 {
     update_eth(interface, session, eth);
@@ -190,11 +190,11 @@ bbl_send_icmp_reply(bbl_interface_s *interface,
     return bbl_send_to_buffer(interface, eth);
 }
 
-bbl_send_result_t 
+bbl_send_result_t
 bbl_send_icmpv6_echo_reply(bbl_interface_s *interface,
                            bbl_session_s *session,
-                           bbl_ethernet_header_t *eth, 
-                           bbl_ipv6_t *ipv6, 
+                           bbl_ethernet_header_t *eth,
+                           bbl_ipv6_t *ipv6,
                            bbl_icmpv6_t *icmpv6)
 {
     update_eth(interface, session, eth);

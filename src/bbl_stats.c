@@ -222,7 +222,7 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
                     stats->min_stream_rx_first_seq = stream->rx_first_seq;
                 }
                 if(stream->rx_first_seq > stats->max_stream_rx_first_seq) stats->max_stream_rx_first_seq = stream->rx_first_seq;
-            
+
                 if(stats->min_stream_delay_ns) {
                     if(stream->min_delay_ns < stats->min_stream_delay_ns) stats->min_stream_delay_ns = stream->min_delay_ns;
                 } else {
@@ -277,25 +277,25 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
             if(ctx->stats.session_traffic_flows) {
-                printf("  TX Session:        %10lu packets\n", 
+                printf("  TX Session:        %10lu packets\n",
                     interface->stats.session_ipv4_tx);
-                printf("  RX Session:        %10lu packets (%lu loss)\n", 
+                printf("  RX Session:        %10lu packets (%lu loss)\n",
                     interface->stats.session_ipv4_rx, interface->stats.session_ipv4_loss);
-                printf("  TX Session IPv6:   %10lu packets\n", 
+                printf("  TX Session IPv6:   %10lu packets\n",
                     interface->stats.session_ipv6_tx);
-                printf("  RX Session IPv6:   %10lu packets (%lu loss)\n", 
+                printf("  RX Session IPv6:   %10lu packets (%lu loss)\n",
                     interface->stats.session_ipv6_rx, interface->stats.session_ipv6_loss);
-                printf("  TX Session IPv6PD: %10lu packets\n", 
+                printf("  TX Session IPv6PD: %10lu packets\n",
                     interface->stats.session_ipv6pd_tx);
-                printf("  RX Session IPv6PD: %10lu packets (%lu loss)\n", 
+                printf("  RX Session IPv6PD: %10lu packets (%lu loss)\n",
                     interface->stats.session_ipv6pd_rx, interface->stats.session_ipv6pd_loss);
             }
-            printf("  TX Multicast:      %10lu packets\n", 
+            printf("  TX Multicast:      %10lu packets\n",
                 interface->stats.mc_tx);
-            printf("  RX Drop Unknown:   %10lu packets\n", 
+            printf("  RX Drop Unknown:   %10lu packets\n",
                 interface->stats.packets_rx_drop_unknown);
             printf("  TX Encode Error:   %10lu\n", interface->stats.encode_errors);
-            printf("  RX Decode Error:   %10lu packets\n", 
+            printf("  RX Decode Error:   %10lu packets\n",
                 interface->stats.packets_rx_drop_decode_error);
             printf("  TX Send Failed:    %10lu\n", interface->stats.sendto_failed);
             printf("  TX No Buffer:      %10lu\n", interface->stats.no_tx_buffer);
@@ -368,17 +368,17 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
             if(ctx->stats.session_traffic_flows) {
-                printf("  TX Session:        %10lu packets\n", 
+                printf("  TX Session:        %10lu packets\n",
                     interface->stats.session_ipv4_tx);
-                printf("  RX Session:        %10lu packets (%lu loss)\n", 
+                printf("  RX Session:        %10lu packets (%lu loss)\n",
                     interface->stats.session_ipv4_rx, interface->stats.session_ipv4_loss);
-                printf("  TX Session IPv6:   %10lu packets\n", 
+                printf("  TX Session IPv6:   %10lu packets\n",
                     interface->stats.session_ipv6_tx);
-                printf("  RX Session IPv6:   %10lu packets (%lu loss)\n", 
+                printf("  RX Session IPv6:   %10lu packets (%lu loss)\n",
                     interface->stats.session_ipv6_rx, interface->stats.session_ipv6_loss);
-                printf("  TX Session IPv6PD: %10lu packets\n", 
+                printf("  TX Session IPv6PD: %10lu packets\n",
                     interface->stats.session_ipv6pd_tx);
-                printf("  RX Session IPv6PD: %10lu packets (%lu loss)\n", 
+                printf("  RX Session IPv6PD: %10lu packets (%lu loss)\n",
                     interface->stats.session_ipv6pd_rx, interface->stats.session_ipv6pd_loss);
 
             }
@@ -398,7 +398,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         printf("    IPv4    PPS:    %8u\n", ctx->config.session_traffic_ipv4_pps);
         printf("    IPv6    PPS:    %8u\n", ctx->config.session_traffic_ipv6_pps);
         printf("    IPv6PD  PPS:    %8u\n", ctx->config.session_traffic_ipv6pd_pps);
-        printf("  Verified Traffic Flows: %u/%u\n", 
+        printf("  Verified Traffic Flows: %u/%u\n",
             ctx->stats.session_traffic_flows_verified, ctx->stats.session_traffic_flows);
         printf("    Access  IPv4:   %8u\n", stats->sessions_access_ipv4_rx);
         printf("    Access  IPv6:   %8u\n", stats->sessions_access_ipv6_rx);
@@ -407,37 +407,37 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         printf("    Network IPv6:   %8u\n", stats->sessions_network_ipv6_rx);
         printf("    Network IPv6PD: %8u\n", stats->sessions_network_ipv6pd_rx);
         printf("  First Sequence Number Received:\n");
-        printf("    Access  IPv4    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+        printf("    Access  IPv4    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n",
             stats->min_access_ipv4_rx_first_seq, stats->min_access_ipv4_rx_seconds,
             stats->max_access_ipv4_rx_first_seq, stats->max_access_ipv4_rx_seconds);
-        printf("    Access  IPv6    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+        printf("    Access  IPv6    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n",
             stats->min_access_ipv6_rx_first_seq, stats->min_access_ipv6_rx_seconds,
             stats->max_access_ipv6_rx_first_seq, stats->max_access_ipv6_rx_seconds);
-        printf("    Access  IPv6PD  MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
-            stats->min_access_ipv6pd_rx_first_seq, stats->min_access_ipv6pd_rx_seconds, 
+        printf("    Access  IPv6PD  MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n",
+            stats->min_access_ipv6pd_rx_first_seq, stats->min_access_ipv6pd_rx_seconds,
             stats->max_access_ipv6pd_rx_first_seq, stats->max_access_ipv6pd_rx_seconds);
-        printf("    Network IPv4    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+        printf("    Network IPv4    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n",
             stats->min_network_ipv4_rx_first_seq, stats->min_network_ipv4_rx_seconds,
             stats->max_network_ipv4_rx_first_seq, stats->max_network_ipv4_rx_seconds);
-        printf("    Network IPv6    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+        printf("    Network IPv6    MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n",
             stats->min_network_ipv6_rx_first_seq, stats->min_network_ipv6_rx_seconds,
             stats->max_network_ipv6_rx_first_seq, stats->max_network_ipv6_rx_seconds);
-        printf("    Network IPv6PD  MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n", 
+        printf("    Network IPv6PD  MIN: %8lu (%6.3fs) MAX: %8lu (%6.3fs)\n",
             stats->min_network_ipv6pd_rx_first_seq, stats->min_network_ipv6pd_rx_seconds,
             stats->max_network_ipv6pd_rx_first_seq, stats->max_network_ipv6pd_rx_seconds);
     }
 
     if(ctx->stats.stream_traffic_flows) {
         printf("\nTraffic Streams:\n");
-        printf("  Verified Traffic Flows: %u/%u\n", 
+        printf("  Verified Traffic Flows: %u/%u\n",
             ctx->stats.stream_traffic_flows_verified, ctx->stats.stream_traffic_flows);
-        printf("  First Sequence Number Received  MIN: %8lu MAX: %8lu\n", 
+        printf("  First Sequence Number Received  MIN: %8lu MAX: %8lu\n",
             stats->min_stream_rx_first_seq,
             stats->max_stream_rx_first_seq);
-        printf("  Flow Receive Packet Loss        MIN: %8lu MAX: %8lu\n", 
+        printf("  Flow Receive Packet Loss        MIN: %8lu MAX: %8lu\n",
             stats->min_stream_loss,
             stats->max_stream_loss);
-        printf("  Flow Receive Delay (nsec)       MIN: %8lu MAX: %8lu\n", 
+        printf("  Flow Receive Delay (nsec)       MIN: %8lu MAX: %8lu\n",
             stats->min_stream_delay_ns,
             stats->max_stream_delay_ns);
     }

@@ -61,9 +61,10 @@ The most common case for IPoE is using DHCPv4/v6 as shown below.
 ## IPoE Session Information
 
 The control socket command `session-info session-id <id>` provides
-detailed information for IPoE sessions. 
+detailed information for IPoE sessions.
 
 `$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .`
+
 ```json
 {
     "status": "ok",

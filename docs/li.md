@@ -5,7 +5,8 @@ about the received flows. Today only the BCM QMX LI header format is supported b
 headers can be easily integrated.
 
 *BCM QMX LI Header Format*
-```
+
+```text
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | D   | PT    | SPT | LIID                                      |
@@ -33,6 +34,7 @@ mediation device as shown in the following example.
 The received flows can be queried using the control socket.
 
 `$ sudo bngblaster-cli run.sock li-flows`
+
 ```json
 {
     "status": "ok",
@@ -88,4 +90,3 @@ The `packets-rx-ipv4-host-internal` refers to the IPv4 protocol number 61 (any h
 which is used by some network testers as default type for traffic streams.
 The same is valid for `packets-rx-ipv6-host-internal` which refers to next header 61 and
 `packets-rx-ipv6-no-next-header` with next header 59.
-

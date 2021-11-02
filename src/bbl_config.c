@@ -269,7 +269,7 @@ json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_net
                 &network_config->gateway_mac[2],
                 &network_config->gateway_mac[3],
                 &network_config->gateway_mac[4],
-                &network_config->gateway_mac[5]) < 6) 
+                &network_config->gateway_mac[5]) < 6)
         {
             fprintf(stderr, "JSON config error: Invalid value for network->gateway-mac\n");
             return false;
@@ -525,7 +525,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
             access_config->ipv4_enable = false;
         }
     } else {
-        /* Disable IPv4 on IPoE if neither DHCP is enabled or 
+        /* Disable IPv4 on IPoE if neither DHCP is enabled or
          * a static IPv4 address is configured. */
         if (!(access_config->dhcp_enable || access_config->static_ip)) {
             access_config->ipv4_enable = false;
@@ -637,7 +637,7 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
                 &a10nsp_config->mac[2],
                 &a10nsp_config->mac[3],
                 &a10nsp_config->mac[4],
-                &a10nsp_config->mac[5]) < 6) 
+                &a10nsp_config->mac[5]) < 6)
         {
             fprintf(stderr, "JSON config error: Invalid value for a10nsp->mac\n");
             return false;
@@ -1321,7 +1321,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 return false;
             }
         }
-   
+
         /* Access Interface Configuration Section */
         sub = json_object_get(section, "access");
         if (json_is_array(sub)) {
@@ -1517,8 +1517,8 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
  * This function populates the BBL context
  * from given JSON configuration file returning
  * true if successfull or false if failed with
- * error message printed to stderr. 
- * 
+ * error message printed to stderr.
+ *
  * @param ctx JSON filename
  * @param ctx global context
  */
@@ -1571,14 +1571,14 @@ json_parse_config_streams (json_t *root, bbl_ctx_s *ctx) {
     return true;
 }
 
-/** 
+/**
  * bbl_config_streams_load_json
  *
  * This function populates traffic streams
  * from given JSON stream configuration file returning
  * true if successfull or false if failed with
  * error message printed to stderr.
- * 
+ *
  * @param ctx JSON filename
  * @param ctx global context
  */

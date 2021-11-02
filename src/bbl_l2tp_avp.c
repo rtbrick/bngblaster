@@ -854,7 +854,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_
                                                 l2tp_session->result_code,
                                                 l2tp_session->error_code,
                                                 l2tp_session->error_message);
-                /* RFC3145 PPP Disconnect Cause Code AVP */                
+                /* RFC3145 PPP Disconnect Cause Code AVP */
                 bbl_l2tp_avp_encode_disconnect_code(&buf, len, l2tp_session);
             }
             break;

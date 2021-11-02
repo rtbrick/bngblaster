@@ -24,7 +24,7 @@ val2key (struct keyval_ *keyval, uint val)
     return "Unknown";
 }
 
-/** 
+/**
  * format_mac_address
  *
  * Format an MAC address as string in one of 16 static buffers.
@@ -44,7 +44,7 @@ format_mac_address (uint8_t *mac)
     return ret;
 }
 
-/** 
+/**
  * format_ipv4_address
  *
  * Format an IPv4 address as string in one of 32 static buffers.
@@ -64,7 +64,7 @@ format_ipv4_address (uint32_t *addr4)
     return ret;
 }
 
-/** 
+/**
  * format_ipv6_address
  *
  * Format an IPv6 address as string in one of 16 static buffers.
@@ -84,7 +84,7 @@ format_ipv6_address (ipv6addr_t *addr6)
     return ret;
 }
 
-/** 
+/**
  * format_ipv6_prefix
  *
  * Format an IPv6 prefix as string in one of 16 static buffers.
@@ -105,9 +105,9 @@ format_ipv6_prefix (ipv6_prefix *addr6)
     return ret;
 }
 
-/** 
+/**
  * replace_substring
- * 
+ *
  * Replace subscrtring in one of 4 static buffers.
  *
  * @param source source string
@@ -131,7 +131,7 @@ replace_substring (const char* source,
     size_t result_len = 0;
 
     idx = (idx+1) & 3;
-    
+
     size_t new_len = strlen(new);
     size_t old_len = strlen(old);
 
@@ -154,7 +154,7 @@ replace_substring (const char* source,
         } else {
             c = strlen(cur);
             result_len += c;
-            if(result_len < STRLEN_MAX) { 
+            if(result_len < STRLEN_MAX) {
                 memcpy(result_pos, cur, c);
                 result_pos += c;
             }
@@ -165,7 +165,7 @@ replace_substring (const char* source,
     return result;
 }
 
-/** 
+/**
  * ipv4_multicast_mac
  *
  * @param ipv4 IPv4 multicast address
@@ -180,7 +180,7 @@ ipv4_multicast_mac(const uint32_t ipv4, uint8_t* mac) {
     mac[3] &= 0x7f;
 }
 
-/** 
+/**
  * ipv6_multicast_mac
  *
  * @param ipv6 IPv6 multicast address

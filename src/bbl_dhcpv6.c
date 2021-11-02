@@ -87,7 +87,7 @@ bbl_dhcpv6_start(bbl_session_s *session) {
             session->dhcpv6_ia_na_iaid = rand();
             if(!session->dhcpv6_ia_na_iaid) session->dhcpv6_ia_na_iaid = 1;
         }
-        
+
         session->dhcpv6_ia_pd_iaid = rand();
         if(session->dhcpv6_ia_pd_iaid == session->dhcpv6_ia_na_iaid) {
             session->dhcpv6_ia_pd_iaid = session->dhcpv6_ia_na_iaid + 1;
@@ -183,7 +183,7 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
                 bbl_session_clear(ctx, session);
             }
             return;
-        } 
+        }
         /* Establish DHCPv6 */
         if(!session->dhcpv6_established) {
             session->dhcpv6_established = true;

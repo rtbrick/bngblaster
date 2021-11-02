@@ -236,7 +236,7 @@ bbl_stats_job (timer_s *timer)
     int i;
 
     int pos = 1; /* position */
-    bool visible = false; 
+    bool visible = false;
 
     access_if = ctx->interfaces.access_if[g_access_if_selected];
     network_if = ctx->interfaces.network_if[g_network_if_selected];

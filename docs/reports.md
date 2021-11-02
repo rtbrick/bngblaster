@@ -5,7 +5,7 @@ at the end of of the test execution.
 
 ## Standard Output Reports
 
-```
+```text
 
       ____   __   ____         _        __                                  ,/
      / __ \ / /_ / __ ) _____ (_)_____ / /__                              ,'/
@@ -245,7 +245,7 @@ as shown in the example below.
 }
 ```
 
-The optional argument `-j sessions` allows to include per session statistics 
+The optional argument `-j sessions` allows to include per session statistics
 in the report file. Similar with `-j streams` which allows to include per stream
 statistics. Both options could be also combined.
 
@@ -276,7 +276,8 @@ Assuming session traffic is enabled for IPv4, IPv6 and IPv6PD, in this case
 all statics should be equal matching the number of sessions.
 
 *Example report output for 100 sessions:*
-```
+
+```text
 Session Traffic:
   Config:
     IPv4    PPS:           1
@@ -299,6 +300,7 @@ Session Traffic:
 ```
 
 JSON:
+
 ```json
 {
     "session-traffic": {
@@ -333,6 +335,7 @@ The flow verification status can be also queried via
 global control socket command `session-traffic`.
 
 `$ cat command.json | jq .`
+
 ```json
 {
   "command": "session-traffic"
@@ -340,6 +343,7 @@ global control socket command `session-traffic`.
 ```
 
 `$ cat command.json | sudo nc -U test.socket | jq .`
+
 ```json
 {
     "status": "ok",
@@ -359,6 +363,7 @@ established using the rate as configured starting with sequence number 1 for
 each flow.
 
 *Example config output with 1 packet per second:*
+
 ```json
 {
     "session-traffic": {
@@ -374,7 +379,8 @@ combined with a rate of 1 PPS would mean that it took between 4
 and 5 seconds until forwarding is working.
 
 *Example report output with 1 packet per second:*
-```
+
+```text
 STDOUT:
 
   First Sequence Number Received:
@@ -385,7 +391,9 @@ STDOUT:
     Network IPv6    MIN:        1 MAX:        1
     Network IPv6PD  MIN:        1 MAX:        1
 ```
+
 JSON:
+
 ```json
 {
       "first-seq-rx-access-ipv4-min": 1,
