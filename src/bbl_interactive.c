@@ -339,7 +339,7 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "    Tx Data                 %10lu (%7lu PPS)\n",
                     network_if->stats.l2tp_data_tx, network_if->stats.rate_l2tp_data_tx.avg);
                 wprintw(stats_win, "    Rx Data                 %10lu (%7lu PPS)\n",
-                    network_if->stats.l2tp_data_rx, network_if->stats.rate_l2tp_data_tx.avg);
+                    network_if->stats.l2tp_data_rx, network_if->stats.rate_l2tp_data_rx.avg);
             }
         }
 
