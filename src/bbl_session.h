@@ -262,6 +262,10 @@ typedef struct bbl_session_
 
     /* Session Traffic */
     bool session_traffic;
+
+    uint8_t session_traffic_flows;
+    uint8_t session_traffic_flows_verified;
+
     uint64_t access_ipv4_tx_flow_id;
     uint64_t access_ipv4_tx_seq;
     uint8_t *access_ipv4_tx_packet_template;

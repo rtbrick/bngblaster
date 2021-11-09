@@ -351,6 +351,7 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
                     if(!session->access_ipv6_rx_first_seq) {
                         session->access_ipv6_rx_first_seq = bbl->flow_seq;
                         interface->ctx->stats.session_traffic_flows_verified++;
+                        session->session_traffic_flows_verified++;
                     } else {
                         if(session->access_ipv6_rx_last_seq +1 != bbl->flow_seq) {
                             interface->stats.session_ipv6_loss++;
@@ -377,6 +378,7 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
                     if(!session->access_ipv6pd_rx_first_seq) {
                         session->access_ipv6pd_rx_first_seq = bbl->flow_seq;
                         interface->ctx->stats.session_traffic_flows_verified++;
+                        session->session_traffic_flows_verified++;
                     } else {
                         if(session->access_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
                             interface->stats.session_ipv6pd_loss++;
@@ -619,6 +621,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                 if(!session->access_ipv4_rx_first_seq) {
                     session->access_ipv4_rx_first_seq = bbl->flow_seq;
                     interface->ctx->stats.session_traffic_flows_verified++;
+                    session->session_traffic_flows_verified++;
                 } else {
                     if(session->access_ipv4_rx_last_seq +1 != bbl->flow_seq) {
                         interface->stats.session_ipv4_loss++;
@@ -1829,6 +1832,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             if(!session->network_ipv4_rx_first_seq) {
                                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
                                 interface->ctx->stats.session_traffic_flows_verified++;
+                                session->session_traffic_flows_verified++;
                             } else {
                                 if(session->network_ipv4_rx_last_seq +1 != bbl->flow_seq) {
                                     interface->stats.session_ipv4_loss++;
@@ -1849,6 +1853,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             if(!session->network_ipv6_rx_first_seq) {
                                 session->network_ipv6_rx_first_seq = bbl->flow_seq;
                                 interface->ctx->stats.session_traffic_flows_verified++;
+                                session->session_traffic_flows_verified++;
                             } else {
                                 if(session->network_ipv6_rx_last_seq +1 != bbl->flow_seq) {
                                     interface->stats.session_ipv6_loss++;
@@ -1869,6 +1874,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             if(!session->network_ipv6pd_rx_first_seq) {
                                 session->network_ipv6pd_rx_first_seq = bbl->flow_seq;
                                 interface->ctx->stats.session_traffic_flows_verified++;
+                                session->session_traffic_flows_verified++;
                             } else {
                                 if(session->network_ipv6pd_rx_last_seq +1 != bbl->flow_seq) {
                                     interface->stats.session_ipv6pd_loss++;

@@ -1042,10 +1042,15 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
         session = ctx->session_list[i];
-        if(session && session->session_state != BBL_ESTABLISHED) {
-            json_session = json_pack("{si ss}",
+        if(!session) continue;
+        
+        if(session->session_state != BBL_ESTABLISHED || 
+           session->session_traffic_flows != session->session_traffic_flows_verified) {
+            json_session = json_pack("{si ss si si}",
                                      "session-id", session->session_id,
-                                     "session-state", session_state_string(session->session_state));
+                                     "session-state", session_state_string(session->session_state),
+                                     "session-traffic-flows", session->session_traffic_flows,
+                                     "session-traffic-flows-verified", session->session_traffic_flows_verified);
             json_array_append(json_sessions, json_session);
         }
     }
