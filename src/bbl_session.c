@@ -271,6 +271,8 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                         session->l2tp_session = NULL;
 
                         /* Session traffic */
+                        session->session_traffic_flows = 0;
+                        session->session_traffic_flows_verified = 0;
                         session->access_ipv4_tx_flow_id = 0;
                         session->access_ipv4_tx_seq = 0;
                         session->access_ipv4_tx_packet_len = 0;
@@ -683,7 +685,6 @@ bbl_session_json(bbl_session_s *session)
     json_t *root = NULL;
     json_t *session_traffic = NULL;
     json_t *a10nsp_session = NULL;
-    bbl_ctx_s *ctx;
 
     struct timespec now;
 
@@ -699,8 +700,6 @@ bbl_session_json(bbl_session_s *session)
     const char *dhcpv6_dns1 = NULL;
     const char *dhcpv6_dns2 = NULL;
 
-    int flows = 0;
-    int flows_verified = 0;
     uint32_t seconds = 0;
     uint32_t dhcp_lease_expire = 0;
     uint32_t dhcp_lease_expire_t1 = 0;
@@ -712,8 +711,6 @@ bbl_session_json(bbl_session_s *session)
     if(!session) {
         return NULL;
     }
-
-    ctx = session->interface->ctx;
 
     if(session->ip_address) {
         ipv4 = format_ipv4_address(&session->ip_address);
@@ -749,23 +746,10 @@ bbl_session_json(bbl_session_s *session)
         dhcpv6_dns2 = format_ipv6_address(&session->dhcpv6_dns2);
     }
 
-    if(ctx->config.session_traffic_ipv4_pps || ctx->config.session_traffic_ipv6_pps || ctx->config.session_traffic_ipv6pd_pps) {
-        if(session->access_ipv4_tx_flow_id) flows++;
-        if(session->access_ipv6_tx_flow_id) flows++;
-        if(session->access_ipv6pd_tx_flow_id) flows++;
-        if(session->network_ipv4_tx_flow_id) flows++;
-        if(session->network_ipv6_tx_flow_id) flows++;
-        if(session->network_ipv6pd_tx_flow_id) flows++;
-        if(session->access_ipv4_rx_first_seq) flows_verified++;
-        if(session->access_ipv6_rx_first_seq) flows_verified++;
-        if(session->access_ipv6pd_rx_first_seq) flows_verified++;
-        if(session->network_ipv4_rx_first_seq) flows_verified++;
-        if(session->network_ipv6_rx_first_seq) flows_verified++;
-        if(session->network_ipv6pd_rx_first_seq) flows_verified++;
-
+    if(session->session_traffic_flows) {
         session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
-            "total-flows", flows,
-            "verified-flows", flows_verified,
+            "total-flows", session->session_traffic_flows,
+            "verified-flows", session->session_traffic_flows_verified,
             "first-seq-rx-access-ipv4", session->access_ipv4_rx_first_seq,
             "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
             "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
