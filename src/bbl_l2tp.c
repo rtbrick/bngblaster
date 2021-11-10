@@ -69,6 +69,44 @@ l2tp_session_state_string(l2tp_session_state_t state)
 }
 
 /**
+ * bbl_l2tp_force_stop
+ */
+static void
+bbl_l2tp_force_stop(bbl_l2tp_tunnel_t *l2tp_tunnel) {
+    bbl_interface_s *interface = l2tp_tunnel->interface;
+    bbl_l2tp_queue_t *q = NULL;
+    bbl_l2tp_queue_t *q_del = NULL;
+
+    uint16_t ns = l2tp_tunnel->ns;
+
+    /* Remove all packets from TX queue never 
+     * send out and reset Ns. number. */
+    q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
+    while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
+        if(!q->retries) {
+            /* Packet was never send out! */
+            if(q->ns < ns) {
+                ns = q->ns;
+            }
+            q_del = q;
+            q = CIRCLEQ_NEXT(q, txq_qnode);
+            CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
+            if(CIRCLEQ_NEXT(q_del, tx_qnode)) {
+                CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q_del, tx_qnode);
+            }
+            free(q_del);
+        } else {
+            q = CIRCLEQ_NEXT(q, txq_qnode);
+        }
+    }
+    /* Reset Ns. number. */
+    l2tp_tunnel->ns = ns;
+    /* Increase window size to ensure that StopCCN is send out. */
+    l2tp_tunnel->cwnd++;
+    bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+}
+
+/**
  * bbl_l2tp_session_delete
  *
  * This function will free all dynamic memory for the given
@@ -278,7 +316,7 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
                     l2tp_tunnel->error_code = 6;
                     l2tp_tunnel->error_message = "max retry";
                     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
-                    bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+                    bbl_l2tp_force_stop(l2tp_tunnel);
                 }
                 /* When congestion occurs (indicated by the triggering of a
                  * retransmission) one half of the congestion window (CWND)
@@ -327,7 +365,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
                 l2tp_tunnel->error_code = 6;
                 l2tp_tunnel->error_message = "timeout";
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
-                bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+                bbl_l2tp_force_stop(l2tp_tunnel);
             }
             break;
         case BBL_L2TP_TUNNEL_ESTABLISHED:
@@ -1217,7 +1255,7 @@ bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {
             if(l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 l2tp_tunnel->result_code = 6;
-                bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+                bbl_l2tp_force_stop(l2tp_tunnel);
             }
         }
         l2tp_server = l2tp_server->next;
