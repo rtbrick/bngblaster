@@ -156,6 +156,7 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;
+        session->session_traffic_flows++;
     }
     session->network_ipv4_tx_flow_id = ctx->flow_id++;
     bbl.flow_id = session->network_ipv4_tx_flow_id;
@@ -221,6 +222,7 @@ bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;
+        session->session_traffic_flows++;
     }
     session->network_ipv4_tx_flow_id = ctx->flow_id++;
     bbl.flow_id = session->network_ipv4_tx_flow_id;
@@ -305,6 +307,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     session->access_ipv4_tx_seq = 1;
     if(!session->access_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;
+        session->session_traffic_flows++;
     }
     session->access_ipv4_tx_flow_id = ctx->flow_id++;
     bbl.flow_id = session->access_ipv4_tx_flow_id;
@@ -340,6 +343,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;
+        session->session_traffic_flows++;
     }
     session->network_ipv4_tx_flow_id = ctx->flow_id++;
     bbl.flow_id = session->network_ipv4_tx_flow_id;
@@ -386,6 +390,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         session->access_ipv6pd_tx_seq = 1;
         if(!session->access_ipv6pd_tx_flow_id) {
             ctx->stats.session_traffic_flows++;
+            session->session_traffic_flows++;
         }
         session->access_ipv6pd_tx_flow_id = ctx->flow_id++;
         bbl.flow_id = session->access_ipv6pd_tx_flow_id;
@@ -399,6 +404,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         session->access_ipv6_tx_seq = 1;
         if(!session->access_ipv6_tx_flow_id) {
             ctx->stats.session_traffic_flows++;
+            session->session_traffic_flows++;
         }
         session->access_ipv6_tx_flow_id = ctx->flow_id++;
         bbl.flow_id = session->access_ipv6_tx_flow_id;
@@ -451,6 +457,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         session->network_ipv6pd_tx_seq = 1;
         if(!session->network_ipv6pd_tx_flow_id) {
             ctx->stats.session_traffic_flows++;
+            session->session_traffic_flows++;
         }
         session->network_ipv6pd_tx_flow_id = ctx->flow_id++;
         bbl.flow_id = session->network_ipv6pd_tx_flow_id;
@@ -463,6 +470,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         session->network_ipv6_tx_seq = 1;
         if(!session->network_ipv6_tx_flow_id) {
             ctx->stats.session_traffic_flows++;
+            session->session_traffic_flows++;
         }
         session->network_ipv6_tx_flow_id = ctx->flow_id++;
         bbl.flow_id = session->network_ipv6_tx_flow_id;

@@ -437,9 +437,9 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
         printf("  Flow Receive Packet Loss        MIN: %8lu MAX: %8lu\n",
             stats->min_stream_loss,
             stats->max_stream_loss);
-        printf("  Flow Receive Delay (nsec)       MIN: %8lu MAX: %8lu\n",
-            stats->min_stream_delay_ns,
-            stats->max_stream_delay_ns);
+        printf("  Flow Receive Delay (msec)       MIN: %8.3f MAX: %8.3f\n",
+               (double)stats->min_stream_delay_ns / (double)MSEC,
+               (double)stats->max_stream_delay_ns / (double)MSEC);
     }
 
     if(ctx->config.igmp_group_count > 1) {

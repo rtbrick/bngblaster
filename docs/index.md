@@ -19,7 +19,8 @@ than hundred thousand PPPoE and IPoE subscribers including IPTV, L2TPv2, QoS, fo
 verification and convergence testing capabilities. The BNG Blaster is also contently
 enhanced for more common (non-BNG) network testing.
 
-A short introduction can be found on [YouTube](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster").
+A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster") and good presentation
+from [DENOG13](https://youtu.be/LVg6rlVEfNU "DENOG13") can be found on YouTube. 
 
 ![BBL Interactive](images/bbl_interactive.png "BNG Blaster (Interactive Mode)")
 
