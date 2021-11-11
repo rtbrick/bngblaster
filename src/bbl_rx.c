@@ -489,6 +489,9 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                 }
             }
             if(session->access_type == ACCESS_TYPE_IPOE) {
+                if(!session->arp_resolved) {
+                    memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
+                }
                 bbl_rx_established_ipoe(eth, interface, session);
             } else if(icmpv6->other && ctx->config.dhcpv6_enable) {
                 bbl_dhcpv6_start(session);
