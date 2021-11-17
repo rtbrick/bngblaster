@@ -1528,9 +1528,9 @@ bbl_rx_session_id_from_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *in
             udp = (bbl_udp_t*)ipv4->next;
             if (udp->protocol == UDP_PROTOCOL_DHCP) {
                 dhcp = (bbl_dhcp_t*)udp->next;
-                session_id |= dhcp->header->chaddr[5];
-                session_id |= dhcp->header->chaddr[4] << 8;
-                session_id |= dhcp->header->chaddr[3] << 16;
+                session_id |= ((uint8_t*)(dhcp->header->chaddr))[5];
+                session_id |= ((uint8_t*)(dhcp->header->chaddr))[4] << 8;
+                session_id |= ((uint8_t*)(dhcp->header->chaddr))[3] << 16;
             }
         }
     }
