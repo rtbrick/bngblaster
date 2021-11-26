@@ -34,6 +34,8 @@ typedef struct bbl_stream_config_
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
 
+    uint32_t ipv4_access_src_address; /* overwrite default IPv4 access address */
+    ipv6addr_t ipv6_access_src_address; /* overwrite default IPv6 access address */
     uint32_t ipv4_network_address; /* overwrite default IPv4 network address */
     ipv6addr_t ipv6_network_address; /* overwrite default IPv6 network address */
     uint32_t ipv4_destination_address; /* overwrite IPv4 destination address */
