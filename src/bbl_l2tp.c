@@ -899,6 +899,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 
     struct timespec delay;
     uint64_t delay_nsec;
+    uint64_t loss;
 
     UNUSED(ctx);
     UNUSED(eth);
@@ -1056,10 +1057,12 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                                 if(!pppoe_session->network_ipv4_rx_first_seq) {
                                     pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
                                     interface->ctx->stats.session_traffic_flows_verified++;
+                                    pppoe_session->session_traffic_flows_verified++;
                                 } else {
-                                    if(pppoe_session->network_ipv4_rx_last_seq +1 != bbl->flow_seq) {
-                                        interface->stats.session_ipv4_loss++;
-                                        pppoe_session->stats.network_ipv4_loss++;
+                                    if((pppoe_session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
+                                        loss = bbl->flow_seq - (pppoe_session->network_ipv4_rx_last_seq +1);
+                                        interface->stats.session_ipv4_loss += loss;
+                                        pppoe_session->stats.network_ipv4_loss += loss;
                                         LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
                                             pppoe_session->session_id, bbl->flow_id, bbl->flow_seq, pppoe_session->network_ipv4_rx_last_seq);
                                     }

@@ -469,7 +469,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     if (json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
         access_config->agent_remote_id = strdup(s);
     } else {
-        if (ctx->config.agent_circuit_id) {
+        if (ctx->config.agent_remote_id) {
             access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
         }
     }
@@ -747,6 +747,20 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
         }
     }
     if (!stream_config->pps) stream_config->pps = 1;
+
+    if (json_unpack(stream, "{s:s}", "access-ipv4-source-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &stream_config->ipv4_access_src_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv4-source-address\n");
+            return false;
+        }
+    }
+
+    if (json_unpack(stream, "{s:s}", "access-ipv6-source-address", &s) == 0) {
+        if (!inet_pton(AF_INET6, s, &stream_config->ipv6_access_src_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv6-source-address\n");
+            return false;
+        }
+    }
 
     if (json_unpack(stream, "{s:s}", "network-ipv4-address", &s) == 0) {
         if (!inet_pton(AF_INET, s, &stream_config->ipv4_network_address)) {
