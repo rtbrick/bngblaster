@@ -469,7 +469,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
     if (json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
         access_config->agent_remote_id = strdup(s);
     } else {
-        if (ctx->config.agent_circuit_id) {
+        if (ctx->config.agent_remote_id) {
             access_config->agent_remote_id = strdup(ctx->config.agent_remote_id);
         }
     }
