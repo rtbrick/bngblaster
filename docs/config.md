@@ -694,6 +694,8 @@ Attribute | Description | Default
 `network-ipv6-address` | Overwrite network interface IPv6 address |
 `destination-ipv4-address` | Overwrite the IPv4 destination address |
 `destination-ipv6-address` | Overwrite the IPv6 destination address |
+`access-ipv4-source-address` | Overwrite the access IPv4 source address (client) |
+`access-ipv6-source-address` | Overwrite the access IPv6 source address (client) |
 `threaded` | Run those streams in separate threads | false
 `thread-group` | Assign this stream to thread group (1-255) | 0 (thread per stream)
 
@@ -701,6 +703,10 @@ For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner 
 
 The `pps` option supports also float numbers like 0.1, or 2.5 PPS and has priority over `bps`
 where second is only a helper to calculate the `pps` based on given `bps` and `length`.
+
+The options `access-ipv4-source-address` and `access-ipv6-source-address` are used
+to test the BNG RPF functionality with traffic send from source addresses different
+to those assigned to the client. 
 
 ## Access-Line
 
