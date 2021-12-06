@@ -386,7 +386,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    IP6CP Request:    %10u\n", interface->stats.ip6cp_timeout);
             printf("    PAP:              %10u\n", interface->stats.pap_timeout);
             printf("    CHAP:             %10u\n", interface->stats.chap_timeout);
-            printf("    DHCPv6 Request:   %10u\n", interface->stats.dhcp_timeout);
+            printf("    DHCP Request:     %10u\n", interface->stats.dhcp_timeout);
             printf("    DHCPv6 Request:   %10u\n", interface->stats.dhcpv6_timeout);
             printf("    ICMPv6 RS:        %10u\n", interface->stats.icmpv6_rs_timeout);
         }
