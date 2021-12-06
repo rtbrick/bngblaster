@@ -33,29 +33,41 @@ typedef struct bbl_stats_ {
     uint32_t mc_not_received;
 
     uint64_t min_access_ipv4_rx_first_seq;
+    uint64_t avg_access_ipv4_rx_first_seq;
     uint64_t max_access_ipv4_rx_first_seq;
     uint64_t min_network_ipv4_rx_first_seq;
+    uint64_t avg_network_ipv4_rx_first_seq;
     uint64_t max_network_ipv4_rx_first_seq;
     uint64_t min_access_ipv6_rx_first_seq;
+    uint64_t avg_access_ipv6_rx_first_seq;
     uint64_t max_access_ipv6_rx_first_seq;
     uint64_t min_network_ipv6_rx_first_seq;
+    uint64_t avg_network_ipv6_rx_first_seq;
     uint64_t max_network_ipv6_rx_first_seq;
     uint64_t min_access_ipv6pd_rx_first_seq;
+    uint64_t avg_access_ipv6pd_rx_first_seq;
     uint64_t max_access_ipv6pd_rx_first_seq;
     uint64_t min_network_ipv6pd_rx_first_seq;
+    uint64_t avg_network_ipv6pd_rx_first_seq;
     uint64_t max_network_ipv6pd_rx_first_seq;
 
     float min_access_ipv4_rx_seconds;
+    float avg_access_ipv4_rx_seconds;
     float max_access_ipv4_rx_seconds;
     float min_network_ipv4_rx_seconds;
+    float avg_network_ipv4_rx_seconds;
     float max_network_ipv4_rx_seconds;
     float min_access_ipv6_rx_seconds;
+    float avg_access_ipv6_rx_seconds;
     float max_access_ipv6_rx_seconds;
     float min_network_ipv6_rx_seconds;
+    float avg_network_ipv6_rx_seconds;
     float max_network_ipv6_rx_seconds;
     float min_access_ipv6pd_rx_seconds;
+    float avg_access_ipv6pd_rx_seconds;
     float max_access_ipv6pd_rx_seconds;
     float min_network_ipv6pd_rx_seconds;
+    float avg_network_ipv6pd_rx_seconds;
     float max_network_ipv6pd_rx_seconds;
 
     uint32_t sessions_access_ipv4_rx;
