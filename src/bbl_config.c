@@ -879,6 +879,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.iterate_outer_vlan = json_boolean_value(value);
         }
+        value = json_object_get(section, "start-delay");
+        if (json_is_number(value)) {
+            ctx->config.sessions_start_delay = json_number_value(value);
+        }
     }
 
     /* IPoE Configuration */

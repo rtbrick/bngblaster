@@ -450,6 +450,7 @@ Attribute | Description | Default
 `start-rate` | Setup request rate in sessions per second | 400
 `stop-rate` | Teardown request rate in sessions per second | 400
 `iterate-vlan-outer` | Iterate on outer VLAN first | false
+`start-delay` | Wait N seconds after all interface are resolved before starting sessions | 0
 
 Per default sessions are created by iteration over inner VLAN range first and outer VLAN second.
 Which can be changed by `iterate-vlan-outer` to iterate on outer VLAN first and inner VLAN second.

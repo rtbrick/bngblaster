@@ -272,7 +272,9 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                         stream = *search;
                         stream->packets_rx++;
                         stream->rx_len = eth->length;
-                        stream->rx_priority = ((bbl_ipv4_t*)eth->next)->tos;
+                        stream->rx_priority = ipv4->tos;
+                        stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
+                        stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
                         timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
                         delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
                         if(delay_nsec > stream->max_delay_ns) {

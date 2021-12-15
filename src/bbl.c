@@ -246,6 +246,9 @@ bbl_ctrl_job (timer_s *timer)
     int rate = 0;
     uint32_t i;
 
+    struct timespec timestamp;
+    struct timespec time_diff;
+
     /* Setup phase ...
      * Wait for all network interfaces to be resolved. */
     if(g_init_phase && !g_teardown) {
@@ -268,6 +271,7 @@ bbl_ctrl_job (timer_s *timer)
         }
         g_init_phase = false;
         LOG(INFO, "All network interfaces resolved\n");
+        clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_resolved);
     }
 
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
@@ -307,6 +311,14 @@ bbl_ctrl_job (timer_s *timer)
             }
         }
     } else {
+        /* Wait N seconds (default 0) before we start to setup sessions. */
+        if(ctx->config.sessions_start_delay) {
+            clock_gettime(CLOCK_MONOTONIC, &timestamp);
+            timespec_sub(&time_diff, &timestamp, &ctx->timestamp_resolved);
+            if(time_diff.tv_sec < ctx->config.sessions_start_delay) {
+                return;
+            }
+        }
         /* Iterate over all idle session (list of pending sessions)
          * and start as much as permitted per interval based on max
          * outstanding and setup rate. Sessions started will be removed
