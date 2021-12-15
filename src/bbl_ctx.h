@@ -36,6 +36,7 @@ typedef struct bbl_ctx_
 
     struct timespec timestamp_start;
     struct timespec timestamp_stop;
+    struct timespec timestamp_resolved;
 
     uint32_t sessions;
     uint32_t sessions_pppoe;
@@ -169,6 +170,8 @@ typedef struct bbl_ctx_
         uint32_t sessions_max_outstanding;
         uint16_t sessions_start_rate;
         uint16_t sessions_stop_rate;
+        uint16_t sessions_start_delay;
+
         bool iterate_outer_vlan;
 
         /* Static */
