@@ -58,7 +58,6 @@ bbl_lcp_echo(timer_s *timer)
     }
 }
 
-
 void
 bbl_igmp_zapping(timer_s *timer)
 {
@@ -272,7 +271,7 @@ bbl_igmp_initial_join(timer_s *timer)
     }
 }
 
-void
+static void
 bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos) {
 
     bbl_stream *stream;
@@ -317,7 +316,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
     }
 }
 
-void
+static void
 bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
@@ -413,6 +412,13 @@ bbl_cfm_cc(timer_s *timer) {
     }
 }
 
+/**
+ * bbl_rx_established_ipoe
+ * 
+ * @param eth received packet
+ * @param interface receiving interface
+ * @param session corresponding session
+ */
 void
 bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
 
@@ -460,7 +466,7 @@ bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, 
     }
 }
 
-void
+static void
 bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_icmpv6_t *icmpv6 = (bbl_icmpv6_t*)ipv6->next;
@@ -511,7 +517,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
     }
 }
 
-void
+static void
 bbl_rx_igmp(bbl_ipv4_t *ipv4, bbl_session_s *session) {
 
     bbl_igmp_t *igmp = (bbl_igmp_t*)ipv4->next;
@@ -571,7 +577,7 @@ bbl_rx_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_session_s *session
     }
 }
 
-void
+static void
 bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface, bbl_session_s *session) {
 
     bbl_udp_t *udp;
@@ -714,7 +720,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
     }
 }
 
-void
+static void
 bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
     switch(ipv6->protocol) {
         case IPV6_NEXT_HEADER_ICMPV6:
@@ -730,7 +736,7 @@ bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *inter
     session->stats.accounting_bytes_rx += eth->length;
 }
 
-void
+static void
 bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_session_t *pppoes;
     bbl_pap_t *pap;
@@ -803,8 +809,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     }
 }
 
-
-void
+static void
 bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_session_t *pppoes;
     bbl_chap_t *chap;
@@ -913,6 +918,13 @@ bbl_session_timeout(timer_s *timer)
     }
 }
 
+/**
+ * bbl_rx_established
+ * 
+ * @param eth received packet
+ * @param interface receiving interface
+ * @param session corresponding session
+ */
 void
 bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
 
@@ -951,7 +963,7 @@ bbl_rx_established(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_s
     }
 }
 
-void
+static void
 bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_session_t *pppoes;
     bbl_ip6cp_t *ip6cp;
@@ -1055,7 +1067,7 @@ bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session
     }
 }
 
-void
+static void
 bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_session_t *pppoes;
     bbl_ipcp_t *ipcp;
@@ -1379,7 +1391,7 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     }
 }
 
-void
+static void
 bbl_rx_session(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_session_t *pppoes;
 
@@ -1425,7 +1437,7 @@ bbl_lcp_start_delay(timer_s *timer) {
     bbl_session_tx_qnode_insert(session);
 }
 
-void
+static void
 bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_discovery_t *pppoed;
     bbl_ctx_s *ctx = interface->ctx;
@@ -1520,7 +1532,7 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
     }
 }
 
-void
+static void
 bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_arp_t *arp = (bbl_arp_t*)eth->next;
     bbl_ctx_s *ctx;
@@ -1549,7 +1561,7 @@ bbl_rx_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     }
 }
 
-uint32_t
+static uint32_t
 bbl_rx_session_id_from_vlan(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     uint32_t session_id = 0;
     vlan_session_key_t key = {0};
@@ -1568,7 +1580,7 @@ bbl_rx_session_id_from_vlan(bbl_ethernet_header_t *eth, bbl_interface_s *interfa
     return session_id;
 }
 
-uint32_t
+static uint32_t
 bbl_rx_session_id_from_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     uint32_t session_id = 0;
     bbl_ipv4_t *ipv4;
@@ -1593,7 +1605,7 @@ bbl_rx_session_id_from_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *in
     return session_id;
 }
 
-void
+static void
 bbl_rx_handler_access_multicast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_ctx_s *ctx;
     bbl_session_s *session;
@@ -1624,7 +1636,7 @@ bbl_rx_handler_access_multicast(bbl_ethernet_header_t *eth, bbl_interface_s *int
     }
 }
 
-void
+static void
 bbl_rx_handler_access_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_ctx_s *ctx;
     bbl_session_s *session;
