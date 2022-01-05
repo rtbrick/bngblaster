@@ -100,6 +100,8 @@
 #define PPP_CODE_ECHO_REPLY             10
 #define PPP_CODE_DISCARD_REQUEST        11
 
+#define PPP_MAX_OPTIONS                 8
+
 #define PAP_CODE_REQUEST                1
 #define PAP_CODE_ACK                    2
 #define PAP_CODE_NAK                    3
@@ -529,7 +531,6 @@ struct pppoe_ppp_session_header {
     uint16_t  protocol;
 } __attribute__ ((__packed__));
 
-
 /*
  * PPP LCP Structure
  */
@@ -547,6 +548,8 @@ typedef struct bbl_lcp_ {
     uint16_t    vendor_value_len;
     uint8_t    *start;
     uint16_t    len;
+    uint8_t    *option[PPP_MAX_OPTIONS];
+    bool        unknown_options;
 } bbl_lcp_t;
 
 /*
@@ -563,6 +566,8 @@ typedef struct bbl_ipcp_ {
     bool        option_address;
     bool        option_dns1;
     bool        option_dns2;
+    uint8_t    *option[PPP_MAX_OPTIONS];
+    bool        unknown_options;
 } bbl_ipcp_t;
 
 /*
@@ -574,6 +579,8 @@ typedef struct bbl_ip6cp_ {
     uint8_t    *options;
     uint8_t     options_len;
     uint64_t    ipv6_identifier;
+    uint8_t    *option[PPP_MAX_OPTIONS];
+    bool        unknown_options;
 } bbl_ip6cp_t;
 
 /*
