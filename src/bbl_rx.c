@@ -1155,7 +1155,48 @@ bbl_rx_ipcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
     }
 }
 
-void
+/**
+ * bbl_rx_lcp_conf_reject
+ * 
+ * This function rejects all unknown LCP configuration
+ * options by sending LCP conf-reject.  
+ * 
+ * @param session corresponding session
+ * @param lcp received LCP packet
+ */
+static void
+bbl_rx_lcp_conf_reject(bbl_session_s *session, bbl_lcp_t *lcp) {
+
+    uint8_t type;
+    uint8_t len;
+    session->lcp_options_len = 0;
+
+    for(int i=0; i < PPP_MAX_OPTIONS; i++) {
+        if(lcp->option[i]) {
+            type = lcp->option[i][0];
+            len = lcp->option[i][1];
+            switch (type) {
+                case PPP_LCP_OPTION_MRU:
+                case PPP_LCP_OPTION_AUTH:
+                case PPP_LCP_OPTION_MAGIC:
+                    break;
+                default:
+                    if((session->lcp_options_len + len) <= PPP_OPTIONS_BUFFER) {                        
+                        memcpy(&session->lcp_options[session->lcp_options_len], lcp->option[i], len);
+                        session->lcp_options_len += len;
+                    }
+                    break;
+            }
+        }
+    }
+    session->lcp_peer_identifier = lcp->identifier;
+    session->lcp_response_code = PPP_CODE_CONF_REJECT;
+    session->send_requests |= BBL_SEND_LCP_RESPONSE;
+    bbl_session_tx_qnode_insert(session);
+    return;
+}
+
+static void
 bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session) {
     bbl_pppoe_session_t *pppoes;
     bbl_lcp_t *lcp;
@@ -1200,6 +1241,9 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_CONF_REQUEST:
+            if(lcp->unknown_options) {
+                return bbl_rx_lcp_conf_reject(session, lcp);
+            }
             session->auth_protocol = lcp->auth;
             if(session->access_config->authentication_protocol) {
                 if(session->access_config->authentication_protocol != lcp->auth) {
