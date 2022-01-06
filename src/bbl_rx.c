@@ -1028,7 +1028,7 @@ bbl_rx_ip6cp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session
                 session->ip6cp_ipv6_identifier = ip6cp->ipv6_identifier;
             }
             session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-            session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
+            session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_CONF_ACK:
