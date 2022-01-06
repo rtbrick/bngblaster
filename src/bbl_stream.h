@@ -30,6 +30,9 @@ typedef struct bbl_stream_config_
     bbl_stream_direction_t direction;
 
     double pps;
+    uint32_t max_packets;
+    uint32_t start_delay;
+
     uint16_t length;
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
@@ -72,6 +75,9 @@ typedef struct bbl_stream_
     uint64_t tx_interval; /* TX interval in nsec */
     uint64_t send_window_packets;
     struct timespec send_window_start;
+
+    struct timespec wait_start;
+    bool wait;
 
     uint8_t rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t rx_outer_vlan_pbit;

@@ -748,6 +748,16 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     }
     if (!stream_config->pps) stream_config->pps = 1;
 
+    value = json_object_get(stream, "max-packets");
+    if (value) {
+        stream_config->max_packets = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "start-delay");
+    if (value) {
+        stream_config->start_delay = json_number_value(value);
+    }
+
     if (json_unpack(stream, "{s:s}", "access-ipv4-source-address", &s) == 0) {
         if (!inet_pton(AF_INET, s, &stream_config->ipv4_access_src_address)) {
             fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv4-source-address\n");

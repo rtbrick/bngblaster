@@ -699,6 +699,8 @@ Attribute | Description | Default
 `access-ipv6-source-address` | Overwrite the access IPv6 source address (client) |
 `threaded` | Run those streams in separate threads | false
 `thread-group` | Assign this stream to thread group (1-255) | 0 (thread per stream)
+`max-packets` | Send a burst of N packets and stop | 0 (infinity) 
+`start-delay` | Wait N seconds after session is established before start | 0
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
 
