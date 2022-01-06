@@ -1033,16 +1033,34 @@ bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
     uint64_t packets = 1;
     uint64_t packets_expected;
 
-    struct timespec send_windwow;
+    struct timespec time_elapsed = {0};
+
+    /** Enforce optional stream traffic start delay ... */
+    if(stream->config->start_delay && stream->packets_tx == 0) {
+        if(stream->wait) {
+            timespec_sub(&time_elapsed, now, &stream->wait_start);
+            if(time_elapsed.tv_sec < stream->config->start_delay) {
+                /** Still waiting ... */
+                return 0;
+            }
+            /** Stop wait window ... */
+        } else {
+            /** Start wait window ... */
+            stream->wait = true;
+            stream->wait_start.tv_sec = now->tv_sec;
+            stream->wait_start.tv_nsec = now->tv_nsec;
+            return 0;
+        }   
+    }
 
     if(stream->send_window_packets == 0) {
         /* Open new send window */
         stream->send_window_start.tv_sec = now->tv_sec;
         stream->send_window_start.tv_nsec = now->tv_nsec;
     } else {
-        timespec_sub(&send_windwow, now, &stream->send_window_start);
-        packets_expected = send_windwow.tv_sec * stream->config->pps;
-        packets_expected += stream->config->pps * ((double)send_windwow.tv_nsec / 1000000000.0);
+        timespec_sub(&time_elapsed, now, &stream->send_window_start);
+        packets_expected = time_elapsed.tv_sec * stream->config->pps;
+        packets_expected += stream->config->pps * ((double)time_elapsed.tv_nsec / 1000000000.0);
 
         if(packets_expected > stream->send_window_packets) {
             packets = packets_expected - stream->send_window_packets;
@@ -1050,6 +1068,16 @@ bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
         if(packets > ctx->config.io_stream_max_ppi) {
             packets = ctx->config.io_stream_max_ppi;
         }
+    }
+
+    /** Enforce optional stream packet limit ... */
+    if(stream->config->max_packets &&
+       stream->packets_tx + packets > stream->config->max_packets) {
+       if(stream->packets_tx < stream->config->max_packets) {
+           packets = stream->config->max_packets - stream->packets_tx;
+       } else {
+           packets = 0;
+       }
     }
 
     return packets;
