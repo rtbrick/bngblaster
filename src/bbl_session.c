@@ -547,6 +547,16 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->client_mac[4] = i>>8;
         session->client_mac[5] = i;
 
+        /* Derive IP6CP interface identifier from MAC (EUI-64) */
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[0] = session->client_mac[0];
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[1] = session->client_mac[1];
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[2] = session->client_mac[2];
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[3] = 0xFF;
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[4] = 0xFE;
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[5] = session->client_mac[3];
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[6] = session->client_mac[4];
+        ((uint8_t *)&session->ip6cp_ipv6_identifier)[7] = session->client_mac[5];
+
         /* Init link-local IPv6 address */
         session->link_local_ipv6_address[0] = 0xfe;
         session->link_local_ipv6_address[1] = 0x80;
