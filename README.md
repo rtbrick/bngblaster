@@ -7,7 +7,7 @@
 
 The BNG Blaster is an open source network test tool which is able to simulate more 
 than hundred thousand PPPoE and IPoE subscribers including IPTV, L2TPv2, QoS, forwarding
-verification and convergence testing capabilities. The BNG Blaster is also contently
+verification and convergence testing capabilities. The BNG Blaster is also constantly
 enhanced for more common (non-BNG) network testing.
 
 A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster") and good presentation
