@@ -55,8 +55,14 @@
           };
         };
         devShell = pkgs.mkShell {
+          nativeBuildInputs = buildTools;
           buildInputs = dependencies
             ++ [ packages.libdict pkgs.bashInteractive ];
+
+          shellHook = ''
+            cmake -DEXPORT_COMPILE_COMMANDS=ON ./build
+            ln -s ./build/compile_commands.json ./compile_commands.json &1>/dev/null
+          '';
         };
         defaultPackage = packages.bngblaster;
         apps.bngblaster = flake-utils.lib.mkApp { drv = packages.bngblaster; };

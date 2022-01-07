@@ -119,6 +119,137 @@ bbl_ctrl_session_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_
 }
 
 ssize_t
+bbl_ctrl_setup_summary(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+
+    json_t *root = json_pack("{ss si s{si si si si si s{sf sf sf sf sf} si}}",
+        "status", "ok",
+        "code", 200,
+        "setup-summary",
+            "total", ctx->sessions,
+            "established", ctx->sessions_established,
+            "outstanding", ctx->sessions_outstanding,
+            "terminated", ctx->sessions_terminated,
+            "setup-time", ctx->stats.setup_time,
+            "setup-rate",
+                "min", ctx->stats.cps_min,
+                "avg", ctx->stats.cps_avg,
+                "max", ctx->stats.cps_max,
+                "sum", ctx->stats.cps_sum,
+                "count", ctx->stats.cps_count,
+            "flapped", ctx->sessions_flapped);
+    if (root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+
+    return result;
+}
+
+#define set_max(a, b) \
+    ({__typeof__ (a) _a = (a); \
+      __typeof__ (b) _b = (b); \
+      if (_b) a = _a > _b ? _a : _b; })
+
+#define set_min(a, b) \
+    ({__typeof__ (a) _a = (a); \
+      __typeof__ (b) _b = (b); \
+      a = _a < _b ? _a : _b; })
+
+ssize_t
+bbl_ctrl_total_session_login_time(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    int64_t i;
+    ssize_t result = 0;
+    uint64_t tmp_seq;
+
+    uint64_t ipcp_min = UINT64_MAX, ipcp_max = 0;
+    uint64_t ipcpv6_min = UINT64_MAX, ipcpv6_max = 0;
+    uint64_t dhcpv6pd_min = UINT64_MAX, dhcpv6pd_max = 0;
+
+    uint64_t network_traffic_min = UINT64_MAX, network_traffic_max = 0;
+    uint64_t network_trafficv6_min = UINT64_MAX, network_trafficv6_max = 0;
+    uint64_t network_trafficv6pd_min = UINT64_MAX, network_trafficv6pd_max = 0;
+    uint64_t access_traffic_min = UINT64_MAX, access_traffic_max = 0;
+    uint64_t access_trafficv6_min = UINT64_MAX, access_trafficv6_max = 0;
+    uint64_t access_trafficv6pd_min = UINT64_MAX, access_trafficv6pd_max = 0;
+
+    uint64_t total_v4_min = UINT64_MAX, total_v4_max = 0;
+    uint64_t total_v6_min = UINT64_MAX, total_v6_max = 0;
+    uint64_t total_v6pd_min = UINT64_MAX, total_v6pd_max = 0;
+
+    bbl_session_s *session;
+
+    for(i = 0; i < (int64_t)ctx->sessions; ++i) {
+        session = ctx->session_list[i];
+        if (!session) { continue; }
+
+        tmp_seq = session->access_ipv4_rx_first_seq;
+        set_min(access_traffic_min, tmp_seq);
+        set_max(access_traffic_max, tmp_seq);
+
+        tmp_seq = session->access_ipv6_rx_first_seq;
+        set_max(access_trafficv6_max, tmp_seq);
+        set_min(access_trafficv6_min, tmp_seq);
+
+        tmp_seq = session->access_ipv6pd_rx_first_seq;
+        set_min(access_trafficv6pd_min, tmp_seq);
+        set_max(access_trafficv6pd_max, tmp_seq);
+
+        tmp_seq = session->network_ipv4_rx_first_seq;
+        set_min(network_traffic_min, tmp_seq);
+        set_max(network_traffic_max, tmp_seq);
+
+        tmp_seq = session->network_ipv6_rx_first_seq;
+        set_min(network_trafficv6_min, tmp_seq);
+        set_max(network_trafficv6_max, tmp_seq);
+
+        tmp_seq = session->network_ipv6pd_rx_first_seq;
+        set_max(network_trafficv6pd_max, tmp_seq);
+        set_min(network_trafficv6pd_min, tmp_seq);
+    }
+
+    json_t *root = json_pack("{ss si s{s{si si si si si si} s{si si si si si si si si si si si si} s{si, si, si}}}",
+        "status", "ok",
+        "code", 200,
+        "session-login-time-summary",
+            "control-plane",
+                "ipcp-min", ipcp_min,
+                "ipcp-max", ipcp_max,
+                "ipv6cp-min", ipv6cp_min,
+                "ipv6cp-max", ipv6cp_max,
+                "dhcpv6pd-min", dhcpv6pd_min,
+                "dhcpv6pd-max", dhcpv6pd_max,
+            "data-plane",
+                "access-traffic-min", access_traffic_min,
+                "access-trafficv6-min", access_trafficv6_min,
+                "access-trafficv6pd-min", access_trafficv6pd_min,
+                "access-traffic-max", access_traffic_max,
+                "access-trafficv6-max", access_trafficv6_max,
+                "access-trafficv6pd-max", access_trafficv6pd_max,
+                "network-traffic-min", network_traffic_min,
+                "network-trafficv6-min", network_trafficv6_min,
+                "network-trafficv6pd-min", network_trafficv6pd_min,
+                "network-traffic-max", network_traffic_max,
+                "network-trafficv6-max", network_trafficv6_max,
+                "network-trafficv6pd-max", network_trafficv6pd_max,
+            "total",
+                "v4-min", total_v4_min,
+                "v4-max", total_v4_max,
+                "v6-min", total_v6_min,
+                "v6-max", total_v6_max,
+                "v6pd-min", total_v6pd_min,
+                "v6pd-max", total_v6pd_max);
+
+
+    if (root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+
+    return result;
+}
+
+ssize_t
 bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
     const char *s;
@@ -1254,6 +1385,8 @@ struct action actions[] = {
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
+    {"setup-summary", bbl_ctrl_setup_summary},
+    {"session-login-time-summary", bbl_ctrl_total_session_login_time},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start},
     {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop},
     {"igmp-join", bbl_ctrl_igmp_join},
