@@ -494,6 +494,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     uint16_t buf_len;
 
     bbl_ethernet_header_t eth = {0};
+    bbl_mpls_t mpls1 = {0};
+    bbl_mpls_t mpls2 = {0};
     bbl_ipv4_t ipv4 = {0};
     bbl_ipv6_t ipv6 = {0};
     bbl_udp_t udp = {0};
@@ -508,6 +510,20 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     eth.vlan_outer = network_if->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = 0;
+
+    /* Add MPLS labels */
+    if(config->tx_mpls1) {
+        eth.mpls = &mpls1;
+        mpls1.label = config->tx_mpls1_label;
+        mpls1.exp = config->tx_mpls1_exp;
+        mpls1.ttl = config->tx_mpls1_ttl;
+        if(config->tx_mpls2) {
+            mpls1.next = &mpls2;
+            mpls2.label = config->tx_mpls2_label;
+            mpls2.exp = config->tx_mpls2_exp;
+            mpls2.ttl = config->tx_mpls2_ttl;
+        }
+    }
 
     udp.src = BBL_UDP_PORT;
     udp.dst = BBL_UDP_PORT;
@@ -1432,5 +1448,22 @@ bbl_stream_json(bbl_stream *stream)
         "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
         "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
 
+    if(stream->config->rx_mpls1) { 
+        json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
+    }
+    if(stream->rx_mpls1) {
+
+        json_object_set(root, "rx-mpls1", json_integer(stream->rx_mpls1_label));
+        json_object_set(root, "rx-mpls1-exp", json_integer(stream->rx_mpls1_exp));
+        json_object_set(root, "rx-mpls1-ttl", json_integer(stream->rx_mpls1_ttl));
+    }
+    if(stream->config->rx_mpls1) { 
+        json_object_set(root, "rx-mpls2-expected", json_integer(stream->config->rx_mpls2_label));
+    }
+    if(stream->rx_mpls2) {
+        json_object_set(root, "rx-mpls2", json_integer(stream->rx_mpls2_label));
+        json_object_set(root, "rx-mpls2-exp", json_integer(stream->rx_mpls2_exp));
+        json_object_set(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
+    }
     return root;
 }

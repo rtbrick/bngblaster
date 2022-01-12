@@ -1801,6 +1801,9 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
 protocol_error_t
 encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_t *eth) {
+
+    bbl_mpls_t *mpls;
+
     if(eth->dst) {
         memcpy(buf, eth->dst, ETH_ADDR_LEN);
     } else {
@@ -1838,9 +1841,27 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
         }
     }
 
-    /* Add ethertype */
-    *(uint16_t*)buf = htobe16(eth->type);
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    if(eth->mpls) {
+        /* Add ethertype MPLS */
+        *(uint16_t*)buf = htobe16(ETH_TYPE_MPLS);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        /* Add labels ... */
+        mpls = eth->mpls;
+        while(mpls) {
+            *(buf+2) = mpls->exp << 1;
+            *(buf+3) = mpls->ttl;
+            *(uint32_t*)buf |= htobe32(mpls->label << 12);
+            mpls = mpls->next;
+            if(!mpls) {
+                *(buf+2) |= 0x1; /* set BOS bit*/
+            }
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        }
+    } else {
+        /* Add ethertype */
+        *(uint16_t*)buf = htobe16(eth->type);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    }
 
     /* Add protocol header */
     switch(eth->type) {
@@ -3479,6 +3500,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 bbl_ethernet_header_t **ethernet) {
 
     bbl_ethernet_header_t *eth;
+    bbl_mpls_t *mpls;
     const struct ether_header *header;
 
     if(len < 14 || sp_len < sizeof(bbl_ethernet_header_t)) {
@@ -3534,6 +3556,40 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 eth->type = be16toh(*(uint16_t*)buf);
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
             }
+        }
+    }
+ 
+    if(eth->type == ETH_TYPE_MPLS) {        
+        mpls = (bbl_mpls_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_mpls_t));
+        eth->mpls = mpls;
+        while(mpls) {
+            if(len < 5) {
+                /* 4 byte MPLS + at least 1 byte payload */
+                return DECODE_ERROR;
+            }
+            mpls->label = be32toh(*(uint32_t*)buf) >> 12;
+            mpls->exp = (*(buf+2) >> 1) & 7; 
+            mpls->ttl = *(buf+3); 
+            if(*(buf+2) & 1) {
+                /* BOS bit set */
+                mpls->next = NULL;
+                mpls = NULL;
+            } else {
+                mpls->next = (bbl_mpls_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_mpls_t));
+                mpls = mpls->next;
+            }
+            BUMP_BUFFER(buf, len, sizeof(uint32_t));
+        }
+        /* Check next 4 bit to set type to IPv4 or IPv6 */
+        switch((*buf >> 4) & 0xf) {
+            case 4: 
+                eth->type = ETH_TYPE_IPV4; 
+                break;
+            case 6:
+                eth->type = ETH_TYPE_IPV6; 
+                break;
+            default: 
+                return UNKNOWN_PROTOCOL;
         }
     }
 

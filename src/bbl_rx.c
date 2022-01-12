@@ -282,6 +282,8 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
 
     uint64_t loss;
 
+    bbl_mpls_t *mpls;
+
     search = dict_search(interface->ctx->stream_flow_dict, &bbl->flow_id);
     if(search) {
         stream = *search;
@@ -290,6 +292,21 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
         stream->rx_priority = tos;
         stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
         stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
+
+        mpls = eth->mpls;
+        if(mpls) {
+            stream->rx_mpls1 = true;
+            stream->rx_mpls1_label = mpls->label;
+            stream->rx_mpls1_exp = mpls->exp;
+            stream->rx_mpls1_ttl = mpls->ttl;
+            mpls = mpls->next;
+            if(mpls) {
+                stream->rx_mpls2 = true;
+                stream->rx_mpls2_label = mpls->label;
+                stream->rx_mpls2_exp = mpls->exp;
+                stream->rx_mpls2_ttl = mpls->ttl;
+            }
+        }
 
         timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
         delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
