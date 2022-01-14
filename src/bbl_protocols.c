@@ -1796,6 +1796,125 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_t *cfm) {
 }
 
 /*
+ * encode_isis
+ */
+protocol_error_t
+encode_isis(uint8_t *buf, uint16_t *len, bbl_isis_t *isis) {
+
+    /* LLC header ... */
+    *(uint16_t*)buf = 0xfefe;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *buf = 0x03;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    uint16_t  isis_len_start;
+    uint8_t  *isis_header_len_ptr;
+    uint16_t *isis_pdu_len_ptr;
+    uint16_t  isis_tlv_len_start;
+    uint8_t  *isis_tlv_len_ptr;
+
+    int i;
+
+    /* IS-IS common header (8 byte) ... */
+    isis_len_start = *len;
+    *buf = ISIS_PROTOCOL_IDENTIFIER;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    isis_header_len_ptr = buf;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 0x01; /* Version */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = isis->system_id_len; 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = isis->type;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 0x01; /* Version */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 0x00; /* Reserved */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    *buf = 0x00; /* Max area addresses */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* IS-IS PDU header ... */
+    switch (isis->type) {
+        case ISIS_PDU_P2P_HELLO:
+            *buf = isis->level;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            memcpy(buf, isis->system_id, isis->system_id_len);
+            BUMP_WRITE_BUFFER(buf, len, isis->system_id_len);
+            *(uint16_t*)buf = htobe16(isis->holding_time);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            isis_pdu_len_ptr = (uint16_t*)buf;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *buf = 0x01; /* Local circuit ID */
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            break;
+        default:
+            return ENCODE_ERROR;
+    }
+    /* Update header length */
+    *isis_header_len_ptr = *len - isis_len_start;
+    
+    /* IS-IS TLV section ... */
+    if(isis->area) {
+        *buf = ISIS_TLV_AREA;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        isis_tlv_len_ptr = buf; 
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        isis_tlv_len_start = *len;
+        for(i=0; i< isis->area_count; i++) {
+            *buf = isis->area[i].len;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+            memcpy(buf, isis->area[i].value, isis->area[i].len);
+            BUMP_WRITE_BUFFER(buf, len, isis->area[i].len);
+        }
+        *isis_tlv_len_ptr = *len - isis_tlv_len_start;
+    }
+    if(isis->protocol_ipv4 || isis->protocol_ipv6) {
+        *buf = ISIS_TLV_PROTOCOLS;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        isis_tlv_len_ptr = buf; 
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        isis_tlv_len_start = *len;
+        if(isis->protocol_ipv4) {
+            *buf = ISIS_PROTOCOL_IPV4;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        if(isis->protocol_ipv6) {
+            *buf = ISIS_PROTOCOL_IPV6;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        }
+        *isis_tlv_len_ptr = *len - isis_tlv_len_start;
+    }
+    if(isis->ipv4_interface_address) {
+        *buf = ISIS_TLV_IPV4_INT_ADDRESS;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = isis->ipv4_interface_address_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, isis->ipv4_interface_address, isis->ipv4_interface_address_len);
+        BUMP_WRITE_BUFFER(buf, len, isis->ipv4_interface_address_len);
+    }
+    if(isis->ipv6_interface_address) {
+        *buf = ISIS_TLV_IPV6_INT_ADDRESS;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = isis->ipv6_interface_address_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, isis->ipv6_interface_address, isis->ipv6_interface_address_len);
+        BUMP_WRITE_BUFFER(buf, len, isis->ipv6_interface_address_len);
+    }
+    if(isis->p2p_adjacency_state) {
+        *buf = ISIS_TLV_P2P_ADJACENCY_STATE;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = sizeof(uint8_t);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = *isis->p2p_adjacency_state;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+    }
+    /* Update PDU length */
+    *isis_pdu_len_ptr = htobe16(*len - isis_len_start);
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_ethernet
  */
 protocol_error_t
@@ -1803,6 +1922,8 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_t *eth) {
 
     bbl_mpls_t *mpls;
+    uint16_t  eth_len; /* 802.3 ethernet header length */
+    uint16_t *eth_len_ptr; /* 802.3 ethernet header length ptr */
 
     if(eth->dst) {
         memcpy(buf, eth->dst, ETH_ADDR_LEN);
@@ -1856,6 +1977,18 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
                 *(buf+2) |= 0x1; /* set BOS bit*/
             }
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        }
+    } if (eth->type == ISIS_PROTOCOL_IDENTIFIER) {
+        /* Remember ethernet length field position */
+        eth_len_ptr = (uint16_t*)buf;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        eth_len = *len;
+        if(encode_isis(buf, len, (bbl_isis_t*)eth->next) == PROTOCOL_SUCCESS)  {
+            /* Update ethernet length field */
+            *eth_len_ptr = htobe16(*len - eth_len);
+            return PROTOCOL_SUCCESS;
+        } else {
+            return ENCODE_ERROR;
         }
     } else {
         /* Add ethertype */
@@ -3492,6 +3625,174 @@ decode_arp(uint8_t *buf, uint16_t len,
 }
 
 /*
+ * decode_bbl_isis_area_tlv
+ */
+static protocol_error_t
+decode_bbl_isis_area_tlv(uint8_t *tlv, uint8_t tlv_len,
+                     uint8_t **sp, uint16_t *sp_len,
+                     bbl_isis_t *isis) {
+
+    bbl_isis_area_t *area;
+    isis->area = (bbl_isis_area_t*)*sp;
+    while(tlv_len >= 2) {
+        /* Init area structure */
+        if(*sp_len < sizeof(bbl_isis_area_t)) {
+            return DECODE_ERROR;
+        }
+        area = (bbl_isis_area_t*)*sp;
+        memset(*sp, 0x0, sizeof(bbl_isis_area_t));
+        BUMP_BUFFER(*sp, *sp_len, sizeof(bbl_isis_area_t));
+        /* Decode area TLV and populate structure */
+        area->len = *tlv;
+        BUMP_BUFFER(tlv, tlv_len, sizeof(uint8_t));
+        if(area->len > ISIS_MAX_AREA_LEN ||
+           area->len > tlv_len) {
+            return DECODE_ERROR;
+        }
+        memcpy(area->value, tlv, area->len);
+        BUMP_BUFFER(tlv, tlv_len, area->len);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+/*
+ * decode_isis_protocol_tlv
+ */
+static protocol_error_t
+decode_isis_protocol_tlv(uint8_t *tlv, uint8_t tlv_len,
+                         bbl_isis_t *isis) {
+
+    while(tlv_len) {
+        switch (*tlv) {
+            case ISIS_PROTOCOL_IPV4:
+                isis->protocol_ipv4 = true;
+                break;
+            case ISIS_PROTOCOL_IPV6:
+                isis->protocol_ipv6 = true;
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(tlv, tlv_len, sizeof(uint8_t));
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+/*
+ * decode_isis
+ */
+protocol_error_t
+decode_isis(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
+            bbl_isis_t **_isis) {
+
+    bbl_isis_t *isis;
+    uint8_t *tlv_start;
+    uint16_t pdu_len;
+    uint8_t  hdr_len;
+    uint8_t  system_id_len;
+
+    uint8_t  tlv_type;
+    uint8_t  tlv_len;
+
+    if(len < ISIS_MIN_HDR_LEN || sp_len < sizeof(bbl_isis_t)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init IS-IS */
+    isis = (bbl_isis_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_isis_t));
+    *_isis = isis;
+
+    /* Decode IS-IS common header (8 byte) */    
+    hdr_len = *(buf+1);
+    tlv_start = buf + hdr_len;
+    system_id_len = *(buf+3);
+    if(system_id_len == 0) {
+        system_id_len = 6;
+    }
+    isis->type = *(buf+4) & 0x1f;
+    if(hdr_len > len) {
+        return DECODE_ERROR;
+    }
+    BUMP_BUFFER(buf, len, ISIS_MIN_HDR_LEN); 
+
+    /* Decode PDU type specfic headers */
+    switch (isis->type) {
+        case ISIS_PDU_P2P_HELLO:
+            if(len < system_id_len + 6) {
+                return DECODE_ERROR;
+            }
+            isis->level = *buf & 3;
+            BUMP_BUFFER(buf, len, sizeof(uint8_t)); 
+            isis->system_id = buf;
+            isis->system_id_len = system_id_len;
+            BUMP_BUFFER(buf, len, system_id_len);
+            isis->holding_time = be16toh(*(uint16_t*)buf);
+            BUMP_BUFFER(buf, len, sizeof(uint16_t));
+            pdu_len = be16toh(*(uint16_t*)buf);
+            BUMP_BUFFER(buf, len, sizeof(uint16_t));
+            /* Local circuit ID */
+            BUMP_BUFFER(buf, len, sizeof(uint8_t));
+            break;
+        default:
+            return UNKNOWN_PROTOCOL;
+    }
+    /* Decode TLV section */
+    if(tlv_start != buf ||
+       hdr_len > pdu_len || (pdu_len - hdr_len) > len) {
+        return DECODE_ERROR;
+    }
+
+    while(len >= 2) {
+        tlv_type = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        tlv_len = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(tlv_len > len) {
+            return DECODE_ERROR;
+        }
+        switch (tlv_type) {
+            case ISIS_TLV_AREA:
+                if(decode_bbl_isis_area_tlv(buf, tlv_len, &sp, &sp_len, isis) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
+                }
+                break;
+            case ISIS_TLV_PROTOCOLS:
+                if(decode_isis_protocol_tlv(buf, tlv_len, isis) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
+                }
+                break;
+            case ISIS_TLV_IPV4_INT_ADDRESS:
+                if(tlv_len < sizeof(uint32_t) || 
+                   tlv_len % sizeof(uint32_t)) {
+                    return DECODE_ERROR;
+                }
+                isis->ipv4_interface_address = (uint32_t*)buf;
+                isis->ipv4_interface_address_len = tlv_len;
+                break;
+            case ISIS_TLV_IPV6_INT_ADDRESS:
+                if(tlv_len < sizeof(ipv6addr_t) || 
+                   tlv_len % sizeof(ipv6addr_t)) {
+                    return DECODE_ERROR;
+                }
+                isis->ipv6_interface_address = (ipv6addr_t*)buf;
+                isis->ipv6_interface_address_len = tlv_len;
+                break;
+            case ISIS_TLV_P2P_ADJACENCY_STATE:
+                if(tlv_len != sizeof(uint8_t)) {
+                    return DECODE_ERROR;
+                }
+                isis->p2p_adjacency_state = buf;
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, tlv_len);
+    }
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * decode_ethernet
  */
 protocol_error_t
@@ -3593,16 +3894,37 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         }
     }
 
-    if(eth->type == ETH_TYPE_PPPOE_SESSION) {
-        return decode_pppoe_session(buf, len, sp, sp_len, (bbl_pppoe_session_t**)&eth->next);
-    } else if(eth->type == ETH_TYPE_PPPOE_DISCOVERY) {
-        return decode_pppoe_discovery(buf, len, sp, sp_len, (bbl_pppoe_discovery_t**)&eth->next);
-    } else if(eth->type == ETH_TYPE_ARP) {
-        return decode_arp(buf, len, sp, sp_len, (bbl_arp_t**)&eth->next);
-    } else if(eth->type == ETH_TYPE_IPV4) {
-        return decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&eth->next);
-    } else if(eth->type == ETH_TYPE_IPV6) {
-        return decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&eth->next);
+    switch (eth->type) {
+        case ETH_TYPE_PPPOE_SESSION:
+            return decode_pppoe_session(buf, len, sp, sp_len, (bbl_pppoe_session_t**)&eth->next);
+        case ETH_TYPE_PPPOE_DISCOVERY:
+            return decode_pppoe_discovery(buf, len, sp, sp_len, (bbl_pppoe_discovery_t**)&eth->next);
+        case ETH_TYPE_ARP:
+            return decode_arp(buf, len, sp, sp_len, (bbl_arp_t**)&eth->next);
+        case ETH_TYPE_IPV4:
+            return decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&eth->next);
+        case ETH_TYPE_IPV6:
+            return decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&eth->next);        
+        default:
+            break;
+    }
+
+    if(eth->type <= ETH_IEEE_802_3_MAX_LEN) {
+        /* 802.3 ethernet header (length instead of type) */
+        if(eth->type > len) {
+            return DECODE_ERROR;
+        }
+        len = eth->type;
+
+        if(len < LLC_HDR_LEN) {
+            return DECODE_ERROR;
+        }
+        /* For now skip/ignore LLC header... */
+        BUMP_BUFFER(buf, len, LLC_HDR_LEN);
+        if(len >= ISIS_MIN_HDR_LEN && *buf == ISIS_PROTOCOL_IDENTIFIER) {
+            eth->type = ISIS_PROTOCOL_IDENTIFIER;
+            return decode_isis(buf, len, sp, sp_len, (bbl_isis_t**)&eth->next);
+        }
     }
 
     return UNKNOWN_PROTOCOL;

@@ -1242,6 +1242,36 @@ bbl_ctrl_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
+ssize_t
+bbl_ctrl_isis_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root, *interfaces, *interface;
+    int i;
+
+    interfaces = json_array();
+    for(i=0; i < ctx->interfaces.network_if_count; i++) {
+        if(ctx->interfaces.network_if[i]->isis.adjacency) {
+           interface = bbl_isis_interface_json(ctx->interfaces.network_if[i]);
+           if(interface) {
+               json_array_append(interfaces, interface);
+           }
+        }
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "interfaces", interfaces);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(interfaces);
+    }
+    return result;
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1286,6 +1316,7 @@ struct action actions[] = {
     {"cfm-cc-rdi-off", bbl_ctrl_cfm_cc_rdi_off},
     {"traffic-start", bbl_ctrl_traffic_start},
     {"traffic-stop", bbl_ctrl_traffic_stop},
+    {"isis-interfaces", bbl_ctrl_isis_interfaces},
     {NULL, NULL},
 };
 

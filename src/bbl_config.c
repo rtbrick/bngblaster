@@ -15,6 +15,10 @@
 
 const char g_default_user[] = "user{session-global}@rtbrick.com";
 const char g_default_pass[] = "test";
+const char g_default_hostname[] = "bngblaster";
+const char g_default_router_id[] = "10.10.10.10";
+const char g_default_system_id[] = "0100.1001.0010";
+const char g_default_area[] = "49.0001/24";
 
 static void
 add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
@@ -288,6 +292,18 @@ json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_net
         network_config->gateway_resolve_wait = true;
     }
 
+    /* IS-IS interface configuration */
+    value = json_object_get(network_interface, "isis-instance-id");
+    if (json_is_number(value)) {
+        network_config->isis_instance_id = json_number_value(value);
+        value = json_object_get(network_interface, "isis-level");
+        if (json_is_number(value)) {
+            network_config->isis_level = json_number_value(value);
+            if(network_config->isis_level > 3) {
+                fprintf(stderr, "JSON config error: Invalid value for network->isis-level (1-3)\n");
+            }
+        }
+    }
     return true;
 }
 
@@ -648,6 +664,137 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
 }
 
 static bool
+json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_config) {
+    json_t *value = NULL;
+    const char *s = NULL;
+    int i;
+
+    UNUSED(ctx);
+
+    value = json_object_get(isis, "instance-id");
+    if (value) {
+        isis_config->id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for isis->instance-id\n");
+        return false;
+    }
+
+    value = json_object_get(isis, "level");
+    if (json_is_number(value)) {
+        isis_config->level = json_number_value(value);
+    } else {
+        isis_config->level = 3;
+    }
+    if(isis_config->level == 0 || isis_config->level > 3) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->level\n");
+    }
+
+    value = json_object_get(isis, "overload");
+    if (json_is_boolean(value)) {
+        isis_config->overload  = json_boolean_value(value);
+    }
+
+    value = json_object_get(isis, "protocol-ipv4");
+    if (json_is_boolean(value)) {
+        isis_config->protocol_ipv4  = json_boolean_value(value);
+    } else {
+        isis_config->protocol_ipv4  = true;
+    }
+
+    value = json_object_get(isis, "protocol-ipv6");
+    if (json_is_boolean(value)) {
+        isis_config->protocol_ipv6  = json_boolean_value(value);
+    } else {
+        isis_config->protocol_ipv6  = true;
+    }
+
+    if (json_unpack(isis, "{s:s}", "level1-auth-key", &s) == 0) {
+        isis_config->level1_key = strdup(s);
+        isis_config->level1_auth = ISIS_AUTH_MD5;
+    }
+    if (json_unpack(isis, "{s:s}", "level2-auth-key", &s) == 0) {
+        isis_config->level2_key = strdup(s);
+        isis_config->level2_auth = ISIS_AUTH_MD5;
+    }
+
+    value = json_object_get(isis, "hello-interval");
+    if (json_is_number(value)) {
+        isis_config->hello_interval = json_number_value(value);
+    } else {
+        isis_config->hello_interval = ISIS_DEFAULT_HELLO_INTERVAL;
+    }
+
+    value = json_object_get(isis, "holding-time");
+    if (json_is_number(value)) {
+        isis_config->holding_time = json_number_value(value);
+    } else {
+        isis_config->holding_time = ISIS_DEFAULT_HOLDING_TIME;
+    }
+
+    value = json_object_get(isis, "lsp-lifetime");
+    if (json_is_number(value)) {
+        isis_config->lsp_lifetime = json_number_value(value);
+    } else {
+        isis_config->lsp_lifetime = ISIS_DEFAULT_LSP_LIFETIME;
+    }
+
+    if (json_unpack(isis, "{s:s}", "hostname", &s) == 0) {
+        isis_config->hostname = strdup(s);
+    } else {
+        isis_config->hostname = g_default_hostname;
+    }
+
+    if (json_unpack(isis, "{s:s}", "router-id", &s) == 0) {
+        isis_config->router_id_str = strdup(s);
+    } else {
+        isis_config->router_id_str = g_default_router_id;
+    }
+    if (!inet_pton(AF_INET, isis_config->router_id_str, &isis_config->system_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->router-id\n");
+        return false;
+    }
+
+    if (json_unpack(isis, "{s:s}", "system-id", &s) == 0) {
+        isis_config->system_id_str = strdup(s);
+    } else {
+        isis_config->system_id_str = g_default_system_id;
+    }
+    if (!bbl_isis_str_to_system_id(isis_config->system_id_str, (uint16_t*)isis_config->system_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->system-id\n");
+        return false;
+    }
+
+    value = json_object_get(isis, "area");
+    if (json_is_array(value)) {
+        isis_config->area_count = json_array_size(value);
+        isis_config->area = calloc(isis_config->area_count, sizeof(bbl_isis_area_t));
+        for (i = 0; i < isis_config->area_count; i++) {
+            if(!bbl_isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
+                fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
+                return false;
+            }
+        }
+    } else if (json_is_string(value)) {
+        isis_config->area = calloc(1, sizeof(bbl_isis_area_t));
+        isis_config->area_count = 1;
+        if(!bbl_isis_str_to_area(json_string_value(value), isis_config->area)) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
+            return false;
+        }
+    } else {
+        isis_config->area = calloc(1, sizeof(bbl_isis_area_t));
+        isis_config->area_count = 1;
+        if(!bbl_isis_str_to_area(g_default_area, isis_config->area)) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
+            return false;
+        }
+    }
+    
+
+    return true;
+}
+
+static bool
 json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_config) {
     json_t *value = NULL;
     const char *s = NULL;
@@ -902,6 +1049,8 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     bbl_network_config_s        *network_config         = NULL;
     bbl_access_config_s         *access_config          = NULL;
     bbl_a10nsp_config_s         *a10nsp_config          = NULL;
+
+    bbl_isis_config_t               *isis_config            = NULL;
 
     if (json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -1319,6 +1468,34 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "ipv6pd-pps");
         if (json_is_number(value)) {
             ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
+        }
+    }
+
+    /* IS-IS Configuration */
+    sub = json_object_get(root, "isis");
+    if (json_is_array(sub)) {
+        /* Config is provided as array (multiple isis instances) */
+        size = json_array_size(sub);
+        for (i = 0; i < size; i++) {
+            if (!isis_config) {
+                ctx->config.isis_config = calloc(1, sizeof(bbl_isis_config_t));
+                isis_config = ctx->config.isis_config;
+            } else {
+                isis_config->next = calloc(1, sizeof(bbl_isis_config_t));
+                isis_config = isis_config->next;
+            }
+            if (!json_parse_isis_config(ctx, json_array_get(sub, i), isis_config)) {
+                return false;
+            }
+        }
+    } else if (json_is_object(section)) {
+        /* Config is provided as object (single isis instance) */
+        isis_config = calloc(1, sizeof(bbl_isis_config_t));
+        if (!ctx->config.isis_config) {
+            ctx->config.isis_config = isis_config;
+        }
+        if (!json_parse_isis_config(ctx, sub, isis_config)) {
+            return false;
         }
     }
 

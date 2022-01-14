@@ -57,6 +57,7 @@
 #include "bbl_stats.h"
 #include "bbl_config.h"
 #include "bbl_l2tp.h"
+#include "bbl_isis.h"
 #include "bbl_session.h"
 #include "bbl_ctx.h"
 #include "bbl_send.h"

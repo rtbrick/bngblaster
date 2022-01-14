@@ -1903,6 +1903,8 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                 return bbl_rx_network_icmpv6(eth, interface);
             }
             break;
+        case ISIS_PROTOCOL_IDENTIFIER:
+            return bbl_isis_handler_rx(eth, interface);
         default:
             break;
     }
