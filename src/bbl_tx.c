@@ -1636,6 +1636,9 @@ static protocol_error_t
 bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
+
+    bbl_ctx_s *ctx = interface->ctx;
+
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
     bbl_ipv6_t ipv6 = {0};
@@ -1655,9 +1658,11 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
         arp.sender_ip = interface->ip;
         arp.target_ip = interface->gateway;
         if(interface->arp_resolved) {
-            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 300, 0, interface, &bbl_network_arp_timeout);
+            timer_add(&ctx->timer_root, &interface->timer_arp, "ARP timeout", 
+                      300, 0, interface, &bbl_network_arp_timeout);
         } else {
-            timer_add(&interface->ctx->timer_root, &interface->timer_arp, "ARP timeout", 1, 0, interface, &bbl_network_arp_timeout);
+            timer_add(&ctx->timer_root, &interface->timer_arp, "ARP timeout", 
+                      1, 0, interface, &bbl_network_arp_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NS) {
@@ -1675,11 +1680,16 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
         memcpy(icmpv6.prefix.address, interface->gateway6.address, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         if(interface->icmpv6_nd_resolved) {
-            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 300, 0, interface, &bbl_network_nd_timeout);
+            timer_add(&ctx->timer_root, &interface->timer_nd, "ND timeout", 
+                      300, 0, interface, &bbl_network_nd_timeout);
         } else {
-            timer_add(&interface->ctx->timer_root, &interface->timer_nd, "ND timeout", 1, 0, interface, &bbl_network_nd_timeout);
+            timer_add(&ctx->timer_root, &interface->timer_nd, "ND timeout", 
+                      1, 0, interface, &bbl_network_nd_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_ISIS_HELLO) {
+        interface->send_requests &= ~BBL_IF_SEND_ISIS_HELLO;
+        result = bbl_isis_encode_p2p_hello(interface, buf, len, &eth);
     } else {
         interface->send_requests = 0;
     }

@@ -49,6 +49,10 @@
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
 
+#define ETH_IEEE_802_3_MAX_LEN          1500
+
+#define LLC_HDR_LEN                     3
+
 #define OUI_LEN                         3
 
 #define IPV4_RF                         0x8000 /* reserved fragment flag */
@@ -226,6 +230,8 @@
     (_buf) += _size; \
     *(uint16_t*)(_len) += _size
 
+#define BITS_TO_BYTES(_len) ((_len+7) >> 3)
+
 typedef uint8_t ipv6addr_t[IPV6_ADDR_LEN];
 
 typedef struct ipv6_prefix_ {
@@ -282,23 +288,23 @@ typedef enum dhcpv6_message_type_ {
 } dhcpv6_message_type;
 
 typedef enum l2tp_message_type_ {
-    L2TP_MESSAGE_DATA          = 0,
-    L2TP_MESSAGE_SCCRQ         = 1,
-    L2TP_MESSAGE_SCCRP         = 2,
-    L2TP_MESSAGE_SCCCN         = 3,
-    L2TP_MESSAGE_STOPCCN       = 4,
-    L2TP_MESSAGE_HELLO         = 6,
-    L2TP_MESSAGE_OCRQ          = 7,
-    L2TP_MESSAGE_OCRP          = 8,
-    L2TP_MESSAGE_OCCN          = 9,
-    L2TP_MESSAGE_ICRQ          = 10,
-    L2TP_MESSAGE_ICRP          = 11,
-    L2TP_MESSAGE_ICCN          = 12,
-    L2TP_MESSAGE_CDN           = 14,
-    L2TP_MESSAGE_WEN           = 15,
-    L2TP_MESSAGE_CSUN          = 28,
-    L2TP_MESSAGE_CSURQ         = 29,
-    L2TP_MESSAGE_ZLB           = 32767,
+    L2TP_MESSAGE_DATA                   = 0,
+    L2TP_MESSAGE_SCCRQ                  = 1,
+    L2TP_MESSAGE_SCCRP                  = 2,
+    L2TP_MESSAGE_SCCCN                  = 3,
+    L2TP_MESSAGE_STOPCCN                = 4,
+    L2TP_MESSAGE_HELLO                  = 6,
+    L2TP_MESSAGE_OCRQ                   = 7,
+    L2TP_MESSAGE_OCRP                   = 8,
+    L2TP_MESSAGE_OCCN                   = 9,
+    L2TP_MESSAGE_ICRQ                   = 10,
+    L2TP_MESSAGE_ICRP                   = 11,
+    L2TP_MESSAGE_ICCN                   = 12,
+    L2TP_MESSAGE_CDN                    = 14,
+    L2TP_MESSAGE_WEN                    = 15,
+    L2TP_MESSAGE_CSUN                   = 28,
+    L2TP_MESSAGE_CSURQ                  = 29,
+    L2TP_MESSAGE_ZLB                    = 32767,
     L2TP_MESSAGE_MAX,
 } l2tp_message_type;
 
@@ -473,6 +479,29 @@ typedef struct access_line_ {
     uint32_t dsl_type;  /* DSL Type */
     void    *profile;
 } access_line_t;
+
+/*
+ * ISIS
+ */
+typedef struct bbl_isis_ {
+    uint8_t      type;
+    uint8_t      level;
+    uint8_t      holding_time;
+    uint8_t     *system_id;
+    uint8_t      system_id_len;
+
+    /* TLV's */
+
+    bbl_isis_area_t *area;
+    uint8_t      area_count;
+    bool         protocol_ipv4;
+    bool         protocol_ipv6;
+    uint32_t    *ipv4_interface_address;
+    uint8_t      ipv4_interface_address_len;
+    ipv6addr_t  *ipv6_interface_address;
+    uint8_t      ipv6_interface_address_len;
+    uint8_t     *p2p_adjacency_state;
+} bbl_isis_t;
 
 /*
  * MPLS Label

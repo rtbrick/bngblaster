@@ -531,6 +531,12 @@ main (int argc, char *argv[])
     if(igmp_group_count) ctx->config.igmp_group_count = atoi(igmp_group_count);
     if(igmp_zap_interval) ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
+    /* Init IS-IS instances. */
+    if(!bbl_isis_init(ctx)) {
+        fprintf(stderr, "Error: Failed to init IS-IS\n");
+        exit(1);
+    }
+
     /* Add interfaces. */
     if(!bbl_add_interfaces(ctx)) {
         fprintf(stderr, "Error: Failed to add interfaces\n");

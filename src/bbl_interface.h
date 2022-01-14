@@ -20,6 +20,7 @@ typedef struct bbl_interface_
 
     struct timer_ *timer_arp;
     struct timer_ *timer_nd;
+    struct timer_ *timer_isis_hello;
 
     struct {
         bbl_io_mode_t mode;
@@ -80,6 +81,11 @@ typedef struct bbl_interface_
     uint16_t mc_packet_len;
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
+
+    struct {
+        bbl_isis_instance_t *instance;
+        bbl_isis_adjacency_t *adjacency;
+    } isis;
 
     struct {
         uint64_t packets_tx;

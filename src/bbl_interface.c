@@ -226,6 +226,7 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
 {
     bbl_network_config_s *network_config = ctx->config.network_config;
     struct bbl_interface_ *network_if;
+    bbl_isis_instance_t *isis;
 
     while(network_config) {
         if(bbl_interface_present(ctx, network_config->interface)) {
@@ -275,6 +276,33 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
         }
 
         network_if->gateway_resolve_wait = network_config->gateway_resolve_wait;
+
+        /* Init routing protocols */ 
+        if(network_config->isis_instance_id) {
+            isis = ctx->isis_instances;
+            while (isis) {
+                if(isis->config->id == network_config->isis_instance_id) {
+                    LOG(ISIS, "Add network interface %s to IS-IS instance %u\n", 
+                        network_config->interface, network_config->isis_instance_id);
+                    network_if->isis.instance = isis;
+                    network_if->isis.adjacency = calloc(1, sizeof(bbl_isis_adjacency_t));
+                    network_if->isis.adjacency->adjacency_state = ISIS_ADJACENCY_STATE_DOWN;
+                    if(network_config->isis_level) {
+                        network_if->isis.adjacency->level = network_config->isis_level;
+                    } else {
+                        network_if->isis.adjacency->level = isis->config->level;
+                    }
+                    /* Start IS-IS hello interval */
+                    network_if->send_requests |= BBL_IF_SEND_ISIS_HELLO;
+                    break;
+                }
+                isis = isis->next;
+            }
+            if(!network_if->isis.instance) {
+                LOG(ERROR, "Failed to enable IS-IS for network interface %s (instance not found)\n", network_config->interface);
+                return false;
+            }
+        }
 
         /* Next ... */
         network_config = network_config->next;

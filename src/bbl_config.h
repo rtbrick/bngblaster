@@ -138,6 +138,9 @@ typedef struct bbl_network_config_
 
     bool gateway_resolve_wait;
 
+    uint16_t isis_instance_id;
+    uint8_t  isis_level;
+
     void *next; /* pointer to next network config element */
 } bbl_network_config_s;
 
