@@ -69,32 +69,24 @@ typedef struct bbl_isis_config_ {
     
     uint16_t id; /* IS-IS instance identifier */
 
-    bool            overload;
-
-    uint8_t         level;
-
-    bool            protocol_ipv4;
-    bool            protocol_ipv6;
-
+    bool                overload;
+    uint8_t             level;
+    bool                protocol_ipv4;
+    bool                protocol_ipv6;
     bbl_isis_auth_type  level1_auth;
-    char           *level1_key;
+    char               *level1_key;
     bbl_isis_auth_type  level2_auth;
-    char           *level2_key;
-
-    uint16_t        hello_interval;
-    uint16_t        holding_time;
-    uint16_t        lsp_lifetime;
-
-    const char     *hostname;
-
-    const char     *router_id_str;
-    uint32_t        router_id;
-
-    const char     *system_id_str;
-    uint8_t         system_id[ISIS_SYSTEM_ID_LEN];
-
-    bbl_isis_area_t    *area;
-    uint8_t         area_count;
+    char               *level2_key;
+    uint16_t            hello_interval;
+    uint16_t            holding_time;
+    uint16_t            lsp_lifetime;
+    const char         *hostname;
+    const char         *router_id_str;
+    uint32_t            router_id;
+    const char          *system_id_str;
+    uint8_t              system_id[ISIS_SYSTEM_ID_LEN];
+    bbl_isis_area_t     *area;
+    uint8_t              area_count;
 
     void *next; /* pointer to next instance */
 } bbl_isis_config_t;
@@ -102,9 +94,8 @@ typedef struct bbl_isis_config_ {
 typedef struct bbl_isis_instance_ {
 
     bbl_isis_config_t  *config;
-
-    uint8_t         fsm_state;
-    bool            overload;
+    uint8_t             fsm_state;
+    bool                overload;
 
     struct {
         uint32_t hello_rx;
@@ -119,15 +110,15 @@ typedef struct bbl_isis_adjacency_ {
     uint8_t adjacency_state;
     
     struct {
-        uint8_t      level;
-        uint8_t      adjacency_state;
-        uint8_t      system_id[ISIS_SYSTEM_ID_LEN];
+        uint8_t          level;
+        uint8_t          adjacency_state;
+        bool             protocol_ipv4;
+        bool             protocol_ipv6;
+        uint32_t         ipv4_interface_address;
+        ipv6addr_t       ipv6_interface_address;
+        uint8_t          system_id[ISIS_SYSTEM_ID_LEN];
         bbl_isis_area_t *area;
-        uint8_t      area_count;
-        bool         protocol_ipv4;
-        bool         protocol_ipv6;
-        uint32_t     ipv4_interface_address;
-        ipv6addr_t   ipv6_interface_address;
+        uint8_t          area_count;
     } peer;
 
     struct {
@@ -146,10 +137,10 @@ char *
 bbl_bbl_isis_area_to_str(bbl_isis_area_t *area);
 
 bool
-bbl_isis_str_to_system_id(const char *str, uint16_t *system_id);
+bbl_isis_str_to_system_id(const char *str, uint8_t *system_id);
 
 char *
-bbl_isis_system_id_to_str(uint16_t *system_id);
+bbl_isis_system_id_to_str(uint8_t *system_id);
 
 protocol_error_t
 bbl_isis_encode_p2p_hello(bbl_interface_s *interface, 

@@ -70,7 +70,8 @@ typedef struct bbl_interface_
     uint8_t  mac[ETH_ADDR_LEN];
     uint8_t  gateway_mac[ETH_ADDR_LEN];
 
-    ipv6_prefix ip6;
+    ipv6addr_t  ip6_ll; /* link-local IPv6 address */
+    ipv6_prefix ip6; /* global IPv6 address */
     ipv6_prefix gateway6;
     ipv6addr_t gateway6_solicited_node_multicast;
 

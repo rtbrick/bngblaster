@@ -759,7 +759,7 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
     } else {
         isis_config->system_id_str = g_default_system_id;
     }
-    if (!bbl_isis_str_to_system_id(isis_config->system_id_str, (uint16_t*)isis_config->system_id)) {
+    if (!bbl_isis_str_to_system_id(isis_config->system_id_str, isis_config->system_id)) {
         fprintf(stderr, "JSON config error: Invalid value for isis->system-id\n");
         return false;
     }

@@ -85,29 +85,34 @@ bbl_isis_str_to_area(const char *str, bbl_isis_area_t *area) {
 }
 
 /**
- * bbl_isis_str_to_area
+ * bbl_bbl_isis_area_to_str
  * 
- * This function the string representation
- * of the given area structure. This string
- * must be freed after use (strdup).
+ * Format an IS-IS area as string 
+ * in one of 4 static buffers.
  * 
  * @param area area structure
- * @return area string
+ * @return IS-IS area string
  */
 char *
 bbl_bbl_isis_area_to_str(bbl_isis_area_t *area) {
-    char str[ISIS_MAX_AREA_STR_LEN] = {0};
+    static char buffer[4][ISIS_MAX_AREA_STR_LEN];
+    static int idx = 0;
+    char *ret;
+    ret = buffer[idx];
+    idx = (idx+1) & 3;
+
     uint16_t *a =  (uint16_t*)&area->value[1];
     int offset; 
     int i;
 
-    offset = snprintf(str, ISIS_MAX_AREA_STR_LEN, "%x", area->value[0]);
+    offset = snprintf(ret, ISIS_MAX_AREA_STR_LEN, "%x", area->value[0]);
     for(i=0; i<ISIS_MAX_AREA_LEN_WITHOUT_AFI2B; i++) {
-        offset += snprintf(&str[offset], ISIS_MAX_AREA_STR_LEN - offset, 
+        offset += snprintf(&ret[offset], ISIS_MAX_AREA_STR_LEN - offset, 
                            ".%04x", be16toh(a[i]));
     }
-    snprintf(&str[offset], ISIS_MAX_AREA_STR_LEN - offset, "/%d", (area->len * 8));    
-    return strdup(str);
+    snprintf(&ret[offset], ISIS_MAX_AREA_STR_LEN - offset, "/%d", (area->len * 8));    
+    
+    return ret;
 }
 
 /**
@@ -118,35 +123,43 @@ bbl_bbl_isis_area_to_str(bbl_isis_area_t *area) {
  * @return true if successfull
  */
 bool
-bbl_isis_str_to_system_id(const char *str, uint16_t *system_id) {    
+bbl_isis_str_to_system_id(const char *str, uint8_t *system_id) {    
     sscanf(str, "%hx.%hx.%hx", 
-           &system_id[0], &system_id[1], &system_id[2]);
+           &((uint16_t*)system_id)[0], 
+           &((uint16_t*)system_id)[1], 
+           &((uint16_t*)system_id)[2]);
 
     for(uint8_t i = 0; i < (ISIS_SYSTEM_ID_LEN/sizeof(uint16_t)); i++) {
-        system_id[i] = htobe16(system_id[i]);
+        ((uint16_t*)system_id)[i] = htobe16(((uint16_t*)system_id)[i]);
     }
 
     return true;
 }
 
 /**
- * bbl_isis_system_id_to_str
- * 
- * This function the string representation
- * of the given system-id. This string
- * must be freed after use (strdup).
- * 
- * @param system_id system-id
- * @return system-id string
+ * format_system_id
+ *
+ * Format an IS-IS system-id as string 
+ * in one of 4 static buffers.
+ *
+ * @param system_id IS-IS system-id (6 bytes)
+ * @return IS-IS system-id string
  */
 char *
-bbl_isis_system_id_to_str(uint16_t *system_id) {
-    char str[ISIS_SYSTEM_ID_STR_LEN] = {0};
-    snprintf(str, ISIS_SYSTEM_ID_STR_LEN, "%04x.%04x.%04x",
-             be16toh(system_id[0]), 
-             be16toh(system_id[1]), 
-             be16toh(system_id[2]));
-    return strdup(str);
+bbl_isis_system_id_to_str (uint8_t *system_id)
+{
+    static char buffer[4][ISIS_SYSTEM_ID_STR_LEN];
+    static int idx = 0;
+    char *ret;
+    ret = buffer[idx];
+    idx = (idx+1) & 3;
+
+    snprintf(ret, ISIS_SYSTEM_ID_STR_LEN, "%04x.%04x.%04x",
+             be16toh(((uint16_t*)system_id)[0]), 
+             be16toh(((uint16_t*)system_id)[1]), 
+             be16toh(((uint16_t*)system_id)[2]));
+
+    return ret;
 }
 
 void
@@ -198,8 +211,8 @@ bbl_isis_encode_p2p_hello(bbl_interface_s *interface,
     }
     if(config->protocol_ipv6) {
         isis.protocol_ipv6 = true;
-        isis.ipv6_interface_address = &interface->ip6.address;
-        isis.ipv6_interface_address_len = sizeof(interface->ip6.address);
+        isis.ipv6_interface_address = &interface->ip6_ll;
+        isis.ipv6_interface_address_len = sizeof(interface->ip6_ll);
     }
 
     adjacency->stats.hello_tx++;
@@ -227,6 +240,9 @@ bbl_isis_p2p_hello_handler_rx(bbl_ethernet_header_t *eth, bbl_isis_t *isis, bbl_
             default:
                 break;
         }
+    }
+    if(isis->level) {
+        adjacency->peer.level = isis->level;
     }
     if(isis->system_id && isis->system_id_len == ISIS_SYSTEM_ID_LEN) {
         memcpy(adjacency->peer.system_id, isis->system_id, ISIS_SYSTEM_ID_LEN);
@@ -260,7 +276,7 @@ bbl_isis_handler_rx(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 }
 
 static const char *
-isis_adjacency_state_string(uint8_t state) {
+bbl_isis_adjacency_state_string(uint8_t state) {
     switch(state) {
         case ISIS_ADJACENCY_STATE_UP: return "Up";
         case ISIS_ADJACENCY_STATE_INIT: return "Init";
@@ -272,11 +288,26 @@ isis_adjacency_state_string(uint8_t state) {
 json_t *
 bbl_isis_interface_json(bbl_interface_s *interface)
 {
+    json_t *root = NULL;
+    json_t *peer = NULL;
+
     bbl_isis_instance_t *instance = interface->isis.instance;
     bbl_isis_adjacency_t *adjacency = interface->isis.adjacency;
-    return json_pack("{ss si si ss}",
+
+    peer = json_pack("{si ss, ss}",
+                     "level", adjacency->peer.level,
+                     "adjacency-state", bbl_isis_adjacency_state_string(adjacency->peer.adjacency_state),
+                     "system-id", bbl_isis_system_id_to_str(adjacency->peer.system_id));
+    
+    root = json_pack("{ss si si ss so}",
                      "name", interface->name,
                      "instance-id", instance->config->id,
                      "level", adjacency->level,
-                     "adjacency-state", isis_adjacency_state_string(adjacency->adjacency_state));
+                     "adjacency-state", bbl_isis_adjacency_state_string(adjacency->adjacency_state),
+                     "peer", peer);
+
+    if(!root) {
+        if(peer) json_decref(peer);
+    }
+    return root;
 }
