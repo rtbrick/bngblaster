@@ -263,8 +263,21 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
             network_if->send_requests |= BBL_IF_SEND_ARP_REQUEST;
         }
 
+        /* Init link-local IPv6 address */
+        network_if->ip6_ll[0]  = 0xfe;
+        network_if->ip6_ll[1]  = 0x80;
+        network_if->ip6_ll[8]  = 0xff;
+        network_if->ip6_ll[9]  = 0xff;
+        network_if->ip6_ll[10] = 0xff;
+        network_if->ip6_ll[11] = 0xff;
+        network_if->ip6_ll[12] = 0xff;
+        network_if->ip6_ll[13] = network_if->mac[3];
+        network_if->ip6_ll[14] = network_if->mac[4];
+        network_if->ip6_ll[15] = network_if->mac[5];
+
         /* Init IPv6 */
         if(network_config->ip6.len && network_config->gateway6.len) {
+            /* Init global IPv6 address */
             memcpy(&network_if->ip6, &network_config->ip6, sizeof(ipv6_prefix));
             memcpy(&network_if->gateway6, &network_config->gateway6, sizeof(ipv6_prefix));
             memcpy(&network_if->gateway6_solicited_node_multicast, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));

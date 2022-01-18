@@ -2984,6 +2984,9 @@ decode_ppp_ip6cp(uint8_t *buf, uint16_t len,
                 }
                 switch (ip6cp_option_type) {
                     case PPP_IP6CP_OPTION_IDENTIFIER:
+                        if(ip6cp_option_len < sizeof(uint64_t)) {
+                            return DECODE_ERROR;
+                        }
                         ip6cp->ipv6_identifier = *(uint64_t*)buf;
                         break;
                     default:
@@ -3070,14 +3073,23 @@ decode_ppp_ipcp(uint8_t *buf, uint16_t len,
                 }
                 switch (ipcp_option_type) {
                     case PPP_IPCP_OPTION_ADDRESS:
+                        if(ipcp_option_len < sizeof(uint32_t)) {
+                            return DECODE_ERROR;
+                        }
                         ipcp->option_address = true;
                         ipcp->address = *(uint32_t*)buf;
                         break;
                     case PPP_IPCP_OPTION_DNS1:
+                        if(ipcp_option_len < sizeof(uint32_t)) {
+                            return DECODE_ERROR;
+                        }
                         ipcp->option_dns1 = true;
                         ipcp->dns1 = *(uint32_t*)buf;
                         break;
                     case PPP_IPCP_OPTION_DNS2:
+                        if(ipcp_option_len < sizeof(uint32_t)) {
+                            return DECODE_ERROR;
+                        }
                         ipcp->option_dns2 = true;
                         ipcp->dns2 = *(uint32_t*)buf;
                         break;
@@ -3196,12 +3208,21 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
                 }
                 switch (lcp_option_type) {
                     case PPP_LCP_OPTION_MRU:
+                        if(lcp_len < sizeof(uint16_t)) {
+                            return DECODE_ERROR;
+                        }
                         lcp->mru = be16toh(*(uint16_t*)buf);
                         break;
                     case PPP_LCP_OPTION_AUTH:
+                        if(lcp_len < sizeof(uint16_t)) {
+                            return DECODE_ERROR;
+                        }
                         lcp->auth = be16toh(*(uint16_t*)buf);
                         break;
                     case PPP_LCP_OPTION_MAGIC:
+                        if(lcp_len < sizeof(uint32_t)) {
+                            return DECODE_ERROR;
+                        }
                         lcp->magic = *(uint32_t*)buf;
                         break;
                     default:
@@ -3281,13 +3302,18 @@ decode_l2tp(uint8_t *buf, uint16_t len,
         /* Length is mandatory for control packets */
         return DECODE_ERROR;
     }
+    if(len < 4) {
+        return DECODE_ERROR;
+    }
     l2tp->tunnel_id = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
     l2tp->session_id = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
 
     if(l2tp->with_sequence) {
-        if(len < 4) return DECODE_ERROR;
+        if(len < 4) {
+            return DECODE_ERROR;
+        }
         l2tp->ns = be16toh(*(uint16_t*)buf);
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
         l2tp->nr = be16toh(*(uint16_t*)buf);
@@ -3298,11 +3324,15 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     }
 
     if(l2tp->with_offset) {
-        if(len < 2) return DECODE_ERROR;
+        if(len < 2) {
+            return DECODE_ERROR;
+        }
         l2tp->offset = be16toh(*(uint16_t*)buf);
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
         if(l2tp->offset) {
-            if(len < l2tp->offset) return DECODE_ERROR;
+            if(len < l2tp->offset) {
+                return DECODE_ERROR;
+            }
             /* Actually never seen a BNG sending offset
              * different than zero... */
             BUMP_BUFFER(buf, len, l2tp->offset);
@@ -3312,9 +3342,13 @@ decode_l2tp(uint8_t *buf, uint16_t len,
     if(l2tp->type) {
         /* L2TP control packet */
         if(len) {
-            if(len < 8) return DECODE_ERROR;
+            if(len < 8) {
+                return DECODE_ERROR;
+            }
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
-            if(*(uint32_t*)buf != 0) return DECODE_ERROR;
+            if(*(uint32_t*)buf != 0) {
+                return DECODE_ERROR;
+            }
             BUMP_BUFFER(buf, len, sizeof(uint32_t));
             l2tp->type = be16toh(*(uint16_t*)buf);
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -3326,8 +3360,9 @@ decode_l2tp(uint8_t *buf, uint16_t len,
         ret_val = PROTOCOL_SUCCESS;
     } else {
         /* L2TP data packet */
-        if(len < 4) return DECODE_ERROR;
-
+        if(len < 4) {
+            return DECODE_ERROR;
+        }
         l2tp->payload = buf;
         l2tp->payload_len = len;
 
@@ -3860,7 +3895,10 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         }
     }
  
-    if(eth->type == ETH_TYPE_MPLS) {        
+    if(eth->type == ETH_TYPE_MPLS) {
+        if(sp_len < sizeof(bbl_mpls_t)) {
+            return DECODE_ERROR;
+        }  
         mpls = (bbl_mpls_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_mpls_t));
         eth->mpls = mpls;
         while(mpls) {
@@ -3876,6 +3914,9 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 mpls->next = NULL;
                 mpls = NULL;
             } else {
+                if(sp_len < sizeof(bbl_mpls_t)) {
+                    return DECODE_ERROR;
+                } 
                 mpls->next = (bbl_mpls_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_mpls_t));
                 mpls = mpls->next;
             }
