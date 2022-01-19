@@ -266,11 +266,11 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
         /* Init link-local IPv6 address */
         network_if->ip6_ll[0]  = 0xfe;
         network_if->ip6_ll[1]  = 0x80;
-        network_if->ip6_ll[8]  = 0xff;
-        network_if->ip6_ll[9]  = 0xff;
-        network_if->ip6_ll[10] = 0xff;
+        network_if->ip6_ll[8]  = network_if->mac[0];
+        network_if->ip6_ll[9]  = network_if->mac[1];
+        network_if->ip6_ll[10] = network_if->mac[2];
         network_if->ip6_ll[11] = 0xff;
-        network_if->ip6_ll[12] = 0xff;
+        network_if->ip6_ll[12] = 0xfe;
         network_if->ip6_ll[13] = network_if->mac[3];
         network_if->ip6_ll[14] = network_if->mac[4];
         network_if->ip6_ll[15] = network_if->mac[5];
