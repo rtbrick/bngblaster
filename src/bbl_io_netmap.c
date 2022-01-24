@@ -21,8 +21,8 @@ bbl_io_netmap_rx_job (timer_s *timer)
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
-	struct netmap_ring *ring;
-	unsigned int i;
+    struct netmap_ring *ring;
+    unsigned int i;
 
     uint8_t *eth_start;
     uint16_t eth_len;
@@ -96,7 +96,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
     bbl_ctx_s *ctx;
 
     struct netmap_ring *ring;
-	unsigned int i;
+    unsigned int i;
 
     uint8_t *buf;
     uint16_t len;
@@ -156,7 +156,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
 bool
 bbl_io_netmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
     struct netmap_ring *ring;
-	unsigned int i;
+    unsigned int i;
     uint8_t *buf;
     ring = NETMAP_TXRING(interface->io.port->nifp, 0);
     if (nm_ring_empty(ring)) {
@@ -189,13 +189,13 @@ bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
      */
     interface->io.port = nm_open(netmap_port, NULL, NETMAP_NO_TX_POLL, NULL);
     if (interface->io.port == NULL) {
-		if (!errno) {
+        if (!errno) {
             LOG(ERROR, "Failed to nm_open(%s): not a netmap port\n", netmap_port);
-		} else {
-			LOG(ERROR, "Failed to nm_open(%s): %s\n", netmap_port, strerror(errno));
-		}
+        } else {
+            LOG(ERROR, "Failed to nm_open(%s): %s\n", netmap_port, strerror(errno));
+        }
         return false;
-	}
+    }
 
     /*
      * Add an periodic timer for polling I/O.

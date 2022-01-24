@@ -232,6 +232,13 @@
 
 #define BITS_TO_BYTES(_len) ((_len+7) >> 3)
 
+typedef uint32_t ipv4addr_t;
+
+typedef struct ipv4_prefix_ {
+    uint8_t         len;
+    ipv4addr_t      address;
+} ipv4_prefix;
+
 typedef uint8_t ipv6addr_t[IPV6_ADDR_LEN];
 
 typedef struct ipv6_prefix_ {
@@ -248,7 +255,6 @@ static const ipv6addr_t ipv6_solicited_node_multicast = {0xFF, 0x02, 0x00, 0x00,
 
 /* MAC Addresses */
 static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
@@ -481,29 +487,6 @@ typedef struct access_line_ {
 } access_line_t;
 
 /*
- * ISIS
- */
-typedef struct bbl_isis_ {
-    uint8_t      type;
-    uint8_t      level;
-    uint8_t      holding_time;
-    uint8_t     *system_id;
-    uint8_t      system_id_len;
-
-    /* TLV's */
-
-    bbl_isis_area_t *area;
-    uint8_t      area_count;
-    bool         protocol_ipv4;
-    bool         protocol_ipv6;
-    uint32_t    *ipv4_interface_address;
-    uint8_t      ipv4_interface_address_len;
-    ipv6addr_t  *ipv6_interface_address;
-    uint8_t      ipv6_interface_address_len;
-    uint8_t     *p2p_adjacency_state;
-} bbl_isis_t;
-
-/*
  * MPLS Label
  */
 typedef struct bbl_mpls_ {
@@ -512,6 +495,15 @@ typedef struct bbl_mpls_ {
     uint8_t  ttl;
     void    *next; /* next label */
 } bbl_mpls_t;
+
+/*
+ * ISIS PDU
+ */
+typedef struct bbl_isis_t {
+    uint8_t  type;
+    uint8_t *pdu;
+    uint16_t pdu_len;
+} bbl_isis_t;
 
 /*
  * Ethernet Header Structure

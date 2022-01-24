@@ -168,7 +168,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = network_if->ip;
+                    ipv4.dst = network_if->ip.address;
                 }
             }
             ipv4.ttl = 64;
@@ -424,7 +424,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = network_if->ip;
+                    ipv4.dst = network_if->ip.address;
                 }
             }
             ipv4.ttl = 64;
@@ -547,7 +547,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             if(stream->config->ipv4_network_address) {
                 ipv4.src = stream->config->ipv4_network_address;
             } else {
-                ipv4.src = network_if->ip;
+                ipv4.src = network_if->ip.address;
             }
             /* Destination address */
             if(stream->config->ipv4_destination_address) {

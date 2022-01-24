@@ -50,20 +50,23 @@
 
 #include "libdict/dict.h"
 #include "bbl_def.h"
+
 #include "bbl_protocols.h"
+#include "isis/isis_def.h"
+
 #include "bbl_logging.h"
 #include "bbl_timer.h"
 #include "bbl_utils.h"
 #include "bbl_stats.h"
 #include "bbl_config.h"
 #include "bbl_l2tp.h"
-#include "bbl_isis.h"
 #include "bbl_session.h"
 #include "bbl_ctx.h"
 #include "bbl_send.h"
 #include "bbl_interface.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
+#include "isis/isis.h"
 
 WINDOW *log_win;
 WINDOW *stats_win;

@@ -127,19 +127,22 @@ typedef struct bbl_network_config_
 {
     struct bbl_interface_ *network_if;
     char *interface;
-
-    uint16_t vlan;
-    uint32_t ip;
-    uint32_t gateway;
+    
     uint8_t gateway_mac[ETH_ADDR_LEN];
+    bool gateway_resolve_wait;
+    uint16_t vlan;
+
+    ipv4_prefix ip;
+    ipv4addr_t gateway;
 
     ipv6_prefix ip6;
-    ipv6_prefix gateway6;
-
-    bool gateway_resolve_wait;
+    ipv6addr_t gateway6;
 
     uint16_t isis_instance_id;
     uint8_t  isis_level;
+    bool     isis_p2p;
+    uint32_t isis_l1_metric;
+    uint32_t isis_l2_metric;
 
     void *next; /* pointer to next network config element */
 } bbl_network_config_s;

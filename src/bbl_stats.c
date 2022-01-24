@@ -26,8 +26,8 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
         ctx->stats.sessions_established_max = ctx->sessions_established_max;
 
         timespec_sub(&time_diff,
-		     &ctx->stats.last_session_established,
-		     &ctx->stats.first_session_tx);
+             &ctx->stats.last_session_established,
+             &ctx->stats.first_session_tx);
 
         ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
         if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
@@ -844,9 +844,9 @@ bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
         }
     }
     if (div) {
-	    rate->avg = sum / div;
+        rate->avg = sum / div;
     } else {
-	    rate->avg = 0;
+        rate->avg = 0;
     }
     if(rate->avg > rate->avg_max) {
         rate->avg_max = rate->avg;

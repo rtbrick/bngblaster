@@ -192,3 +192,85 @@ ipv6_multicast_mac(const uint8_t *ipv6, uint8_t* mac) {
     mac[0] = 0x33;
     mac[1] = 0x33;
 }
+
+bool
+ipv4prefix_str(const char *str, ipv4_prefix *ipv4) {
+    char *s = strdup(str);
+    char *p;
+    int   r = 0;
+
+    p = strchr(s, '/');
+    if(p) {
+        sscanf(p, "/%hhd", &ipv4->len);
+        *p = '\0';
+        if(ipv4->len > 32) {
+            free(s);
+            return false;
+        }
+    } else {
+        ipv4->len = 24;
+    }
+
+    r = inet_pton(AF_INET, s, &ipv4->address);
+    free(s);
+    if(!r) {
+        fprintf(stderr, "DEBUG3 %s %d\n", s, r);
+        return false;
+    }
+    return true;
+}
+
+bool
+ipv6prefix_str(const char *str, ipv6_prefix *ipv6) {
+    char *s = strdup(str);
+    char *p;
+    int   r;
+
+    p = strchr(s, '/');
+    if(p) {
+        sscanf(p, "/%hhd", &ipv6->len);
+        *p = '\0';
+        if(ipv6->len > 128) {
+            free(s);
+            return false;
+        }
+    } else {
+        ipv6->len = 64;
+    }
+
+    r = inet_pton(AF_INET6, s, &ipv6->address);
+    free(s);
+    if(!r) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * access_ipv6_addr_not_zero
+ *
+ * @param addr IPv6 address
+ * @return true if IPv6 is not zero (!::)
+ */
+bool
+ipv6_addr_not_zero(ipv6addr_t *addr) {
+    if(addr && (*(uint64_t *)addr != 0 ||*((uint64_t *)addr + 1) != 0 )) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * ipv6_prefix_not_zero
+ *
+ * @param prefix IPv6 prefix
+ * @return true if IPv6 prefix length and address are not zero (!::/0)
+ */
+bool
+ipv6_prefix_not_zero(ipv6_prefix *prefix) {
+    /* check if pointer and prefix length */
+    if(prefix && *(uint8_t*)prefix > 0) {
+        return ipv6_addr_not_zero((ipv6addr_t *)prefix+1);
+    }
+    return false;
+}

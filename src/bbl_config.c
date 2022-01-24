@@ -25,7 +25,7 @@ add_secondary_ipv4(bbl_ctx_s *ctx, uint32_t ipv4) {
     bbl_secondary_ip_s  *secondary_ip;
 
     for(int i = 0; i < ctx->interfaces.network_if_count; i++) {
-        if (ipv4 == ctx->interfaces.network_if[i]->ip) {
+        if (ipv4 == ctx->interfaces.network_if[i]->ip.address) {
             return;
         }
     }
@@ -228,7 +228,7 @@ static bool
 json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_network_config_s *network_config) {
     json_t *value = NULL;
     const char *s = NULL;
-    uint32_t ipv4;
+    ipv4addr_t ipv4 = {0};
 
     UNUSED(ctx);
 
@@ -239,11 +239,10 @@ json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_net
         return false;
     }
     if (json_unpack(network_interface, "{s:s}", "address", &s) == 0) {
-        if (!inet_pton(AF_INET, s, &ipv4)) {
+        if (!ipv4prefix_str(s, &network_config->ip)) {
             fprintf(stderr, "JSON config error: Invalid value for network->address\n");
             return false;
         }
-        network_config->ip = ipv4;
     }
     if (json_unpack(network_interface, "{s:s}", "gateway", &s) == 0) {
         if (!inet_pton(AF_INET, s, &ipv4)) {
@@ -253,18 +252,16 @@ json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_net
         network_config->gateway = ipv4;
     }
     if (json_unpack(network_interface, "{s:s}", "address-ipv6", &s) == 0) {
-        if (!inet_pton(AF_INET6, s, &network_config->ip6.address)) {
+        if (!ipv6prefix_str(s, &network_config->ip6)) {
             fprintf(stderr, "JSON config error: Invalid value for network->address-ipv6\n");
             return false;
         }
-        network_config->ip6.len = 64;
     }
     if (json_unpack(network_interface, "{s:s}", "gateway-ipv6", &s) == 0) {
-        if (!inet_pton(AF_INET6, s, &network_config->gateway6.address)) {
+        if (!inet_pton(AF_INET6, s, &network_config->gateway6)) {
             fprintf(stderr, "JSON config error: Invalid value for network->gateway-ipv6\n");
             return false;
         }
-        network_config->gateway6.len = 64;
     }
     if (json_unpack(network_interface, "{s:s}", "gateway-mac", &s) == 0) {
         if (sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
@@ -296,12 +293,31 @@ json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_net
     value = json_object_get(network_interface, "isis-instance-id");
     if (json_is_number(value)) {
         network_config->isis_instance_id = json_number_value(value);
+        network_config->isis_level = 3;
         value = json_object_get(network_interface, "isis-level");
         if (json_is_number(value)) {
             network_config->isis_level = json_number_value(value);
-            if(network_config->isis_level > 3) {
+            if(network_config->isis_level == 0 || 
+               network_config->isis_level > 3) {
                 fprintf(stderr, "JSON config error: Invalid value for network->isis-level (1-3)\n");
             }
+        }
+        network_config->isis_p2p = true;
+        value = json_object_get(network_interface, "isis-p2p");
+        if (json_is_boolean(value)) {
+            network_config->isis_p2p = json_boolean_value(value);
+        }
+        value = json_object_get(network_interface, "isis-l1-metric");
+        if (json_is_number(value)) {
+            network_config->isis_l1_metric = json_number_value(value);
+        } else {
+            network_config->isis_l1_metric = 10;
+        }
+        value = json_object_get(network_interface, "isis-l2-metric");
+        if (json_is_number(value)) {
+            network_config->isis_l2_metric = json_number_value(value);
+        } else {
+            network_config->isis_l2_metric = 10;
         }
     }
     return true;
@@ -664,11 +680,11 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
 }
 
 static bool
-json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_config) {
+json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config) {
     json_t *value = NULL;
     const char *s = NULL;
-    int i;
-
+    int i;    
+    
     UNUSED(ctx);
 
     value = json_object_get(isis, "instance-id");
@@ -710,11 +726,23 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
 
     if (json_unpack(isis, "{s:s}", "level1-auth-key", &s) == 0) {
         isis_config->level1_key = strdup(s);
-        isis_config->level1_auth = ISIS_AUTH_MD5;
+        isis_config->level1_auth = ISIS_AUTH_CLEARTEXT;
+        if (json_unpack(isis, "{s:s}", "level1-auth-type", &s) == 0) {
+            if (strcmp(s, "md5") == 0) {
+                isis_config->level1_auth = ISIS_AUTH_HMAC_MD5;
+
+            }
+        }
     }
+
     if (json_unpack(isis, "{s:s}", "level2-auth-key", &s) == 0) {
         isis_config->level2_key = strdup(s);
-        isis_config->level2_auth = ISIS_AUTH_MD5;
+        isis_config->level2_auth = ISIS_AUTH_CLEARTEXT;
+        if (json_unpack(isis, "{s:s}", "level2-auth-type", &s) == 0) {
+            if (strcmp(s, "md5") == 0) {
+                isis_config->level2_auth = ISIS_AUTH_HMAC_MD5;
+            }
+        }
     }
 
     value = json_object_get(isis, "hello-interval");
@@ -722,6 +750,11 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
         isis_config->hello_interval = json_number_value(value);
     } else {
         isis_config->hello_interval = ISIS_DEFAULT_HELLO_INTERVAL;
+    }
+
+    value = json_object_get(isis, "hello-padding");
+    if (json_is_boolean(value)) {
+        isis_config->hello_padding  = json_boolean_value(value);
     }
 
     value = json_object_get(isis, "holding-time");
@@ -738,6 +771,41 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
         isis_config->lsp_lifetime = ISIS_DEFAULT_LSP_LIFETIME;
     }
 
+    value = json_object_get(isis, "lsp-refresh-interval");
+    if (json_is_number(value)) {
+        isis_config->lsp_refresh_interval = json_number_value(value);
+    } else {
+        isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
+    }
+
+    value = json_object_get(isis, "lsp-retry-interval");
+    if (json_is_number(value)) {
+        isis_config->lsp_retry_interval = json_number_value(value);
+    } else {
+        isis_config->lsp_retry_interval = ISIS_DEFAULT_LSP_RETRY_IVL;
+    }
+
+    value = json_object_get(isis, "lsp-tx-interval");
+    if (json_is_number(value)) {
+        isis_config->lsp_tx_interval = json_number_value(value);
+    } else {
+        isis_config->lsp_tx_interval = ISIS_DEFAULT_LSP_TX_IVL_MS;
+    }
+
+    value = json_object_get(isis, "lsp-tx-window-size");
+    if (json_is_number(value)) {
+        isis_config->lsp_tx_window_size = json_number_value(value);
+    } else {
+        isis_config->lsp_tx_window_size = ISIS_DEFAULT_LSP_WINDOWS_SIZE;
+    }
+
+    value = json_object_get(isis, "csnp-interval");
+    if (json_is_number(value)) {
+        isis_config->csnp_interval = json_number_value(value);
+    } else {
+        isis_config->csnp_interval = ISIS_DEFAULT_CSNP_INTERVAL;
+    }
+
     if (json_unpack(isis, "{s:s}", "hostname", &s) == 0) {
         isis_config->hostname = strdup(s);
     } else {
@@ -749,7 +817,7 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
     } else {
         isis_config->router_id_str = g_default_router_id;
     }
-    if (!inet_pton(AF_INET, isis_config->router_id_str, &isis_config->system_id)) {
+    if (!inet_pton(AF_INET, isis_config->router_id_str, &isis_config->router_id)) {
         fprintf(stderr, "JSON config error: Invalid value for isis->router-id\n");
         return false;
     }
@@ -759,7 +827,7 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
     } else {
         isis_config->system_id_str = g_default_system_id;
     }
-    if (!bbl_isis_str_to_system_id(isis_config->system_id_str, isis_config->system_id)) {
+    if (!isis_str_to_system_id(isis_config->system_id_str, isis_config->system_id)) {
         fprintf(stderr, "JSON config error: Invalid value for isis->system-id\n");
         return false;
     }
@@ -767,29 +835,38 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, bbl_isis_config_t *isis_co
     value = json_object_get(isis, "area");
     if (json_is_array(value)) {
         isis_config->area_count = json_array_size(value);
-        isis_config->area = calloc(isis_config->area_count, sizeof(bbl_isis_area_t));
+        isis_config->area = calloc(isis_config->area_count, sizeof(isis_area_t));
         for (i = 0; i < isis_config->area_count; i++) {
-            if(!bbl_isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
+            if(!isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
                 fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
                 return false;
             }
         }
     } else if (json_is_string(value)) {
-        isis_config->area = calloc(1, sizeof(bbl_isis_area_t));
+        isis_config->area = calloc(1, sizeof(isis_area_t));
         isis_config->area_count = 1;
-        if(!bbl_isis_str_to_area(json_string_value(value), isis_config->area)) {
+        if(!isis_str_to_area(json_string_value(value), isis_config->area)) {
             fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
             return false;
         }
     } else {
-        isis_config->area = calloc(1, sizeof(bbl_isis_area_t));
+        isis_config->area = calloc(1, sizeof(isis_area_t));
         isis_config->area_count = 1;
-        if(!bbl_isis_str_to_area(g_default_area, isis_config->area)) {
+        if(!isis_str_to_area(g_default_area, isis_config->area)) {
             fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
             return false;
         }
     }
-    
+
+    value = json_object_get(isis, "sr-base");
+    if (json_is_number(value)) {
+        isis_config->sr_base = json_number_value(value);
+    }
+
+    value = json_object_get(isis, "sr-range");
+    if (json_is_number(value)) {
+        isis_config->sr_range = json_number_value(value);
+    }
 
     return true;
 }
@@ -1050,7 +1127,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
     bbl_access_config_s         *access_config          = NULL;
     bbl_a10nsp_config_s         *a10nsp_config          = NULL;
 
-    bbl_isis_config_t               *isis_config            = NULL;
+    isis_config_t               *isis_config            = NULL;
 
     if (json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -1478,10 +1555,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         size = json_array_size(sub);
         for (i = 0; i < size; i++) {
             if (!isis_config) {
-                ctx->config.isis_config = calloc(1, sizeof(bbl_isis_config_t));
+                ctx->config.isis_config = calloc(1, sizeof(isis_config_t));
                 isis_config = ctx->config.isis_config;
             } else {
-                isis_config->next = calloc(1, sizeof(bbl_isis_config_t));
+                isis_config->next = calloc(1, sizeof(isis_config_t));
                 isis_config = isis_config->next;
             }
             if (!json_parse_isis_config(ctx, json_array_get(sub, i), isis_config)) {
@@ -1490,7 +1567,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         }
     } else if (json_is_object(section)) {
         /* Config is provided as object (single isis instance) */
-        isis_config = calloc(1, sizeof(bbl_isis_config_t));
+        isis_config = calloc(1, sizeof(isis_config_t));
         if (!ctx->config.isis_config) {
             ctx->config.isis_config = isis_config;
         }

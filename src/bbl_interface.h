@@ -63,17 +63,19 @@ typedef struct bbl_interface_
 
     uint32_t send_requests;
     bool     arp_resolved;
-    uint32_t ip;
-    uint32_t gateway;
+
     uint16_t vlan;
     bool     qinq; /* use ethertype 0x8818 */
     uint8_t  mac[ETH_ADDR_LEN];
     uint8_t  gateway_mac[ETH_ADDR_LEN];
 
-    ipv6addr_t  ip6_ll; /* link-local IPv6 address */
+    ipv4_prefix ip;
+    ipv4addr_t  gateway;
+
     ipv6_prefix ip6; /* global IPv6 address */
-    ipv6_prefix gateway6;
-    ipv6addr_t gateway6_solicited_node_multicast;
+    ipv6addr_t  ip6_ll; /* link-local IPv6 address */
+    ipv6addr_t  gateway6;
+    ipv6addr_t  gateway6_solicited_node_multicast;
 
     bool icmpv6_nd_resolved;
     bool gateway_resolve_wait;
@@ -83,10 +85,8 @@ typedef struct bbl_interface_
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
 
-    struct {
-        bbl_isis_instance_t *instance;
-        bbl_isis_adjacency_t *adjacency;
-    } isis;
+    isis_adjacency_p2p_t *isis_adjacency_p2p;
+    isis_adjacency_t     *isis_adjacency[ISIS_LEVELS];
 
     struct {
         uint64_t packets_tx;
@@ -191,6 +191,9 @@ typedef struct bbl_interface_
 
         uint64_t li_rx;
         bbl_rate_s rate_li_rx;
+
+        uint32_t isis_rx;
+        uint32_t isis_tx;
     } stats;
 
     struct timer_ *tx_job;

@@ -226,7 +226,8 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
 {
     bbl_network_config_s *network_config = ctx->config.network_config;
     struct bbl_interface_ *network_if;
-    bbl_isis_instance_t *isis;
+    isis_instance_t *isis;
+    bool isis_result;
 
     while(network_config) {
         if(bbl_interface_present(ctx, network_config->interface)) {
@@ -256,8 +257,9 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
         memcpy(network_if->gateway_mac, network_config->gateway_mac, ETH_ADDR_LEN);
 
         /* Init IPv4 */
-        if(network_config->ip && network_config->gateway) {
-            network_if->ip = network_config->ip;
+        if(network_config->ip.address && network_config->gateway) {
+            network_if->ip.address = network_config->ip.address;
+            network_if->ip.len = network_config->ip.len;
             network_if->gateway = network_config->gateway;
             /* Send initial ARP request */
             network_if->send_requests |= BBL_IF_SEND_ARP_REQUEST;
@@ -276,13 +278,14 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
         network_if->ip6_ll[15] = network_if->mac[5];
 
         /* Init IPv6 */
-        if(network_config->ip6.len && network_config->gateway6.len) {
+        if(ipv6_prefix_not_zero(&network_config->ip6) && 
+           ipv6_addr_not_zero(&network_config->gateway6)) {
             /* Init global IPv6 address */
             memcpy(&network_if->ip6, &network_config->ip6, sizeof(ipv6_prefix));
-            memcpy(&network_if->gateway6, &network_config->gateway6, sizeof(ipv6_prefix));
+            memcpy(&network_if->gateway6, &network_config->gateway6, sizeof(ipv6addr_t));
             memcpy(&network_if->gateway6_solicited_node_multicast, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
             memcpy(((uint8_t*)&network_if->gateway6_solicited_node_multicast)+13,
-                   ((uint8_t*)&network_if->gateway6.address)+13, 3);
+                   ((uint8_t*)&network_if->gateway6)+13, 3);
 
             /* Send initial ICMPv6 NS */
             network_if->send_requests |= BBL_IF_SEND_ICMPV6_NS;
@@ -292,31 +295,26 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
 
         /* Init routing protocols */ 
         if(network_config->isis_instance_id) {
+            isis_result = false;
             isis = ctx->isis_instances;
             while (isis) {
                 if(isis->config->id == network_config->isis_instance_id) {
-                    LOG(ISIS, "Add network interface %s to IS-IS instance %u\n", 
-                        network_config->interface, network_config->isis_instance_id);
-                    network_if->isis.instance = isis;
-                    network_if->isis.adjacency = calloc(1, sizeof(bbl_isis_adjacency_t));
-                    network_if->isis.adjacency->adjacency_state = ISIS_ADJACENCY_STATE_DOWN;
-                    if(network_config->isis_level) {
-                        network_if->isis.adjacency->level = network_config->isis_level;
-                    } else {
-                        network_if->isis.adjacency->level = isis->config->level;
+                    isis_result = isis_adjacency_init(network_config, network_if, isis);
+                    if(!isis_result) {
+                        LOG(ERROR, "Failed to enable IS-IS for network interface %s (adjacency init failed)\n", 
+                            network_config->interface);
+                        return false;
                     }
-                    /* Start IS-IS hello interval */
-                    network_if->send_requests |= BBL_IF_SEND_ISIS_HELLO;
                     break;
                 }
                 isis = isis->next;
             }
-            if(!network_if->isis.instance) {
-                LOG(ERROR, "Failed to enable IS-IS for network interface %s (instance not found)\n", network_config->interface);
+            if(!isis_result) {
+                LOG(ERROR, "Failed to enable IS-IS for network interface %s (instance not found)\n",  
+                    network_config->interface);
                 return false;
             }
         }
-
         /* Next ... */
         network_config = network_config->next;
     }

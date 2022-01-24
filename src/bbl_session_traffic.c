@@ -286,7 +286,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     } else if (session->a10nsp_session) {
         ip.dst = A10NSP_IP_LOCAL;
     } else {
-        ip.dst = network_if->ip;
+        ip.dst = network_if->ip.address;
     }
     ip.src = session->ip_address;
     ip.offset = IPV4_DF;
@@ -332,7 +332,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ip;
     ip.dst = session->ip_address;
-    ip.src = network_if->ip;
+    ip.src = network_if->ip.address;
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;

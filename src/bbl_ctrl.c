@@ -44,7 +44,6 @@ string_or_na(char *string) {
     }
 }
 
-
 ssize_t
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) {
     ssize_t result = 0;
@@ -833,7 +832,6 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     }
 }
 
-
 ssize_t
 bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
     bbl_l2tp_tunnel_t *l2tp_tunnel;
@@ -1243,31 +1241,84 @@ bbl_ctrl_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 }
 
 ssize_t
-bbl_ctrl_isis_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_isis_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
-    json_t *root, *interfaces, *interface;
-    int i;
+    json_t *root, *adjacencies, *adjacency;
 
-    interfaces = json_array();
-    for(i=0; i < ctx->interfaces.network_if_count; i++) {
-        if(ctx->interfaces.network_if[i]->isis.adjacency) {
-           interface = bbl_isis_interface_json(ctx->interfaces.network_if[i]);
-           if(interface) {
-               json_array_append(interfaces, interface);
+    adjacencies = json_array();
+    for(int i=0; i < ctx->interfaces.network_if_count; i++) {
+        if(ctx->interfaces.network_if[i]->isis_adjacency_p2p) {
+           adjacency = isis_ctrl_adjacency_p2p(ctx->interfaces.network_if[i]->isis_adjacency_p2p);
+           if(adjacency) {
+               json_array_append(adjacencies, adjacency);
            }
+        } else {
+            for(int level=0; level<ISIS_LEVELS; level++) {
+                adjacency = isis_ctrl_adjacency(ctx->interfaces.network_if[i]->isis_adjacency[level]);
+                if(adjacency) {
+                    json_array_append(adjacencies, adjacency);
+                }
+            }
         }
     }
-
     root = json_pack("{ss si so}",
                      "status", "ok",
                      "code", 200,
-                     "interfaces", interfaces);
+                     "isis-adjacencies", adjacencies);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
-        json_decref(interfaces);
+        json_decref(adjacencies);
+    }
+    return result;
+}
+
+ssize_t
+bbl_ctrl_isis_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+
+    ssize_t result = 0;
+    json_t *root;
+    isis_instance_t *instance = NULL;
+
+    int instance_id = 0;
+    int level = 0;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
+    }
+    if (json_unpack(arguments, "{s:i}", "level", &level) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS level");
+    }
+    if (!(level == ISIS_LEVEL_1 || level == ISIS_LEVEL_2)) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid ISIS level");
+    }
+
+    /* Search for matching instance */
+    instance = ctx->isis_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if (!instance) {
+        return bbl_ctrl_status(fd, "error", 400, "ISIS instance not found");
+    }
+
+    if(!instance->level[level-1].lsdb) {
+        return bbl_ctrl_status(fd, "error", 400, "ISIS database not found");
+    }
+
+    root = isis_ctrl_database(instance->level[level-1].lsdb);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
     }
     return result;
 }
@@ -1316,7 +1367,8 @@ struct action actions[] = {
     {"cfm-cc-rdi-off", bbl_ctrl_cfm_cc_rdi_off},
     {"traffic-start", bbl_ctrl_traffic_start},
     {"traffic-stop", bbl_ctrl_traffic_stop},
-    {"isis-interfaces", bbl_ctrl_isis_interfaces},
+    {"isis-adjacencies", bbl_ctrl_isis_adjacencies},
+    {"isis-database", bbl_ctrl_isis_database},
     {NULL, NULL},
 };
 
