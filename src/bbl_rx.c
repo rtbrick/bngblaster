@@ -1783,7 +1783,7 @@ bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
         }
         if(arp->code == ARP_REQUEST) {
-            if(arp->target_ip == interface->ip) {
+            if(arp->target_ip == interface->ip.address) {
                 bbl_send_arp_reply(interface, NULL, eth, arp);
             } else {
                 secondary_ip = interface->ctx->config.secondary_ip_addresses;
@@ -1808,7 +1808,7 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     ipv6 = (bbl_ipv6_t*)eth->next;
     icmpv6 = (bbl_icmpv6_t*)ipv6->next;
 
-    if(memcmp(ipv6->src, interface->gateway6.address, IPV6_ADDR_LEN) == 0) {
+    if(memcmp(ipv6->src, interface->gateway6, IPV6_ADDR_LEN) == 0) {
         interface->icmpv6_nd_resolved = true;
         if(*(uint32_t*)interface->gateway_mac == 0) {
             memcpy(interface->gateway_mac, eth->src, ETH_ADDR_LEN);
@@ -1835,8 +1835,8 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 static void
 bbl_rx_network_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface) {
     bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
-    if(interface->ip &&
-       interface->ip == ipv4->dst &&
+    if(interface->ip.address &&
+       interface->ip.address == ipv4->dst &&
        icmp->type == ICMP_TYPE_ECHO_REQUEST) {
         /* Send ICMP reply... */
         bbl_send_icmp_reply(interface, NULL, eth, ipv4, icmp);
@@ -1904,7 +1904,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             }
             break;
         case ISIS_PROTOCOL_IDENTIFIER:
-            return bbl_isis_handler_rx(eth, interface);
+            return isis_handler_rx(eth, interface);
         default:
             break;
     }

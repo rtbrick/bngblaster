@@ -95,7 +95,7 @@ timer_change (timer_s *timer)
      * Are we already on the timer change queue ?
      */
     if (timer->on_change_list) {
-	    return;
+        return;
     }
 
     timer_root = timer->timer_bucket->timer_root;
@@ -137,7 +137,7 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
     root->buckets++;
 
     LOG(TIMER_DETAIL, "Add timer bucket %lu.%06lus\n",
-	timer_bucket->sec, timer_bucket->nsec/1000);
+    timer_bucket->sec, timer_bucket->nsec/1000);
 
  INSERT:
     timer->timer_bucket = timer_bucket;
@@ -251,7 +251,7 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
             LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
                 timer->expire.tv_sec, timer->expire.tv_nsec / 1000);
         }
-	    return;
+        return;
     }
 }
 
@@ -298,7 +298,7 @@ timer_smear_all_buckets (timer_root_s *root)
             LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
                 last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000);
         }
-	    return;
+        return;
     }
 }
 
@@ -427,7 +427,7 @@ timer_add (timer_root_s *root,
             timer->data = data;
             timer->cb = cb;
         }
-	    return;
+        return;
     }
 
     if (CIRCLEQ_EMPTY(&root->timer_gc_qhead)) {
@@ -444,7 +444,7 @@ timer_add (timer_root_s *root,
         timer = CIRCLEQ_FIRST(&root->timer_gc_qhead);
         CIRCLEQ_REMOVE(&root->timer_gc_qhead, timer, timer_qnode);
         root->gc--;
-	memset(timer, 0, sizeof(timer_s));
+    memset(timer, 0, sizeof(timer_s));
     }
 
     if (!timer) {
@@ -471,7 +471,7 @@ timer_add (timer_root_s *root,
 
 void
 timer_add_periodic (timer_root_s *root, timer_s **ptimer, char *name,
-		            time_t sec, long nsec, void *data, void (*cb))
+                    time_t sec, long nsec, void *data, void (*cb))
 {
     timer_s *timer;
 

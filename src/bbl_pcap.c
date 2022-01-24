@@ -37,7 +37,7 @@ pcapng_fflush (bbl_ctx_s *ctx)
     int res;
 
     if (!ctx->pcap.write_buf) {
-	    return;
+        return;
     }
 
     if (!ctx->pcap.write_idx) {
@@ -124,7 +124,7 @@ write_le_uint (u_char *data, uint length, unsigned long long value)
     uint idx;
 
     if (!length || length > 8) {
-	    return;
+        return;
     }
 
     for (idx = 0; idx < length; idx++) {
@@ -143,7 +143,7 @@ push_le_uint (bbl_ctx_s *ctx, uint length, unsigned long long value)
      * Buffer overrun protection.
      */
     if ((ctx->pcap.write_idx + length) >= PCAPNG_WRITEBUFSIZE) {
-	    return;
+        return;
     }
 
     /*
@@ -189,16 +189,16 @@ pcapng_init (bbl_ctx_s *ctx)
     }
 
     if (!ctx->pcap.filename) {
-	    return;
+        return;
     }
 
     /*
      * Write buffer for I/O.
      */
     if (!ctx->pcap.write_buf) {
-	    ctx->pcap.write_buf = calloc(1, PCAPNG_WRITEBUFSIZE);
+        ctx->pcap.write_buf = calloc(1, PCAPNG_WRITEBUFSIZE);
     } else {
-	    ctx->pcap.write_idx = 0;
+        ctx->pcap.write_idx = 0;
     }
 
     /*
@@ -214,20 +214,20 @@ void
 pcapng_free (bbl_ctx_s *ctx)
 {
     if (!ctx) {
-	    return;
+        return;
     }
 
     pcapng_fflush(ctx);
 
     if (ctx->pcap.fd != -1) {
-	    close(ctx->pcap.fd);
-	    ctx->pcap.fd = -1;
-	    return;
+        close(ctx->pcap.fd);
+        ctx->pcap.fd = -1;
+        return;
     }
 
     if (ctx->pcap.write_buf) {
-	    free(ctx->pcap.write_buf);
-	    ctx->pcap.write_buf = NULL;
+        free(ctx->pcap.write_buf);
+        ctx->pcap.write_buf = NULL;
     }
 }
 
@@ -272,8 +272,8 @@ pcapng_push_section_header (bbl_ctx_s *ctx)
      */
     push_le_uint(ctx, 2, PCAPNG_SHB_USERAPPL_OPTION); /* option_type */
     option_length = snprintf((char *)ctx->pcap.write_buf + ctx->pcap.write_idx + 2,
-			     PCAPNG_WRITEBUFSIZE - ctx->pcap.write_idx - 2,
-			     "%s", PCAPNG_SHB_USERAPPL);
+                 PCAPNG_WRITEBUFSIZE - ctx->pcap.write_idx - 2,
+                 "%s", PCAPNG_SHB_USERAPPL);
     push_le_uint(ctx, 2, option_length); /* option_length */
     ctx->pcap.write_idx += option_length;
     push_le_uint(ctx, calc_pad(option_length), 0);
@@ -307,8 +307,8 @@ pcapng_push_interface_header (bbl_ctx_s *ctx, uint dlt, const char *if_name)
      */
     push_le_uint(ctx, 2, PCAPNG_IDB_IFNAME_OPTION); /* option_type */
     option_length = snprintf((char *)ctx->pcap.write_buf + ctx->pcap.write_idx + 2,
-			     PCAPNG_WRITEBUFSIZE - ctx->pcap.write_idx - 2,
-			     "%s", if_name);
+                 PCAPNG_WRITEBUFSIZE - ctx->pcap.write_idx - 2,
+                 "%s", if_name);
     push_le_uint(ctx, 2, option_length); /* option_length */
     ctx->pcap.write_idx += option_length;
     push_le_uint(ctx, calc_pad(option_length), 0);
@@ -326,14 +326,14 @@ pcapng_push_interface_header (bbl_ctx_s *ctx, uint dlt, const char *if_name)
  */
 void
 pcapng_push_packet_header (bbl_ctx_s *ctx, struct timespec *ts, u_char *data, uint packet_length,
-			   uint ifindex, uint direction)
+               uint ifindex, uint direction)
 {
     bbl_interface_s *interface;
     uint start_idx, total_length;
     uint64_t ts_usec;
 
     if (!ctx->pcap.wrote_header) {
-	    pcapng_push_section_header(ctx);
+        pcapng_push_section_header(ctx);
 
         /*
         * Push a list of interfaces.
@@ -379,12 +379,12 @@ pcapng_push_packet_header (bbl_ctx_s *ctx, struct timespec *ts, u_char *data, ui
     push_le_uint(ctx, 4, total_length); /* block total_length */
 
     LOG(PCAP, "wrote %u bytes pcap packet data, buffer fill %u/%u\n",
-	    packet_length, ctx->pcap.write_idx, PCAPNG_WRITEBUFSIZE);
+        packet_length, ctx->pcap.write_idx, PCAPNG_WRITEBUFSIZE);
 
     /*
      * Buffer about to be overrun ?
      */
     if (ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
-	    pcapng_fflush(ctx);
+        pcapng_fflush(ctx);
     }
 }

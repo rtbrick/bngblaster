@@ -85,12 +85,12 @@ main (int argc, char **argv) {
 
     fp = pcap_open_offline(argv[1], errbuf);
     if (fp == NULL) {
-	    fprintf(stderr, "\nFailed to open PCAP: %s\n", errbuf);
-	    exit(1);
+        fprintf(stderr, "\nFailed to open PCAP: %s\n", errbuf);
+        exit(1);
     }
 
     /* Load PCAP to memory... */
-	if (pcap_loop(fp, 0, packet_handler, NULL) < 0) {
+    if (pcap_loop(fp, 0, packet_handler, NULL) < 0) {
         fprintf(stderr, "\nReading PCAP failed: %s\n", pcap_geterr(fp));
         exit(1);
     }

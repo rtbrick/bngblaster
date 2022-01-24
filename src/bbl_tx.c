@@ -1655,7 +1655,7 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
         eth.next = &arp;
         arp.code = ARP_REQUEST;
         arp.sender = interface->mac;
-        arp.sender_ip = interface->ip;
+        arp.sender_ip = interface->ip.address;
         arp.target_ip = interface->gateway;
         if(interface->arp_resolved) {
             timer_add(&ctx->timer_root, &interface->timer_arp, "ARP timeout", 
@@ -1677,7 +1677,7 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
         ipv6.next = &icmpv6;
         ipv6.ttl = 255;
         icmpv6.type = IPV6_ICMPV6_NEIGHBOR_SOLICITATION;
-        memcpy(icmpv6.prefix.address, interface->gateway6.address, IPV6_ADDR_LEN);
+        memcpy(icmpv6.prefix.address, interface->gateway6, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         if(interface->icmpv6_nd_resolved) {
             timer_add(&ctx->timer_root, &interface->timer_nd, "ND timeout", 
@@ -1687,9 +1687,9 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
                       1, 0, interface, &bbl_network_nd_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
-    } else if(interface->send_requests & BBL_IF_SEND_ISIS_HELLO) {
-        interface->send_requests &= ~BBL_IF_SEND_ISIS_HELLO;
-        result = bbl_isis_encode_p2p_hello(interface, buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_ISIS_P2P_HELLO) {
+        interface->send_requests &= ~BBL_IF_SEND_ISIS_P2P_HELLO;
+        result = isis_p2p_hello_encode(interface, buf, len, &eth);
     } else {
         interface->send_requests = 0;
     }

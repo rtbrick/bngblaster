@@ -38,7 +38,7 @@
 /* Network Interface Send Mask */
 #define BBL_IF_SEND_ARP_REQUEST     0x00000001
 #define BBL_IF_SEND_ICMPV6_NS       0x00000002
-#define BBL_IF_SEND_ISIS_HELLO      0x00000004
+#define BBL_IF_SEND_ISIS_P2P_HELLO  0x00000004
 
 #define DUID_LEN                    10
 
@@ -139,8 +139,5 @@ typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
 typedef struct bbl_stream_thread_ bbl_stream_thread;
 typedef struct bbl_stream_config_ bbl_stream_config;
 typedef struct bbl_stream_ bbl_stream;
-typedef struct bbl_isis_area_ bbl_isis_area_t;
-typedef struct bbl_isis_config_ bbl_isis_config_t;
-typedef struct bbl_isis_instance_ bbl_isis_instance_t;
 
 #endif

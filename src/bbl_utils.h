@@ -25,5 +25,9 @@ void ipv4_multicast_mac(const uint32_t ipv4, uint8_t* mac);
 void ipv6_multicast_mac(const uint8_t *ipv6, uint8_t* mac);
 char *replace_substring (const char* s, const char* old, const char* new);
 const char *val2key (struct keyval_ *keyval, uint val);
+bool ipv4prefix_str(const char *str, ipv4_prefix *ipv4);
+bool ipv6prefix_str(const char *str, ipv6_prefix *ipv6);
+bool ipv6_addr_not_zero(ipv6addr_t *addr);
+bool ipv6_prefix_not_zero(ipv6_prefix *prefix);
 
 #endif

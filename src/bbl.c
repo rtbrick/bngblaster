@@ -107,7 +107,7 @@ bbl_add_multicast_packets(bbl_ctx_s *ctx)
             if(ctx->config.igmp_source) {
                 source = ctx->config.igmp_source;
             } else {
-                source = interface->ip;
+                source = interface->ip.address;
             }
             group = htobe32(group);
             /* Generate multicast destination MAC */
@@ -258,9 +258,9 @@ bbl_ctrl_job (timer_s *timer)
             if(interface->gateway_resolve_wait == false) {
                 continue;
             }
-            if(interface->gateway6.len && !interface->icmpv6_nd_resolved) {
+            if(ipv6_addr_not_zero(&interface->gateway6) && !interface->icmpv6_nd_resolved) {
                 LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n",
-                    interface->name, format_ipv6_prefix(&interface->gateway6));
+                    interface->name, format_ipv6_address(&interface->gateway6));
                 return;
             }
             if(interface->gateway && !interface->arp_resolved) {
@@ -532,7 +532,7 @@ main (int argc, char *argv[])
     if(igmp_zap_interval) ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
     /* Init IS-IS instances. */
-    if(!bbl_isis_init(ctx)) {
+    if(!isis_init(ctx)) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
         exit(1);
     }

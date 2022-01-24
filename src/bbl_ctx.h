@@ -96,7 +96,7 @@ typedef struct bbl_ctx_
         struct bbl_interface_ *a10nsp_if[BBL_MAX_INTERFACES];
     } interfaces;
 
-    bbl_isis_instance_t *isis_instances;
+    isis_instance_t *isis_instances;
 
     /* Scratchpad memory */
     uint8_t *sp_rx;
@@ -169,7 +169,7 @@ typedef struct bbl_ctx_
         void *stream_config;
 
         /* ISIS Instances */
-        bbl_isis_config_t *isis_config;
+        isis_config_t *isis_config;
 
         /* Global Session Settings */
         uint32_t sessions;

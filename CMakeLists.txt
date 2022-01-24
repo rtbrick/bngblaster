@@ -22,7 +22,7 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-FILE(GLOB BBL_SOURCES src/*.c)
+FILE(GLOB BBL_SOURCES src/*.c src/isis/*.c)
 list(SORT BBL_SOURCES)
 # Deterministic randomness for symbol name creation
 foreach(_file ${BBL_SOURCES})
