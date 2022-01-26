@@ -116,6 +116,14 @@ swap_ipv4_src_dst(bbl_ipv4_t *ipv4)
 }
 
 static void
+swap_ipv6_src_dst(bbl_ipv6_t *ipv6)
+{
+    uint8_t *dst = ipv6->dst;
+    ipv6->dst = ipv6->src;
+    ipv6->src = dst;
+}
+
+static void
 update_eth(bbl_interface_s *interface,
            bbl_session_s *session,
            bbl_ethernet_header_t *eth)
@@ -198,12 +206,7 @@ bbl_send_icmpv6_echo_reply(bbl_interface_s *interface,
                            bbl_icmpv6_t *icmpv6)
 {
     update_eth(interface, session, eth);
-    ipv6->dst = ipv6->src;
-    if(session) {
-        ipv6->src = session->ipv6_address;
-    } else {
-        ipv6->src = interface->ip6.address;
-    }
+    swap_ipv6_src_dst(ipv6);
     ipv6->ttl = 255;
     icmpv6->type = IPV6_ICMPV6_ECHO_REPLY;
     return bbl_send_to_buffer(interface, eth);

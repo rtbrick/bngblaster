@@ -30,6 +30,9 @@ typedef struct bbl_stream_config_
     bbl_stream_direction_t direction;
 
     double pps;
+    uint32_t max_packets;
+    uint32_t start_delay;
+
     uint16_t length;
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
@@ -42,6 +45,22 @@ typedef struct bbl_stream_config_
     ipv6addr_t ipv6_destination_address; /* overwrite IPv6 destination address */
     char *network_interface;
     char *a10nsp_interface;
+
+    bool     tx_mpls1;
+    uint32_t tx_mpls1_label;
+    uint8_t  tx_mpls1_exp;
+    uint8_t  tx_mpls1_ttl;
+
+    bool     tx_mpls2;
+    uint32_t tx_mpls2_label;
+    uint8_t  tx_mpls2_exp;
+    uint8_t  tx_mpls2_ttl;
+    
+    bool     rx_mpls1;
+    uint32_t rx_mpls1_label;
+    
+    bool     rx_mpls2;
+    uint32_t rx_mpls2_label;
 
     bool threaded;
     uint8_t thread_group;
@@ -73,6 +92,9 @@ typedef struct bbl_stream_
     uint64_t send_window_packets;
     struct timespec send_window_start;
 
+    struct timespec wait_start;
+    bool wait;
+
     uint8_t rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t rx_outer_vlan_pbit;
     uint8_t rx_inner_vlan_pbit;
@@ -86,6 +108,16 @@ typedef struct bbl_stream_
 
     uint64_t min_delay_ns;
     uint64_t max_delay_ns;
+
+    bool     rx_mpls1;
+    uint32_t rx_mpls1_label;
+    uint8_t  rx_mpls1_exp;
+    uint8_t  rx_mpls1_ttl;
+
+    bool     rx_mpls2;
+    uint32_t rx_mpls2_label;
+    uint8_t  rx_mpls2_exp;
+    uint8_t  rx_mpls2_ttl;
 
     bbl_rate_s rate_packets_tx;
     bbl_rate_s rate_packets_rx;

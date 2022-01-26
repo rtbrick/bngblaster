@@ -699,6 +699,16 @@ Attribute | Description | Default
 `access-ipv6-source-address` | Overwrite the access IPv6 source address (client) |
 `threaded` | Run those streams in separate threads | false
 `thread-group` | Assign this stream to thread group (1-255) | 0 (thread per stream)
+`max-packets` | Send a burst of N packets and stop | 0 (infinity) 
+`start-delay` | Wait N seconds after session is established before start | 0
+`tx-label1` | MPLS send (TX) label (outer label) | 
+`tx-label1-exp` | EXP bits of first label (outer label) | 0
+`tx-label1-ttl` | TTL of first label (outer label) | 255
+`tx-label2` | MPLS send (TX) label (inner label) | 
+`tx-label2-exp` | EXP bits of first label (inner label) | 0
+`tx-label2-ttl` | TTL of first label (inner label) | 255
+`rx-label1` | Expected receive MPLS label (outer label) |
+`rx-label2` | Expected receive MPLS label (inner label) | 
 
 For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 and inner IPv4 header.
 
