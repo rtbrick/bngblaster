@@ -748,6 +748,16 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
     }
     if (!stream_config->pps) stream_config->pps = 1;
 
+    value = json_object_get(stream, "max-packets");
+    if (value) {
+        stream_config->max_packets = json_number_value(value);
+    }
+
+    value = json_object_get(stream, "start-delay");
+    if (value) {
+        stream_config->start_delay = json_number_value(value);
+    }
+
     if (json_unpack(stream, "{s:s}", "access-ipv4-source-address", &s) == 0) {
         if (!inet_pton(AF_INET, s, &stream_config->ipv4_access_src_address)) {
             fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv4-source-address\n");
@@ -790,6 +800,48 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
             fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv6-address\n");
             return false;
         }
+    }
+
+    /* MPLS labels */
+    value = json_object_get(stream, "tx-label1");
+    if (value) {
+        stream_config->tx_mpls1 = true;
+        stream_config->tx_mpls1_label = json_number_value(value);
+        value = json_object_get(stream, "tx-label1-exp");
+        if (value) {
+            stream_config->tx_mpls1_exp = json_number_value(value);
+        }
+        value = json_object_get(stream, "tx-label1-ttl");
+        if (value) {
+            stream_config->tx_mpls1_ttl = json_number_value(value);
+        } else {
+            stream_config->tx_mpls1_ttl = 255;
+        }
+    }
+    value = json_object_get(stream, "tx-label2");
+    if (value) {
+        stream_config->tx_mpls2 = true;
+        stream_config->tx_mpls2_label = json_number_value(value);
+        value = json_object_get(stream, "tx-label2-exp");
+        if (value) {
+            stream_config->tx_mpls2_exp = json_number_value(value);
+        }
+        value = json_object_get(stream, "tx-label2-ttl");
+        if (value) {
+            stream_config->tx_mpls2_ttl = json_number_value(value);
+        } else {
+            stream_config->tx_mpls2_ttl = 255;
+        }
+    }
+    value = json_object_get(stream, "rx-label1");
+    if (value) {
+        stream_config->rx_mpls1 = true;
+        stream_config->rx_mpls1_label = json_number_value(value);
+    }
+    value = json_object_get(stream, "rx-label2");
+    if (value) {
+        stream_config->rx_mpls2 = true;
+        stream_config->rx_mpls2_label = json_number_value(value);
     }
 
     /* Threading */

@@ -53,17 +53,16 @@ typedef struct timer_
 {
     CIRCLEQ_ENTRY(timer_) timer_qnode;
     CIRCLEQ_ENTRY(timer_) timer_change_qnode;
-    struct timer_bucket_ *timer_bucket; /* back pointer */
-
-    char name[16];
-    void *data; /* Misc. data */
-    struct timer_ **ptimer; /* Where this timer pointer gets stored */
-    void (*cb)(struct timer_ *); /* Callback function. */
     struct timespec expire; /* Expiration interval */
-    uint expired:1,
-    periodic:1, /* auto restart timer ? */
-    delete:1, /* timer has been deleted */
-    on_change_list:1; /* node is on change list */
+    void *data; /* Misc. data */
+    void (*cb)(struct timer_ *); /* Callback function. */
+    bool expired;
+    bool periodic; /* auto restart timer ? */
+    bool delete; /* timer has been deleted */
+    bool on_change_list; /* node is on change list */
+    char name[16];
+    struct timer_bucket_ *timer_bucket; /* back pointer */
+    struct timer_ **ptimer; /* Where this timer pointer gets stored */
  } timer_s;
 
 /*

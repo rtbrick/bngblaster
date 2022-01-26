@@ -397,6 +397,22 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     }
 }
 
+static json_t *
+bbl_ctrl_interfaces_json(bbl_interface_s *interace, const char *type) {
+    return json_pack("{ss si ss si si si si si si si si}",
+                     "name", interace->name,
+                     "ifindex", interace->ifindex,
+                     "type", type,
+                     "tx-packets", interace->stats.packets_tx,
+                     "tx-bytes", interace->stats.bytes_tx, 
+                     "tx-pps", interace->stats.rate_packets_tx.avg,
+                     "tx-kbps", interace->stats.rate_bytes_tx.avg * 8 / 1000,
+                     "rx-packets", interace->stats.packets_rx, 
+                     "rx-bytes", interace->stats.bytes_rx,
+                     "rx-pps", interace->stats.rate_packets_rx.avg,
+                     "rx-kbps", interace->stats.rate_bytes_rx.avg * 8 / 1000);
+}
+
 ssize_t
 bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
@@ -405,24 +421,15 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
 
     interfaces = json_array();
     for(i=0; i < ctx->interfaces.network_if_count; i++) {
-        interface = json_pack("{ss si ss}",
-                            "name", ctx->interfaces.network_if[i]->name,
-                            "ifindex", ctx->interfaces.network_if[i]->ifindex,
-                            "type", "network");
+        interface = bbl_ctrl_interfaces_json(ctx->interfaces.access_if[i], "access");
         json_array_append(interfaces, interface);
     }
     for(i=0; i < ctx->interfaces.access_if_count; i++) {
-        interface = json_pack("{ss si ss}",
-                            "name", ctx->interfaces.access_if[i]->name,
-                            "ifindex", ctx->interfaces.access_if[i]->ifindex,
-                            "type", "access");
+        interface = bbl_ctrl_interfaces_json(ctx->interfaces.network_if[i], "network");
         json_array_append(interfaces, interface);
     }
     for(i=0; i < ctx->interfaces.a10nsp_if_count; i++) {
-        interface = json_pack("{ss si ss}",
-                            "name", ctx->interfaces.a10nsp_if[i]->name,
-                            "ifindex", ctx->interfaces.a10nsp_if[i]->ifindex,
-                            "type", "a10nsp");
+        interface = bbl_ctrl_interfaces_json(ctx->interfaces.a10nsp_if[i], "a10nsp");
         json_array_append(interfaces, interface);
     }
     root = json_pack("{ss si so}",
