@@ -420,11 +420,11 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     int i;
 
     interfaces = json_array();
-    for(i=0; i < ctx->interfaces.network_if_count; i++) {
+    for(i=0; i < ctx->interfaces.access_if_count; i++) {
         interface = bbl_ctrl_interfaces_json(ctx->interfaces.access_if[i], "access");
         json_array_append(interfaces, interface);
     }
-    for(i=0; i < ctx->interfaces.access_if_count; i++) {
+    for(i=0; i < ctx->interfaces.network_if_count; i++) {
         interface = bbl_ctrl_interfaces_json(ctx->interfaces.network_if[i], "network");
         json_array_append(interfaces, interface);
     }
