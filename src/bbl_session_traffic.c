@@ -20,16 +20,13 @@ bbl_session_traffic_ipv4(timer_s *timer)
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
             session->ipcp_state != BBL_PPP_OPENED) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
         if(session->l2tp && session->l2tp_session == NULL) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
     } else {
         if(session->session_state != BBL_ESTABLISHED) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
     }
@@ -49,12 +46,10 @@ bbl_session_traffic_ipv6(timer_s *timer)
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
             session->ip6cp_state != BBL_PPP_OPENED) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
     } else {
         if(session->session_state != BBL_ESTABLISHED) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
     }
@@ -76,12 +71,10 @@ bbl_session_traffic_ipv6pd(timer_s *timer)
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
             session->ip6cp_state != BBL_PPP_OPENED) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
     } else {
         if(session->session_state != BBL_ESTABLISHED) {
-            timer->periodic = false; /* Stop periodic timer */
             return;
         }
     }
