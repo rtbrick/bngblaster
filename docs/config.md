@@ -177,8 +177,13 @@ Attribute | Description | Default
 `vlan` | Network interface VLAN | 0 (untagged)
 `gateway-mac`| Optional set gateway MAC address manually
 `gateway-resolve-wait` | Sessions will not start until gateways are resolved | true
+`isis-instance-id` | Assign interface to ISIS instance | -
+`isis-level` | ISIS interface level | 3
+`isis-p2p` | ISIS P2P interface | true
+`isis-l1-metric` | ISIS level 1 interface metric | 10
+`isis-l2-metric` | ISIS level 2 interface metric | 10
 
-The BNG Blaster supports also multiple access interfaces
+The BNG Blaster supports also multiple network interfaces
 or VLAN ranges as shown in the example below.
 
 ```json
@@ -818,6 +823,69 @@ here.
             "ont-onu-ass-up": 40000,
             "pon-max-up": 1000000,
             "pon-max-down": 2400000
+        }
+    ]
+}
+```
+
+## ISIS
+
+This section describes all attributes of the `isis` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`instance-id` | ISIS instance identifier |
+`level` | ISIS level | 3 
+`overload` | ISIS overload | false
+`protocol-ipv4` | Enable/disable IPv4 | true
+`protocol-ipv6` | Enable/disable IPv6 | true
+`level1-auth-key` | ISIS level 1 authentication key | 
+`level1-auth-type` | ISIS level 1 authentication type | disabled
+`level2-auth-key` | ISIS level 2 authentication key |
+`level2-auth-type` | ISIS level 2 authentication type | disabled
+`hello-interval` | ISIS hello interval in seconds | 10
+`hello-padding` | ISIS hello padding | false
+`holding-time` | ISIS holding time in seconds | 30
+`lsp-lifetime` | ISIS LSP lifetime in seconds | 65535
+`lsp-refresh-interval` | ISIS LSP refresh interval in seconds | 300
+`lsp-retry-interval` | ISIS LSP retry interval in seconds | 5
+`lsp-tx-interval` | ISIS LSP TX interval in ms (time between LSP send windows) | 10 
+`lsp-tx-window-size` | ISIS LSP TX window size (LSP send per window) | 1 
+`csnp-interval` | ISIS CSNP interval in seconds | 30
+`hostname` | ISIS hostname | bngblaster
+`router-id` | ISIS router identifier | 10.10.10.10
+`system-id` | ISIS system identifier | 0100.1001.0010
+`area` | ISIS area(s) | 49.0001/24
+`sr-base` | ISIS SR base |
+`sr-range` | ISIS SR range |
+`external-lsp-database-file` | ISIS LSP database file |  
+`external-lsp-overwrite` | Allow to overwrite external LSP with newer versions in the network | false
+`external-lsp-refresh` | Allow to refresh external LSP | false
+
+```json
+{
+    "interfaces": {
+        "network": {
+            "interface": "eth1",
+            "address": "10.0.0.1/24",
+            "gateway": "10.0.0.2",
+            "isis-instance-id": 1,
+            "isis-l1-metric": 100,
+            "isis-l2-metric": 100
+        }
+    },
+    "isis": [
+        {
+            "instance-id": 1,
+            "system-id": "1921.6800.1001",
+            "router-id": "192.168.1.1",
+            "hostname": "R1",
+        },
+        {
+            "instance-id": 2,
+            "system-id": "1921.6800.1002",
+            "router-id": "192.168.1.2",
+            "hostname": "R2"
         }
     ]
 }
