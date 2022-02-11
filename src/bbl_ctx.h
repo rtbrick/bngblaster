@@ -61,6 +61,8 @@ typedef struct bbl_ctx_
     uint32_t l2tp_tunnels_established;
     uint32_t l2tp_tunnels_established_max;
 
+    uint32_t routing_sessions;
+
     CIRCLEQ_HEAD(sessions_idle_, bbl_session_ ) sessions_idle_qhead;
     CIRCLEQ_HEAD(sessions_teardown_, bbl_session_ ) sessions_teardown_qhead;
     CIRCLEQ_HEAD(interface_, bbl_interface_ ) interface_qhead; /* list of interfaces */

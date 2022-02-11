@@ -31,6 +31,7 @@ volatile bool g_teardown = false;
 volatile bool g_teardown_request = false;
 volatile uint8_t g_teardown_request_count = 0;
 
+uint16_t g_teardown_countdown = 1;
 
 const char banner[] = "\n"
 "      ____   __   ____         _        __                                  ,/\n"
@@ -277,6 +278,7 @@ bbl_ctrl_job (timer_s *timer)
     if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
 
     if(g_teardown) {
+        if(g_teardown_countdown) g_teardown_countdown--;
         if(ctx->l2tp_tunnels && ctx->sessions_terminated >= ctx->sessions) {
             bbl_l2tp_stop_all_tunnel(ctx);
         }
@@ -292,6 +294,8 @@ bbl_ctrl_job (timer_s *timer)
                     }
                 }
             }
+            /* Teardown routing protocols. */
+            isis_teardown(ctx);
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
@@ -598,7 +602,7 @@ main (int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
     while(g_teardown_request_count < 10) {
-        if(!ctx->l2tp_tunnels) {
+        if(!(ctx->l2tp_tunnels || ctx->routing_sessions)) {
             if(ctx->sessions) {
                 /* With sessions, wait for all sessions
                 * to be terminated. */

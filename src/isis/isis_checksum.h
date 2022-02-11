@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - IS-IS Checksum
  *
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause

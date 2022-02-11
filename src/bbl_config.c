@@ -868,6 +868,13 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config
         isis_config->sr_range = json_number_value(value);
     }
 
+    value = json_object_get(isis, "teardown-time");
+    if (json_is_number(value)) {
+        isis_config->teardown_time = json_number_value(value);
+    } else {
+        isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
+    }
+
     return true;
 }
 

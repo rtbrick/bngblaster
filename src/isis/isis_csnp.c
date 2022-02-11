@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - IS-IS CSNP
  *
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,7 +11,7 @@
 uint64_t g_csnp_scan = 0;
 
 void
-isis_csnp_job (timer_s *timer) {
+isis_csnp_job(timer_s *timer) {
     isis_adjacency_t *adjacency = timer->data;
     isis_instance_t *instance = adjacency->instance;
     isis_config_t *config = instance->config;
@@ -156,6 +156,13 @@ isis_csnp_job (timer_s *timer) {
     return;
 }
 
+/**
+ * isis_csnp_handler_rx 
+ * 
+ * @param interface receive interface
+ * @param pdu received ISIS PDU
+ * @param level ISIS level
+ */
 void
 isis_csnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
 

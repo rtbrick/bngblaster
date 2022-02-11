@@ -1,13 +1,22 @@
 /*
  * BNG Blaster (BBL) - IS-IS LSP
  *
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "isis.h"
 
+/**
+ * isis_lsp_flood 
+ * 
+ * This function adds an LSP to the 
+ * given adjacency flood tree. 
+ * 
+ * @param lsp LSP
+ * @param adjacency ISIS adjacency
+ */
 void
 isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency) {
 
@@ -34,6 +43,16 @@ isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency) {
     }
 }
 
+/**
+ * isis_lsp_flood 
+ * 
+ * This function adds an LSP to all
+ * flood trees of the same instance
+ * where neighbor system-id is different 
+ * to origin system-id. 
+ * 
+ * @param lsp LSP
+ */
 void
 isis_lsp_flood(isis_lsp_t *lsp) {
 
@@ -65,6 +84,18 @@ NEXT:
     }
 }
 
+/**
+ * isis_lsp_process_entries 
+ * 
+ * This function iterate of all LSP entries
+ * of the given PDU (CSNP or PSNP) and compares
+ * them the LSP database. 
+ * 
+ * @param adjacency ISIS adjacency
+ * @param lsdb ISIS LSP database
+ * @param pdu received ISIS PDU
+ * @param csnp_scan CSNP scan/job identifier
+ */
 void
 isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t *pdu, uint64_t csnp_scan) {
 
@@ -114,6 +145,35 @@ isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t 
 }
 
 void
+isis_lsp_gc_job(timer_s *timer) {
+    isis_instance_t *instance = timer->data;
+
+    isis_lsp_t *lsp;
+    hb_itor *itor;
+    bool next;
+
+    dict_remove_result removed;
+
+    for(int i=0; i<ISIS_LEVELS; i++) {
+        if(instance->level[i].lsdb) {
+            itor = hb_itor_new(instance->level[i].lsdb);
+            next = hb_itor_first(itor);
+            while(next) {
+                lsp = *hb_itor_datum(itor);
+                next = hb_itor_next(itor);
+                if(lsp->expired && lsp->refcount == 0) {
+                    removed = hb_tree_remove(instance->level[i].lsdb, &lsp->id);
+                    if(removed.removed) {
+                        free(lsp);
+                    }
+                }
+            }
+            hb_itor_free(itor);
+        }
+    }
+}
+
+void
 isis_lsp_retry_job(timer_s *timer) {
     isis_adjacency_t *adjacency = timer->data;
 
@@ -153,6 +213,18 @@ isis_lsp_refresh_job(timer_s *timer) {
     isis_pdu_update_lifetime(&lsp->pdu, lsp->lifetime);
     isis_pdu_update_checksum(&lsp->pdu);
     isis_lsp_flood(lsp);
+}
+
+void
+isis_lsp_lifetime_job(timer_s *timer) {
+    isis_lsp_t *lsp = timer->data;
+
+    LOG(ISIS, "ISIS %s-LSP %s (seq %u) lifetime expired \n", 
+        isis_level_string(lsp->level), 
+        isis_lsp_id_to_str(&lsp->id), 
+        lsp->seq);
+
+    lsp->expired = true;
 }
 
 void
@@ -279,17 +351,22 @@ isis_lsp_self_update(bbl_ctx_s *ctx, isis_instance_t *instance, uint8_t level) {
         }
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
+
     lsp->level = level;
     lsp->origin.type = ISIS_ORIGIN_SELF;
     lsp->seq++;
-    lsp->lifetime = config->lsp_lifetime;
     lsp->instance = instance;
-    clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
+    if(instance->teardown) {
+        lsp->lifetime = ISIS_DEFAULT_PURGE_LIFETIME;
+        timer_del(lsp->timer_refresh);
+    } else {
+        lsp->lifetime = config->lsp_lifetime;
+        timer_add_periodic(&ctx->timer_root, &lsp->timer_refresh, 
+                           "ISIS LSP refresh", config->lsp_refresh_interval, 0, lsp, 
+                           &isis_lsp_refresh_job);
+    }
 
-    timer_add_periodic(&ctx->timer_root, &lsp->timer_refresh, 
-                       "ISIS LSP refresh", config->lsp_refresh_interval, 0, lsp, 
-                       &isis_lsp_refresh_job);
-    
     /* Build PDU */
     pdu = &lsp->pdu;
     if(level == ISIS_LEVEL_1) {
@@ -349,6 +426,13 @@ NEXT:
     return lsp;
 }
 
+/**
+ * isis_lsp_handler_rx 
+ * 
+ * @param interface receive interface
+ * @param pdu received ISIS PDU
+ * @param level ISIS level
+ */
 void
 isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
 
@@ -393,6 +477,7 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) 
         isis_level_string(level), 
         isis_lsp_id_to_str(&lsp_id), 
         seq, interface->name);
+        return;
     }
 
     /* Get LSDB */
@@ -404,7 +489,16 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) 
         if(lsp->seq >= seq) {
             goto ACK;
         }
+        if(lsp->origin.type == ISIS_ORIGIN_EXTERNAL) {
+            /* Per default we will not overwrite 
+             * external LSP. */
+            goto ACK;
+        }
         if(lsp->origin.type == ISIS_ORIGIN_SELF) {
+            /* We received a newer version of our own
+             * self originated LSP. Therfore re-generate 
+             * them with a sequence number higher than 
+             * the received one. */
             lsp->seq = seq;
             isis_lsp_self_update(adjacency->interface->ctx, adjacency->instance, adjacency->level);
             goto ACK;
@@ -426,11 +520,17 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) 
     lsp->origin.adjacency = adjacency;
     lsp->seq = seq;
     lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+    lsp->expired = false;
     lsp->instance = adjacency->instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     PDU_CURSOR_RST(pdu);
     memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_t));
+
+    timer_add(&interface->ctx->timer_root, 
+              &lsp->timer_lifetime, 
+              "ISIS LIFETIME", lsp->lifetime, 0, lsp,
+              &isis_lsp_lifetime_job);
 
     isis_lsp_flood(lsp);
 
