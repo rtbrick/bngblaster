@@ -76,6 +76,12 @@ isis_init(bbl_ctx_s *ctx) {
                 }
             }
         }
+
+        /* Start LSP garbage collection job. */
+        timer_add_periodic(&ctx->timer_root, &instance->timer_lsp_gc, 
+                           "ISIS LSP GC", ISIS_LSP_GC_INTERVAL, 0, instance,
+                           &isis_lsp_gc_job);
+
         config = config->next;
     }
     return true;
@@ -133,4 +139,47 @@ isis_handler_rx(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             break;
     }
     return;
+}
+
+void
+isis_teardown_job(timer_s *timer) {
+    isis_instance_t *instance = timer->data;
+    isis_adjacency_t *adjacency;
+    while(instance) {
+        for(int i=0; i<ISIS_LEVELS; i++) {
+            adjacency = instance->level[i].adjacency;
+            while(adjacency) {
+                isis_adjacency_down(adjacency);
+                adjacency = adjacency->next;
+            }
+        }
+        instance = instance->next;
+    }
+}
+
+/**
+ * isis_teardown
+ * 
+ * This function stops all IS-IS instances. 
+ * 
+ * @param ctx global context
+ */
+void
+isis_teardown(bbl_ctx_s *ctx) {
+    isis_instance_t *instance = ctx->isis_instances;
+    while(instance) {
+        if(!instance->teardown) {
+            LOG(ISIS, "Teardown IS-IS instance %u\n", instance->config->id);
+            instance->teardown = true;
+            for(int i=0; i<ISIS_LEVELS; i++) {
+                if(instance->level[i].adjacency) {
+                    isis_lsp_self_update(ctx, instance, i+1);
+                }
+            }
+            timer_add(&ctx->timer_root, &instance->timer_teardown, 
+                      "ISIS TEARDOWN", instance->config->teardown_time, 0, instance,
+                      &isis_teardown_job);
+        }
+        instance = instance->next;
+    }
 }

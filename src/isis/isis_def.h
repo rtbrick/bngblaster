@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - IS-IS Definitions
  *
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
@@ -67,6 +67,11 @@
 #define ISIS_DEFAULT_LSP_REFRESH_IVL    300
 #define ISIS_DEFAULT_LSP_TX_IVL_MS      10
 #define ISIS_DEFAULT_LSP_WINDOWS_SIZE   1
+
+#define ISIS_DEFAULT_TEARDOWN_TIME      5
+#define ISIS_DEFAULT_PURGE_LIFETIME     30
+
+#define ISIS_LSP_GC_INTERVAL            30
 
 #define ISIS_PROTOCOLS_MAX              2
 #define ISIS_PROTOCOL_IPV4              0xcc
@@ -181,6 +186,7 @@ typedef struct isis_config_ {
     uint16_t            lsp_lifetime;
     uint16_t            hello_interval;
     uint16_t            holding_time;
+    uint16_t            teardown_time;
 
     const char         *hostname;
     const char         *router_id_str;
@@ -275,6 +281,10 @@ typedef struct isis_instance_ {
     isis_config_t  *config;
     bool            overload;
 
+    bool            teardown;
+    struct timer_  *timer_teardown;
+    struct timer_  *timer_lsp_gc;
+
     struct {
         hb_tree *lsdb;
         isis_adjacency_t *adjacency;
@@ -320,6 +330,7 @@ typedef struct isis_lsp_ {
     struct timer_ *timer_refresh;
 
     uint32_t refcount;
+    bool expired;
 
     uint32_t seq;           /* Sequence number */
     uint16_t lifetime;      /* Remaining lifetime */

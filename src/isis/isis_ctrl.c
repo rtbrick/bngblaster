@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - IS-IS CTRL (Control Commands)
  *
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
@@ -21,12 +21,12 @@ isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
                      "system-id", isis_system_id_to_str(adjacency->peer->system_id));
 
     root = json_pack("{ss ss, ss si ss so}",
-                "interface", adjacency->interface->name,
-                "type", "P2P",
-                "level", isis_level_string(adjacency->level),
-                "instance-id", adjacency->instance->config->id,
-                "adjacency-state", isis_p2p_adjacency_state_string(adjacency->state),
-                "peer", peer);
+                     "interface", adjacency->interface->name,
+                     "type", "P2P",
+                     "level", isis_level_string(adjacency->level),
+                     "instance-id", adjacency->instance->config->id,
+                     "adjacency-state", isis_p2p_adjacency_state_string(adjacency->state),
+                     "peer", peer);
 
     if(!root) {
         if(peer) json_decref(peer);

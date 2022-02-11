@@ -1,7 +1,7 @@
 /*
  * BNG Blaster (BBL) - IS-IS Checksum
  * 
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
@@ -11,7 +11,7 @@
 /* Fletcher Checksum -- Refer to RFC1008. */
 #define MODX    4102 /* 5802 should be fine */
 
-/*
+/**
  * isis_checksum_fletcher16
  *
  * This function is based on the implementation from 

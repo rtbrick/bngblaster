@@ -1,13 +1,15 @@
 /*
  * BNG Blaster (BBL) - IS-IS LSP
  *
- * Christian Giese, January 2022
+ * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __BBL_ISIS_LSP_H__
 #define __BBL_ISIS_LSP_H__
+
+
 
 void
 isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency);
@@ -17,6 +19,9 @@ isis_lsp_flood(isis_lsp_t *lsp);
 
 void
 isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t *pdu, uint64_t csnp_scan);
+
+void
+isis_lsp_gc_job(timer_s *timer);
 
 void
 isis_lsp_retry_job(timer_s *timer);

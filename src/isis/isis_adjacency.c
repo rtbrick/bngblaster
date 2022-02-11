@@ -79,11 +79,20 @@ isis_adjacency_init(bbl_network_config_s *interface_config,
     return true;
 }
 
+/**
+ * isis_adjacency_up
+ *
+ * @param adjacency ISIS adjacency
+ */
 void 
 isis_adjacency_up(isis_adjacency_t *adjacency) {
 
     bbl_ctx_s *ctx = adjacency->interface->ctx;
     isis_config_t *config = adjacency->instance->config;
+
+    if(adjacency->state == ISIS_ADJACENCY_STATE_UP) {
+        return;
+    }
 
     LOG(ISIS, "ISIS %s adjacency UP on interface %s \n", 
         isis_level_string(adjacency->level), adjacency->interface->name);
@@ -109,10 +118,23 @@ isis_adjacency_up(isis_adjacency_t *adjacency) {
         "ISIS CSNP", 
         0, 10*MSEC, adjacency,
         &isis_csnp_job);
+
+    ctx->routing_sessions++;
 }
 
+/**
+ * isis_adjacency_down
+ *
+ * @param adjacency ISIS adjacency
+ */
 void
 isis_adjacency_down(isis_adjacency_t *adjacency) {
+
+    bbl_ctx_s *ctx = adjacency->interface->ctx;
+
+    if(adjacency->state == ISIS_ADJACENCY_STATE_DOWN) {
+        return;
+    }
 
     LOG(ISIS, "ISIS %s adjacency DOWN on interface %s \n", 
         isis_level_string(adjacency->level), adjacency->interface->name);
@@ -123,4 +145,6 @@ isis_adjacency_down(isis_adjacency_t *adjacency) {
     timer_del(adjacency->timer_retry);
     timer_del(adjacency->timer_csnp);
     timer_del(adjacency->timer_csnp_next);
+
+    if(ctx->routing_sessions) ctx->routing_sessions--;
 }

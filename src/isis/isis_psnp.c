@@ -135,6 +135,13 @@ isis_psnp_job (timer_s *timer) {
     return;
 }
 
+/**
+ * isis_psnp_handler_rx 
+ * 
+ * @param interface receive interface
+ * @param pdu received ISIS PDU
+ * @param level ISIS level
+ */
 void
 isis_psnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
 
