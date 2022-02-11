@@ -10,6 +10,9 @@
 #define __BBL_ISIS_UTILS_H__
 
 const char *
+isis_source_string(uint8_t source);
+
+const char *
 isis_level_string(uint8_t level);
 
 const char *

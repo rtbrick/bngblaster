@@ -9,6 +9,16 @@
 #include "isis.h"
 
 const char *
+isis_source_string(uint8_t source) {
+    switch(source) {
+        case ISIS_SOURCE_SELF: return "self";
+        case ISIS_SOURCE_ADJACENCY: return "adjacency";
+        case ISIS_SOURCE_EXTERNAL: return "external";
+        default: return "INVALID";
+    }
+}
+
+const char *
 isis_level_string(uint8_t level) {
     switch(level) {
         case 1: return "L1";
