@@ -49,7 +49,7 @@ isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency) {
  * This function adds an LSP to all
  * flood trees of the same instance
  * where neighbor system-id is different 
- * to origin system-id. 
+ * to source system-id. 
  * 
  * @param lsp LSP
  */
@@ -65,13 +65,13 @@ isis_lsp_flood(isis_lsp_t *lsp) {
         if(adjacency->state != ISIS_ADJACENCY_STATE_UP) {
             goto NEXT;
         }
-        if(lsp->origin.type == ISIS_ORIGIN_ADJACENCY) {
-            if(lsp->origin.adjacency == adjacency) {
+        if(lsp->source.type == ISIS_SOURCE_ADJACENCY) {
+            if(lsp->source.adjacency == adjacency) {
                 /* Do not flood over the adjacency from where LSP was received. */
                 goto NEXT;
             }
             if(memcmp(adjacency->peer->system_id, 
-                      lsp->origin.adjacency->peer->system_id, 
+                      lsp->source.adjacency->peer->system_id, 
                       ISIS_SYSTEM_ID_LEN) == 0) {
                 /* Do not flood to the neighbor from where LSP was received. */
                 goto NEXT;
@@ -354,7 +354,7 @@ isis_lsp_self_update(bbl_ctx_s *ctx, isis_instance_t *instance, uint8_t level) {
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     lsp->level = level;
-    lsp->origin.type = ISIS_ORIGIN_SELF;
+    lsp->source.type = ISIS_SOURCE_SELF;
     lsp->seq++;
     lsp->instance = instance;
     if(instance->teardown) {
@@ -489,12 +489,12 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) 
         if(lsp->seq >= seq) {
             goto ACK;
         }
-        if(lsp->origin.type == ISIS_ORIGIN_EXTERNAL) {
+        if(lsp->source.type == ISIS_SOURCE_EXTERNAL) {
             /* Per default we will not overwrite 
              * external LSP. */
             goto ACK;
         }
-        if(lsp->origin.type == ISIS_ORIGIN_SELF) {
+        if(lsp->source.type == ISIS_SOURCE_SELF) {
             /* We received a newer version of our own
              * self originated LSP. Therfore re-generate 
              * them with a sequence number higher than 
@@ -516,8 +516,8 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) 
     }
 
     lsp->level = level;
-    lsp->origin.type = ISIS_ORIGIN_ADJACENCY;
-    lsp->origin.adjacency = adjacency;
+    lsp->source.type = ISIS_SOURCE_ADJACENCY;
+    lsp->source.adjacency = adjacency;
     lsp->seq = seq;
     lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;

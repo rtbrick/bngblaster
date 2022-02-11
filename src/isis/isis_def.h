@@ -108,11 +108,11 @@ typedef enum isis_auth_type_{
     ISIS_AUTH_HMAC_MD5          = 54  
 } __attribute__ ((__packed__)) isis_auth_type;
 
-typedef enum isis_lsp_origin_{
-    ISIS_ORIGIN_SELF,       /* Self originated LSP */
-    ISIS_ORIGIN_ADJACENCY,  /* LSP learned from neighbors */
-    ISIS_ORIGIN_EXTERNAL    /* LSP injected externally (e.g. MRT file, ...) */
-} isis_lsp_origin;
+typedef enum isis_lsp_source_{
+    ISIS_SOURCE_SELF,       /* Self originated LSP */
+    ISIS_SOURCE_ADJACENCY,  /* LSP learned from neighbors */
+    ISIS_SOURCE_EXTERNAL    /* LSP injected externally (e.g. MRT file, ...) */
+} isis_lsp_source;
 
 typedef enum isis_pdu_type_ {
     ISIS_PDU_L1_HELLO   = 15,
@@ -318,9 +318,9 @@ typedef struct isis_lsp_ {
     isis_instance_t *instance;
 
     struct {
-        isis_lsp_origin   type;
+        isis_lsp_source   type;
         isis_adjacency_t *adjacency;
-    } origin;
+    } source;
 
     /* LSP receive timestamp for 
      * remaining lifetime calculation. */

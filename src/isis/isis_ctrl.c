@@ -47,7 +47,7 @@ isis_ctrl_adjacency(isis_adjacency_t *adjacency) {
     peer = json_pack("{ss}",
                      "system-id", isis_system_id_to_str(adjacency->peer->system_id));
 
-    root = json_pack("{ss ss, ss si ss so}",
+    root = json_pack("{ss ss ss si ss so}",
                 "interface", adjacency->interface->name,
                 "type", "LAN",
                 "level", isis_level_string(adjacency->level),
@@ -69,9 +69,17 @@ isis_ctrl_database(hb_tree *lsdb) {
     hb_itor *itor;
     bool next;
 
+    struct timespec now;
+    struct timespec ago;
+    uint16_t remaining_lifetime;
+
+    char *source_system_id;
+
     if(!lsdb) {
         return NULL;
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
 
     itor = hb_itor_new(lsdb);
     next = hb_itor_first(itor);
@@ -79,9 +87,27 @@ isis_ctrl_database(hb_tree *lsdb) {
     database = json_array();
     while(next) {
         lsp = *hb_itor_datum(itor);
-        entry = json_pack("{ss, si}", 
+        timespec_sub(&ago, &now, &lsp->timestamp);
+        if(ago.tv_sec < lsp->lifetime) {
+            remaining_lifetime = lsp->lifetime - ago.tv_sec;
+        } else {
+            remaining_lifetime = 0;
+        }
+
+        if(lsp->source.adjacency) {
+            source_system_id = isis_system_id_to_str(lsp->source.adjacency->peer->system_id);
+        } else {
+            source_system_id = NULL;
+        }
+        
+        entry = json_pack("{ss si si si ss ss*}", 
             "id", isis_lsp_id_to_str(&lsp->id),
-            "seq", lsp->seq);
+            "seq", lsp->seq,
+            "lifetime", lsp->lifetime,
+            "lifetime-remaining", remaining_lifetime,
+            "source-type", isis_source_string(lsp->source.type),
+            "source-system-id", source_system_id);
+
         if(entry) {
             json_array_append(database, entry);
         }
