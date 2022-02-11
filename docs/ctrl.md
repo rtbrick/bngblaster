@@ -270,3 +270,10 @@ This command can be executed as shown below using the CLI tool.
 The L2TP session terminate command allows to test result (RFC2661) and disconnect (RFC3145) codes.
 
 `$ sudo bngblaster-cli run.sock l2tp-session-terminate session-id 1 result-code 2 error-message "LCP request" disconnect-code 3 disconnect-message "LCP terminate request"`
+
+### ISIS Commands
+
+Attribute | Description | Mandatory Arguments | Optional Arguments
+--------- | ----------- | ------------------- | ------------------
+`isis-adjacencies` | ISIS adjacency information | |
+`isis-database` | ISIS database information | `instance`, `level` | 
