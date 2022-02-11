@@ -861,32 +861,3 @@ Attribute | Description | Default
 `external-lsp-database-file` | ISIS LSP database file |  
 `external-lsp-overwrite` | Allow to overwrite external LSP with newer versions in the network | false
 `external-lsp-refresh` | Allow to refresh external LSP | false
-
-```json
-{
-    "interfaces": {
-        "network": {
-            "interface": "eth1",
-            "address": "10.0.0.1/24",
-            "gateway": "10.0.0.2",
-            "isis-instance-id": 1,
-            "isis-l1-metric": 100,
-            "isis-l2-metric": 100
-        }
-    },
-    "isis": [
-        {
-            "instance-id": 1,
-            "system-id": "1921.6800.1001",
-            "router-id": "192.168.1.1",
-            "hostname": "R1",
-        },
-        {
-            "instance-id": 2,
-            "system-id": "1921.6800.1002",
-            "router-id": "192.168.1.2",
-            "hostname": "R2"
-        }
-    ]
-}
-```
