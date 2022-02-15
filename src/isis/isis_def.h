@@ -167,6 +167,16 @@ typedef struct isis_area_ {
     uint8_t    *value;
 } isis_area_t;
 
+typedef struct isis_external_connection_ {
+    uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
+
+    struct {
+        uint32_t metric;
+    } level[ISIS_LEVELS];
+
+    struct isis_external_connection_ *next;
+} isis_external_connection_t;
+
 /*
  * IS-IS Instance
  */
@@ -209,9 +219,11 @@ typedef struct isis_config_ {
     uint32_t            sr_base;
     uint32_t            sr_range;
 
-    char               *external_lsp_mrt_file;
+    char *external_mrt_file;
+    struct isis_external_connection_ *external_connection;
 
-    struct isis_config_ *next; /* pointer to next instance */
+    /* Pointer to next instance */
+    struct isis_config_ *next; 
 } isis_config_t;
 
 typedef struct isis_peer_ {

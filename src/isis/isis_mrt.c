@@ -26,6 +26,9 @@ isis_mrt_load(isis_instance_t  *instance, char *file_path) {
     void **search = NULL;
     dict_insert_result result;
 
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
     LOG(ISIS, "Load ISIS MRT file %s\n", file_path);
 
     mrt_file = fopen(file_path, "r");
@@ -40,13 +43,12 @@ isis_mrt_load(isis_instance_t  *instance, char *file_path) {
         //LOG(DEBUG, "MRT type: %u subtype: %u length: %u\n", mrt.type, mrt.subtype, mrt.length);
         if(!(mrt.type == ISIS_MRT_TYPE && 
              mrt.subtype == 0 &&
-             mrt.length > sizeof(mrt.length) + ISIS_HDR_LEN_COMMON &&
+             mrt.length >= ISIS_HDR_LEN_COMMON &&
              mrt.length <= ISIS_MAX_PDU_LEN)) {
             LOG(ERROR, "Invalid MRT file %s\n", file_path);
             fclose(mrt_file);
             return false;
         }
-        mrt.length -= sizeof(mrt.length);
         if(fread(pdu_buf, mrt.length, 1, mrt_file) != 1) {
             LOG(ERROR, "Invalid MRT file %s\n", file_path);
             fclose(mrt_file);
@@ -108,7 +110,8 @@ isis_mrt_load(isis_instance_t  *instance, char *file_path) {
         lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_LIFETIME));
         lsp->expired = false;
         lsp->instance = instance;
-        clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
+        lsp->timestamp.tv_sec = now.tv_sec;
+        lsp->timestamp.tv_nsec = now.tv_nsec;
 
         PDU_CURSOR_RST(&pdu);
         memcpy(&lsp->pdu, &pdu, sizeof(isis_pdu_t));

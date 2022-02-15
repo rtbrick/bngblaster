@@ -319,7 +319,6 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
     bbl_ctx_s        *ctx       = instance->ctx;
     isis_config_t    *config    = instance->config;
     isis_adjacency_t *adjacency = NULL;
-
     isis_lsp_t       *lsp       = NULL;
     uint64_t          lsp_id    = 0;
     isis_pdu_t       *pdu;
@@ -329,6 +328,8 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
     dict_insert_result result;
 
     isis_auth_type auth_type = ISIS_AUTH_NONE;
+
+    isis_external_connection_t *external_connection = NULL;
 
     /* Create LSP-ID */
     memcpy(&lsp_id, &config->system_id, ISIS_SYSTEM_ID_LEN);
@@ -408,14 +409,28 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
             goto NEXT;
         }
         if(config->protocol_ipv4 && adjacency->interface->ip.len) {
-            isis_pdu_add_tlv_ext_ipv4_reachability(pdu, &adjacency->interface->ip, adjacency->metric);
+            isis_pdu_add_tlv_ext_ipv4_reachability(pdu, 
+                &adjacency->interface->ip, 
+                adjacency->metric);
         }
         if(config->protocol_ipv6 && adjacency->interface->ip6.len) {
-            isis_pdu_add_tlv_ipv6_reachability(pdu, &adjacency->interface->ip6, adjacency->metric);
+            isis_pdu_add_tlv_ipv6_reachability(pdu, 
+                &adjacency->interface->ip6, 
+                adjacency->metric);
         }
-        isis_pdu_add_tlv_ext_reachability(pdu, adjacency->peer->system_id, adjacency->metric);
+        isis_pdu_add_tlv_ext_reachability(pdu, 
+            adjacency->peer->system_id, 
+            adjacency->metric);
 NEXT:
         adjacency = adjacency->next;
+    }
+    
+    external_connection = config->external_connection;
+    while(external_connection) {
+        isis_pdu_add_tlv_ext_reachability(pdu, 
+            external_connection->system_id, 
+            external_connection->level[level-1].metric);
+        external_connection = external_connection->next;
     }
     
     /* Update checksum... */
