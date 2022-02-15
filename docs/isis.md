@@ -49,6 +49,28 @@ attached to two network interfaces.
 All supported configuration options are detailed explained 
 in the configuration section.
 
+## MRT Files
+
+The BNG Blaster is able to load LSP's from a MRT file as defined in 
+[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
+
+```text
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                           Timestamp                           |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |             Type              |            Subtype            |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                             Length                            |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                      Message... (variable)
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+```
+
+The message field contains the complete ISIS LSP PDU including 
+the ISIS common header starting with `0x83`. 
+
 ## Limitations
 
 Currently only ISIS P2P links are supported. 

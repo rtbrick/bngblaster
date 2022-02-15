@@ -858,6 +858,21 @@ Attribute | Description | Default
 `area` | ISIS area(s) | 49.0001/24
 `sr-base` | ISIS SR base |
 `sr-range` | ISIS SR range |
-`external-lsp-mrt-file` | ISIS LSP mrt file |  
-`external-lsp-overwrite` | Allow to overwrite external LSP with newer versions in the network | false
-`external-lsp-refresh` | Allow to refresh external LSP | false
+
+### ISIS External
+
+`"isis": { "external": { ... } }`
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`mrt-file` | Username | user{session-global}@rtbrick.com
+
+### ISIS External Connections
+
+`"isis": { "external": { "connections": [] } }`
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`system-id` | ISIS system identifier | 
+`l1-metric` | ISIS level 1 interface metric | 10
+`l2-metric` | ISIS level 2 interface metric | 10

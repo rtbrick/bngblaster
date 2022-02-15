@@ -681,10 +681,12 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
 
 static bool
 json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config) {
-    json_t *value = NULL;
+    json_t *sub, *con, *c, *value = NULL;
     const char *s = NULL;
-    int i;    
+    int i, size;
     
+    isis_external_connection_t *connection = NULL;
+
     UNUSED(ctx);
 
     value = json_object_get(isis, "instance-id");
@@ -875,10 +877,47 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config
         isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
     }
 
-    if (json_unpack(isis, "{s:s}", "external-lsp-mrt-file", &s) == 0) {
-        isis_config->external_lsp_mrt_file = strdup(s);
+    sub = json_object_get(isis, "external");
+    if (json_is_object(sub)) {
+        if (json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
+            isis_config->external_mrt_file = strdup(s);
+        }
+        con = json_object_get(sub, "connections");
+        if (json_is_array(con)) {
+            size = json_array_size(con);
+            for (i = 0; i < size; i++) {
+                if(connection) {
+                    connection->next = calloc(1, sizeof(isis_external_connection_t));
+                    connection = connection->next;
+                } else {
+                    connection = calloc(1, sizeof(isis_external_connection_t));
+                    isis_config->external_connection = connection;
+                }
+                c = json_array_get(con, i);
+                if (json_unpack(c, "{s:s}", "system-id", &s) == 0) {
+                    if (!isis_str_to_system_id(s, connection->system_id)) {
+                        fprintf(stderr, "JSON config error: Invalid value for isis->external->connections->system-id\n");
+                        return false;
+                    }
+                } else {
+                    fprintf(stderr, "JSON config error: Missing value for isis->external->connections->system-id\n");
+                    return false;
+                }
+                value = json_object_get(c, "l1-metric");
+                if (json_is_number(value)) {
+                    connection->level[ISIS_LEVEL_1_IDX].metric = json_number_value(value);
+                } else {
+                    connection->level[ISIS_LEVEL_1_IDX].metric = 10;
+                }
+                value = json_object_get(c, "l2-metric");
+                if (json_is_number(value)) {
+                    connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
+                } else {
+                    connection->level[ISIS_LEVEL_2_IDX].metric = 10;
+                }
+            }
+        }
     }
-
     return true;
 }
 

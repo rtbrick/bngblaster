@@ -77,9 +77,9 @@ isis_init(bbl_ctx_s *ctx) {
             }
         }
 
-        if(config->external_lsp_mrt_file) {
-            if(!isis_mrt_load(instance, config->external_lsp_mrt_file)) {
-                LOG(ISIS, "Failed to load MRT file %s\n", config->external_lsp_mrt_file);
+        if(config->external_mrt_file) {
+            if(!isis_mrt_load(instance, config->external_mrt_file)) {
+                LOG(ISIS, "Failed to load MRT file %s\n", config->external_mrt_file);
                 return false;
             }
         }
