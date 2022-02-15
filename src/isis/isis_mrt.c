@@ -40,6 +40,7 @@ isis_mrt_load(isis_instance_t  *instance, char *file_path) {
     while(fread(&mrt, sizeof(isis_mrt_hdr_t), 1, mrt_file) == 1) {
         mrt.type = be16toh(mrt.type);
         mrt.subtype = be16toh(mrt.subtype);
+        mrt.length = be32toh(mrt.length);
         //LOG(DEBUG, "MRT type: %u subtype: %u length: %u\n", mrt.type, mrt.subtype, mrt.length);
         if(!(mrt.type == ISIS_MRT_TYPE && 
              mrt.subtype == 0 &&
