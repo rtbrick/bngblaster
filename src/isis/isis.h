@@ -20,6 +20,7 @@
 #include "isis_psnp.h"
 #include "isis_lsp.h"
 #include "isis_ctrl.h"
+#include "isis_mrt.h"
 
 extern uint8_t g_isis_mac_p2p_hello[];
 extern uint8_t g_isis_mac_all_l1[];

@@ -209,6 +209,8 @@ typedef struct isis_config_ {
     uint32_t            sr_base;
     uint32_t            sr_range;
 
+    char               *external_lsp_mrt_file;
+
     struct isis_config_ *next; /* pointer to next instance */
 } isis_config_t;
 
@@ -277,6 +279,8 @@ typedef struct isis_adjacency_p2p_ {
 } isis_adjacency_p2p_t;
 
 typedef struct isis_instance_ {
+
+    struct bbl_ctx_ *ctx; /* parent */
 
     isis_config_t  *config;
     bool            overload;

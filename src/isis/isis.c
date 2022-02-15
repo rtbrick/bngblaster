@@ -64,16 +64,23 @@ isis_init(bbl_ctx_s *ctx) {
             instance = calloc(1, sizeof(isis_instance_t));
             ctx->isis_instances = instance;
         }
+        instance->ctx = ctx;
         instance->config = config;
-
         for(int i=0; i<ISIS_LEVELS; i++) {
             level = i+1;
             if(config->level & level) {
                 instance->level[i].lsdb = hb_tree_new((dict_compare_func)isis_lsp_id_compare);
-                if(!isis_lsp_self_update(ctx, instance, level)) {
+                if(!isis_lsp_self_update(instance, level)) {
                     LOG(ISIS, "Failed to generate self originated LSP for IS-IS instance %u\n", config->id);
                     return false;
                 }
+            }
+        }
+
+        if(config->external_lsp_mrt_file) {
+            if(!isis_mrt_load(instance, config->external_lsp_mrt_file)) {
+                LOG(ISIS, "Failed to load MRT file %s\n", config->external_lsp_mrt_file);
+                return false;
             }
         }
 
@@ -173,9 +180,11 @@ isis_teardown(bbl_ctx_s *ctx) {
             instance->teardown = true;
             for(int i=0; i<ISIS_LEVELS; i++) {
                 if(instance->level[i].adjacency) {
-                    isis_lsp_self_update(ctx, instance, i+1);
+                    isis_lsp_self_update(instance, i+1);
+                    isis_lsp_purge_external(instance, i+1);
                 }
             }
+
             timer_add(&ctx->timer_root, &instance->timer_teardown, 
                       "ISIS TEARDOWN", instance->config->teardown_time, 0, instance,
                       &isis_teardown_job);

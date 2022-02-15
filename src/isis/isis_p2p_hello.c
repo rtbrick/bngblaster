@@ -48,7 +48,7 @@ isis_p2p_hello_encode(bbl_interface_s *interface,
         for(int i=0; i<ISIS_LEVELS; i++) {
             if(interface->isis_adjacency[i]) {
                 isis_adjacency_down(interface->isis_adjacency[i]);
-                isis_lsp_self_update(interface->ctx, adjacency->instance, i+1);
+                isis_lsp_self_update(adjacency->instance, i+1);
             }
         }
     }
@@ -181,7 +181,7 @@ isis_p2p_hello_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu) {
         for(int i=0; i<ISIS_LEVELS; i++) {
             if(interface->isis_adjacency[i]) {
                 isis_adjacency_up(interface->isis_adjacency[i]);
-                isis_lsp_self_update(interface->ctx, adjacency->instance, i+1);
+                isis_lsp_self_update(adjacency->instance, i+1);
             }
         }
     }

@@ -875,6 +875,10 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config
         isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
     }
 
+    if (json_unpack(isis, "{s:s}", "external-lsp-mrt-file", &s) == 0) {
+        isis_config->external_lsp_mrt_file = strdup(s);
+    }
+
     return true;
 }
 
