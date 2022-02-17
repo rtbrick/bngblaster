@@ -732,7 +732,6 @@ json_parse_isis_config(bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config)
         if (json_unpack(isis, "{s:s}", "level1-auth-type", &s) == 0) {
             if (strcmp(s, "md5") == 0) {
                 isis_config->level1_auth = ISIS_AUTH_HMAC_MD5;
-
             }
         }
     }
