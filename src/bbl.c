@@ -594,6 +594,11 @@ main (int argc, char *argv[])
     /* Smear all buckets. */
     timer_smear_all_buckets(&ctx->timer_root);
 
+    /* Prevent traffic from autostart. */
+    if(ctx->config.traffic_autostart == false) {
+        enable_disable_traffic(ctx, false);
+    }
+
     /* Start threads. */
     bbl_stream_start_threads(ctx);
 

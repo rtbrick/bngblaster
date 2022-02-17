@@ -613,17 +613,6 @@ signatures for faster processing and more detailed analysis.
 If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1 and group-count 3 the result are the following
 three groups (S.G) 1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.
 
-## Session-Traffic
-
-This section describes all attributes of the `session-traffic` hierarchy.
-
-Attribute | Description | Default
---------- | ----------- | -------
-`autostart` | Automatically start session traffic after session is established | true
-`ipv4-pps` | Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses | 0 (disabled)
-`ipv6-pps` | Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses | 0 (disabled)
-`ipv6pd-pps` | Generate bidirectional Ipv6 traffic between network interface and all session delegated IPv6 addresses | 0 (disabled)
-
 ## L2TP Server (LNS)
 
 This section describes all attributes of the `l2tp-server` (LNS) hierarchy
@@ -678,6 +667,25 @@ is described in RFC2661 appendix A (Control Channel Slow Start and
 Congestion Avoidance). The mode `slow` uses a fixed control window
 size of 1 where `aggressive` sticks to max permitted based on peer
 received window size.
+
+## Traffic
+
+This section describes all attributes of the `traffic` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`autostart` | Automatically start traffic | true
+
+## Session Traffic
+
+This section describes all attributes of the `session-traffic` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`autostart` | Automatically start session traffic after session is established | true
+`ipv4-pps` | Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses | 0 (disabled)
+`ipv6-pps` | Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses | 0 (disabled)
+`ipv6pd-pps` | Generate bidirectional Ipv6 traffic between network interface and all session delegated IPv6 addresses | 0 (disabled)
 
 ## Traffic Streams
 

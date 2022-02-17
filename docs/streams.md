@@ -1,13 +1,14 @@
 # Traffic Streams
 
-Traffic streams allow to test QoS using BNG Blaster.
+Traffic streams allow to do various forwarding verification 
+and QoS tests using BNG Blaster.
 
 ![BBL Interactive Streams](images/bbl_streams.png "BNG Blaster")
 
 ## Configuration
 
-Following a simple example using streams as described in
-[Configuration](config).
+Following a simple example using streams as described in the
+[configuration section](config).
 
 ```json
 {
