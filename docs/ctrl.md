@@ -277,3 +277,4 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 --------- | ----------- | ------------------- | ------------------
 `isis-adjacencies` | ISIS adjacency information | |
 `isis-database` | ISIS database information | `instance`, `level` | 
+`isis-load-mrt` | Load ISIS MRT file | `instance`, `file` | 
