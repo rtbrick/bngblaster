@@ -286,9 +286,8 @@ isis_lsp_tx_job(timer_s *timer) {
             entry->tx_timestamp.tv_sec = now.tv_sec;
             entry->tx_timestamp.tv_nsec = now.tv_nsec;
             adjacency->stats.lsp_tx++;
-            if(--window == 0) {
-                break;
-            }
+            if(window) window--;
+            if(window == 0) break;
         }
         next = hb_itor_next(itor);
     }

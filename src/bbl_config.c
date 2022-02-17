@@ -93,7 +93,7 @@ add_secondary_ipv6(bbl_ctx_s *ctx, ipv6addr_t ipv6) {
 }
 
 static bool
-json_parse_access_line_profile (json_t *config, bbl_access_line_profile_s *profile) {
+json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profile) {
     json_t *value = NULL;
 
     value = json_object_get(config, "access-line-profile-id");
@@ -225,7 +225,7 @@ json_parse_access_line_profile (json_t *config, bbl_access_line_profile_s *profi
 }
 
 static bool
-json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_network_config_s *network_config) {
+json_parse_network_interface(bbl_ctx_s *ctx, json_t *network_interface, bbl_network_config_s *network_config) {
     json_t *value = NULL;
     const char *s = NULL;
     ipv4addr_t ipv4 = {0};
@@ -324,7 +324,7 @@ json_parse_network_interface (bbl_ctx_s *ctx, json_t *network_interface, bbl_net
 }
 
 static bool
-json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_access_config_s *access_config) {
+json_parse_access_interface(bbl_ctx_s *ctx, json_t *access_interface, bbl_access_config_s *access_config) {
     json_t *value = NULL;
     const char *s = NULL;
     uint32_t ipv4;
@@ -644,7 +644,7 @@ json_parse_access_interface (bbl_ctx_s *ctx, json_t *access_interface, bbl_acces
 }
 
 static bool
-json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10nsp_config_s *a10nsp_config) {
+json_parse_a10nsp_interface(bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10nsp_config_s *a10nsp_config) {
     const char *s = NULL;
     json_t *value = NULL;
 
@@ -680,7 +680,7 @@ json_parse_a10nsp_interface (bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10ns
 }
 
 static bool
-json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config) {
+json_parse_isis_config(bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config) {
     json_t *sub, *con, *c, *value = NULL;
     const char *s = NULL;
     int i, size;
@@ -922,7 +922,7 @@ json_parse_isis_config (bbl_ctx_s *ctx, json_t *isis, isis_config_t *isis_config
 }
 
 static bool
-json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_config) {
+json_parse_stream(bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_config) {
     json_t *value = NULL;
     const char *s = NULL;
     double bps;
@@ -1162,7 +1162,7 @@ json_parse_stream (bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_con
 }
 
 static bool
-json_parse_config (json_t *root, bbl_ctx_s *ctx) {
+json_parse_config(json_t *root, bbl_ctx_s *ctx) {
 
     json_t *section, *sub, *value = NULL;
     const char *s;
@@ -1615,7 +1615,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
                 return false;
             }
         }
-    } else if (json_is_object(section)) {
+    } else if (json_is_object(sub)) {
         /* Config is provided as object (single isis instance) */
         isis_config = calloc(1, sizeof(isis_config_t));
         if (!ctx->config.isis_config) {
@@ -1901,7 +1901,7 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
  * @param ctx global context
  */
 bool
-bbl_config_load_json (const char *filename, bbl_ctx_s *ctx) {
+bbl_config_load_json(const char *filename, bbl_ctx_s *ctx) {
     json_t *root = NULL;
     json_error_t error;
     bool result = false;
@@ -1917,7 +1917,7 @@ bbl_config_load_json (const char *filename, bbl_ctx_s *ctx) {
 }
 
 static bool
-json_parse_config_streams (json_t *root, bbl_ctx_s *ctx) {
+json_parse_config_streams(json_t *root, bbl_ctx_s *ctx) {
 
     json_t *section = NULL;
     int i, size;
@@ -1961,7 +1961,7 @@ json_parse_config_streams (json_t *root, bbl_ctx_s *ctx) {
  * @param ctx global context
  */
 bool
-bbl_config_streams_load_json (const char *filename, bbl_ctx_s *ctx) {
+bbl_config_streams_load_json(const char *filename, bbl_ctx_s *ctx) {
     json_t *root = NULL;
     json_error_t error;
     bool result = false;

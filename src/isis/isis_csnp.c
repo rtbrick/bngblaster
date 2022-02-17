@@ -122,7 +122,7 @@ isis_csnp_job(timer_s *timer) {
         timer_add(&adjacency->interface->ctx->timer_root, 
                   &adjacency->timer_csnp_next, 
                   "ISIS CSNP", 
-                   0, 10*MSEC, adjacency,
+                   0, 10 * MSEC, adjacency,
                    &isis_csnp_job);
     }    
 
