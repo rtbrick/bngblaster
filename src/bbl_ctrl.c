@@ -1279,7 +1279,8 @@ ssize_t
 bbl_ctrl_isis_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
 
     ssize_t result = 0;
-    json_t *root;
+    json_t *root = NULL;
+    json_t *database = NULL;
     isis_instance_t *instance = NULL;
 
     int instance_id = 0;
@@ -1313,14 +1314,23 @@ bbl_ctrl_isis_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
         return bbl_ctrl_status(fd, "error", 400, "ISIS database not found");
     }
 
-    root = isis_ctrl_database(instance->level[level-1].lsdb);
-    if(root) {
-        result = json_dumpfd(root, fd, 0);
-        json_decref(root);
+    database = isis_ctrl_database(instance->level[level-1].lsdb);
+    if(database) {
+        root = json_pack("{ss si so}",
+                         "status", "ok",
+                         "code", 200,
+                         "isis-database", database);
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(database);
+        }
+        return result;
     } else {
-        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        return bbl_ctrl_status(fd, "error", 500, "internal error");
     }
-    return result;
 }
 
 ssize_t
