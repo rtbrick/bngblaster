@@ -45,4 +45,7 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level);
 void
 isis_lsp_purge_external(isis_instance_t *instance, uint8_t level);
 
+bool
+isis_lsp_update_external(isis_instance_t *instance, isis_pdu_t *pdu);
+
 #endif

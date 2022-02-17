@@ -1348,11 +1348,78 @@ bbl_ctrl_isis_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     }
 
     if (!instance) {
-        return bbl_ctrl_status(fd, "error", 400, "ISIS instance not found");
+        return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
     }
 
     if(!isis_mrt_load(instance, file_path)) {
-        return bbl_ctrl_status(fd, "error", 400, "failed to load ISIS MRT file");
+        return bbl_ctrl_status(fd, "error", 500, "failed to load ISIS MRT file");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+ssize_t
+bbl_ctrl_isis_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+
+    protocol_error_t result;
+
+    json_t *value;
+    size_t pdu_count;
+
+    int instance_id = 0;
+    isis_instance_t *instance = NULL;
+
+    isis_pdu_t pdu = {0};
+
+    const char *pdu_string;
+    uint16_t pdu_string_len;
+
+    uint8_t buf[ISIS_MAX_PDU_LEN];
+    uint16_t len;
+
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
+    }
+
+    /* Search for matching instance */
+    instance = ctx->isis_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if (!instance) {
+        return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
+    }
+
+    /* Process PDU array */
+    value = json_object_get(arguments, "pdu");
+    if (json_is_array(value)) {
+        pdu_count = json_array_size(value);
+        for (size_t i = 0; i < pdu_count; i++) {
+            pdu_string = json_string_value(json_array_get(value, i));
+            if(!pdu_string) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to read ISIS PDU");
+            }
+            pdu_string_len = strlen(pdu_string);
+            /* Load PDU from hexstring */
+            for (len = 0; len < (pdu_string_len/2); len++) {
+                sscanf(pdu_string + len*2, "%02hhx", &buf[len]);
+            }
+            result = isis_pdu_load(&pdu, (uint8_t*)buf, len);
+            if(result != PROTOCOL_SUCCESS) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to decode ISIS PDU");
+            }
+            /* Update external LSP */
+            if(!isis_lsp_update_external(instance, &pdu)) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to update ISIS LSP");
+            }
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing PDU list");
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
@@ -1404,6 +1471,7 @@ struct action actions[] = {
     {"isis-adjacencies", bbl_ctrl_isis_adjacencies},
     {"isis-database", bbl_ctrl_isis_database},
     {"isis-load-mrt", bbl_ctrl_isis_load_mrt},
+    {"isis-lsp-update", bbl_ctrl_isis_lsp_update},
     {NULL, NULL},
 };
 
