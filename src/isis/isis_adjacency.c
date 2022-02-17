@@ -101,7 +101,7 @@ isis_adjacency_up(isis_adjacency_t *adjacency) {
 
     timer_add_periodic(&ctx->timer_root, &adjacency->timer_tx, 
         "ISIS TX", 
-        0, config->lsp_tx_interval, adjacency,
+        0, config->lsp_tx_interval * MSEC, adjacency,
         &isis_lsp_tx_job);
 
     timer_add_periodic(&ctx->timer_root, &adjacency->timer_retry, 
@@ -116,7 +116,7 @@ isis_adjacency_up(isis_adjacency_t *adjacency) {
 
     timer_add(&ctx->timer_root, &adjacency->timer_csnp_next, 
         "ISIS CSNP", 
-        0, 10*MSEC, adjacency,
+        0, 10 * MSEC, adjacency,
         &isis_csnp_job);
 
     ctx->routing_sessions++;
