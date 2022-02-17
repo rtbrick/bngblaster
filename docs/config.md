@@ -870,13 +870,19 @@ Attribute | Description | Default
 
 ### ISIS External
 
+The BNG Blaster allows to inject LSP's via MRT files as defined in 
+[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396). Details
+to MRT files can be found in the [ISIS section](isis).
+
 `"isis": { "external": { ... } }`
 
 Attribute | Description | Default
 --------- | ----------- | -------
-`mrt-file` | Username | user{session-global}@rtbrick.com
+`mrt-file` | ISIS MRT file | 
 
-### ISIS External Connections
+It is also possible to define external connections as required
+to connect the ISIS instance with the link state graph in the MTR 
+file.
 
 `"isis": { "external": { "connections": [] } }`
 
@@ -885,3 +891,26 @@ Attribute | Description | Default
 `system-id` | ISIS system identifier | 
 `l1-metric` | ISIS level 1 interface metric | 10
 `l2-metric` | ISIS level 2 interface metric | 10
+
+```json
+{
+    "isis": [
+        {
+            "instance-id": 1,
+            "system-id": "0100.1001.0010",
+            "router-id": "10.10.10.10",
+            "hostname": "R1",
+            "external": {
+                "mrt-file": "test.mrt",
+                "connections": [
+                    {
+                        "system-id": "0000.0000.0001",
+                        "l1-metric": 1000,
+                        "l2-metric": 2000
+                    }
+                ]
+            }
+        }
+    ]
+}
+```
