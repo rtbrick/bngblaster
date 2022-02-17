@@ -848,9 +848,9 @@ Attribute | Description | Default
 `protocol-ipv4` | Enable/disable IPv4 | true
 `protocol-ipv6` | Enable/disable IPv6 | true
 `level1-auth-key` | ISIS level 1 authentication key | 
-`level1-auth-type` | ISIS level 1 authentication type | disabled
+`level1-auth-type` | ISIS level 1 authentication type (simple or md5) | disabled
 `level2-auth-key` | ISIS level 2 authentication key |
-`level2-auth-type` | ISIS level 2 authentication type | disabled
+`level2-auth-type` | ISIS level 2 authentication type (simple or md5) | disabled
 `hello-interval` | ISIS hello interval in seconds | 10
 `hello-padding` | ISIS hello padding | false
 `holding-time` | ISIS holding time in seconds | 30

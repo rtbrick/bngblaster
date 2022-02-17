@@ -279,21 +279,3 @@ Attribute | Description | Mandatory Arguments | Optional Arguments
 `isis-database` | ISIS database information | `instance`, `level` | 
 `isis-load-mrt` | Load ISIS MRT file | `instance`, `file` | 
 `isis-lsp-update` | Update ISIS LSP | `instance`, `pdu` | 
-
-The LSP update command expects a list of hex encoded PDU's including 
-the ISIS common header starting with `0x83`. 
-
-`$ cat command.json | jq .`
-
-```json
-{
-    "command": "isis-lsp-update",
-    "arguments": {
-        "instance": 1,
-        "pdu": [
-            "831b0100120100000021ffff010203040506000000000003c0d103010403490001", 
-            "831b0100120100000021ffff010203040506000100000003bad603010403490001"
-        ]
-    }
-}
-```
