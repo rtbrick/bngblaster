@@ -1323,6 +1323,40 @@ bbl_ctrl_isis_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     return result;
 }
 
+ssize_t
+bbl_ctrl_isis_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+    char *file_path;
+    int instance_id = 0;
+
+    isis_instance_t *instance = NULL;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing MRT file");
+    }
+    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
+    }
+
+    /* Search for matching instance */
+    instance = ctx->isis_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if (!instance) {
+        return bbl_ctrl_status(fd, "error", 400, "ISIS instance not found");
+    }
+
+    if(!isis_mrt_load(instance, file_path)) {
+        return bbl_ctrl_status(fd, "error", 400, "failed to load ISIS MRT file");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1369,6 +1403,7 @@ struct action actions[] = {
     {"traffic-stop", bbl_ctrl_traffic_stop},
     {"isis-adjacencies", bbl_ctrl_isis_adjacencies},
     {"isis-database", bbl_ctrl_isis_database},
+    {"isis-load-mrt", bbl_ctrl_isis_load_mrt},
     {NULL, NULL},
 };
 
