@@ -872,7 +872,7 @@ Attribute | Description | Default
 
 The BNG Blaster allows to inject LSP's via MRT files as defined in 
 [RFC6396](https://datatracker.ietf.org/doc/html/rfc6396). Details
-to MRT files can be found in the [ISIS section](isis).
+to MRT files can be found in [ISIS](isis).
 
 `"isis": { "external": { ... } }`
 
