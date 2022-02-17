@@ -638,3 +638,76 @@ isis_lsp_purge_external(isis_instance_t *instance, uint8_t level) {
         next = hb_itor_next(itor);
     }
 }
+
+/**
+ * isis_lsp_update_external 
+ * 
+ * @param instance ISIS instance
+ * @param pdu received ISIS PDU
+ */
+bool
+isis_lsp_update_external(isis_instance_t *instance, isis_pdu_t *pdu) {
+
+    isis_lsp_t *lsp = NULL;
+    uint64_t    lsp_id;
+    uint32_t    seq;
+    uint8_t     level;
+
+    hb_tree *lsdb;
+    void **search = NULL;
+    dict_insert_result result;
+
+    if(pdu->pdu_type == ISIS_PDU_L1_LSP) {
+        level = ISIS_LEVEL_1;
+    } else if(pdu->pdu_type == ISIS_PDU_L1_LSP) {
+        level = ISIS_LEVEL_2;
+    } else {
+        return false;
+    }
+
+    lsp_id = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
+    seq = be32toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
+
+    LOG(DEBUG, "ISIS UPDATE %s-LSP %s (seq %u) from command\n", 
+        isis_level_string(level), 
+        isis_lsp_id_to_str(&lsp_id), 
+        seq);
+
+    lsdb = instance->level[level-1].lsdb;
+    search = hb_tree_search(lsdb, &lsp_id);
+
+    if(search) {
+        /* Update existing LSP. */
+        lsp = *search;
+    } else {
+        /* Create new LSP. */
+        lsp = isis_lsp_new(lsp_id, level, instance);
+        result = hb_tree_insert(lsdb,  &lsp->id);
+        if (result.inserted) {
+            *result.datum_ptr = lsp;
+        } else {
+            LOG(ISIS, "Failed to add LSP to LSDB\n");
+            return false;
+        }
+    }
+
+    lsp->level = level;
+    lsp->source.type = ISIS_SOURCE_EXTERNAL;
+    lsp->source.adjacency = NULL;
+    lsp->seq = seq;
+    lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+    lsp->expired = false;
+    lsp->instance = instance;
+    clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
+
+    PDU_CURSOR_RST(pdu);
+    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_t));
+
+    timer_add(&instance->ctx->timer_root, 
+              &lsp->timer_lifetime, 
+              "ISIS LIFETIME", lsp->lifetime, 0, lsp,
+              &isis_lsp_lifetime_job);
+
+    isis_lsp_flood(lsp);
+    return true;
+}
