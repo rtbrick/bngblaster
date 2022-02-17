@@ -1577,27 +1577,6 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         }
     }
 
-    /* Session Traffic Configuration */
-    section = json_object_get(root, "session-traffic");
-    if (json_is_object(section)) {
-        value = json_object_get(section, "autostart");
-        if (json_is_boolean(value)) {
-            ctx->config.session_traffic_autostart = json_boolean_value(value);
-        }
-        value = json_object_get(section, "ipv4-pps");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv4_pps = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv6-pps");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv6_pps = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv6pd-pps");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
-        }
-    }
-
     /* IS-IS Configuration */
     sub = json_object_get(root, "isis");
     if (json_is_array(sub)) {
@@ -1848,6 +1827,36 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
     }
 
+    /* Global Traffic Configuration */
+    section = json_object_get(root, "traffic");
+    if (json_is_object(section)) {
+        value = json_object_get(section, "autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.traffic_autostart = json_boolean_value(value);
+        }
+    }
+
+    /* Session Traffic Configuration */
+    section = json_object_get(root, "session-traffic");
+    if (json_is_object(section)) {
+        value = json_object_get(section, "autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.session_traffic_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "ipv4-pps");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv4_pps = json_number_value(value);
+        }
+        value = json_object_get(section, "ipv6-pps");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv6_pps = json_number_value(value);
+        }
+        value = json_object_get(section, "ipv6pd-pps");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
+        }
+    }
+
     /* Traffic Streams Configuration */
     section = json_object_get(root, "streams");
     if (json_is_array(section)) {
@@ -2037,5 +2046,6 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.igmp_source = 0;
     ctx->config.igmp_group_count = 1;
     ctx->config.igmp_zap_wait = true;
+    ctx->config.traffic_autostart = true;
     ctx->config.session_traffic_autostart = true;
 }

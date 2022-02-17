@@ -286,6 +286,9 @@ typedef struct bbl_ctx_
         uint16_t multicast_traffic_len;
         char *multicast_traffic_network_interface;
 
+        /* Global Traffic */
+        bool traffic_autostart;
+
         /* Session Traffic */
         bool session_traffic_autostart;
         uint16_t session_traffic_ipv4_pps;
