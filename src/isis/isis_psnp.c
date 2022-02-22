@@ -146,8 +146,8 @@ void
 isis_psnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
 
     isis_adjacency_t *adjacency = interface->isis_adjacency[level-1];
-    isis_instance_t  *instance  = adjacency->instance;
-    isis_config_t    *config    = instance->config;
+    isis_instance_t  *instance  = NULL;
+    isis_config_t    *config    = NULL;
 
     hb_tree *lsdb;
 
@@ -157,6 +157,9 @@ isis_psnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level)
     if(!adjacency) {
         return;
     }
+    instance = adjacency->instance;
+    config = instance->config;
+
     adjacency->stats.psnp_rx++;
     
     if(level == ISIS_LEVEL_1 && config->level1_auth && config->level1_key) {
