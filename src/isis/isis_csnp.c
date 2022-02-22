@@ -167,8 +167,8 @@ void
 isis_csnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
 
     isis_adjacency_t *adjacency = interface->isis_adjacency[level-1];
-    isis_instance_t  *instance  = adjacency->instance;
-    isis_config_t    *config    = instance->config;
+    isis_instance_t  *instance  = NULL;
+    isis_config_t    *config    = NULL;
 
     uint64_t csnp_scan = ++g_csnp_scan;
 
@@ -186,6 +186,9 @@ isis_csnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level)
     if(!adjacency) {
         return;
     }
+    instance = adjacency->instance;
+    config = instance->config;
+
     adjacency->stats.csnp_rx++;
     
     lsp_start = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_START));

@@ -113,8 +113,8 @@ void
 isis_p2p_hello_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu) {
 
     isis_adjacency_p2p_t *adjacency = interface->isis_adjacency_p2p;
-    isis_instance_t      *instance  = adjacency->instance;
-    isis_config_t        *config    = instance->config;
+    isis_instance_t      *instance  = NULL;
+    isis_config_t        *config    = NULL;
 
     isis_peer_t *peer;
     isis_tlv_t *tlv;
@@ -128,6 +128,9 @@ isis_p2p_hello_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu) {
     if(!adjacency) {
         return;
     }
+    instance = adjacency->instance;
+    config = instance->config;
+
     adjacency->stats.hello_rx++;
 
     if(config->level1_auth && config->level1_key) {
