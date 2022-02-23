@@ -322,6 +322,8 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
     uint64_t          lsp_id    = 0;
     isis_pdu_t       *pdu;
     
+    ipv4_prefix loopback_prefix;
+
     hb_tree *lsdb;
     void **search = NULL;
     dict_insert_result result;
@@ -395,6 +397,24 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
     isis_pdu_add_tlv_hostname(pdu, (char*)config->hostname);
     isis_pdu_add_tlv_ipv4_int_address(pdu, config->router_id);
     isis_pdu_add_tlv_te_router_id(pdu, config->router_id);
+
+    loopback_prefix.address = config->router_id;
+    loopback_prefix.len = 32;
+    if(config->sr_node_sid) {
+        /* Add Prefix-SID sub-TLV */
+        isis_sub_tlv_t stlv = {0};
+        uint8_t prefix_sid[6] = {0};
+        stlv.type = 3;
+        stlv.len = 6;
+        stlv.value = prefix_sid;
+        prefix_sid[0] = 64; /* N-Flag */
+        prefix_sid[1] = 0;  /* SPF */
+        *(uint32_t*)&prefix_sid[2] = htobe32(config->sr_node_sid);
+        isis_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, &stlv);
+    } else {
+        isis_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, NULL);
+    }
+
     if(config->sr_base && config->sr_range) {
         isis_pdu_add_tlv_router_cap(pdu, config->router_id, 
             config->protocol_ipv4, config->protocol_ipv6, 
@@ -410,7 +430,7 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
         if(config->protocol_ipv4 && adjacency->interface->ip.len) {
             isis_pdu_add_tlv_ext_ipv4_reachability(pdu, 
                 &adjacency->interface->ip, 
-                adjacency->metric);
+                adjacency->metric, NULL);
         }
         if(config->protocol_ipv6 && adjacency->interface->ip6.len) {
             isis_pdu_add_tlv_ipv6_reachability(pdu, 
