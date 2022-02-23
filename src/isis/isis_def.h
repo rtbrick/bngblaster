@@ -154,6 +154,13 @@ typedef struct isis_tlv_ {
     uint8_t  value[];
 } __attribute__ ((__packed__)) isis_tlv_t;
 
+typedef struct isis_sub_tlv_ {
+    uint8_t  type;
+    uint8_t  len;
+    uint8_t *value;
+    struct isis_sub_tlv_ *next;
+} isis_sub_tlv_t;
+
 typedef struct isis_lsp_entry_ {
     uint16_t  lifetime;
     uint64_t  lsp_id;
@@ -218,7 +225,8 @@ typedef struct isis_config_ {
 
     uint32_t            sr_base;
     uint32_t            sr_range;
-
+    uint32_t            sr_node_sid;
+    
     char *external_mrt_file;
     struct isis_external_connection_ *external_connection;
 

@@ -91,7 +91,7 @@ void
 isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_t *pdu, uint8_t state);
 
 void
-isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_t *pdu, ipv4_prefix *prefix, uint32_t metric);
+isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_t *pdu, ipv4_prefix *prefix, uint32_t metric, isis_sub_tlv_t *stlv);
 
 void
 isis_pdu_add_tlv_ipv6_reachability(isis_pdu_t *pdu, ipv6_prefix *prefix, uint32_t metric);

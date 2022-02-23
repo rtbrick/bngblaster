@@ -414,16 +414,37 @@ isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_t *pdu, uint8_t state) {
 }
 
 void
-isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_t *pdu, ipv4_prefix *prefix, uint32_t metric) {
+isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_t *pdu, ipv4_prefix *prefix, uint32_t metric, isis_sub_tlv_t *stlv) {
     isis_tlv_t *tlv = (isis_tlv_t *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
+    uint8_t *stlv_len = NULL;
     uint8_t prefix_bytes = BITS_TO_BYTES(prefix->len);
     tlv->type = ISIS_TLV_EXT_IPV4_REACHABILITY;
     tlv->len = sizeof(metric) + sizeof(prefix->len) + prefix_bytes;
     *(uint32_t*)tlv_cur = htobe32(metric);
-    tlv_cur += sizeof(metric); 
-    *tlv_cur++ = prefix->len; 
+    tlv_cur += sizeof(metric);
+    if(stlv) {
+        *tlv_cur++ = prefix->len | 0x40; 
+    } else {
+        *tlv_cur++ = prefix->len;
+    }
     memcpy(tlv_cur, &prefix->address, prefix_bytes);
+    if(stlv) {
+        tlv_cur += prefix_bytes;
+        stlv_len = tlv_cur++;
+        *stlv_len = 0;
+        while(stlv) {
+            *stlv_len += 2 + stlv->len;
+            *tlv_cur++ = stlv->type;
+            *tlv_cur++ = stlv->len;
+            memcpy(tlv_cur, stlv->value, stlv->len);
+            tlv_cur += stlv->len;
+            stlv = stlv->next;
+
+
+        }
+        tlv->len += 1 + *stlv_len;
+    }
     PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_t)+tlv->len);
 }
 

@@ -866,6 +866,7 @@ Attribute | Description | Default
 `area` | ISIS area(s) | 49.0001/24
 `sr-base` | ISIS SR base |
 `sr-range` | ISIS SR range |
+`sr-node-sid` | ISIS SR node SID |
 `teardown-time` | ISIS teardown time in seconds | 5
 
 ### ISIS External
