@@ -85,6 +85,8 @@ typedef struct bbl_interface_
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
 
+    struct netif netif; /* LwIP network interface */
+
     isis_adjacency_p2p_t *isis_adjacency_p2p;
     isis_adjacency_t     *isis_adjacency[ISIS_LEVELS];
 
@@ -145,7 +147,8 @@ typedef struct bbl_interface_
         uint32_t icmpv6_tx;
         uint32_t icmpv6_rx;
         uint32_t icmpv6_rs_timeout;
-
+        uint32_t tcp_tx;
+        uint32_t tcp_rx;
         uint32_t dhcp_tx;
         uint32_t dhcp_rx;
         uint32_t dhcp_timeout;

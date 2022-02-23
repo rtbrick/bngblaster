@@ -33,6 +33,8 @@ typedef struct bbl_ctx_
     struct timer_ *keyboard_timer;
     struct timer_ *ctrl_socket_timer;
 
+    struct timer_ *tcp_timer;
+
     struct timespec timestamp_start;
     struct timespec timestamp_stop;
     struct timespec timestamp_resolved;

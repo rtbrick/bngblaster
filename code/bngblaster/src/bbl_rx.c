@@ -1782,12 +1782,26 @@ bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 }
 
 static void
+bbl_rx_test_tcp(bbl_interface_s *interface) {
+    static uint8_t test_packet[1024] = {0};
+    LOG(TCP, "START TCP SESSION on interface %s\n", interface->name);
+    bbl_tcp_t *tcp = bbl_tcp_ipv4_connect(interface, &interface->ip.address, &interface->gateway, 179);
+    if(tcp) {
+        bbl_tcp_send(tcp, test_packet, sizeof(test_packet));
+    }
+}
+
+static void
 bbl_rx_network_arp(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_secondary_ip_s *secondary_ip;
 
     bbl_arp_t *arp = (bbl_arp_t*)eth->next;
     if(arp->sender_ip == interface->gateway) {
+        if(!interface->arp_resolved) {
+            bbl_rx_test_tcp(interface);
+        }
         interface->arp_resolved = true;
+
         if(*(uint32_t*)interface->gateway_mac == 0) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
         }
