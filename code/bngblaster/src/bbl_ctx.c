@@ -85,6 +85,9 @@ bbl_ctx_add (void)
     ctx->li_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_LI_HASHTABLE_SIZE);
     ctx->stream_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_STREAM_FLOW_HASHTABLE_SIZE);
 
+    /* Initialize TCP. */
+    bbl_tcp_init(ctx);
+
     return ctx;
 }
 

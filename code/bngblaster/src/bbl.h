@@ -42,6 +42,7 @@
 #include "bbl_interface.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
+#include "bbl_tcp.h"
 #include "isis/isis.h"
 
 WINDOW *log_win;
