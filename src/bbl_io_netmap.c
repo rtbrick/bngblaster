@@ -47,15 +47,7 @@ bbl_io_netmap_rx_job (timer_s *timer)
         eth_len = ring->slot[i].len;
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += eth_len;
-
-        /*
-	     * Dump the packet into pcap file.
-	     */
-        if (ctx->pcap.write_buf) {
-	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
-				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
-        }
-
+        interface->io.ctrl = true;
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
 #if 0
@@ -83,6 +75,12 @@ bbl_io_netmap_rx_job (timer_s *timer)
             interface->stats.packets_rx_drop_unknown++;
         } else {
             interface->stats.packets_rx_drop_decode_error++;
+        }
+
+        /* Dump the packet into pcap file. */
+        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+	        pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
+				                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
 
         ring->head = ring->cur = nm_ring_next(ring, i);
@@ -118,7 +116,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
     ring = NETMAP_TXRING(interface->io.port->nifp, 0);
     while(tx_result != EMPTY) {
         /* Check if this slot available for writing. */
-        if (nm_ring_empty(ring)) {
+        if(nm_ring_empty(ring)) {
             interface->stats.no_tx_buffer++;
             break;
         }
@@ -126,14 +124,14 @@ bbl_io_netmap_tx_job (timer_s *timer)
         buf = (uint8_t*)NETMAP_BUF(ring, ring->slot[i].buf_idx);
 
         tx_result = bbl_tx(ctx, interface, buf, &len);
-        if (tx_result == PROTOCOL_SUCCESS) {
+        if(tx_result == PROTOCOL_SUCCESS) {
             packets++;
             interface->stats.packets_tx++;
             interface->stats.bytes_tx += len;
             ring->slot[i].len = len;
             ring->head = ring->cur = nm_ring_next(ring, i);
             /* Dump the packet into pcap file. */
-            if (ctx->pcap.write_buf) {
+            if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
                                           buf, len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);

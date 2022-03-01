@@ -39,6 +39,7 @@ bbl_encode_packet_session_ipv4 (bbl_session_s *session)
     *(uint64_t*)(session->write_buf + (session->access_ipv4_tx_packet_len - 16)) = session->access_ipv4_tx_seq++;
     *(uint32_t*)(session->write_buf + (session->access_ipv4_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
     *(uint32_t*)(session->write_buf + (session->access_ipv4_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+    interface->io.ctrl = false;
     return PROTOCOL_SUCCESS;
 }
 
@@ -68,6 +69,7 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
     *(uint64_t*)(session->write_buf + (session->access_ipv6_tx_packet_len - 16)) = session->access_ipv6_tx_seq++;
     *(uint32_t*)(session->write_buf + (session->access_ipv6_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
     *(uint32_t*)(session->write_buf + (session->access_ipv6_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+    interface->io.ctrl = false;
     return PROTOCOL_SUCCESS;
 }
 
@@ -97,11 +99,12 @@ bbl_encode_packet_session_ipv6pd (bbl_session_s *session)
     *(uint64_t*)(session->write_buf + (session->access_ipv6pd_tx_packet_len - 16)) = session->access_ipv6pd_tx_seq++;
     *(uint32_t*)(session->write_buf + (session->access_ipv6pd_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
     *(uint32_t*)(session->write_buf + (session->access_ipv6pd_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+    interface->io.ctrl = false;
     return PROTOCOL_SUCCESS;
 }
 
 protocol_error_t
-bbl_encode_packet_network_session_ipv4 (bbl_interface_s *interface, bbl_session_s *session)
+bbl_encode_packet_network_session_ipv4(bbl_interface_s *interface, bbl_session_s *session)
 {
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -129,11 +132,12 @@ bbl_encode_packet_network_session_ipv4 (bbl_interface_s *interface, bbl_session_
     *(uint64_t*)(session->write_buf + (session->network_ipv4_tx_packet_len - 16)) = session->network_ipv4_tx_seq++;
     *(uint32_t*)(session->write_buf + (session->network_ipv4_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
     *(uint32_t*)(session->write_buf + (session->network_ipv4_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+    interface->io.ctrl = false;
     return PROTOCOL_SUCCESS;
 }
 
 protocol_error_t
-bbl_encode_packet_network_session_ipv6 (bbl_interface_s *interface, bbl_session_s *session)
+bbl_encode_packet_network_session_ipv6(bbl_interface_s *interface, bbl_session_s *session)
 {
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -155,11 +159,12 @@ bbl_encode_packet_network_session_ipv6 (bbl_interface_s *interface, bbl_session_
     *(uint64_t*)(session->write_buf + (session->network_ipv6_tx_packet_len - 16)) = session->network_ipv6_tx_seq++;
     *(uint32_t*)(session->write_buf + (session->network_ipv6_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
     *(uint32_t*)(session->write_buf + (session->network_ipv6_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+    interface->io.ctrl = false;
     return PROTOCOL_SUCCESS;
 }
 
 protocol_error_t
-bbl_encode_packet_network_session_ipv6pd (bbl_interface_s *interface, bbl_session_s *session)
+bbl_encode_packet_network_session_ipv6pd(bbl_interface_s *interface, bbl_session_s *session)
 {
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -181,6 +186,7 @@ bbl_encode_packet_network_session_ipv6pd (bbl_interface_s *interface, bbl_sessio
     *(uint64_t*)(session->write_buf + (session->network_ipv6pd_tx_packet_len - 16)) = session->network_ipv6pd_tx_seq++;
     *(uint32_t*)(session->write_buf + (session->network_ipv6pd_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
     *(uint32_t*)(session->write_buf + (session->network_ipv6pd_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
+    interface->io.ctrl = false;
     return PROTOCOL_SUCCESS;
 }
 
@@ -231,7 +237,7 @@ bbl_igmp_timeout(timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_igmp (bbl_session_s *session)
+bbl_encode_packet_igmp(bbl_session_s *session)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
@@ -415,7 +421,7 @@ bbl_encode_packet_igmp (bbl_session_s *session)
 }
 
 void
-bbl_pap_timeout (timer_s *timer)
+bbl_pap_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -429,7 +435,7 @@ bbl_pap_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_pap_request (bbl_session_s *session) {
+bbl_encode_packet_pap_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -466,7 +472,7 @@ bbl_encode_packet_pap_request (bbl_session_s *session) {
 }
 
 void
-bbl_chap_timeout (timer_s *timer)
+bbl_chap_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -480,7 +486,7 @@ bbl_chap_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_chap_response (bbl_session_s *session) {
+bbl_encode_packet_chap_response(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -516,7 +522,7 @@ bbl_encode_packet_chap_response (bbl_session_s *session) {
 }
 
 void
-bbl_icmpv6_timeout (timer_s *timer)
+bbl_icmpv6_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -530,7 +536,7 @@ bbl_icmpv6_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
+bbl_encode_packet_icmpv6_rs(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -580,7 +586,7 @@ bbl_encode_packet_icmpv6_rs (bbl_session_s *session) {
 }
 
 void
-bbl_dhcpv6_timeout (timer_s *timer)
+bbl_dhcpv6_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -610,7 +616,7 @@ bbl_dhcpv6_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
+bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -727,7 +733,7 @@ bbl_encode_packet_dhcpv6_request (bbl_session_s *session) {
 }
 
 void
-bbl_ip6cp_timeout (timer_s *timer)
+bbl_ip6cp_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -754,7 +760,7 @@ bbl_ip6cp_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_ip6cp_request (bbl_session_s *session) {
+bbl_encode_packet_ip6cp_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -832,7 +838,7 @@ bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
 }
 
 void
-bbl_ipcp_timeout (timer_s *timer)
+bbl_ipcp_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -859,7 +865,7 @@ bbl_ipcp_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_ipcp_request (bbl_session_s *session) {
+bbl_encode_packet_ipcp_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -910,7 +916,7 @@ bbl_encode_packet_ipcp_request (bbl_session_s *session) {
 }
 
 protocol_error_t
-bbl_encode_packet_ipcp_response (bbl_session_s *session) {
+bbl_encode_packet_ipcp_response(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -946,7 +952,7 @@ bbl_encode_packet_ipcp_response (bbl_session_s *session) {
 }
 
 void
-bbl_lcp_timeout (timer_s *timer)
+bbl_lcp_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -979,7 +985,7 @@ bbl_lcp_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_lcp_request (bbl_session_s *session) {
+bbl_encode_packet_lcp_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -1023,7 +1029,7 @@ bbl_encode_packet_lcp_request (bbl_session_s *session) {
 }
 
 protocol_error_t
-bbl_encode_packet_lcp_response (bbl_session_s *session) {
+bbl_encode_packet_lcp_response(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -1068,7 +1074,7 @@ bbl_encode_packet_lcp_response (bbl_session_s *session) {
 }
 
 void
-bbl_padi_timeout (timer_s *timer)
+bbl_padi_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPPOE_INIT) {
@@ -1078,7 +1084,7 @@ bbl_padi_timeout (timer_s *timer)
 }
 
 void
-bbl_padr_timeout (timer_s *timer)
+bbl_padr_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPPOE_REQUEST) {
@@ -1088,7 +1094,7 @@ bbl_padr_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_padi (bbl_session_s *session)
+bbl_encode_padi(bbl_session_s *session)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
@@ -1133,7 +1139,7 @@ bbl_encode_padi (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_padr (bbl_session_s *session)
+bbl_encode_padr(bbl_session_s *session)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
@@ -1179,7 +1185,7 @@ bbl_encode_padr (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_padt (bbl_session_s *session)
+bbl_encode_padt(bbl_session_s *session)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
@@ -1206,7 +1212,7 @@ bbl_encode_padt (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet_discovery (bbl_session_s *session) {
+bbl_encode_packet_discovery(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     protocol_error_t result = UNKNOWN_PROTOCOL;
@@ -1242,7 +1248,7 @@ bbl_encode_packet_discovery (bbl_session_s *session) {
 }
 
 void
-bbl_dhcp_timeout (timer_s *timer)
+bbl_dhcp_timeout(timer_s *timer)
 {
     bbl_session_s *session;
     bbl_interface_s *interface;
@@ -1261,7 +1267,7 @@ bbl_dhcp_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_dhcp (bbl_session_s *session) {
+bbl_encode_packet_dhcp(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -1410,7 +1416,7 @@ bbl_encode_packet_dhcp (bbl_session_s *session) {
 }
 
 void
-bbl_arp_timeout (timer_s *timer)
+bbl_arp_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     session->send_requests |= BBL_SEND_ARP_REQUEST;
@@ -1418,7 +1424,7 @@ bbl_arp_timeout (timer_s *timer)
 }
 
 protocol_error_t
-bbl_encode_packet_arp_request (bbl_session_s *session)
+bbl_encode_packet_arp_request(bbl_session_s *session)
 {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
@@ -1456,7 +1462,7 @@ bbl_encode_packet_arp_request (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet_arp_reply (bbl_session_s *session)
+bbl_encode_packet_arp_reply(bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
@@ -1478,7 +1484,7 @@ bbl_encode_packet_arp_reply (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet_cfm_cc (bbl_session_s *session)
+bbl_encode_packet_cfm_cc(bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_cfm_t cfm = {0};
@@ -1506,7 +1512,7 @@ bbl_encode_packet_cfm_cc (bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *accounting)
+bbl_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *accounting)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
@@ -1587,7 +1593,7 @@ bbl_encode_packet (bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *ac
 }
 
 protocol_error_t
-bbl_encode_network_packet (bbl_interface_s *interface, bbl_session_s *session, uint8_t *buf, uint16_t *len)
+bbl_encode_network_packet(bbl_interface_s *interface, bbl_session_s *session, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
@@ -1613,21 +1619,21 @@ bbl_encode_network_packet (bbl_interface_s *interface, bbl_session_s *session, u
 }
 
 void
-bbl_network_arp_timeout (timer_s *timer)
+bbl_network_arp_timeout(timer_s *timer)
 {
     bbl_interface_s *interface = timer->data;
     interface->send_requests |= BBL_IF_SEND_ARP_REQUEST;
 }
 
 void
-bbl_network_nd_timeout (timer_s *timer)
+bbl_network_nd_timeout(timer_s *timer)
 {
     bbl_interface_s *interface = timer->data;
     interface->send_requests |= BBL_IF_SEND_ICMPV6_NS;
 }
 
 static protocol_error_t
-bbl_encode_interface_packet (bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
+bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
     bbl_ethernet_header_t eth = {0};
@@ -1700,6 +1706,8 @@ bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
     bbl_l2tp_queue_t *l2tpq;
 
     bool accounting;
+
+    interface->io.ctrl = true;
 
     /* Write per interface frames like ARP, ICMPv6 NS or LLDP. */
     if(interface->send_requests) {
@@ -1784,6 +1792,7 @@ bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             /* Write Multicast frames. */
             if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic) {
                 if(interface->mc_packet_cursor < ctx->config.igmp_group_count) {
+                    interface->io.ctrl = false;
                     memcpy(buf, interface->mc_packets + (interface->mc_packet_cursor*interface->mc_packet_len), interface->mc_packet_len);
                     *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
                     *(uint32_t*)(buf + (interface->mc_packet_len - 8)) = interface->tx_timestamp.tv_sec;

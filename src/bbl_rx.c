@@ -348,6 +348,7 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
             return bbl_dhcpv6_rx(eth, (bbl_dhcpv6_t*)udp->next, session);
         case BBL_UDP_PORT:
             bbl = (bbl_bbl_t*)udp->next;
+            interface->io.ctrl = false;
             session->stats.accounting_packets_rx++;
             session->stats.accounting_bytes_rx += eth->length;
             break;
@@ -641,6 +642,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
 
     /* BBL receive handler */
     if(bbl) {
+        interface->io.ctrl = false;
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
             if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
                bbl->inner_vlan_id != session->vlan_key.inner_vlan_id) {
@@ -1907,6 +1909,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
 
     if(bbl) {
+        interface->io.ctrl = false;
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
             session = bbl_session_get(ctx, bbl->session_id);
             if(session) {

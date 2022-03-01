@@ -42,6 +42,7 @@ typedef struct bbl_interface_
         uint16_t cursor_rx; /* slot # inside the ring buffer */
 
         bool pollout;
+        bool ctrl; /* control traffic */
 
 #ifdef BNGBLASTER_NETMAP
         struct nm_desc *port;

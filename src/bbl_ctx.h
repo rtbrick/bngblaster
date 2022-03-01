@@ -107,6 +107,7 @@ typedef struct bbl_ctx_
         uint8_t *write_buf;
         uint write_idx;
         bool wrote_header;
+        bool include_streams;
         uint32_t index; /* next to be allocated interface index */
     } pcap;
 

@@ -1131,6 +1131,7 @@ bbl_stream_tx_job (timer_s *timer) {
     /* Update BBL header fields */
     *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
     *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
+    interface->io.ctrl = false;
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet ... */

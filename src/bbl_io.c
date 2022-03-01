@@ -16,7 +16,7 @@
 #endif
 
 void
-bbl_io_packet_mmap_rx_job (timer_s *timer) {
+bbl_io_packet_mmap_rx_job(timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     struct pollfd fds[1] = {0};
@@ -60,13 +60,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
         eth_len = tphdr->tp_len;
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += eth_len;
-
-        /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf) {
-            pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
-        }
-
+        interface->io.ctrl = true;
         decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
@@ -107,6 +101,12 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
             interface->stats.packets_rx_drop_decode_error++;
         }
 
+        /* Dump the packet into pcap file. */
+        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+            pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+        }
+
         tphdr->tp_status = TP_STATUS_KERNEL; /* Return ownership back to kernel */
         interface->io.cursor_rx = (interface->io.cursor_rx + 1) % interface->io.req_rx.tp_frame_nr;
 
@@ -117,7 +117,7 @@ bbl_io_packet_mmap_rx_job (timer_s *timer) {
 }
 
 void
-bbl_io_raw_rx_job (timer_s *timer) {
+bbl_io_raw_rx_job(timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
 
@@ -145,13 +145,7 @@ bbl_io_raw_rx_job (timer_s *timer) {
         }
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += recv_result;
-
-        /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf) {
-            pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
-        }
-
+        interface->io.ctrl = true;
         decode_result = decode_ethernet(interface->io.rx_buf, interface->io.rx_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             /* Copy RX timestamp */
@@ -175,12 +169,18 @@ bbl_io_raw_rx_job (timer_s *timer) {
         } else {
             interface->stats.packets_rx_drop_decode_error++;
         }
+
+        /* Dump the packet into pcap file. */
+        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+            pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+        }
     }
     pcapng_fflush(ctx);
 }
 
 void
-bbl_io_packet_mmap_tx_job (timer_s *timer) {
+bbl_io_packet_mmap_tx_job(timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     protocol_error_t tx_result = IGNORED;
@@ -239,7 +239,7 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
             interface->io.cursor_tx = (interface->io.cursor_tx + 1) % interface->io.req_tx.tp_frame_nr;
             /* Dump the packet into pcap file. */
-            if (ctx->pcap.write_buf) {
+            if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
                                           buf, len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
@@ -259,7 +259,7 @@ bbl_io_packet_mmap_tx_job (timer_s *timer) {
 }
 
 void
-bbl_io_raw_tx_job (timer_s *timer) {
+bbl_io_raw_tx_job(timer_s *timer) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
     protocol_error_t tx_result = PROTOCOL_SUCCESS;
@@ -288,7 +288,7 @@ bbl_io_raw_tx_job (timer_s *timer) {
             interface->stats.packets_tx++;
             interface->stats.bytes_tx += interface->io.tx_len;
             /* Dump the packet into pcap file. */
-            if (ctx->pcap.write_buf) {
+            if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
                                           interface->io.tx_buf, interface->io.tx_len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
@@ -300,7 +300,7 @@ bbl_io_raw_tx_job (timer_s *timer) {
 }
 
 bool
-bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+bbl_io_packet_mmap_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
     struct tpacket2_hdr* tphdr;
     uint8_t *frame_ptr;
     uint8_t *buf;
@@ -319,7 +319,7 @@ bbl_io_packet_mmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t p
 }
 
 bool
-bbl_io_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+bbl_io_raw_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
     if (sendto(interface->io.fd_tx, packet, packet_len, 0, (struct sockaddr*)&interface->io.addr, sizeof(struct sockaddr_ll)) <0 ) {
         LOG(IO, "Sendto failed with errno: %i\n", errno);
         interface->stats.sendto_failed++;
@@ -338,7 +338,7 @@ bbl_io_raw_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_le
  * @param packet_len packet length
  */
 bool
-bbl_io_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
     bbl_ctx_s *ctx = interface->ctx;
     bool result = false;
 
@@ -363,10 +363,10 @@ bbl_io_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
         interface->stats.packets_tx++;
         interface->stats.bytes_tx += packet_len;
         /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf) {
+        if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
             pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                    packet, packet_len, interface->pcap_index,
-                                    PCAPNG_EPB_FLAGS_OUTBOUND);
+                                      packet, packet_len, interface->pcap_index,
+                                      PCAPNG_EPB_FLAGS_OUTBOUND);
             pcapng_fflush(ctx);
         }
     }
