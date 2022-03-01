@@ -42,6 +42,7 @@ typedef struct bbl_session_
     session_state_t session_state;
     uint32_t send_requests;
     uint32_t network_send_requests;
+    uint32_t wait_reconnect;
 
     CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
@@ -79,6 +80,7 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv6pd;
     struct timer_ *timer_rate;
     struct timer_ *timer_cfm_cc;
+    struct timer_ *timer_wait;
 
     bbl_access_type_t access_type;
 

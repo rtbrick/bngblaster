@@ -467,6 +467,28 @@ bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* 
     }
 }
 
+ssize_t
+bbl_ctrl_session_reconnect(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
+    bbl_session_s *session;
+    if(session_id) {
+        /* terminate and reconnect single matching session */
+        session = bbl_session_get(ctx, session_id);
+        if(session) {
+            uint32_t wait_reconnect = 0;
+            if (json_unpack(arguments, "{s:i}", "wait-time", &wait_reconnect) != 0) {
+                return bbl_ctrl_status(fd, "error", 400, "missing reconnect wait time");
+            }
+            session->wait_reconnect = wait_reconnect;
+            bbl_session_clear(ctx, session);
+            return bbl_ctrl_status(fd, "ok", 200, "terminate session");
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing session id");
+    }
+}
+
 static void
 bbl_ctrl_session_ncp_open(bbl_session_s *session, bool ipcp) {
     if(session->session_state == BBL_ESTABLISHED ||
@@ -1250,6 +1272,7 @@ struct action {
 struct action actions[] = {
     {"interfaces", bbl_ctrl_interfaces},
     {"terminate", bbl_ctrl_session_terminate},
+    {"reconnect", bbl_ctrl_session_reconnect},
     {"ipcp-open", bbl_ctrl_session_ipcp_open},
     {"ipcp-close", bbl_ctrl_session_ipcp_close},
     {"ip6cp-open", bbl_ctrl_session_ip6cp_open},

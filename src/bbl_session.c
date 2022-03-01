@@ -128,6 +128,151 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
+static void
+bbl_session_reset_for_reconnect(bbl_session_s *session)
+{
+    memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
+    session->pppoe_session_id = 0;
+    if(session->pppoe_ac_cookie) {
+        free(session->pppoe_ac_cookie);
+        session->pppoe_ac_cookie = NULL;
+    }
+    session->pppoe_ac_cookie_len = 0;
+    if(!session->interface->ctx->config.pppoe_service_name) {
+        if(session->pppoe_service_name) {
+            free(session->pppoe_service_name);
+            session->pppoe_service_name = NULL;
+        }
+        session->pppoe_service_name_len = 0;
+    }
+    session->ip_address = 0;
+    session->peer_ip_address = 0;
+    session->dns1 = 0;
+    session->dns2 = 0;
+    session->ipv6_prefix.len = 0;
+    session->delegated_ipv6_prefix.len = 0;
+    session->icmpv6_ra_received = false;
+    session->dhcpv6_requested = false;
+    session->dhcpv6_established = false;
+    session->dhcpv6_state = BBL_DHCP_INIT;
+    session->dhcpv6_ia_na_option_len = 0;
+    session->dhcpv6_ia_pd_option_len = 0;
+    memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+    memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
+    memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
+    memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
+    memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
+    memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
+    session->zapping_joined_group = NULL;
+    session->zapping_leaved_group = NULL;
+    session->zapping_count = 0;
+    session->zapping_view_start_time.tv_sec = 0;
+    session->zapping_view_start_time.tv_nsec = 0;
+
+    if(session->reply_message) {
+        free(session->reply_message);
+        session->reply_message = NULL;
+    }
+    if(session->connections_status_message) {
+        free(session->connections_status_message);
+        session->connections_status_message = NULL;
+    }
+
+    /* L2TP */
+    session->l2tp = false;
+    session->l2tp_session = NULL;
+
+    /* Session traffic */
+    session->session_traffic_flows = 0;
+    session->session_traffic_flows_verified = 0;
+    session->access_ipv4_tx_flow_id = 0;
+    session->access_ipv4_tx_seq = 0;
+    session->access_ipv4_tx_packet_len = 0;
+    session->access_ipv4_rx_first_seq = 0;
+    session->access_ipv4_rx_last_seq = 0;
+    session->network_ipv4_tx_flow_id = 0;
+    session->network_ipv4_tx_seq = 0;
+    session->network_ipv4_tx_packet_len = 0;
+    session->network_ipv4_rx_first_seq = 0;
+    session->network_ipv4_rx_last_seq = 0;
+    session->access_ipv6_tx_flow_id = 0;
+    session->access_ipv6_tx_seq = 0;
+    session->access_ipv6_tx_packet_len = 0;
+    session->access_ipv6_rx_first_seq = 0;
+    session->access_ipv6_rx_last_seq = 0;
+    session->network_ipv6_tx_flow_id = 0;
+    session->network_ipv6_tx_seq = 0;
+    session->network_ipv6_tx_packet_len = 0;
+    session->network_ipv6_rx_first_seq = 0;
+    session->network_ipv6_rx_last_seq = 0;
+    session->access_ipv6pd_tx_flow_id = 0;
+    session->access_ipv6pd_tx_seq = 0;
+    session->access_ipv6pd_tx_packet_len = 0;
+    session->access_ipv6pd_rx_first_seq = 0;
+    session->access_ipv6pd_rx_last_seq = 0;
+    session->network_ipv6pd_tx_flow_id = 0;
+    session->network_ipv6pd_tx_seq = 0;
+    session->network_ipv6pd_tx_packet_len = 0;
+    session->network_ipv6pd_rx_first_seq = 0;
+    session->network_ipv6pd_rx_last_seq = 0;
+
+    /* Reset session stats */
+    session->stats.igmp_rx = 0;
+    session->stats.igmp_tx = 0;
+    session->stats.min_join_delay = 0;
+    session->stats.avg_join_delay = 0;
+    session->stats.max_join_delay = 0;
+    session->stats.min_leave_delay = 0;
+    session->stats.avg_leave_delay = 0;
+    session->stats.max_leave_delay = 0;
+    session->stats.mc_old_rx_after_first_new = 0;
+    session->stats.mc_rx = 0;
+    session->stats.mc_loss = 0;
+    session->stats.mc_not_received = 0;
+    session->stats.icmp_rx = 0;
+    session->stats.icmp_tx = 0;
+    session->stats.icmpv6_rx = 0;
+    session->stats.icmpv6_tx = 0;
+    session->stats.access_ipv4_rx = 0;
+    session->stats.access_ipv4_tx = 0;
+    session->stats.access_ipv4_loss = 0;
+    session->stats.network_ipv4_rx = 0;
+    session->stats.network_ipv4_tx = 0;
+    session->stats.network_ipv4_loss = 0;
+    session->stats.access_ipv6_rx = 0;
+    session->stats.access_ipv6_tx = 0;
+    session->stats.access_ipv6_loss = 0;
+    session->stats.network_ipv6_rx = 0;
+    session->stats.network_ipv6_tx = 0;
+    session->stats.network_ipv6_loss = 0;
+    session->stats.access_ipv6pd_rx = 0;
+    session->stats.access_ipv6pd_tx = 0;
+    session->stats.access_ipv6pd_loss = 0;
+    session->stats.network_ipv6pd_rx = 0;
+    session->stats.network_ipv6pd_tx = 0;
+    session->stats.network_ipv6pd_loss = 0;
+}
+
+static void
+bbl_session_wait_reconnect(timer_s *timer)
+{
+    bbl_session_s *session;
+    bbl_interface_s *interface;
+    bbl_ctx_s *ctx;
+
+    session = timer->data;
+    interface = session->interface;
+    ctx = interface->ctx;
+
+    bbl_session_reset_for_reconnect(session);
+    session->session_state = BBL_IDLE;
+    CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+
+    /* Increment flap counter */
+    session->stats.flapped++;
+    ctx->sessions_flapped++;
+}
+
 /**
  * bbl_session_update_state
  *
@@ -201,6 +346,7 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             timer_del(session->timer_session_traffic_ipv4);
             timer_del(session->timer_session_traffic_ipv6);
             timer_del(session->timer_session_traffic_ipv6pd);
+            timer_del(session->timer_wait);
 
             /* Reset all states */
             session->lcp_state = BBL_PPP_CLOSED;
@@ -216,133 +362,19 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             } else {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(ctx->config.pppoe_reconnect) {
-                        /* Reset session for reconnect */
-                        state = BBL_IDLE;
-                        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
-                        memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
-                        session->pppoe_session_id = 0;
-                        if(session->pppoe_ac_cookie) {
-                            free(session->pppoe_ac_cookie);
-                            session->pppoe_ac_cookie = NULL;
+                        if(session->wait_reconnect > 0) {
+                            /* wait before reconnect */
+                            timer_add(&ctx->timer_root, &session->timer_wait, "Session Wait", session->wait_reconnect, 0, session, &bbl_session_wait_reconnect);
+                            session->wait_reconnect = 0;
+                        } else {
+                            /* reconnect immediately */
+                            bbl_session_reset_for_reconnect(session);
+                            state = BBL_IDLE;
+                            CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+                            /* Increment flap counter */
+                            session->stats.flapped++;
+                            ctx->sessions_flapped++;
                         }
-                        session->pppoe_ac_cookie_len = 0;
-                        if(!session->interface->ctx->config.pppoe_service_name) {
-                            if(session->pppoe_service_name) {
-                                free(session->pppoe_service_name);
-                                session->pppoe_service_name = NULL;
-                            }
-                            session->pppoe_service_name_len = 0;
-                        }
-                        session->ip_address = 0;
-                        session->peer_ip_address = 0;
-                        session->dns1 = 0;
-                        session->dns2 = 0;
-                        session->ipv6_prefix.len = 0;
-                        session->delegated_ipv6_prefix.len = 0;
-                        session->icmpv6_ra_received = false;
-                        session->dhcpv6_requested = false;
-                        session->dhcpv6_established = false;
-                        session->dhcpv6_state = BBL_DHCP_INIT;
-                        session->dhcpv6_ia_na_option_len = 0;
-                        session->dhcpv6_ia_pd_option_len = 0;
-                        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
-                        memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
-                        memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
-                        memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-                        memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
-                        memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
-                        session->zapping_joined_group = NULL;
-                        session->zapping_leaved_group = NULL;
-                        session->zapping_count = 0;
-                        session->zapping_view_start_time.tv_sec = 0;
-                        session->zapping_view_start_time.tv_nsec = 0;
-
-                        if(session->reply_message) {
-                            free(session->reply_message);
-                            session->reply_message = NULL;
-                        }
-                        if(session->connections_status_message) {
-                            free(session->connections_status_message);
-                            session->connections_status_message = NULL;
-                        }
-
-                        /* L2TP */
-                        session->l2tp = false;
-                        session->l2tp_session = NULL;
-
-                        /* Session traffic */
-                        session->session_traffic_flows = 0;
-                        session->session_traffic_flows_verified = 0;
-                        session->access_ipv4_tx_flow_id = 0;
-                        session->access_ipv4_tx_seq = 0;
-                        session->access_ipv4_tx_packet_len = 0;
-                        session->access_ipv4_rx_first_seq = 0;
-                        session->access_ipv4_rx_last_seq = 0;
-                        session->network_ipv4_tx_flow_id = 0;
-                        session->network_ipv4_tx_seq = 0;
-                        session->network_ipv4_tx_packet_len = 0;
-                        session->network_ipv4_rx_first_seq = 0;
-                        session->network_ipv4_rx_last_seq = 0;
-                        session->access_ipv6_tx_flow_id = 0;
-                        session->access_ipv6_tx_seq = 0;
-                        session->access_ipv6_tx_packet_len = 0;
-                        session->access_ipv6_rx_first_seq = 0;
-                        session->access_ipv6_rx_last_seq = 0;
-                        session->network_ipv6_tx_flow_id = 0;
-                        session->network_ipv6_tx_seq = 0;
-                        session->network_ipv6_tx_packet_len = 0;
-                        session->network_ipv6_rx_first_seq = 0;
-                        session->network_ipv6_rx_last_seq = 0;
-                        session->access_ipv6pd_tx_flow_id = 0;
-                        session->access_ipv6pd_tx_seq = 0;
-                        session->access_ipv6pd_tx_packet_len = 0;
-                        session->access_ipv6pd_rx_first_seq = 0;
-                        session->access_ipv6pd_rx_last_seq = 0;
-                        session->network_ipv6pd_tx_flow_id = 0;
-                        session->network_ipv6pd_tx_seq = 0;
-                        session->network_ipv6pd_tx_packet_len = 0;
-                        session->network_ipv6pd_rx_first_seq = 0;
-                        session->network_ipv6pd_rx_last_seq = 0;
-
-                        /* Reset session stats */
-                        session->stats.igmp_rx = 0;
-                        session->stats.igmp_tx = 0;
-                        session->stats.min_join_delay = 0;
-                        session->stats.avg_join_delay = 0;
-                        session->stats.max_join_delay = 0;
-                        session->stats.min_leave_delay = 0;
-                        session->stats.avg_leave_delay = 0;
-                        session->stats.max_leave_delay = 0;
-                        session->stats.mc_old_rx_after_first_new = 0;
-                        session->stats.mc_rx = 0;
-                        session->stats.mc_loss = 0;
-                        session->stats.mc_not_received = 0;
-                        session->stats.icmp_rx = 0;
-                        session->stats.icmp_tx = 0;
-                        session->stats.icmpv6_rx = 0;
-                        session->stats.icmpv6_tx = 0;
-                        session->stats.access_ipv4_rx = 0;
-                        session->stats.access_ipv4_tx = 0;
-                        session->stats.access_ipv4_loss = 0;
-                        session->stats.network_ipv4_rx = 0;
-                        session->stats.network_ipv4_tx = 0;
-                        session->stats.network_ipv4_loss = 0;
-                        session->stats.access_ipv6_rx = 0;
-                        session->stats.access_ipv6_tx = 0;
-                        session->stats.access_ipv6_loss = 0;
-                        session->stats.network_ipv6_rx = 0;
-                        session->stats.network_ipv6_tx = 0;
-                        session->stats.network_ipv6_loss = 0;
-                        session->stats.access_ipv6pd_rx = 0;
-                        session->stats.access_ipv6pd_tx = 0;
-                        session->stats.access_ipv6pd_loss = 0;
-                        session->stats.network_ipv6pd_rx = 0;
-                        session->stats.network_ipv6pd_tx = 0;
-                        session->stats.network_ipv6pd_loss = 0;
-
-                        /* Increment flap counter */
-                        session->stats.flapped++;
-                        ctx->sessions_flapped++;
                     } else {
                         ctx->sessions_terminated++;
                     }
