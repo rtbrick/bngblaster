@@ -1363,6 +1363,10 @@ json_parse_config (json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.io_stream_max_ppi = json_number_value(value);
         }
+        value = json_object_get(section, "capture-include-streams");
+        if (json_is_boolean(value)) {
+            ctx->pcap.include_streams = json_boolean_value(value);
+        }
 
         /* Network Interface Configuration Section */
         sub = json_object_get(section, "network");
@@ -1678,6 +1682,7 @@ bbl_config_streams_load_json (const char *filename, bbl_ctx_s *ctx) {
  */
 void
 bbl_config_init_defaults (bbl_ctx_s *ctx) {
+    ctx->pcap.include_streams = true;
     ctx->config.username = g_default_user;
     ctx->config.password = g_default_pass;
     ctx->config.tx_interval = 5 * MSEC;

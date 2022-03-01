@@ -112,6 +112,7 @@ Attribute | Description | Default
 `io-mode` | IO mode | packet_mmap_raw
 `io-slots` | IO slots (ring size) | 1024
 `io-stream-max-ppi` | IO traffic stream max packets per interval | 32
+`capture-include-streams` | Include traffic streams in capture | true
 
 The `tx-interval` and `rx-interval` should be set to at to at least `1.0` (1ms)
 if more precise timestamps are needed. This is recommended for IGMP join/leave
