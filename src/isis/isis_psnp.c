@@ -118,6 +118,7 @@ isis_psnp_job (timer_s *timer) {
     eth.type = ISIS_PROTOCOL_IDENTIFIER;
     eth.next = &isis;
     eth.src = adjacency->interface->mac;
+    eth.vlan_outer = adjacency->interface->vlan;
     if(adjacency->level == ISIS_LEVEL_1) {
         eth.dst = g_isis_mac_all_l1;
         isis.type = ISIS_PDU_L1_PSNP;
