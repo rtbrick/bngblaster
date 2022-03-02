@@ -746,8 +746,7 @@ bbl_rx_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *inter
             interface->stats.icmpv6_rx++;
             return bbl_rx_icmpv6(eth, ipv6, interface, session);
         case IPV6_NEXT_HEADER_UDP:
-            bbl_rx_udp_ipv6(eth, ipv6, interface, session);
-            break;
+            return bbl_rx_udp_ipv6(eth, ipv6, interface, session);
         default:
             break;
     }
