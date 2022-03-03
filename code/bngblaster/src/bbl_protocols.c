@@ -2556,6 +2556,35 @@ decode_udp(uint8_t *buf, uint16_t len,
 }
 
 /*
+ * decode_tcp
+ */
+protocol_error_t
+decode_tcp(uint8_t *buf, uint16_t len,
+           uint8_t *sp, uint16_t sp_len,
+           bbl_tcp_t **_tcp) {
+
+    protocol_error_t ret_val = PROTOCOL_SUCCESS;
+
+    bbl_tcp_t *tcp;
+
+    if(len < 20 || sp_len < sizeof(bbl_tcp_t)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init UDP header */
+    tcp = (bbl_tcp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_tcp_t));
+
+    tcp->src = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    tcp->dst = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+
+    *_tcp = tcp;
+    return ret_val;
+}
+
+
+/*
  * decode_ipv6
  */
 protocol_error_t
@@ -2606,6 +2635,9 @@ decode_ipv6(uint8_t *buf, uint16_t len,
             break;
         case IPV6_NEXT_HEADER_UDP:
             ret_val = decode_udp(buf, len, sp, sp_len, (bbl_udp_t**)&ipv6->next);
+            break;
+        case IPV6_NEXT_HEADER_TCP:
+            ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_t**)&ipv6->next);
             break;
         default:
             ipv6->next = NULL;
@@ -2703,6 +2735,10 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         case PROTOCOL_IPV4_UDP:
             ret_val = decode_udp(buf, len, sp, sp_len, (bbl_udp_t**)&ipv4->next);
             break;
+        case PROTOCOL_IPV4_TCP:
+            ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_t**)&ipv4->next);
+            break;
+
         default:
             ipv4->next = NULL;
             break;

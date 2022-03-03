@@ -282,6 +282,18 @@ json_parse_network_interface(bbl_ctx_s *ctx, json_t *network_interface, bbl_netw
         network_config->vlan &= 4095;
     }
 
+    value = json_object_get(network_interface, "mtu");
+    if (json_is_number(value)) {
+        network_config->mtu = json_number_value(value);
+    } else {
+        network_config->mtu = 1500;
+    }
+
+    if(network_config->mtu < 64 || network_config->mtu > 9000) {
+        fprintf(stderr, "JSON config error: Invalid value for network->mtu\n");
+        return false;
+    }
+
     value = json_object_get(network_interface, "gateway-resolve-wait");
     if (json_is_boolean(value)) {
         network_config->gateway_resolve_wait = json_boolean_value(value);
@@ -676,6 +688,69 @@ json_parse_a10nsp_interface(bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10nsp
         }
     }
 
+    return true;
+}
+
+static bool
+json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
+    json_t *value = NULL;
+    const char *s = NULL;    
+    
+    ctx->tcp = true;
+
+    if (json_unpack(bgp, "{s:s}", "source-ipv4-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_src_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->source-ipv4-address\n");
+            return false;
+        }
+        add_secondary_ipv4(ctx, bgp_config->ipv4_src_address);
+    }
+
+    if (json_unpack(bgp, "{s:s}", "destination-ipv4-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_dst_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->destination-ipv4-address\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for bgp->destination-ipv4-address\n");
+        return false;   
+    }
+
+    value = json_object_get(bgp, "local-as");
+    if (value) {
+        bgp_config->local_as = json_number_value(value);
+    } else {
+        bgp_config->local_as = BGP_DEFAULT_AS;
+    }
+
+    value = json_object_get(bgp, "peer-as");
+    if (value) {
+        bgp_config->peer_as = json_number_value(value);
+    } else {
+        bgp_config->peer_as = bgp_config->local_as;
+    }
+
+    value = json_object_get(bgp, "holdtime");
+    if (value) {
+        bgp_config->holdtime = json_number_value(value);
+    } else {
+        bgp_config->holdtime = BGP_DEFAULT_HOLDTIME;
+    }
+
+    bgp_config->id = htobe32(0x01020304);
+    if (json_unpack(bgp, "{s:s}", "id", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->id)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->id\n");
+            return false;
+        }
+    } else {
+
+    }
+
+
+    if (json_unpack(bgp, "{s:s}", "mrt-file", &s) == 0) {
+        bgp_config->mrt_file = strdup(s);
+    }
     return true;
 }
 
@@ -1181,6 +1256,7 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
     bbl_access_config_s         *access_config          = NULL;
     bbl_a10nsp_config_s         *a10nsp_config          = NULL;
 
+    bgp_config_t                *bgp_config             = NULL;
     isis_config_t               *isis_config            = NULL;
 
     if (json_typeof(root) != JSON_OBJECT) {
@@ -1578,6 +1654,34 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "dsl-type");
         if (json_is_number(value)) {
             ctx->config.dsl_type = json_number_value(value);
+        }
+    }
+
+    /* BGP Configuration */
+    sub = json_object_get(root, "bgp");
+    if (json_is_array(sub)) {
+        /* Config is provided as array (multiple bgp sessions) */
+        size = json_array_size(sub);
+        for (i = 0; i < size; i++) {
+            if (!bgp_config) {
+                ctx->config.bgp_config = calloc(1, sizeof(bgp_config_t));
+                bgp_config = ctx->config.bgp_config;
+            } else {
+                bgp_config->next = calloc(1, sizeof(bgp_config_t));
+                bgp_config = bgp_config->next;
+            }
+            if (!json_parse_bgp_config(ctx, json_array_get(sub, i), bgp_config)) {
+                return false;
+            }
+        }
+    } else if (json_is_object(sub)) {
+        /* Config is provided as object (single bgp session) */
+        bgp_config = calloc(1, sizeof(bgp_config_t));
+        if (!ctx->config.bgp_config) {
+            ctx->config.bgp_config = bgp_config;
+        }
+        if (!json_parse_bgp_config(ctx, sub, bgp_config)) {
+            return false;
         }
     }
 

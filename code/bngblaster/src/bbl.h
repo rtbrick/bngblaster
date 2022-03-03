@@ -30,6 +30,7 @@
 #include "bbl_def.h"
 
 #include "bbl_protocols.h"
+#include "bgp/bgp_def.h"
 #include "isis/isis_def.h"
 
 #include "bbl_stats.h"
@@ -43,6 +44,7 @@
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
 #include "bbl_tcp.h"
+#include "bgp/bgp.h"
 #include "isis/isis.h"
 
 WINDOW *log_win;

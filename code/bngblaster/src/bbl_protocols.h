@@ -676,6 +676,16 @@ typedef struct bbl_udp_ {
 } bbl_udp_t;
 
 /*
+ * TCP Structure
+ */
+typedef struct bbl_tcp_ {
+    uint16_t    src;
+    uint16_t    dst;
+    uint16_t    len; /* TCP total length */
+    uint8_t    *hdr; /* TCP header start */
+} bbl_tcp_t;
+
+/*
  * IGMP Structure
  */
 typedef struct bbl_igmp_group_record_ {
