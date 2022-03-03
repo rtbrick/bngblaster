@@ -86,6 +86,7 @@ typedef struct bbl_interface_
     uint16_t mc_packet_cursor;
 
     struct netif netif; /* LwIP network interface */
+    dict *tcp_connections; /* hashtable for tcp_connections */
 
     isis_adjacency_p2p_t *isis_adjacency_p2p;
     isis_adjacency_t     *isis_adjacency[ISIS_LEVELS];

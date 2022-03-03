@@ -87,7 +87,8 @@ typedef struct bbl_network_config_
     uint8_t gateway_mac[ETH_ADDR_LEN];
     bool gateway_resolve_wait;
     uint16_t vlan;
-
+    uint16_t mtu;
+    
     ipv4_prefix ip;
     ipv4addr_t gateway;
 

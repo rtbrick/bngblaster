@@ -564,6 +564,15 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    /* Init TCP. */
+    bbl_tcp_init(ctx);
+
+    /* Init BGP sessions. */
+    if(!bgp_init(ctx)) {
+        fprintf(stderr, "Error: Failed to init BGP\n");
+        exit(1);
+    }
+
     /* Start curses. */
     if (interactive) {
         bbl_init_curses(ctx);

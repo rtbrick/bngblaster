@@ -173,5 +173,6 @@ typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
 typedef struct bbl_stream_thread_ bbl_stream_thread;
 typedef struct bbl_stream_config_ bbl_stream_config;
 typedef struct bbl_stream_ bbl_stream;
+typedef struct bbl_tcp_ctx_ bbl_tcp_ctx_t;
 
 #endif

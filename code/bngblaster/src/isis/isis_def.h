@@ -185,7 +185,7 @@ typedef struct isis_external_connection_ {
 } isis_external_connection_t;
 
 /*
- * IS-IS Instance
+ * IS-IS Instance Configuration
  */
 typedef struct isis_config_ {
 

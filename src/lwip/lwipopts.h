@@ -153,7 +153,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_MAXRTX              12
 
 /* Maximum number of retransmissions of SYN segments. */
-#define TCP_SYNMAXRTX           4
+#define TCP_SYNMAXRTX           12
 
 #define TCP_LISTEN_BACKLOG      1
 #define LWIP_CALLBACK_API       1
