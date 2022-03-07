@@ -43,18 +43,20 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len) {
 
     UNUSED(buf);
     UNUSED(len);
+    UNUSED(session);
 
-    if(session->state == BGP_CONNECT) {
-        bgp_message_open(session);
-        bbl_tcp_send(session->tcpc, session->write_buf, session->write_idx);
-        bgp_state_change(session, BGP_OPENSENT);
-    }
+    switch(session->state) {
+        case BGP_IDLE:
+            bgp_state_change(session, BGP_CONNECT);
+            break;
+        default:
+            break;
+    }   
 }
 
-void
-bgp_connect_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
-    if(!session->interface->arp_resolved) {
+static void
+bgp_idle(bgp_session_t *session) {
+    if(!session->interface->arp_resolved || session->tcpc) {
         return;
     }
 
@@ -71,11 +73,29 @@ bgp_connect_job(timer_s *timer) {
 
     session->tcpc->arg = session;
     session->tcpc->receive_cb = bgp_receive_cb;
-    
-    bgp_state_change(session, BGP_CONNECT);
+}
 
-    /* Stop timer... */
-    timer->periodic = false;
+static void
+bgp_connect(bgp_session_t *session) {
+    bgp_message_open(session);
+    bbl_tcp_send(session->tcpc, session->write_buf, session->write_idx);
+    bgp_state_change(session, BGP_OPENSENT);
+}
+
+void
+bgp_state_job(timer_s *timer) {
+    bgp_session_t *session = timer->data;
+
+    switch(session->state) {
+        case BGP_IDLE:
+            bgp_idle(session);
+            break;
+        case BGP_CONNECT:
+            bgp_connect(session);
+            break;
+        default:
+            break;
+    }
 }
 
 /**
@@ -123,8 +143,8 @@ bgp_init(bbl_ctx_s *ctx) {
         session->write_buf = malloc(BGP_WRITEBUFSIZE);
         session->write_idx = 0;
 
-        timer_add(&ctx->timer_root, &session->connect_timer, 
-                  "BGP CONNECT", 1, 0, session, &bgp_connect_job);
+        timer_add_periodic(&ctx->timer_root, &session->state_timer, 
+                           "BGP STATE", 1, 0, session, &bgp_state_job);
         
         config = config->next;
     }
