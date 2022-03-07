@@ -62,12 +62,7 @@ typedef struct bgp_session_ {
     bbl_interface_s *interface;
     bbl_tcp_ctx_t   *tcpc;
 
-    struct timer_ *connect_timer;
-    struct timer_ *send_open_timer;
-    struct timer_ *open_sent_timer;
-    struct timer_ *keepalive_timer;
-    struct timer_ *hold_timer;
-    struct timer_ *close_timer;
+    struct timer_ *state_timer;
 
     uint8_t *write_buf;
     uint16_t write_idx;

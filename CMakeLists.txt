@@ -36,13 +36,13 @@ string(APPEND CMAKE_C_FLAGS "-pthread")
 # add LwIP
 
 set(LWIP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/lwip)
-set(LWIP_DEFINITIONS LWIP_DEBUG=1)
+set(LWIP_DEFINITIONS LWIP_DEBUG=0)
 set(LWIP_DEFINITIONS LWIP_TCPIP_CORE_LOCKING=1)
 set(LWIP_DEFINITIONS LWIP_DONT_PROVIDE_BYTEORDER_FUNCTIONS=1)
 
 include(${LWIP_DIR}/contrib/ports/CMakeCommon.cmake)
 set(LWIP_INCLUDE_DIRS
-    "src/lwip"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lwip"
     "${LWIP_DIR}/src/include"
     "${LWIP_DIR}/contrib/"
     "${LWIP_DIR}/contrib/ports/unix/port/include"
