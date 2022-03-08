@@ -27,6 +27,10 @@ for early review or help.
 Please use the directory structure of the repository and 
 strictly use snake_case (underscore_separated) in filenames.
 
+Common code used by BNG Blaster and tools like LSPGEN is stored
+in the directory common. This includes the timer, logging and utility 
+functions. 
+
 ### Indentation
 
 Our standard indentation is 4 spaces per level. Most editors 
