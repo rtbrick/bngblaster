@@ -8,9 +8,6 @@ project(bngblaster LANGUAGES C VERSION 0.0.0)
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
 option(BNGBLASTER_NETMAP "Build with netmap support" OFF)
 
-configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in"
-                "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
-
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -22,52 +19,17 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-FILE(GLOB BBL_SOURCES src/*.c src/isis/*.c)
-list(SORT BBL_SOURCES)
-# Deterministic randomness for symbol name creation
-foreach(_file ${BBL_SOURCES})
-    file(SHA1 ${_file} checksum)
-    string(SUBSTRING ${checksum} 0 8 checksum)
-    set_property(SOURCE ${_file} APPEND_STRING PROPERTY COMPILE_FLAGS "-frandom-seed=0x${checksum}")
-endforeach()
-add_executable(bngblaster ${BBL_SOURCES})
-
-# libdict will be statically linked
-find_library(libdict NAMES libdict.a REQUIRED)
-
-set(CURSES_NEED_NCURSES TRUE)
-include(FindCurses)
-target_link_libraries(bngblaster ${CURSES_LIBRARIES} crypto jansson ${libdict} m)
-
-set(PLATFORM_SPECIFIC_LIBS "-lpthread")
-string(APPEND CMAKE_C_FLAGS "-pthread")
-
-
-# add experimental netmap support
-if(BNGBLASTER_NETMAP)
-    add_definitions(-DBNGBLASTER_NETMAP)
-    target_link_libraries(bngblaster netmap)
-endif()
-
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
-    target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-endif()
-target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -m64 -mtune=generic)
-set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-
-# Build tests only if required
-if(BNGBLASTER_TESTS)
-    message("Build Tests")
-    enable_testing()
-    add_subdirectory(test)
-endif()
-
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "..." FORCE)
 endif()
 
-install(TARGETS bngblaster DESTINATION sbin)
-install(PROGRAMS bngblaster-cli DESTINATION sbin)
+# libdict will be statically linked
+find_library(libdict NAMES libdict.a REQUIRED)
+
+if(BNGBLASTER_TESTS)
+    include(CTest)
+endif()
+add_subdirectory(code)
 
 set(CPACK_GENERATOR "DEB")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")
