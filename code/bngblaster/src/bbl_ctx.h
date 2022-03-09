@@ -310,13 +310,13 @@ typedef struct bbl_ctx_
 int
 bbl_compare_key32 (void *key1, void *key2);
 
-uint
+uint32_t
 bbl_key32_hash(const void* k);
 
 int
 bbl_compare_key64(void *key1, void *key2);
 
-uint
+uint32_t
 bbl_key64_hash(const void* k);
 
 bbl_ctx_s *

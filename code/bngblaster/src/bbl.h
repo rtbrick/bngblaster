@@ -19,6 +19,12 @@
 
 #include <common_include.h>
 
+/* LwIP */
+#include "lwip/timeouts.h"
+#include "lwip/init.h"
+#include "lwip/tcp.h"
+#include "lwip/api.h"
+
 /* Experimental NETMAP Support */
 #ifdef BNGBLASTER_NETMAP
 #define LIBNETMAP_NOTHREADSAFE

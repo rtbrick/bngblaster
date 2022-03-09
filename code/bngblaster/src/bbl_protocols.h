@@ -59,6 +59,7 @@
 #define IPV4_MF                         0x2000 /* more fragments flag */
 #define IPV4_OFFMASK                    0x1fff /* mask for fragmenting bits */
 
+#define IPV6_HDR_LEN                    40
 #define IPV6_IDENTIFER_LEN              8
 
 #define PPPOE_TAG_SERVICE_NAME          0x0101
