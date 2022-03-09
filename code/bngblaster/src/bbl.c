@@ -188,6 +188,9 @@ struct keyval_ log_names[] = {
     { L2TP,          "l2tp" },
     { DHCP,          "dhcp" },
     { ISIS,          "isis" },
+    { BGP,           "bgp" },
+    { TCP,           "tcp" },
+    { TCP_DETAIL,    "tcp-detail" },
     { 0, NULL}
 };
 

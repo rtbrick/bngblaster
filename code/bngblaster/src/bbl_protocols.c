@@ -1917,7 +1917,7 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
         case ETH_TYPE_IPV6:
             return encode_ipv6(buf, len, (bbl_ipv6_t*)eth->next);
         case ETH_TYPE_CFM:
-            return encode_cfm(buf, len, (bbl_cfm_t*)eth->next);            
+            return encode_cfm(buf, len, (bbl_cfm_t*)eth->next);
         default:
             return UNKNOWN_PROTOCOL;
     }
@@ -2582,7 +2582,6 @@ decode_tcp(uint8_t *buf, uint16_t len,
     *_tcp = tcp;
     return ret_val;
 }
-
 
 /*
  * decode_ipv6
