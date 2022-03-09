@@ -263,6 +263,13 @@ the ISIS common header starting with `0x83`,
 }
 ```
 
+## LSPGEN
+
+The BNG Blaster includes a tool called `lspgen` which is able to generate
+link state packets and topologies for export as MRT and PCAP files or directly
+injected via BNG Blaster LSP update command. This tool is detailed explained
+in the chapter [LSPGEN](lspgen) of this documentation.
+
 ## LSP Update via Scapy 
 
 The following example shows how to generate LSP's via Scapy 
