@@ -6,7 +6,7 @@
  * Netmap is a an framework for very fast packet I/O from userspace.
  * https://github.com/luigirizzo/netmap
  *
- * Copyright (C) 2020-2021, RtBrick, Inc.
+ * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
