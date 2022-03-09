@@ -177,8 +177,13 @@ Attribute | Description | Default
 `vlan` | Network interface VLAN | 0 (untagged)
 `gateway-mac`| Optional set gateway MAC address manually
 `gateway-resolve-wait` | Sessions will not start until gateways are resolved | true
+`isis-instance-id` | Assign interface to ISIS instance | -
+`isis-level` | ISIS interface level | 3
+`isis-p2p` | ISIS P2P interface | true
+`isis-l1-metric` | ISIS level 1 interface metric | 10
+`isis-l2-metric` | ISIS level 2 interface metric | 10
 
-The BNG Blaster supports also multiple access interfaces
+The BNG Blaster supports also multiple network interfaces
 or VLAN ranges as shown in the example below.
 
 ```json
@@ -608,17 +613,6 @@ signatures for faster processing and more detailed analysis.
 If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1 and group-count 3 the result are the following
 three groups (S.G) 1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.
 
-## Session-Traffic
-
-This section describes all attributes of the `session-traffic` hierarchy.
-
-Attribute | Description | Default
---------- | ----------- | -------
-`autostart` | Automatically start session traffic after session is established | true
-`ipv4-pps` | Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses | 0 (disabled)
-`ipv6-pps` | Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses | 0 (disabled)
-`ipv6pd-pps` | Generate bidirectional Ipv6 traffic between network interface and all session delegated IPv6 addresses | 0 (disabled)
-
 ## L2TP Server (LNS)
 
 This section describes all attributes of the `l2tp-server` (LNS) hierarchy
@@ -673,6 +667,25 @@ is described in RFC2661 appendix A (Control Channel Slow Start and
 Congestion Avoidance). The mode `slow` uses a fixed control window
 size of 1 where `aggressive` sticks to max permitted based on peer
 received window size.
+
+## Traffic
+
+This section describes all attributes of the `traffic` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`autostart` | Automatically start traffic | true
+
+## Session Traffic
+
+This section describes all attributes of the `session-traffic` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`autostart` | Automatically start session traffic after session is established | true
+`ipv4-pps` | Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses | 0 (disabled)
+`ipv6-pps` | Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses | 0 (disabled)
+`ipv6pd-pps` | Generate bidirectional Ipv6 traffic between network interface and all session delegated IPv6 addresses | 0 (disabled)
 
 ## Traffic Streams
 
@@ -818,6 +831,86 @@ here.
             "ont-onu-ass-up": 40000,
             "pon-max-up": 1000000,
             "pon-max-down": 2400000
+        }
+    ]
+}
+```
+
+## ISIS
+
+This section describes all attributes of the `isis` hierarchy.
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`instance-id` | ISIS instance identifier |
+`level` | ISIS level | 3 
+`overload` | ISIS overload | false
+`protocol-ipv4` | Enable/disable IPv4 | true
+`protocol-ipv6` | Enable/disable IPv6 | true
+`level1-auth-key` | ISIS level 1 authentication key | 
+`level1-auth-type` | ISIS level 1 authentication type (simple or md5) | disabled
+`level2-auth-key` | ISIS level 2 authentication key |
+`level2-auth-type` | ISIS level 2 authentication type (simple or md5) | disabled
+`hello-interval` | ISIS hello interval in seconds | 10
+`hello-padding` | ISIS hello padding | false
+`holding-time` | ISIS holding time in seconds | 30
+`lsp-lifetime` | ISIS LSP lifetime in seconds | 65535
+`lsp-refresh-interval` | ISIS LSP refresh interval in seconds | 300
+`lsp-retry-interval` | ISIS LSP retry interval in seconds | 5
+`lsp-tx-interval` | ISIS LSP TX interval in ms (time between LSP send windows) | 10 
+`lsp-tx-window-size` | ISIS LSP TX window size (LSP send per window) | 1 
+`csnp-interval` | ISIS CSNP interval in seconds | 30
+`hostname` | ISIS hostname | bngblaster
+`router-id` | ISIS router identifier | 10.10.10.10
+`system-id` | ISIS system identifier | 0100.1001.0010
+`area` | ISIS area(s) | 49.0001/24
+`sr-base` | ISIS SR base |
+`sr-range` | ISIS SR range |
+`sr-node-sid` | ISIS SR node SID |
+`teardown-time` | ISIS teardown time in seconds | 5
+
+### ISIS External
+
+The BNG Blaster allows to inject LSP's via MRT files as defined in 
+[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396). Details
+to MRT files can be found in [ISIS](isis).
+
+`"isis": { "external": { ... } }`
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`mrt-file` | ISIS MRT file | 
+
+It is also possible to define external connections as required
+to connect the ISIS instance with the link state graph in the MTR 
+file.
+
+`"isis": { "external": { "connections": [] } }`
+
+Attribute | Description | Default
+--------- | ----------- | -------
+`system-id` | ISIS system identifier | 
+`l1-metric` | ISIS level 1 interface metric | 10
+`l2-metric` | ISIS level 2 interface metric | 10
+
+```json
+{
+    "isis": [
+        {
+            "instance-id": 1,
+            "system-id": "0100.1001.0010",
+            "router-id": "10.10.10.10",
+            "hostname": "R1",
+            "external": {
+                "mrt-file": "test.mrt",
+                "connections": [
+                    {
+                        "system-id": "0000.0000.0001",
+                        "l1-metric": 1000,
+                        "l2-metric": 2000
+                    }
+                ]
+            }
         }
     ]
 }
