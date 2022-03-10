@@ -18,7 +18,6 @@ typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_CONNECT,
     BBL_TCP_STATE_IDLE,
     BBL_TCP_STATE_SEND,
-    BBL_TCP_STATE_RECEIVE,
     BBL_TCP_STATE_CLOSING,
     BBL_TCP_STATE_CLOSED,
 } bbl_tcp_state_t;
@@ -59,8 +58,8 @@ typedef struct bbl_tcp_ctx_
     
     struct {
         uint8_t *buf;
-        size_t   len;
-        size_t   offset;
+        uint32_t len;
+        uint32_t offset;
     } tx;
 
     uint64_t packets_rx;
@@ -83,7 +82,7 @@ void
 bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6);
 
 err_t
-bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint16_t len);
+bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len);
 
 bool
 bbl_tcp_interface_init(bbl_interface_s *interface, bbl_network_config_s *network_config);

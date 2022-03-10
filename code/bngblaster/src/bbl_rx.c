@@ -1899,6 +1899,10 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                 interface->stats.icmp_rx++;
                 bbl_rx_network_icmp(eth, ipv4, interface);
                 return;
+            } else if(ipv4->protocol == PROTOCOL_IPV4_TCP) {
+                interface->stats.tcp_rx++;
+                bbl_tcp_ipv4_rx(interface, eth, ipv4);
+                return;
             }
             break;
         case ETH_TYPE_IPV6:

@@ -54,6 +54,8 @@ bgp_message_open(bgp_session_t *session) {
     uint8_t *buf = session->write_buf;
     uint16_t cap_len;
 
+    session->write_idx = 0;
+
     memset(buf, 16, 0xff); /* marker */
     BUMP_WRITE_BUFFER(buf, &session->write_idx, 16);
     *(uint16_t*)buf = 0; /* length */
@@ -98,5 +100,6 @@ bgp_message_open(bgp_session_t *session) {
     *(session->write_buf+opt_parms_idx-1) = opt_parms_length;
 
     /* Update message length field */
+    LOG(BGP, "DEEEBUG: %u\n", session->write_idx);
     *(uint16_t*)(session->write_buf+16) = htobe16(session->write_idx);
 }

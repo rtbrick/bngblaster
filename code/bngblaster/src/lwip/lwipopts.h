@@ -11,7 +11,6 @@
 
 #define LWIP_DBG_MIN_LEVEL  0
 #define LWIP_COMPAT_SOCKETS 1
-
 #define TAPIF_DEBUG      LWIP_DBG_OFF
 #define TUNIF_DEBUG      LWIP_DBG_OFF
 #define UNIXIF_DEBUG     LWIP_DBG_OFF
@@ -192,6 +191,6 @@ a lot of data that needs to be copied, this should be set high. */
  * (e.g #define TCP_STATS 0). All of them are turned off if LWIP_STATS
  * is 0
  * */
-#define LWIP_STATS	1
+#define LWIP_STATS	0
 
 #endif /* __LWIPOPTS_H__ */

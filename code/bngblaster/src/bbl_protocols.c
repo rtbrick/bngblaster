@@ -1896,13 +1896,17 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
         *(uint16_t*)buf = htobe16(eth->type);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
-
-    if(eth->next && eth->next_len) {
-        /* RAW ethernet packet */
-        memcpy(buf, eth->next, eth->next_len);
-        BUMP_WRITE_BUFFER(buf, len, eth->next_len);
+#ifdef BNGBLASTER_LWIP
+    if(eth->lwip) {
+        struct pbuf *p = eth->next; 
+        while(p) {
+            memcpy(buf, p->payload, p->len);
+            BUMP_WRITE_BUFFER(buf, len, p->len);
+            p = p->next;
+        }
         return PROTOCOL_SUCCESS;
     }
+#endif
 
     /* Add protocol header */
     switch(eth->type) {
