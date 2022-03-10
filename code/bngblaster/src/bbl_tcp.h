@@ -10,6 +10,9 @@
 #ifndef __BBL_TCP_H__
 #define __BBL_TCP_H__
 
+#include "bbl.h"
+#include "lwip/priv/tcp_priv.h"
+
 #define BBL_TCP_BUF_SIZE 65000
 #define BBL_TCP_INTERVAL 250*MSEC
 #define BBL_TCP_HASHTABLE_SIZE 32771
@@ -22,6 +25,7 @@ typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_CLOSED,
 } bbl_tcp_state_t;
 
+typedef void (*bbl_tcp_connected_fn)(void *arg);
 typedef void (*bbl_tcp_receive_fn)(void *arg, uint8_t *buf, uint16_t len);
 typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);
 typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
@@ -45,9 +49,11 @@ typedef struct bbl_tcp_ctx_
     ipv6addr_t remote_ipv6;
     
     struct tcp_pcb *pcb;
-    
+
+    bbl_tcp_connected_fn connected_cb; /* application connected callback */
+
     bbl_tcp_receive_fn receive_cb; /* application receive callback */
-    bbl_tcp_error_fn error_cb; /* application receive callback */
+    bbl_tcp_error_fn error_cb; /* application error callback */
 
     bbl_tcp_poll_fn poll_cb; /* application poll callback */
     uint8_t poll_interval;
@@ -68,6 +74,9 @@ typedef struct bbl_tcp_ctx_
     uint64_t bytes_tx;
 
 } bbl_tcp_ctx_t;
+
+void
+bbl_tcp_close(bbl_tcp_ctx_t *tcpc);
 
 bbl_tcp_ctx_t *
 bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);

@@ -10,6 +10,6 @@
 #define __BBL_BGP_MESSAGE_H__
 
 void
-bgp_message_open(bgp_session_t *session);
+bgp_push_open_message(bgp_session_t *session);
 
 #endif
