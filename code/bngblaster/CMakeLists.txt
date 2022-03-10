@@ -20,6 +20,7 @@ include(FindCurses)
 target_link_libraries(bngblaster ${CURSES_LIBRARIES} crypto jansson ${libdict} m)
 
 # Add LwIP support
+add_definitions(-DBNGBLASTER_LWIP)
 
 set(LWIP_DEFINITIONS LWIP_DEBUG=0)
 set(LWIP_DEFINITIONS LWIP_TCPIP_CORE_LOCKING=1)

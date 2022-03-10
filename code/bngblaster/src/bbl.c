@@ -639,13 +639,13 @@ main(int argc, char *argv[])
         if(!(ctx->l2tp_tunnels || ctx->routing_sessions)) {
             if(ctx->sessions) {
                 /* With sessions, wait for all sessions
-                * to be terminated. */
+                 * to be terminated. */
                 if(ctx->sessions_terminated >= ctx->sessions && ctx->l2tp_tunnels == 0) {
                     break;
                 }
             } else {
                 /* Without sessions, we can stop immediately
-                * as soon as teardown was requested. */
+                 * as soon as teardown was requested. */
                 if(g_teardown) {
                     break;
                 }

@@ -51,7 +51,8 @@ bbl_tcp_ctx_new(bbl_interface_s *interface) {
 err_t 
 bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
     bbl_tcp_ctx_t *tcpc = arg;
-    size_t tx = tpcb->snd_buf;
+    uint16_t tx = tpcb->snd_buf;
+    uint8_t flags = 0; /* no-copy (alternative TCP_WRITE_FLAG_COPY) */
 
     UNUSED(len);
 
@@ -60,10 +61,17 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
         if((tcpc->tx.offset + tx) > tcpc->tx.len) {
             tx = tcpc->tx.len - tcpc->tx.offset;
         }
-        if(tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, 0) == ERR_OK) {
+/* Enable the following code to suppress PSH flag 
+ * if buffer was not dequeued completely. 
+ *
+ * if((tcpc->tx.offset + tx) < tcpc->tx.len) {
+ *     flags |= TCP_WRITE_FLAG_MORE;
+ * }
+ */
+        if(tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, flags) == ERR_OK) {
             tcpc->tx.offset += tx;
             if(tcpc->af == AF_INET) {
-                LOG(TCP_DETAIL, "TCP %lu bytes send (%s %s:%u - %s:%u)\n",
+                LOG(TCP_DETAIL, "TCP %u bytes send (%s %s:%u - %s:%u)\n",
                     tx, tcpc->interface->name,
                     format_ipv4_address(&tcpc->local_ipv4), tcpc->key.local_port,
                     format_ipv4_address(&tcpc->remote_ipv4), tcpc->key.remote_port);
@@ -187,7 +195,10 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
     bbl_tcp_ctx_t *tcpc;
     dict_insert_result result;
 
-    if(!interface->ctx->tcp) return NULL;
+    if(!interface->ctx->tcp) {
+        /* TCP not enabled! */
+        return NULL;
+    }
 
     tcpc = bbl_tcp_ctx_new(interface);
     if(!tcpc) {
@@ -243,7 +254,10 @@ bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4
 
     UNUSED(eth);
 
-    if(!interface->ctx->tcp) return;
+    if(!interface->ctx->tcp) {
+        /* TCP not enabled! */
+        return;
+    }
 
     LOG(TCP_DETAIL, "TCP packet received (%s %s:%u - %s:%u)\n",
         interface->name,
@@ -273,7 +287,10 @@ bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4
 bbl_tcp_ctx_t *
 bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port) {
 
-    if(!interface->ctx->tcp) return NULL;
+    if(!interface->ctx->tcp) {
+        /* TCP not enabled! */
+        return NULL;
+    }
 
     UNUSED(src);
     UNUSED(dst);
@@ -295,7 +312,10 @@ bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6
 
     UNUSED(eth);
 
-    if(!interface->ctx->tcp) return;
+    if(!interface->ctx->tcp) {
+        /* TCP not enabled! */
+        return;
+    }
 
     LOG(TCP_DETAIL, "TCP packet received (%s %s:%u - %s:%u)\n",
         interface->name,
@@ -315,7 +335,7 @@ bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6
  * @return ERR_OK if successfull
  */
 err_t
-bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint16_t len) {
+bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len) {
 
     if(tcpc->tx.offset < tcpc->tx.len) {
         /* There is still data to send */
@@ -339,22 +359,18 @@ err_t
 bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t *ipaddr) {
     bbl_interface_s *interface = netif->state;
     bbl_ethernet_header_t eth = {0};
-
     UNUSED(ipaddr);
 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
     eth.type = ETH_TYPE_IPV4;
-    while(p) {
-        eth.next = p->payload;
-        eth.next_len = p->len;
-        if(bbl_send_to_buffer(interface, &eth) != BBL_SEND_OK) {
-            return ERR_IF;
-        }
-        interface->stats.tcp_tx++;
-        p = p->next;
+    eth.lwip = true;
+    eth.next = p;
+    if(bbl_send_to_buffer(interface, &eth) != BBL_SEND_OK) {
+        return ERR_IF;
     }
+    interface->stats.tcp_tx++;
     return ERR_OK;
 }
 
@@ -366,22 +382,18 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     bbl_tcp_ctx_t *tcpc = netif->state;
     bbl_interface_s *interface = tcpc->interface;
     bbl_ethernet_header_t eth = {0};
-
     UNUSED(ipaddr);
 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
     eth.type = ETH_TYPE_IPV6;
-    while(p) {
-        eth.next = p->payload;
-        eth.next_len = p->len;
-        if(bbl_send_to_buffer(interface, &eth) != BBL_SEND_OK) {
-            return ERR_IF;
-        }
-        interface->stats.tcp_tx++;
-        p = p->next;
+    eth.lwip = true;
+    eth.next = p;
+    if(bbl_send_to_buffer(interface, &eth) != BBL_SEND_OK) {
+        return ERR_IF;
     }
+    interface->stats.tcp_tx++;
     return ERR_OK;
 }
 
@@ -438,7 +450,10 @@ bbl_tcp_timer(timer_s *timer) {
 void
 bbl_tcp_init(bbl_ctx_s *ctx) {
 
-    if(!ctx->tcp) return;
+    if(!ctx->tcp) {
+        /* TCP not enabled! */
+        return;
+    }
 
     lwip_init();
 

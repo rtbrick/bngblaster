@@ -495,6 +495,7 @@ typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; /* destination MAC address */
     uint8_t  *src; /* source MAC address */
 
+    bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
     uint16_t  vlan_outer; /* outer VLAN identifier */
     uint16_t  vlan_inner; /* inner VLAN identifier */
@@ -506,7 +507,7 @@ typedef struct bbl_ethernet_header_ {
 
     bbl_mpls_t *mpls; /* MPLS */
     void       *next; /* next header */
-    uint16_t    next_len; /* only used for raw packets */
+
     struct timespec timestamp; /* receive timestamp */
 } bbl_ethernet_header_t;
 

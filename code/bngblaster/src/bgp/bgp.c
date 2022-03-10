@@ -77,8 +77,10 @@ bgp_idle(bgp_session_t *session) {
 
 static void
 bgp_connect(bgp_session_t *session) {
-    bgp_message_open(session);
-    bbl_tcp_send(session->tcpc, session->write_buf, session->write_idx);
+    //bgp_message_open(session);
+    static uint8_t tmp[] = {0x00, 0x01, 0x02, 0x03};
+
+    bbl_tcp_send(session->tcpc, tmp, sizeof(tmp));
     bgp_state_change(session, BGP_OPENSENT);
 }
 
