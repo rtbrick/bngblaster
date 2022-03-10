@@ -7,21 +7,26 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bgp.h"
+extern bool g_init_phase;
+extern volatile bool g_teardown;
 
-static const char *
-bgp_state_string(uint32_t state) {
-    switch(state) {
-        case BGP_IDLE: return "Idle";
-        case BGP_CONNECT: return "Connect";
-        case BGP_ACTIVE: return "Active";
-        case BGP_OPENSENT: return "OpenSent";
-        case BGP_OPENCONFIRM: return "OpenConfirm";
-        case BGP_ESTABLISHED: return "Established";
-        default: return "N/A";
-    }
-}
+struct keyval_ bgp_fsm_state_names[] = {
+    { BGP_CLOSED,       "closed" },
+    { BGP_IDLE,         "idle" },
+    { BGP_CONNECT,      "connect" },
+    { BGP_ACTIVE,       "active" },
+    { BGP_OPENSENT,     "opensent" },
+    { BGP_OPENCONFIRM,  "openconfirm" },
+    { BGP_ESTABLISHED,  "established" },
+    { 0, NULL}
+};
 
-static void
+/**
+ * bgp_state_change
+ * 
+ * @param session BGP session
+ */
+void
 bgp_state_change(bgp_session_t *session, bgp_state_t new_state)
 {
     if (session->state == new_state) {
@@ -31,35 +36,95 @@ bgp_state_change(bgp_session_t *session, bgp_state_t new_state)
     LOG(BGP, "BGP %s:%s state change from %s -> %s\n", 
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address),
-        bgp_state_string(session->state),
-        bgp_state_string(new_state));
+        keyval_get_key(bgp_fsm_state_names, session->state),
+        keyval_get_key(bgp_fsm_state_names, new_state));
 
     session->state = new_state;
 }
 
+/**
+ * bgp_send
+ * 
+ * @param session BGP session
+ */
+err_t
+bgp_send(bgp_session_t *session) {
+    return bbl_tcp_send(session->tcpc, session->write_buf.data, session->write_buf.idx);
+}
+
 void 
-bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len) {
+bgp_connected_cb(void *arg) {
     bgp_session_t *session = (bgp_session_t*)arg;
+    bgp_push_open_message(session);
+    bgp_send(session);
+    bgp_state_change(session, BGP_OPENSENT);
+}
 
-    UNUSED(buf);
-    UNUSED(len);
-    UNUSED(session);
+static void
+bgp_reset_read_buffer(bgp_session_t *session) {
+    session->read_buf.idx = 0;
+    session->read_buf.start_idx = 0;
+}
 
-    switch(session->state) {
-        case BGP_IDLE:
-            bgp_state_change(session, BGP_CONNECT);
-            break;
-        default:
-            break;
-    }   
+static void
+bgp_reset_write_buffer(bgp_session_t *session) {
+    session->write_buf.idx = 0;
+    session->write_buf.start_idx = 0;
+}
+
+/**
+ * bgp_session_connect
+ * 
+ * @param session BGP session
+ */
+void
+bgp_session_connect(bgp_session_t *session) {
+    if(session->state == BGP_CLOSED) {
+        bgp_reset_read_buffer(session);
+        bgp_reset_write_buffer(session);
+        bgp_state_change(session, BGP_IDLE);
+    }
+}
+
+/**
+ * bgp_session_close
+ * 
+ * @param session BGP session
+ */
+void
+bgp_session_close(bgp_session_t *session) {
+    if(session->state > BGP_IDLE) {
+        bbl_tcp_close(session->tcpc);
+        session->tcpc = NULL;
+        session->peer.as = 0;
+        session->peer.id = 0;
+        session->peer.holdtime = 0;
+        timer_del(session->close_timer);
+    }
+    bgp_state_change(session, BGP_CLOSED);
+}
+
+void
+bgp_session_close_job(timer_s *timer) {
+    bgp_session_t *session = timer->data;
+    bgp_session_close(session);
+}
+
+/**
+ * bgp_restart_timeout
+ * 
+ * @param session BGP session
+ * @param timeout timeout in seconds
+ */
+void
+bgp_restart_timeout(bgp_session_t *session, time_t timeout) {
+    timer_add(&session->interface->ctx->timer_root, &session->close_timer, 
+              "BGP TIMEOUT", timeout, 0, session, &bgp_session_close_job);
 }
 
 static void
 bgp_idle(bgp_session_t *session) {
-    if(!session->interface->arp_resolved || session->tcpc) {
-        return;
-    }
-
+    /* Connect TCP session */
     session->tcpc = bbl_tcp_ipv4_connect(
         session->interface, 
         &session->ipv4_src_address,
@@ -72,28 +137,28 @@ bgp_idle(bgp_session_t *session) {
     }
 
     session->tcpc->arg = session;
+    session->tcpc->connected_cb = bgp_connected_cb;
     session->tcpc->receive_cb = bgp_receive_cb;
-}
-
-static void
-bgp_connect(bgp_session_t *session) {
-    //bgp_message_open(session);
-    static uint8_t tmp[] = {0x00, 0x01, 0x02, 0x03};
-
-    bbl_tcp_send(session->tcpc, tmp, sizeof(tmp));
-    bgp_state_change(session, BGP_OPENSENT);
+    bgp_state_change(session, BGP_CONNECT);
+    bgp_restart_timeout(session, 30);
 }
 
 void
 bgp_state_job(timer_s *timer) {
     bgp_session_t *session = timer->data;
 
+    if(g_init_phase) {
+        /* Wait for all network interfaces to be resolved */
+        return;
+    }
+    if(g_teardown) {
+        bgp_session_close(session);
+        return;
+    }
+
     switch(session->state) {
         case BGP_IDLE:
             bgp_idle(session);
-            break;
-        case BGP_CONNECT:
-            bgp_connect(session);
             break;
         default:
             break;
@@ -142,12 +207,19 @@ bgp_init(bbl_ctx_s *ctx) {
             session->ipv4_src_address = network_if->ip.address;
         }
         session->ipv4_dst_address = config->ipv4_dst_address;
-        session->write_buf = malloc(BGP_WRITEBUFSIZE);
-        session->write_idx = 0;
+        
+        /* Init read/write buffer */
+        session->read_buf.data = malloc(BGP_BUF_SIZE);
+        session->read_buf.size = BGP_BUF_SIZE;
+        session->write_buf.data = malloc(BGP_BUF_SIZE);
+        session->write_buf.size = BGP_BUF_SIZE;
 
+        /* Start state timer */
         timer_add_periodic(&ctx->timer_root, &session->state_timer, 
                            "BGP STATE", 1, 0, session, &bgp_state_job);
-        
+
+        bgp_session_connect(session);
+
         config = config->next;
     }
     return true;

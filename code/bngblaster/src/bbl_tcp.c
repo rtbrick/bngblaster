@@ -6,9 +6,7 @@
  * Copyright (C) 2020-2021, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
-#include "bbl.h"
-#include "lwip/priv/tcp_priv.h"
+#include "bbl_tcp.h"
 
 static void
 bbl_tcp_ctx_free(bbl_tcp_ctx_t *tcp) {
@@ -89,17 +87,18 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     UNUSED(err); /* TODO!!! */
 
     if(p) {
-        _p = p;
-        while(_p) {
-            if(tcpc->receive_cb) {
+        if(tcpc->receive_cb) {
+            _p = p;
+            while(_p) {
                 (tcpc->receive_cb)(tcpc->arg, p->payload, p->len);
+                _p = _p->next;
             }
-            _p = _p->next;
+            /* Signal application that read is finished. */
+            (tcpc->receive_cb)(tcpc->arg, NULL, 0);
         }
         tcpc->bytes_rx += p->tot_len;
         tcp_recved(tpcb, p->tot_len);
         pbuf_free(p);
-
         if(tcpc->af == AF_INET) {
             LOG(TCP_DETAIL, "TCP %u bytes received (%s %s:%u - %s:%u)\n",
                 p->tot_len, tcpc->interface->name,
@@ -176,8 +175,17 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
     }
 
     tcpc->state = BBL_TCP_STATE_IDLE;
+    if(tcpc->connected_cb) {
+        (tcpc->connected_cb)(tcpc->arg);
+    }
     bbl_tcp_sent_cb(tcpc, tpcb, 0);
     return ERR_OK;
+}
+
+void
+bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
+    dict_remove(tcpc->interface->tcp_connections, &tcpc->key);
+    bbl_tcp_ctx_free(tcpc);
 }
 
 /**
