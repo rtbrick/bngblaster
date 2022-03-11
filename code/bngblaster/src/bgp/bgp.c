@@ -27,8 +27,7 @@ struct keyval_ bgp_fsm_state_names[] = {
  * @param session BGP session
  */
 void
-bgp_state_change(bgp_session_t *session, bgp_state_t new_state)
-{
+bgp_state_change(bgp_session_t *session, bgp_state_t new_state) {
     if (session->state == new_state) {
 	    return;
     }
@@ -42,32 +41,17 @@ bgp_state_change(bgp_session_t *session, bgp_state_t new_state)
     session->state = new_state;
 }
 
-/**
- * bgp_send
- * 
- * @param session BGP session
- */
-err_t
-bgp_send(bgp_session_t *session) {
-    return bbl_tcp_send(session->tcpc, session->write_buf.data, session->write_buf.idx);
-}
-
-void 
-bgp_connected_cb(void *arg) {
-    bgp_session_t *session = (bgp_session_t*)arg;
-    bgp_push_open_message(session);
-    bgp_send(session);
-    bgp_state_change(session, BGP_OPENSENT);
-}
-
 static void
 bgp_reset_read_buffer(bgp_session_t *session) {
     session->read_buf.idx = 0;
     session->read_buf.start_idx = 0;
 }
 
-static void
+void
 bgp_reset_write_buffer(bgp_session_t *session) {
+    if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_SENDING) {
+        return;
+    }
     session->write_buf.idx = 0;
     session->write_buf.start_idx = 0;
 }
@@ -80,8 +64,15 @@ bgp_reset_write_buffer(bgp_session_t *session) {
 void
 bgp_session_connect(bgp_session_t *session) {
     if(session->state == BGP_CLOSED) {
+        bbl_tcp_ctx_free(session->tcpc);
+        session->tcpc = NULL;
         bgp_reset_read_buffer(session);
         bgp_reset_write_buffer(session);
+        session->peer.as = 0;
+        session->peer.id = 0;
+        session->peer.holdtime = 0;
+        session->stats.keepalive_rx = 0;
+        session->stats.update_rx = 0;
         bgp_state_change(session, BGP_IDLE);
     }
 }
@@ -95,18 +86,40 @@ void
 bgp_session_close(bgp_session_t *session) {
     if(session->state > BGP_IDLE) {
         bbl_tcp_close(session->tcpc);
-        session->tcpc = NULL;
-        session->peer.as = 0;
-        session->peer.id = 0;
-        session->peer.holdtime = 0;
+        timer_del(session->keepalive_timer);
         timer_del(session->close_timer);
     }
     bgp_state_change(session, BGP_CLOSED);
+    if(!g_teardown && session->config->reconnect) {
+        bgp_session_connect(session);
+    }
+}
+
+/**
+ * bgp_send
+ * 
+ * @param session BGP session
+ */
+bool
+bgp_send(bgp_session_t *session) {
+    bbl_tcp_ctx_t *tcpc = session->tcpc;
+    if(tcpc && tcpc->state == BBL_TCP_STATE_SENDING && 
+       tcpc->tx.buf == session->write_buf.data &&
+       tcpc->tx.len < session->write_buf.idx) {
+        tcpc->tx.len = session->write_buf.idx;
+        return true;
+    }
+    return bbl_tcp_send(session->tcpc, session->write_buf.data, session->write_buf.idx);
 }
 
 void
-bgp_session_close_job(timer_s *timer) {
+bgp_session_timeout_job(timer_s *timer) {
     bgp_session_t *session = timer->data;
+
+    LOG(BGP, "BGP %s:%s session timeout\n", 
+        format_ipv4_address(&session->ipv4_src_address),
+        format_ipv4_address(&session->ipv4_dst_address));
+
     bgp_session_close(session);
 }
 
@@ -119,28 +132,15 @@ bgp_session_close_job(timer_s *timer) {
 void
 bgp_restart_timeout(bgp_session_t *session, time_t timeout) {
     timer_add(&session->interface->ctx->timer_root, &session->close_timer, 
-              "BGP TIMEOUT", timeout, 0, session, &bgp_session_close_job);
+              "BGP TIMEOUT", timeout, 0, session, &bgp_session_timeout_job);
 }
 
-static void
-bgp_idle(bgp_session_t *session) {
-    /* Connect TCP session */
-    session->tcpc = bbl_tcp_ipv4_connect(
-        session->interface, 
-        &session->ipv4_src_address,
-        &session->ipv4_dst_address,
-        BGP_PORT);
-
-    if(!session->tcpc) {
-        /* Try again... */
-        return;
-    }
-
-    session->tcpc->arg = session;
-    session->tcpc->connected_cb = bgp_connected_cb;
-    session->tcpc->receive_cb = bgp_receive_cb;
-    bgp_state_change(session, BGP_CONNECT);
-    bgp_restart_timeout(session, 30);
+void 
+bgp_connected_cb(void *arg) {
+    bgp_session_t *session = (bgp_session_t*)arg;
+    bgp_push_open_message(session);
+    bgp_send(session);
+    bgp_state_change(session, BGP_OPENSENT);
 }
 
 void
@@ -155,13 +155,35 @@ bgp_state_job(timer_s *timer) {
         bgp_session_close(session);
         return;
     }
+    bgp_reset_write_buffer(session);
+    if(session->state == BGP_IDLE) {
+        /* Connect TCP session */
+        session->tcpc = bbl_tcp_ipv4_connect(
+            session->interface, 
+            &session->ipv4_src_address,
+            &session->ipv4_dst_address,
+            BGP_PORT);
 
-    switch(session->state) {
-        case BGP_IDLE:
-            bgp_idle(session);
-            break;
-        default:
-            break;
+        if(!session->tcpc) {
+            /* Try again... */
+            return;
+        }
+        session->tcpc->arg = session;
+        session->tcpc->connected_cb = bgp_connected_cb;
+        session->tcpc->receive_cb = bgp_receive_cb;
+        bgp_state_change(session, BGP_CONNECT);
+        bgp_restart_timeout(session, 30);
+    } if(session->state == BGP_ESTABLISHED) {
+        if(session->keepalive_countdown) {
+            session->keepalive_countdown--;
+        } else {
+            session->keepalive_countdown = 10;
+            if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
+                bgp_reset_write_buffer(session);
+                bgp_push_keepalive_message(session);
+                bgp_send(session);
+            }
+        }
     }
 }
 

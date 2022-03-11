@@ -12,6 +12,7 @@
 /* DEFINITIONS ... */
 
 #define BGP_PORT                179
+#define BGP_MIN_MESSAGE_SIZE    19
 #define BGP_MAX_MESSAGE_SIZE    4096
 #define BGP_BUF_SIZE            256*1024
 #define BGP_DEFAULT_AS          65000
@@ -43,6 +44,8 @@ typedef struct bgp_config_ {
     uint32_t peer_as;
     uint16_t holdtime;
 
+    bool reconnect;
+
     char *network_interface;
     char *mrt_file;
 
@@ -64,12 +67,14 @@ typedef struct bgp_session_ {
     bbl_tcp_ctx_t   *tcpc;
 
     struct timer_ *state_timer;
+    struct timer_ *keepalive_timer;
     struct timer_ *close_timer;
 
     io_buffer_t read_buf;
     io_buffer_t write_buf;
 
     bgp_state_t state;
+    uint16_t keepalive_countdown;
 
     struct {
         uint32_t as;

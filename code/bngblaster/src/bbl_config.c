@@ -743,10 +743,14 @@ json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
             fprintf(stderr, "JSON config error: Invalid value for bgp->id\n");
             return false;
         }
+    } 
+
+    value = json_object_get(bgp, "reconnect");
+    if (json_is_boolean(value)) {
+        bgp_config->reconnect = json_boolean_value(value);
     } else {
-
+        bgp_config->reconnect = true;
     }
-
 
     if (json_unpack(bgp, "{s:s}", "mrt-file", &s) == 0) {
         bgp_config->mrt_file = strdup(s);

@@ -83,8 +83,9 @@ bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
         format_ipv4_address(&session->ipv4_dst_address),
         session->peer.as, session->peer.holdtime);
 
-    //bgp_push_keepalive_message(session);
-    //bgp_send(session);
+    bgp_reset_write_buffer(session);
+    bgp_push_keepalive_message(session);
+    bgp_send(session);
     bgp_state_change(session, BGP_OPENCONFIRM);
     return;
 
@@ -212,7 +213,7 @@ bpg_read(bgp_session_t *session) {
                 return;
             case BGP_MSG_KEEPALIVE:
                 session->stats.keepalive_rx++;
-                bgp_state_change(session, ESTABLISHED);
+                bgp_state_change(session, BGP_ESTABLISHED);
                 /* reset hold timer */
                 if (session->peer.holdtime) {
                     bgp_restart_timeout(session, session->peer.holdtime);

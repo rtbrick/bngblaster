@@ -7,14 +7,40 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl_tcp.h"
+#ifndef BNGBLASTER_TCP_DEBUG
+#define BNGBLASTER_TCP_DEBUG 1
+#endif
 
-static void
-bbl_tcp_ctx_free(bbl_tcp_ctx_t *tcp) {
-    if(tcp) {
-        if(tcp->pcb) {
-            tcp_close(tcp->pcb);
-        }
-        free(tcp);
+/**
+ * bbl_tcp_close 
+ * 
+ * This function closes the TCP session.
+ * 
+ * @param tcpc TCP context
+ */
+void
+bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
+    tcpc->state = BBL_TCP_STATE_CLOSING;
+    if(tcpc->pcb) {
+        tcp_close(tcpc->pcb);
+        tcpc->pcb = NULL;
+    }
+    tcpc->state = BBL_TCP_STATE_CLOSED;
+}
+
+/**
+ * bbl_tcp_ctx_free 
+ * 
+ * This function closes the TCP session (if active)
+ * and free the TCP context memory. 
+ * 
+ * @param tcpc TCP context
+ */
+void
+bbl_tcp_ctx_free(bbl_tcp_ctx_t *tcpc) {
+    if(tcpc) {
+        bbl_tcp_close(tcpc);
+        free(tcpc);
     }
 }
 
@@ -50,31 +76,20 @@ err_t
 bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
     bbl_tcp_ctx_t *tcpc = arg;
     uint16_t tx = tpcb->snd_buf;
-    uint8_t flags = 0; /* no-copy (alternative TCP_WRITE_FLAG_COPY) */
 
     UNUSED(len);
 
     if(tcpc->tx.offset < tcpc->tx.len) {
-        tcpc->state = BBL_TCP_STATE_SEND;
         if((tcpc->tx.offset + tx) > tcpc->tx.len) {
             tx = tcpc->tx.len - tcpc->tx.offset;
         }
-/* Enable the following code to suppress PSH flag 
- * if buffer was not dequeued completely. 
- *
- * if((tcpc->tx.offset + tx) < tcpc->tx.len) {
- *     flags |= TCP_WRITE_FLAG_MORE;
- * }
- */
-        if(tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, flags) == ERR_OK) {
+        if(tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, tcpc->tx.flags) == ERR_OK) {
+            tcpc->state = BBL_TCP_STATE_SENDING;
             tcpc->tx.offset += tx;
-            if(tcpc->af == AF_INET) {
-                LOG(TCP_DETAIL, "TCP %u bytes send (%s %s:%u - %s:%u)\n",
-                    tx, tcpc->interface->name,
-                    format_ipv4_address(&tcpc->local_ipv4), tcpc->key.local_port,
-                    format_ipv4_address(&tcpc->remote_ipv4), tcpc->key.remote_port);
-            }
         }
+    } else if(tcpc->pcb->unacked == NULL && tcpc->pcb->unsent == NULL) {
+        /* Idle means that it is save to replace buffer. */
+        tcpc->state = BBL_TCP_STATE_IDLE;
     }
     return ERR_OK;
 }
@@ -99,12 +114,6 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
         tcpc->bytes_rx += p->tot_len;
         tcp_recved(tpcb, p->tot_len);
         pbuf_free(p);
-        if(tcpc->af == AF_INET) {
-            LOG(TCP_DETAIL, "TCP %u bytes received (%s %s:%u - %s:%u)\n",
-                p->tot_len, tcpc->interface->name,
-                format_ipv4_address(&tcpc->local_ipv4), tcpc->key.local_port,
-                format_ipv4_address(&tcpc->remote_ipv4), tcpc->key.remote_port);
-        }
     }
     return ERR_OK;
 }
@@ -126,8 +135,8 @@ bbl_tcp_error_cb(void *arg, err_t err) {
     if(tcpc->af == AF_INET) {
         LOG(TCP, "TCP error %u (%s %s:%u - %s:%u)\n",
             err, tcpc->interface->name,
-            format_ipv4_address(&tcpc->local_ipv4), tcpc->key.local_port,
-            format_ipv4_address(&tcpc->remote_ipv4), tcpc->key.remote_port);
+            format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
     }
 
     if(tcpc->error_cb) {
@@ -168,24 +177,25 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
     }
 
     if(tcpc->af == AF_INET) {
-        LOG(TCP_DETAIL, "TCP session connected (%s %s:%u - %s:%u)\n",
+        LOG(TCP, "TCP session connected (%s %s:%u - %s:%u)\n",
             tcpc->interface->name,
-            format_ipv4_address(&tcpc->local_ipv4), tcpc->key.local_port,
-            format_ipv4_address(&tcpc->remote_ipv4), tcpc->key.remote_port);
+            format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
+    } else {
+        LOG(TCP, "TCP session connected (%s %s:%u - %s:%u)\n",
+            tcpc->interface->name,
+            format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
+            format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port);
     }
 
     tcpc->state = BBL_TCP_STATE_IDLE;
+
+    /* Call application TCP connected callback function. */
     if(tcpc->connected_cb) {
         (tcpc->connected_cb)(tcpc->arg);
     }
     bbl_tcp_sent_cb(tcpc, tpcb, 0);
     return ERR_OK;
-}
-
-void
-bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
-    dict_remove(tcpc->interface->tcp_connections, &tcpc->key);
-    bbl_tcp_ctx_free(tcpc);
 }
 
 /**
@@ -195,13 +205,12 @@ bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
  * @param src source address
  * @param dst destination address
  * @param port destination port
- * @return bbl_tcp_ctx_t * 
+ * @return TCP context
  */
 bbl_tcp_ctx_t *
 bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port) {
 
     bbl_tcp_ctx_t *tcpc;
-    dict_insert_result result;
 
     if(!interface->ctx->tcp) {
         /* TCP not enabled! */
@@ -223,27 +232,17 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
     }
 
     tcpc->af = AF_INET;
-    tcpc->key.local_port = tcpc->pcb->local_port;
-    tcpc->key.remote_port = port;
+    tcpc->local_port = tcpc->pcb->local_port;
+    tcpc->remote_port = port;
     tcpc->local_ipv4 = *src;
     tcpc->remote_ipv4 = *dst;
-
-    /* Add BBL TCP context to interface */
-    result = dict_insert(interface->tcp_connections, &tcpc->key);
-    if (!result.inserted) {
-        bbl_tcp_ctx_free(tcpc);
-        return NULL;
-    }
-
-    /* TODO: This looks wrong but is required. 
-     * Further investigations needed! */
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V4;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V4;
-
+    tcpc->state = BBL_TCP_STATE_CONNECTING;
     LOG(TCP, "TCP connect (%s %s:%u - %s:%u)\n",
         interface->name,
-        format_ipv4_address(&tcpc->local_ipv4), tcpc->key.local_port,
-        format_ipv4_address(&tcpc->remote_ipv4), tcpc->key.remote_port);
+        format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
+        format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
 
     return tcpc;
 }
@@ -266,12 +265,12 @@ bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4
         /* TCP not enabled! */
         return;
     }
-
+#ifdef BNGBLASTER_TCP_DEBUG
     LOG(TCP_DETAIL, "TCP packet received (%s %s:%u - %s:%u)\n",
         interface->name,
         format_ipv4_address(&ipv4->dst), tcp->dst,
         format_ipv4_address(&ipv4->src), tcp->src);
-
+#endif
     ip_data.current_netif = &interface->netif;
     ip_data.current_input_netif = &interface->netif;
     ip_data.current_iphdr_dest.type = IPADDR_TYPE_V4;
@@ -290,7 +289,7 @@ bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4
  * @param src source address
  * @param dst destination address
  * @param port destination port
- * @return bbl_tcp_ctx_t * 
+ * @return TCP context
  */
 bbl_tcp_ctx_t *
 bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port) {
@@ -324,12 +323,12 @@ bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6
         /* TCP not enabled! */
         return;
     }
-
+#ifdef BNGBLASTER_TCP_DEBUG
     LOG(TCP_DETAIL, "TCP packet received (%s %s:%u - %s:%u)\n",
         interface->name,
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
         format_ipv6_address((ipv6addr_t*)ipv6->src), tcp->src);
-
+#endif
     pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
     interface->netif.input(pbuf, &interface->netif);
 }
@@ -342,12 +341,11 @@ bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6
  * @param len
  * @return ERR_OK if successfull
  */
-err_t
+bool
 bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len) {
 
-    if(tcpc->tx.offset < tcpc->tx.len) {
-        /* There is still data to send */
-        return ERR_INPROGRESS;
+    if(tcpc->state == BBL_TCP_STATE_SENDING) {
+        return false;
     }
 
     tcpc->tx.buf = buf;
@@ -357,7 +355,7 @@ bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len) {
     if(tcpc->state == BBL_TCP_STATE_IDLE) {
         bbl_tcp_sent_cb(tcpc, tcpc->pcb, 0);
     }
-    return ERR_OK;
+    return true;
 }
 
 /**
@@ -435,8 +433,6 @@ bbl_tcp_interface_init(bbl_interface_s *interface, bbl_network_config_s *network
     interface->netif.state = interface;
     interface->netif.mtu = network_config->mtu;
     interface->netif.mtu6 = network_config->mtu;
-    interface->tcp_connections = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_TCP_HASHTABLE_SIZE);
-
     return true;
 }
 

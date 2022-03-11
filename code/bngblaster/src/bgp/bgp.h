@@ -16,9 +16,12 @@
 #include "bgp_mrt.h"
 
 void
+bgp_reset_write_buffer(bgp_session_t *session);
+
+void
 bgp_state_change(bgp_session_t *session, bgp_state_t new_state);
 
-err_t
+bool
 bgp_send(bgp_session_t *session);
 
 void
