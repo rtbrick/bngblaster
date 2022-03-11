@@ -174,6 +174,10 @@ bgp_state_job(timer_s *timer) {
         bgp_state_change(session, BGP_CONNECT);
         bgp_restart_timeout(session, 30);
     } if(session->state == BGP_ESTABLISHED) {
+        if(session->raw_update && !session->raw_update_send) {
+            session->raw_update_send = bbl_tcp_send(session->tcpc, 
+                session->raw_update->buf, session->raw_update->len);
+        }
         if(session->keepalive_countdown) {
             session->keepalive_countdown--;
         } else {
@@ -185,6 +189,28 @@ bgp_state_job(timer_s *timer) {
             }
         }
     }
+}
+
+static bgp_raw_update_t *
+bgp_raw_update_load(char *file) {
+
+    bgp_raw_update_t *raw_update;
+    FILE *f = fopen(file, "rb");
+    if (f == NULL) {
+        LOG(ERROR, "Failed to open BGP RAW update file %s\n", file);
+        return NULL;
+    } 
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    raw_update = malloc(sizeof(bgp_raw_update_t));
+    raw_update->file = file;
+    raw_update->buf = malloc(fsize);
+    raw_update->len = fsize;
+    fread(raw_update->buf, fsize, 1, f);
+    fclose(f);
+    return raw_update;
 }
 
 /**
@@ -200,6 +226,9 @@ bgp_init(bbl_ctx_s *ctx) {
     bgp_config_t *config = ctx->config.bgp_config;
     bgp_session_t *session = NULL;
     bbl_interface_s *network_if;
+
+    bgp_raw_update_t *raw_update_root = NULL;
+    bgp_raw_update_t *raw_update = NULL;
 
     while(config) {
         if(session) {
@@ -235,6 +264,23 @@ bgp_init(bbl_ctx_s *ctx) {
         session->read_buf.size = BGP_BUF_SIZE;
         session->write_buf.data = malloc(BGP_BUF_SIZE);
         session->write_buf.size = BGP_BUF_SIZE;
+
+        /* Init RAW update file */
+        if(config->raw_update_file) {
+            raw_update = raw_update_root;
+            while(raw_update){
+                if (strcmp(config->raw_update_file, raw_update->file) == 0) {
+                    session->raw_update = raw_update;
+                    break;
+                }
+                raw_update = raw_update->next;
+            }
+            if(!session->raw_update) {
+                session->raw_update = bgp_raw_update_load(config->raw_update_file);
+                session->raw_update->next = raw_update_root;
+                raw_update_root = session->raw_update;
+            }
+        }
 
         /* Start state timer */
         timer_add_periodic(&ctx->timer_root, &session->state_timer, 
