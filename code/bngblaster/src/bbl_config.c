@@ -752,8 +752,8 @@ json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
         bgp_config->reconnect = true;
     }
 
-    if (json_unpack(bgp, "{s:s}", "mrt-file", &s) == 0) {
-        bgp_config->mrt_file = strdup(s);
+    if (json_unpack(bgp, "{s:s}", "raw-update-file", &s) == 0) {
+        bgp_config->raw_update_file = strdup(s);
     }
     return true;
 }

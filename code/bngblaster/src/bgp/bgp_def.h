@@ -34,6 +34,19 @@ typedef enum bgp_state_ {
 } bgp_state_t;
 
 /*
+ * BGP RAW Update File
+ */
+typedef struct bgp_raw_update_ {
+    char *file;
+
+    uint8_t *buf;
+    uint32_t len;
+
+    /* Pointer to next instance */
+    struct bgp_raw_update_ *next;
+} bgp_raw_update_t;
+
+/*
  * BGP Configuration
  */
 typedef struct bgp_config_ {
@@ -48,6 +61,7 @@ typedef struct bgp_config_ {
 
     char *network_interface;
     char *mrt_file;
+    char *raw_update_file;
 
     /* Pointer to next instance */
     struct bgp_config_ *next;
@@ -68,6 +82,7 @@ typedef struct bgp_session_ {
 
     struct timer_ *state_timer;
     struct timer_ *keepalive_timer;
+    struct timer_ *update_timer;
     struct timer_ *close_timer;
 
     io_buffer_t read_buf;
@@ -87,6 +102,9 @@ typedef struct bgp_session_ {
         uint32_t update_rx;
     } stats;
 
+    bgp_raw_update_t *raw_update;
+    bool raw_update_send;
+    
     struct bgp_session_ *next; /* pointer to next instance */
 } bgp_session_t;
 
