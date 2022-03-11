@@ -12,4 +12,7 @@
 void
 bgp_push_open_message(bgp_session_t *session);
 
+void
+bgp_push_keepalive_message(bgp_session_t *session);
+
 #endif

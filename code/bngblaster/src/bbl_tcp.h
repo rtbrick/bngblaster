@@ -18,11 +18,11 @@
 #define BBL_TCP_HASHTABLE_SIZE 32771
 
 typedef enum bbl_tcp_state_ {
-    BBL_TCP_STATE_CONNECT,
-    BBL_TCP_STATE_IDLE,
-    BBL_TCP_STATE_SEND,
-    BBL_TCP_STATE_CLOSING,
     BBL_TCP_STATE_CLOSED,
+    BBL_TCP_STATE_CONNECTING,
+    BBL_TCP_STATE_IDLE,
+    BBL_TCP_STATE_SENDING,
+    BBL_TCP_STATE_CLOSING,
 } bbl_tcp_state_t;
 
 typedef void (*bbl_tcp_connected_fn)(void *arg);
@@ -30,21 +30,17 @@ typedef void (*bbl_tcp_receive_fn)(void *arg, uint8_t *buf, uint16_t len);
 typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);
 typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
 
-typedef struct bbl_tcp_key_ {
-    uint16_t local_port;
-    uint16_t remote_port;
-} __attribute__ ((__packed__)) bbl_tcp_key_t;
-
 typedef struct bbl_tcp_ctx_
 {
     bbl_interface_s *interface;
 
     uint8_t af; /* AF_INET or AF_INET6 */
-    
-    bbl_tcp_key_t key;
 
+    uint16_t   local_port;
     ipv4addr_t local_ipv4;
     ipv6addr_t local_ipv6;
+
+    uint16_t   remote_port;
     ipv4addr_t remote_ipv4;
     ipv6addr_t remote_ipv6;
     
@@ -66,6 +62,7 @@ typedef struct bbl_tcp_ctx_
         uint8_t *buf;
         uint32_t len;
         uint32_t offset;
+        uint8_t  flags; /* e.g. TCP_WRITE_FLAG_COPY */
     } tx;
 
     uint64_t packets_rx;
@@ -77,6 +74,9 @@ typedef struct bbl_tcp_ctx_
 
 void
 bbl_tcp_close(bbl_tcp_ctx_t *tcpc);
+
+void
+bbl_tcp_ctx_free(bbl_tcp_ctx_t *tcpc);
 
 bbl_tcp_ctx_t *
 bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
@@ -90,7 +90,7 @@ bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *ds
 void
 bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6);
 
-err_t
+bool
 bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len);
 
 bool
