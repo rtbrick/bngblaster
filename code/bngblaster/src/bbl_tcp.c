@@ -339,7 +339,7 @@ bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6
  * @param tcp 
  * @param buf 
  * @param len
- * @return ERR_OK if successfull
+ * @return true if successfull
  */
 bool
 bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len) {

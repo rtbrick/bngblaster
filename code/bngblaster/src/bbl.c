@@ -316,6 +316,7 @@ bbl_ctrl_job (timer_s *timer)
             }
             /* Teardown routing protocols. */
             isis_teardown(ctx);
+            bgp_teardown(ctx);
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
