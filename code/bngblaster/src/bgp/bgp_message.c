@@ -107,3 +107,25 @@ bgp_push_keepalive_message(bgp_session_t *session) {
     length = buffer->idx - keepalive_start_idx;
     write_be_uint(buffer->data+keepalive_start_idx+16, 2, length); /* overwrite message length */
 }
+
+void
+bgp_push_notification_message(bgp_session_t *session) {
+    uint32_t notification_start_idx, length;
+    io_buffer_t *buffer = &session->write_buf;
+
+    if (buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
+	    return;
+    }
+
+    notification_start_idx = buffer->idx;
+    push_be_uint(buffer, 8, 0xffffffffffffffff); /* marker */
+    push_be_uint(buffer, 8, 0xffffffffffffffff); /* marker */
+    push_be_uint(buffer, 2, 0); /* length */
+    push_be_uint(buffer, 1, BGP_MSG_NOTIFICATION); /* message type */
+    push_be_uint(buffer, 1, session->error_code);
+    push_be_uint(buffer, 1, session->error_subcode);
+
+    /* Calculate message length field */
+    length = buffer->idx - notification_start_idx;
+    write_be_uint(buffer->data+notification_start_idx+16, 2, length); /* overwrite message length */
+}

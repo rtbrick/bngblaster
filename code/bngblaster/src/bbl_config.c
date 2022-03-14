@@ -752,6 +752,13 @@ json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
         bgp_config->reconnect = true;
     }
 
+    value = json_object_get(bgp, "teardown-time");
+    if (json_is_number(value)) {
+        bgp_config->teardown_time = json_number_value(value);
+    } else {
+        bgp_config->teardown_time = BGP_DEFAULT_TEARDOWN_TIME;
+    }
+
     if (json_unpack(bgp, "{s:s}", "raw-update-file", &s) == 0) {
         bgp_config->raw_update_file = strdup(s);
     }

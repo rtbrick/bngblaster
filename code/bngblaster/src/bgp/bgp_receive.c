@@ -78,23 +78,26 @@ bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
     session->peer.holdtime = read_be_uint(start+22, 2);
     session->peer.id = read_be_uint(start+24, 4);
 
-    LOG(BGP, "BGP %s:%s peer AS: %u holdtime: %us\n", 
+    LOG(BGP, "BGP (%s:%s=>%s) open message received peer AS: %u, holdtime: %us\n",
+        session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address),
         session->peer.as, session->peer.holdtime);
 
-    bgp_reset_write_buffer(session);
-    bgp_push_keepalive_message(session);
-    bgp_send(session);
-    bgp_state_change(session, BGP_OPENCONFIRM);
+    bgp_session_state_change(session, BGP_OPENCONFIRM);
     return;
 
 ERROR:
-    LOG(BGP, "BGP %s:%s invalid open message received\n", 
+    LOG(BGP, "BGP (%s:%s=>%s) invalid open message received\n",
+        session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address));
 
-    bgp_restart_timeout(session, 0);
+    if(!session->error_code) {
+        session->error_code = 1; /* Message header error */
+        session->error_subcode = 2; /* Bad message length */
+    }
+    bgp_session_close(session);
 }
 
 static void
@@ -143,15 +146,21 @@ bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
                 keyval_get_key(bgp_notification_error_values, error_code), error_code, error_subcode);
             break;
     }
-    bgp_restart_timeout(session, 0);
+    session->error_code = 0;
+    bgp_session_close(session);
     return;
 
 ERROR:
-    LOG(BGP, "BGP %s:%s invalid notification message received\n", 
+    LOG(BGP, "BGP (%s:%s=>%s) invalid notification message received\n",
+        session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address));
 
-    bgp_restart_timeout(session, 0);
+    if(!session->error_code) {
+        session->error_code = 1; /* Message header error */
+        session->error_subcode = 2; /* Bad message length */
+    }
+    bgp_session_close(session);
 }
 
 /*
@@ -199,7 +208,8 @@ bpg_read(bgp_session_t *session) {
             break;
         }
 
-        LOG(BGP, "BGP %s:%s read %s message\n", 
+        LOG(BGP, "BGP (%s:%s=>%s) read %s message\n",
+            session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address),
             keyval_get_key(bgp_msg_names, type));
@@ -213,22 +223,19 @@ bpg_read(bgp_session_t *session) {
                 return;
             case BGP_MSG_KEEPALIVE:
                 session->stats.keepalive_rx++;
-                bgp_state_change(session, BGP_ESTABLISHED);
-                /* reset hold timer */
-                if (session->peer.holdtime) {
-                    bgp_restart_timeout(session, session->peer.holdtime);
+                if(session->state == BGP_OPENCONFIRM) {
+                    bgp_session_state_change(session, BGP_ESTABLISHED);
                 }
                 break;
             case BGP_MSG_UPDATE:
                 session->stats.update_rx++;
-                /* reset hold timer */
-                if (session->peer.holdtime) {
-                    bgp_restart_timeout(session, session->peer.holdtime);
-                }
                 break;
             default:
                 break;
         }
+
+        /* Reset hold timer */
+        bgp_restart_hold_timer(session, session->config->holdtime);
 
         /* Progress pointer to next BGP message */
         buffer->start_idx += length;
@@ -242,11 +249,16 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len) {
     io_buffer_t *buffer = &session->read_buf;
     if(buf) {
         if(buffer->idx+len > buffer->size) {
-            LOG(ERROR, "BGP %s:%s receive error (read buffer exhausted)\n", 
+            LOG(ERROR, "BGP (%s:%s=>%s) receive error (read buffer exhausted)\n",
+                session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address));
-            
-            bgp_restart_timeout(session, 0);
+
+            if(!session->error_code) {
+                session->error_code = 6; /* Cease */
+                session->error_subcode = 8; /* Out of ressources */
+            }
+            bgp_session_close(session);
             return;
         }
         memcpy(buffer->data+buffer->idx, buf, len);
