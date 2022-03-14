@@ -188,7 +188,7 @@ bgp_session_connect_job(timer_s *timer) {
     if(g_init_phase) {
         /* Wait for all network interfaces to be resolved */
         timeout = 1;
-    } else if(!g_init_phase && session->state == BGP_IDLE) {
+    } else if(session->state == BGP_IDLE) {
         /* Connect TCP session */
         session->tcpc = bbl_tcp_ipv4_connect(
             session->interface, 
@@ -201,34 +201,31 @@ bgp_session_connect_job(timer_s *timer) {
             session->tcpc->connected_cb = bgp_connected_cb;
             session->tcpc->receive_cb = bgp_receive_cb;
             bgp_session_state_change(session, BGP_CONNECT);
-            /* Close session if not established within 30 seconds */
-            timeout = 30; 
+            /* Close session if not established within 60 seconds */
+            timeout = 60; 
         } else {
             LOG(BGP, "BGP (%s:%s=>%s) TCP connect failed\n", 
                 session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address));
         }
-    } else if(session->state == BGP_CONNECT) {
+    } else if(session->state == BGP_ESTABLISHED) {
+        timer->periodic = false;
+        return;
+    } else {
         LOG(BGP, "BGP session %s %s:%s connect timeout\n", 
             session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address));
 
         bgp_session_close(session);
-        goto STOP;
-    } else {
-        goto STOP;
+        timer->periodic = false;
+        return;
     }
 
     timer_add_periodic(&ctx->timer_root, &session->connect_timer, 
                        "BGP CONNECT", timeout, 0, session,
                        &bgp_session_connect_job);
-
-    return;
-
-STOP:
-    timer->periodic = false;
 }
 
 /**

@@ -208,7 +208,7 @@ bpg_read(bgp_session_t *session) {
             break;
         }
 
-        LOG(BGP, "BGP (%s:%s=>%s) read %s message\n",
+        LOG(DEBUG, "BGP (%s:%s=>%s) read %s message\n",
             session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address),
