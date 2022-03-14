@@ -33,7 +33,12 @@ bgp_raw_update_load(char *file) {
     raw_update->file = file;
     raw_update->buf = malloc(fsize);
     raw_update->len = fsize;
-    fread(raw_update->buf, fsize, 1, f);
+    if(fread(raw_update->buf, fsize, 1, f) != 1) {
+        LOG(ERROR, "Failed to read BGP RAW update file %s\n", file);
+        free(raw_update->buf);
+        free(raw_update);
+        return NULL;
+    }
     fclose(f);
     return raw_update;
 }
