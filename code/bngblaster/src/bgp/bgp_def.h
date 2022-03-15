@@ -52,8 +52,8 @@ typedef struct bgp_raw_update_ {
  * BGP Configuration
  */
 typedef struct bgp_config_ {
-    uint32_t ipv4_src_address;
-    uint32_t ipv4_dst_address;
+    uint32_t ipv4_local_address;
+    uint32_t ipv4_peer_address;
     uint32_t id;
     uint32_t local_as;
     uint32_t peer_as;
@@ -76,8 +76,8 @@ typedef struct bgp_config_ {
 typedef struct bgp_session_ {
     struct bbl_ctx_ *ctx; /* parent */
     
-    uint32_t ipv4_src_address;
-    uint32_t ipv4_dst_address;
+    uint32_t ipv4_local_address;
+    uint32_t ipv4_peer_address;
 
     bgp_config_t    *config;
     bbl_interface_s *interface;

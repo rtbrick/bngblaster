@@ -698,21 +698,25 @@ json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
     
     ctx->tcp = true;
 
-    if (json_unpack(bgp, "{s:s}", "source-ipv4-address", &s) == 0) {
-        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_src_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for bgp->source-ipv4-address\n");
-            return false;
-        }
-        add_secondary_ipv4(ctx, bgp_config->ipv4_src_address);
+    if (json_unpack(bgp, "{s:s}", "network-interface", &s) == 0) {
+        bgp_config->network_interface = strdup(s);
     }
 
-    if (json_unpack(bgp, "{s:s}", "destination-ipv4-address", &s) == 0) {
-        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_dst_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for bgp->destination-ipv4-address\n");
+    if (json_unpack(bgp, "{s:s}", "local-ipv4-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_local_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->local-ipv4-address\n");
+            return false;
+        }
+        add_secondary_ipv4(ctx, bgp_config->ipv4_local_address);
+    }
+
+    if (json_unpack(bgp, "{s:s}", "peer-ipv4-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_peer_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->peer-ipv4-address\n");
             return false;
         }
     } else {
-        fprintf(stderr, "JSON config error: Missing value for bgp->destination-ipv4-address\n");
+        fprintf(stderr, "JSON config error: Missing value for bgp->peer-ipv4-address\n");
         return false;   
     }
 
