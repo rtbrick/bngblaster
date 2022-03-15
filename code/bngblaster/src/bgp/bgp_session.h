@@ -9,6 +9,9 @@
 #ifndef __BBL_BGP_SESSION_H__
 #define __BBL_BGP_SESSION_H__
 
+const char *
+bgp_session_state_string(bgp_state_t state);
+
 void
 bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state);
 

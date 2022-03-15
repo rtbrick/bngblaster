@@ -31,7 +31,6 @@ isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
     if(!root) {
         if(peer) json_decref(peer);
     }
-
     return root;
 }
 
