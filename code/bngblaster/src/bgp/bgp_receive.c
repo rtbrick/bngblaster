@@ -78,7 +78,7 @@ bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
     session->peer.holdtime = read_be_uint(start+22, 2);
     session->peer.id = read_be_uint(start+24, 4);
 
-    LOG(BGP, "BGP (%s:%s=>%s) open message received peer AS: %u, holdtime: %us\n",
+    LOG(BGP, "BGP (%s %s - %s) open message received with peer AS: %u, holdtime: %us\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address),
@@ -88,7 +88,7 @@ bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
     return;
 
 ERROR:
-    LOG(BGP, "BGP (%s:%s=>%s) invalid open message received\n",
+    LOG(BGP, "BGP (%s %s - %s) invalid open message received\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address));
@@ -112,35 +112,40 @@ bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
     error_subcode = *(start+20);
     switch(error_code) {
         case 1: /* Message Header Error */
-            LOG(BGP, "BGP %s:%s notification error: %s (%u), %s (%u)\n", 
+            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n", 
+                session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address),
                 keyval_get_key(bgp_notification_error_values, error_code), error_code,
                 keyval_get_key(bgp_notification_msg_hdr_error_values, error_subcode), error_subcode);
             break;
         case 2: /* OPEN Message Error */
-            LOG(BGP, "BGP %s:%s notification error: %s (%u), %s (%u)\n", 
+            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n",
+                session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address),
                 keyval_get_key(bgp_notification_error_values, error_code), error_code,
                 keyval_get_key(bgp_notification_open_error_values, error_subcode), error_subcode);
             break;
         case 3: /* Update Message Error */
-            LOG(BGP, "BGP %s:%s notification error: %s (%u), %s (%u)\n", 
+            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n", 
+                session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address),
                 keyval_get_key(bgp_notification_error_values, error_code), error_code,
                 keyval_get_key(bgp_notification_update_error_values, error_subcode), error_subcode);
             break;
         case 6: /* Cease */
-            LOG(BGP, "BGP %s:%s notification error: %s (%u), %s (%u)\n", 
+            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n", 
+                session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address),
                 keyval_get_key(bgp_notification_error_values, error_code), error_code,
                 keyval_get_key(bgp_notification_cease_error_values, error_subcode), error_subcode);
             break;
         default:
-            LOG(BGP, "BGP %s:%s notification error: %s (%u), subcode %u\n", 
+            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), subcode %u\n", 
+                session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address),
                 keyval_get_key(bgp_notification_error_values, error_code), error_code, error_subcode);
@@ -151,7 +156,7 @@ bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
     return;
 
 ERROR:
-    LOG(BGP, "BGP (%s:%s=>%s) invalid notification message received\n",
+    LOG(BGP, "BGP (%s %s - %s) invalid notification message received\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address));
@@ -208,7 +213,7 @@ bpg_read(bgp_session_t *session) {
             break;
         }
 
-        LOG(DEBUG, "BGP (%s:%s=>%s) read %s message\n",
+        LOG(DEBUG, "BGP (%s %s - %s) read %s message\n",
             session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address),
@@ -249,7 +254,7 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len) {
     io_buffer_t *buffer = &session->read_buf;
     if(buf) {
         if(buffer->idx+len > buffer->size) {
-            LOG(ERROR, "BGP (%s:%s=>%s) receive error (read buffer exhausted)\n",
+            LOG(ERROR, "BGP (%s %s - %s) receive error (read buffer exhausted)\n",
                 session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address));

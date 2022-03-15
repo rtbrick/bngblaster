@@ -72,7 +72,7 @@ a lot of data that needs to be copied, this should be set high. */
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
-#define MEMP_NUM_PBUF            64
+#define MEMP_NUM_PBUF            128
 /* MEMP_NUM_RAW_PCB: the number of UDP protocol control blocks. One
    per active RAW "connection". */
 #define MEMP_NUM_RAW_PCB         3
@@ -81,13 +81,13 @@ a lot of data that needs to be copied, this should be set high. */
 #define MEMP_NUM_UDP_PCB         4
 /* MEMP_NUM_TCP_PCB: the number of simultaneously active TCP
    connections. */
-#define MEMP_NUM_TCP_PCB         32
+#define MEMP_NUM_TCP_PCB         64
 /* MEMP_NUM_TCP_PCB_LISTEN: the number of listening TCP
    connections. */
-#define MEMP_NUM_TCP_PCB_LISTEN  32
+#define MEMP_NUM_TCP_PCB_LISTEN  64
 /* MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP
    segments. */
-#define MEMP_NUM_TCP_SEG         32
+#define MEMP_NUM_TCP_SEG         64
 /* MEMP_NUM_SYS_TIMEOUT: the number of simultaneously active
    timeouts. */
 #define MEMP_NUM_SYS_TIMEOUT     65
@@ -128,17 +128,17 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* Controls if TCP should queue segments that arrive out of
    order. Define to 0 if your device is low on memory. */
-#define TCP_QUEUE_OOSEQ         1
+#define TCP_QUEUE_OOSEQ         0
 
 /* TCP Maximum segment size. */
 #define TCP_MSS                 1024
 
 /* TCP sender buffer space (bytes). */
-#define TCP_SND_BUF             2048
+#define TCP_SND_BUF             (8 * TCP_MSS)
 
 /* TCP sender buffer space (pbufs). This must be at least = 2 *
    TCP_SND_BUF/TCP_MSS for things to work. */
-#define TCP_SND_QUEUELEN        (4 * TCP_SND_BUF/TCP_MSS)
+#define TCP_SND_QUEUELEN        (8 * TCP_SND_BUF/TCP_MSS)
 
 /* TCP writable space (bytes). This must be less than or equal
    to TCP_SND_BUF. It is the amount of space which must be
@@ -146,7 +146,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_SNDLOWAT		    (TCP_SND_BUF/2)
 
 /* TCP receive window. */
-#define TCP_WND                 8096
+#define TCP_WND                 16384
 
 /* Maximum number of retransmissions of data segments. */
 #define TCP_MAXRTX              12

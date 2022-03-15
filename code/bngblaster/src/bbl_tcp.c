@@ -8,8 +8,32 @@
  */
 #include "bbl_tcp.h"
 #ifndef BNGBLASTER_TCP_DEBUG
-#define BNGBLASTER_TCP_DEBUG 1
+#define BNGBLASTER_TCP_DEBUG 0
 #endif
+
+const char *
+tcp_err_string(err_t err) {
+    switch(err) {
+        case ERR_OK: return "ok";
+        case ERR_MEM: return "out of memory error";
+        case ERR_BUF: return "buffer error";
+        case ERR_TIMEOUT: return "timeout";
+        case ERR_RTE: return "routing problem";
+        case ERR_INPROGRESS: return "operation in progress";
+        case ERR_VAL: return "illegal value";
+        case ERR_WOULDBLOCK: return "operation would block";
+        case ERR_USE: return "address in use";
+        case ERR_ALREADY: return "already connecting";
+        case ERR_ISCONN: return "already connected";
+        case ERR_CONN: return "not connected";
+        case ERR_IF: return "low-level netif error";
+        case ERR_ABRT: return "connection aborted";
+        case ERR_RST: return "connection reset";
+        case ERR_CLSD: return "connection closed";
+        case ERR_ARG: return "illegal argument";
+        default: return "unknown error";
+    }
+}
 
 /**
  * bbl_tcp_close 
@@ -20,12 +44,13 @@
  */
 void
 bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
-    tcpc->state = BBL_TCP_STATE_CLOSING;
-    if(tcpc->pcb) {
-        tcp_close(tcpc->pcb);
+    if(tcpc) {
+        if(tcpc->pcb) {
+            tcp_close(tcpc->pcb);
+        }
+        tcpc->state = BBL_TCP_STATE_CLOSED;
         tcpc->pcb = NULL;
     }
-    tcpc->state = BBL_TCP_STATE_CLOSED;
 }
 
 /**
@@ -131,12 +156,22 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
 void 
 bbl_tcp_error_cb(void *arg, err_t err) {
     bbl_tcp_ctx_t *tcpc = arg;
+    tcpc->state = BBL_TCP_STATE_CLOSED;
+    tcpc->pcb = NULL;
+    tcpc->err = err;
 
     if(tcpc->af == AF_INET) {
-        LOG(TCP, "TCP error %u (%s %s:%u - %s:%u)\n",
-            err, tcpc->interface->name,
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %u (%s)\n",
+            tcpc->interface->name,
             format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
-            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
+            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port,
+            err, tcp_err_string(err));
+    } else {
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %u (%s)\n",
+            tcpc->interface->name,
+            format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
+            format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port,
+            err, tcp_err_string(err));
     }
 
     if(tcpc->error_cb) {
@@ -177,12 +212,12 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
     }
 
     if(tcpc->af == AF_INET) {
-        LOG(TCP, "TCP session connected (%s %s:%u - %s:%u)\n",
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) session connected\n",
             tcpc->interface->name,
             format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
             format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
     } else {
-        LOG(TCP, "TCP session connected (%s %s:%u - %s:%u)\n",
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) session connected\n",
             tcpc->interface->name,
             format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
             format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port);
@@ -239,7 +274,7 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V4;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V4;
     tcpc->state = BBL_TCP_STATE_CONNECTING;
-    LOG(TCP, "TCP connect (%s %s:%u - %s:%u)\n",
+    LOG(TCP, "TCP (%s %s:%u - %s:%u) connect\n",
         interface->name,
         format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
         format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
@@ -257,20 +292,21 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
 void
 bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4) {
     struct pbuf *pbuf;
-    bbl_tcp_t *tcp = (bbl_tcp_t*)ipv4->next;
-
     UNUSED(eth);
 
     if(!interface->ctx->tcp) {
         /* TCP not enabled! */
         return;
     }
-#ifdef BNGBLASTER_TCP_DEBUG
-    LOG(TCP_DETAIL, "TCP packet received (%s %s:%u - %s:%u)\n",
+
+#if BNGBLASTER_TCP_DEBUG
+    bbl_tcp_t *tcp = (bbl_tcp_t*)ipv4->next;
+    LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
         interface->name,
         format_ipv4_address(&ipv4->dst), tcp->dst,
         format_ipv4_address(&ipv4->src), tcp->src);
 #endif
+
     ip_data.current_netif = &interface->netif;
     ip_data.current_input_netif = &interface->netif;
     ip_data.current_iphdr_dest.type = IPADDR_TYPE_V4;
@@ -315,20 +351,21 @@ bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *ds
 void
 bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6) {
     struct pbuf *pbuf;
-    bbl_tcp_t *tcp = (bbl_tcp_t*)ipv6->next;
-
     UNUSED(eth);
 
     if(!interface->ctx->tcp) {
         /* TCP not enabled! */
         return;
     }
-#ifdef BNGBLASTER_TCP_DEBUG
-    LOG(TCP_DETAIL, "TCP packet received (%s %s:%u - %s:%u)\n",
+
+#if BNGBLASTER_TCP_DEBUG
+    bbl_tcp_t *tcp = (bbl_tcp_t*)ipv6->next;
+    LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
         interface->name,
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
         format_ipv6_address((ipv6addr_t*)ipv6->src), tcp->src);
 #endif
+
     pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
     interface->netif.input(pbuf, &interface->netif);
 }
@@ -405,10 +442,8 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
 
 err_t 
 bbl_tcp_netif_init(struct netif *netif) {
-    //bbl_interface_s *interface = netif->state;
     netif->output = bbl_tcp_netif_output_ipv4;
     netif->output_ip6 = bbl_tcp_netif_output_ipv6;
-    //netif_set_link_up(netif);
     netif_set_up(netif);
     return ERR_OK;
 }
