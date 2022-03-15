@@ -190,7 +190,6 @@ struct keyval_ log_names[] = {
     { ISIS,          "isis" },
     { BGP,           "bgp" },
     { TCP,           "tcp" },
-    { TCP_DETAIL,    "tcp-detail" },
     { 0, NULL}
 };
 

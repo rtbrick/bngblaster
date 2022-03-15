@@ -112,7 +112,7 @@ bgp_init(bbl_ctx_s *ctx) {
             }
         }
 
-        LOG(BGP, "BGP (%s:%s=>%s) init session\n",
+        LOG(BGP, "BGP (%s %s - %s) init session\n",
             session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address));
@@ -146,7 +146,7 @@ bgp_teardown(bbl_ctx_s *ctx) {
     bgp_session_t *session  = ctx->bgp_sessions;
     while(session) {
         if(!session->teardown) {
-            LOG(BGP, "BGP (%s:%s=>%s) teardown session\n",
+            LOG(BGP, "BGP (%s %s - %s) teardown session\n",
                 session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address));

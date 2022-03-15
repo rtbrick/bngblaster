@@ -149,7 +149,7 @@ bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state) {
 	    return;
     }
 
-    LOG(BGP, "BGP (%s:%s=>%s) state changed from %s -> %s\n",
+    LOG(BGP, "BGP (%s %s - %s) state changed from %s -> %s\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address),
@@ -179,6 +179,20 @@ bgp_connected_cb(void *arg) {
     bgp_session_state_change(session, BGP_OPENSENT);
 }
 
+void 
+bgp_error_cb(void *arg, err_t err) {
+    bgp_session_t *session = (bgp_session_t*)arg;
+
+    LOG(BGP, "BGP (%s %s - %s) TCP error %d (%s)\n",
+        session->interface->name,
+        format_ipv4_address(&session->ipv4_src_address),
+        format_ipv4_address(&session->ipv4_dst_address),
+        err, tcp_err_string(err));
+
+    session->error_code = 0;
+    bgp_session_close(session);
+}
+
 void
 bgp_session_connect_job(timer_s *timer) {
     bgp_session_t *session = timer->data;
@@ -200,11 +214,12 @@ bgp_session_connect_job(timer_s *timer) {
             session->tcpc->arg = session;
             session->tcpc->connected_cb = bgp_connected_cb;
             session->tcpc->receive_cb = bgp_receive_cb;
+            session->tcpc->error_cb = bgp_error_cb;
             bgp_session_state_change(session, BGP_CONNECT);
             /* Close session if not established within 60 seconds */
             timeout = 60; 
         } else {
-            LOG(BGP, "BGP (%s:%s=>%s) TCP connect failed\n", 
+            LOG(BGP, "BGP (%s %s - %s) TCP connect failed\n", 
                 session->interface->name,
                 format_ipv4_address(&session->ipv4_src_address),
                 format_ipv4_address(&session->ipv4_dst_address));
@@ -213,7 +228,7 @@ bgp_session_connect_job(timer_s *timer) {
         timer->periodic = false;
         return;
     } else {
-        LOG(BGP, "BGP session %s %s:%s connect timeout\n", 
+        LOG(BGP, "BGP (%s %s - %s) connect timeout\n", 
             session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address));
@@ -292,7 +307,7 @@ bgp_session_close(bgp_session_t *session) {
        session->state < BGP_CLOSING &&
        session->error_code > 0) {
         /* Send notification messages */
-        LOG(BGP, "BGP (%s:%s=>%s) send notification message (error code %u sub-code %u)\n",
+        LOG(BGP, "BGP (%s %s - %s) send notification message (error code %u sub-code %u)\n",
             session->interface->name,
             format_ipv4_address(&session->ipv4_src_address),
             format_ipv4_address(&session->ipv4_dst_address),
@@ -313,7 +328,7 @@ void
 bgp_session_hold_timer_job(timer_s *timer) {
     bgp_session_t *session = timer->data;
 
-    LOG(BGP, "BGP (%s:%s=>%s) session timeout\n",
+    LOG(BGP, "BGP (%s %s - %s) session timeout\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_src_address),
         format_ipv4_address(&session->ipv4_dst_address));

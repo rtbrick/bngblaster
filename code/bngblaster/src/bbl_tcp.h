@@ -22,7 +22,6 @@ typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_CONNECTING,
     BBL_TCP_STATE_IDLE,
     BBL_TCP_STATE_SENDING,
-    BBL_TCP_STATE_CLOSING,
 } bbl_tcp_state_t;
 
 typedef void (*bbl_tcp_connected_fn)(void *arg);
@@ -57,7 +56,8 @@ typedef struct bbl_tcp_ctx_
     void *arg; /* application callback argument */
 
     bbl_tcp_state_t state;
-    
+    err_t err;
+
     struct {
         uint8_t *buf;
         uint32_t len;
@@ -71,6 +71,9 @@ typedef struct bbl_tcp_ctx_
     uint64_t bytes_tx;
 
 } bbl_tcp_ctx_t;
+
+const char *
+tcp_err_string(err_t err);
 
 void
 bbl_tcp_close(bbl_tcp_ctx_t *tcpc);

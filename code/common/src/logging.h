@@ -39,7 +39,6 @@ enum {
     ISIS,
     BGP,
     TCP,
-    TCP_DETAIL,
     LSDB,
     LSP,
     LOG_ID_MAX
