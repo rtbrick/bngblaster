@@ -9,10 +9,15 @@
 #include "bgp.h"
 
 static bgp_raw_update_t *
-bgp_raw_update_load(char *file) {
-    bgp_raw_update_t *raw_update;
+bgp_raw_update_load(char *file, bool decode_file) {
+    bgp_raw_update_t *raw_update = NULL;
     long fsize;
     double fsize_kb;
+
+    uint8_t *buf = NULL;
+    uint32_t len = 0;
+    uint16_t msg_len;
+    uint8_t  msg_type;
 
     /* Open file */
     FILE *f = fopen(file, "rb");
@@ -28,19 +33,64 @@ bgp_raw_update_load(char *file) {
     fseek(f, 0, SEEK_SET);
 
     /* Load file into memory */
-    LOG(INFO, "Load BGP RAW update file %s (%.2f KB)\n", file, fsize_kb);
     raw_update = malloc(sizeof(bgp_raw_update_t));
     raw_update->file = file;
     raw_update->buf = malloc(fsize);
     raw_update->len = fsize;
     if(fread(raw_update->buf, fsize, 1, f) != 1) {
+        fclose(f);
         LOG(ERROR, "Failed to read BGP RAW update file %s\n", file);
-        free(raw_update->buf);
-        free(raw_update);
-        return NULL;
+        goto ERROR;
     }
     fclose(f);
+
+    if(decode_file) {
+        /* Decode update stream */
+        buf = raw_update->buf;
+        len = raw_update->len;
+        while(len) {
+            if(len < BGP_MIN_MESSAGE_SIZE) {
+                goto DECODE_ERROR;
+            }
+            if(*(uint64_t*)buf != UINT64_MAX) {
+                goto DECODE_ERROR;
+            }
+            BUMP_BUFFER(buf, len, sizeof(uint64_t));
+            if(*(uint64_t*)buf != UINT64_MAX) {
+                goto DECODE_ERROR;
+            }
+            BUMP_BUFFER(buf, len, sizeof(uint64_t));
+            msg_len = be16toh(*(uint16_t*)buf);
+            BUMP_BUFFER(buf, len, sizeof(uint16_t));
+            msg_type = *buf;
+            BUMP_BUFFER(buf, len, sizeof(uint8_t));
+            if(msg_len < BGP_MIN_MESSAGE_SIZE ||
+               msg_len > BGP_MAX_MESSAGE_SIZE) {
+                goto DECODE_ERROR;
+            }
+            if((msg_len - BGP_MIN_MESSAGE_SIZE) > len) {
+                goto DECODE_ERROR;
+            }
+            if(msg_type == BGP_MSG_UPDATE) {
+                raw_update->updates++;
+            }
+            BUMP_BUFFER(buf, len, (msg_len - BGP_MIN_MESSAGE_SIZE));
+        }
+    }
+    LOG(INFO, "Loaded BGP RAW update file %s (%.2f KB, %u updates)\n", 
+        file, fsize_kb, raw_update->updates);
     return raw_update;
+
+DECODE_ERROR:
+    LOG(ERROR, "Failed to decode BGP RAW update file %s\n", file);
+ERROR:
+    if(raw_update) {
+        if(raw_update->buf) {
+            free(raw_update->buf);
+        }
+        free(raw_update);
+    }
+    return NULL;
 }
 
 /**
@@ -106,9 +156,13 @@ bgp_init(bbl_ctx_s *ctx) {
                 raw_update = raw_update->next;
             }
             if(!session->raw_update) {
-                session->raw_update = bgp_raw_update_load(config->raw_update_file);
-                session->raw_update->next = raw_update_root;
-                raw_update_root = session->raw_update;
+                session->raw_update = bgp_raw_update_load(config->raw_update_file, true);
+                if(session->raw_update) {
+                    session->raw_update->next = raw_update_root;
+                    raw_update_root = session->raw_update;
+                } else {
+                    return false;
+                }
             }
         }
 

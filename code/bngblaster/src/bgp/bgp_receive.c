@@ -69,10 +69,25 @@ struct keyval_ bgp_notification_cease_error_values[] = {
     { 0, NULL}
 };
 
+static void 
+bgp_decode_error(bgp_session_t *session) {
+    LOG(BGP, "BGP (%s %s - %s) invalid message received\n",
+        session->interface->name,
+        format_ipv4_address(&session->ipv4_local_address),
+        format_ipv4_address(&session->ipv4_peer_address));
+
+    if(!session->error_code) {
+        session->error_code = 1; /* Message header error */
+        session->error_subcode = 2; /* Bad message length */
+    }
+    bgp_session_close(session);
+}
+
 static void
 bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
     if(length < 28) {
-        goto ERROR;
+        bgp_decode_error(session);
+        return;
     }
     session->peer.as = read_be_uint(start+20, 2);
     session->peer.holdtime = read_be_uint(start+22, 2);
@@ -86,18 +101,6 @@ bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
 
     bgp_session_state_change(session, BGP_OPENCONFIRM);
     return;
-
-ERROR:
-    LOG(BGP, "BGP (%s %s - %s) invalid open message received\n",
-        session->interface->name,
-        format_ipv4_address(&session->ipv4_local_address),
-        format_ipv4_address(&session->ipv4_peer_address));
-
-    if(!session->error_code) {
-        session->error_code = 1; /* Message header error */
-        session->error_subcode = 2; /* Bad message length */
-    }
-    bgp_session_close(session);
 }
 
 static void
@@ -105,7 +108,8 @@ bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
     uint8_t error_code, error_subcode;
 
     if(length < 21) {
-        goto ERROR;
+        bgp_decode_error(session);
+        return;
     }
 
     error_code = *(start+19);
@@ -154,18 +158,6 @@ bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
     session->error_code = 0;
     bgp_session_close(session);
     return;
-
-ERROR:
-    LOG(BGP, "BGP (%s %s - %s) invalid notification message received\n",
-        session->interface->name,
-        format_ipv4_address(&session->ipv4_local_address),
-        format_ipv4_address(&session->ipv4_peer_address));
-
-    if(!session->error_code) {
-        session->error_code = 1; /* Message header error */
-        session->error_subcode = 2; /* Bad message length */
-    }
-    bgp_session_close(session);
 }
 
 /*
@@ -202,17 +194,25 @@ bpg_read(bgp_session_t *session) {
         size = buffer->idx - buffer->start_idx;
 
         /* Minimum message size */
-        if (size < 19) {
+        if (size < BGP_MIN_MESSAGE_SIZE) {
+            break;
+        }
+
+        length = read_be_uint(start+16, 2);
+        if (length < BGP_MIN_MESSAGE_SIZE ||
+            length > BGP_MAX_MESSAGE_SIZE) {
+            bgp_decode_error(session);
             break;
         }
 
         /* Full message on the wire to consume? */
-        length = read_be_uint(start+16, 2);
-        type = *(start+18);
         if (length > size) {
             break;
         }
 
+        type = *(start+18);
+
+        session->stats.message_rx++;
         LOG(DEBUG, "BGP (%s %s - %s) read %s message\n",
             session->interface->name,
             format_ipv4_address(&session->ipv4_local_address),
