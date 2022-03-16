@@ -24,7 +24,7 @@ typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_SENDING,
 } bbl_tcp_state_t;
 
-typedef void (*bbl_tcp_connected_fn)(void *arg);
+typedef void (*bbl_tcp_callback_fn)(void *arg);
 typedef void (*bbl_tcp_receive_fn)(void *arg, uint8_t *buf, uint16_t len);
 typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);
 typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
@@ -45,7 +45,8 @@ typedef struct bbl_tcp_ctx_
     
     struct tcp_pcb *pcb;
 
-    bbl_tcp_connected_fn connected_cb; /* application connected callback */
+    bbl_tcp_callback_fn connected_cb; /* application connected callback */
+    bbl_tcp_callback_fn idle_cb; /* application idle callback */
 
     bbl_tcp_receive_fn receive_cb; /* application receive callback */
     bbl_tcp_error_fn error_cb; /* application error callback */

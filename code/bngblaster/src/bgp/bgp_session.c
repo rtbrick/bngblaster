@@ -75,9 +75,34 @@ bgp_session_keepalive_job(timer_s *timer) {
         if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
             bgp_session_reset_write_buffer(session);
             bgp_push_keepalive_message(session);
-            bgp_session_send(session);
+            if(bgp_session_send(session)) {
+                session->stats.message_tx++;
+                session->stats.keepalive_tx++;
+            }
         }
     }
+}
+
+void 
+bgp_raw_update_stop_cb(void *arg) {
+    bgp_session_t *session = (bgp_session_t*)arg;
+    struct timespec time_diff;
+
+    session->tcpc->idle_cb = NULL;
+
+    clock_gettime(CLOCK_MONOTONIC, &session->update_stop_timestamp);
+    timespec_sub(&time_diff, 
+                 &session->update_stop_timestamp, 
+                 &session->update_start_timestamp);
+    
+    session->stats.message_tx += session->raw_update->updates;
+    session->stats.update_tx += session->raw_update->updates;
+
+    LOG(BGP, "BGP (%s %s - %s) raw update stop after %lds\n",
+        session->interface->name,
+        format_ipv4_address(&session->ipv4_local_address),
+        format_ipv4_address(&session->ipv4_peer_address),
+        time_diff.tv_sec);
 }
 
 void
@@ -89,6 +114,15 @@ bgp_session_update_job(timer_s *timer) {
         if(session->raw_update && !session->raw_update_send) {
             if(bbl_tcp_send(session->tcpc, session->raw_update->buf, session->raw_update->len)) {
                 session->raw_update_send = true;
+
+                LOG(BGP, "BGP (%s %s - %s) raw update start\n",
+                    session->interface->name,
+                    format_ipv4_address(&session->ipv4_local_address),
+                    format_ipv4_address(&session->ipv4_peer_address));
+
+                clock_gettime(CLOCK_MONOTONIC, &session->update_start_timestamp);
+                session->tcpc->idle_cb = bgp_raw_update_stop_cb;
+
             } else {
                 goto RETRY;
             }
@@ -110,6 +144,7 @@ bgp_session_state_opensent(bgp_session_t *session) {
     bgp_session_reset_write_buffer(session);
     bgp_push_open_message(session);
     bgp_session_send(session);
+    session->stats.message_tx++;
 }
 
 static void
@@ -117,12 +152,16 @@ bgp_session_state_openconfirm(bgp_session_t *session) {
     bgp_session_reset_write_buffer(session);
     bgp_push_keepalive_message(session);
     bgp_session_send(session);
+    session->stats.message_tx++;
+    session->stats.keepalive_tx++;
 }
 
 static void
 bgp_session_state_estbalished(bgp_session_t *session) {
     bbl_ctx_s *ctx = session->interface->ctx;
     time_t keepalive_interval;
+
+    clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
 
     /* Start BGP keepalive */
     keepalive_interval = session->peer.holdtime/2U;
@@ -256,16 +295,33 @@ bgp_session_connect(bgp_session_t *session, time_t delay) {
     if(session->state == BGP_CLOSED) {
         bbl_tcp_ctx_free(session->tcpc);
         session->tcpc = NULL;
+
         bgp_session_reset_read_buffer(session);
         bgp_session_reset_write_buffer(session);
+
         session->peer.as = 0;
         session->peer.id = 0;
         session->peer.holdtime = 0;
+
+        session->stats.message_rx = 0;
+        session->stats.message_tx = 0;
         session->stats.keepalive_rx = 0;
+        session->stats.keepalive_tx = 0;
         session->stats.update_rx = 0;
+        session->stats.update_tx = 0;
+        
         session->raw_update_send = false;
+
+        session->established_timestamp.tv_sec = 0;
+        session->established_timestamp.tv_nsec = 0;
+        session->update_start_timestamp.tv_sec = 0;
+        session->update_start_timestamp.tv_nsec = 0;
+        session->update_stop_timestamp.tv_sec = 0;
+        session->update_stop_timestamp.tv_nsec = 0;
+
         session->error_code = 0;
         session->error_subcode = 0;
+
         bgp_session_state_change(session, BGP_IDLE);
 
         timer_add(&ctx->timer_root, &session->connect_timer, 
@@ -317,6 +373,7 @@ bgp_session_close(bgp_session_t *session) {
         bgp_session_reset_write_buffer(session);
         bgp_push_notification_message(session);
         bgp_session_send(session);
+        session->stats.message_tx++;
         bgp_session_state_change(session, BGP_CLOSING);
         delay = 3;
     }

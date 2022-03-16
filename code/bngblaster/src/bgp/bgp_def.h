@@ -12,8 +12,8 @@
 /* DEFINITIONS ... */
 
 #define BGP_PORT                    179
-#define BGP_MIN_MESSAGE_SIZE        19
-#define BGP_MAX_MESSAGE_SIZE        4096
+#define BGP_MIN_MESSAGE_SIZE        19U
+#define BGP_MAX_MESSAGE_SIZE        4096U
 #define BGP_BUF_SIZE                256*1024
 #define BGP_DEFAULT_AS              65000
 #define BGP_DEFAULT_HOLDTIME        90
@@ -43,6 +43,7 @@ typedef struct bgp_raw_update_ {
 
     uint8_t *buf;
     uint32_t len;
+    uint32_t updates;
 
     /* Pointer to next instance */
     struct bgp_raw_update_ *next;
@@ -97,7 +98,6 @@ typedef struct bgp_session_ {
     io_buffer_t write_buf;
 
     bgp_state_t state;
-    uint16_t keepalive_countdown;
 
     struct {
         uint32_t as;
@@ -106,12 +106,20 @@ typedef struct bgp_session_ {
     } peer;
 
     struct {
+        uint32_t message_rx;
+        uint32_t message_tx;
         uint32_t keepalive_rx;
+        uint32_t keepalive_tx;
         uint32_t update_rx;
+        uint32_t update_tx;
     } stats;
 
     bgp_raw_update_t *raw_update;
     bool raw_update_send;
+
+    struct timespec established_timestamp;
+    struct timespec update_start_timestamp;
+    struct timespec update_stop_timestamp;
 
     bool teardown;
     uint8_t error_code;

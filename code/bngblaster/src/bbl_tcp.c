@@ -1,6 +1,6 @@
 /*
- * BNG Blaster (BBL) - LwIP
- *
+ * BNG Blaster (BBL) - TCP (lwIP)
+ * 
  * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2021, RtBrick, Inc.
@@ -115,6 +115,9 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
     } else if(tcpc->pcb->unacked == NULL && tcpc->pcb->unsent == NULL) {
         /* Idle means that it is save to replace buffer. */
         tcpc->state = BBL_TCP_STATE_IDLE;
+        if(tcpc->idle_cb) {
+            (tcpc->idle_cb)(tcpc->arg);
+        }
     }
     return ERR_OK;
 }
