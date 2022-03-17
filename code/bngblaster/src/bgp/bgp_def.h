@@ -62,6 +62,7 @@ typedef struct bgp_config_ {
     uint16_t teardown_time;
 
     bool reconnect;
+    bool start_traffic;
 
     char *network_interface;
     char *mrt_file;

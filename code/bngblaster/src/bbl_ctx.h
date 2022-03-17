@@ -295,6 +295,7 @@ typedef struct bbl_ctx_
 
         /* Global Traffic */
         bool traffic_autostart;
+        bool traffic_stop_verified;
 
         /* Session Traffic */
         bool session_traffic_autostart;

@@ -841,7 +841,7 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
                     }
                 }
             }
-            if(stream->buf && g_traffic && session->stream_traffic) {
+            if(stream->buf && g_traffic && !stream->stop && session->stream_traffic) {
                 stream->thread.can_send = true;
             } else {
                 stream->thread.can_send = false;
@@ -855,7 +855,7 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
                     }
                 }
             }
-            if(stream->buf && g_traffic) {
+            if(stream->buf && g_traffic && !stream->stop) {
                 stream->thread.can_send = true;
             } else {
                 stream->thread.can_send = false;
@@ -1100,7 +1100,7 @@ bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
 }
 
 void
-bbl_stream_tx_job (timer_s *timer) {
+bbl_stream_tx_job(timer_s *timer) {
 
     bbl_stream *stream = timer->data;
     bbl_session_s *session = stream->session;
@@ -1120,7 +1120,7 @@ bbl_stream_tx_job (timer_s *timer) {
         }
     }
 
-    if(!g_traffic || (session && !session->stream_traffic)) {
+    if(!g_traffic || stream->stop || (session && !session->stream_traffic)) {
         /* Close send window */
         stream->send_window_packets = 0;
         return;

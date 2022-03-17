@@ -103,6 +103,10 @@ bgp_raw_update_stop_cb(void *arg) {
         format_ipv4_address(&session->ipv4_local_address),
         format_ipv4_address(&session->ipv4_peer_address),
         time_diff.tv_sec);
+
+    if(session->config->start_traffic) {
+        enable_disable_traffic(session->ctx, true);
+    }
 }
 
 void
@@ -164,7 +168,11 @@ bgp_session_state_estbalished(bgp_session_t *session) {
     clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
 
     /* Start BGP keepalive */
-    keepalive_interval = session->peer.holdtime/2U;
+    if(session->peer.holdtime < session->config->holdtime) {
+        keepalive_interval = session->peer.holdtime/2U;
+    } else {
+        keepalive_interval = session->config->holdtime/2U;
+    }
     if(!keepalive_interval) {
         keepalive_interval = 1;
     }
