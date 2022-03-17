@@ -756,6 +756,13 @@ json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
         bgp_config->reconnect = true;
     }
 
+    value = json_object_get(bgp, "start-traffic");
+    if (json_is_boolean(value)) {
+        bgp_config->start_traffic = json_boolean_value(value);
+    } else {
+        bgp_config->start_traffic = false;
+    }
+
     value = json_object_get(bgp, "teardown-time");
     if (json_is_number(value)) {
         bgp_config->teardown_time = json_number_value(value);
@@ -1956,6 +1963,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "autostart");
         if (json_is_boolean(value)) {
             ctx->config.traffic_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "stop-verified");
+        if (json_is_boolean(value)) {
+            ctx->config.traffic_stop_verified = json_boolean_value(value);
         }
     }
 

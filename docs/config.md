@@ -675,6 +675,7 @@ This section describes all attributes of the `traffic` hierarchy.
 Attribute | Description | Default
 --------- | ----------- | -------
 `autostart` | Automatically start traffic | true
+`stop-verified` | Automatically stop traffic streams if verified | false
 
 ## Session Traffic
 
@@ -930,5 +931,6 @@ Attribute | Description | Default
 `holdtime` | BGP holdtime in seconds | 90
 `id` | BGP identifier | 1.2.3.4
 `reconnect` | BGP reconnect | true
+`start-traffic` | BGP start global traffic after RAW update | false
 `teardown-time` | BGP teardown time in seconds | 5
 `raw-update-file` | BGP RAW update file |
