@@ -16,7 +16,7 @@
 extern const char banner[];
 
 void
-bbl_stats_update_cps (bbl_ctx_s *ctx) {
+bbl_stats_update_cps(bbl_ctx_s *ctx) {
     struct timespec time_diff = {0};
     uint32_t ms;
     double x, y;
@@ -53,7 +53,7 @@ bbl_stats_update_cps (bbl_ctx_s *ctx) {
 }
 
 void
-bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
+bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
     bbl_session_s *session;
     bbl_stream *stream;
@@ -266,7 +266,7 @@ bbl_stats_generate (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 }
 
 void
-bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
+bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t * stats) {
     struct bbl_interface_ *interface;
     int i;
 
@@ -307,6 +307,12 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("\nNetwork Interface ( %s ):\n", interface->name);
             printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
+            if(ctx->stats.stream_traffic_flows) {
+                printf("  TX Stream:         %10lu packets\n",
+                    interface->stats.stream_tx);
+                printf("  RX Stream:         %10lu packets (%lu loss)\n",
+                    interface->stats.stream_rx, interface->stats.stream_loss);
+            }
             if(ctx->stats.session_traffic_flows) {
                 printf("  TX Session:        %10lu packets\n",
                     interface->stats.session_ipv4_tx);
@@ -341,6 +347,12 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("\nAccess Interface ( %s ):\n", interface->name);
             printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
+            if(ctx->stats.stream_traffic_flows) {
+                printf("  TX Stream:         %10lu packets\n",
+                    interface->stats.stream_tx);
+                printf("  RX Stream:         %10lu packets (%lu loss)\n",
+                    interface->stats.stream_rx, interface->stats.stream_loss);
+            }
             if(ctx->stats.session_traffic_flows) {
                 printf("  TX Session:        %10lu packets\n", interface->stats.session_ipv4_tx);
                 printf("  RX Session:        %10lu packets (%lu loss, %lu wrong session)\n", interface->stats.session_ipv4_rx,
@@ -398,6 +410,12 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("\nA10NSP Interface ( %s ):\n", interface->name);
             printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
+            if(ctx->stats.stream_traffic_flows) {
+                printf("  TX Stream:         %10lu packets\n",
+                    interface->stats.stream_tx);
+                printf("  RX Stream:         %10lu packets (%lu loss)\n",
+                    interface->stats.stream_rx, interface->stats.stream_loss);
+            }
             if(ctx->stats.session_traffic_flows) {
                 printf("  TX Session:        %10lu packets\n",
                     interface->stats.session_ipv4_tx);
@@ -505,7 +523,7 @@ bbl_stats_stdout (bbl_ctx_s *ctx, bbl_stats_t * stats) {
 }
 
 void
-bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
+bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t * stats) {
     struct bbl_interface_ *interface;
     bbl_session_s *session;
     bbl_stream *stream;
@@ -568,6 +586,11 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_sub, "tx-packets", json_integer(interface->stats.packets_tx));
             json_object_set(jobj_sub, "rx-packets", json_integer(interface->stats.packets_rx));
             if(ctx->stats.session_traffic_flows) {
+                json_object_set(jobj_sub, "tx-stream-packets", json_integer(interface->stats.stream_tx));
+                json_object_set(jobj_sub, "rx-stream-packets", json_integer(interface->stats.stream_rx));
+                json_object_set(jobj_sub, "rx-stream-packets-loss", json_integer(interface->stats.stream_loss));
+            }
+            if(ctx->stats.session_traffic_flows) {
                 json_object_set(jobj_sub, "tx-session-packets", json_integer(interface->stats.session_ipv4_tx));
                 json_object_set(jobj_sub, "rx-session-packets", json_integer(interface->stats.session_ipv4_rx));
                 json_object_set(jobj_sub, "rx-session-packets-loss", json_integer(interface->stats.session_ipv4_loss));
@@ -598,6 +621,11 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_sub, "name", json_string(interface->name));
             json_object_set(jobj_sub, "tx-packets", json_integer(interface->stats.packets_tx));
             json_object_set(jobj_sub, "rx-packets", json_integer(interface->stats.packets_rx));
+            if(ctx->stats.session_traffic_flows) {
+                json_object_set(jobj_sub, "tx-stream-packets", json_integer(interface->stats.stream_tx));
+                json_object_set(jobj_sub, "rx-stream-packets", json_integer(interface->stats.stream_rx));
+                json_object_set(jobj_sub, "rx-stream-packets-loss", json_integer(interface->stats.stream_loss));
+            }
             if(ctx->stats.session_traffic_flows) {
                 json_object_set(jobj_sub, "tx-session-packets", json_integer(interface->stats.session_ipv4_tx));
                 json_object_set(jobj_sub, "rx-session-packets", json_integer(interface->stats.session_ipv4_rx));
@@ -673,6 +701,11 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_sub, "name", json_string(interface->name));
             json_object_set(jobj_sub, "tx-packets", json_integer(interface->stats.packets_tx));
             json_object_set(jobj_sub, "rx-packets", json_integer(interface->stats.packets_rx));
+            if(ctx->stats.session_traffic_flows) {
+                json_object_set(jobj_sub, "tx-stream-packets", json_integer(interface->stats.stream_tx));
+                json_object_set(jobj_sub, "rx-stream-packets", json_integer(interface->stats.stream_rx));
+                json_object_set(jobj_sub, "rx-stream-packets-loss", json_integer(interface->stats.stream_loss));
+            }
             if(ctx->stats.session_traffic_flows) {
                 json_object_set(jobj_sub, "tx-session-packets", json_integer(interface->stats.session_ipv4_tx));
                 json_object_set(jobj_sub, "rx-session-packets", json_integer(interface->stats.session_ipv4_rx));
@@ -825,8 +858,7 @@ bbl_stats_json (bbl_ctx_s *ctx, bbl_stats_t * stats) {
  * Compute a PPS rate using a moving average of <BBL_AVG_SAMPLE> samples.
  */
 void
-bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
-{
+bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value) {
     uint8_t idx;
     uint64_t div;
     uint64_t sum;
@@ -856,8 +888,7 @@ bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value)
 }
 
 void
-bbl_compute_interface_rate_job (timer_s *timer)
-{
+bbl_compute_interface_rate_job(timer_s *timer) {
     bbl_interface_s *interface;
 
     interface = timer->data;
@@ -867,20 +898,25 @@ bbl_compute_interface_rate_job (timer_s *timer)
     bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
     bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
 
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-    if(interface->type == INTERFACE_TYPE_ACCESS || interface->type == INTERFACE_TYPE_NETWORK) {
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
-    }
-
     if(interface->type == INTERFACE_TYPE_NETWORK) {
         bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
+    } else if(interface->type == INTERFACE_TYPE_ACCESS) {
+        bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
         bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx);
+    }
+
+    if(interface->ctx->stats.stream_traffic_flows) {
+        bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
+    }
+    if(interface->ctx->stats.session_traffic_flows) {
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
     }
 }

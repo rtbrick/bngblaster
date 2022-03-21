@@ -798,6 +798,7 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
     bytes_tx = thread->bytes_tx;
     delta_bytes = bytes_tx - thread->bytes_tx_last_sync;
 
+    interface->stats.stream_tx += delta_packets;
     interface->stats.packets_tx += delta_packets;
     interface->stats.bytes_tx += delta_bytes;
 
@@ -1138,6 +1139,7 @@ bbl_stream_tx_job(timer_s *timer) {
         if(!bbl_io_send(interface, stream->buf, stream->tx_len)) {
             return;
         }
+        interface->stats.stream_tx++;
         stream->send_window_packets++;
         stream->packets_tx++;
         stream->flow_seq++;
