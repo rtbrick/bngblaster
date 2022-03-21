@@ -662,6 +662,7 @@ main(int argc, char *argv[])
     /* Stop curses. Do this before the final reports. */
     if(g_interactive) {
         endwin();
+        g_interactive = false;
     }
 
     /* Generate reports. */
