@@ -287,12 +287,12 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
     search = dict_search(interface->ctx->stream_flow_dict, &bbl->flow_id);
     if(search) {
         stream = *search;
+        interface->stats.stream_rx++;
         stream->packets_rx++;
         stream->rx_len = eth->length;
         stream->rx_priority = tos;
         stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
         stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
-
         mpls = eth->mpls;
         if(mpls) {
             stream->rx_mpls1 = true;
@@ -330,6 +330,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
                 loss = bbl->flow_seq - (stream->rx_last_seq +1);
                 stream->loss += loss;
+                interface->stats.stream_loss += loss;
             }
         }
         stream->rx_last_seq = bbl->flow_seq;

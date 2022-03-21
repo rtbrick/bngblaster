@@ -93,12 +93,8 @@ typedef struct bbl_interface_
     struct {
         uint64_t packets_tx;
         uint64_t packets_rx;
-        bbl_rate_s rate_packets_tx;
-        bbl_rate_s rate_packets_rx;
         uint64_t bytes_tx;
         uint64_t bytes_rx;
-        bbl_rate_s rate_bytes_tx;
-        bbl_rate_s rate_bytes_rx;
         uint64_t packets_rx_drop_unknown;
         uint64_t packets_rx_drop_decode_error;
         uint64_t sendto_failed;
@@ -160,26 +156,21 @@ typedef struct bbl_interface_
         uint32_t ipv4_fragmented_rx;
 
         uint64_t session_ipv4_tx;
-        bbl_rate_s rate_session_ipv4_tx;
         uint64_t session_ipv4_rx;
-        bbl_rate_s rate_session_ipv4_rx;
         uint64_t session_ipv4_loss;
-
-        uint64_t session_ipv6_tx;
-        bbl_rate_s rate_session_ipv6_tx;
-        uint64_t session_ipv6_rx;
-        bbl_rate_s rate_session_ipv6_rx;
-        uint64_t session_ipv6_loss;
-
-        uint64_t session_ipv6pd_tx;
-        bbl_rate_s rate_session_ipv6pd_tx;
-        uint64_t session_ipv6pd_rx;
-        bbl_rate_s rate_session_ipv6pd_rx;
-        uint64_t session_ipv6pd_loss;
-
         uint64_t session_ipv4_wrong_session;
+        uint64_t session_ipv6_tx;
+        uint64_t session_ipv6_rx;
+        uint64_t session_ipv6_loss;
         uint64_t session_ipv6_wrong_session;
+        uint64_t session_ipv6pd_tx;
+        uint64_t session_ipv6pd_rx;
+        uint64_t session_ipv6pd_loss;
         uint64_t session_ipv6pd_wrong_session;
+
+        uint64_t stream_tx;
+        uint64_t stream_rx;
+        uint64_t stream_loss;
 
         uint32_t l2tp_control_rx;
         uint32_t l2tp_control_rx_dup; /* duplicate */
@@ -189,14 +180,29 @@ typedef struct bbl_interface_
         uint32_t l2tp_control_retry;
         uint64_t l2tp_data_rx;
         uint64_t l2tp_data_tx;
-        bbl_rate_s rate_l2tp_data_rx;
-        bbl_rate_s rate_l2tp_data_tx;
 
         uint64_t li_rx;
-        bbl_rate_s rate_li_rx;
 
         uint32_t isis_rx;
         uint32_t isis_tx;
+
+        /* Rate Stats */
+
+        bbl_rate_s rate_packets_tx;
+        bbl_rate_s rate_packets_rx;
+        bbl_rate_s rate_bytes_tx;
+        bbl_rate_s rate_bytes_rx;
+        bbl_rate_s rate_session_ipv4_tx;
+        bbl_rate_s rate_session_ipv4_rx;
+        bbl_rate_s rate_session_ipv6_tx;
+        bbl_rate_s rate_session_ipv6_rx;
+        bbl_rate_s rate_session_ipv6pd_tx;
+        bbl_rate_s rate_session_ipv6pd_rx;
+        bbl_rate_s rate_stream_tx;
+        bbl_rate_s rate_stream_rx;
+        bbl_rate_s rate_l2tp_data_rx;
+        bbl_rate_s rate_l2tp_data_tx;
+        bbl_rate_s rate_li_rx;
     } stats;
 
     struct timer_ *tx_job;
