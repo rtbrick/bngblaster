@@ -171,7 +171,7 @@ lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node,
 
         if (ctx->authentication_type == ISIS_AUTH_SIMPLE) {
             push_data(&packet->buf, (uint8_t *)ctx->authentication_key, auth_len);
-        } 
+        }
         if (ctx->authentication_type == ISIS_AUTH_MD5) {
             push_be_uint(&packet->buf, 8, 0);
             push_be_uint(&packet->buf, 8, 0);
@@ -289,8 +289,8 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
      * The IPv4 Prefix TLV has limited space for flags. Generate them as subTLV if required.
      */
     if (attr->key.attr_type == ISIS_TLV_EXTD_IPV4_REACH &&
-        (attr->key.prefix.ext_flag || 
-         attr->key.prefix.r_flag || 
+        (attr->key.prefix.ext_flag ||
+         attr->key.prefix.r_flag ||
          attr->key.prefix.node_flag)) {
 
         subtlv_start_idx = buf->idx;
@@ -615,7 +615,8 @@ lspgen_gen_packet_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
          * Start a fresh TLV ?
          */
         if ((last_attr != attr->key.attr_type) ||
-            (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size)) {
+            (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
+	    attr->key.start_tlv) {
             tlv_start_idx = packet->buf.idx;
             push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
             push_be_uint(&packet->buf, 1, 0); /* Length */
@@ -679,3 +680,4 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
 
     dict_itor_free(itor);
 }
+
