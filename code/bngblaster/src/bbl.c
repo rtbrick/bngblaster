@@ -61,6 +61,7 @@ enable_disable_traffic(bbl_ctx_s *ctx, bool status)
     uint32_t i;
 
     g_traffic = status;
+    ctx->multicast_traffic = status;
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
