@@ -61,7 +61,7 @@ lspgen_write_cap_config(json_t *arr, lsdb_attr_t *attr)
 }
 
 /*
- * Common function shared between ipv4_prefix, 
+ * Common function shared between ipv4_prefix,
  * ipv6_prefix and label_binding writers.
  */
 void
@@ -442,7 +442,7 @@ lspgen_read_ipv6_addr_config(lsdb_node_t *node, json_t *obj)
 }
 
 /*
- * Common function shared between ipv4_prefix, 
+ * Common function shared between ipv4_prefix,
  * ipv6_prefix and label_binding readers.
  */
 void
@@ -539,6 +539,7 @@ lspgen_read_label_binding_config(lsdb_node_t *node, json_t *obj)
     }
 
     attr_template.key.attr_type = ISIS_TLV_BINDING;
+    attr_template.key.start_tlv = true;
     lsdb_add_node_attr(node, &attr_template);
 }
 
