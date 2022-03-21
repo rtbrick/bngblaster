@@ -1847,9 +1847,7 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 static void
 bbl_rx_network_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface) {
     bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
-    if(interface->ip.address &&
-       interface->ip.address == ipv4->dst &&
-       icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+    if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
         /* Send ICMP reply... */
         bbl_send_icmp_reply(interface, NULL, eth, ipv4, icmp);
     }

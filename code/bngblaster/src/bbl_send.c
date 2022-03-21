@@ -128,6 +128,7 @@ update_eth(bbl_interface_s *interface,
            bbl_session_s *session,
            bbl_ethernet_header_t *eth)
 {
+    eth->mpls = NULL;
     if(session) {
         swap_eth_src_dst(eth);
         eth->src = session->client_mac;
