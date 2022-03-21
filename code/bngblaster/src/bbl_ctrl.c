@@ -998,14 +998,30 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
     }
 }
 
-ssize_t
+static ssize_t
 bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
+    bbl_stream *stream;
+    bool stream_stop;
+    struct dict_itor *itor;
     uint32_t i;
+
+    if(status) {
+        stream_stop = false;
+    } else {
+        stream_stop = true;
+    }
+
     if(session_id) {
         session = bbl_session_get(ctx, session_id);
         if(session) {
             session->stream_traffic = status;
+            /* Iterate over all session traffic streams */
+            stream = session->stream;
+            while(stream) {
+                stream->stop = stream_stop;
+                stream = stream->next;
+            }
             return bbl_ctrl_status(fd, "ok", 200, NULL);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -1018,7 +1034,17 @@ bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status
                 session->stream_traffic = status;
             }
         }
+        /* Iterate over all traffic streams */
+        itor = dict_itor_new(ctx->stream_flow_dict);
+        dict_itor_first(itor);
+        for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+            stream = (bbl_stream*)*dict_itor_datum(itor);
+            if(stream) {
+                stream->stop = stream_stop;
+            }
+        }
         return bbl_ctrl_status(fd, "ok", 200, NULL);
+    
     }
 }
 
@@ -1200,30 +1226,6 @@ bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
         return result;
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "stream not found");
-    }
-}
-
-ssize_t
-bbl_ctrl_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
-    bbl_session_s *session;
-    uint32_t i;
-    if(session_id) {
-        session = bbl_session_get(ctx, session_id);
-        if(session) {
-            session->stream_traffic = status;
-            return bbl_ctrl_status(fd, "ok", 200, NULL);
-        } else {
-            return bbl_ctrl_status(fd, "warning", 404, "session not found");
-        }
-    } else {
-        /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
-            if(session) {
-                session->stream_traffic = status;
-            }
-        }
-        return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
 }
 
