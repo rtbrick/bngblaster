@@ -9,7 +9,16 @@
 #ifndef __BBL_BGP_CTRL_H__
 #define __BBL_BGP_CTRL_H__
 
-json_t *
-bgp_ctrl_session(bgp_session_t *session);
+ssize_t
+bgp_ctrl_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
+
+ssize_t
+bgp_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
+
+ssize_t
+bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+
+ssize_t
+bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
 
 #endif

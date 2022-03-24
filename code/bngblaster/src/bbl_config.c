@@ -772,6 +772,9 @@ json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
 
     if (json_unpack(bgp, "{s:s}", "raw-update-file", &s) == 0) {
         bgp_config->raw_update_file = strdup(s);
+        if(!bgp_raw_update_load(ctx, bgp_config->raw_update_file, true)) {
+            return false;
+        }
     }
     return true;
 }
@@ -1704,6 +1707,20 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         }
         if (!json_parse_bgp_config(ctx, sub, bgp_config)) {
             return false;
+        }
+    }
+
+    /* Pre-Load BGP RAW update files */
+    sub = json_object_get(root, "bgp-raw-update-files");
+    if (json_is_array(sub)) {
+        size = json_array_size(sub);
+        for (i = 0; i < size; i++) {
+            s = json_string_value(json_array_get(sub, i));
+            if(s) {
+                if(!bgp_raw_update_load(ctx, s, true)) {
+                    return false;
+                }
+            }
         }
     }
 

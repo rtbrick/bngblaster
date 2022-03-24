@@ -1471,42 +1471,6 @@ bbl_ctrl_isis_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
-bbl_ctrl_bgp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
-    json_t *root, *sessions, *session;
-
-    bgp_session_t *bgp_session = ctx->bgp_sessions;
-
-    sessions = json_array();
-    while(bgp_session) {
-        session = bgp_ctrl_session(bgp_session);
-        if(session) {
-            json_array_append(sessions, session);
-        }
-        bgp_session = bgp_session->next;
-    }
-
-    root = json_pack("{ss si so}",
-                     "status", "ok",
-                     "code", 200,
-                     "bgp-sessions", sessions);
-    if(root) {
-        result = json_dumpfd(root, fd, 0);
-        json_decref(root);
-    } else {
-        result = bbl_ctrl_status(fd, "error", 500, "internal error");
-        json_decref(sessions);
-    }
-    return result;
-}
-
-ssize_t
-bbl_ctrl_bgp_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    bgp_teardown(ctx);
-    return bbl_ctrl_status(fd, "ok", 200, NULL);
-}
-
 struct action {
     char *name;
     callback_function *fn;
@@ -1557,8 +1521,10 @@ struct action actions[] = {
     {"isis-load-mrt", bbl_ctrl_isis_load_mrt},
     {"isis-lsp-update", bbl_ctrl_isis_lsp_update},
     {"isis-teardown", bbl_ctrl_isis_teardown},
-    {"bgp-sessions", bbl_ctrl_bgp_sessions},
-    {"bgp-teardown", bbl_ctrl_bgp_teardown},
+    {"bgp-sessions", bgp_ctrl_sessions},
+    {"bgp-teardown", bgp_ctrl_teardown},
+    {"bgp-raw-update", bgp_ctrl_raw_update},
+    {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
     {NULL, NULL},
 };
 

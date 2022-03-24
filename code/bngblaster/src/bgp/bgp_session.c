@@ -94,10 +94,11 @@ bgp_raw_update_stop_cb(void *arg) {
     timespec_sub(&time_diff, 
                  &session->update_stop_timestamp, 
                  &session->update_start_timestamp);
-    
+
+    session->raw_update_sending = false;
     session->stats.message_tx += session->raw_update->updates;
     session->stats.update_tx += session->raw_update->updates;
-
+    
     LOG(BGP, "BGP (%s %s - %s) raw update stop after %lds\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_local_address),
@@ -115,9 +116,9 @@ bgp_session_update_job(timer_s *timer) {
     bbl_ctx_s *ctx = session->interface->ctx;
 
     if(session->state == BGP_ESTABLISHED) {
-        if(session->raw_update && !session->raw_update_send) {
+        if(session->raw_update && !session->raw_update_sending) {
             if(bbl_tcp_send(session->tcpc, session->raw_update->buf, session->raw_update->len)) {
-                session->raw_update_send = true;
+                session->raw_update_sending = true;
 
                 LOG(BGP, "BGP (%s %s - %s) raw update start\n",
                     session->interface->name,
@@ -126,7 +127,6 @@ bgp_session_update_job(timer_s *timer) {
 
                 clock_gettime(CLOCK_MONOTONIC, &session->update_start_timestamp);
                 session->tcpc->idle_cb = bgp_raw_update_stop_cb;
-
             } else {
                 goto RETRY;
             }
@@ -317,8 +317,9 @@ bgp_session_connect(bgp_session_t *session, time_t delay) {
         session->stats.keepalive_tx = 0;
         session->stats.update_rx = 0;
         session->stats.update_tx = 0;
-        
-        session->raw_update_send = false;
+
+        session->raw_update = session->raw_update_start;
+        session->raw_update_sending = false;
 
         session->established_timestamp.tv_sec = 0;
         session->established_timestamp.tv_nsec = 0;
