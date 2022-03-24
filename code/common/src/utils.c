@@ -51,7 +51,7 @@ write_be_uint(uint8_t *data, size_t length, uint64_t value)
  * Push a big endian integer to the write buffer and update the cursor.
  */
 bool
-push_be_uint(struct io_buffer_ *buffer, size_t length, uint64_t value)
+push_be_uint(io_buffer_t *buffer, size_t length, uint64_t value)
 {
     /*
      * Buffer overrun protection.
@@ -120,7 +120,7 @@ write_le_uint(uint8_t *data, uint32_t length, uint64_t value)
  * Push a little endian integer to the write buffer and update the cursor.
  */
 bool
-push_le_uint(struct io_buffer_ *buffer, uint32_t length, uint64_t value)
+push_le_uint(io_buffer_t *buffer, uint32_t length, uint64_t value)
 {
     /*
      * Buffer overrun protection.

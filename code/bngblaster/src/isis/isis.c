@@ -159,15 +159,12 @@ void
 isis_teardown_job(timer_s *timer) {
     isis_instance_t *instance = timer->data;
     isis_adjacency_t *adjacency;
-    while(instance) {
-        for(int i=0; i<ISIS_LEVELS; i++) {
-            adjacency = instance->level[i].adjacency;
-            while(adjacency) {
-                isis_adjacency_down(adjacency);
-                adjacency = adjacency->next;
-            }
+    for(int i=0; i<ISIS_LEVELS; i++) {
+        adjacency = instance->level[i].adjacency;
+        while(adjacency) {
+            isis_adjacency_down(adjacency);
+            adjacency = adjacency->next;
         }
-        instance = instance->next;
     }
 }
 

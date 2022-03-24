@@ -43,6 +43,7 @@
 #define ETH_TYPE_IPV6                   0x86dd
 #define ETH_TYPE_CFM                    0x8902
 #define ETH_TYPE_MPLS                   0x8847
+#define ETH_TYPE_RAW                    0xffff
 
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
@@ -58,6 +59,7 @@
 #define IPV4_MF                         0x2000 /* more fragments flag */
 #define IPV4_OFFMASK                    0x1fff /* mask for fragmenting bits */
 
+#define IPV6_HDR_LEN                    40
 #define IPV6_IDENTIFER_LEN              8
 
 #define PPPOE_TAG_SERVICE_NAME          0x0101
@@ -493,6 +495,7 @@ typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; /* destination MAC address */
     uint8_t  *src; /* source MAC address */
 
+    bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
     uint16_t  vlan_outer; /* outer VLAN identifier */
     uint16_t  vlan_inner; /* inner VLAN identifier */
@@ -635,13 +638,15 @@ typedef struct bbl_ipv4_ {
     uint32_t    src;
     uint32_t    dst;
     uint8_t     tos;
-    uint16_t    offset;
     uint8_t     ttl;
     uint8_t     protocol;
+    bool        router_alert_option; /* add router alert option if true */
+    uint16_t    offset;
+    uint16_t    len; /* IPv4 total length */
+    uint8_t    *hdr; /* IPv4 header start */
     void       *next; /* next header */
     void       *payload; /* IPv4 payload */
     uint16_t    payload_len; /* IPv4 payload length */
-    bool        router_alert_option; /* add router alert option if true */
 } bbl_ipv4_t;
 
 /*
@@ -653,6 +658,8 @@ typedef struct bbl_ipv6_ {
     uint8_t     tos;
     uint8_t     ttl;
     uint8_t     protocol;
+    uint16_t    len; /* IPv6 total length */
+    uint8_t    *hdr; /* IPv6 header start */
     void       *next; /* next header */
     void       *payload; /* IPv6 payload */
     uint16_t    payload_len; /* IPv6 payload length */
@@ -669,6 +676,16 @@ typedef struct bbl_udp_ {
     void       *payload; /* UDP payload */
     uint16_t    payload_len; /* UDP payload length */
 } bbl_udp_t;
+
+/*
+ * TCP Structure
+ */
+typedef struct bbl_tcp_ {
+    uint16_t    src;
+    uint16_t    dst;
+    uint16_t    len; /* TCP total length */
+    uint8_t    *hdr; /* TCP header start */
+} bbl_tcp_t;
 
 /*
  * IGMP Structure

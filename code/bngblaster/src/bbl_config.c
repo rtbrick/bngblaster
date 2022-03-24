@@ -282,6 +282,18 @@ json_parse_network_interface(bbl_ctx_s *ctx, json_t *network_interface, bbl_netw
         network_config->vlan &= 4095;
     }
 
+    value = json_object_get(network_interface, "mtu");
+    if (json_is_number(value)) {
+        network_config->mtu = json_number_value(value);
+    } else {
+        network_config->mtu = 1500;
+    }
+
+    if(network_config->mtu < 64 || network_config->mtu > 9000) {
+        fprintf(stderr, "JSON config error: Invalid value for network->mtu\n");
+        return false;
+    }
+
     value = json_object_get(network_interface, "gateway-resolve-wait");
     if (json_is_boolean(value)) {
         network_config->gateway_resolve_wait = json_boolean_value(value);
@@ -676,6 +688,94 @@ json_parse_a10nsp_interface(bbl_ctx_s *ctx, json_t *a10nsp_interface, bbl_a10nsp
         }
     }
 
+    return true;
+}
+
+static bool
+json_parse_bgp_config(bbl_ctx_s *ctx, json_t *bgp, bgp_config_t *bgp_config) {
+    json_t *value = NULL;
+    const char *s = NULL;    
+    
+    ctx->tcp = true;
+
+    if (json_unpack(bgp, "{s:s}", "network-interface", &s) == 0) {
+        bgp_config->network_interface = strdup(s);
+    }
+
+    if (json_unpack(bgp, "{s:s}", "local-ipv4-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_local_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->local-ipv4-address\n");
+            return false;
+        }
+        add_secondary_ipv4(ctx, bgp_config->ipv4_local_address);
+    }
+
+    if (json_unpack(bgp, "{s:s}", "peer-ipv4-address", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->ipv4_peer_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->peer-ipv4-address\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for bgp->peer-ipv4-address\n");
+        return false;   
+    }
+
+    value = json_object_get(bgp, "local-as");
+    if (value) {
+        bgp_config->local_as = json_number_value(value);
+    } else {
+        bgp_config->local_as = BGP_DEFAULT_AS;
+    }
+
+    value = json_object_get(bgp, "peer-as");
+    if (value) {
+        bgp_config->peer_as = json_number_value(value);
+    } else {
+        bgp_config->peer_as = bgp_config->local_as;
+    }
+
+    value = json_object_get(bgp, "holdtime");
+    if (value) {
+        bgp_config->holdtime = json_number_value(value);
+    } else {
+        bgp_config->holdtime = BGP_DEFAULT_HOLDTIME;
+    }
+
+    bgp_config->id = htobe32(0x01020304);
+    if (json_unpack(bgp, "{s:s}", "id", &s) == 0) {
+        if (!inet_pton(AF_INET, s, &bgp_config->id)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->id\n");
+            return false;
+        }
+    } 
+
+    value = json_object_get(bgp, "reconnect");
+    if (json_is_boolean(value)) {
+        bgp_config->reconnect = json_boolean_value(value);
+    } else {
+        bgp_config->reconnect = true;
+    }
+
+    value = json_object_get(bgp, "start-traffic");
+    if (json_is_boolean(value)) {
+        bgp_config->start_traffic = json_boolean_value(value);
+    } else {
+        bgp_config->start_traffic = false;
+    }
+
+    value = json_object_get(bgp, "teardown-time");
+    if (json_is_number(value)) {
+        bgp_config->teardown_time = json_number_value(value);
+    } else {
+        bgp_config->teardown_time = BGP_DEFAULT_TEARDOWN_TIME;
+    }
+
+    if (json_unpack(bgp, "{s:s}", "raw-update-file", &s) == 0) {
+        bgp_config->raw_update_file = strdup(s);
+        if(!bgp_raw_update_load(ctx, bgp_config->raw_update_file, true)) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -1181,6 +1281,7 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
     bbl_access_config_s         *access_config          = NULL;
     bbl_a10nsp_config_s         *a10nsp_config          = NULL;
 
+    bgp_config_t                *bgp_config             = NULL;
     isis_config_t               *isis_config            = NULL;
 
     if (json_typeof(root) != JSON_OBJECT) {
@@ -1581,6 +1682,48 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         }
     }
 
+    /* BGP Configuration */
+    sub = json_object_get(root, "bgp");
+    if (json_is_array(sub)) {
+        /* Config is provided as array (multiple bgp sessions) */
+        size = json_array_size(sub);
+        for (i = 0; i < size; i++) {
+            if (!bgp_config) {
+                ctx->config.bgp_config = calloc(1, sizeof(bgp_config_t));
+                bgp_config = ctx->config.bgp_config;
+            } else {
+                bgp_config->next = calloc(1, sizeof(bgp_config_t));
+                bgp_config = bgp_config->next;
+            }
+            if (!json_parse_bgp_config(ctx, json_array_get(sub, i), bgp_config)) {
+                return false;
+            }
+        }
+    } else if (json_is_object(sub)) {
+        /* Config is provided as object (single bgp session) */
+        bgp_config = calloc(1, sizeof(bgp_config_t));
+        if (!ctx->config.bgp_config) {
+            ctx->config.bgp_config = bgp_config;
+        }
+        if (!json_parse_bgp_config(ctx, sub, bgp_config)) {
+            return false;
+        }
+    }
+
+    /* Pre-Load BGP RAW update files */
+    sub = json_object_get(root, "bgp-raw-update-files");
+    if (json_is_array(sub)) {
+        size = json_array_size(sub);
+        for (i = 0; i < size; i++) {
+            s = json_string_value(json_array_get(sub, i));
+            if(s) {
+                if(!bgp_raw_update_load(ctx, s, true)) {
+                    return false;
+                }
+            }
+        }
+    }
+
     /* IS-IS Configuration */
     sub = json_object_get(root, "isis");
     if (json_is_array(sub)) {
@@ -1837,6 +1980,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "autostart");
         if (json_is_boolean(value)) {
             ctx->config.traffic_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "stop-verified");
+        if (json_is_boolean(value)) {
+            ctx->config.traffic_stop_verified = json_boolean_value(value);
         }
     }
 

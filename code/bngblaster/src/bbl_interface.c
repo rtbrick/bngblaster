@@ -293,6 +293,13 @@ bbl_add_network_interfaces(bbl_ctx_s *ctx)
 
         network_if->gateway_resolve_wait = network_config->gateway_resolve_wait;
 
+        /* Init TCP */
+        if(!bbl_tcp_interface_init(network_if, network_config)) {
+            LOG(ERROR, "Failed to init TCP for network interface %s\n", 
+                network_config->interface);
+            return false;
+        }
+
         /* Init routing protocols */ 
         if(network_config->isis_instance_id) {
             isis_result = false;

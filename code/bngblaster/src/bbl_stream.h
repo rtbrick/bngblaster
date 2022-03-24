@@ -94,6 +94,7 @@ typedef struct bbl_stream_
 
     struct timespec wait_start;
     bool wait;
+    bool stop;
 
     uint8_t rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t rx_outer_vlan_pbit;

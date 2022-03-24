@@ -6,7 +6,7 @@
 [![Documentation](https://img.shields.io/badge/Documentation-lightgrey)](https://rtbrick.github.io/bngblaster)
 
 The BNG Blaster is an open source network test tool which is able to simulate routing protocols
-like IS-IS, more than hundred thousand PPPoE and IPoE subscribers including IPTV, L2TPv2, QoS, 
+like IS-IS and BGP, more than hundred thousand PPPoE and IPoE subscribers including IPTV, L2TPv2, QoS, 
 forwarding verification and convergence testing capabilities. 
 
 The BNG Blaster is also constantly enhanced for more common (non-BNG) network testing. 

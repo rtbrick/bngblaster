@@ -37,6 +37,8 @@ enum {
     L2TP,
     DHCP,
     ISIS,
+    BGP,
+    TCP,
     LSDB,
     LSP,
     LOG_ID_MAX

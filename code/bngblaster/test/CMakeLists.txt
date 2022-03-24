@@ -1,5 +1,8 @@
 include_directories("../src/")
 
+# Disable LWIP for unit tests 
+remove_definitions(-DBNGBLASTER_LWIP)
+
 set(LINK_LIBS ${libdict} cmocka pcap m)
 
 add_executable(test-protocols protocols.c ../src/bbl_protocols.c)
