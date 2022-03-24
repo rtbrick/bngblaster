@@ -22,3 +22,14 @@ BNG Blaster directory.
 
 LSPGEN directory.
 
+## Scripts
+
+### bngblaster-cli
+
+Simple python script to interact with the BNG Blaster
+control socket JSON RPC API.
+
+### bgpupdate
+
+Simple python script to generate BGP RAW update 
+streams for use with the BNG Blaster. 

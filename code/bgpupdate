@@ -42,7 +42,8 @@ LOG_LEVELS = {
 MPLS_LABEL_MIN = 1
 MPLS_LABEL_MAX = 1048575
 
-BGP_UPDATE_MIN_LEN = 41
+BGP_UPDATE_MIN_LEN = 34
+BGP_LOCAL_PREF_LEN = 7
 BGP_MP_REACH_IPV4_FIXED_HDR_LEN = 14
 BGP_MP_REACH_IPV6_FIXED_HDR_LEN = 26
 
@@ -165,15 +166,16 @@ def label_type(label: int) -> int:
 def main():
     # parse arguments
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('-a', '--asn', type=int, required=True, action='append', help='autonomous system number')
+    parser.add_argument('-a', '--asn', type=int, default=[], action='append', help='autonomous system number')
     parser.add_argument('-n', '--next-hop-base', metavar='ADDRESS', type=ipaddress.ip_address, required=True, help='next-hop base address (IPv4 or IPv6)')
     parser.add_argument('-N', '--next-hop-num', metavar='N', type=int, default=1, help='next-hop count')
     parser.add_argument('-p', '--prefix-base', metavar='PREFIX', type=ipaddress.ip_network, required=True, help='prefix base network (IPv4 or IPv6)')
     parser.add_argument('-P', '--prefix-num', metavar='N', type=int, default=1, help='prefix count')
     parser.add_argument('-m', '--label-base', metavar='LABEL', type=label_type, help='label base')
     parser.add_argument('-M', '--label-num', metavar='N', type=int, default=1, help='label count')
-    parser.add_argument('-l', '--local-pref', type=int, default=100, help='local preference')
+    parser.add_argument('-l', '--local-pref', type=int, help='local preference')
     parser.add_argument('-f', '--file', type=str, default="out.bgp", help='output file')
+    parser.add_argument('-w', '--withdraw', action="store_true", help="withdraw prefixes")
     parser.add_argument("--end-of-rib", action="store_true", help="add end-of-rib message")
     parser.add_argument("--append", action="store_true", help="append to file if exist")
     parser.add_argument("--pcap", metavar='FILE', type=str, help="write BGP updates to PCAP file")
@@ -258,17 +260,25 @@ def main():
     with open(args.file, file_flags) as f:
         origin_attr = BGPPathAttr(type_flags=64, type_code="ORIGIN", attribute=BGPPAOrigin())
         as_path_attr = BGPPathAttr(type_flags=64, type_code="AS_PATH", attribute=BGPPAAS4BytesPath(segments = [BGPPAAS4BytesPath.ASPathSegment(segment_type="AS_SEQUENCE", segment_value=args.asn)]))
-        local_pref_attr = BGPPathAttr(type_flags=64, type_code="LOCAL_PREF", attribute=BGPPALocalPref(local_pref=args.local_pref))
+
+        if args.local_pref is not None:
+            local_pref_attr = BGPPathAttr(type_flags=64, type_code="LOCAL_PREF", attribute=BGPPALocalPref(local_pref=args.local_pref))
+
         while len(prefixes):
             for nh_index in list(prefixes.keys()):
                 prefix_list = prefixes[nh_index]
                 prefix_count = 0
 
-                path_attr = [origin_attr, as_path_attr, local_pref_attr]
+                path_attr = [origin_attr, as_path_attr]
 
                 nlri = []
 
                 remaining = BGP_MAXIMUM_MESSAGE_SIZE - (BGP_UPDATE_MIN_LEN + (len(args.asn) * 4))
+
+                if args.local_pref is not None:
+                    remaining -= BGP_LOCAL_PREF_LEN
+                    path_attr.append(local_pref_attr)
+
                 if ip_version == 4:
                     if labelled:
                         remaining -= BGP_MP_REACH_IPV4_FIXED_HDR_LEN
@@ -278,6 +288,9 @@ def main():
                         path_attr.append(BGPPathAttr(type_flags=64, type_code="NEXT_HOP", attribute=next_hop_attr))
                 else:
                     remaining -= BGP_MP_REACH_IPV6_FIXED_HDR_LEN
+
+                if args.withdraw:
+                    path_attr = []
 
                 while len(prefix_list) > 0:
                     if remaining < prefix_attr_len:
@@ -292,7 +305,11 @@ def main():
                         if prefix.version == 4:
                             nlri.append(BGPNLRI_LabelledIPv4(prefix=labelled_prefix))
                         else:
-                            nlri.append(BGPNLRI_LabelledIPv6(prefix=labelled_prefix))   
+                            nlri.append(BGPNLRI_LabelledIPv6(prefix=labelled_prefix))
+                        # There is a limitation which allows to withdraw only one prefix
+                        # per update message for SAFI labelled-unicast. 
+                        if args.withdraw:
+                            break
                     else:
                         if prefix.version == 4:
                             nlri.append(BGPNLRI_IPv4(prefix=str(prefix)))
@@ -309,21 +326,39 @@ def main():
                 if labelled or ip_version == 6:
                     if ip_version == 4:
                         # labelled IPv4 unicast
-                        mp_reach_attr = BGPPAMPReachNLRI(afi=1, safi=4, nh_v4_addr=next_hops[nh_index], nh_addr_len=4, nlri=nlri)
+                        if args.withdraw:
+                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=1, safi=4, afi_safi_specific=nlri)
+                        else:
+                            mp_reach_attr = BGPPAMPReachNLRI(afi=1, safi=4, nh_v4_addr=next_hops[nh_index], nh_addr_len=4, nlri=nlri)
                     elif labelled and ip_version == 6:
                         # labelled IPv6 unicast
-                        mp_reach_attr = BGPPAMPReachNLRI(afi=2, safi=4, nh_v6_addr=next_hops[nh_index], nh_addr_len=16, nlri=nlri)
+                        if args.withdraw:
+                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=2, safi=4, afi_safi_specific=nlri)
+                        else:
+                            mp_reach_attr = BGPPAMPReachNLRI(afi=2, safi=4, nh_v6_addr=next_hops[nh_index], nh_addr_len=16, nlri=nlri)
                     else:
                         # IPv6 unicast
-                        mp_reach_attr = BGPPAMPReachNLRI(afi=2, safi=1, nh_v6_addr=next_hops[nh_index], nh_addr_len=16, nlri=nlri)
+                        if args.withdraw:
+                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=2, safi=1, afi_safi_specific=BGPPAMPUnreachNLRI_IPv6(withdrawn_routes=nlri))
+                        else:
+                            mp_reach_attr = BGPPAMPReachNLRI(afi=2, safi=1, nh_v6_addr=next_hops[nh_index], nh_addr_len=16, nlri=nlri)
 
-                    path_attr.append(BGPPathAttr(type_flags=144, type_code="MP_REACH_NLRI", attribute=mp_reach_attr))
+                    if args.withdraw:
+                        path_attr.append(BGPPathAttr(type_flags=144, type_code="MP_UNREACH_NLRI", attribute=mp_reach_attr))
+                    else:
+                        path_attr.append(BGPPathAttr(type_flags=144, type_code="MP_REACH_NLRI", attribute=mp_reach_attr))
                     nlri = []    
-                
+
                 # build update message
-                message = BGPHeader(type="UPDATE")/BGPUpdate(path_attr=path_attr, nlri=nlri)
+                if args.withdraw:
+                    message = BGPHeader(type="UPDATE")/BGPUpdate(path_attr=path_attr, withdrawn_routes=nlri)
+                else:
+                    message = BGPHeader(type="UPDATE")/BGPUpdate(path_attr=path_attr, nlri=nlri)
                 message_bin = bytearray(message.build())
                 log.debug("add update with %s prefixes and length of %s bytes" % (prefix_count, len(message_bin)))
+                if len(message_bin) > BGP_MAXIMUM_MESSAGE_SIZE:
+                    # not expected ...
+                    log.error("invalid BGP update message with length of %s bytes generated, please open a ticket", len(message_bin))
                 pcap(message)
                 f.write(message_bin)
 
