@@ -21,4 +21,7 @@ bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
 ssize_t
 bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
 
+ssize_t
+bgp_ctrl_disconnect(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+
 #endif

@@ -1525,6 +1525,7 @@ struct action actions[] = {
     {"bgp-teardown", bgp_ctrl_teardown},
     {"bgp-raw-update", bgp_ctrl_raw_update},
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
+    {"bgp-disconnect", bgp_ctrl_disconnect},
     {NULL, NULL},
 };
 
