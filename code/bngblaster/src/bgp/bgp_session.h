@@ -13,6 +13,9 @@ const char *
 bgp_session_state_string(bgp_state_t state);
 
 void
+bgp_session_update_job(timer_s *timer);
+
+void
 bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state);
 
 void

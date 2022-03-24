@@ -39,7 +39,7 @@ typedef enum bgp_state_ {
  * BGP RAW Update File
  */
 typedef struct bgp_raw_update_ {
-    char *file;
+    const char *file;
 
     uint8_t *buf;
     uint32_t len;
@@ -115,8 +115,9 @@ typedef struct bgp_session_ {
         uint32_t update_tx;
     } stats;
 
+    bgp_raw_update_t *raw_update_start;
     bgp_raw_update_t *raw_update;
-    bool raw_update_send;
+    bool raw_update_sending;
 
     struct timespec established_timestamp;
     struct timespec update_start_timestamp;

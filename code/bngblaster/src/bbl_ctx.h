@@ -102,6 +102,7 @@ typedef struct bbl_ctx_
     } interfaces;
 
     bgp_session_t *bgp_sessions;
+    bgp_raw_update_t *bgp_raw_updates;
     isis_instance_t *isis_instances;
 
     /* Scratchpad memory */
