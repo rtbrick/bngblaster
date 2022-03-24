@@ -21,7 +21,7 @@ bbl_compare_key32 (void *key1, void *key2)
 }
 
 uint32_t
-bbl_key32_hash (const void* k)
+bbl_key32_hash(const void* k)
 {
     uint32_t hash = 2166136261U;
     hash ^= *(uint32_t *)k;
@@ -29,7 +29,7 @@ bbl_key32_hash (const void* k)
 }
 
 int
-bbl_compare_key64 (void *key1, void *key2)
+bbl_compare_key64(void *key1, void *key2)
 {
     const uint64_t a = *(const uint64_t*)key1;
     const uint64_t b = *(const uint64_t*)key2;
@@ -37,7 +37,7 @@ bbl_compare_key64 (void *key1, void *key2)
 }
 
 uint32_t
-bbl_key64_hash (const void* k)
+bbl_key64_hash(const void* k)
 {
     uint32_t hash = 2166136261U;
 

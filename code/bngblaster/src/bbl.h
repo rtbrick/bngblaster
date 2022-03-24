@@ -19,17 +19,10 @@
 
 #include <common_include.h>
 
-/* Experimental NETMAP Support */
-#ifdef BNGBLASTER_NETMAP
-#define LIBNETMAP_NOTHREADSAFE
-#include <net/netmap.h>
-#define NETMAP_WITH_LIBS
-#include <net/netmap_user.h>
-#endif
-
 #include "bbl_def.h"
 
 #include "bbl_protocols.h"
+#include "bgp/bgp_def.h"
 #include "isis/isis_def.h"
 
 #include "bbl_stats.h"
@@ -42,6 +35,8 @@
 #include "bbl_interface.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
+#include "bbl_tcp.h"
+#include "bgp/bgp.h"
 #include "isis/isis.h"
 
 WINDOW *log_win;

@@ -61,6 +61,7 @@ enable_disable_traffic(bbl_ctx_s *ctx, bool status)
     uint32_t i;
 
     g_traffic = status;
+    ctx->multicast_traffic = status;
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
@@ -188,6 +189,8 @@ struct keyval_ log_names[] = {
     { L2TP,          "l2tp" },
     { DHCP,          "dhcp" },
     { ISIS,          "isis" },
+    { BGP,           "bgp" },
+    { TCP,           "tcp" },
     { 0, NULL}
 };
 
@@ -313,6 +316,7 @@ bbl_ctrl_job (timer_s *timer)
             }
             /* Teardown routing protocols. */
             isis_teardown(ctx);
+            bgp_teardown(ctx);
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
@@ -564,6 +568,15 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    /* Init TCP. */
+    bbl_tcp_init(ctx);
+
+    /* Init BGP sessions. */
+    if(!bgp_init(ctx)) {
+        fprintf(stderr, "Error: Failed to init BGP\n");
+        exit(1);
+    }
+
     /* Start curses. */
     if (interactive) {
         bbl_init_curses(ctx);
@@ -627,13 +640,13 @@ main(int argc, char *argv[])
         if(!(ctx->l2tp_tunnels || ctx->routing_sessions)) {
             if(ctx->sessions) {
                 /* With sessions, wait for all sessions
-                * to be terminated. */
+                 * to be terminated. */
                 if(ctx->sessions_terminated >= ctx->sessions && ctx->l2tp_tunnels == 0) {
                     break;
                 }
             } else {
                 /* Without sessions, we can stop immediately
-                * as soon as teardown was requested. */
+                 * as soon as teardown was requested. */
                 if(g_teardown) {
                     break;
                 }
@@ -649,6 +662,7 @@ main(int argc, char *argv[])
     /* Stop curses. Do this before the final reports. */
     if(g_interactive) {
         endwin();
+        g_interactive = false;
     }
 
     /* Generate reports. */

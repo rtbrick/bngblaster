@@ -14,6 +14,7 @@
 - [Legal Interception](li)
 - [A10NSP](a10nsp)
 - [ISIS](isis)
+- [BGP](bgp)
 
 The BNG Blaster is an open source network test tool which is able to simulate more 
 than hundred thousand PPPoE and IPoE subscribers including IPTV, L2TPv2, QoS, forwarding

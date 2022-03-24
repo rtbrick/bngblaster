@@ -12,4 +12,7 @@
 #define GIT_REF "@GIT_REF@"
 #define GIT_SHA "@GIT_SHA@"
 
+#define COMPILER_ID "@CMAKE_C_COMPILER_ID@"
+#define COMPILER_VERSION "@CMAKE_C_COMPILER_VERSION@"
+
 #endif

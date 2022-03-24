@@ -392,6 +392,13 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
                 network_if->stats.packets_rx, network_if->stats.rate_packets_rx.avg,
                 network_if->stats.rate_bytes_rx.avg * 8 / 1000);
+            if(ctx->stats.stream_traffic_flows) {
+                wprintw(stats_win, "  Tx Stream Packets         %10lu |%7lu PPS\n",
+                    network_if->stats.stream_tx, network_if->stats.rate_stream_tx.avg);
+                wprintw(stats_win, "  Rx Stream Packets         %10lu |%7lu PPS %10lu Loss\n",
+                    network_if->stats.stream_rx, network_if->stats.rate_stream_rx.avg,
+                    network_if->stats.stream_loss);
+            }
             if(ctx->stats.session_traffic_flows) {
                 wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
                     network_if->stats.session_ipv4_tx, network_if->stats.rate_session_ipv4_tx.avg);
@@ -429,6 +436,13 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
                 a10nsp_if->stats.packets_rx, a10nsp_if->stats.rate_packets_rx.avg,
                 a10nsp_if->stats.rate_bytes_rx.avg * 8 / 1000);
+            if(ctx->stats.stream_traffic_flows) {
+                wprintw(stats_win, "  Tx Stream Packets         %10lu |%7lu PPS\n",
+                    a10nsp_if->stats.stream_tx, a10nsp_if->stats.rate_stream_tx.avg);
+                wprintw(stats_win, "  Rx Stream Packets         %10lu |%7lu PPS %10lu Loss\n",
+                    a10nsp_if->stats.stream_rx, a10nsp_if->stats.rate_stream_rx.avg,
+                    a10nsp_if->stats.stream_loss);
+            }
             if(ctx->stats.session_traffic_flows) {
                 wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
                     a10nsp_if->stats.session_ipv4_tx, a10nsp_if->stats.rate_session_ipv4_tx.avg);
@@ -454,6 +468,13 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "  Rx Packets                %10lu |%7lu PPS %10lu Kbps\n",
                 access_if->stats.packets_rx, access_if->stats.rate_packets_rx.avg,
                 access_if->stats.rate_bytes_rx.avg * 8 / 1000);
+            if(ctx->stats.stream_traffic_flows) {
+                wprintw(stats_win, "  Tx Stream Packets         %10lu |%7lu PPS\n",
+                    access_if->stats.stream_tx, access_if->stats.rate_stream_tx.avg);
+                wprintw(stats_win, "  Rx Stream Packets         %10lu |%7lu PPS %10lu Loss\n",
+                    access_if->stats.stream_rx, access_if->stats.rate_stream_rx.avg,
+                    access_if->stats.stream_loss);
+            }
             if(ctx->stats.session_traffic_flows) {
                 wprintw(stats_win, "  Tx Session Packets        %10lu |%7lu PPS\n",
                     access_if->stats.session_ipv4_tx, access_if->stats.rate_session_ipv4_tx.avg);

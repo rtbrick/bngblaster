@@ -287,12 +287,12 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
     search = dict_search(interface->ctx->stream_flow_dict, &bbl->flow_id);
     if(search) {
         stream = *search;
+        interface->stats.stream_rx++;
         stream->packets_rx++;
         stream->rx_len = eth->length;
         stream->rx_priority = tos;
         stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
         stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
-
         mpls = eth->mpls;
         if(mpls) {
             stream->rx_mpls1 = true;
@@ -323,10 +323,14 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
         if(!stream->rx_first_seq) {
             stream->rx_first_seq = bbl->flow_seq;
             interface->ctx->stats.stream_traffic_flows_verified++;
+            if(interface->ctx->config.traffic_stop_verified) {
+                stream->stop = true;
+            }
         } else {
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
                 loss = bbl->flow_seq - (stream->rx_last_seq +1);
                 stream->loss += loss;
+                interface->stats.stream_loss += loss;
             }
         }
         stream->rx_last_seq = bbl->flow_seq;
@@ -1844,9 +1848,7 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 static void
 bbl_rx_network_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface) {
     bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
-    if(interface->ip.address &&
-       interface->ip.address == ipv4->dst &&
-       icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+    if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
         /* Send ICMP reply... */
         bbl_send_icmp_reply(interface, NULL, eth, ipv4, icmp);
     }
@@ -1898,6 +1900,10 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
             } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
                 interface->stats.icmp_rx++;
                 bbl_rx_network_icmp(eth, ipv4, interface);
+                return;
+            } else if(ipv4->protocol == PROTOCOL_IPV4_TCP) {
+                interface->stats.tcp_rx++;
+                bbl_tcp_ipv4_rx(interface, eth, ipv4);
                 return;
             }
             break;

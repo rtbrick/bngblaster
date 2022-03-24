@@ -37,6 +37,22 @@
 
 #include "libdict/dict.h"
 
+/* LwIP */
+#ifdef BNGBLASTER_LWIP
+#include "lwip/timeouts.h"
+#include "lwip/init.h"
+#include "lwip/tcp.h"
+#include "lwip/api.h"
+#endif
+
+/* Experimental NETMAP Support */
+#ifdef BNGBLASTER_NETMAP
+#define LIBNETMAP_NOTHREADSAFE
+#include <net/netmap.h>
+#define NETMAP_WITH_LIBS
+#include <net/netmap_user.h>
+#endif
+
 #define IO_BUFFER_LEN               9216
 #define SCRATCHPAD_LEN              4096
 #define CHALLENGE_LEN               16
@@ -173,5 +189,6 @@ typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
 typedef struct bbl_stream_thread_ bbl_stream_thread;
 typedef struct bbl_stream_config_ bbl_stream_config;
 typedef struct bbl_stream_ bbl_stream;
+typedef struct bbl_tcp_ctx_ bbl_tcp_ctx_t;
 
 #endif

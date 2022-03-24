@@ -16,7 +16,6 @@ import os
 import json
 import ast
 
-
 def error(*args, **kwargs):
     """print error and exit"""
     print(*args, file=sys.stderr, **kwargs)

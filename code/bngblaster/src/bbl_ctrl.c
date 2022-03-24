@@ -27,7 +27,6 @@
 #include "bbl_dhcpv6.h"
 
 #define BACKLOG 4
-#define INPUT_BUFFER 1024
 
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
@@ -998,10 +997,11 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
     }
 }
 
-ssize_t
-bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+static ssize_t
+bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
     uint32_t i;
+
     if(session_id) {
         session = bbl_session_get(ctx, session_id);
         if(session) {
@@ -1024,12 +1024,68 @@ bbl_ctrl_stream_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status
 
 ssize_t
 bbl_ctrl_stream_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_stream_traffic(fd, ctx, session_id, true);
+    return bbl_ctrl_stream_traffic_start_stop(fd, ctx, session_id, true);
 }
 
 ssize_t
 bbl_ctrl_stream_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_stream_traffic(fd, ctx, session_id, false);
+    return bbl_ctrl_stream_traffic_start_stop(fd, ctx, session_id, false);
+}
+
+ssize_t
+bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    bbl_stream *stream;
+    struct dict_itor *itor;
+    
+    ctx->stats.stream_traffic_flows_verified = 0;
+
+    /* Iterate over all traffic streams */
+    itor = dict_itor_new(ctx->stream_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        stream = (bbl_stream*)*dict_itor_datum(itor);
+        if(!stream) {
+            continue;
+        }
+        if(stream->thread.thread) {
+            pthread_mutex_lock(&stream->thread.mutex);
+            stream->thread.thread->packets_tx = 0;
+            stream->thread.thread->packets_tx_last_sync = 0;
+            stream->thread.thread->bytes_tx = 0;
+            stream->thread.thread->bytes_tx_last_sync = 0;
+        }
+
+        stream->flow_seq = 0;
+        stream->rx_first_seq = 0;
+        stream->rx_last_seq = 0;
+        stream->stop = false;
+
+        stream->packets_tx = 0;
+        stream->packets_rx = 0;
+        stream->packets_tx_last_sync = 0;
+        stream->packets_rx_last_sync = 0;
+
+        stream->min_delay_ns = 0;
+        stream->max_delay_ns = 0;
+
+        stream->rx_mpls1 = false;
+        stream->rx_mpls1_label = 0;
+        stream->rx_mpls1_exp = 0;
+        stream->rx_mpls1_ttl = 0;
+
+        stream->rx_mpls2 = false;
+        stream->rx_mpls2_label = 0;
+        stream->rx_mpls2_exp = 0;
+        stream->rx_mpls2_ttl = 0;
+
+        stream->packets_rx_last_sync = 0;
+        stream->packets_rx_last_sync = 0;
+
+        if(stream->thread.thread) {
+            pthread_mutex_unlock(&stream->thread.mutex);
+        }
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);    
 }
 
 ssize_t
@@ -1200,30 +1256,6 @@ bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
         return result;
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "stream not found");
-    }
-}
-
-ssize_t
-bbl_ctrl_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
-    bbl_session_s *session;
-    uint32_t i;
-    if(session_id) {
-        session = bbl_session_get(ctx, session_id);
-        if(session) {
-            session->stream_traffic = status;
-            return bbl_ctrl_status(fd, "ok", 200, NULL);
-        } else {
-            return bbl_ctrl_status(fd, "warning", 404, "session not found");
-        }
-    } else {
-        /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
-            if(session) {
-                session->stream_traffic = status;
-            }
-        }
-        return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
 }
 
@@ -1433,6 +1465,12 @@ bbl_ctrl_isis_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
+ssize_t
+bbl_ctrl_isis_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    isis_teardown(ctx);
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1470,6 +1508,7 @@ struct action actions[] = {
     {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
     {"stream-info", bbl_ctrl_stream_info},
     {"stream-stats", bbl_ctrl_stream_stats},
+    {"stream-reset", bbl_ctrl_stream_reset},
     {"sessions-pending", bbl_ctrl_sessions_pending},
     {"cfm-cc-start", bbl_ctrl_cfm_cc_start},
     {"cfm-cc-stop", bbl_ctrl_cfm_cc_stop},
@@ -1481,11 +1520,17 @@ struct action actions[] = {
     {"isis-database", bbl_ctrl_isis_database},
     {"isis-load-mrt", bbl_ctrl_isis_load_mrt},
     {"isis-lsp-update", bbl_ctrl_isis_lsp_update},
+    {"isis-teardown", bbl_ctrl_isis_teardown},
+    {"bgp-sessions", bgp_ctrl_sessions},
+    {"bgp-disconnect", bgp_ctrl_disconnect},
+    {"bgp-teardown", bgp_ctrl_teardown},
+    {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
+    {"bgp-raw-update", bgp_ctrl_raw_update},
     {NULL, NULL},
 };
 
 void
-bbl_ctrl_socket_job (timer_s *timer) {
+bbl_ctrl_socket_job(timer_s *timer) {
     bbl_ctx_s *ctx = timer->data;
     int fd;
     size_t i;
@@ -1607,7 +1652,7 @@ CLOSE:
 }
 
 bool
-bbl_ctrl_socket_open (bbl_ctx_s *ctx) {
+bbl_ctrl_socket_open(bbl_ctx_s *ctx) {
     struct sockaddr_un addr = {0};
     ctx->ctrl_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if(ctx->ctrl_socket < 0) {
@@ -1638,7 +1683,7 @@ bbl_ctrl_socket_open (bbl_ctx_s *ctx) {
 }
 
 bool
-bbl_ctrl_socket_close (bbl_ctx_s *ctx) {
+bbl_ctrl_socket_close(bbl_ctx_s *ctx) {
     if(ctx->ctrl_socket) {
         close(ctx->ctrl_socket);
         ctx->ctrl_socket = 0;

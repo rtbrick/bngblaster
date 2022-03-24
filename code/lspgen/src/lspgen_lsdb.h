@@ -249,6 +249,7 @@ typedef struct lsdb_attr_ {
     struct {
     uint8_t ordinal; /* Used for ordering TLV generation */
     uint8_t attr_type; /* Type */
+    bool start_tlv; /* Always start a fresh TLV */
     union {
         struct lsdb_attr_prefix_ prefix;
         iso_prefix area;

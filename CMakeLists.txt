@@ -5,6 +5,12 @@
 cmake_minimum_required (VERSION 3.10)
 project(bngblaster LANGUAGES C VERSION 0.0.0)
 
+if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    message(FATAL_ERROR "Host ${CMAKE_SYSTEM_NAME} is not supported!")
+endif()
+
+message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
+
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
 option(BNGBLASTER_NETMAP "Build with netmap support" OFF)
 

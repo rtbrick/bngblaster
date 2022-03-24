@@ -1057,6 +1057,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                         if(!stream->rx_first_seq) {
                             stream->rx_first_seq = bbl->flow_seq;
                             interface->ctx->stats.stream_traffic_flows_verified++;
+                            if(interface->ctx->config.traffic_stop_verified) {
+                                stream->stop = true;
+                            }
                         } else {
                             if(stream->rx_last_seq +1 != bbl->flow_seq) {
                                 stream->loss++;
