@@ -200,7 +200,7 @@ bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
         bgp_session = bgp_session->next;
     }
 
-    root = json_pack("{ss si s{si si}}",
+    root = json_pack("{ss si s{si si si}}",
                      "status", "ok",
                      "code", 200,
                      "bgp-raw-update",
@@ -245,6 +245,76 @@ bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
         json_decref(updates);
+    }
+    return result;
+}
+
+ssize_t
+bgp_ctrl_disconnect(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+    ssize_t result = 0;
+    json_t *root;
+
+    bgp_session_t *bgp_session = ctx->bgp_sessions;
+
+    const char *s;
+
+    uint16_t disconnected = 0;
+    uint16_t skipped = 0;
+    uint16_t filtered = 0;
+
+    uint32_t ipv4_local_address = 0;
+    uint32_t ipv4_peer_address = 0;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &ipv4_local_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv4-address");
+        }
+    }
+    if (json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
+        }
+    }
+
+    while(bgp_session) {
+        if(ipv4_local_address && bgp_session->ipv4_local_address != ipv4_local_address) {
+            bgp_session = bgp_session->next;
+            filtered++;
+            continue;
+        }
+        if(ipv4_peer_address && bgp_session->ipv4_peer_address != ipv4_peer_address) {
+            bgp_session = bgp_session->next;
+            filtered++;
+            continue;
+        }
+        if(bgp_session->state == BGP_CLOSED || bgp_session->state == BGP_CLOSING) {
+            bgp_session = bgp_session->next;
+            skipped++;
+            continue;
+        }
+        if(!bgp_session->error_code) {
+            bgp_session->error_code = 6; /* Cease */
+            bgp_session->error_subcode = 2; /* Shutdown */
+        }
+        bgp_session_close(bgp_session);
+        disconnected++;
+        bgp_session = bgp_session->next;
+    }
+
+    root = json_pack("{ss si s{si si si}}",
+                     "status", "ok",
+                     "code", 200,
+                     "bgp-disconnect",
+                     "disconnected", disconnected,
+                     "skipped", skipped,
+                     "filtered", filtered);
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
     }
     return result;
 }
