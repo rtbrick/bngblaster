@@ -1522,10 +1522,10 @@ struct action actions[] = {
     {"isis-lsp-update", bbl_ctrl_isis_lsp_update},
     {"isis-teardown", bbl_ctrl_isis_teardown},
     {"bgp-sessions", bgp_ctrl_sessions},
-    {"bgp-teardown", bgp_ctrl_teardown},
-    {"bgp-raw-update", bgp_ctrl_raw_update},
-    {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
     {"bgp-disconnect", bgp_ctrl_disconnect},
+    {"bgp-teardown", bgp_ctrl_teardown},
+    {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
+    {"bgp-raw-update", bgp_ctrl_raw_update},
     {NULL, NULL},
 };
 

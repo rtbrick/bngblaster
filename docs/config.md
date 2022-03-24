@@ -934,3 +934,17 @@ Attribute | Description | Default
 `start-traffic` | BGP start global traffic after RAW update | false
 `teardown-time` | BGP teardown time in seconds | 5
 `raw-update-file` | BGP RAW update file |
+
+```json
+{
+    "bgp": [
+        {
+            "local-ipv4-address": "10.0.1.2",
+            "peer-ipv4-address": "10.0.1.1",
+            "raw-update-file": "start.bgp",
+            "local-as": 65001,
+            "peer-as": 65001
+        }
+    ]
+}
+```
