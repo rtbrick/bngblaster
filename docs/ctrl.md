@@ -275,7 +275,18 @@ The L2TP session terminate command allows to test result (RFC2661) and disconnec
 
 Attribute | Description | Mandatory Arguments | Optional Arguments
 --------- | ----------- | ------------------- | ------------------
-`isis-adjacencies` | ISIS adjacency information | |
+`isis-adjacencies` | Display all ISIS adjacencies | |
 `isis-database` | ISIS database information | `instance`, `level` | 
 `isis-load-mrt` | Load ISIS MRT file | `instance`, `file` | 
 `isis-lsp-update` | Update ISIS LSP | `instance`, `pdu` | 
+`isis-teardown` | Teardown all ISIS adjacencies | |
+
+### BGP Commands
+
+Attribute | Description | Mandatory Arguments | Optional Arguments
+--------- | ----------- | ------------------- | ------------------
+`bgp-sessions` | Display all matching BGP sessions | | `local-ipv4-address`, `peer-ipv4-address`
+`bgp-disconnect` | Disconnect all matching BGP sessions | | `local-ipv4-address`, `peer-ipv4-address`
+`bgp-teardown` | Teardown all BGP sessions | |
+`bgp-raw-update-list` | List all loaded BGP RAW update files in memory | | 
+`bgp-raw-update` | Update all matching BGP session | `file` | `local-ipv4-address`, `peer-ipv4-address`

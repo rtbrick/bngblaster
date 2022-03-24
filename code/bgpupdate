@@ -27,10 +27,9 @@ except:
 # ==============================================================
 
 DESCRIPTION = """
-BGP RAW Update Generator
-
-Simple tool to generate BGP RAW update 
-streams for use with the BNG Blaster. 
+The BGP RAW update generator is a simple 
+tool to generate BGP RAW update streams 
+for use with the BNG Blaster. 
 """
 
 LOG_LEVELS = {
