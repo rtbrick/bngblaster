@@ -151,8 +151,15 @@ streams for use with the BNG Blaster.
 
     $ bgpupdate --help
     usage: bgpupdate [-h] [-a ASN] -n ADDRESS [-N N] -p PREFIX [-P N] [-m LABEL]
-                    [-M N] [-l LOCAL_PREF] [-f FILE] [-w] [--end-of-rib]
+                    [-M N] [-l LOCAL_PREF] [-f FILE] [-w] [-s STREAMS]
+                    [--stream-tx-label LABEL] [--stream-tx-inner-label LABEL]
+                    [--stream-rx-label LABEL] [--stream-rx-label-num N]
+                    [--stream-threads N] [--stream-pps N]
+                    [--stream-interface IFACE] [--stream-append] [--end-of-rib]
                     [--append] [--pcap FILE] [--log-level {warning,info,debug}]
+
+    The BGP RAW update generator is a simple tool to generate BGP RAW update
+    streams for use with the BNG Blaster.
 
     optional arguments:
     -h, --help            show this help message and exit
@@ -171,11 +178,27 @@ streams for use with the BNG Blaster.
                             local preference
     -f FILE, --file FILE  output file
     -w, --withdraw        withdraw prefixes
+    -s STREAMS, --streams STREAMS
+                            generate BNG Blaster traffic stream file
+    --stream-tx-label LABEL
+                            stream TX outer label
+    --stream-tx-inner-label LABEL
+                            stream TX inner label
+    --stream-rx-label LABEL
+                            stream RX label
+    --stream-rx-label-num N
+                            stream RX label count
+    --stream-threads N    stream TX threads
+    --stream-pps N        stream packets per seconds
+    --stream-interface IFACE
+                            stream interface
+    --stream-append       append to stream file if exist
     --end-of-rib          add end-of-rib message
     --append              append to file if exist
     --pcap FILE           write BGP updates to PCAP file
     --log-level {warning,info,debug}
                             logging Level
+
 
 
 The python BGP RAW update generator is a python script which uses
