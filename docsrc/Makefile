@@ -7,6 +7,10 @@ SPHINXBUILD ?= sphinx-build
 SOURCEDIR    = sources
 BUILDDIR     = build
 
+github:
+	@make html
+	@cp -a build/html/. ../docs
+
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
