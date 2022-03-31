@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-3-Clause
 """
 import argparse
 import ipaddress
+import json
 import logging
 import struct
 import sys
@@ -175,9 +176,18 @@ def main():
     parser.add_argument('-l', '--local-pref', type=int, help='local preference')
     parser.add_argument('-f', '--file', type=str, default="out.bgp", help='output file')
     parser.add_argument('-w', '--withdraw', action="store_true", help="withdraw prefixes")
-    parser.add_argument("--end-of-rib", action="store_true", help="add end-of-rib message")
-    parser.add_argument("--append", action="store_true", help="append to file if exist")
-    parser.add_argument("--pcap", metavar='FILE', type=str, help="write BGP updates to PCAP file")
+    parser.add_argument('-s', '--streams', type=str, help="generate BNG Blaster traffic stream file")
+    parser.add_argument('--stream-tx-label', metavar='LABEL', type=label_type, help="stream TX outer label")
+    parser.add_argument('--stream-tx-inner-label', metavar='LABEL', type=label_type, help="stream TX inner label")
+    parser.add_argument('--stream-rx-label', metavar='LABEL', type=label_type, help="stream RX label")
+    parser.add_argument('--stream-rx-label-num', metavar='N', type=int, default=1, help="stream RX label count")
+    parser.add_argument('--stream-threads', metavar='N', type=int, default=1, help="stream TX threads")
+    parser.add_argument('--stream-pps', metavar='N', type=float, default=1.0, help="stream packets per seconds")
+    parser.add_argument('--stream-interface', metavar='IFACE', type=str, help="stream interface")
+    parser.add_argument('--stream-append', action="store_true", help="append to stream file if exist")
+    parser.add_argument('--end-of-rib', action="store_true", help="add end-of-rib message")
+    parser.add_argument('--append', action="store_true", help="append to file if exist")
+    parser.add_argument('--pcap', metavar='FILE', type=str, help="write BGP updates to PCAP file")
     parser.add_argument('--log-level', type=str, default='info', choices=LOG_LEVELS.keys(), help='logging Level')
     args = parser.parse_args()
 
@@ -200,6 +210,18 @@ def main():
         exit(1)
 
     ip_version = args.prefix_base.version
+
+    streams = []
+    stream_thread = 1
+    stream_label_index = 0
+    stream_label = args.stream_rx_label
+    if args.streams and args.stream_append:
+        try:
+            with open(args.streams) as json_file:
+                data = json.load(json_file)
+                streams = data.get("streams", [])
+        except:
+            pass
 
     # Here we will store packets for optional PCAP output
     pcap_packets = []
@@ -226,6 +248,52 @@ def main():
         log.debug("add prefix %s via %s label %s" % (prefix, next_hops[nh_index], label))
         prefixes[nh_index].append((prefix, label))
 
+        if args.streams:
+            stream = {
+                "name": "%s" % prefix,
+                "direction": "downstream",
+                "pps": args.stream_pps,
+                "threaded": True,
+                "thread-group": stream_thread
+            }
+            if ip_version == 4:
+                stream["type"] = "ipv4"
+                stream["destination-ipv4-address"] = str(prefix.network_address+1)
+            else:
+                stream["type"] = "ipv6"
+                stream["destination-ipv6-address"] = str(prefix.network_address+1)
+
+            if args.stream_interface:
+                stream["network-interface"] = args.stream_interface
+
+            if stream_label: 
+                stream["rx-label1"] = stream_label
+                if labelled:
+                    stream["rx-label2"] = label
+                stream_label_index += 1
+                if stream_label_index < args.stream_rx_label_num:
+                    stream_label = args.stream_rx_label + stream_label_index
+                    if stream_label > MPLS_LABEL_MAX:
+                        stream_label_index = 0
+                        stream_label = args.stream_rx_label
+                else:
+                    stream_label_index = 0
+                    stream_label = args.stream_rx_label
+            else:
+                if labelled: 
+                    stream["rx-label1"] = label
+
+            if args.stream_tx_label:
+                stream["tx-label1"] = args.stream_tx_label
+                if args.stream_tx_inner_label:
+                    stream["tx-label2"] = args.stream_tx_inner_label
+
+            streams.append(stream)
+            stream_thread += 1
+            if stream_thread > args.stream_threads:
+                stream_thread = 1
+
+        # next...
         nh_index += 1
         if nh_index >= args.next_hop_num:
             nh_index = 0
@@ -242,6 +310,11 @@ def main():
                 label = args.label_base
 
         prefix = ipaddress.ip_network("%s/%s" % (prefix.broadcast_address+1, prefix.prefixlen))
+
+    if args.streams:
+        log.info("write %s streams to file %s", len(streams), args.streams)
+        with open(args.streams, "w") as f:
+            json.dump({ "streams": streams}, f, indent=4)
 
     prefix_bytes = (args.prefix_base.prefixlen + 7) // 8 
     if labelled:
