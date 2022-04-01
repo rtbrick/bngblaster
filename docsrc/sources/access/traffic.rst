@@ -41,8 +41,6 @@ Verification
 The final report includes detailed information 
 for session traffic. 
 
-*Example report output for 100 sessions:*
-
 .. code-block:: none 
 
     Session Traffic:
