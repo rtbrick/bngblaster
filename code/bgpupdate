@@ -184,6 +184,8 @@ def main():
     parser.add_argument('--stream-threads', metavar='N', type=int, default=1, help="stream TX threads")
     parser.add_argument('--stream-pps', metavar='N', type=float, default=1.0, help="stream packets per seconds")
     parser.add_argument('--stream-interface', metavar='IFACE', type=str, help="stream interface")
+    parser.add_argument('--stream-group-id', metavar='N', type=int, help="stream group identifier")
+    parser.add_argument('--stream-direction', default="downstream", choices=['upstream', 'downstream', 'both'], help="stream direction")
     parser.add_argument('--stream-append', action="store_true", help="append to stream file if exist")
     parser.add_argument('--end-of-rib', action="store_true", help="add end-of-rib message")
     parser.add_argument('--append', action="store_true", help="append to file if exist")
@@ -251,7 +253,7 @@ def main():
         if args.streams:
             stream = {
                 "name": "%s" % prefix,
-                "direction": "downstream",
+                "direction": args.stream_direction,
                 "pps": args.stream_pps,
                 "threaded": True,
                 "thread-group": stream_thread
@@ -266,6 +268,9 @@ def main():
             if args.stream_interface:
                 stream["network-interface"] = args.stream_interface
 
+            if args.stream_group_id:
+                stream["stream-group-id"] = args.stream_group_id
+            
             if stream_label: 
                 stream["rx-label1"] = stream_label
                 if labelled:
