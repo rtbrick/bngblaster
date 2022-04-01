@@ -125,7 +125,6 @@ PPP IP6CP (IPv6)
 ^^^^^^^^^^^^^^^^
 .. include:: ../configuration/ppp_ip6cp.rst
 
-
 LCP Vendor Extension
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -144,7 +143,7 @@ The value from request is stored in the session as ``connection-status-message``
 PPPoE Commands
 ~~~~~~~~~~~~~~
 
-The control socket command ``session-info session-id <id>`` provides
+The :ref:`command <api>` ``session-info session-id <id>`` provides
 detailed information for PPPoE sessions.
 
 ``$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .``

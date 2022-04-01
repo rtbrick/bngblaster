@@ -168,7 +168,7 @@ LSP entries in the ISIS database.
 The type ``self`` is used for the self originated LSP describing the own 
 BNG Blaster ISIS instance. LSP entries of type ``adjacency`` are learned
 via ISIS adjacencies. The type ``external`` is used for those LSP entries 
-learned via MRT files or injected via ``isis-lsp-update`` command.
+learned via MRT files or injected via ``isis-lsp-update`` :ref:`command <api>`.
 
 ``$ sudo bngblaster-cli run.sock isis-database instance 1 level 1``
 
@@ -255,7 +255,7 @@ the ISIS common header starting with ``0x83``.
 
 Those files can be loaded at startup via configuration option 
 ``"isis": { "external": { "mrt-file": "<file>" } }`` or alternative
-via ``isis-load-mrt`` command. 
+via ``isis-load-mrt`` :ref:`command <api>`. 
 
 ``$ sudo bngblaster-cli run.sock isis-load-mrt file test.mrt instance 1``
 
@@ -263,9 +263,9 @@ LSP Update Command
 ~~~~~~~~~~~~~~~~~~
 
 It is also possible to inject external LSP's using the ``isis-lsp-update``
-command. 
+:ref:`command <api>`. 
 
-The command expects a list of hex encoded PDU's including 
+The :ref:`command <api>` expects a list of hex encoded PDU's including 
 the ISIS common header starting with ``0x83``, 
 
 ``$ cat command.json | jq .``
@@ -286,15 +286,63 @@ the ISIS common header starting with ``0x83``,
 LSPGEN
 ~~~~~~
 
-The BNG Blaster includes a tool called ```lspgen`` which is able to generate
-link state packets and topologies for export as MRT and PCAP files or directly
-injected via BNG Blaster LSP update command.
+The BNG Blaster includes a tool called ``lspgen`` which is able to generate
+link state packets and topologies for export as MRT and PCAP files. This tool
+is also able to inject LSP's directly using the ``isis-lsp-update``
+:ref:`command <api>`.
+
+.. code-block:: none
+
+    $ lspgen --help
+
+        ____   __   ____         _        __            ,/
+        / __ \ / /_ / __ ) _____ (_)_____ / /__        ,'/
+        / /_/ // __// __  |/ ___// // ___// //_/      ,' /
+    / _, _// /_ / /_/ // /   / // /__ / ,<       ,'  /_____,    
+    /_/ |_| \__//_____//_/   /_/ \___//_/|_|    .'____    ,'   
+        __   _____ ____  ______                      /  ,'
+        / /  / ___// __ \/ ____/__  ____             / ,'
+        / /   \__ \/ /_/ / / __/ _ \/ __ \           /,'
+    / /______/ / ____/ /_/ /  __/ / / /          / 
+    /_____/____/_/    \____/\___/_/ /_/
+
+    Usage: lspgen [OPTIONS]
+
+    -v --version
+    -a --area <args>
+    -K --authentication-key <args>
+    -T --authentication-type none|simple|md5
+    -r --read-config-file <args>
+    -w --write-config-file <args>
+    -C --connector <args>
+    -S --control-socket <args>
+    -l --ipv4-link-prefix <args>
+    -L --ipv6-link-prefix <args>
+    -n --ipv4-node-prefix <args>
+    -N --ipv6-node-prefix <args>
+    -x --ipv4-external-prefix <args>
+    -X --ipv6-external-prefix <args>
+    -M --lsp-lifetime <args>
+    -z --no-ipv4
+    -Z --no-ipv6
+    -e --external-count <args>
+    -g --graphviz-file <args>
+    -h --help
+    -m --mrt-file <args>
+    -c --node-count <args>
+    -p --pcap-file <args>
+    -f --stream-file <args>
+    -s --seed <args>
+    -q --sequence <args>
+    -V --level <args>
+    -t --log normal|debug|lsp|lsdb|timer|timer-detail|ctrl|error
+
 
 LSP Update via Scapy 
 ~~~~~~~~~~~~~~~~~~~~
 
 The following example shows how to generate LSP's via Scapy 
-and inject them using the ``isis-lsp-update`` command. 
+and inject them using the ``isis-lsp-update`` :ref:`command <api>`.
 
 .. code-block:: python
 

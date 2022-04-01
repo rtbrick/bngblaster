@@ -412,7 +412,7 @@ LSP entries in the ISIS database.</p>
 <p>The type <code class="docutils literal notranslate"><span class="pre">self</span></code> is used for the self originated LSP describing the own
 BNG Blaster ISIS instance. LSP entries of type <code class="docutils literal notranslate"><span class="pre">adjacency</span></code> are learned
 via ISIS adjacencies. The type <code class="docutils literal notranslate"><span class="pre">external</span></code> is used for those LSP entries
-learned via MRT files or injected via <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> command.</p>
+learned via MRT files or injected via <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">isis-database</span> <span class="pre">instance</span> <span class="pre">1</span> <span class="pre">level</span> <span class="pre">1</span></code></p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
@@ -490,14 +490,14 @@ no support for route leaking between levels.</p>
 the ISIS common header starting with <code class="docutils literal notranslate"><span class="pre">0x83</span></code>.</p>
 <p>Those files can be loaded at startup via configuration option
 <code class="docutils literal notranslate"><span class="pre">&quot;isis&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;external&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;mrt-file&quot;:</span> <span class="pre">&quot;&lt;file&gt;&quot;</span> <span class="pre">}</span> <span class="pre">}</span></code> or alternative
-via <code class="docutils literal notranslate"><span class="pre">isis-load-mrt</span></code> command.</p>
+via <code class="docutils literal notranslate"><span class="pre">isis-load-mrt</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">isis-load-mrt</span> <span class="pre">file</span> <span class="pre">test.mrt</span> <span class="pre">instance</span> <span class="pre">1</span></code></p>
 </section>
 <section id="lsp-update-command">
 <h2>LSP Update Command<a class="headerlink" href="#lsp-update-command" title="Permalink to this headline"></a></h2>
 <p>It is also possible to inject external LSP’s using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
-command.</p>
-<p>The command expects a list of hex encoded PDU’s including
+<a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
+<p>The <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> expects a list of hex encoded PDU’s including
 the ISIS common header starting with <code class="docutils literal notranslate"><span class="pre">0x83</span></code>,</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
@@ -515,14 +515,60 @@ the ISIS common header starting with <code class="docutils literal notranslate">
 </section>
 <section id="lspgen">
 <h2>LSPGEN<a class="headerlink" href="#lspgen" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster includes a tool called <code class="docutils literal notranslate"><span class="pre">`lspgen</span></code> which is able to generate
-link state packets and topologies for export as MRT and PCAP files or directly
-injected via BNG Blaster LSP update command.</p>
+<p>The BNG Blaster includes a tool called <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> which is able to generate
+link state packets and topologies for export as MRT and PCAP files. This tool
+is also able to inject LSP’s directly using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
+<a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ lspgen --help
+
+    ____   __   ____         _        __            ,/
+    / __ \ / /_ / __ ) _____ (_)_____ / /__        ,&#39;/
+    / /_/ // __// __  |/ ___// // ___// //_/      ,&#39; /
+/ _, _// /_ / /_/ // /   / // /__ / ,&lt;       ,&#39;  /_____,
+/_/ |_| \__//_____//_/   /_/ \___//_/|_|    .&#39;____    ,&#39;
+    __   _____ ____  ______                      /  ,&#39;
+    / /  / ___// __ \/ ____/__  ____             / ,&#39;
+    / /   \__ \/ /_/ / / __/ _ \/ __ \           /,&#39;
+/ /______/ / ____/ /_/ /  __/ / / /          /
+/_____/____/_/    \____/\___/_/ /_/
+
+Usage: lspgen [OPTIONS]
+
+-v --version
+-a --area &lt;args&gt;
+-K --authentication-key &lt;args&gt;
+-T --authentication-type none|simple|md5
+-r --read-config-file &lt;args&gt;
+-w --write-config-file &lt;args&gt;
+-C --connector &lt;args&gt;
+-S --control-socket &lt;args&gt;
+-l --ipv4-link-prefix &lt;args&gt;
+-L --ipv6-link-prefix &lt;args&gt;
+-n --ipv4-node-prefix &lt;args&gt;
+-N --ipv6-node-prefix &lt;args&gt;
+-x --ipv4-external-prefix &lt;args&gt;
+-X --ipv6-external-prefix &lt;args&gt;
+-M --lsp-lifetime &lt;args&gt;
+-z --no-ipv4
+-Z --no-ipv6
+-e --external-count &lt;args&gt;
+-g --graphviz-file &lt;args&gt;
+-h --help
+-m --mrt-file &lt;args&gt;
+-c --node-count &lt;args&gt;
+-p --pcap-file &lt;args&gt;
+-f --stream-file &lt;args&gt;
+-s --seed &lt;args&gt;
+-q --sequence &lt;args&gt;
+-V --level &lt;args&gt;
+-t --log normal|debug|lsp|lsdb|timer|timer-detail|ctrl|error
+</pre></div>
+</div>
 </section>
 <section id="lsp-update-via-scapy">
 <h2>LSP Update via Scapy<a class="headerlink" href="#lsp-update-via-scapy" title="Permalink to this headline"></a></h2>
 <p>The following example shows how to generate LSP’s via Scapy
-and inject them using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> command.</p>
+and inject them using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">socket</span>
 <span class="kn">import</span> <span class="nn">os</span>
