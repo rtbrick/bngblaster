@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISIS &mdash; BNG Blaster 0.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="BGP" href="bgp.html" />
+    <link rel="prev" title="Routing Protocols" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> BNG Blaster
+            <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Routing Protocols</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ISIS</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adjacencies">Adjacencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#database">Database</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flooding">Flooding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#limitations">Limitations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mrt-files">MRT Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsp-update-command">LSP Update Command</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lspgen">LSPGEN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsp-update-via-scapy">LSP Update via Scapy</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="bgp.html">BGP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mpls.html">MPLS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Routing Protocols</a> &raquo;</li>
+      <li>ISIS</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/routing/isis.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="isis">
+<span id="id1"></span><h1>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h1>
+<p>Intermediate System to Intermediate System (ISIS, also written IS-IS)
+is a routing protocol designed to move information efficiently within
+a network.</p>
+<p>The ISIS protocol is defined in ISO/IEC 10589:2002 as an international
+standard within the Open Systems Interconnection (OSI) reference design.
+The Internet Engineering Task Force (IETF) republished ISIS in RFC 1142,
+but that RFC was later marked as historic by RFC 7142 because it republished
+a draft rather than a final version of the ISO standard, causing confusion.</p>
+<p>ISIS has been called the de facto standard for large service provider
+network backbones.</p>
+<p>The BNG Blaster is able to emulate multiple ISIS instances. An ISIS instance
+is a virtual ISIS node with one or more network interfaces attached. Such a
+node behaves like a “real router” including database synchronization and
+flooding. Every instance generates a <code class="docutils literal notranslate"><span class="pre">self</span></code> originated LSP describing the
+node itself.</p>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
+<p>Following an example ISIS configuration with one instance
+attached to two network interfaces.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::2/64&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;isis-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;isis-level&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;isis-l1-metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.2.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.2.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:2::2/64&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:2::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;isis-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0010&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;area&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;49.0001/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;49.0002/24&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hello-padding&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lsp-lifetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65535</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;level1-auth-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;secret&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;level1-auth-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;sr-base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;sr-range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3600</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>instance-id</cite></p></td>
+<td><p>ISIS instance identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>level</cite></p></td>
+<td><p>ISIS level</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>overload</cite></p></td>
+<td><p>ISIS overload</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>protocol-ipv4</cite></p></td>
+<td><p>Enable/disable IPv4</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>protocol-ipv6</cite></p></td>
+<td><p>Enable/disable IPv6</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>level1-auth-key</cite></p></td>
+<td><p>ISIS level 1 authentication key</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>level1-auth-type</cite></p></td>
+<td><p>ISIS level 1 authentication type (simple or md5)</p></td>
+<td><p>disabled</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>level2-auth-key</cite></p></td>
+<td><p>ISIS level 2 authentication key</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>level2-auth-type</cite></p></td>
+<td><p>ISIS level 2 authentication type (simple or md5)</p></td>
+<td><p>disabled</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>hello-interval</cite></p></td>
+<td><p>ISIS hello interval in seconds</p></td>
+<td><p>10</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>hello-padding</cite></p></td>
+<td><p>ISIS hello padding</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>holding-time</cite></p></td>
+<td><p>ISIS holding time in seconds</p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lsp-lifetime</cite></p></td>
+<td><p>ISIS LSP lifetime in seconds</p></td>
+<td><p>65535</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lsp-refresh-interval</cite></p></td>
+<td><p>ISIS LSP refresh interval in seconds</p></td>
+<td><p>300</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lsp-retry-interval</cite></p></td>
+<td><p>ISIS LSP retry interval in seconds</p></td>
+<td><p>5</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lsp-tx-interval</cite></p></td>
+<td><p>ISIS LSP TX interval in ms (time between LSP send windows)</p></td>
+<td><p>10</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lsp-tx-window-size</cite></p></td>
+<td><p>ISIS LSP TX window size (LSP send per window)</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>csnp-interval</cite></p></td>
+<td><p>ISIS CSNP interval in seconds</p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>hostname</cite></p></td>
+<td><p>ISIS hostname</p></td>
+<td><p>bngblaster</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>router-id</cite></p></td>
+<td><p>ISIS router identifier</p></td>
+<td><p>10.10.10.10</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>system-id</cite></p></td>
+<td><p>ISIS system identifier</p></td>
+<td><p>0100.1001.0010</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>area</cite></p></td>
+<td><p>ISIS area(s)</p></td>
+<td><p>49.0001/24</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>sr-base</cite></p></td>
+<td><p>ISIS SR base</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>sr-range</cite></p></td>
+<td><p>ISIS SR range</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>sr-node-sid</cite></p></td>
+<td><p>ISIS SR node SID</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
+<td><p>ISIS teardown time in seconds</p></td>
+<td><p>5</p></td>
+</tr>
+</tbody>
+</table>
+<p>The support for multiple instances allows different use cases. One example might
+be to create two instances connected to the device or network under test. Now
+inject a LSP on one instance and check if learned over the tested network on
+the other instance.</p>
+<p>Every ISIS instance can be also connected to an emulated link state graph loaded
+by MRT files  as shown in the example below.</p>
+<img alt="ISIS" src="../_images/bbl_isis.png" />
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0011&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.11&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;B1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test.mrt&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="p">{</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000.0000.0001&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;l1-metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;l2-metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"></span>
+<span class="w">                    </span><span class="p">}</span><span class="w"></span>
+<span class="w">                </span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0011&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.12&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;B2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>mrt-file</cite></p></td>
+<td><p>ISIS MRT file</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The The node <code class="docutils literal notranslate"><span class="pre">N1</span></code> in this example also needs to advertise the
+reachability to the node <code class="docutils literal notranslate"><span class="pre">B1</span></code>.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>system-id</cite></p></td>
+<td><p>ISIS system identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>l1-metric</cite></p></td>
+<td><p>ISIS level 1 interface metric</p></td>
+<td><p>10</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>l2-metric</cite></p></td>
+<td><p>ISIS level 2 interface metric</p></td>
+<td><p>10</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="adjacencies">
+<h2>Adjacencies<a class="headerlink" href="#adjacencies" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster supports P2P adjacencies with 3-way-handshake only.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">isis-adjacencies</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;isis-adjacencies&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P2P&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;L1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;adjacency-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Up&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0022&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P2P&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;L1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;adjacency-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Up&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0021&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="database">
+<h2>Database<a class="headerlink" href="#database" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster distinguishes between three different source types of
+LSP entries in the ISIS database.</p>
+<p>The type <code class="docutils literal notranslate"><span class="pre">self</span></code> is used for the self originated LSP describing the own
+BNG Blaster ISIS instance. LSP entries of type <code class="docutils literal notranslate"><span class="pre">adjacency</span></code> are learned
+via ISIS adjacencies. The type <code class="docutils literal notranslate"><span class="pre">external</span></code> is used for those LSP entries
+learned via MRT files or injected via <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> command.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">isis-database</span> <span class="pre">instance</span> <span class="pre">1</span> <span class="pre">level</span> <span class="pre">1</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;isis-database&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000.0000.0001.00-00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65535</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime-remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65529</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;external&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0011.00-00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65535</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime-remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65507</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;self&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0021.00-00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65524</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime-remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65506</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;adjacency&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0021&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0022.00-00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65524</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lifetime-remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65506</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;adjacency&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0100.1001.0021&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The BNG Blaster automatically purges all LSP’s of type
+<code class="docutils literal notranslate"><span class="pre">self</span></code> and <code class="docutils literal notranslate"><span class="pre">external</span></code> during teardown. This is done by
+generating LSP’s with a newer sequence numbers and lifetime
+of 30 seconds only. This lifetime is enough to flood the purge
+LSP over te whole network under test.</p>
+</section>
+<section id="flooding">
+<h2>Flooding<a class="headerlink" href="#flooding" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster floods LSP’s received to all other active
+adjacencies of the ISIS instance except to those with peer
+system-id equal to the source system-id of the LSP.</p>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline"></a></h2>
+<p>Currently only ISIS P2P links are supported. There is also
+no support for route leaking between levels.</p>
+</section>
+<section id="mrt-files">
+<h2>MRT Files<a class="headerlink" href="#mrt-files" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster is able to load LSP’s from a MRT file as defined in
+[RFC6396](<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6396">https://datatracker.ietf.org/doc/html/rfc6396</a>).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                           Timestamp                           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             Type              |            Subtype            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             Length                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                      Message... (variable)
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<p>The message field contains the complete ISIS LSP PDU including
+the ISIS common header starting with <code class="docutils literal notranslate"><span class="pre">0x83</span></code>.</p>
+<p>Those files can be loaded at startup via configuration option
+<code class="docutils literal notranslate"><span class="pre">&quot;isis&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;external&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;mrt-file&quot;:</span> <span class="pre">&quot;&lt;file&gt;&quot;</span> <span class="pre">}</span> <span class="pre">}</span></code> or alternative
+via <code class="docutils literal notranslate"><span class="pre">isis-load-mrt</span></code> command.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">isis-load-mrt</span> <span class="pre">file</span> <span class="pre">test.mrt</span> <span class="pre">instance</span> <span class="pre">1</span></code></p>
+</section>
+<section id="lsp-update-command">
+<h2>LSP Update Command<a class="headerlink" href="#lsp-update-command" title="Permalink to this headline"></a></h2>
+<p>It is also possible to inject external LSP’s using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
+command.</p>
+<p>The command expects a list of hex encoded PDU’s including
+the ISIS common header starting with <code class="docutils literal notranslate"><span class="pre">0x83</span></code>,</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis-lsp-update&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;instance&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;pdu&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="s2">&quot;831b0100120100000021ffff010203040506000000000003c0d103010403490001&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="s2">&quot;831b0100120100000021ffff010203040506000100000003bad603010403490001&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="lspgen">
+<h2>LSPGEN<a class="headerlink" href="#lspgen" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster includes a tool called <code class="docutils literal notranslate"><span class="pre">`lspgen</span></code> which is able to generate
+link state packets and topologies for export as MRT and PCAP files or directly
+injected via BNG Blaster LSP update command.</p>
+</section>
+<section id="lsp-update-via-scapy">
+<h2>LSP Update via Scapy<a class="headerlink" href="#lsp-update-via-scapy" title="Permalink to this headline"></a></h2>
+<p>The following example shows how to generate LSP’s via Scapy
+and inject them using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> command.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">scapy.contrib.isis</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;print error and exit&quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">execute_command</span><span class="p">(</span><span class="n">socket_path</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">socket_path</span><span class="p">):</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_UNIX</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">socket_path</span><span class="p">)</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">request</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">junk</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">junk</span><span class="p">:</span>
+                    <span class="n">data</span> <span class="o">+=</span> <span class="n">junk</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">error</span><span class="p">(</span><span class="s2">&quot;socket </span><span class="si">%s</span><span class="s2"> not found&quot;</span> <span class="o">%</span> <span class="n">socket_path</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;main function&quot;&quot;&quot;</span>
+    <span class="n">socket_path</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">command</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;command&quot;</span><span class="p">:</span> <span class="s2">&quot;isis-lsp-update&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;arguments&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;instance&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;pdu&quot;</span><span class="p">:</span> <span class="p">[]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="n">tlvs</span> <span class="o">=</span> <span class="n">ISIS_AreaTlv</span><span class="p">(</span><span class="n">areas</span><span class="o">=</span><span class="n">ISIS_AreaEntry</span><span class="p">(</span><span class="n">areaid</span><span class="o">=</span><span class="s1">&#39;49.0001&#39;</span><span class="p">))</span>
+    <span class="n">pdu</span> <span class="o">=</span> <span class="n">ISIS_CommonHdr</span><span class="p">()</span><span class="o">/</span><span class="n">ISIS_L1_LSP</span><span class="p">(</span><span class="n">lifetime</span><span class="o">=</span><span class="mi">65535</span><span class="p">,</span> <span class="n">lspid</span><span class="o">=</span><span class="s1">&#39;0102.0304.0506.00-00&#39;</span><span class="p">,</span> <span class="n">seqnum</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">tlvs</span><span class="o">=</span><span class="n">tlvs</span><span class="p">)</span>
+    <span class="n">command</span><span class="p">[</span><span class="s2">&quot;arguments&quot;</span><span class="p">][</span><span class="s2">&quot;pdu&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pdu</span><span class="o">.</span><span class="n">build</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">())</span>
+
+    <span class="n">pdu</span> <span class="o">=</span> <span class="n">ISIS_CommonHdr</span><span class="p">()</span><span class="o">/</span><span class="n">ISIS_L1_LSP</span><span class="p">(</span><span class="n">lifetime</span><span class="o">=</span><span class="mi">65535</span><span class="p">,</span> <span class="n">lspid</span><span class="o">=</span><span class="s1">&#39;0102.0304.0506.00-01&#39;</span><span class="p">,</span> <span class="n">seqnum</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">tlvs</span><span class="o">=</span><span class="n">tlvs</span><span class="p">)</span>
+    <span class="n">command</span><span class="p">[</span><span class="s2">&quot;arguments&quot;</span><span class="p">][</span><span class="s2">&quot;pdu&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pdu</span><span class="o">.</span><span class="n">build</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">())</span>
+
+    <span class="n">execute_command</span><span class="p">(</span><span class="n">socket_path</span><span class="p">,</span> <span class="n">command</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Routing Protocols" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="bgp.html" class="btn btn-neutral float-right" title="BGP" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

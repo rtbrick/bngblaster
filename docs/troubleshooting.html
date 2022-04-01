@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Troubleshooting &mdash; BNG Blaster 0.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Reference" href="reference/index.html" />
+    <link rel="prev" title="API/CLI" href="api/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="access/index.html">Access Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="routing/index.html">Routing Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pcap">PCAP</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Troubleshooting</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/troubleshooting.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="troubleshooting">
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline"></a></h1>
+<section id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster is able to log events to the standard output
+or logging window of the interactive courses interface. Those
+events could be also logged to files using the argument
+<code class="docutils literal notranslate"><span class="pre">-L</span> <span class="pre">&lt;file&gt;</span></code>.</p>
+<p>Per default only events classified as <cite>info</cite> or <cite>error</cite> are logged.
+The following list shows all supported logging options.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code>: debug events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">error</span></code>: error events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">igmp</span></code>: igmp events with join and leave time</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">io</span></code>: interface input/output events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pppoe</span></code>: pppoe events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">info</span></code>: informational events (enabled per default)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pcap</span></code>: PCAP related events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">timer</span></code>: timer events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">timer-detail</span></code>: detailed timer events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ip</span></code>: log learned IP addresses</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loss</span></code>: log traffic loss with sequence number</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">l2tp</span></code>: log L2TP (LNS) events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dhcp</span></code>: log DHCP events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isis</span></code>: log ISIS events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bgp</span></code>: log BGP events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tcp</span></code>: log TCP events</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C test.json -L test.log -l ip -l isis -l bgp
+</pre></div>
+</div>
+</section>
+<section id="pcap">
+<h2>PCAP<a class="headerlink" href="#pcap" title="Permalink to this headline"></a></h2>
+<p>You can start the BNG Blaster with the argument <code class="docutils literal notranslate"><span class="pre">-P</span> <span class="pre">&lt;file&gt;</span></code>
+to capture all traffic send and received by the BNG Blaster
+into a single PCAP file. This file includes all traffic from all
+interfaces in use with proper meta header to filter by interface
+names.</p>
+<p>This helps to verify if traffic is received or how it has received.
+Some network interfaces drop the most outer VLAN which can be easily
+verified using the capture file.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="api/index.html" class="btn btn-neutral float-left" title="API/CLI" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="reference/index.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
