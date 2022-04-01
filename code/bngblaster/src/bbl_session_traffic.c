@@ -232,6 +232,7 @@ static bool
 bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
+    bbl_mpls_t mpls = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ipv4_t ip = {0};
     bbl_udp_t udp = {0};
@@ -286,7 +287,11 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     } else if (session->a10nsp_session) {
         ip.dst = A10NSP_IP_LOCAL;
     } else {
-        ip.dst = network_if->ip.address;
+        if(ctx->config.session_traffic_ipv4_address) {
+            ip.dst = ctx->config.session_traffic_ipv4_address;
+        } else {
+            ip.dst = network_if->ip.address;
+        }
     }
     ip.src = session->ip_address;
     ip.offset = IPV4_DF;
@@ -329,10 +334,19 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     eth.qinq = false;
     eth.vlan_outer = network_if->vlan;
     eth.vlan_inner = 0;
+    if(ctx->config.session_traffic_ipv4_label) {
+        mpls.label = ctx->config.session_traffic_ipv4_label;
+        mpls.ttl = 64;
+        eth.mpls = &mpls;
+    }
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ip;
     ip.dst = session->ip_address;
-    ip.src = network_if->ip.address;
+    if(ctx->config.session_traffic_ipv4_address) {
+        ip.src = ctx->config.session_traffic_ipv4_address;
+    } else {
+        ip.src = network_if->ip.address;
+    }
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
         ctx->stats.session_traffic_flows++;
@@ -353,15 +367,26 @@ static bool
 bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_pd)
 {
     bbl_ethernet_header_t eth = {0};
+    bbl_mpls_t mpls = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ipv6_t ip = {0};
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
     uint8_t *buf;
     uint16_t len = 0;
-
+    
     bbl_interface_s *network_if = session->network_interface;
-    if(!(network_if && *(uint64_t*)network_if->ip6.address)) {
+    uint8_t *network_ip = NULL;
+
+    if(!network_if) {
+        return false;
+    }
+    if(ipv6_addr_not_zero(&ctx->config.session_traffic_ipv6_address)) {
+        network_ip = ctx->config.session_traffic_ipv6_address;
+    } else if(ipv6_addr_not_zero(&network_if->ip6.address)) {
+        network_ip = network_if->ip6.address;
+    }
+    if(!network_ip) {
         return false;
     }
 
@@ -420,7 +445,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ip;
     }
-    ip.dst = network_if->ip6.address;
+    ip.dst = network_ip;
     ip.ttl = 64;
     ip.protocol = IPV6_NEXT_HEADER_UDP;
     ip.next = &udp;
@@ -474,9 +499,14 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
     eth.qinq = false;
     eth.vlan_outer = network_if->vlan;
     eth.vlan_inner = 0;
+    if(ctx->config.session_traffic_ipv6_label) {
+        mpls.label = ctx->config.session_traffic_ipv6_label;
+        mpls.ttl = 64;
+        eth.mpls = &mpls;
+    }
     eth.type = ETH_TYPE_IPV6;
     eth.next = &ip;
-    ip.src = network_if->ip6.address;
+    ip.src = network_ip;
     bbl.direction = BBL_DIRECTION_DOWN;
 
     if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {

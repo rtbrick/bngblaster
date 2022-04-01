@@ -300,9 +300,13 @@ typedef struct bbl_ctx_
 
         /* Session Traffic */
         bool session_traffic_autostart;
-        uint16_t session_traffic_ipv4_pps;
-        uint16_t session_traffic_ipv6_pps;
-        uint16_t session_traffic_ipv6pd_pps;
+        uint16_t    session_traffic_ipv4_pps;
+        uint32_t    session_traffic_ipv4_label;
+        ipv4addr_t  session_traffic_ipv4_address;
+        uint16_t    session_traffic_ipv6_pps;
+        uint32_t    session_traffic_ipv6_label;
+        ipv6addr_t  session_traffic_ipv6_address;
+        uint16_t    session_traffic_ipv6pd_pps;
 
         /* L2TP Server Config (LNS) */
         bbl_l2tp_server_t *l2tp_server;
