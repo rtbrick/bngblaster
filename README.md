@@ -26,7 +26,7 @@ from [DENOG13](https://youtu.be/LVg6rlVEfNU "DENOG13") can be found on YouTube.
 
 Please checkout the [documentation](https://rtbrick.github.io/bngblaster/) for details.
 
-![BBL Interactive](docs/images/bbl_interactive.png "BNG Blaster (Interactive Mode)")
+![BBL Interactive](docsrc/sources/images/bbl_interactive.png "BNG Blaster (Interactive Mode)")
 
 ## License
 
