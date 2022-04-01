@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports &mdash; BNG Blaster 0.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuration" href="configuration/index.html" />
+    <link rel="prev" title="Traffic Streams" href="streams.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="access/index.html">Access Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="routing/index.html">Routing Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="streams.html">Traffic Streams</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Reports</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#standard-output-reports">Standard Output Reports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#json-reports">JSON Reports</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Reports</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/reports.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="reports">
+<h1>Reports<a class="headerlink" href="#reports" title="Permalink to this headline"></a></h1>
+<p>The BNG Blaster is able to generate detailed result reports
+at the end of of the test execution.</p>
+<section id="standard-output-reports">
+<h2>Standard Output Reports<a class="headerlink" href="#standard-output-reports" title="Permalink to this headline"></a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    ____   __   ____         _        __                                  ,/
+    / __ \ / /_ / __ ) _____ (_)_____ / /__                              ,&#39;/
+    / /_/ // __// __  |/ ___// // ___// //_/                            ,&#39; /
+/ _, _// /_ / /_/ // /   / // /__ / ,&lt;                             ,&#39;  /_____,
+/_/ |_| \__//_____//_/   /_/ \___//_/|_|                          .&#39;____    ,&#39;
+    ____   _   _  ______   ____   _               _                    /  ,&#39;
+    / __ ) / | / // ____/  / __ ) / /____ _ _____ / /_ ___   ____      / ,&#39;
+    / __  |/  |/ // / __   / __  |/ // __ `// ___// __// _ \ / ___/    /,&#39;
+/ /_/ // /|  // /_/ /  / /_/ // // /_/ /(__  )/ /_ /  __// /       /
+/_____//_/ |_/ \____/  /_____//_/ \__,_//____/ \__/ \___//_/
+
+Report:
+
+Sessions PPPoE: 500 IPoE: 0
+Sessions established: 500/500
+DHCPv6 sessions established: 500
+Setup Time: 396 ms
+Setup Rate: 1262.63 CPS (MIN: 1262.63 AVG: 1262.63 MAX: 1262.63)
+Flapped: 0
+
+Network Interface ( eth2 ):
+TX:                     25503 packets
+RX:                     24254 packets
+TX Session:              8500 packets
+RX Session:              8248 packets (0 loss)
+TX Session IPv6:         8500 packets
+RX Session IPv6:         8000 packets (0 loss)
+TX Session IPv6PD:       8500 packets
+RX Session IPv6PD:       8000 packets (0 loss)
+TX Multicast:               0 packets
+RX Drop Unknown:            1 packets
+TX Encode Error:            0
+RX Decode Error:            0 packets
+TX Send Failed:             0
+TX No Buffer:               0
+TX Poll Kernel:             0
+RX Poll Kernel:          3932
+
+Access Interface ( eth1 ):
+TX:                     33250 packets
+RX:                     34047 packets
+TX Session:              8500 packets
+RX Session:              8248 packets (0 loss, 0 wrong session)
+TX Session IPv6:         8500 packets
+RX Session IPv6:         8000 packets (0 loss, 0 wrong session)
+TX Session IPv6PD:       8500 packets
+RX Session IPv6PD:       8000 packets (0 loss, 0 wrong session)
+RX Multicast:               0 packets (0 loss)
+RX Drop Unknown:            1 packets
+TX Encode Error:        33250 packets
+RX Decode Error:            0 packets
+TX Send Failed:             0
+TX No Buffer:               0
+TX Poll Kernel:             0
+RX Poll Kernel:          3932
+
+Access Interface Protocol Packet Stats:
+    ARP    TX:          0 RX:          0
+    PADI   TX:        500 RX:          0
+    PADO   TX:          0 RX:        500
+    PADR   TX:        500 RX:          0
+    PADS   TX:          0 RX:        500
+    PADT   TX:          1 RX:        499
+    LCP    TX:       2249 RX:       2249
+    PAP    TX:        250 RX:        250
+    CHAP   TX:        250 RX:        500
+    IPCP   TX:       1500 RX:       1500
+    IP6CP  TX:       1500 RX:       1500
+    IGMP   TX:          0 RX:       1298
+    ICMP   TX:          0 RX:          0
+    ICMPv6 TX:        500 RX:        500
+    DHCPv6 TX:        500 RX:        500
+
+Access Interface Protocol Timeout Stats:
+    LCP Echo Request:          0
+    LCP Request:               0
+    IPCP Request:              0
+    IP6CP Request:             0
+    PAP:                       0
+    CHAP:                      0
+    ICMPv6 RS:                 0
+    DHCPv6 Request:            0
+
+Session Traffic:
+Config:
+    IPv4    PPS:           1
+    IPv6    PPS:           1
+    IPv6PD  PPS:           1
+Verified Traffic Flows: 3000/3000
+    Access  IPv4:        500
+    Access  IPv6:        500
+    Access  IPv6PD:      500
+    Network IPv4:        500
+    Network IPv6:        500
+    Network IPv6PD:      500
+First Sequence Number Received:
+    Access  IPv4    MIN:        1 ( 1.000s) MAX:        2 ( 2.000s)
+    Access  IPv6    MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+    Access  IPv6PD  MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+    Network IPv4    MIN:        1 ( 1.000s) MAX:        2 ( 2.000s)
+    Network IPv6    MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+    Network IPv6PD  MIN:        2 ( 2.000s) MAX:        2 ( 2.000s)
+</pre></div>
+</div>
+</section>
+<section id="json-reports">
+<h2>JSON Reports<a class="headerlink" href="#json-reports" title="Permalink to this headline"></a></h2>
+<p>A detailed JSON report is generated if enabled using the optional
+argument <code class="docutils literal notranslate"><span class="pre">-J</span> <span class="pre">&lt;filename&gt;</span></code> as shown in the example below.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-ipoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;setup-time-ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">396</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;setup-rate-cps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1263</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;setup-rate-cps-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1263</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;setup-rate-cps-avg&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1263</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;setup-rate-cps-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1263</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network-interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">25503</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">24254</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8248</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-avg-pps-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-avg-pps-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-avg-pps-max-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-avg-pps-max-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-avg-pps-max-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-avg-pps-max-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-multicast-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;access-interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">33250</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">34047</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8248</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-avg-pps-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-avg-pps-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-avg-pps-max-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-avg-pps-max-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-session-packets-avg-pps-max-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-session-packets-avg-pps-max-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-multicast-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-multicast-packets-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;protocol-stats&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;arp-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;arp-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;padi-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;pado-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;padr-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;pads-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;padt-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;padt-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">499</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lcp-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2249</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lcp-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2249</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;pap-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;pap-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;chap-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;chap-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ipcp-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ipcp-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ip6cp-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ip6cp-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;igmp-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;igmp-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1298</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;icmp-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;icmp-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;icmpv6-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;icmpv6-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;dhcpv6-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;dhcpv6-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lcp-echo-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lcp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ipcp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ip6cp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;pap-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;chap-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;icmpv6-rs-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;dhcpv6-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;config-ipv4-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;config-ipv6-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;config-ipv6pd-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;total-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows-access-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows-access-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows-access-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows-network-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows-network-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;verified-flows-network-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv4-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv4-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv6-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv6-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv6pd-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv6pd-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv4-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv4-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv6-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv6-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv6pd-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv6pd-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The optional argument <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">sessions</span></code> allows to include per session statistics
+in the report file. Similar with <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">streams</span></code> which allows to include per stream
+statistics. Both options could be also combined.</p>
+<p>Those extensive JSON reports could be easily verified with simple python scripts to
+extract the desired results.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="c1"># Open JSON report ...</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;report.json&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="c1"># Analyze data ...</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="streams.html" class="btn btn-neutral float-left" title="Traffic Streams" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="configuration/index.html" class="btn btn-neutral float-right" title="Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
