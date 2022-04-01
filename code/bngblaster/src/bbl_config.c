@@ -2006,6 +2006,27 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
         }
+        value = json_object_get(section, "ipv4-label");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv4_label = json_number_value(value);
+        }
+        if (json_unpack(section, "{s:s}", "ipv4-address", &s) == 0) {
+            if (!inet_pton(AF_INET, s, &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv4-address\n");
+                return false;
+            }
+            ctx->config.session_traffic_ipv4_address = ipv4;
+        }
+        value = json_object_get(section, "ipv6-label");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv6_label = json_number_value(value);
+        }
+        if (json_unpack(section, "{s:s}", "ipv6-address", &s) == 0) {
+            if (!inet_pton(AF_INET6, s, &ctx->config.session_traffic_ipv6_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv6-address\n");
+                return false;
+            }
+        }
     }
 
     /* Traffic Streams Configuration */

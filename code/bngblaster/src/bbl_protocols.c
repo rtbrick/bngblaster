@@ -742,7 +742,7 @@ encode_igmp(uint8_t *buf, uint16_t *len,
  */
 protocol_error_t
 encode_ipv6(uint8_t *buf, uint16_t *len,
-             bbl_ipv6_t *ipv6) {
+            bbl_ipv6_t *ipv6) {
 
     protocol_error_t result;
 
@@ -1879,7 +1879,7 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             }
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         }
-    } if (eth->type == ISIS_PROTOCOL_IDENTIFIER) {
+    } else if (eth->type == ISIS_PROTOCOL_IDENTIFIER) {
         /* Remember ethernet length field position */
         eth_len_ptr = (uint16_t*)buf;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
