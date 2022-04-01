@@ -5,21 +5,19 @@
 [![License](https://img.shields.io/badge/License-BSD-lightgrey)](https://github.com/rtbrick/bngblaster/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/Documentation-lightgrey)](https://rtbrick.github.io/bngblaster)
 
-The BNG Blaster is an open-source network tester for access and routing protocols. 
-It can simulate massive PPPoE and IPoE (DHCP) subscribers including IPTV, and L2TPv2. 
+The BNG Blaster is an open-source network tester 
+for access and routing protocols. It can emulate massive 
+PPPoE and IPoE (DHCP) subscribers including IPTV, and L2TP (LNS). 
+There are various routing protocols supported like ISIS and BGP. 
+So you can use it for end-to-end BNG and non-BNG router testing.
 
-There are various routing protocols supported like ISIS and BGP. So you can use it for 
-end-to-end BNG and non-BNG router testing. 
+You can use the included traffic generator for forwarding verification,
+QoS testing or to measure convergence times. The traffic generator supports 
+millions of separate tracked flows. This allows you to verify every single 
+forwarding state of a full feed internet routing table. You can also send 
+traffic to every single QoS queue of your service edge router.
 
-You can use the included traffic generator for forwarding verification, which allows you 
-to test QoS configurations or measure convergence times. 
-
-The traffic generator supports more than a million separate tracked flows. 
-So you can use this to verify every single forwarding state of a full feed 
-internet routing table. You can also send traffic for every single QoS queue 
-of carrier grade BNG hardware. 
-
-The BNG Blaster is used by network operators and vendors of network hard- and software. 
+The BNG Blaster is used by leading network operators, network hard- and software vendors.
 
 A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster") and good presentation
 from [DENOG13](https://youtu.be/LVg6rlVEfNU "DENOG13") can be found on YouTube. 
