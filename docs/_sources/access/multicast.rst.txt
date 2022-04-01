@@ -101,8 +101,8 @@ allows to search for the missing packets in the corresponding capture files.
 Manual Join/Leave Testing
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to join and leave multicast groups manually using the <<Control Socket>> as
-shown in the example below.
+It is possible to join and leave multicast groups manually using the :ref:`command <api>`
+``igmp-join``.
 
 ``$ sudo bngblaster-cli run.sock igmp-join session-id 1 group 232.1.1.1 source1 202.11.23.101 source2 202.11.23.102 source3 202.11.23.103``
 
@@ -183,7 +183,7 @@ sending leave and the last multicast packet received for this group. Multicast p
 received for the leaved group after first packet of joined group is received are counted
 as overlap.
 
-The following configuration shows an example of the `igmp` section
+The following configuration shows an example of the ``igmp`` section
 for a typical zapping test.
 
 .. code-block:: json
@@ -205,13 +205,12 @@ for a typical zapping test.
         }
     }
 
+.. include:: ../configuration/igmp.rst
+
 Multicast Limitations
 ~~~~~~~~~~~~~~~~~~~~~
 
 The BNG Blaster IGMP implementation supports up to 3 sources per group record
 and 8 group records per session.
-
-The IGMP protocol stops working if IPCP has closed also if session IPCP renegotiates.
-The whole session needs to be disconnected to restart IGMP.
 
 The check for overlapping multicast traffic is supported for zapping tests only.

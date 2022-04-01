@@ -103,7 +103,7 @@ The configured ``raw-update-file`` under the BGP session is loaded
 during Blaster startup phase and send as soon as the session is 
 established. 
 
-The ``bgp-raw-update`` command allows to send further updates during
+The ``bgp-raw-update`` :ref:`command <api>` allows to send further updates during
 the session lifetime.
 
 ``$ sudo bngblaster-cli run.sock bgp-raw-update file update1.bgp``

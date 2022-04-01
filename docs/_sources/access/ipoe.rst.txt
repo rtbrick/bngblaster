@@ -78,7 +78,7 @@ DHCPv6
 IPoE Commands
 ~~~~~~~~~~~~~
 
-The control socket command ``session-info session-id <id>`` provides
+The :ref:`command <api>` ``session-info session-id <id>`` provides
 detailed information for IPoE sessions.
 
 ``$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .``

@@ -325,7 +325,7 @@ is possible to send also CSURQ requests to the LAC.
 L2TP Commands
 ~~~~~~~~~~~~~
 
-The control socket command ``session-info l2tp-tunnels`` provides
+The :ref:`command <api>` ``session-info l2tp-tunnels`` provides
 detailed information about L2TP tunnels.
 
 ``$ sudo bngblaster-cli run.sock l2tp-tunnels``
@@ -357,7 +357,7 @@ detailed information about L2TP tunnels.
         ]
     }
 
-The ``l2tp-sessions`` command returns all L2TP sessions.
+The ``l2tp-sessions`` :ref:`command <api>` returns all L2TP sessions.
 
 ``$ sudo bngblaster-cli run.sock l2tp-sessions``
 
