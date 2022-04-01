@@ -1281,14 +1281,9 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 }
                 *result.datum_ptr = stream;
                 if(session->stream) {
-                    session_stream = session->stream;
-                    while(session_stream->next) {
-                        session_stream = session_stream->next;
-                    }
-                    session_stream->next = stream;
-                } else {
-                    session->stream = stream;
+                    stream->next = session->stream;
                 }
+                session->stream = stream;
                 if(config->threaded) {
                     thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
                     if(!thread) {
