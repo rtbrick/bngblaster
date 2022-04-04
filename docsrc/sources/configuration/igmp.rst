@@ -55,6 +55,9 @@
    * - `network-interface`
      - Multicast traffic source interface
      - 
+   * - `max-join-delay`
+     - Maximum join delay in milliseconds
+     - 0 (disabled)
 
 Per default join and leave requests are send using dedicated reports. 
 The option ``combined-leave-join`` allows the combination of leave and 
@@ -70,3 +73,5 @@ If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1
 and group-count 3 the result are the following three groups (S.G) 
 1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.
 
+If ``max-join-delay`` is configured, the final report includes how often 
+the measured join delay is above the configured threshold here. 

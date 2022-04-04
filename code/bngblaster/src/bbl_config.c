@@ -1657,6 +1657,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_unpack(section, "{s:s}", "network-interface", &s) == 0) {
             ctx->config.multicast_traffic_network_interface = strdup(s);
         }
+        value = json_object_get(section, "max-join-delay");
+        if (json_is_number(value)) {
+            ctx->config.igmp_max_join_delay = json_number_value(value);
+        }
     }
 
     /* Access Line Configuration */

@@ -122,6 +122,10 @@ bbl_igmp_zapping(timer_s *timer)
             session->stats.min_join_delay = join_delay;
         }
         session->stats.avg_join_delay = session->zapping_join_delay_sum / session->zapping_join_delay_count;
+        
+        if(ctx->config.igmp_max_join_delay && join_delay > ctx->config.igmp_max_join_delay) {
+            session->stats.max_join_delay_violations++;
+        }
 
         LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms join delay for group %s\n",
             session->session_id, join_delay, format_ipv4_address(&group->group));

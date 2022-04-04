@@ -99,6 +99,8 @@ bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
                 }
             }
 
+            stats->max_join_delay_violations += session->stats.max_join_delay_violations;
+
             /* Session Traffic */
             if(session->access_ipv4_rx_first_seq) {
                 stats->sessions_access_ipv4_rx++;
@@ -511,6 +513,11 @@ bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    MIN: %u ms\n", stats->min_join_delay);
             printf("    AVG: %u ms\n", stats->avg_join_delay);
             printf("    MAX: %u ms\n", stats->max_join_delay);
+
+            if(ctx->config.igmp_max_join_delay) {
+                printf("    VIOLATIONS: %u (> %u ms)\n", stats->max_join_delay_violations, ctx->config.igmp_max_join_delay);
+            }
+
             printf("  Leave Delay:\n");
             printf("    MIN: %u ms\n", stats->min_leave_delay);
             printf("    AVG: %u ms\n", stats->avg_leave_delay);
