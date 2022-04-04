@@ -7,34 +7,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "isis.h"
+#include "../bbl_ctrl.h"
 
-json_t *
-isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
-    json_t *root = NULL;
-    json_t *peer = NULL;
-
-    if(!adjacency) {
-        return NULL;
-    }
-
-    peer = json_pack("{ss}",
-                     "system-id", isis_system_id_to_str(adjacency->peer->system_id));
-
-    root = json_pack("{ss ss, ss si ss so}",
-                     "interface", adjacency->interface->name,
-                     "type", "P2P",
-                     "level", isis_level_string(adjacency->level),
-                     "instance-id", adjacency->instance->config->id,
-                     "adjacency-state", isis_p2p_adjacency_state_string(adjacency->state),
-                     "peer", peer);
-
-    if(!root) {
-        if(peer) json_decref(peer);
-    }
-    return root;
-}
-
-json_t *
+static json_t *
 isis_ctrl_adjacency(isis_adjacency_t *adjacency) {
     json_t *root = NULL;
     json_t *peer = NULL;
@@ -61,8 +36,69 @@ isis_ctrl_adjacency(isis_adjacency_t *adjacency) {
     return root;
 }
 
-json_t *
-isis_ctrl_database(hb_tree *lsdb) {
+static json_t *
+isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
+    json_t *root = NULL;
+    json_t *peer = NULL;
+
+    if(!adjacency) {
+        return NULL;
+    }
+
+    peer = json_pack("{ss}",
+                     "system-id", isis_system_id_to_str(adjacency->peer->system_id));
+
+    root = json_pack("{ss ss, ss si ss so}",
+                     "interface", adjacency->interface->name,
+                     "type", "P2P",
+                     "level", isis_level_string(adjacency->level),
+                     "instance-id", adjacency->instance->config->id,
+                     "adjacency-state", isis_p2p_adjacency_state_string(adjacency->state),
+                     "peer", peer);
+
+    if(!root) {
+        if(peer) json_decref(peer);
+    }
+    return root;
+}
+
+ssize_t
+isis_ctrl_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root, *adjacencies, *adjacency;
+
+    adjacencies = json_array();
+    for(int i=0; i < ctx->interfaces.network_if_count; i++) {
+        if(ctx->interfaces.network_if[i]->isis_adjacency_p2p) {
+           adjacency = isis_ctrl_adjacency_p2p(ctx->interfaces.network_if[i]->isis_adjacency_p2p);
+           if(adjacency) {
+               json_array_append(adjacencies, adjacency);
+           }
+        } else {
+            for(int level=0; level<ISIS_LEVELS; level++) {
+                adjacency = isis_ctrl_adjacency(ctx->interfaces.network_if[i]->isis_adjacency[level]);
+                if(adjacency) {
+                    json_array_append(adjacencies, adjacency);
+                }
+            }
+        }
+    }
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "isis-adjacencies", adjacencies);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(adjacencies);
+    }
+    return result;
+}
+
+static json_t *
+isis_ctrl_database_entries(hb_tree *lsdb) {
     json_t *database, *entry;
     isis_lsp_t *lsp;
     hb_itor *itor;
@@ -115,4 +151,169 @@ isis_ctrl_database(hb_tree *lsdb) {
     hb_itor_free(itor);
 
     return database;
+}
+
+ssize_t
+isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+
+    ssize_t result = 0;
+    json_t *root = NULL;
+    json_t *database = NULL;
+    isis_instance_t *instance = NULL;
+
+    int instance_id = 0;
+    int level = 0;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
+    }
+    if (json_unpack(arguments, "{s:i}", "level", &level) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS level");
+    }
+    if (!(level == ISIS_LEVEL_1 || level == ISIS_LEVEL_2)) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid ISIS level");
+    }
+
+    /* Search for matching instance */
+    instance = ctx->isis_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if (!instance) {
+        return bbl_ctrl_status(fd, "error", 400, "ISIS instance not found");
+    }
+
+    if(!instance->level[level-1].lsdb) {
+        return bbl_ctrl_status(fd, "error", 400, "ISIS database not found");
+    }
+
+    database = isis_ctrl_database_entries(instance->level[level-1].lsdb);
+    if(database) {
+        root = json_pack("{ss si so}",
+                         "status", "ok",
+                         "code", 200,
+                         "isis-database", database);
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(database);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+}
+
+ssize_t
+isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+    char *file_path;
+    int instance_id = 0;
+
+    isis_instance_t *instance = NULL;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing MRT file");
+    }
+    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
+    }
+
+    /* Search for matching instance */
+    instance = ctx->isis_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if (!instance) {
+        return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
+    }
+
+    if(!isis_mrt_load(instance, file_path)) {
+        return bbl_ctrl_status(fd, "error", 500, "failed to load ISIS MRT file");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+ssize_t
+isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+
+    protocol_error_t result;
+
+    json_t *value;
+    size_t pdu_count;
+
+    int instance_id = 0;
+    isis_instance_t *instance = NULL;
+
+    isis_pdu_t pdu = {0};
+
+    const char *pdu_string;
+    uint16_t pdu_string_len;
+
+    uint8_t buf[ISIS_MAX_PDU_LEN];
+    uint16_t len;
+
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
+    }
+
+    /* Search for matching instance */
+    instance = ctx->isis_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if (!instance) {
+        return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
+    }
+
+    /* Process PDU array */
+    value = json_object_get(arguments, "pdu");
+    if (json_is_array(value)) {
+        pdu_count = json_array_size(value);
+        for (size_t i = 0; i < pdu_count; i++) {
+            pdu_string = json_string_value(json_array_get(value, i));
+            if(!pdu_string) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to read ISIS PDU");
+            }
+            pdu_string_len = strlen(pdu_string);
+            /* Load PDU from hexstring */
+            for (len = 0; len < (pdu_string_len/2); len++) {
+                sscanf(pdu_string + len*2, "%02hhx", &buf[len]);
+            }
+            result = isis_pdu_load(&pdu, (uint8_t*)buf, len);
+            if(result != PROTOCOL_SUCCESS) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to decode ISIS PDU");
+            }
+            /* Update external LSP */
+            if(!isis_lsp_update_external(instance, &pdu)) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to update ISIS LSP");
+            }
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing PDU list");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+ssize_t
+isis_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    isis_teardown(ctx);
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

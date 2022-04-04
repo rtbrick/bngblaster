@@ -9,13 +9,19 @@
 #ifndef __BBL_ISIS_CTRL_H__
 #define __BBL_ISIS_CTRL_H__
 
-json_t *
-isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency);
+ssize_t
+isis_ctrl_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
 
-json_t *
-isis_ctrl_adjacency(isis_adjacency_t *adjacency);
+ssize_t
+isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
 
-json_t *
-isis_ctrl_database(hb_tree *lsdb);
+ssize_t
+isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+
+ssize_t
+isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+
+ssize_t
+isis_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
 
 #endif
