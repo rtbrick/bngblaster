@@ -36,4 +36,8 @@
    * - `terminate`
      - Terminate session
      - 
-     - `session-id`
+     - `session-id`, `reconnect-delay`
+
+The argument ``reconnect-delay`` is only applicable in combination with ``session-id`` 
+and reconnect enabled in configuration. This argument allows to delay the session 
+reconnect by the defined amount of seconds. 

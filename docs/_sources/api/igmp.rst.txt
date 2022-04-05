@@ -17,3 +17,11 @@
      - Display group information
      - 
      - 
+   * - `zapping-start`
+     - Start IGMP zapping test
+     - 
+     - 
+   * - `zapping-stop`
+     - Stop IGMP zapping test
+     - 
+     - 

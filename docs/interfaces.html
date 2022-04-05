@@ -201,12 +201,11 @@ interface.</p>
 <p>Those interfaces can communicate with the configured gateway only.
 Meaning that all traffic sent from the network interface will be sent
 to the learned MAC address of the configured gateway.</p>
-<p>The network interface behaves like a router accepting all traffic
-sent to its own MAC address. This allows to send and receive traffic
-for prefixes advertised via routing protocols or configured statically
-on the connected device under test.</p>
-<p>The BNG Blaster will also respond to all ICMP echo requests sent to its
-own MAC address.</p>
+<p>The network interface behaves like a router. It accepts all traffic sent
+to its own MAC address. This allows to send and receive traffic for prefixes
+advertised via routing protocols or configured via static routes on the
+connected device under test.</p>
+<p>The BNG Blaster responds to all ICMP echo requests sent to its own MAC address.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -305,12 +304,13 @@ as shown in the example below.</p>
 </pre></div>
 </div>
 <p>Using multiple network interfaces requires to select which network interface
-to be used otherwise one of the interface is selected automatically. Therefore
-the configuration option <code class="docutils literal notranslate"><span class="pre">network-interface</span></code> is supported in different sections.</p>
+to be used. If not explicitly configured one of the interface is selected
+automatically. Therefore, the configuration option <code class="docutils literal notranslate"><span class="pre">network-interface</span></code>
+is supported in different sections.</p>
 </section>
 <section id="access-interfaces">
 <h2>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Permalink to this headline"></a></h2>
-<p id="access-interface">The access interface are used to emulate PPPoE and IPoE clients.</p>
+<p id="access-interface">The access interfaces are used to emulate PPPoE and IPoE clients.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -497,14 +497,14 @@ the configuration option <code class="docutils literal notranslate"><span class=
 </tr>
 </tbody>
 </table>
-<p>For all modes it is possible to configure between zero and three VLAN
-tags on the access interface as shown below.</p>
+<p>For all modes, it is possible to configure between zero and three VLAN
+tags on the access interface. The VLAN identifier <code class="docutils literal notranslate"><span class="pre">0</span></code> disables the
+corresponding VLAN header.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[ethernet][outer-vlan][inner-vlan][third-vlan][pppoe]...
 </pre></div>
 </div>
 <section id="untagged">
 <h3>Untagged<a class="headerlink" href="#untagged" title="Permalink to this headline"></a></h3>
-<p>With untagged only one session is possible.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
