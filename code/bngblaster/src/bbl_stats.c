@@ -100,6 +100,8 @@ bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             }
 
             stats->max_join_delay_violations += session->stats.max_join_delay_violations;
+            stats->zapping_join_count += session->zapping_join_count;
+            stats->zapping_leave_count += session->zapping_leave_count;
 
             /* Session Traffic */
             if(session->access_ipv4_rx_first_seq) {
@@ -515,7 +517,10 @@ bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             printf("    MAX: %u ms\n", stats->max_join_delay);
 
             if(ctx->config.igmp_max_join_delay) {
-                printf("    VIOLATIONS: %u (> %u ms)\n", stats->max_join_delay_violations, ctx->config.igmp_max_join_delay);
+                printf("    VIOLATIONS: %u/%u (> %u ms)\n", 
+                    stats->max_join_delay_violations, 
+                    stats->zapping_join_count,
+                    ctx->config.igmp_max_join_delay);
             }
 
             printf("  Leave Delay:\n");
@@ -812,9 +817,12 @@ bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_sub, "zapping-join-delay-ms-min", json_integer(stats->min_join_delay));
             json_object_set(jobj_sub, "zapping-join-delay-ms-avg", json_integer(stats->avg_join_delay));
             json_object_set(jobj_sub, "zapping-join-delay-ms-max", json_integer(stats->max_join_delay));
+            json_object_set(jobj_sub, "zapping-join-delay-violations", json_integer(stats->max_join_delay_violations));
+            json_object_set(jobj_sub, "zapping-join-count", json_integer(stats->zapping_join_count));
             json_object_set(jobj_sub, "zapping-leave-delay-ms-min", json_integer(stats->min_leave_delay));
             json_object_set(jobj_sub, "zapping-leave-delay-ms-avg", json_integer(stats->avg_leave_delay));
             json_object_set(jobj_sub, "zapping-leave-delay-ms-max", json_integer(stats->max_leave_delay));
+            json_object_set(jobj_sub, "zapping-leave-count", json_integer(stats->zapping_leave_count));
             json_object_set(jobj_sub, "zapping-multicast-packets-overlap", json_integer(stats->mc_old_rx_after_first_new));
             json_object_set(jobj_sub, "zapping-multicast-not-received", json_integer(stats->mc_not_received));
             json_object_set(jobj, "multicast", jobj_sub);

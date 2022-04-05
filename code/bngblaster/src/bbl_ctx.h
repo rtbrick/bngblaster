@@ -139,6 +139,7 @@ typedef struct bbl_ctx_
     } stats;
 
     bool multicast_traffic;
+    bool zapping;
 
     /* Config options */
     struct {

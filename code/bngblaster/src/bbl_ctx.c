@@ -78,6 +78,7 @@ bbl_ctx_add (void)
 
     ctx->flow_id = 1;
     ctx->multicast_traffic = true;
+    ctx->zapping = true;
 
     /* Initialize hash table dictionaries. */
     ctx->vlan_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_SESSION_HASHTABLE_SIZE);
