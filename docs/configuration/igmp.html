@@ -152,6 +152,10 @@
 <td><p>Multicast traffic source interface</p></td>
 <td></td>
 </tr>
+<tr class="row-odd"><td><p><cite>max-join-delay</cite></p></td>
+<td><p>Maximum join delay in milliseconds</p></td>
+<td><p>0 (disabled)</p></td>
+</tr>
 </tbody>
 </table>
 <p>Per default join and leave requests are send using dedicated reports.
@@ -165,6 +169,8 @@ for faster processing and more detailed analysis.</p>
 <p>If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1
 and group-count 3 the result are the following three groups (S.G)
 1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">max-join-delay</span></code> is configured, the final report includes how often
+the measured join delay is above the configured threshold here.</p>
 
 
            </div>

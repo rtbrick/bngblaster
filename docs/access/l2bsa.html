@@ -90,8 +90,49 @@
              
   <section id="l2bsa">
 <span id="id1"></span><h1>L2BSA<a class="headerlink" href="#l2bsa" title="Permalink to this headline"></a></h1>
-<p>The A10NSP interface emulates an layer two provider interface. The term A10
-refers to the end-to-end ADSL network reference model from TR-025.</p>
+<p>Layer 2 Bitstream Access (L2BSA) refers to a scenario in which a service provider makes
+his access infrastructure available to other service providers. These are retail service
+providers who provide their Internet services. In Germany, this service is mandated by
+the Federal Network Agency (German: Bundesnetzagentur or BNetzA). This is the regulatory
+office for electricity, gas, telecommunications, post, and railway markets. It is a federal
+agency of the Federal Ministry for Economic Affairs and Energy located in Bonn, Germany.</p>
+<p>The definition of L2BSA service was defined by the so-called <a class="reference external" href="https://www.bundesnetzagentur.de/EN/Areas/Telecommunications/Companies/MarketRegulation/NGAForum/NGAForum_node.html">NGA Forum</a>.
+This is an advisory board founded in May 2010 by the Bundesnetzagentur for promoting dialogue
+between the Bundesnetzagentur, network operators, manufacturers, states, and local authorities
+on NGA rollout.</p>
+<p>The L2BSA specification defines two interfaces. The so called U interface (User Interface)
+at the customer location and the A10-NSP interface (A10 Network Service Provider) between
+the service provider networks. Those interface types were introduced in the Broadband Forum
+TR-101 (Migration to Ethernet-Based Broadband Aggregation).</p>
+<img alt="L2BSA Interfaces" src="../_images/bbl_l2bsa_interfaces.png" />
+<p>The U interface is defined as a transparent Layer 2 interface. This can be used with or without
+VLAN tags by the wholesale service providers. This means that some CPE will send their traffic
+untagged while another CPE is configured for tagged traffic. All those traffic needs to be forwarded
+between the U interface and the A10-NSP interface.</p>
+<p>The A10-NSP interface is defined as a link aggregation bundle interface with one or more interfaces
+and LACP enabled or disabled. All traffic on this interface is at least single tagged with the so-called
+S-VLAN tag which identifies the U interface. This limits the amount of L2BSA services to 4094 per A10-NSP
+interface caused by the usable VLAN range. So some providers need many A10-NSP interfaces if they need to
+address more than the 4094 services.</p>
+<p>The term A10 relates to the end-to-end ADSL network reference model depicted in the figure below.
+The Core Network reference model is a subset of the end-to-end architecture. It is composed of two
+functional blocks and three reference points. The Access Node and the Regional Broadband Network are
+the two functional blocks. U, V, and A10 are the three reference points.</p>
+<img alt="TR-025" src="../_images/tr-025.png" />
+<p>The mapping between the U interface and A10-NSP/S-VLAN is managed by the L2BSA service provider.
+These mappings may change triggered by re-provisioning actions (port up/down).</p>
+<p>Thus all PPPoE discovery, as well as DHCPv4/v6 packets, must be enriched with extra line identification
+headers (Agent-Remote-Id, Agent-Circuit-Id, Actual-Data-Rate, …​) by the L2BSA service provider in the
+upstream direction (from U to A10-NSP interface). Those headers allow the wholesale provider to identify
+the actual U interface for traffic received on the A10-NSP interface. This functionality is referred to
+as the intermediate agent functionality.</p>
+<p>The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts
+all PPPoE sessions received to verify forwarding and PPPoE header enrichment.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is also planned to emulate a lightweight DHCPv4 and DHCPv6 server
+to verify IPoE forwarding and header enrichment.</p>
+</div>
 <p>Following a basic PPPoE/A10NSP configuration example which is
 detailed explained in the configuration section.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
@@ -159,6 +200,8 @@ detailed explained in the configuration section.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>You can define multiple interfaces with the same MAC
+address to emulate some static link aggregation (without LACP).</p>
 </section>
 
 

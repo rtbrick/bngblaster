@@ -87,13 +87,12 @@ Those interfaces can communicate with the configured gateway only.
 Meaning that all traffic sent from the network interface will be sent 
 to the learned MAC address of the configured gateway. 
 
-The network interface behaves like a router accepting all traffic 
-sent to its own MAC address. This allows to send and receive traffic 
-for prefixes advertised via routing protocols or configured statically
-on the connected device under test. 
+The network interface behaves like a router. It accepts all traffic sent 
+to its own MAC address. This allows to send and receive traffic for prefixes 
+advertised via routing protocols or configured via static routes on the 
+connected device under test.
 
-The BNG Blaster will also respond to all ICMP echo requests sent to its 
-own MAC address. 
+The BNG Blaster responds to all ICMP echo requests sent to its own MAC address. 
 
 .. include:: configuration/interfaces_network.rst
 
@@ -127,20 +126,22 @@ as shown in the example below.
     }
 
 Using multiple network interfaces requires to select which network interface
-to be used otherwise one of the interface is selected automatically. Therefore
-the configuration option ``network-interface`` is supported in different sections.
+to be used. If not explicitly configured one of the interface is selected 
+automatically. Therefore, the configuration option ``network-interface`` 
+is supported in different sections.
 
 Access Interfaces
 -----------------
 
 .. _access-interface:
 
-The access interface are used to emulate PPPoE and IPoE clients.
+The access interfaces are used to emulate PPPoE and IPoE clients.
 
 .. include:: configuration/interfaces_access.rst
 
-For all modes it is possible to configure between zero and three VLAN
-tags on the access interface as shown below.
+For all modes, it is possible to configure between zero and three VLAN
+tags on the access interface. The VLAN identifier ``0`` disables the
+corresponding VLAN header. 
 
 .. code-block:: none
 
@@ -149,8 +150,6 @@ tags on the access interface as shown below.
 
 Untagged
 ~~~~~~~~
-With untagged only one session is possible.
-
 .. code-block:: json
 
     {

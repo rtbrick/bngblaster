@@ -85,9 +85,9 @@
   <section id="quickstart-guide">
 <h1>Quickstart Guide<a class="headerlink" href="#quickstart-guide" title="Permalink to this headline"></a></h1>
 <p>In this guide, we’ll walk you through the BNG Blaster basics. All the
-examples here work without having network devices to be tested.</p>
-<p>First you need to <a class="reference internal" href="install.html#install"><span class="std std-ref">install</span></a> the BNG Blaster on your machine.</p>
-<p>In the next step, you create a virtual ethernet interface pair that can be
+examples here work standalone without having network devices.</p>
+<p>First, you need to <a class="reference internal" href="install.html#install"><span class="std std-ref">install</span></a> the BNG Blaster on your machine.</p>
+<p>In the next step, you create a virtual ethernet interface pair. This can be
 used by the BNG Blaster to send and received traffic.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link add veth1.1 type veth peer name veth1.2
 sudo ip link set veth1.1 up
@@ -97,12 +97,13 @@ sudo ip link set veth1.2 up
 <section id="pppoe">
 <h2>PPPoE<a class="headerlink" href="#pppoe" title="Permalink to this headline"></a></h2>
 <p>Let’s start with a simple PPPoE setup where BNG Blaster emulates the
-client and server. On the first interface we use an <a class="reference internal" href="interfaces.html#a10nsp-interface"><span class="std std-ref">A10NSP interface</span></a>
-which includes a lightweight PPPoE server. The other interface is
+client and server. On the first interface we use an
+<a class="reference internal" href="interfaces.html#a10nsp-interface"><span class="std std-ref">A10NSP interface</span></a>. Those interfaces emulate a
+lightweight PPPoE server by accepting every session. The other interface is
 configured as PPPoE client.</p>
 <p>The configured <a class="reference internal" href="access/traffic.html#session-traffic"><span class="std std-ref">session traffic</span></a> generates
 bidirectional traffic between client and server. There is also
-one more bound <a class="reference internal" href="streams.html#streams"><span class="std std-ref">traffic stream</span></a> configured.</p>
+one more <a class="reference internal" href="streams.html#streams"><span class="std std-ref">traffic stream</span></a> bound to the sessions.</p>
 <p><strong>pppoe.json:</strong></p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
@@ -155,7 +156,7 @@ Mar 30 14:27:59.303952 All network interfaces resolved
 Mar 30 14:27:59.396765 ALL SESSIONS ESTABLISHED
 </pre></div>
 </div>
-<p>After pressing <code class="docutils literal notranslate"><span class="pre">ctrl+c</span></code> the test should be stopped and a detailed
+<p>After pressing <code class="docutils literal notranslate"><span class="pre">ctrl+c</span></code>, the test should be stopped and a detailed
 report printed.</p>
 <p>Let’s advance the test by enabling some features explained below.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C pppoe.json -c 1 -L test.log -l ip -J report.json -j sessions -j streams -P test.pcap -S run.sock -I

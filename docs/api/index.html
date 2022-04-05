@@ -279,10 +279,13 @@ Examples:
 <tr class="row-odd"><td><p><cite>terminate</cite></p></td>
 <td><p>Terminate session</p></td>
 <td></td>
-<td><p><cite>session-id</cite></p></td>
+<td><p><cite>session-id</cite>, <cite>reconnect-delay</cite></p></td>
 </tr>
 </tbody>
 </table>
+<p>The argument <code class="docutils literal notranslate"><span class="pre">reconnect-delay</span></code> is only applicable in combination with <code class="docutils literal notranslate"><span class="pre">session-id</span></code>
+and reconnect enabled in configuration. This argument allows to delay the session
+reconnect by the defined amount of seconds.</p>
 </section>
 <section id="ppp">
 <h2>PPP<a class="headerlink" href="#ppp" title="Permalink to this headline"></a></h2>
@@ -418,6 +421,16 @@ session-id for which a connect speed update is requested.</p>
 </tr>
 <tr class="row-even"><td><p><cite>igmp-info</cite></p></td>
 <td><p>Display group information</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>zapping-start</cite></p></td>
+<td><p>Start IGMP zapping test</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>zapping-stop</cite></p></td>
+<td><p>Stop IGMP zapping test</p></td>
 <td></td>
 <td></td>
 </tr>
