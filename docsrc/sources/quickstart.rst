@@ -1,12 +1,12 @@
 Quickstart Guide
 ================
 
-In this guide, we’ll walk you through the BNG Blaster basics. All the
-examples here work without having network devices to be tested. 
+In this guide, we’ll walk you through the BNG Blaster basics. All the 
+examples here work standalone without having network devices.
 
-First you need to :ref:`install <install>` the BNG Blaster on your machine.
+First, you need to :ref:`install <install>` the BNG Blaster on your machine.
 
-In the next step, you create a virtual ethernet interface pair that can be 
+In the next step, you create a virtual ethernet interface pair. This can be 
 used by the BNG Blaster to send and received traffic.
 
 .. code-block:: none
@@ -19,13 +19,14 @@ PPPoE
 -----
 
 Let's start with a simple PPPoE setup where BNG Blaster emulates the
-client and server. On the first interface we use an :ref:`A10NSP interface <a10nsp-interface>`
-which includes a lightweight PPPoE server. The other interface is 
+client and server. On the first interface we use an 
+:ref:`A10NSP interface <a10nsp-interface>`. Those interfaces emulate a 
+lightweight PPPoE server by accepting every session. The other interface is 
 configured as PPPoE client. 
 
 The configured :ref:`session traffic <session-traffic>` generates 
 bidirectional traffic between client and server. There is also 
-one more bound :ref:`traffic stream <streams>` configured.
+one more :ref:`traffic stream <streams>` bound to the sessions.
 
 **pppoe.json:**
 
@@ -83,7 +84,7 @@ Now you can start the BNG Blaster with this configuration.
     Mar 30 14:27:59.303952 All network interfaces resolved
     Mar 30 14:27:59.396765 ALL SESSIONS ESTABLISHED
 
-After pressing ``ctrl+c`` the test should be stopped and a detailed 
+After pressing ``ctrl+c``, the test should be stopped and a detailed 
 report printed. 
 
 Let's advance the test by enabling some features explained below.
