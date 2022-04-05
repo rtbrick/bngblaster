@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BGP &mdash; BNG Blaster 0.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="MPLS" href="mpls.html" />
+    <link rel="prev" title="ISIS" href="isis.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> BNG Blaster
+            <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Routing Protocols</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="isis.html">ISIS</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">BGP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bgp-sessions">BGP Sessions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#limitations">Limitations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#raw-update-files">RAW Update Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bgp-raw-update-generator">BGP RAW Update Generator</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mpls.html">MPLS</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Routing Protocols</a> &raquo;</li>
+      <li>BGP</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/routing/bgp.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="bgp">
+<span id="id1"></span><h1>BGP<a class="headerlink" href="#bgp" title="Permalink to this headline"></a></h1>
+<p>The Border Gateway Protocol (BGP) is a standardized exterior gateway protocol
+designed to exchange routing and reachability information among autonomous systems
+(AS) on the internet. BGP is classified as a path-vector routing protocol, and it
+makes routing decisions based on paths, network policies, or rule-sets configured
+by a network operator.</p>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
+<p>Following an example BGP configuration with one session.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test.bgp&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
+<td><p>BGP local interface (source-interface)</p></td>
+<td><p>first network interface</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>local-ipv4-address</cite></p></td>
+<td><p>BGP local IPv4 address (source-address)</p></td>
+<td><p>network interface address</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>local-as</cite></p></td>
+<td><p>BGP local AS</p></td>
+<td><p>65000</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>peer-ipv4-address</cite></p></td>
+<td><p>BGP peer address</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>peer-as</cite></p></td>
+<td><p>BGP peer AS</p></td>
+<td><p>local AS</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>holdtime</cite></p></td>
+<td><p>BGP holdtime in seconds</p></td>
+<td><p>90</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>id</cite></p></td>
+<td><p>BGP identifier</p></td>
+<td><p>1.2.3.4</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>reconnect</cite></p></td>
+<td><p>BGP reconnect</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>start-traffic</cite></p></td>
+<td><p>BGP start global traffic after RAW update</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
+<td><p>BGP teardown time in seconds</p></td>
+<td><p>5</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
+<td><p>BGP RAW update file</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="bgp-sessions">
+<h2>BGP Sessions<a class="headerlink" href="#bgp-sessions" title="Permalink to this headline"></a></h2>
+<p>Every BGP session is opened with the capabilities for the following
+address families:</p>
+<ul class="simple">
+<li><p>IPv4 unicast</p></li>
+<li><p>IPv4 labelled unicast</p></li>
+<li><p>IPv6 unicast</p></li>
+<li><p>IPv6 labelled unicast</p></li>
+</ul>
+</section>
+<section id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline"></a></h2>
+<p>BGP authentication is currently not supported but already
+planned as enhancement in one of the next releases.</p>
+</section>
+<section id="raw-update-files">
+<h2>RAW Update Files<a class="headerlink" href="#raw-update-files" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster is able to inject BGP messages from a pre-compiled
+RAW update file into the defined sessions. A RAW update file is not
+more than a pre-compiled binary stream of BGP messages, typically
+but not limited to update messages.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0                   1                   2                   3
+0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                                                               +
+|                                                               |
++                                                               +
+|                           Marker                              |
++                                                               +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Length               |      Type     | ...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++++
+.
+.
+.
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                                                               +
+|                                                               |
++                                                               +
+|                           Marker                              |
++                                                               +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Length               |      Type     | ...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++++
+</pre></div>
+</div>
+<p>Those files can be created using the included BGP RAW update generator
+script <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> or manually using libraries like scapy or converters
+from PCAP or MRT files.</p>
+<p>The configured <code class="docutils literal notranslate"><span class="pre">raw-update-file</span></code> under the BGP session is loaded
+during Blaster startup phase and send as soon as the session is
+established.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">bgp-raw-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> allows to send further updates during
+the session lifetime.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">bgp-raw-update</span> <span class="pre">file</span> <span class="pre">update1.bgp</span></code></p>
+<p>This allows in example to load a full table after session has
+started and manually trigger a series of changes using incremental
+updates files.</p>
+<p>All BGP RAW update files are loaded once and can than be used by
+multiple sessions. Meaning if two or more sessions reference the
+same file identified by file name, this file is loaded once into
+memory and used by multiple sessions.</p>
+<p>Therefore for incremental updates, it may makes sense to pre-load
+via <code class="docutils literal notranslate"><span class="pre">bgp-raw-update-files</span></code> configuration.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;start.bgp&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">],</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;bgp-raw-update-files&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;update1.bgp&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;update2.bgp&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Incremental updates not listed here will be loaded dynamically as soon
+as referenced by first session.</p>
+</section>
+<section id="bgp-raw-update-generator">
+<h2>BGP RAW Update Generator<a class="headerlink" href="#bgp-raw-update-generator" title="Permalink to this headline"></a></h2>
+<p>The BGP RAW update generator is a simple tool to generate BGP RAW update
+streams for use with the BNG Blaster.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ bgpupdate --help
+usage: bgpupdate [-h] [-a ASN] -n ADDRESS [-N N] -p PREFIX [-P N] [-m LABEL]
+                [-M N] [-l LOCAL_PREF] [-f FILE] [-w] [-s STREAMS]
+                [--stream-tx-label LABEL] [--stream-tx-inner-label LABEL]
+                [--stream-rx-label LABEL] [--stream-rx-label-num N]
+                [--stream-threads N] [--stream-pps N]
+                [--stream-interface IFACE] [--stream-append] [--end-of-rib]
+                [--append] [--pcap FILE] [--log-level {warning,info,debug}]
+
+The BGP RAW update generator is a simple tool to generate BGP RAW update
+streams for use with the BNG Blaster.
+
+optional arguments:
+-h, --help            show this help message and exit
+-a ASN, --asn ASN     autonomous system number
+-n ADDRESS, --next-hop-base ADDRESS
+                        next-hop base address (IPv4 or IPv6)
+-N N, --next-hop-num N
+                        next-hop count
+-p PREFIX, --prefix-base PREFIX
+                        prefix base network (IPv4 or IPv6)
+-P N, --prefix-num N  prefix count
+-m LABEL, --label-base LABEL
+                        label base
+-M N, --label-num N   label count
+-l LOCAL_PREF, --local-pref LOCAL_PREF
+                        local preference
+-f FILE, --file FILE  output file
+-w, --withdraw        withdraw prefixes
+-s STREAMS, --streams STREAMS
+                        generate BNG Blaster traffic stream file
+--stream-tx-label LABEL
+                        stream TX outer label
+--stream-tx-inner-label LABEL
+                        stream TX inner label
+--stream-rx-label LABEL
+                        stream RX label
+--stream-rx-label-num N
+                        stream RX label count
+--stream-threads N    stream TX threads
+--stream-pps N        stream packets per seconds
+--stream-interface IFACE
+                        stream interface
+--stream-append       append to stream file if exist
+--end-of-rib          add end-of-rib message
+--append              append to file if exist
+--pcap FILE           write BGP updates to PCAP file
+--log-level {warning,info,debug}
+                        logging Level
+</pre></div>
+</div>
+<p>The python BGP RAW update generator is a python script which uses
+scapy to build BGP messages. Therefore this tool can be easily
+modified, extend or used as blueprint for your own tools to generate
+valid BGP update streams.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="isis.html" class="btn btn-neutral float-left" title="ISIS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mpls.html" class="btn btn-neutral float-right" title="MPLS" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

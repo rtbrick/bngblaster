@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interfaces &mdash; BNG Blaster 0.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Access Protocols" href="access/index.html" />
+    <link rel="prev" title="Quickstart Guide" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interfaces</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#interface-settings">Interface Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#network-interfaces">Network Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#access-interfaces">Access Interfaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#untagged">Untagged</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#single-tagged">Single Tagged</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#double-tagged">Double Tagged</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#triple-tagged">Triple Tagged</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#a10nsp-interfaces">A10NSP Interfaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="access/index.html">Access Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="routing/index.html">Routing Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Interfaces</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/interfaces.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="interfaces">
+<span id="id1"></span><h1>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h1>
+<p>The BNG Blaster supports three types of interfaces.</p>
+<p>All interfaces are optional but obviously at least
+one interface is required to start the BNG Blaster.</p>
+<section id="interface-settings">
+<h2>Interface Settings<a class="headerlink" href="#interface-settings" title="Permalink to this headline"></a></h2>
+<p>The following settings are applied to all interfaces.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2048</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
+<td><p>TX ring polling interval in milliseconds</p></td>
+<td><p>5.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
+<td><p>RX ring polling interval in milliseconds</p></td>
+<td><p>5.0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
+<td><p>Bypass the kernel’s qdisc layer</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
+<td><p>IO mode</p></td>
+<td><p>packet_mmap_raw</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
+<td><p>IO slots (ring size)</p></td>
+<td><p>1024</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-stream-max-ppi</cite></p></td>
+<td><p>IO traffic stream max packets per interval</p></td>
+<td><p>32</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>capture-include-streams</cite></p></td>
+<td><p>Include traffic streams in capture</p></td>
+<td><p>true</p></td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> should be set to at to at least <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms)
+if more precise timestamps or high throughput is needed. This is recommended for IGMP
+join/leave or QoS delay measurements. For higher packet rates (&gt;1g) it might be needed to
+increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">1024</span></code> to <code class="docutils literal notranslate"><span class="pre">2048</span></code> or more.</p>
+<p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
+<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered as experimental. In
+the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
+ring buffer and send directly trough RAW packet sockets.</p>
+<p>The interfaces used in BNG Blaster do not need IP addresses configured in the host
+operating system but they need to be in up state.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set dev &lt;interface&gt; up
+</pre></div>
+</div>
+<p>It is not possible to send packets larger than the interface MTU which is 1500 per default
+but for PPPoE with multiple VLAN headers this might be not enough for large packets.
+Therefore the interface MTU should be increased using the following commands.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set mtu 9000 dev &lt;interface&gt;
+</pre></div>
+</div>
+<p>This can be also archived via netplan using the following configuration for each BNG Blaster
+interface.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">network</span><span class="p">:</span><span class="w"></span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w"></span>
+<span class="nt">renderer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">networkd</span><span class="w"></span>
+<span class="nt">ethernets</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">eth1</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">dhcp4</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no</span><span class="w"></span>
+<span class="w">    </span><span class="nt">dhcp6</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no</span><span class="w"></span>
+<span class="w">    </span><span class="nt">link-local</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
+<span class="w">    </span><span class="nt">mtu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9000</span><span class="w"></span>
+<span class="w">    </span><span class="nt">eth2</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="nt">dhcp4</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no</span><span class="w"></span>
+<span class="w">    </span><span class="nt">dhcp6</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no</span><span class="w"></span>
+<span class="w">    </span><span class="nt">link-local</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w"></span>
+<span class="w">    </span><span class="nt">mtu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9000</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The number of interfaces is currently limited to 32!</p>
+</div>
+</section>
+<section id="network-interfaces">
+<h2>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Permalink to this headline"></a></h2>
+<p id="network-interface">The network interfaces are used for traffic and routing protocols.</p>
+<p>Those interfaces can communicate with the configured gateway only.
+Meaning that all traffic sent from the network interface will be sent
+to the learned MAC address of the configured gateway.</p>
+<p>The network interface behaves like a router. It accepts all traffic sent
+to its own MAC address. This allows to send and receive traffic for prefixes
+advertised via routing protocols or configured via static routes on the
+connected device under test.</p>
+<p>The BNG Blaster responds to all ICMP echo requests sent to its own MAC address.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Network interface name (e.g. eth0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>address</cite></p></td>
+<td><p>Local network interface IPv4 address</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>gateway</cite></p></td>
+<td><p>Gateway network interface IPv4 address</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>address-ipv6</cite></p></td>
+<td><p>Local network interface IPv6 address (implicitly /64)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>gateway-ipv6</cite></p></td>
+<td><p>Gateway network interface IPv6 address (implicitly /64)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>vlan</cite></p></td>
+<td><p>Network interface VLAN</p></td>
+<td><p>0 (untagged)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>gateway-mac</cite></p></td>
+<td><p>Optional set gateway MAC address manually</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>gateway-resolve-wait</cite></p></td>
+<td><p>Sessions will not start until gateways are resolved</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>isis-instance-id</cite></p></td>
+<td><p>Assign interface to ISIS instance</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>isis-level</cite></p></td>
+<td><p>ISIS interface level</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>isis-p2p</cite></p></td>
+<td><p>ISIS P2P interface</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>isis-l1-metric</cite></p></td>
+<td><p>ISIS level 1 interface metric</p></td>
+<td><p>10</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>isis-l2-metric</cite></p></td>
+<td><p>ISIS level 2 interface metric</p></td>
+<td><p>10</p></td>
+</tr>
+</tbody>
+</table>
+<p>The BNG Blaster supports multiple network interfaces
+as shown in the example below.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth3&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::2&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Using multiple network interfaces requires to select which network interface
+to be used. If not explicitly configured one of the interface is selected
+automatically. Therefore, the configuration option <code class="docutils literal notranslate"><span class="pre">network-interface</span></code>
+is supported in different sections.</p>
+</section>
+<section id="access-interfaces">
+<h2>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Permalink to this headline"></a></h2>
+<p id="access-interface">The access interfaces are used to emulate PPPoE and IPoE clients.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Access interface name (e.g. eth0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
+<td><p>Select the corresponding network interface for this session</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>type</cite></p></td>
+<td><p>Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>)</p></td>
+<td><p>pppoe</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>vlan-mode</cite></p></td>
+<td><p>Set VLAN mode <cite>1:1</cite> or <cite>N:1</cite></p></td>
+<td><p>1:1</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>qinq</cite></p></td>
+<td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>outer-vlan-min</cite></p></td>
+<td><p>Outer VLAN minimum value</p></td>
+<td><p>0 (untagged)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>outer-vlan-max</cite></p></td>
+<td><p>Outer VLAN maximum value</p></td>
+<td><p>0 (untagged)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>outer-vlan</cite></p></td>
+<td><p>Set outer-vlan-min/max equally</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>inner-vlan-min</cite></p></td>
+<td><p>Inner VLAN minimum value</p></td>
+<td><p>0 (untagged)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>inner-vlan-max</cite></p></td>
+<td><p>Inner VLAN maximum value</p></td>
+<td><p>0 (untagged)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>inner-vlan</cite></p></td>
+<td><p>Set inner-vlan-min/max equally</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>third-vlan</cite></p></td>
+<td><p>Add a fixed third VLAN (most inner VLAN)</p></td>
+<td><p>0 (untagged)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>address</cite></p></td>
+<td><p>Static IPv4 base address (IPoE only)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>address-iter</cite></p></td>
+<td><p>Static IPv4 base address iterator (IPoE only)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>gateway</cite></p></td>
+<td><p>Static IPv4 gateway address (IPoE only)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>gateway-iter</cite></p></td>
+<td><p>Static IPv4 gateway address iterator (IPoE only)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>username</cite></p></td>
+<td><p>Overwrite the username from authentication section</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>password</cite></p></td>
+<td><p>Overwrite the password from authentication section</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>authentication-protocol</cite></p></td>
+<td><p>Overwrite the username from authentication section</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>agent-circuit-id</cite></p></td>
+<td><p>Overwrite the agent-circuit-id from access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>agent-remote-id</cite></p></td>
+<td><p>Overwrite the agent-remote-id from access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rate-up</cite></p></td>
+<td><p>Overwrite the rate-up from access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>rate-down</cite></p></td>
+<td><p>Overwrite the rate-down from access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>dsl-type</cite></p></td>
+<td><p>Overwrite the dsl-type from access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipcp</cite></p></td>
+<td><p>De-/activate PPP IPCP</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ip6cp</cite></p></td>
+<td><p>De-/activate PPP IP6CP</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipv4</cite></p></td>
+<td><p>De-/activate IPoE IPv4</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv6</cite></p></td>
+<td><p>De-/activate IPoE IPv6</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>dhcp</cite></p></td>
+<td><p>De-/activate DHCP</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>dhcpv6</cite></p></td>
+<td><p>De-/activate DHCPv6</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>igmp-autostart</cite></p></td>
+<td><p>Overwrite IGMP autostart</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>igmp-version</cite></p></td>
+<td><p>Overwrite IGMP protocol version (1, 2 or 3)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>stream-group-id</cite></p></td>
+<td><p>Stream group identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>access-line-profile-id</cite></p></td>
+<td><p>Access-line-profile identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>cfm-cc</cite></p></td>
+<td><p>De-/activate EOAM CFM CC (IPoE only)</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>cfm-level</cite></p></td>
+<td><p>Set EOAM CFM maintenance domain level</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>cfm-ma-id</cite></p></td>
+<td><p>Set EOAM CFM maintenance association identifier</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>cfm-ma-name</cite></p></td>
+<td><p>Set EOAM CFM maintenance association short name</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>i1-start</cite></p></td>
+<td><p>Iterator for usage in strings <cite>{i1}</cite></p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>i1-step</cite></p></td>
+<td><p>Iterator step per session</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>i2-start</cite></p></td>
+<td><p>Iterator for usage in strings <cite>{i2}</cite></p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>i2-step</cite></p></td>
+<td><p>Iterator step per session</p></td>
+<td><p>1</p></td>
+</tr>
+</tbody>
+</table>
+<p>For all modes, it is possible to configure between zero and three VLAN
+tags on the access interface. The VLAN identifier <code class="docutils literal notranslate"><span class="pre">0</span></code> disables the
+corresponding VLAN header.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[ethernet][outer-vlan][inner-vlan][third-vlan][pppoe]...
+</pre></div>
+</div>
+<section id="untagged">
+<h3>Untagged<a class="headerlink" href="#untagged" title="Permalink to this headline"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="single-tagged">
+<h3>Single Tagged<a class="headerlink" href="#single-tagged" title="Permalink to this headline"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4049</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="double-tagged">
+<h3>Double Tagged<a class="headerlink" href="#double-tagged" title="Permalink to this headline"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4049</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="triple-tagged">
+<h3>Triple Tagged<a class="headerlink" href="#triple-tagged" title="Permalink to this headline"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;third-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The BNG Blaster supports also multiple access interfaces
+or VLAN ranges as shown in the example below.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pta@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2tp@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2999</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth3&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;200.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address-iter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;200.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway-iter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.4&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The configuration attributes for username, agent-remote-id and agent-circuit-id
+support also some variable substitution. The variable <code class="docutils literal notranslate"><span class="pre">{session-global}</span></code> will
+be replaced with a number starting from 1 and incremented for every new session.
+where as the variable <code class="docutils literal notranslate"><span class="pre">{session}</span></code> is incremented per interface section.</p>
+<p>In VLAN mode <code class="docutils literal notranslate"><span class="pre">N:1</span></code> only one VLAN combination is supported per access interface section.
+This means that only VLAN min or max is considered as VLAN identifier.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="a10nsp-interfaces">
+<h2>A10NSP Interfaces<a class="headerlink" href="#a10nsp-interfaces" title="Permalink to this headline"></a></h2>
+<p id="a10nsp-interface">The A10NSP interface emulates an layer two provider interface. The term A10
+refers to the end-to-end ADSL network reference model from TR-025.</p>
+<p>The A10NSP interface is required for <a class="reference internal" href="access/l2bsa.html#l2bsa"><span class="std std-ref">L2BSA</span></a> tests.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>A10nSP interface name (e.g. eth0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
+<td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac</cite></p></td>
+<td><p>Optional set gateway interface address manually</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The BNG Blaster supports multiple A10NSP interfaces
+as shown in the example below.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;qinq&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:ff:ff:01&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth5&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;qinq&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:ff:ff:02&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>You can define multiple interfaces with the same MAC
+address to emulate some static link aggregation (without LACP).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quickstart Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="access/index.html" class="btn btn-neutral float-right" title="Access Protocols" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

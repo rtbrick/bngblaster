@@ -1,0 +1,110 @@
+.. code-block:: json
+
+    { "streams": {} }
+
+
+.. list-table::
+   :widths: 25 50 25
+   :header-rows: 1
+
+   * - Attribute
+     - Description
+     - Default
+   * - `name`
+     - Mandatory stream name
+     - 
+   * - `stream-group-id`
+     - Stream group identifier
+     - 0 (raw)
+   * - `type`
+     - Mandatory stream type (`ipv4`, `ipv6` or `ipv6pd`)
+     - 
+   * - `direction`
+     - Mandatory stream direction (`upstream`, `downstream` or `both`)
+     - `both`
+   * - `priority`
+     - IPv4 TOS / IPv6 TC
+     - 0
+   * - `vlan-priority`
+     - VLAN priority
+     - 0
+   * - `length`
+     - Layer 3 (IP + payload) traffic length (76 - 9000)
+     - 128
+   * - `pps`
+     - Stream traffic rate in packets per second
+     - 1
+   * - `bps`
+     - Stream traffic rate in bits per second (layer 3)
+     - 
+   * - `a10nsp-interface`
+     - Select the corresponding A10NSP interface for this stream
+     - 
+   * - `network-interface`
+     - Select the corresponding network interface for this stream
+     - 
+   * - `network-ipv4-address`
+     - Overwrite network interface IPv4 address
+     - 
+   * - `network-ipv6-address`
+     - Overwrite network interface IPv6 address
+     - 
+   * - `destination-ipv4-address`
+     - Overwrite the IPv4 destination address
+     - 
+   * - `destination-ipv6-address`
+     - Overwrite the IPv6 destination address
+     - 
+   * - `access-ipv4-source-address`
+     - Overwrite the access IPv4 source address (client)
+     - 
+   * - `access-ipv6-source-address`
+     - Overwrite the access IPv6 source address (client)
+     - 
+   * - `threaded`
+     - Run those streams in separate threads
+     - false
+   * - `thread-group`
+     - Assign this stream to thread group (1-255)
+     - 0 (thread per stream)
+   * - `max-packets`
+     - Send a burst of N packets and stop
+     - 0 (infinity)
+   * - `start-delay`
+     - Wait N seconds after session is established before start
+     - 0
+   * - `tx-label1`
+     - MPLS send (TX) label (outer label)
+     - 
+   * - `tx-label1-exp`
+     - EXP bits of first label (outer label)
+     - 0
+   * - `tx-label1-ttl`
+     - TTL of first label (outer label)
+     - 255
+   * - `tx-label2`
+     - MPLS send (TX) label (inner label)
+     - 
+   * - `tx-label2-exp`
+     - EXP bits of first label (inner label)
+     - 0
+   * - `tx-label2-ttl`
+     - TTL of first label (inner label)
+     - 255
+   * - `rx-label1`
+     - Expected receive MPLS label (outer label)
+     - 
+   * - `rx-label2`
+     - Expected receive MPLS label (inner label)
+     - 
+
+For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 
+and inner IPv4 header.
+
+The ``pps`` option supports also float numbers like 0.1, or 2.5 PPS and has 
+priority over ``bps`` where second is only a helper to calculate the ``pps`` 
+based on given ``bps`` and ``length``.
+
+The options ``access-ipv4-source-address`` and ``access-ipv6-source-address`` 
+are used to test the BNG RPF functionality with traffic send from source addresses 
+different to those assigned to the client. 
