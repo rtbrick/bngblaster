@@ -108,36 +108,44 @@ bbl_igmp_zapping(timer_s *timer)
     /* Calculate last join delay... */
     group = session->zapping_joined_group;
     if(group->first_mc_rx_time.tv_sec) {
-        timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
-        ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
-        if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
-        join_delay = (time_diff.tv_sec * 1000) + ms;
-        if(!join_delay) join_delay = 1; /* join delay must be at least one millisecond */
-        session->zapping_join_delay_sum += join_delay;
-        session->zapping_join_delay_count++;
-        if(join_delay > session->stats.max_join_delay) session->stats.max_join_delay = join_delay;
-        if(session->stats.min_join_delay) {
-            if(join_delay < session->stats.min_join_delay) session->stats.min_join_delay = join_delay;
-        } else {
-            session->stats.min_join_delay = join_delay;
-        }
-        session->stats.avg_join_delay = session->zapping_join_delay_sum / session->zapping_join_delay_count;
-        
-        if(ctx->config.igmp_max_join_delay && join_delay > ctx->config.igmp_max_join_delay) {
-            session->stats.max_join_delay_violations++;
-        }
+        if(!group->zapping_result) {
+            group->zapping_result = true;
+            timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
+            ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
+            if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
+            join_delay = (time_diff.tv_sec * 1000) + ms;
+            if(!join_delay) join_delay = 1; /* join delay must be at least one millisecond */
+            session->zapping_join_delay_sum += join_delay;
+            session->zapping_join_count++;
+            if(join_delay > session->stats.max_join_delay) session->stats.max_join_delay = join_delay;
+            if(session->stats.min_join_delay) {
+                if(join_delay < session->stats.min_join_delay) session->stats.min_join_delay = join_delay;
+            } else {
+                session->stats.min_join_delay = join_delay;
+            }
+            session->stats.avg_join_delay = session->zapping_join_delay_sum / session->zapping_join_count;
+            
+            if(ctx->config.igmp_max_join_delay && join_delay > ctx->config.igmp_max_join_delay) {
+                session->stats.max_join_delay_violations++;
+            }
 
-        LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms join delay for group %s\n",
-            session->session_id, join_delay, format_ipv4_address(&group->group));
+            LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms join delay for group %s\n",
+                session->session_id, join_delay, format_ipv4_address(&group->group));
+        }
     } else {
         if(ctx->config.igmp_zap_wait) {
             /* Wait until MC traffic is received ... */
             return;
         } else {
+            group->zapping_result = true;
             session->stats.mc_not_received++;
             LOG(IGMP, "IGMP (ID: %u) ZAPPING join failed for group %s\n",
                 session->session_id, format_ipv4_address(&group->group));
         }
+    }
+
+    if(!ctx->zapping) {
+        return;
     }
 
     /* Select next group to be joined ... */
@@ -166,14 +174,14 @@ bbl_igmp_zapping(timer_s *timer)
         leave_delay = (time_diff.tv_sec * 1000) + ms;
         if(!leave_delay) leave_delay = 1; /* leave delay must be at least one millisecond */
         session->zapping_leave_delay_sum += leave_delay;
-        session->zapping_leave_delay_count++;
+        session->zapping_leave_count++;
         if(leave_delay > session->stats.max_leave_delay) session->stats.max_leave_delay = leave_delay;
         if(session->stats.min_leave_delay) {
             if(leave_delay < session->stats.min_leave_delay) session->stats.min_leave_delay = leave_delay;
         } else {
             session->stats.min_leave_delay = leave_delay;
         }
-        session->stats.avg_leave_delay = session->zapping_leave_delay_sum / session->zapping_leave_delay_count;
+        session->stats.avg_leave_delay = session->zapping_leave_delay_sum / session->zapping_leave_count;
 
         LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms leave delay for group %s\n",
             session->session_id, leave_delay, format_ipv4_address(&group->group));
@@ -194,6 +202,7 @@ bbl_igmp_zapping(timer_s *timer)
     group->leave_tx_time.tv_nsec = 0;
     group->last_mc_rx_time.tv_sec = 0;
     group->last_mc_rx_time.tv_nsec = 0;
+    group->zapping_result = false;
 
     session->send_requests |= BBL_SEND_IGMP;
     bbl_session_tx_qnode_insert(session);

@@ -16,6 +16,7 @@ typedef struct bbl_igmp_group_
     uint8_t  robustness_count;
     bool     send;
     bool     zapping;
+    bool     zapping_result;
     uint32_t group;
     uint32_t source[IGMP_MAX_SOURCES];
     uint64_t packets;
@@ -330,6 +331,7 @@ typedef struct bbl_session_
         uint32_t min_join_delay;
         uint32_t avg_join_delay;
         uint32_t max_join_delay;
+        uint32_t max_join_delay_violations;
 
         uint32_t min_leave_delay;
         uint32_t avg_leave_delay;

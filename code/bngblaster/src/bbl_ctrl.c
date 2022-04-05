@@ -277,10 +277,10 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
                     }
                 }
                 record = json_pack("{ss so si si}",
-                                "group", format_ipv4_address(&group->group),
-                                "sources", sources,
-                                "packets", group->packets,
-                                "loss", group->loss);
+                                   "group", format_ipv4_address(&group->group),
+                                   "sources", sources,
+                                   "packets", group->packets,
+                                   "loss", group->loss);
 
                 switch (group->state) {
                     case IGMP_GROUP_IDLE:
@@ -323,9 +323,9 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
             }
         }
         root = json_pack("{ss si so}",
-                        "status", "ok",
-                        "code", 200,
-                        "igmp-groups", groups);
+                         "status", "ok",
+                         "code", 200,
+                         "igmp-groups", groups);
         if(root) {
             result = json_dumpfd(root, fd, 0);
             json_decref(root);
@@ -337,6 +337,18 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
     }
+}
+
+ssize_t
+bbl_ctrl_zapping_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ctx->zapping = true;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+ssize_t
+bbl_ctrl_zapping_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ctx->zapping = false;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 ssize_t
@@ -1295,6 +1307,8 @@ struct action actions[] = {
     {"igmp-join", bbl_ctrl_igmp_join},
     {"igmp-leave", bbl_ctrl_igmp_leave},
     {"igmp-info", bbl_ctrl_igmp_info},
+    {"zapping-start", bbl_ctrl_zapping_start},
+    {"zapping-stop", bbl_ctrl_zapping_stop},
     {"li-flows", bbl_ctrl_li_flows},
     {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
     {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
