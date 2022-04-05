@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multicast and IPTV &mdash; BNG Blaster 0.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Legal Interception (LI)" href="li.html" />
+    <link rel="prev" title="Session Traffic" href="traffic.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> BNG Blaster
+            <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Access Protocols</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="pppoe.html">PPPoE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipoe.html">IPoE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="l2tp.html">L2TP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="l2bsa.html">L2BSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="traffic.html">Session Traffic</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Multicast and IPTV</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#generate-multicast-traffic">Generate Multicast Traffic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#manual-join-leave-testing">Manual Join/Leave Testing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#iptv-zapping-test">IPTV Zapping Test</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multicast-limitations">Multicast Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="li.html">Legal Interception (LI)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Access Protocols</a> &raquo;</li>
+      <li>Multicast and IPTV</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/access/multicast.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="multicast-and-iptv">
+<span id="multicast"></span><h1>Multicast and IPTV<a class="headerlink" href="#multicast-and-iptv" title="Permalink to this headline"></a></h1>
+<p>The BNG Blaster provides advanced functionalities for testing multicast
+over PPPoE sessions with focus on IPTV. Therefore IGMP version 1, 2 and 3
+is implemented with support for up to 8 group records per session and 3
+sources per group.</p>
+<p>Multicast testing is supported using external multicast traffic like real
+world IPTV traffic or by generating multicast traffic on the network interface.</p>
+<section id="generate-multicast-traffic">
+<h2>Generate Multicast Traffic<a class="headerlink" href="#generate-multicast-traffic" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster supports different ways to generate multicast traffic. The first
+one is via igmp configuration and second one using raw streams.</p>
+<p>The following example shows how to generate traffic for 100 multicast groups
+with one packet per millisecond for every group.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.10&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;igmp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;239.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;group-iter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;group-count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.10&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;send-multicast-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>It is recommended to send multicast traffic with 1000 PPS per group
+to measure the join and leave delay in milliseconds. Therefore the
+<code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> should be set to at to at least
+<cite>1.0</cite> (1ms) for more precise IGMP join/leave delay measurements.</p>
+<p>It is also possible to generate multicast traffic using RAW streams as shown in the
+example below:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MC1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;239.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;MC2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.2.2.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;239.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Using RAW streams allows to generate streams distributed over multiple network interfaces
+with higher transmit rate using threaded streams if needed.</p>
+<p>Setting the <code class="docutils literal notranslate"><span class="pre">destination-ipv4-address</span></code> to an multicast IPv4 address is enough to generate
+proper multicast streams. All headers including the BNG Blaster header will be automatically
+set for multicast. Therefore such streams can be also used to measure the IGMP join and leave
+delay.</p>
+<p>The BNG Blaster is recognizing loss using the <a class="reference internal" href="../reference/traffic.html#bbl-header"><span class="std std-ref">BNG Blaster header</span></a>
+sequence numbers. After first multicast traffic is received for a particular group,
+for every further packet it checks if there is a gap between last and new sequence number
+which is than reported as loss. The argument option <code class="docutils literal notranslate"><span class="pre">-l</span> <span class="pre">loss</span></code> enables loss logging which
+allows to search for the missing packets in the corresponding capture files.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>It is also possible to start a dedicated BNG Blaster instance to generate multicast
+traffic which can be consumed by multiple BNG Blaster instances. The BNG Blaster
+header allows to do the same measurements on traffic generated from same or different
+BNG Blaster instance.</p>
+</div>
+</section>
+<section id="manual-join-leave-testing">
+<h2>Manual Join/Leave Testing<a class="headerlink" href="#manual-join-leave-testing" title="Permalink to this headline"></a></h2>
+<p>It is possible to join and leave multicast groups manually using the <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>
+<code class="docutils literal notranslate"><span class="pre">igmp-join</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">igmp-join</span> <span class="pre">session-id</span> <span class="pre">1</span> <span class="pre">group</span> <span class="pre">232.1.1.1</span> <span class="pre">source1</span> <span class="pre">202.11.23.101</span> <span class="pre">source2</span> <span class="pre">202.11.23.102</span> <span class="pre">source3</span> <span class="pre">202.11.23.103</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">igmp-info</span> <span class="pre">session-id</span> <span class="pre">1</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;igmp-groups&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;232.1.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;igmp-sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;202.11.23.101&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;202.11.23.102&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;202.11.23.103&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1291</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;active&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;join-delay-ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">139</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">igmp-leave</span> <span class="pre">session-id</span> <span class="pre">1</span> <span class="pre">group</span> <span class="pre">232.1.1.1</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">igmp-info</span> <span class="pre">session-id</span> <span class="pre">1</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;igmp-groups&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;232.1.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;igmp-sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;202.11.23.101&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;202.11.23.102&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;202.11.23.103&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7456</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;idle&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;leave-delay-ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">114</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="iptv-zapping-test">
+<h2>IPTV Zapping Test<a class="headerlink" href="#iptv-zapping-test" title="Permalink to this headline"></a></h2>
+<p>A key element of IPTV services is the delay in changing channels.
+How long does it take to change from one channel to another, is
+the right channel received and the old channel stopped without overlap
+between old and new channel which may leads into traffic congestions if
+both channels are send at the same time. Verify that fast channel changes
+(zapping) works reliable as well.</p>
+<p>The BNG Blaster is able to emulate different client zapping behaviors and
+measure the resulting join/leave delays and possible multicast traffic loss.</p>
+<p>The join delay is the time in milliseconds between sending join and receiving
+first multicast packet of the requested group. The leave delay is the time between
+sending leave and the last multicast packet received for this group. Multicast packets
+received for the leaved group after first packet of joined group is received are counted
+as overlap.</p>
+<p>The following configuration shows an example of the <code class="docutils literal notranslate"><span class="pre">igmp</span></code> section
+for a typical zapping test.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;igmp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;start-delay&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;239.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;group-iter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;group-count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.10&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;zapping-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;zapping-count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;zapping-view-duration&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;zapping-wait&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;combined-leave-join&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;send-multicast-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;igmp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>autostart</cite></p></td>
+<td><p>Automatically join after session is established</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>version</cite></p></td>
+<td><p>IGMP protocol version (1, 2 or 3)</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>combined-leave-join</cite></p></td>
+<td><p>Combine leave and join records within a single IGMPv3 report</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
+<td><p>Delay between session established and initial IGMP join in seconds</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>group</cite></p></td>
+<td><p>Multicast group base address (e.g. 239.0.0.1)</p></td>
+<td><p>0.0.0.0 (disabled)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>group-iter</cite></p></td>
+<td><p>Multicast group iterator</p></td>
+<td><p>0.0.0.1</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>group-count</cite></p></td>
+<td><p>Multicast group count</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>source</cite></p></td>
+<td><p>Multicast source address (e.g. 1.1.1.1)</p></td>
+<td><p>0.0.0.0 (ASM)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>zapping-interval</cite></p></td>
+<td><p>IGMP channel zapping interval in seconds</p></td>
+<td><p>0 (disabled)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>zapping-count</cite></p></td>
+<td><p>Define the amount of channel changes before starting view duration</p></td>
+<td><p>0 (disabled)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>view-duration</cite></p></td>
+<td><p>Define the view duration in seconds</p></td>
+<td><p>0 (disabled)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>send-multicast-traffic</cite></p></td>
+<td><p>Generate multicast traffic</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>multicast-traffic-length</cite></p></td>
+<td><p>Multicast traffic IP length</p></td>
+<td><p>76</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>multicast-traffic-tos</cite></p></td>
+<td><p>Multicast traffic TOS priority</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
+<td><p>Multicast traffic source interface</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>max-join-delay</cite></p></td>
+<td><p>Maximum join delay in milliseconds</p></td>
+<td><p>0 (disabled)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Per default join and leave requests are send using dedicated reports.
+The option <code class="docutils literal notranslate"><span class="pre">combined-leave-join</span></code> allows the combination of leave and
+join records within a single IGMPv3 report using multiple group records.
+This option is applicable to IGMP version 3 only!</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">send-multicast-traffic</span></code> is true, the BNG Blaster generates multicast
+traffic on the network interface based on the specified group and source
+attributes mentioned before. This traffic includes some special signatures
+for faster processing and more detailed analysis.</p>
+<p>If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1
+and group-count 3 the result are the following three groups (S.G)
+1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">max-join-delay</span></code> is configured, the final report includes how often
+the measured join delay is above the configured threshold here.</p>
+</section>
+<section id="multicast-limitations">
+<h2>Multicast Limitations<a class="headerlink" href="#multicast-limitations" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster IGMP implementation supports up to 3 sources per group record
+and 8 group records per session.</p>
+<p>The check for overlapping multicast traffic is supported for zapping tests only.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="traffic.html" class="btn btn-neutral float-left" title="Session Traffic" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="li.html" class="btn btn-neutral float-right" title="Legal Interception (LI)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
