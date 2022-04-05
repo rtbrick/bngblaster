@@ -456,12 +456,18 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
 }
 
 ssize_t
-bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
+    int reconnect_delay = 0;
+
     if(session_id) {
         /* Terminate single matching session ... */
         session = bbl_session_get(ctx, session_id);
         if(session) {
+            json_unpack(arguments, "{s:i}", "reconnect-delay", &session->reconnect_delay);
+            if(reconnect_delay > 0) {
+                session->reconnect_delay = reconnect_delay;
+            }
             bbl_session_clear(ctx, session);
             return bbl_ctrl_status(fd, "ok", 200, "terminate session");
         } else {

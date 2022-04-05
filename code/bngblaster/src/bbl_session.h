@@ -80,6 +80,7 @@ typedef struct bbl_session_
     struct timer_ *timer_session_traffic_ipv6pd;
     struct timer_ *timer_rate;
     struct timer_ *timer_cfm_cc;
+    struct timer_ *timer_reconnect;
 
     bbl_access_type_t access_type;
 
@@ -106,6 +107,9 @@ typedef struct bbl_session_
     /* Authentication */
     char *username;
     char *password;
+
+    /* Optional reconnect delay in seconds */
+    uint32_t reconnect_delay;
 
     uint8_t chap_identifier;
     uint8_t chap_response[CHALLENGE_LEN];
@@ -253,9 +257,9 @@ typedef struct bbl_session_
     uint32_t zapping_group_max;
     uint8_t  zapping_count;
     uint64_t zapping_join_delay_sum;
-    uint32_t zapping_join_delay_count;
+    uint32_t zapping_join_count;
     uint64_t zapping_leave_delay_sum;
-    uint32_t zapping_leave_delay_count;
+    uint32_t zapping_leave_count;
     struct timespec zapping_view_start_time;
 
     /* Multicast Traffic */
