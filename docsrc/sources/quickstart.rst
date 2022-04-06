@@ -24,6 +24,9 @@ client and server. On the first interface we use an
 lightweight PPPoE server by accepting every session. The other interface is 
 configured as PPPoE client. 
 
+.. image:: images/quickstart_pppoe.png
+    :alt: PPPoE Quickstart
+
 The configured :ref:`session traffic <session-traffic>` generates 
 bidirectional traffic between client and server. There is also 
 one more :ref:`traffic stream <streams>` bound to the sessions.
@@ -104,12 +107,15 @@ Let's advance the test by enabling some features explained below.
 * ``-S run.sock`` opens the JSON RPC API socket
 * ``-I`` start interactive courses user interface
 
-.. image:: images/quickstart1.png
+.. image:: images/quickstart_interactive.png
     :alt: BNG Blaster Interactive
 
 Now let's try to press ``F1`` to navigate through the different views. All supported
 keyboard inputs are listed in the top left corner. After pressing ``F9`` the test 
 should be stopped. 
+
+.. image:: images/quickstart_streams.png
+    :alt: BNG Blaster Interactive
 
 If the test is still running, you can open a second terminal. Then go to the same 
 directory from where you started the BNG Blaster and enter the following command.
@@ -192,6 +198,9 @@ ISIS
 
 In the following example, we create two :ref:`ISIS <isis>` nodes (R1 and R2) with an emulated
 ISIS topology attached to R1 (`test.mrt``). 
+
+.. image:: images/quickstart_isis.png
+    :alt: ISIS Quickstart
 
 **isis.json:**
 

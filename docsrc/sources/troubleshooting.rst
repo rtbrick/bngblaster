@@ -46,3 +46,30 @@ names.
 This helps to verify if traffic is received or how it has received.
 Some network interfaces drop the most outer VLAN which can be easily
 verified using the capture file. 
+
+The configuration option ``capture-include-streams`` allows to 
+include (default behavior) or exclude traffic streams from capture. 
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "capture-include-streams": false
+        }
+    }
+
+Wireshark Plugin
+~~~~~~~~~~~~~~~~
+
+Traffic streams generated with the BNG Blaster include the
+:ref:`BNG Blaster Header <bbl_header>` which can analyzed 
+with the Wireshark BNG Blaster Header Dissector. 
+
+Download the LUA dissector script 
+`bbl_header.lua <https://github.com/rtbrick/bngblaster/tree/main/wireshark>`_
+and start wireshark as shown below from the directory where the script is placed.
+
+.. code-block:: none
+
+    $ wireshark -X lua_script:bbl_header.lua
+
