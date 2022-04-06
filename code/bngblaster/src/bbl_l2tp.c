@@ -908,13 +908,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 
     bbl_stream *stream;
     void **search = NULL;
-
-    struct timespec delay;
-    uint64_t delay_nsec;
     uint64_t loss;
-
-    UNUSED(ctx);
-    UNUSED(eth);
 
     if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
         return;
@@ -1037,35 +1031,30 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     search = dict_search(ctx->stream_flow_dict, &bbl->flow_id);
                     if(search) {
                         stream = *search;
-                        stream->packets_rx++;
-                        stream->rx_len = eth->length;
-                        stream->rx_priority = ipv4->tos;
-                        stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
-                        stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
-                        timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
-                        delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
-                        if(delay_nsec > stream->max_delay_ns) {
-                            stream->max_delay_ns = delay_nsec;
-                        }
-                        if(stream->min_delay_ns) {
-                            if(delay_nsec < stream->min_delay_ns) {
-                                stream->min_delay_ns = delay_nsec;
+                        if(stream->rx_first_seq) {
+                            /* Stream already verified */
+                            if((stream->rx_last_seq +1) < bbl->flow_seq) {
+                                loss = bbl->flow_seq - (stream->rx_last_seq +1);
+                                stream->loss += loss;
+                                interface->stats.stream_loss += loss;
+                                LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
+                                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
                             }
                         } else {
-                            stream->min_delay_ns = delay_nsec;
-                        }
-                        if(!stream->rx_first_seq) {
+                            /* Verify stream ... */
+                            stream->rx_len = eth->length;
+                            stream->rx_priority = ipv4->tos;
+                            stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
+                            stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
                             stream->rx_first_seq = bbl->flow_seq;
-                            interface->ctx->stats.stream_traffic_flows_verified++;
-                            if(interface->ctx->config.traffic_stop_verified) {
+                            ctx->stats.stream_traffic_flows_verified++;
+                            if(ctx->config.traffic_stop_verified) {
                                 stream->stop = true;
                             }
-                        } else {
-                            if(stream->rx_last_seq +1 != bbl->flow_seq) {
-                                stream->loss++;
-                            }
                         }
+                        stream->packets_rx++;
                         stream->rx_last_seq = bbl->flow_seq;
+                        bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
                     } else {
                         if(l2tp_session->pppoe_session) {
                             pppoe_session = l2tp_session->pppoe_session;
@@ -1074,8 +1063,8 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                                 pppoe_session->stats.network_ipv4_rx++;
                                 if(!pppoe_session->network_ipv4_rx_first_seq) {
                                     pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
-                                    interface->ctx->stats.session_traffic_flows_verified++;
                                     pppoe_session->session_traffic_flows_verified++;
+                                    ctx->stats.session_traffic_flows_verified++;
                                 } else {
                                     if((pppoe_session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                                         loss = bbl->flow_seq - (pppoe_session->network_ipv4_rx_last_seq +1);

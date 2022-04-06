@@ -986,21 +986,21 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
             stream = stream->next;
         }
         root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}",
-                        "status", "ok",
-                        "code", 200,
-                        "session-streams",
-                        "session-id", session->session_id,
-                        "rx-packets", session->stats.packets_rx,
-                        "tx-packets", session->stats.packets_tx,
-                        "rx-accounting-packets", session->stats.accounting_packets_rx,
-                        "tx-accounting-packets", session->stats.accounting_packets_tx,
-                        "rx-pps", session->stats.rate_packets_rx.avg,
-                        "tx-pps", session->stats.rate_packets_tx.avg,
-                        "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
-                        "tx-bps-l2", session->stats.rate_bytes_tx.avg * 8,
-                        "rx-mbps-l2", (double)(session->stats.rate_bytes_rx.avg * 8) / 1000000.0,
-                        "tx-mbps-l2", (double)(session->stats.rate_bytes_tx.avg * 8) / 1000000.0,
-                        "streams", json_streams);
+                         "status", "ok",
+                         "code", 200,
+                         "session-streams",
+                         "session-id", session->session_id,
+                         "rx-packets", session->stats.packets_rx,
+                         "tx-packets", session->stats.packets_tx,
+                         "rx-accounting-packets", session->stats.accounting_packets_rx,
+                         "tx-accounting-packets", session->stats.accounting_packets_tx,
+                         "rx-pps", session->stats.rate_packets_rx.avg,
+                         "tx-pps", session->stats.rate_packets_tx.avg,
+                         "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
+                         "tx-bps-l2", session->stats.rate_bytes_tx.avg * 8,
+                         "rx-mbps-l2", (double)(session->stats.rate_bytes_rx.avg * 8) / 1000000.0,
+                         "tx-mbps-l2", (double)(session->stats.rate_bytes_tx.avg * 8) / 1000000.0,
+                         "streams", json_streams);
 
         if(root) {
             result = json_dumpfd(root, fd, 0);
@@ -1073,11 +1073,10 @@ bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
             stream->thread.thread->bytes_tx_last_sync = 0;
         }
 
-        stream->flow_seq = 0;
+        stream->flow_seq = 1;
         stream->rx_first_seq = 0;
         stream->rx_last_seq = 0;
         stream->stop = false;
-
         stream->packets_tx = 0;
         stream->packets_rx = 0;
         stream->packets_tx_last_sync = 0;

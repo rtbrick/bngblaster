@@ -244,9 +244,7 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
 
     bbl_stream *stream;
     void **search = NULL;
-
-    struct timespec delay;
-    uint64_t delay_nsec;
+    uint64_t loss;
 
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
@@ -270,46 +268,42 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                     search = dict_search(ctx->stream_flow_dict, &bbl->flow_id);
                     if(search) {
                         stream = *search;
-                        stream->packets_rx++;
-                        stream->rx_len = eth->length;
-                        stream->rx_priority = ipv4->tos;
-                        stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
-                        stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
-                        timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
-                        delay_nsec = delay.tv_sec * 1e9 + delay.tv_nsec;
-                        if(delay_nsec > stream->max_delay_ns) {
-                            stream->max_delay_ns = delay_nsec;
-                        }
-                        if(stream->min_delay_ns) {
-                            if(delay_nsec < stream->min_delay_ns) {
-                                stream->min_delay_ns = delay_nsec;
+                        if(stream->rx_first_seq) {
+                            /* Stream already verified */
+                            if((stream->rx_last_seq +1) < bbl->flow_seq) {
+                                loss = bbl->flow_seq - (stream->rx_last_seq +1);
+                                stream->loss += loss;
+                                interface->stats.stream_loss += loss;
+                                LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
+                                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
                             }
                         } else {
-                            stream->min_delay_ns = delay_nsec;
-                        }
-                        if(!stream->rx_first_seq) {
+                            /* Verify stream ... */
+                            stream->rx_len = eth->length;
+                            stream->rx_priority = ipv4->tos;
+                            stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
+                            stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
                             stream->rx_first_seq = bbl->flow_seq;
-                            interface->ctx->stats.stream_traffic_flows_verified++;
-                            if(interface->ctx->config.traffic_stop_verified) {
+                            ctx->stats.stream_traffic_flows_verified++;
+                            if(ctx->config.traffic_stop_verified) {
                                 stream->stop = true;
                             }
-                        } else {
-                            if(stream->rx_last_seq +1 != bbl->flow_seq) {
-                                stream->loss++;
-                            }
                         }
+                        stream->packets_rx++;
                         stream->rx_last_seq = bbl->flow_seq;
+                        bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
                     } else {
                         if(bbl->flow_id == session->access_ipv4_tx_flow_id) {
                             interface->stats.session_ipv4_rx++;
                             session->stats.network_ipv4_rx++;
                             if(!session->network_ipv4_rx_first_seq) {
                                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
-                                interface->ctx->stats.session_traffic_flows_verified++;
+                                ctx->stats.session_traffic_flows_verified++;
                             } else {
-                                if(session->network_ipv4_rx_last_seq+1 != bbl->flow_seq) {
-                                    interface->stats.session_ipv4_loss++;
-                                    session->stats.network_ipv4_loss++;
+                                if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
+                                    loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);
+                                    session->stats.network_ipv4_loss += loss;
+                                    interface->stats.session_ipv4_loss += loss;
                                     LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
                                         session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
                                 }

@@ -287,66 +287,68 @@ bbl_igmp_initial_join(timer_s *timer)
 static void
 bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos) {
 
+    bbl_ctx_s *ctx = interface->ctx;
     bbl_stream *stream;
+    bbl_mpls_t *mpls;
     void **search = NULL;
-
-    struct timespec delay;
-    uint64_t delay_nsec;
-
     uint64_t loss;
 
-    bbl_mpls_t *mpls;
-
-    search = dict_search(interface->ctx->stream_flow_dict, &bbl->flow_id);
+    interface->stats.stream_rx++;
+    search = dict_search(ctx->stream_flow_dict, &bbl->flow_id);
     if(search) {
         stream = *search;
-        interface->stats.stream_rx++;
-        stream->packets_rx++;
-        stream->rx_len = eth->length;
-        stream->rx_priority = tos;
-        stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
-        stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
-        mpls = eth->mpls;
-        if(mpls) {
-            stream->rx_mpls1 = true;
-            stream->rx_mpls1_label = mpls->label;
-            stream->rx_mpls1_exp = mpls->exp;
-            stream->rx_mpls1_ttl = mpls->ttl;
-            mpls = mpls->next;
-            if(mpls) {
-                stream->rx_mpls2 = true;
-                stream->rx_mpls2_label = mpls->label;
-                stream->rx_mpls2_exp = mpls->exp;
-                stream->rx_mpls2_ttl = mpls->ttl;
-            }
-        }
-
-        timespec_sub(&delay, &eth->timestamp, &bbl->timestamp);
-        delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
-        if(delay_nsec > stream->max_delay_ns) {
-            stream->max_delay_ns = delay_nsec;
-        }
-        if(stream->min_delay_ns) {
-            if(delay_nsec < stream->min_delay_ns) {
-                stream->min_delay_ns = delay_nsec;
-            }
-        } else {
-            stream->min_delay_ns = delay_nsec;
-        }
-        if(!stream->rx_first_seq) {
-            stream->rx_first_seq = bbl->flow_seq;
-            interface->ctx->stats.stream_traffic_flows_verified++;
-            if(interface->ctx->config.traffic_stop_verified) {
-                stream->stop = true;
-            }
-        } else {
+        if(stream->rx_first_seq) {
+            /* Stream already verified */
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
                 loss = bbl->flow_seq - (stream->rx_last_seq +1);
                 stream->loss += loss;
                 interface->stats.stream_loss += loss;
+                LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
+                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
+            }
+        } else {
+            /* Verify stream ... */
+            stream->rx_len = eth->length;
+            stream->rx_priority = tos;
+            stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
+            stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
+            mpls = eth->mpls;
+            if(mpls) {
+                stream->rx_mpls1 = true;
+                stream->rx_mpls1_label = mpls->label;
+                stream->rx_mpls1_exp = mpls->exp;
+                stream->rx_mpls1_ttl = mpls->ttl;
+                mpls = mpls->next;
+                if(mpls) {
+                    stream->rx_mpls2 = true;
+                    stream->rx_mpls2_label = mpls->label;
+                    stream->rx_mpls2_exp = mpls->exp;
+                    stream->rx_mpls2_ttl = mpls->ttl;
+                }
+            }
+            if(stream->config->rx_mpls1_label) {
+                /* Check if expected outer label is received ... */
+                if(stream->rx_mpls1_label != stream->config->rx_mpls1_label) {
+                    /* Wrong outer label received! */
+                    return;
+                }
+                if(stream->config->rx_mpls2_label) {
+                    /* Check if expected inner label is received ... */
+                    if(stream->rx_mpls2_label != stream->config->rx_mpls2_label) {
+                        /* Wrong inner label received! */
+                        return;
+                    }
+                }
+            }
+            stream->rx_first_seq = bbl->flow_seq;
+            ctx->stats.stream_traffic_flows_verified++;
+            if(ctx->config.traffic_stop_verified) {
+                stream->stop = true;
             }
         }
+        stream->packets_rx++;
         stream->rx_last_seq = bbl->flow_seq;
+        bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
     }
 }
 
