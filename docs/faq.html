@@ -79,6 +79,10 @@
              
   <section id="frequently-asked-questions">
 <h1>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this headline"></a></h1>
+<p><strong>Outer VLAN header not captured in PCAP?</strong></p>
+<p>Some interface drivers drop the outer VLAN header. The BNG Blaster tries to
+recover the VLAN from kernel headers but will not change the packets stored
+in the PCAP file.</p>
 <p><strong>Some session established on BNG are not established on BNG Blaster?</strong></p>
 <p>The BNG Blaster considers a session only as established if all configured
 protocols are established. This could occur if the device under test (your BNG)

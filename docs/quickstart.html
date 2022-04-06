@@ -101,6 +101,7 @@ client and server. On the first interface we use an
 <a class="reference internal" href="interfaces.html#a10nsp-interface"><span class="std std-ref">A10NSP interface</span></a>. Those interfaces emulate a
 lightweight PPPoE server by accepting every session. The other interface is
 configured as PPPoE client.</p>
+<img alt="PPPoE Quickstart" src="_images/quickstart_pppoe.png" />
 <p>The configured <a class="reference internal" href="access/traffic.html#session-traffic"><span class="std std-ref">session traffic</span></a> generates
 bidirectional traffic between client and server. There is also
 one more <a class="reference internal" href="streams.html#streams"><span class="std std-ref">traffic stream</span></a> bound to the sessions.</p>
@@ -174,10 +175,11 @@ report printed.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">-S</span> <span class="pre">run.sock</span></code> opens the JSON RPC API socket</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">-I</span></code> start interactive courses user interface</p></li>
 </ul>
-<img alt="BNG Blaster Interactive" src="_images/quickstart1.png" />
+<img alt="BNG Blaster Interactive" src="_images/quickstart_interactive.png" />
 <p>Now let’s try to press <code class="docutils literal notranslate"><span class="pre">F1</span></code> to navigate through the different views. All supported
 keyboard inputs are listed in the top left corner. After pressing <code class="docutils literal notranslate"><span class="pre">F9</span></code> the test
 should be stopped.</p>
+<img alt="BNG Blaster Interactive" src="_images/quickstart_streams.png" />
 <p>If the test is still running, you can open a second terminal. Then go to the same
 directory from where you started the BNG Blaster and enter the following command.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock session-info session-id 1 | jq .
@@ -254,6 +256,7 @@ log, and PCAP files.</p>
 <h2>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h2>
 <p>In the following example, we create two <a class="reference internal" href="routing/isis.html#isis"><span class="std std-ref">ISIS</span></a> nodes (R1 and R2) with an emulated
 ISIS topology attached to R1 (<cite>test.mrt`</cite>).</p>
+<img alt="ISIS Quickstart" src="_images/quickstart_isis.png" />
 <p><strong>isis.json:</strong></p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
