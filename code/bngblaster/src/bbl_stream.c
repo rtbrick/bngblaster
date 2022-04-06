@@ -17,6 +17,24 @@ extern volatile bool g_teardown;
 extern bool g_init_phase;
 extern bool g_traffic;
 
+void
+bbl_stream_delay(bbl_stream *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp) {
+    struct timespec delay;
+    uint64_t delay_nsec;
+    timespec_sub(&delay, rx_timestamp, bbl_timestamp);
+    delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
+    if(delay_nsec > stream->max_delay_ns) {
+        stream->max_delay_ns = delay_nsec;
+    }
+    if(stream->min_delay_ns) {
+        if(delay_nsec < stream->min_delay_ns) {
+            stream->min_delay_ns = delay_nsec;
+        }
+    } else {
+        stream->min_delay_ns = delay_nsec;
+    }
+}
+
 static bool
 bbl_stream_can_send(bbl_stream *stream) {
     bbl_session_s *session = stream->session;
@@ -1450,12 +1468,11 @@ bbl_stream_json(bbl_stream *stream)
         json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
     }
     if(stream->rx_mpls1) {
-
         json_object_set(root, "rx-mpls1", json_integer(stream->rx_mpls1_label));
         json_object_set(root, "rx-mpls1-exp", json_integer(stream->rx_mpls1_exp));
         json_object_set(root, "rx-mpls1-ttl", json_integer(stream->rx_mpls1_ttl));
     }
-    if(stream->config->rx_mpls1) { 
+    if(stream->config->rx_mpls2) { 
         json_object_set(root, "rx-mpls2-expected", json_integer(stream->config->rx_mpls2_label));
     }
     if(stream->rx_mpls2) {
