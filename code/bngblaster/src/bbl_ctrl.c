@@ -1352,7 +1352,6 @@ struct action actions[] = {
 void
 bbl_ctrl_socket_job(timer_s *timer) {
     bbl_ctx_s *ctx = timer->data;
-    int fd;
     size_t i;
     size_t flags = JSON_DISABLE_EOF_CHECK;
     json_error_t error;
@@ -1366,108 +1365,108 @@ bbl_ctrl_socket_job(timer_s *timer) {
     bbl_session_s *session;
     void **search;
 
-    while(true) {
-        fd = accept(ctx->ctrl_socket, 0, 0);
-        if(fd < 0) {
-            /* The accept function fails with error EAGAIN or EWOULDBLOCK if
-             * there are no pending connections present on the queue.*/
-            if(errno == EAGAIN) {
-                return;
-            }
+    /* ToDo: Add connection manager!
+     * This is just a temporary workaround! Finally we need
+     * to create a connection manager. */
+    static int fd = 0;
+    if(fd > 0) {
+        close(fd);
+    }
+
+    fd = accept(ctx->ctrl_socket, 0, 0);
+    if(fd > 0) {
+        /* New connection */
+        root = json_loadfd(fd, flags, &error);
+        if (!root) {
+            LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
+            bbl_ctrl_status(fd, "error", 400, "invalid json");
         } else {
-            /* New connection */
-            root = json_loadfd(fd, flags, &error);
-            if (!root) {
-                LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
-                bbl_ctrl_status(fd, "error", 400, "invalid json");
+                /* Each command request should be formatted as shown in the example below
+                 * with a mandatory command element and optional arguments.
+                 * {
+                 *    "command": "session-info",
+                 *    "arguments": {
+                 *        "outer-vlan": 1,
+                 *        "inner-vlan": 2
+                 *    }
+                 * }
+                 */
+            if(json_unpack(root, "{s:s, s?o}", "command", &command, "arguments", &arguments) != 0) {
+                LOG_NOARG(DEBUG, "Invalid command via ctrl socket\n");
+                bbl_ctrl_status(fd, "error", 400, "invalid request");
             } else {
-                   /* Each command request should be formatted as shown in the example below
-                    * with a mandatory command element and optional arguments.
-                    * {
-                    *    "command": "session-info",
-                    *    "arguments": {
-                    *        "outer-vlan": 1,
-                    *        "inner-vlan": 2
-                    *    }
-                    * }
-                    */
-                if(json_unpack(root, "{s:s, s?o}", "command", &command, "arguments", &arguments) != 0) {
-                    LOG_NOARG(DEBUG, "Invalid command via ctrl socket\n");
-                    bbl_ctrl_status(fd, "error", 400, "invalid request");
-                } else {
-                    if(arguments) {
-                        value = json_object_get(arguments, "session-id");
+                if(arguments) {
+                    value = json_object_get(arguments, "session-id");
+                    if (value) {
+                        if(json_is_number(value)) {
+                            session_id = json_number_value(value);
+                        } else {
+                            bbl_ctrl_status(fd, "error", 400, "invalid session-id");
+                            goto CLOSE;
+                        }
+                    } else {
+                            /* Deprecated!
+                             * For backward compatibility with version 0.4.X, we still
+                             * support per session commands using VLAN index instead of
+                             * new session-id. */
+                        value = json_object_get(arguments, "ifindex");
                         if (value) {
                             if(json_is_number(value)) {
-                                session_id = json_number_value(value);
+                                key.ifindex = json_number_value(value);
                             } else {
-                                bbl_ctrl_status(fd, "error", 400, "invalid session-id");
+                                bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
                                 goto CLOSE;
                             }
                         } else {
-                               /* Deprecated!
-                                * For backward compatibility with version 0.4.X, we still
-                                * support per session commands using VLAN index instead of
-                                * new session-id. */
-                            value = json_object_get(arguments, "ifindex");
-                            if (value) {
-                                if(json_is_number(value)) {
-                                    key.ifindex = json_number_value(value);
-                                } else {
-                                    bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
-                                    goto CLOSE;
-                                }
-                            } else {
-                                /* Use first interface as default. */
-                                if(ctx->interfaces.access_if[0]) {
-                                    key.ifindex = ctx->interfaces.access_if[0]->ifindex;
-                                }
-                            }
-                            value = json_object_get(arguments, "outer-vlan");
-                            if (value) {
-                                if(json_is_number(value)) {
-                                    key.outer_vlan_id = json_number_value(value);
-                                } else {
-                                    bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
-                                    goto CLOSE;
-                                }
-                            }
-                            value = json_object_get(arguments, "inner-vlan");
-                            if (value) {
-                                if(json_is_number(value)) {
-                                    key.inner_vlan_id = json_number_value(value);
-                                } else {
-                                    bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
-                                    goto CLOSE;
-                                }
-                            }
-                            if(key.outer_vlan_id) {
-                                search = dict_search(ctx->vlan_session_dict, &key);
-                                if(search) {
-                                    session = *search;
-                                    session_id = session->session_id;
-                                } else {
-                                    bbl_ctrl_status(fd, "warning", 404, "session not found");
-                                    goto CLOSE;
-                                }
+                            /* Use first interface as default. */
+                            if(ctx->interfaces.access_if[0]) {
+                                key.ifindex = ctx->interfaces.access_if[0]->ifindex;
                             }
                         }
-                    }
-                    for(i = 0; true; i++) {
-                        if(actions[i].name == NULL) {
-                            bbl_ctrl_status(fd, "error", 400, "unknown command");
-                            break;
-                        } else if(strcmp(actions[i].name, command) == 0) {
-                            actions[i].fn(fd, ctx, session_id, arguments);
-                            break;
+                        value = json_object_get(arguments, "outer-vlan");
+                        if (value) {
+                            if(json_is_number(value)) {
+                                key.outer_vlan_id = json_number_value(value);
+                            } else {
+                                bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
+                                goto CLOSE;
+                            }
+                        }
+                        value = json_object_get(arguments, "inner-vlan");
+                        if (value) {
+                            if(json_is_number(value)) {
+                                key.inner_vlan_id = json_number_value(value);
+                            } else {
+                                bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
+                                goto CLOSE;
+                            }
+                        }
+                        if(key.outer_vlan_id) {
+                            search = dict_search(ctx->vlan_session_dict, &key);
+                            if(search) {
+                                session = *search;
+                                session_id = session->session_id;
+                            } else {
+                                bbl_ctrl_status(fd, "warning", 404, "session not found");
+                                goto CLOSE;
+                            }
                         }
                     }
                 }
+                for(i = 0; true; i++) {
+                    if(actions[i].name == NULL) {
+                        bbl_ctrl_status(fd, "error", 400, "unknown command");
+                        break;
+                    } else if(strcmp(actions[i].name, command) == 0) {
+                        actions[i].fn(fd, ctx, session_id, arguments);
+                        break;
+                    }
+                }
             }
-CLOSE:
-            if(root) json_decref(root);
-            close(fd);
         }
+CLOSE:
+        if(root) json_decref(root);
+        shutdown(fd, SHUT_WR);
     }
 }
 
