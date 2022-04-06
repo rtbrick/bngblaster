@@ -283,60 +283,6 @@ the ISIS common header starting with ``0x83``,
         }
     }
 
-LSPGEN
-~~~~~~
-
-The BNG Blaster includes a tool called ``lspgen`` which is able to generate
-link state packets and topologies for export as MRT and PCAP files. This tool
-is also able to inject LSP's directly using the ``isis-lsp-update``
-:ref:`command <api>`.
-
-.. code-block:: none
-
-    $ lspgen --help
-
-        ____   __   ____         _        __            ,/
-        / __ \ / /_ / __ ) _____ (_)_____ / /__        ,'/
-        / /_/ // __// __  |/ ___// // ___// //_/      ,' /
-    / _, _// /_ / /_/ // /   / // /__ / ,<       ,'  /_____,    
-    /_/ |_| \__//_____//_/   /_/ \___//_/|_|    .'____    ,'   
-        __   _____ ____  ______                      /  ,'
-        / /  / ___// __ \/ ____/__  ____             / ,'
-        / /   \__ \/ /_/ / / __/ _ \/ __ \           /,'
-    / /______/ / ____/ /_/ /  __/ / / /          / 
-    /_____/____/_/    \____/\___/_/ /_/
-
-    Usage: lspgen [OPTIONS]
-
-    -v --version
-    -a --area <args>
-    -K --authentication-key <args>
-    -T --authentication-type none|simple|md5
-    -r --read-config-file <args>
-    -w --write-config-file <args>
-    -C --connector <args>
-    -S --control-socket <args>
-    -l --ipv4-link-prefix <args>
-    -L --ipv6-link-prefix <args>
-    -n --ipv4-node-prefix <args>
-    -N --ipv6-node-prefix <args>
-    -x --ipv4-external-prefix <args>
-    -X --ipv6-external-prefix <args>
-    -M --lsp-lifetime <args>
-    -z --no-ipv4
-    -Z --no-ipv6
-    -e --external-count <args>
-    -g --graphviz-file <args>
-    -h --help
-    -m --mrt-file <args>
-    -c --node-count <args>
-    -p --pcap-file <args>
-    -f --stream-file <args>
-    -s --seed <args>
-    -q --sequence <args>
-    -V --level <args>
-    -t --log normal|debug|lsp|lsdb|timer|timer-detail|ctrl|error
-
 
 LSP Update via Scapy 
 ~~~~~~~~~~~~~~~~~~~~
@@ -405,3 +351,216 @@ and inject them using the ``isis-lsp-update`` :ref:`command <api>`.
 
     if __name__ == "__main__":
         main()
+
+
+LSPGEN
+~~~~~~
+
+The BNG Blaster includes a tool called ``lspgen`` which is able to generate
+topologies and link state packets for export as MRT and PCAP files. This tool
+is also able to inject LSP's directly using the ``isis-lsp-update``
+:ref:`command <api>`.
+
+.. code-block:: none
+
+    $ lspgen --help
+
+        ____   __   ____         _        __            ,/
+        / __ \ / /_ / __ ) _____ (_)_____ / /__        ,'/
+        / /_/ // __// __  |/ ___// // ___// //_/      ,' /
+    / _, _// /_ / /_/ // /   / // /__ / ,<       ,'  /_____,    
+    /_/ |_| \__//_____//_/   /_/ \___//_/|_|    .'____    ,'   
+        __   _____ ____  ______                      /  ,'
+        / /  / ___// __ \/ ____/__  ____             / ,'
+        / /   \__ \/ /_/ / / __/ _ \/ __ \           /,'
+    / /______/ / ____/ /_/ /  __/ / / /          / 
+    /_____/____/_/    \____/\___/_/ /_/
+
+    Usage: lspgen [OPTIONS]
+
+    -v --version
+    -a --area <args>
+    -K --authentication-key <args>
+    -T --authentication-type none|simple|md5
+    -r --read-config-file <args>
+    -w --write-config-file <args>
+    -C --connector <args>
+    -S --control-socket <args>
+    -l --ipv4-link-prefix <args>
+    -L --ipv6-link-prefix <args>
+    -n --ipv4-node-prefix <args>
+    -N --ipv6-node-prefix <args>
+    -x --ipv4-external-prefix <args>
+    -X --ipv6-external-prefix <args>
+    -M --lsp-lifetime <args>
+    -z --no-ipv4
+    -Z --no-ipv6
+    -e --external-count <args>
+    -g --graphviz-file <args>
+    -h --help
+    -m --mrt-file <args>
+    -c --node-count <args>
+    -p --pcap-file <args>
+    -f --stream-file <args>
+    -s --seed <args>
+    -q --sequence <args>
+    -V --level <args>
+    -t --log normal|debug|lsp|lsdb|timer|timer-detail|ctrl|error
+ 
+
+You can generate random topologies or define a topology manually 
+using configuration files.
+
+Random Topologies
+^^^^^^^^^^^^^^^^^
+
+The following example generates a random topology with 1000 nodes. 
+
+.. code-block:: none
+
+    lspgen -m isis.mrt -c 1000 -K <secret> -T md5
+
+The arguments ``-K`` and ``-T`` add a valid authentication TLV
+to the generated LSP's in the MRT file. 
+
+Those topologies could be even exported as configuration file 
+with the argument ``-w`` and later imported with the argument ``-r``.
+This allows to generate a large random topology which can be modified
+manually. 
+
+Topology from Configuration File
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following example shows the configuration for a topology 
+with three nodes.
+
+.. code-block:: json
+
+    {
+        "level1": [
+            {
+                "node_id": "1337.0000.0001",
+                "hostname": "R1",
+                "area_list": [
+                    "49.1337/24"
+                ],
+                "protocol_list": [
+                    "ipv4"
+                ],
+                "ipv4_address_list": [
+                    "10.13.37.1"
+                ],
+                "ipv4_prefix_list": [
+                    {
+                        "ipv4_prefix": "10.13.37.1/32",
+                        "metric": 0,
+                        "segment_id": 30005,
+                        "node_flag": true
+                    },
+                    {
+                        "ipv4_prefix": "10.0.1.0/24",
+                        "metric": 1000
+                    },
+                    {
+                        "ipv4_prefix": "10.0.2.0/24",
+                        "metric": 1000
+                    }
+                ],
+                "capability_list": [
+                    {
+                        "router_id": "10.13.37.1",
+                        "mpls_ipv4_flag": true,
+                        "mpls_ipv6_flag": false,
+                        "srgb_base": 100000,
+                        "srgb_range": 36000
+                    }
+                ],
+                "neighbor_list": [
+                    {
+                        "remote_node_id": "1337.0000.0000.00",
+                        "metric": 10
+                    },
+                    {
+                        "remote_node_id": "1337.0000.0002.00",
+                        "metric": 10
+                    },
+                    {
+                        "remote_node_id": "0204.0000.0003.00",
+                        "metric": 10
+                    }
+                ]
+            },
+            {
+                "node_id": "1337.0000.0002",
+                "hostname": "R2",
+                "area_list": [
+                    "49.1337/24"
+                ],
+                "protocol_list": [
+                    "ipv4"
+                ],
+                "ipv4_address_list": [
+                    "10.13.37.2"
+                ],
+                "ipv4_prefix_list": [
+                    {
+                        "ipv4_prefix": "10.13.37.2/32",
+                        "metric": 0,
+                        "segment_id": 30003,
+                        "node_flag": true
+                    }
+                ],
+                "capability_list": [
+                    {
+                        "router_id": "10.13.37.2",
+                        "mpls_ipv4_flag": true,
+                        "mpls_ipv6_flag": false,
+                        "srgb_base": 100000,
+                        "srgb_range": 36000
+                    }
+                ],
+                "neighbor_list": [
+                    {
+                        "remote_node_id": "1337.0000.0001.00",
+                        "metric": 10
+                    }
+                ]
+            },
+            {
+                "node_id": "1337.0000.3",
+                "hostname": "R3",
+                "area_list": [
+                    "49.1337/24"
+                ],
+                "protocol_list": [
+                    "ipv4"
+                ],
+                "ipv4_address_list": [
+                    "10.13.37.3"
+                ],
+                "ipv4_prefix_list": [
+                    {
+                        "ipv4_prefix": "10.13.37.3/32",
+                        "metric": 0,
+                        "segment_id": 30003,
+                        "node_flag": true
+                    }
+                ],
+                "capability_list": [
+                    {
+                        "router_id": "10.13.37.3",
+                        "mpls_ipv4_flag": true,
+                        "mpls_ipv6_flag": false,
+                        "srgb_base": 100000,
+                        "srgb_range": 36000
+                    }
+                ],
+                "neighbor_list": [
+                    {
+                        "remote_node_id": "1337.0000.0001.00",
+                        "metric": 10
+                    }
+                ]
+            }
+        ]
+    }

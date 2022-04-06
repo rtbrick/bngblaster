@@ -124,16 +124,3 @@ jitter calculations.
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 The timestamp 0 means that timestamps are disabled.
-
-Wireshark Plugin
-~~~~~~~~~~~~~~~~
-**Wireshark BNG Blaster Header Dissector**
-
-Download the LUA dissector script 
-`bbl_header.lua <https://github.com/rtbrick/bngblaster/tree/main/wireshark>`_
-and start wireshark as shown below from the directory where the script is placed.
-
-.. code-block:: none
-
-    $ wireshark -X lua_script:bbl_header.lua
-
