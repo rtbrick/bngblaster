@@ -182,6 +182,9 @@ typedef struct bbl_stream_thread_
     void *next; /* Next stream thread */
 } bbl_stream_thread;
 
+void
+bbl_stream_delay(bbl_stream *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp);
+
 bool
 bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s *session);
 
