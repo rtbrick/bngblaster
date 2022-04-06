@@ -51,7 +51,10 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Troubleshooting</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#pcap">PCAP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pcap">PCAP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#wireshark-plugin">Wireshark Plugin</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
@@ -124,6 +127,27 @@ names.</p>
 <p>This helps to verify if traffic is received or how it has received.
 Some network interfaces drop the most outer VLAN which can be easily
 verified using the capture file.</p>
+<p>The configuration option <code class="docutils literal notranslate"><span class="pre">capture-include-streams</span></code> allows to
+include (default behavior) or exclude traffic streams from capture.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;capture-include-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<section id="wireshark-plugin">
+<h3>Wireshark Plugin<a class="headerlink" href="#wireshark-plugin" title="Permalink to this headline"></a></h3>
+<p>Traffic streams generated with the BNG Blaster include the
+<a class="reference internal" href="reference/traffic.html#bbl-header"><span class="std std-ref">BNG Blaster Header</span></a> which can analyzed
+with the Wireshark BNG Blaster Header Dissector.</p>
+<p>Download the LUA dissector script
+<a class="reference external" href="https://github.com/rtbrick/bngblaster/tree/main/wireshark">bbl_header.lua</a>
+and start wireshark as shown below from the directory where the script is placed.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ wireshark -X lua_script:bbl_header.lua
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 
