@@ -285,6 +285,9 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                             stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
                             stream->rx_first_seq = bbl->flow_seq;
                             ctx->stats.stream_traffic_flows_verified++;
+                            if(ctx->stats.stream_traffic_flows_verified == ctx->stats.stream_traffic_flows) {
+                                LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+                            }
                             if(ctx->config.traffic_stop_verified) {
                                 stream->stop = true;
                             }
@@ -299,6 +302,9 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                             if(!session->network_ipv4_rx_first_seq) {
                                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
                                 ctx->stats.session_traffic_flows_verified++;
+                                if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                                    LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                                }
                             } else {
                                 if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);

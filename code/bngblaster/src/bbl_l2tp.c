@@ -1048,6 +1048,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                             stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
                             stream->rx_first_seq = bbl->flow_seq;
                             ctx->stats.stream_traffic_flows_verified++;
+                            if(ctx->stats.stream_traffic_flows_verified == ctx->stats.stream_traffic_flows) {
+                                LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+                            }
                             if(ctx->config.traffic_stop_verified) {
                                 stream->stop = true;
                             }
@@ -1065,6 +1068,9 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                                     pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
                                     pppoe_session->session_traffic_flows_verified++;
                                     ctx->stats.session_traffic_flows_verified++;
+                                    if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                                        LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                                    }
                                 } else {
                                     if((pppoe_session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                                         loss = bbl->flow_seq - (pppoe_session->network_ipv4_rx_last_seq +1);
