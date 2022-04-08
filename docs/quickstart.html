@@ -44,6 +44,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart Guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#pppoe">PPPoE</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#isis">ISIS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bgp">BGP</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces</a></li>
@@ -407,6 +408,210 @@ from where you started the BNG Blaster and enter the following command.</p>
 </pre></div>
 </div>
 <p>You can also try other <a class="reference internal" href="api/index.html#api"><span class="std std-ref">commands</span></a> to get familiar with the API.</p>
+</section>
+<section id="bgp">
+<h2>BGP<a class="headerlink" href="#bgp" title="Permalink to this headline"></a></h2>
+<p>In the following example, we create a BGP session between BNG Blaster
+and <a class="reference external" href="https://github.com/osrg/gobgp">gobgp</a>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install gobgpd
+</pre></div>
+</div>
+<p>Therefore, we use again the veth interface pair. But this time
+the side used by <a class="reference external" href="https://github.com/osrg/gobgp">gobgp</a>
+needs an IP address and TCP checksum offloading must be disabled!</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link add veth1.1 type veth peer name veth1.2
+sudo ip link set veth1.1 up
+sudo ip link set veth1.2 up
+# disable checksum offloading
+sudo ethtool -K veth1.1 tx off
+sudo ethtool -K veth1.2 tx off
+# add IPv4 address for gobgpd
+sudo ip address add 192.168.92.1/24 dev veth1.1
+</pre></div>
+</div>
+<p>Following the <a class="reference external" href="https://github.com/osrg/gobgp">gobgp</a> and
+BNG Blaster configuration files needed.</p>
+<p><strong>gobgpd.conf:</strong></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[global.config]
+    as = 65001
+    router-id = &quot;192.168.92.1&quot;
+    local-address-list = [&quot;192.168.92.1&quot;]
+
+[[neighbors]]
+    [neighbors.config]
+        peer-as = 65001
+        neighbor-address = &quot;192.168.92.2&quot;
+    [[neighbors.afi-safis]]
+        [neighbors.afi-safis.config]
+        afi-safi-name = &quot;ipv4-unicast&quot;
+    [[neighbors.afi-safis]]
+        [neighbors.afi-safis.config]
+        afi-safi-name = &quot;ipv6-unicast&quot;
+    [[neighbors.afi-safis]]
+        [neighbors.afi-safis.config]
+        afi-safi-name = &quot;ipv4-labelled-unicast&quot;
+    [[neighbors.afi-safis]]
+        [neighbors.afi-safis.config]
+        afi-safi-name = &quot;ipv6-labelled-unicast&quot;
+</pre></div>
+</div>
+<p><strong>bgp.json:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;veth1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.1&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;out.bgp&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Use the included tool <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> to generate a BGP update file
+with 10.000 IPv4 and 10.000 IPv6 prefixes.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -a 65001 -n 192.168.92.2 -p 11.0.0.0/28 -P 10000
+bgpupdate -a 65001 -n 192.168.92.2 -p fc66:11::/64 -P 10000 --append
+</pre></div>
+</div>
+<p>Start the <a class="reference external" href="https://github.com/osrg/gobgp">gobgp</a> daemon.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo -E gobgpd  -f gobgpd.conf
+{&quot;level&quot;:&quot;info&quot;,&quot;msg&quot;:&quot;gobgpd started&quot;,&quot;time&quot;:&quot;2022-04-08T14:51:03+02:00&quot;}
+{&quot;Topic&quot;:&quot;Config&quot;,&quot;level&quot;:&quot;info&quot;,&quot;msg&quot;:&quot;Finished reading the config file&quot;,&quot;time&quot;:&quot;2022-04-08T14:51:03+02:00&quot;}
+{&quot;level&quot;:&quot;info&quot;,&quot;msg&quot;:&quot;Peer 192.168.92.2 is added&quot;,&quot;time&quot;:&quot;2022-04-08T14:51:03+02:00&quot;}
+{&quot;Topic&quot;:&quot;Peer&quot;,&quot;level&quot;:&quot;info&quot;,&quot;msg&quot;:&quot;Add a peer configuration for:192.168.92.2&quot;,&quot;time&quot;:&quot;2022-04-08T14:51:03+02:00&quot;}
+</pre></div>
+</div>
+<p>Finally, start the BNG Blaster in another terminal window.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C bgp.json -l bgp -S run.sock
+Apr 08 14:53:51.870722 Loaded BGP RAW update file out.bgp (138.63 KB, 36 updates)
+Apr 08 14:53:51.904266 BGP (veth1.2 192.168.92.2 - 192.168.92.1) init session
+Apr 08 14:53:51.904293 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from closed -&gt; idle
+Apr 08 14:53:51.904369 Opened control socket run.sock
+Apr 08 14:53:52.904359 Resolve network interfaces
+Apr 08 14:53:52.904389 All network interfaces resolved
+Apr 08 14:53:53.904448 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from idle -&gt; connect
+Apr 08 14:53:53.905659 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from connect -&gt; opensent
+Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, holdtime: 90s
+Apr 08 14:53:53.907903 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from opensent -&gt; openconfirm
+Apr 08 14:53:53.907917 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from openconfirm -&gt; established
+Apr 08 14:53:54.907989 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update start
+Apr 08 14:53:55.182885 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update stop after 0s
+</pre></div>
+</div>
+<p>If the test is still running, you can open one more terminal, go to the same directory
+from where you started the BNG Blaster and enter the following command.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock bgp-sessions
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;bgp-sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;veth1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3.4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-holdtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.92.168.192&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-holdtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;established&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-update-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;done&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;out.bgp&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stats&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;messages-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;messages-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">38</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;keepalive-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;keepalive-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;update-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;update-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>You can also try other <a class="reference internal" href="api/index.html#api"><span class="std std-ref">commands</span></a> to get familiar with the API.</p>
+<p>The following command shows the session in <a class="reference external" href="https://github.com/osrg/gobgp">gobgp</a>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ gobgp neighbor 192.168.92.2
+BGP neighbor is 192.168.92.2, remote AS 65001
+BGP version 4, remote router ID 4.3.2.1
+BGP state = established, up for 00:01:36
+BGP OutQ = 0, Flops = 0
+Hold time is 90, keepalive interval is 30 seconds
+Configured hold time is 90, keepalive interval is 30 seconds
+
+Neighbor capabilities:
+    multiprotocol:
+        ipv4-unicast:       advertised and received
+        ipv6-unicast:       advertised and received
+        ipv4-labelled-unicast:      advertised and received
+        ipv6-labelled-unicast:      advertised and received
+    route-refresh:  advertised
+    4-octet-as:     advertised and received
+Message statistics:
+                        Sent       Rcvd
+    Opens:                  2          2
+    Notifications:          0          0
+    Updates:                0         72
+    Keepalives:             5          4
+    Route Refresh:          0          0
+    Discarded:              0          0
+    Total:                  7         79
+Route statistics:
+    Advertised:             0
+    Received:           20000
+    Accepted:               0
+</pre></div>
+</div>
+<p>If the test is still running, you can add further routes. Therefore
+first create a new BGP update file.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f update.bgp
+</pre></div>
+</div>
+<p>Apply this file to the specified BGP session.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo bngblaster-cli run.sock bgp-raw-update file update.bgp peer-ipv4-address 192.168.92.1 local-ipv4-address 192.168.92.2
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;bgp-raw-update&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;started&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;skipped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;filtered&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The parameters <code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code> and <code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code> are used to filter to which sessions
+this update should be applied. Without any of those parameters, the update will be applied to all
+sessions.</p>
+<p>Check if they are received in the <a class="reference external" href="https://github.com/osrg/gobgp">gobgp</a> daemon.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ gobgp neighbor
+Peer            AS  Up/Down State       |#Received  Accepted
+192.168.92.2 65001 00:09:36 Establ      |   120000         0
+</pre></div>
+</div>
+<p>Finally, you can withdraw them again.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f withdraw.bgp --withdraw
+sudo bngblaster-cli run.sock bgp-raw-update file withdraw.bgp
+</pre></div>
+</div>
 </section>
 </section>
 
