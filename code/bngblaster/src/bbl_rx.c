@@ -342,6 +342,9 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
             }
             stream->rx_first_seq = bbl->flow_seq;
             ctx->stats.stream_traffic_flows_verified++;
+            if(ctx->stats.stream_traffic_flows_verified == ctx->stats.stream_traffic_flows) {
+                LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+            }
             if(ctx->config.traffic_stop_verified) {
                 stream->stop = true;
             }
@@ -355,6 +358,7 @@ bbl_rx_stream(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_bbl_t 
 static void
 bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *interface, bbl_session_s *session) {
 
+    bbl_ctx_s *ctx = interface->ctx;
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
     bbl_bbl_t *bbl = NULL;
     uint64_t loss;
@@ -391,8 +395,11 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
                     session->stats.access_ipv6_rx++;
                     if(!session->access_ipv6_rx_first_seq) {
                         session->access_ipv6_rx_first_seq = bbl->flow_seq;
-                        interface->ctx->stats.session_traffic_flows_verified++;
                         session->session_traffic_flows_verified++;
+                        ctx->stats.session_traffic_flows_verified++;
+                        if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                            LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                        }
                     } else {
                         if((session->access_ipv6_rx_last_seq +1) < bbl->flow_seq) {
                             loss = bbl->flow_seq - (session->access_ipv6_rx_last_seq +1);
@@ -419,8 +426,11 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
                     session->stats.access_ipv6pd_rx++;
                     if(!session->access_ipv6pd_rx_first_seq) {
                         session->access_ipv6pd_rx_first_seq = bbl->flow_seq;
-                        interface->ctx->stats.session_traffic_flows_verified++;
                         session->session_traffic_flows_verified++;
+                        ctx->stats.session_traffic_flows_verified++;
+                        if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                            LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                        }
                     } else {
                         if((session->access_ipv6pd_rx_last_seq +1) < bbl->flow_seq) {
                             loss = bbl->flow_seq - (session->access_ipv6pd_rx_last_seq +1);
@@ -618,6 +628,7 @@ bbl_rx_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_session_s *session
 static void
 bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *interface, bbl_session_s *session) {
 
+    bbl_ctx_s *ctx = interface->ctx;
     bbl_udp_t *udp;
     bbl_bbl_t *bbl = NULL;
     bbl_igmp_group_s *group = NULL;
@@ -678,8 +689,11 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                 session->stats.access_ipv4_rx++;
                 if(!session->access_ipv4_rx_first_seq) {
                     session->access_ipv4_rx_first_seq = bbl->flow_seq;
-                    interface->ctx->stats.session_traffic_flows_verified++;
                     session->session_traffic_flows_verified++;
+                    ctx->stats.session_traffic_flows_verified++;
+                    if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                        LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                    }
                 } else {
                     if((session->access_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                         loss = bbl->flow_seq - (session->access_ipv4_rx_last_seq +1);
@@ -1880,16 +1894,13 @@ bbl_rx_network_icmp(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_
 void
 bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
-    bbl_ctx_s *ctx;
-
+    bbl_ctx_s *ctx = interface->ctx;
     bbl_ipv4_t *ipv4 = NULL;
     bbl_ipv6_t *ipv6 = NULL;
     bbl_udp_t *udp = NULL;
     bbl_bbl_t *bbl = NULL;
     bbl_session_s *session;
     uint64_t loss;
-
-    ctx = interface->ctx;
 
     switch(eth->type) {
         case ETH_TYPE_ARP:
@@ -1957,8 +1968,11 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             session->stats.network_ipv4_rx++;
                             if(!session->network_ipv4_rx_first_seq) {
                                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
-                                interface->ctx->stats.session_traffic_flows_verified++;
                                 session->session_traffic_flows_verified++;
+                                ctx->stats.session_traffic_flows_verified++;
+                                if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                                    LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                                }
                             } else {
                                 if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);
@@ -1981,8 +1995,11 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             session->stats.network_ipv6_rx++;
                             if(!session->network_ipv6_rx_first_seq) {
                                 session->network_ipv6_rx_first_seq = bbl->flow_seq;
-                                interface->ctx->stats.session_traffic_flows_verified++;
                                 session->session_traffic_flows_verified++;
+                                ctx->stats.session_traffic_flows_verified++;
+                                if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                                    LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                                }
                             } else {
                                 if((session->network_ipv6_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv6_rx_last_seq +1);
@@ -2005,8 +2022,11 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                             session->stats.network_ipv6pd_rx++;
                             if(!session->network_ipv6pd_rx_first_seq) {
                                 session->network_ipv6pd_rx_first_seq = bbl->flow_seq;
-                                interface->ctx->stats.session_traffic_flows_verified++;
                                 session->session_traffic_flows_verified++;
+                                ctx->stats.session_traffic_flows_verified++;
+                                if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                                    LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                                }
                             } else {
                                 if((session->network_ipv6pd_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv6pd_rx_last_seq +1);
