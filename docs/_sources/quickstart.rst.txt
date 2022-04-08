@@ -361,3 +361,243 @@ from where you started the BNG Blaster and enter the following command.
     }
 
 You can also try other :ref:`commands <api>` to get familiar with the API.
+
+BGP
+---
+
+In the following example, we create a BGP session between BNG Blaster 
+and `gobgp <https://github.com/osrg/gobgp>`_. 
+
+.. code-block:: none
+
+    sudo apt install gobgpd
+
+Therefore, we use again the veth interface pair. But this time
+the side used by `gobgp <https://github.com/osrg/gobgp>`_ 
+needs an IP address and TCP checksum offloading must be disabled!
+
+.. code-block:: none
+
+    sudo ip link add veth1.1 type veth peer name veth1.2
+    sudo ip link set veth1.1 up
+    sudo ip link set veth1.2 up
+    # disable checksum offloading
+    sudo ethtool -K veth1.1 tx off
+    sudo ethtool -K veth1.2 tx off
+    # add IPv4 address for gobgpd
+    sudo ip address add 192.168.92.1/24 dev veth1.1
+
+Following the `gobgp <https://github.com/osrg/gobgp>`_ and 
+BNG Blaster configuration files needed. 
+
+**gobgpd.conf:**
+
+.. code-block:: none
+
+    [global.config]
+        as = 65001
+        router-id = "192.168.92.1"
+        local-address-list = ["192.168.92.1"]
+
+    [[neighbors]]
+        [neighbors.config]
+            peer-as = 65001
+            neighbor-address = "192.168.92.2"
+        [[neighbors.afi-safis]]
+            [neighbors.afi-safis.config]
+            afi-safi-name = "ipv4-unicast"
+        [[neighbors.afi-safis]]
+            [neighbors.afi-safis.config]
+            afi-safi-name = "ipv6-unicast"
+        [[neighbors.afi-safis]]
+            [neighbors.afi-safis.config]
+            afi-safi-name = "ipv4-labelled-unicast"
+        [[neighbors.afi-safis]]
+            [neighbors.afi-safis.config]
+            afi-safi-name = "ipv6-labelled-unicast"
+
+**bgp.json:**
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "tx-interval": 1,
+            "rx-interval": 1,
+            "io-slots": 4096,
+            "network": {
+                "interface": "veth1.2",
+                "address": "192.168.92.2/24",
+                "gateway": "192.168.92.1"
+            } 
+        },
+        "bgp": [
+            {
+                "local-ipv4-address": "192.168.92.2",
+                "peer-ipv4-address": "192.168.92.1",
+                "raw-update-file": "out.bgp",
+                "local-as": 65001,
+                "peer-as": 65001
+            }
+        ]
+    }
+
+Use the included tool ``bgpupdate`` to generate a BGP update file 
+with 10.000 IPv4 and 10.000 IPv6 prefixes. 
+
+.. code-block:: none
+
+    bgpupdate -a 65001 -n 192.168.92.2 -p 11.0.0.0/28 -P 10000 
+    bgpupdate -a 65001 -n 192.168.92.2 -p fc66:11::/64 -P 10000 --append
+
+
+Start the `gobgp <https://github.com/osrg/gobgp>`_ daemon.
+
+.. code-block:: none
+
+    $ sudo -E gobgpd  -f gobgpd.conf 
+    {"level":"info","msg":"gobgpd started","time":"2022-04-08T14:51:03+02:00"}
+    {"Topic":"Config","level":"info","msg":"Finished reading the config file","time":"2022-04-08T14:51:03+02:00"}
+    {"level":"info","msg":"Peer 192.168.92.2 is added","time":"2022-04-08T14:51:03+02:00"}
+    {"Topic":"Peer","level":"info","msg":"Add a peer configuration for:192.168.92.2","time":"2022-04-08T14:51:03+02:00"}
+
+Finally, start the BNG Blaster in another terminal window. 
+
+.. code-block:: none
+
+    $ sudo bngblaster -C bgp.json -l bgp -S run.sock
+    Apr 08 14:53:51.870722 Loaded BGP RAW update file out.bgp (138.63 KB, 36 updates)
+    Apr 08 14:53:51.904266 BGP (veth1.2 192.168.92.2 - 192.168.92.1) init session
+    Apr 08 14:53:51.904293 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from closed -> idle
+    Apr 08 14:53:51.904369 Opened control socket run.sock
+    Apr 08 14:53:52.904359 Resolve network interfaces
+    Apr 08 14:53:52.904389 All network interfaces resolved
+    Apr 08 14:53:53.904448 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from idle -> connect
+    Apr 08 14:53:53.905659 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from connect -> opensent
+    Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, holdtime: 90s
+    Apr 08 14:53:53.907903 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from opensent -> openconfirm
+    Apr 08 14:53:53.907917 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from openconfirm -> established
+    Apr 08 14:53:54.907989 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update start
+    Apr 08 14:53:55.182885 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update stop after 0s
+
+
+If the test is still running, you can open one more terminal, go to the same directory
+from where you started the BNG Blaster and enter the following command. 
+
+.. code-block:: none
+    
+    $ sudo bngblaster-cli run.sock bgp-sessions
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "bgp-sessions": [
+            {
+                "interface": "veth1.2",
+                "local-address": "192.168.92.2",
+                "local-id": "1.2.3.4",
+                "local-as": 65001,
+                "local-holdtime": 90,
+                "peer-address": "192.168.92.1",
+                "peer-id": "1.92.168.192",
+                "peer-as": 65001,
+                "peer-holdtime": 90,
+                "state": "established",
+                "raw-update-state": "done",
+                "raw-update-file": "out.bgp",
+                "stats": {
+                    "messages-rx": 3,
+                    "messages-tx": 38,
+                    "keepalive-rx": 2,
+                    "keepalive-tx": 1,
+                    "update-rx": 0,
+                    "update-tx": 36
+                }
+            }
+        ]
+    }
+
+You can also try other :ref:`commands <api>` to get familiar with the API.
+
+The following command shows the session in `gobgp <https://github.com/osrg/gobgp>`_.
+
+.. code-block:: none
+
+    $ gobgp neighbor 192.168.92.2 
+    BGP neighbor is 192.168.92.2, remote AS 65001
+    BGP version 4, remote router ID 4.3.2.1
+    BGP state = established, up for 00:01:36
+    BGP OutQ = 0, Flops = 0
+    Hold time is 90, keepalive interval is 30 seconds
+    Configured hold time is 90, keepalive interval is 30 seconds
+    
+    Neighbor capabilities:
+        multiprotocol:
+            ipv4-unicast:	advertised and received
+            ipv6-unicast:	advertised and received
+            ipv4-labelled-unicast:	advertised and received
+            ipv6-labelled-unicast:	advertised and received
+        route-refresh:	advertised
+        4-octet-as:	advertised and received
+    Message statistics:
+                            Sent       Rcvd
+        Opens:                  2          2
+        Notifications:          0          0
+        Updates:                0         72
+        Keepalives:             5          4
+        Route Refresh:          0          0
+        Discarded:              0          0
+        Total:                  7         79
+    Route statistics:
+        Advertised:             0
+        Received:           20000
+        Accepted:               0
+
+
+If the test is still running, you can add further routes. Therefore 
+first create a new BGP update file. 
+
+.. code-block:: none
+
+    bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f update.bgp
+
+
+Apply this file to the specified BGP session. 
+
+.. code-block:: none
+
+    sudo bngblaster-cli run.sock bgp-raw-update file update.bgp peer-ipv4-address 192.168.92.1 local-ipv4-address 192.168.92.2
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "bgp-raw-update": {
+            "started": 1,
+            "skipped": 0,
+            "filtered": 0
+        }
+    }
+
+The parameters ``peer-ipv4-address`` and ``local-ipv4-address`` are used to filter to which sessions
+this update should be applied. Without any of those parameters, the update will be applied to all
+sessions. 
+
+Check if they are received in the `gobgp <https://github.com/osrg/gobgp>`_ daemon.
+
+.. code-block:: none
+
+    $ gobgp neighbor 
+    Peer            AS  Up/Down State       |#Received  Accepted
+    192.168.92.2 65001 00:09:36 Establ      |   120000         0
+
+Finally, you can withdraw them again.
+
+.. code-block:: none
+
+    bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f withdraw.bgp --withdraw
+    sudo bngblaster-cli run.sock bgp-raw-update file withdraw.bgp
+
