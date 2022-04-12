@@ -2174,9 +2174,9 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->pcap.include_streams = true;
     ctx->config.username = g_default_user;
     ctx->config.password = g_default_pass;
-    ctx->config.tx_interval = 5 * MSEC;
-    ctx->config.rx_interval = 5 * MSEC;
-    ctx->config.io_slots = 1024;
+    ctx->config.tx_interval = 1 * MSEC;
+    ctx->config.rx_interval = 1 * MSEC;
+    ctx->config.io_slots = 4096;
     ctx->config.io_stream_max_ppi = 32;
     ctx->config.qdisc_bypass = true;
     ctx->config.sessions = 1;
