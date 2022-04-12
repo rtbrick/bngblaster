@@ -915,11 +915,11 @@ bbl_compute_interface_rate_job(timer_s *timer) {
 
     if(interface->type == INTERFACE_TYPE_NETWORK) {
         bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
+        bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
         bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
     } else if(interface->type == INTERFACE_TYPE_ACCESS) {
         bbl_compute_avg_rate(&interface->stats.rate_mc_rx, interface->stats.mc_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx);
     }
 
     if(interface->ctx->stats.stream_traffic_flows) {
