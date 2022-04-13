@@ -279,7 +279,7 @@ bbl_io_raw_tx_job(timer_s *timer) {
         if(!interface->io.tx_len) {
             tx_result = bbl_tx(ctx, interface, interface->io.tx_buf, &interface->io.tx_len);
         }
-        if (tx_result == PROTOCOL_SUCCESS) {
+        if(tx_result == PROTOCOL_SUCCESS) {
             if (sendto(interface->io.fd_tx, interface->io.tx_buf, interface->io.tx_len, 0, (struct sockaddr*)&interface->io.addr, sizeof(struct sockaddr_ll)) <0 ) {
                 LOG(IO, "Sendto failed with errno: %i\n", errno);
                 interface->stats.sendto_failed++;
