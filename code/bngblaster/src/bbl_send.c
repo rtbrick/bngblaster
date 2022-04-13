@@ -12,8 +12,7 @@
 #include "bbl_session.h"
 
 bool
-bbl_send_init_interface(bbl_interface_s *interface, uint16_t size)
-{
+bbl_send_init_interface(bbl_interface_s *interface, uint16_t size) {
     interface->send.ring = malloc(size * sizeof(bbl_send_slot_t));
     if(!interface->send.ring) {
         return false;
@@ -26,8 +25,7 @@ bbl_send_init_interface(bbl_interface_s *interface, uint16_t size)
 }
 
 bool
-bbl_send_is_empty(bbl_interface_s *interface)
-{
+bbl_send_is_empty(bbl_interface_s *interface) {
     if(interface->send.read == interface->send.write) {
         return true;
     }
@@ -35,8 +33,7 @@ bbl_send_is_empty(bbl_interface_s *interface)
 }
 
 bool
-bbl_send_is_full(bbl_interface_s *interface)
-{
+bbl_send_is_full(bbl_interface_s *interface) {
     if(interface->send.read == interface->send.next) {
         return true;
     }
@@ -52,8 +49,7 @@ bbl_send_is_full(bbl_interface_s *interface)
  * @return number of bytes copied
  */
 uint16_t
-bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf)
-{
+bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf) {
     bbl_send_slot_t *slot;
 
     if(interface->send.read == interface->send.write) {
@@ -79,11 +75,11 @@ bbl_send_from_buffer(bbl_interface_s *interface, uint8_t *buf)
  * @return bbl_send_result_t
  */
 bbl_send_result_t
-bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
-{
+bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth) {
     bbl_send_slot_t *slot;
 
     if(interface->send.read == interface->send.next) {
+        interface->send.full++;
         return BBL_SEND_FULL;
     }
     slot = interface->send.ring + interface->send.write;
@@ -100,24 +96,21 @@ bbl_send_to_buffer(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
 }
 
 static void
-swap_eth_src_dst(bbl_ethernet_header_t *eth)
-{
+swap_eth_src_dst(bbl_ethernet_header_t *eth) {
     uint8_t *dst = eth->dst;
     eth->dst = eth->src;
     eth->src = dst;
 }
 
 static void
-swap_ipv4_src_dst(bbl_ipv4_t *ipv4)
-{
+swap_ipv4_src_dst(bbl_ipv4_t *ipv4) {
     uint32_t dst = ipv4->dst;
     ipv4->dst = ipv4->src;
     ipv4->src = dst;
 }
 
 static void
-swap_ipv6_src_dst(bbl_ipv6_t *ipv6)
-{
+swap_ipv6_src_dst(bbl_ipv6_t *ipv6) {
     uint8_t *dst = ipv6->dst;
     ipv6->dst = ipv6->src;
     ipv6->src = dst;
@@ -126,8 +119,7 @@ swap_ipv6_src_dst(bbl_ipv6_t *ipv6)
 static void
 update_eth(bbl_interface_s *interface,
            bbl_session_s *session,
-           bbl_ethernet_header_t *eth)
-{
+           bbl_ethernet_header_t *eth) {
     eth->mpls = NULL;
     if(session) {
         swap_eth_src_dst(eth);
@@ -149,8 +141,7 @@ bbl_send_result_t
 bbl_send_arp_reply(bbl_interface_s *interface,
                   bbl_session_s *session,
                   bbl_ethernet_header_t *eth,
-                  bbl_arp_t *arp)
-{
+                  bbl_arp_t *arp) {
     update_eth(interface, session, eth);
     arp->code = ARP_REPLY;
     arp->sender = interface->mac;
@@ -165,8 +156,7 @@ bbl_send_icmpv6_na(bbl_interface_s *interface,
                   bbl_session_s *session,
                   bbl_ethernet_header_t *eth,
                   bbl_ipv6_t *ipv6,
-                  bbl_icmpv6_t *icmpv6)
-{
+                  bbl_icmpv6_t *icmpv6) {
     update_eth(interface, session, eth);
     ipv6->dst = ipv6->src;
     if(session) {
@@ -190,8 +180,7 @@ bbl_send_icmp_reply(bbl_interface_s *interface,
                    bbl_session_s *session,
                    bbl_ethernet_header_t *eth,
                    bbl_ipv4_t *ipv4,
-                   bbl_icmp_t *icmp)
-{
+                   bbl_icmp_t *icmp) {
     update_eth(interface, session, eth);
     swap_ipv4_src_dst(ipv4);
     ipv4->ttl = 64;
@@ -204,8 +193,7 @@ bbl_send_icmpv6_echo_reply(bbl_interface_s *interface,
                            bbl_session_s *session,
                            bbl_ethernet_header_t *eth,
                            bbl_ipv6_t *ipv6,
-                           bbl_icmpv6_t *icmpv6)
-{
+                           bbl_icmpv6_t *icmpv6) {
     update_eth(interface, session, eth);
     swap_ipv6_src_dst(ipv6);
     ipv6->ttl = 255;
