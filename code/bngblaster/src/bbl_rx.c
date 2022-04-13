@@ -144,7 +144,7 @@ bbl_igmp_zapping(timer_s *timer)
         }
     }
 
-    if(!ctx->zapping) {
+    if(!ctx->zapping && group->state < IGMP_GROUP_ACTIVE) {
         return;
     }
 
@@ -187,34 +187,44 @@ bbl_igmp_zapping(timer_s *timer)
             session->session_id, leave_delay, format_ipv4_address(&group->group));
     }
 
-    /* Join next group ... */
-    group->group = next_group;
-    group->state = IGMP_GROUP_JOINING;
-    group->robustness_count = session->igmp_robustness;
-    group->send = true;
-    group->packets = 0;
-    group->loss = 0;
-    group->join_tx_time.tv_sec = 0;
-    group->join_tx_time.tv_nsec = 0;
-    group->first_mc_rx_time.tv_sec = 0;
-    group->first_mc_rx_time.tv_nsec = 0;
-    group->leave_tx_time.tv_sec = 0;
-    group->leave_tx_time.tv_nsec = 0;
-    group->last_mc_rx_time.tv_sec = 0;
-    group->last_mc_rx_time.tv_nsec = 0;
-    group->zapping_result = false;
+    if(ctx->zapping) {
+        /* Join next group ... */
+        group->group = next_group;
+        group->state = IGMP_GROUP_JOINING;
+        group->robustness_count = session->igmp_robustness;
+        group->send = true;
+        group->packets = 0;
+        group->loss = 0;
+        group->join_tx_time.tv_sec = 0;
+        group->join_tx_time.tv_nsec = 0;
+        group->first_mc_rx_time.tv_sec = 0;
+        group->first_mc_rx_time.tv_nsec = 0;
+        group->leave_tx_time.tv_sec = 0;
+        group->leave_tx_time.tv_nsec = 0;
+        group->last_mc_rx_time.tv_sec = 0;
+        group->last_mc_rx_time.tv_nsec = 0;
+        group->zapping_result = false;
+
+        /* Swap join/leave */
+        session->zapping_leaved_group = session->zapping_joined_group;
+        session->zapping_joined_group = group;
+
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s join %s\n",
+            session->session_id,
+            format_ipv4_address(&session->zapping_leaved_group->group),
+            format_ipv4_address(&session->zapping_joined_group->group));
+    } else {
+        /* Zapping has stopped */
+        group->last_mc_rx_time.tv_sec = 0;
+        group->leave_tx_time.tv_sec = 0;
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s\n",
+            session->session_id,
+            format_ipv4_address(&session->zapping_joined_group->group));
+    }
 
     session->send_requests |= BBL_SEND_IGMP;
     bbl_session_tx_qnode_insert(session);
 
-    /* Swap join/leave */
-    session->zapping_leaved_group = session->zapping_joined_group;
-    session->zapping_joined_group = group;
-
-    LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s join %s\n",
-        session->session_id,
-        format_ipv4_address(&session->zapping_leaved_group->group),
-        format_ipv4_address(&session->zapping_joined_group->group));
 
     /* Handle viewing profile */
     session->zapping_count++;

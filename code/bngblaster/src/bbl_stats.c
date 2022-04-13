@@ -53,21 +53,13 @@ bbl_stats_update_cps(bbl_ctx_s *ctx) {
 }
 
 void
-bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
+bbl_stats_generate_multicast(bbl_ctx_s *ctx, bbl_stats_t *stats, bool reset) {
 
     bbl_session_s *session;
-    bbl_stream *stream;
-    struct bbl_interface_ *interface;
-
-    struct dict_itor *itor;
     uint32_t i;
 
     uint32_t join_delays = 0;
     uint32_t leave_delays = 0;
-
-    float pps;
-
-    bbl_stats_update_cps(ctx);
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
@@ -103,6 +95,53 @@ bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             stats->zapping_join_count += session->zapping_join_count;
             stats->zapping_leave_count += session->zapping_leave_count;
 
+            if(reset) {
+                session->zapping_count = 0;
+                session->zapping_join_delay_sum = 0;
+                session->zapping_join_count = 0;
+                session->zapping_leave_delay_sum = 0;
+                session->zapping_leave_count = 0;
+                session->stats.min_join_delay = 0;
+                session->stats.avg_join_delay = 0;
+                session->stats.max_join_delay = 0;
+                session->stats.max_join_delay_violations = 0;
+                session->stats.min_leave_delay = 0;
+                session->stats.avg_leave_delay = 0;
+                session->stats.max_leave_delay = 0;
+                session->stats.mc_old_rx_after_first_new = 0;
+                session->stats.mc_not_received = 0;
+
+            }
+        }
+    }
+
+    if(join_delays) {
+        stats->avg_join_delay = stats->avg_join_delay / join_delays;
+    }
+    if(leave_delays) {
+        stats->avg_leave_delay = stats->avg_leave_delay / leave_delays;
+    }
+}
+
+void
+bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
+
+    bbl_session_s *session;
+    bbl_stream *stream;
+    struct bbl_interface_ *interface;
+
+    struct dict_itor *itor;
+    uint32_t i;
+
+    float pps;
+
+    bbl_stats_update_cps(ctx);
+    bbl_stats_generate_multicast(ctx, stats, false);
+
+    /* Iterate over all sessions */
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session) {
             /* Session Traffic */
             if(session->access_ipv4_rx_first_seq) {
                 stats->sessions_access_ipv4_rx++;
@@ -172,12 +211,6 @@ bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
         }
     }
 
-    if(join_delays) {
-        stats->avg_join_delay = stats->avg_join_delay / join_delays;
-    }
-    if(leave_delays) {
-        stats->avg_leave_delay = stats->avg_leave_delay / leave_delays;
-    }
     if(stats->sessions_access_ipv4_rx) {
         stats->avg_access_ipv4_rx_first_seq = stats->avg_access_ipv4_rx_first_seq / stats->sessions_access_ipv4_rx;
     }
