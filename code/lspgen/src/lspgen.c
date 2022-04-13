@@ -370,15 +370,6 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.attr_type = ISIS_TLV_IPV4_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
-        /* ipv4 loopback address */
-        lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
-        addr += node->node_index;
-        lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
-        attr_template.key.ordinal = 1;
-        attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
-        lsdb_add_node_attr(node, &attr_template);
-
         /* ipv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
@@ -388,6 +379,15 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+        lsdb_add_node_attr(node, &attr_template);
+
+        /* ipv6 loopback address */
+        lsdb_reset_attr_template(&attr_template);
+        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
+        addr += node->node_index;
+        lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
+        attr_template.key.ordinal = 1;
+        attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
         /* ipv6 loopback prefix */
