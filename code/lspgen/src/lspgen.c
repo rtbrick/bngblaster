@@ -370,15 +370,6 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.attr_type = ISIS_TLV_IPV4_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
-        /* ipv4 loopback address */
-        lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
-        addr += node->node_index;
-        lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
-        attr_template.key.ordinal = 1;
-        attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
-        lsdb_add_node_attr(node, &attr_template);
-
         /* ipv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
@@ -388,6 +379,15 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+        lsdb_add_node_attr(node, &attr_template);
+
+        /* ipv6 loopback address */
+        lsdb_reset_attr_template(&attr_template);
+        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
+        addr += node->node_index;
+        lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
+        attr_template.key.ordinal = 1;
+        attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
         /* ipv6 loopback prefix */
@@ -567,11 +567,35 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 }
 
 /*
+ * Compute the SRGB range to be large enough to hold indexes for ipv4 and ipv6 SIDs.
+ */
+void
+lspgen_compute_srgb_range (struct lsdb_ctx_ *ctx)
+{
+    unsigned int range;
+
+    if (ctx->no_ipv4 && ctx->no_ipv6) {
+	ctx->srgb_range = 0;
+	return;
+    }
+
+    range = ctx->num_nodes * 2;
+    if (ctx->no_ipv4) {
+	range = ctx->num_nodes;
+    }
+    if (ctx->no_ipv6) {
+	range = ctx->num_nodes;
+    }
+
+    ctx->srgb_range = range;
+}
+
+/*
  * Convert a connector string in the form of an
  * iso node id xxxx.xxxx.xxxx.xx into a LSDB node id.
  */
 void
-mrtgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
+lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 {
     long long int node_id;
     char conn_dst[32];
@@ -690,10 +714,11 @@ main(int argc, char *argv[])
                     ctx->num_nodes = 5;
                     LOG(ERROR, "Set node count to minimal %u\n", ctx->num_nodes);
                 }
+		lspgen_compute_srgb_range(ctx);
                 break;
             case 'C':
                 /* connector */
-                mrtgen_add_connector(ctx, optarg);
+                lspgen_add_connector(ctx, optarg);
                 break;
             case 'n':
                 /* base prefix for ipv4 loopbacks */
