@@ -560,7 +560,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         /* Set client OUI to locally administered */
         session->client_mac[0] = 0x02;
         session->client_mac[1] = 0x00;
-        session->client_mac[2] = 0x00;
+        session->client_mac[2] = ctx->config.mac_modifier;
         /* Use session identifier for remaining bytes */
         session->client_mac[3] = i>>16;
         session->client_mac[4] = i>>8;

@@ -1801,6 +1801,14 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->pcap.include_streams = json_boolean_value(value);
         }
+        value = json_object_get(section, "mac-modifier");
+        if (json_is_number(value)) {
+            if(json_number_value(value) < 0 || json_number_value(value) > UINT8_MAX) {
+                fprintf(stderr, "Config error: Invalid value for interfaces->mac-modifier\n");
+                return false;
+            }
+            ctx->config.mac_modifier = json_number_value(value);
+        }
 
         /* Network Interface Configuration Section */
         sub = json_object_get(section, "network");
