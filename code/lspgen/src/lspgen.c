@@ -532,10 +532,53 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     time(&ctx->now);
 }
 
+struct ipv4_prefix_ *
+lspgen_compute_end_prefix4(struct ipv4_prefix_ *start_prefix, unsigned int num_prefixes)
+{
+    __uint128_t addr, prefix_inc;
+    static struct ipv4_prefix_ end_prefix;
+
+    end_prefix = *start_prefix;
+
+    if (!num_prefixes) {
+	return &end_prefix;
+    }
+
+    prefix_inc = lspgen_get_prefix_inc(AF_INET, start_prefix->len);
+    addr = lspgen_load_addr((uint8_t *)&start_prefix->address, 4);
+    addr += prefix_inc * (num_prefixes-1);
+    lspgen_store_addr(addr, (uint8_t *)&end_prefix.address, 4);
+
+    return &end_prefix;
+}
+
+struct ipv6_prefix_ *
+lspgen_compute_end_prefix6(struct ipv6_prefix_ *start_prefix, unsigned int num_prefixes)
+{
+    __uint128_t addr, prefix_inc;
+    static struct ipv6_prefix_ end_prefix;
+
+    end_prefix = *start_prefix;
+
+    if (!num_prefixes) {
+	return &end_prefix;
+    }
+
+    prefix_inc = lspgen_get_prefix_inc(AF_INET6, start_prefix->len);
+    addr = lspgen_load_addr((uint8_t *)&start_prefix->address, 16);
+    addr += prefix_inc * (num_prefixes-1);
+    lspgen_store_addr(addr, (uint8_t *)&end_prefix.address, 16);
+
+    return &end_prefix;
+}
+
 void
 lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 {
+    struct ipv4_prefix_ *end_prefix4;
+    struct ipv6_prefix_ *end_prefix6;
     uint32_t idx;
+
     LOG_NOARG(NORMAL, "LSP generation parameters\n");
 
     /*
@@ -554,14 +597,36 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
             ctx->authentication_key, val2key(isis_auth_names, ctx->authentication_type));
     }
     if (!ctx->no_ipv4) {
-        LOG(NORMAL, " IPv4 Node Base Prefix %s\n", format_ipv4_prefix(&ctx->ipv4_node_prefix));
-        LOG(NORMAL, " IPv4 Link Base Prefix %s\n", format_ipv4_prefix(&ctx->ipv4_link_prefix));
-        LOG(NORMAL, " IPv4 External Base Prefix %s\n", format_ipv4_prefix(&ctx->ipv4_ext_prefix));
+	end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_node_prefix, ctx->num_nodes);
+	LOG(NORMAL, " IPv4 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv4_prefix(&ctx->ipv4_node_prefix),
+	    format_ipv4_prefix(end_prefix4), ctx->num_nodes);
+
+	end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_link_prefix, ctx->num_nodes*2);
+	LOG(NORMAL, " IPv4 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv4_prefix(&ctx->ipv4_link_prefix),
+	    format_ipv4_prefix(end_prefix4), ctx->num_nodes*2);
+
+	end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_ext_prefix, ctx->num_ext);
+	LOG(NORMAL, " IPv4 External Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv4_prefix(&ctx->ipv4_ext_prefix),
+	    format_ipv4_prefix(end_prefix4), ctx->num_ext);
     }
     if (!ctx->no_ipv6) {
-        LOG(NORMAL, " IPv6 Node Base Prefix %s\n", format_ipv6_prefix(&ctx->ipv6_node_prefix));
-        LOG(NORMAL, " IPv6 Link Base Prefix %s\n", format_ipv6_prefix(&ctx->ipv6_link_prefix));
-        LOG(NORMAL, " IPv6 External Base Prefix %s\n", format_ipv6_prefix(&ctx->ipv6_ext_prefix));
+	end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_node_prefix, ctx->num_nodes);
+	LOG(NORMAL, " IPv6 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv6_prefix(&ctx->ipv6_node_prefix),
+	    format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+
+	end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_link_prefix, ctx->num_nodes*2);
+	LOG(NORMAL, " IPv6 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv6_prefix(&ctx->ipv6_link_prefix),
+	    format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+
+	end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_ext_prefix, ctx->num_ext);
+	LOG(NORMAL, " IPv6 External Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv6_prefix(&ctx->ipv6_ext_prefix),
+	    format_ipv6_prefix(end_prefix6), ctx->num_ext);
     }
     LOG(NORMAL, " SRGB base %u, range %u\n", ctx->srgb_base, ctx->srgb_range);
 }
@@ -809,7 +874,7 @@ main(int argc, char *argv[])
      */
     if (ctx->config_read && ctx->config_filename) {
         lspgen_read_config(ctx);
-    } else { 
+    } else {
         /*
          * Generate a random graph.
          */
