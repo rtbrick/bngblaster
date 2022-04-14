@@ -888,6 +888,8 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
         switch(chap->code) {
             case CHAP_CODE_CHALLENGE:
                 if(chap->challenge_len != CHALLENGE_LEN) {
+                    /* TODO: Add support for variable CHAP challenge lengths. */
+                    LOG(PPPOE, "CHAP (ID: %u) unsupported CHAP challenge length received (expected 16)\n", session->session_id);
                     bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
                     session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                     session->lcp_options_len = 0;
