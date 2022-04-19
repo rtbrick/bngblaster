@@ -249,6 +249,7 @@ lsdb_free_packet(__attribute__((unused))void *key, void *datum)
 
     if (packet->on_change_list) {
         CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
+        ctx->ctrl_stats.packets_queued--;
     }
 
     free(datum);
@@ -384,6 +385,12 @@ lsdb_delete_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
         lsdb_delete_link(ctx, link);
     }
 
+    /*
+     * Stop refresh timer.
+     */
+    timer_del(node->refresh_timer);
+    node->refresh_timer->ptimer = NULL; /* Reset field such that timer library does not late ref */
+
     dict_remove(ctx->node_dict, &node_template->key);
     free(node);
 }
@@ -442,6 +449,11 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
          */
         ctx->nodecount++;
         node->ctx = ctx;
+
+	/*
+	 * Default sequence number to inherit from context.
+	 */
+	node->sequence = ctx->sequence;
 
         LOG(LSDB, "  Add node %s (%s) node-ptr %p\n", lsdb_format_node(node),
             lsdb_format_node_id(node->key.node_id), (void *)node);

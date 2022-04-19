@@ -14,6 +14,11 @@
 #include "lspgen_isis.h"
 
 /*
+ * Globals
+ */
+bool loop_running = true;
+
+/*
  * Prototypes
  */
 const char banner[] = "\n"
@@ -705,6 +710,20 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
     LOG(NORMAL, "Add connector to 0x%llx\n", node_id);
 }
 
+void
+lspgen_sig_handler (int signum)
+{
+    LOG(NORMAL, "Received %s signal\n", sys_siglist[signum]);
+
+    switch (signum) {
+    case SIGINT:
+	loop_running = false; /* Get out of event loop */
+	break;
+    default:
+	break;
+    }
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -956,7 +975,14 @@ main(int argc, char *argv[])
          */
         signal(SIGPIPE, SIG_IGN);
 
-        timer_walk(&ctx->timer_root);
+	/*
+	 * Keep running until Ctrl-C is hit.
+	 */
+	signal(SIGINT, lspgen_sig_handler);
+
+	while (loop_running) {
+	    timer_walk(&ctx->timer_root);
+	}
     }
 
     /*
