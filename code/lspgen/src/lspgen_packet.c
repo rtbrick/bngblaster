@@ -12,6 +12,11 @@
 #include "lspgen_isis.h"
 #include "hmac_md5.h"
 
+/*
+ * Prototypes.
+ */
+void lspgen_gen_packet_node(lsdb_node_t *);
+
 void
 lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
@@ -52,13 +57,7 @@ lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *pack
     push_be_uint(&packet->buf, 1, 0); /* PSN # */
     push_be_uint(&packet->buf, 1, packet->key.id); /* Fragment # */
 
-    /* sequence */
-    if (node->sequence) {
-        push_be_uint(&packet->buf, 4, node->sequence);
-    } else {
-        push_be_uint(&packet->buf, 4, ctx->sequence);
-    }
-
+    push_be_uint(&packet->buf, 4, node->sequence); /* Sequence */
     push_be_uint(&packet->buf, 2, 0); /* Checksum */
 
     lsattr = 0;
@@ -517,6 +516,7 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         */
         CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = true;
+	ctx->ctrl_stats.packets_queued++;
 
         /*
         * Parent
@@ -535,20 +535,71 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
 }
 
 /*
+ * Refresh timer has expired. Bump the sequence number of the node and rebuild all fragments.
+ */
+void
+lspgen_refresh_cb (timer_s *timer)
+{
+    struct lsdb_node_ *node;
+    struct lsdb_ctx_ *ctx;
+
+    node = timer->data;
+    ctx = node->ctx;
+
+    node->sequence++;
+    LOG(LSDB, "Refresh LSP for %s, sequence 0x%0x\n", lsdb_format_node(node), node->sequence);
+
+    lspgen_gen_packet_node(node);
+
+    /*
+     * Set up a ctrl session to drain the refreshed LSPs.
+     */
+    if (ctx->ctrl_socket_path) {
+        timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
+                           "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+    }
+}
+
+/*
+ * The refresh interval is lsp_lifetime minus 300 seconds.
+ * Ensure that it does not go below 60 secs.
+ */
+unsigned int
+lspgen_refresh_interval (lsdb_ctx_t *ctx)
+{
+    int refresh;
+
+    refresh = ctx->lsp_lifetime - 300;
+    if (refresh < 60) {
+	refresh = 60;
+    }
+
+    return refresh;
+}
+
+/*
  * Walk the graph of the LSDB and serialize packets.
  */
 void
-lspgen_gen_packet_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
+lspgen_gen_packet_node(lsdb_node_t *node)
 {
+    lsdb_ctx_t *ctx;
     struct lsdb_packet_ *packet;
     struct lsdb_attr_ *attr;
     dict_itor *itor;
     uint32_t id, last_attr, tlv_start_idx, min_len;
 
+    ctx = node->ctx;
+
     packet = NULL;
     id = 0;
     last_attr = 0;
     tlv_start_idx = 0;
+
+    /*
+     * Flush old serialized packets.
+     */
+    dict_clear(node->packet_dict, lsdb_free_packet);
 
     if (!node->attr_dict) {
         /*
@@ -574,6 +625,14 @@ lspgen_gen_packet_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
         dict_itor_free(itor);
         LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
         return;
+    }
+
+    /*
+     * Start refresh timer.
+     */
+    if (ctx->ctrl_socket_path) {
+	timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
+			   lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
     }
 
     do {
@@ -662,22 +721,24 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
     do {
         node = *dict_itor_datum(itor);
 
-        if (node->packet_dict) {
-            /*
-             * Flush old serialized packets.
-             */
-            dict_free(node->packet_dict, lsdb_free_packet);
-        } else {
-            node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
-        }
+	/*
+	 * Init per-packet tree for this node.
+	 */
+	if (!node->packet_dict) {
+	    node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
+	}
 
-        /*
+	/*
          * Generate the link-state packets for this node.
          */
-        lspgen_gen_packet_node(ctx, node);
+        lspgen_gen_packet_node(node);
 
     } while (dict_itor_next(itor));
 
     dict_itor_free(itor);
-}
 
+    /*
+     * Distribute expiration of refresh timer over time.
+     */
+    timer_smear_bucket(&ctx->timer_root, lspgen_refresh_interval(ctx), 0);
+}

@@ -129,6 +129,8 @@ typedef struct lsdb_node_ {
     uint32_t sequence;
     uint16_t lsp_lifetime;
 
+    timer_s *refresh_timer;
+
     /*
      * List of links
      */
