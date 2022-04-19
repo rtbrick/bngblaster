@@ -5,8 +5,8 @@
 project = 'BNG Blaster'
 copyright = '2020-2022, RtBrick, Inc.'
 author = 'Christian Giese'
-release = '0.0'
-version = '0.0.0'
+release = '0.7'
+version = '0.7.2'
 
 # -- General configuration
 
