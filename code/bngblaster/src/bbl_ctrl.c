@@ -352,6 +352,42 @@ bbl_ctrl_zapping_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 }
 
 ssize_t
+bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    ssize_t result = 0;
+    json_t *root;
+
+    bbl_stats_t stats = {0};
+    bool reset = false;
+    
+    json_unpack(arguments, "{s:b}", "reset", &reset);
+    bbl_stats_generate_multicast(ctx, &stats, reset);
+
+    root = json_pack("{ss si s{si si si si si si si si si si si}}",
+                     "status", "ok",
+                     "code", 200,
+                     "zapping-stats",
+                     "join-delay-ms-min", stats.min_join_delay,
+                     "join-delay-ms-avg", stats.avg_join_delay,
+                     "join-delay-ms-max", stats.max_join_delay,
+                     "join-delay-violations", stats.max_join_delay_violations,
+                     "join-count", stats.zapping_join_count,
+                     "leave-delay-ms-min", stats.min_leave_delay,
+                     "leave-delay-ms-avg", stats.avg_leave_delay,
+                     "leave-delay-ms-max", stats.max_leave_delay,
+                     "leave-count", stats.zapping_leave_count,
+                     "multicast-packets-overlap", stats.mc_old_rx_after_first_new,
+                     "multicast-not-received", stats.mc_not_received);
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+    return result;
+}
+
+ssize_t
 bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ssize_t result = 0;
     json_t *root = json_pack("{ss si s{si si si si}}",
@@ -1314,6 +1350,7 @@ struct action actions[] = {
     {"igmp-info", bbl_ctrl_igmp_info},
     {"zapping-start", bbl_ctrl_zapping_start},
     {"zapping-stop", bbl_ctrl_zapping_stop},
+    {"zapping-stats", bbl_ctrl_zapping_stats},
     {"li-flows", bbl_ctrl_li_flows},
     {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
     {"l2tp-sessions", bbl_ctrl_l2tp_sessions},

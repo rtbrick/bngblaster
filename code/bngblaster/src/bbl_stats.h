@@ -101,7 +101,8 @@ typedef struct bbl_stats_ {
 
 void bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value);
 void bbl_stats_update_cps (bbl_ctx_s *ctx);
-void bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t *stats);
+void bbl_stats_generate_multicast(bbl_ctx_s *ctx, bbl_stats_t * stats, bool reset);
+void bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats);
 void bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t *stats);
 void bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t *stats);
 void bbl_compute_interface_rate_job(timer_s *timer);
