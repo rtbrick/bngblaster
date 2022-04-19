@@ -555,8 +555,11 @@ lspgen_refresh_cb (timer_s *timer)
      * Set up a ctrl session to drain the refreshed LSPs.
      */
     if (ctx->ctrl_socket_path) {
-        timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
-                           "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+
+	if (!ctx->ctrl_socket_connect_timer) {
+	    timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
+			       "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+	}
     }
 }
 
