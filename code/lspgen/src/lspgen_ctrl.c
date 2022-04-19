@@ -211,6 +211,15 @@ lspgen_ctrl_close_cb(timer_s *timer)
      LOG(NORMAL, "Closing connection to %s\n", ctx->ctrl_socket_path);
 }
 
+bool
+lspgen_buffer_is_empty (lsdb_ctx_t *ctx) {
+    if (ctx->ctrl_io_buf.idx - ctx->ctrl_io_buf.start_idx) {
+	return false;
+    } else {
+	return true;
+    }
+}
+
 void
 lspgen_ctrl_write_cb(timer_s *timer)
 {
@@ -275,6 +284,15 @@ lspgen_ctrl_write_cb(timer_s *timer)
      json_footer = "]\n}\n}\n";
      push_data(&ctx->ctrl_io_buf, (uint8_t *)json_footer, strlen(json_footer));
      lspgen_write_ctrl_buffer(ctx);
+
+     /*
+      * Optimization.
+      * If the buffer has been fully drained then kill the write timer right away,
+      * else keep it running. It will be killed once the close timer fires.
+      */
+     if (lspgen_buffer_is_empty(ctx)) {
+	 timer_del(ctx->ctrl_socket_write_timer);
+     }
 
      LOG(NORMAL, "Sent %u packets, %u bytes to %s\n",
      ctx->ctrl_stats.packets_sent,
