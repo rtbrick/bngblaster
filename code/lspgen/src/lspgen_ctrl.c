@@ -202,7 +202,10 @@ lspgen_ctrl_close_cb(timer_s *timer)
      /*
       * Close the connection.
       */
-     close(ctx->ctrl_socket_sockfd);
+     if (ctx->ctrl_socket_sockfd > 0) {
+	 close(ctx->ctrl_socket_sockfd);
+	 ctx->ctrl_socket_sockfd = 0;
+     }
      LOG(NORMAL, "Closing connection to %s\n", ctx->ctrl_socket_path);
 }
 
@@ -318,6 +321,9 @@ lspgen_ctrl_connect_cb(timer_s *timer)
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
+    if (ctx->ctrl_socket_sockfd != 0) {
+	LOG(CTRL, "CTRL socket to %s still unfreed\n", ctx->ctrl_socket_path);
+    }
     ctx->ctrl_socket_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     res = connect(ctx->ctrl_socket_sockfd, (struct sockaddr *)&addr, SUN_LEN(&addr));
 
@@ -352,5 +358,7 @@ lspgen_ctrl_connect_cb(timer_s *timer)
         return;
     }
 
+    close(ctx->ctrl_socket_sockfd);
+    ctx->ctrl_socket_sockfd = 0;
     LOG(ERROR, "Error connecting to %s, %s\n", ctx->ctrl_socket_path, strerror(errno));
 }
