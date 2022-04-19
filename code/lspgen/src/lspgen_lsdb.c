@@ -814,12 +814,12 @@ void
 lsdb_delete_ctx(struct lsdb_ctx_ *ctx)
 {
 
+    timer_flush_root(&ctx->timer_root);
+
     dict_free(ctx->link_dict, lsdb_free_link);
     ctx->link_dict = NULL;
     dict_free(ctx->node_dict, lsdb_free_node);
     ctx->node_dict = NULL;
-
-    timer_flush_root(&ctx->timer_root);
 
     lsdb_free_name(&ctx->instance_name);
     lsdb_free_name(&ctx->protocol_name);
@@ -836,6 +836,11 @@ lsdb_delete_ctx(struct lsdb_ctx_ *ctx)
         free(ctx->ctrl_io_buf.data);
         ctx->ctrl_io_buf.data = NULL;
     }
+
+    if (ctx->ctrl_socket_sockfd > 0) {
+	 close(ctx->ctrl_socket_sockfd);
+	 ctx->ctrl_socket_sockfd = 0;
+     }
 
     free(ctx);
 }
