@@ -31,3 +31,6 @@
    * - `capture-include-streams`
      - Include traffic streams in capture
      - true
+   * - `mac-modifier`
+     - Third byte of access session MAC address (0-255)
+     - 0

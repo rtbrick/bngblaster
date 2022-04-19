@@ -144,6 +144,7 @@ typedef struct bbl_ctx_
     /* Config options */
     struct {
         bool interface_lock_force;
+        uint8_t mac_modifier;
 
         uint64_t tx_interval; /* TX interval in nsec */
         uint64_t rx_interval; /* RX interval in nsec */
