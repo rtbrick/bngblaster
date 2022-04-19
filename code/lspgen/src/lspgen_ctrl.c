@@ -200,11 +200,6 @@ lspgen_ctrl_close_cb(timer_s *timer)
      timer_del(ctx->ctrl_socket_write_timer);
 
      /*
-      * Reset statistics.
-      */
-     memset(&ctx->ctrl_stats, 0, sizeof(ctx->ctrl_stats));
-
-     /*
       * Close the connection.
       */
      close(ctx->ctrl_socket_sockfd);
@@ -341,6 +336,12 @@ lspgen_ctrl_connect_cb(timer_s *timer)
          */
         ctx->ctrl_io_buf.start_idx = 0;
         ctx->ctrl_io_buf.idx = 0;
+
+	/*
+	 * Reset statistics.
+	 */
+	ctx->ctrl_stats.octets_sent = 0;
+	ctx->ctrl_stats.packets_sent = 0;
 
         /*
          * Write header before the first packet.
