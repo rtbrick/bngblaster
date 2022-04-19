@@ -38,6 +38,7 @@ lspgen_enqueue_node_packets(lsdb_ctx_t *ctx, lsdb_node_t *node)
 
         if (packet->on_change_list) {
             CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
+	    ctx->ctrl_stats.packets_queued--;
         }
         CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = true;
@@ -109,7 +110,14 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
                 timer_del(ctx->ctrl_socket_write_timer);
                 timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
                                    "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
-                return;
+
+		/*
+		 * Requeue all packets to the change list.
+		 */
+		lspgen_enqueue_all_packets(ctx);
+		LOG(ERROR, "Requeued %u packets to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
+
+		return;
             default:
                 LOG(ERROR, "write(): error %s (%d)\n", strerror(errno), errno);
                 break;
@@ -192,6 +200,11 @@ lspgen_ctrl_close_cb(timer_s *timer)
      timer_del(ctx->ctrl_socket_write_timer);
 
      /*
+      * Reset statistics.
+      */
+     memset(&ctx->ctrl_stats, 0, sizeof(ctx->ctrl_stats));
+
+     /*
       * Close the connection.
       */
      close(ctx->ctrl_socket_sockfd);
@@ -236,8 +249,8 @@ lspgen_ctrl_write_cb(timer_s *timer)
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;
 
         /*
-            * Hexdumping doubles the data plus 4 bytes for two quotation marks, comma and whitespace.
-            */
+	 * Hexdumping doubles the data plus 4 bytes for two quotation marks, comma and whitespace.
+	 */
         if (buffer_left < ((packet->buf.idx * 2) + 4)) {
 
             /* no space, release buffer and try later */
@@ -252,10 +265,11 @@ lspgen_ctrl_write_cb(timer_s *timer)
         lspgen_ctrl_encode_packet(ctx, packet);
 
         /*
-            * Packet got encoded, take packet off the change queue.
-            */
+	 * Packet got encoded, take packet off the change queue.
+	 */
         CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = false;
+        ctx->ctrl_stats.packets_queued--;
     }
 
      json_footer = "]\n}\n}\n";
@@ -283,6 +297,11 @@ lspgen_ctrl_connect_cb(timer_s *timer)
 
     ctx = timer->data;
 
+    if (ctx->ctrl_socket_close_timer) {
+	LOG(CTRL, "Close timer to %s still running, retry later\n", ctx->ctrl_socket_path);
+	return;
+    }
+
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
@@ -306,19 +325,10 @@ lspgen_ctrl_connect_cb(timer_s *timer)
         ctx->ctrl_io_buf.idx = 0;
 
         /*
-         * Reset statistics.
-         */
-        memset(&ctx->ctrl_stats, 0, sizeof(ctx->ctrl_stats));
-
-        /*
          * Write header before the first packet.
          */
         ctx->ctrl_packet_first = true;
 
-        /*
-         * Enqueue all packets to the change list, which will be worked in the write CB.
-         */
-        lspgen_enqueue_all_packets(ctx);
         LOG(NORMAL, "Enqueued %u packets to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
         return;
     }
