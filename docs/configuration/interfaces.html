@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 0.0 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.7 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -94,11 +94,11 @@
 <tbody>
 <tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
 <td><p>TX ring polling interval in milliseconds</p></td>
-<td><p>5.0</p></td>
+<td><p>1.0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
 <td><p>RX ring polling interval in milliseconds</p></td>
-<td><p>5.0</p></td>
+<td><p>1.0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
 <td><p>Bypass the kernel’s qdisc layer</p></td>
@@ -110,7 +110,7 @@
 </tr>
 <tr class="row-even"><td><p><cite>io-slots</cite></p></td>
 <td><p>IO slots (ring size)</p></td>
-<td><p>1024</p></td>
+<td><p>4096</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>io-stream-max-ppi</cite></p></td>
 <td><p>IO traffic stream max packets per interval</p></td>
@@ -119,6 +119,10 @@
 <tr class="row-even"><td><p><cite>capture-include-streams</cite></p></td>
 <td><p>Include traffic streams in capture</p></td>
 <td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>mac-modifier</cite></p></td>
+<td><p>Third byte of access session MAC address (0-255)</p></td>
+<td><p>0</p></td>
 </tr>
 </tbody>
 </table>

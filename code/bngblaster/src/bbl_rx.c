@@ -144,7 +144,7 @@ bbl_igmp_zapping(timer_s *timer)
         }
     }
 
-    if(!ctx->zapping) {
+    if(!ctx->zapping && group->state < IGMP_GROUP_ACTIVE) {
         return;
     }
 
@@ -187,34 +187,44 @@ bbl_igmp_zapping(timer_s *timer)
             session->session_id, leave_delay, format_ipv4_address(&group->group));
     }
 
-    /* Join next group ... */
-    group->group = next_group;
-    group->state = IGMP_GROUP_JOINING;
-    group->robustness_count = session->igmp_robustness;
-    group->send = true;
-    group->packets = 0;
-    group->loss = 0;
-    group->join_tx_time.tv_sec = 0;
-    group->join_tx_time.tv_nsec = 0;
-    group->first_mc_rx_time.tv_sec = 0;
-    group->first_mc_rx_time.tv_nsec = 0;
-    group->leave_tx_time.tv_sec = 0;
-    group->leave_tx_time.tv_nsec = 0;
-    group->last_mc_rx_time.tv_sec = 0;
-    group->last_mc_rx_time.tv_nsec = 0;
-    group->zapping_result = false;
+    if(ctx->zapping) {
+        /* Join next group ... */
+        group->group = next_group;
+        group->state = IGMP_GROUP_JOINING;
+        group->robustness_count = session->igmp_robustness;
+        group->send = true;
+        group->packets = 0;
+        group->loss = 0;
+        group->join_tx_time.tv_sec = 0;
+        group->join_tx_time.tv_nsec = 0;
+        group->first_mc_rx_time.tv_sec = 0;
+        group->first_mc_rx_time.tv_nsec = 0;
+        group->leave_tx_time.tv_sec = 0;
+        group->leave_tx_time.tv_nsec = 0;
+        group->last_mc_rx_time.tv_sec = 0;
+        group->last_mc_rx_time.tv_nsec = 0;
+        group->zapping_result = false;
+
+        /* Swap join/leave */
+        session->zapping_leaved_group = session->zapping_joined_group;
+        session->zapping_joined_group = group;
+
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s join %s\n",
+            session->session_id,
+            format_ipv4_address(&session->zapping_leaved_group->group),
+            format_ipv4_address(&session->zapping_joined_group->group));
+    } else {
+        /* Zapping has stopped */
+        group->last_mc_rx_time.tv_sec = 0;
+        group->leave_tx_time.tv_sec = 0;
+        LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s\n",
+            session->session_id,
+            format_ipv4_address(&session->zapping_joined_group->group));
+    }
 
     session->send_requests |= BBL_SEND_IGMP;
     bbl_session_tx_qnode_insert(session);
 
-    /* Swap join/leave */
-    session->zapping_leaved_group = session->zapping_joined_group;
-    session->zapping_joined_group = group;
-
-    LOG(IGMP, "IGMP (ID: %u) ZAPPING leave %s join %s\n",
-        session->session_id,
-        format_ipv4_address(&session->zapping_leaved_group->group),
-        format_ipv4_address(&session->zapping_joined_group->group));
 
     /* Handle viewing profile */
     session->zapping_count++;
@@ -888,6 +898,8 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
         switch(chap->code) {
             case CHAP_CODE_CHALLENGE:
                 if(chap->challenge_len != CHALLENGE_LEN) {
+                    /* TODO: Add support for variable CHAP challenge lengths. */
+                    LOG(PPPOE, "CHAP (ID: %u) unsupported CHAP challenge length received (expected 16)\n", session->session_id);
                     bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
                     session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                     session->lcp_options_len = 0;
@@ -1529,8 +1541,10 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                         memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
                     }
                 } else {
-                    LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADO\n", session->session_id);
-                    return;
+                    if(session->pppoe_service_name_len) {
+                        LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADO\n", session->session_id);
+                        return;
+                    }
                 }
                 if(session->pppoe_host_uniq) {
                     if(pppoed->host_uniq_len != sizeof(uint64_t) ||
@@ -1555,10 +1569,17 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                             return;
                         }
                     }
-                    if(pppoed->service_name_len != session->pppoe_service_name_len ||
-                        memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
-                        LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
-                        return;
+                    if(pppoed->service_name_len) {
+                        if(pppoed->service_name_len != session->pppoe_service_name_len ||
+                            memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
+                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
+                            return;
+                        }
+                    } else {
+                        if(session->pppoe_service_name_len) {
+                            LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADS\n", session->session_id);
+                            return;
+                        }
                     }
                     session->pppoe_session_id = pppoed->session_id;
                     bbl_session_update_state(ctx, session, BBL_PPP_LINK);
