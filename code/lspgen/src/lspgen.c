@@ -370,15 +370,6 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.attr_type = ISIS_TLV_IPV4_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
-        /* ipv4 loopback address */
-        lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
-        addr += node->node_index;
-        lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
-        attr_template.key.ordinal = 1;
-        attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
-        lsdb_add_node_attr(node, &attr_template);
-
         /* ipv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
@@ -388,6 +379,15 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+        lsdb_add_node_attr(node, &attr_template);
+
+        /* ipv6 loopback address */
+        lsdb_reset_attr_template(&attr_template);
+        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
+        addr += node->node_index;
+        lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
+        attr_template.key.ordinal = 1;
+        attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
         /* ipv6 loopback prefix */
@@ -532,10 +532,53 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     time(&ctx->now);
 }
 
+struct ipv4_prefix_ *
+lspgen_compute_end_prefix4(struct ipv4_prefix_ *start_prefix, unsigned int num_prefixes)
+{
+    __uint128_t addr, prefix_inc;
+    static struct ipv4_prefix_ end_prefix;
+
+    end_prefix = *start_prefix;
+
+    if (!num_prefixes) {
+	return &end_prefix;
+    }
+
+    prefix_inc = lspgen_get_prefix_inc(AF_INET, start_prefix->len);
+    addr = lspgen_load_addr((uint8_t *)&start_prefix->address, 4);
+    addr += prefix_inc * (num_prefixes-1);
+    lspgen_store_addr(addr, (uint8_t *)&end_prefix.address, 4);
+
+    return &end_prefix;
+}
+
+struct ipv6_prefix_ *
+lspgen_compute_end_prefix6(struct ipv6_prefix_ *start_prefix, unsigned int num_prefixes)
+{
+    __uint128_t addr, prefix_inc;
+    static struct ipv6_prefix_ end_prefix;
+
+    end_prefix = *start_prefix;
+
+    if (!num_prefixes) {
+	return &end_prefix;
+    }
+
+    prefix_inc = lspgen_get_prefix_inc(AF_INET6, start_prefix->len);
+    addr = lspgen_load_addr((uint8_t *)&start_prefix->address, 16);
+    addr += prefix_inc * (num_prefixes-1);
+    lspgen_store_addr(addr, (uint8_t *)&end_prefix.address, 16);
+
+    return &end_prefix;
+}
+
 void
 lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 {
+    struct ipv4_prefix_ *end_prefix4;
+    struct ipv6_prefix_ *end_prefix6;
     uint32_t idx;
+
     LOG_NOARG(NORMAL, "LSP generation parameters\n");
 
     /*
@@ -554,16 +597,62 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
             ctx->authentication_key, val2key(isis_auth_names, ctx->authentication_type));
     }
     if (!ctx->no_ipv4) {
-        LOG(NORMAL, " IPv4 Node Base Prefix %s\n", format_ipv4_prefix(&ctx->ipv4_node_prefix));
-        LOG(NORMAL, " IPv4 Link Base Prefix %s\n", format_ipv4_prefix(&ctx->ipv4_link_prefix));
-        LOG(NORMAL, " IPv4 External Base Prefix %s\n", format_ipv4_prefix(&ctx->ipv4_ext_prefix));
+	end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_node_prefix, ctx->num_nodes);
+	LOG(NORMAL, " IPv4 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv4_prefix(&ctx->ipv4_node_prefix),
+	    format_ipv4_prefix(end_prefix4), ctx->num_nodes);
+
+	end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_link_prefix, ctx->num_nodes*2);
+	LOG(NORMAL, " IPv4 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv4_prefix(&ctx->ipv4_link_prefix),
+	    format_ipv4_prefix(end_prefix4), ctx->num_nodes*2);
+
+	end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_ext_prefix, ctx->num_ext);
+	LOG(NORMAL, " IPv4 External Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv4_prefix(&ctx->ipv4_ext_prefix),
+	    format_ipv4_prefix(end_prefix4), ctx->num_ext);
     }
     if (!ctx->no_ipv6) {
-        LOG(NORMAL, " IPv6 Node Base Prefix %s\n", format_ipv6_prefix(&ctx->ipv6_node_prefix));
-        LOG(NORMAL, " IPv6 Link Base Prefix %s\n", format_ipv6_prefix(&ctx->ipv6_link_prefix));
-        LOG(NORMAL, " IPv6 External Base Prefix %s\n", format_ipv6_prefix(&ctx->ipv6_ext_prefix));
+	end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_node_prefix, ctx->num_nodes);
+	LOG(NORMAL, " IPv6 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv6_prefix(&ctx->ipv6_node_prefix),
+	    format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+
+	end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_link_prefix, ctx->num_nodes*2);
+	LOG(NORMAL, " IPv6 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv6_prefix(&ctx->ipv6_link_prefix),
+	    format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+
+	end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_ext_prefix, ctx->num_ext);
+	LOG(NORMAL, " IPv6 External Base Prefix %s, End Prefix %s, %u prefixes\n",
+	    format_ipv6_prefix(&ctx->ipv6_ext_prefix),
+	    format_ipv6_prefix(end_prefix6), ctx->num_ext);
     }
     LOG(NORMAL, " SRGB base %u, range %u\n", ctx->srgb_base, ctx->srgb_range);
+}
+
+/*
+ * Compute the SRGB range to be large enough to hold indexes for ipv4 and ipv6 SIDs.
+ */
+void
+lspgen_compute_srgb_range (struct lsdb_ctx_ *ctx)
+{
+    unsigned int range;
+
+    if (ctx->no_ipv4 && ctx->no_ipv6) {
+	ctx->srgb_range = 0;
+	return;
+    }
+
+    range = ctx->num_nodes * 2;
+    if (ctx->no_ipv4) {
+	range = ctx->num_nodes;
+    }
+    if (ctx->no_ipv6) {
+	range = ctx->num_nodes;
+    }
+
+    ctx->srgb_range = range;
 }
 
 /*
@@ -571,7 +660,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
  * iso node id xxxx.xxxx.xxxx.xx into a LSDB node id.
  */
 void
-mrtgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
+lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 {
     long long int node_id;
     char conn_dst[32];
@@ -690,10 +779,11 @@ main(int argc, char *argv[])
                     ctx->num_nodes = 5;
                     LOG(ERROR, "Set node count to minimal %u\n", ctx->num_nodes);
                 }
+		lspgen_compute_srgb_range(ctx);
                 break;
             case 'C':
                 /* connector */
-                mrtgen_add_connector(ctx, optarg);
+                lspgen_add_connector(ctx, optarg);
                 break;
             case 'n':
                 /* base prefix for ipv4 loopbacks */
@@ -784,7 +874,7 @@ main(int argc, char *argv[])
      */
     if (ctx->config_read && ctx->config_filename) {
         lspgen_read_config(ctx);
-    } else { 
+    } else {
         /*
          * Generate a random graph.
          */

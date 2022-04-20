@@ -56,6 +56,7 @@ typedef struct bbl_interface_
         uint16_t read;  /* current read slot */
         uint16_t write; /* current write slot */
         uint16_t next;  /* next write slot */
+        uint32_t full; 
     } send;
 
     uint32_t ifindex; /* interface index */

@@ -14,7 +14,7 @@
 #ifndef __BBL_TXQ_H__
 #define __BBL_TXQ_H__
 
-#define BBL_SEND_DEFAULT_SIZE 2048
+#define BBL_SEND_DEFAULT_SIZE 4096
 
 typedef enum bbl_send_result_ {
     BBL_SEND_OK = 0,

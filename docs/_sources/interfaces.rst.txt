@@ -29,7 +29,7 @@ The following settings are applied to all interfaces.
 The ``tx-interval`` and ``rx-interval`` should be set to at to at least ``1.0`` (1ms)
 if more precise timestamps or high throughput is needed. This is recommended for IGMP 
 join/leave or QoS delay measurements. For higher packet rates (>1g) it might be needed to
-increase the ``io-slots`` from the default value of ``1024`` to ``2048`` or more.
+increase the ``io-slots`` from the default value of ``4096``.
 
 The supported IO modes are listed with ``bngblaster -v`` but except
 ``packet_mmap_raw`` all other modes are currently considered as experimental. In
@@ -74,6 +74,46 @@ interface.
 
 
 .. note:: The number of interfaces is currently limited to 32!
+
+It might be also needed to increase the hardware and software queue size of your
+network interfaces for higher throughput. 
+
+The command ``ethtool -g <interface>`` shows the currently applied and maximum 
+hardware queue size.
+
+.. code-block:: none
+
+    $ sudo ethtool -g ens5f1
+    Ring parameters for ens5f1:
+    Pre-set maximums:
+    RX:             4096
+    RX Mini:        0
+    RX Jumbo:       0
+    TX:             4096
+    Current hardware settings:
+    RX:             512
+    RX Mini:        0
+    RX Jumbo:       0
+    TX:             512
+
+The currently applied settings can be change with the following command: 
+
+.. code-block:: none
+
+    sudo ethtool -G ens5f1 tx 4096 rx 4096
+
+You can even change the software queue size:
+
+.. code-block:: none
+
+    sudo ip link set txqueuelen 4096 dev ens5f1
+
+
+.. note::
+    
+    Today all traffic is received in main thread, therefore 
+    the single thread performance of your CPU is the most 
+    significant performance factor. 
 
 
 Network Interfaces
