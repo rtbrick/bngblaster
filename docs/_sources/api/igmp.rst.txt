@@ -25,3 +25,7 @@
      - Stop IGMP zapping test
      - 
      - 
+   * - `zapping-stats`
+     - Return IGMP zapping stats
+     - 
+     - `reset`
