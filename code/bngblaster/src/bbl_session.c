@@ -128,7 +128,7 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
-static void
+void
 bbl_session_reset(bbl_session_s *session) {
     /* Reset session for reconnect */
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */

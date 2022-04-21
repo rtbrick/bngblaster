@@ -421,7 +421,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     if(session) {
         session_json = bbl_session_json(session);
         if(!session_json) {
-            bbl_ctrl_status(fd, "error", 500, "internal error");
+            return bbl_ctrl_status(fd, "error", 500, "internal error");
         }
 
         root = json_pack("{ss si so*}",
@@ -446,14 +446,27 @@ ssize_t
 bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     bbl_session_s *session;
 
+    if(g_teardown) {
+        return bbl_ctrl_status(fd, "error", 405, "teardown");
+    }
+
     if(session_id == 0) {
         /* session-id is mandatory */
-        return bbl_ctrl_status(fd, "error", 405, "missing session-id");
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
 
     session = bbl_session_get(ctx, session_id);
     if(session) {
-        if(session->session_state != BBL_IDLE || 
+        if(session->session_state == BBL_TERMINATED && 
+           session->reconnect_delay == 0) {
+            ctx->sessions_flapped++;
+            session->stats.flapped++;
+            session->session_state = BBL_IDLE;
+            bbl_session_reset(session);
+            if(ctx->sessions_terminated) {
+                ctx->sessions_terminated--;
+            }
+        } else if(session->session_state != BBL_IDLE || 
            CIRCLEQ_NEXT(session, session_idle_qnode) || 
            CIRCLEQ_PREV(session, session_idle_qnode)) {
            return bbl_ctrl_status(fd, "error", 405, "wrong session state");
