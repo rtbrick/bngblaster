@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interfaces &mdash; BNG Blaster 0.0 documentation</title>
+  <title>Interfaces &mdash; BNG Blaster 0.7 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -125,11 +125,11 @@ one interface is required to start the BNG Blaster.</p>
 <tbody>
 <tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
 <td><p>TX ring polling interval in milliseconds</p></td>
-<td><p>5.0</p></td>
+<td><p>1.0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
 <td><p>RX ring polling interval in milliseconds</p></td>
-<td><p>5.0</p></td>
+<td><p>1.0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
 <td><p>Bypass the kernel’s qdisc layer</p></td>
@@ -141,7 +141,7 @@ one interface is required to start the BNG Blaster.</p>
 </tr>
 <tr class="row-even"><td><p><cite>io-slots</cite></p></td>
 <td><p>IO slots (ring size)</p></td>
-<td><p>1024</p></td>
+<td><p>4096</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>io-stream-max-ppi</cite></p></td>
 <td><p>IO traffic stream max packets per interval</p></td>
@@ -151,12 +151,16 @@ one interface is required to start the BNG Blaster.</p>
 <td><p>Include traffic streams in capture</p></td>
 <td><p>true</p></td>
 </tr>
+<tr class="row-odd"><td><p><cite>mac-modifier</cite></p></td>
+<td><p>Third byte of access session MAC address (0-255)</p></td>
+<td><p>0</p></td>
+</tr>
 </tbody>
 </table>
 <p>The <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> should be set to at to at least <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms)
 if more precise timestamps or high throughput is needed. This is recommended for IGMP
 join/leave or QoS delay measurements. For higher packet rates (&gt;1g) it might be needed to
-increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">1024</span></code> to <code class="docutils literal notranslate"><span class="pre">2048</span></code> or more.</p>
+increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">4096</span></code>.</p>
 <p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
 <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered as experimental. In
 the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
@@ -193,6 +197,38 @@ interface.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The number of interfaces is currently limited to 32!</p>
+</div>
+<p>It might be also needed to increase the hardware and software queue size of your
+network interfaces for higher throughput.</p>
+<p>The command <code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-g</span> <span class="pre">&lt;interface&gt;</span></code> shows the currently applied and maximum
+hardware queue size.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo ethtool -g ens5f1
+Ring parameters for ens5f1:
+Pre-set maximums:
+RX:             4096
+RX Mini:        0
+RX Jumbo:       0
+TX:             4096
+Current hardware settings:
+RX:             512
+RX Mini:        0
+RX Jumbo:       0
+TX:             512
+</pre></div>
+</div>
+<p>The currently applied settings can be change with the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ethtool -G ens5f1 tx 4096 rx 4096
+</pre></div>
+</div>
+<p>You can even change the software queue size:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set txqueuelen 4096 dev ens5f1
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Today all traffic is received in main thread, therefore
+the single thread performance of your CPU is the most
+significant performance factor.</p>
 </div>
 </section>
 <section id="network-interfaces">

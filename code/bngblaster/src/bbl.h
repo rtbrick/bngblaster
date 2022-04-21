@@ -39,8 +39,8 @@
 #include "bgp/bgp.h"
 #include "isis/isis.h"
 
-WINDOW *log_win;
-WINDOW *stats_win;
+extern WINDOW *log_win;
+extern WINDOW *stats_win;
 
 void
 enable_disable_traffic(bbl_ctx_s *ctx, bool status);
