@@ -1541,8 +1541,10 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                         memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
                     }
                 } else {
-                    LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADO\n", session->session_id);
-                    return;
+                    if(session->pppoe_service_name_len) {
+                        LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADO\n", session->session_id);
+                        return;
+                    }
                 }
                 if(session->pppoe_host_uniq) {
                     if(pppoed->host_uniq_len != sizeof(uint64_t) ||
@@ -1567,10 +1569,17 @@ bbl_rx_discovery(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_ses
                             return;
                         }
                     }
-                    if(pppoed->service_name_len != session->pppoe_service_name_len ||
-                        memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
-                        LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
-                        return;
+                    if(pppoed->service_name_len) {
+                        if(pppoed->service_name_len != session->pppoe_service_name_len ||
+                            memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
+                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
+                            return;
+                        }
+                    } else {
+                        if(session->pppoe_service_name_len) {
+                            LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADS\n", session->session_id);
+                            return;
+                        }
                     }
                     session->pppoe_session_id = pppoed->session_id;
                     bbl_session_update_state(ctx, session, BBL_PPP_LINK);

@@ -12,10 +12,10 @@
      - Default
    * - `tx-interval`
      - TX ring polling interval in milliseconds
-     - 5.0
+     - 1.0
    * - `rx-interval`
      - RX ring polling interval in milliseconds
-     - 5.0
+     - 1.0
    * - `qdisc-bypass`
      - Bypass the kernel's qdisc layer
      - true
@@ -24,7 +24,7 @@
      - packet_mmap_raw
    * - `io-slots`
      - IO slots (ring size)
-     - 1024
+     - 4096
    * - `io-stream-max-ppi`
      - IO traffic stream max packets per interval
      - 32
