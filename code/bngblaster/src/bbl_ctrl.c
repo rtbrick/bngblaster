@@ -442,6 +442,29 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     }
 }
 
+ssize_t
+bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+    bbl_session_s *session;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 405, "missing session-id");
+    }
+
+    session = bbl_session_get(ctx, session_id);
+    if(session) {
+        if(session->session_state != BBL_IDLE || 
+           CIRCLEQ_NEXT(session, session_idle_qnode) || 
+           CIRCLEQ_PREV(session, session_idle_qnode)) {
+           return bbl_ctrl_status(fd, "error", 405, "wrong session state");
+        }
+        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
 static json_t *
 bbl_ctrl_interfaces_json(bbl_interface_s *interace, const char *type) {
     return json_pack("{ss si ss si si si si si si si si}",
@@ -1338,6 +1361,7 @@ struct action actions[] = {
     {"ip6cp-close", bbl_ctrl_session_ip6cp_close},
     {"session-counters", bbl_ctrl_session_counters},
     {"session-info", bbl_ctrl_session_info},
+    {"session-start", bbl_ctrl_session_start},
     {"session-traffic", bbl_ctrl_session_traffic_stats},
     {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
