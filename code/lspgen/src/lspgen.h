@@ -56,4 +56,7 @@ void lspgen_write_config(lsdb_ctx_t *);
 void lspgen_serialize_attr(lsdb_attr_t *, io_buffer_t *);
 void lspgen_gen_packet(lsdb_ctx_t *);
 
+/* lspgen_playbook.c */
+void lspgen_playbook_cb(timer_s *);
+
 #endif /*__LSPGEN_H__*/

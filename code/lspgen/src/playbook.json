@@ -1,0 +1,40 @@
+{
+  "loop_playbook": 2,
+  "playbook": [
+    {
+      "loop_act": 3,
+      "step": [
+        {
+          "wait_s": 1,
+          "config_file": "base.json",
+          "merge_style": "replace"
+        },
+        {
+          "wait_s": 2,
+          "config_file": "test1.json",
+          "merge_style": "add"
+        },
+	  {
+          "wait_s": 3,
+          "config_file": "test2.json",
+          "merge_style": "delete"
+        }
+      ]
+    },
+    {
+      "loop_act": 5,
+      "step": [
+        {
+          "wait_s": 5,
+          "config_file": "test3.json",
+          "merge_style": "add"
+        },
+        {
+          "wait_s": 8,
+          "config_file": "test4.json",
+          "merge_style": "delete"
+        }
+      ]
+    }
+  ]
+}

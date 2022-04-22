@@ -829,6 +829,7 @@ lsdb_delete_ctx(struct lsdb_ctx_ *ctx)
     lsdb_free_name(&ctx->mrt_filename);
     lsdb_free_name(&ctx->stream_filename);
     lsdb_free_name(&ctx->config_filename);
+    lsdb_free_name(&ctx->playbook_filename);
     lsdb_free_name(&ctx->ctrl_socket_path);
     lsdb_free_name(&ctx->authentication_key);
 

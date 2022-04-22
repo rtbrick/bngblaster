@@ -16,7 +16,7 @@
 /*
  * Globals
  */
-bool loop_running = true;
+bool loop_running = false;
 
 /*
  * Prototypes
@@ -43,6 +43,7 @@ static struct option long_options[] = {
     {"authentication-type", required_argument, NULL, 'T'},
     {"read-config-file", required_argument, NULL, 'r'},
     {"write-config-file", required_argument, NULL, 'w'},
+    {"playbook-file", required_argument, NULL, 'P'},
     {"connector", required_argument, NULL, 'C'},
     {"control-socket", required_argument, NULL, 'S'},
     {"ipv4-link-prefix", required_argument, NULL, 'l'},
@@ -489,6 +490,7 @@ void
 lspgen_init_ctx(struct lsdb_ctx_ *ctx)
 {
     CIRCLEQ_INIT(&ctx->packet_change_qhead);
+    CIRCLEQ_INIT(&ctx->act_qhead);
     timer_init_root(&ctx->timer_root);
 
     ctx->num_nodes = 10; /* Number of nodes */
@@ -583,6 +585,13 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     struct ipv4_prefix_ *end_prefix4;
     struct ipv6_prefix_ *end_prefix6;
     uint32_t idx;
+
+    /*
+     * Do not display generator options when reading config from a file or playbook.
+     */
+    if ((ctx->config_read && ctx->config_filename) || ctx->playbook_filename) {
+	return;
+    }
 
     LOG_NOARG(NORMAL, "LSP generation parameters\n");
 
@@ -746,7 +755,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:q:r:s:S:t:T:V:w:x:X:zZ",
+    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:P:q:r:s:S:t:T:V:w:x:X:zZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -759,6 +768,9 @@ main(int argc, char *argv[])
                 }
                 ctx->config_filename = strdup(optarg);
                 ctx->config_read = true;
+                break;
+            case 'P':
+                ctx->playbook_filename = strdup(optarg);
                 break;
             case 'w':
                 if (ctx->config_filename) {
@@ -897,11 +909,13 @@ main(int argc, char *argv[])
      */
     if (ctx->config_read && ctx->config_filename) {
         lspgen_read_config(ctx);
-    } else {
+    } else if (!ctx->playbook_filename) {
+
         /*
          * Generate a random graph.
          */
         lsdb_init_graph(ctx);
+
         /*
          * Generate the node and link attributes.
          */
@@ -979,14 +993,28 @@ main(int argc, char *argv[])
          */
         signal(SIGPIPE, SIG_IGN);
 
-	/*
-	 * Keep running until Ctrl-C is hit.
-	 */
-	signal(SIGINT, lspgen_sig_handler);
+	loop_running = true;
+    }
 
-	while (loop_running) {
-	    timer_walk(&ctx->timer_root);
-	}
+    /*
+     * Check periodically if the playbook demands loading of a new configuration.
+     */
+    if (ctx->playbook_filename) {
+	timer_add_periodic(&ctx->timer_root, &ctx->playbook_timer,
+			   "playbook", 1, 0, ctx, &lspgen_playbook_cb);
+	loop_running = true;
+    }
+
+    /*
+     * Keep running until Ctrl-C is hit.
+     */
+    signal(SIGINT, lspgen_sig_handler);
+
+    /*
+     * Go into event loop.
+     */
+    while (loop_running) {
+	timer_walk(&ctx->timer_root);
     }
 
     /*

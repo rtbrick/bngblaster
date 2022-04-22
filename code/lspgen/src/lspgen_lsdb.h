@@ -16,8 +16,8 @@
 #define LSDB_MAX_LINK_ID_SIZE 16    /* enough space for various protocols */
 
 /*
- * Inital hash bucket size. Good to pick prime numbers.
- * Should give enough initial space for roughly 1000 nodes and 5000 links.
+ * Initial hash bucket size. Good to pick prime numbers.
+ * Should give enough initial space for roughly 500 nodes and 5000 links.
  */
 #define LSDB_NODE_HSIZE 997    /* hash table initial bucket size */
 #define LSDB_LINK_HSIZE 9973   /* hash table initial bucket size */
@@ -38,6 +38,16 @@ typedef struct lsdb_ctx_
 
     /* List of changed packets for incremental LSP generation  */
     CIRCLEQ_HEAD(lsdb_packet_head_, lsdb_packet_ ) packet_change_qhead;
+
+    /*
+     * Playbook handling.
+     */
+    char *playbook_filename;  /* File name for juggling configurations. */
+    timer_s *playbook_timer;
+
+    /* List of configuration files to play through the playbook */
+    CIRCLEQ_HEAD(act_head_, playbook_act_ ) act_qhead;
+    uint32_t loop_playbook; /* How often ? */
 
     /*
      * Root node.
@@ -104,9 +114,9 @@ typedef struct lsdb_ctx_
     char *graphviz_filename;    /* File name for dumping LSDB in graphviz format. */
     char *pcap_filename;        /* File name for dumping LSDB in pcapng format. */
     FILE *pcap_file;            /* File handle for dumping LSDB in pcapng format. */
-    char *stream_filename;        /* File name for writing traffic streams. */
+    char *stream_filename;      /* File name for writing traffic streams. */
     FILE *stream_file;          /* File handle for writing traffic streams. */
-    char *config_filename;        /* File name for configuration. */
+    char *config_filename;      /* File name for configuration. */
     FILE *config_file;          /* File handle for configuration. */
     bool config_read;
     bool config_write;
@@ -290,6 +300,36 @@ typedef struct lsdb_packet_ {
     uint8_t redzone[8]; /* Overwrite detection */
 
 } lsdb_packet_t;
+
+/*
+ * An act of a playbook.
+ */
+typedef struct playbook_act_
+{
+    CIRCLEQ_ENTRY(playbook_act_ ) act_qnode;
+
+    /* List of steps  */
+    CIRCLEQ_HEAD(step_head_, playbook_step_ ) step_qhead;
+    uint32_t loop_act;
+    uint32_t act_num;
+} playbook_act_t;
+
+/*
+ * A step of a playbook act.
+ */
+typedef struct playbook_step_ {
+    CIRCLEQ_ENTRY(playbook_step_ ) step_qnode;
+    char *config_file;
+    uint32_t wait_s; /* Wait <ms> before next step */
+    uint8_t merge_style; /* replace/add/delete */
+} playbook_step_t;
+
+enum {
+    MERGE_STYLE_UNKNOWN = 0,
+    MERGE_STYLE_REPLACE = 1,
+    MERGE_STYLE_ADD = 2,
+    MERGE_STYLE_DELETE = 3
+};
 
 /*
  * lspgen_lsdb.c - Prototypes for manipulating the LSDB
