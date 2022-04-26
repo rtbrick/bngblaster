@@ -128,7 +128,7 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
-static void
+void
 bbl_session_reset(bbl_session_s *session) {
     /* Reset session for reconnect */
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
@@ -653,7 +653,9 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->interface = access_config->access_if;
         session->network_interface = bbl_get_network_interface(ctx, access_config->network_interface);
         session->session_state = BBL_IDLE;
-        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        if(ctx->config.sessions_autostart) {
+            CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        }
         ctx->sessions++;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             ctx->sessions_pppoe++;

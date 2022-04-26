@@ -28,6 +28,9 @@
    * - `start-delay`
      - Wait N seconds after all interface are resolved before starting sessions
      - 0
+   * - `autostart`
+     - Start sessions automatically
+     - true
 
 Per default sessions are created by iteration over inner VLAN range first and 
 outer VLAN second. Which can be changed by ``iterate-vlan-outer`` to iterate 
