@@ -128,9 +128,17 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
-static void
-bbl_session_reset(bbl_session_s *session) {
-    /* Reset session for reconnect */
+/**
+ * bbl_session_reset
+ * 
+ * Reset session for reconnect.
+ * 
+ * @param session session
+ */
+void
+bbl_session_reset(bbl_session_s *session) {    
+    bbl_ctx_s *ctx = session->interface->ctx;
+
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
     session->pppoe_session_id = 0;
     if(session->pppoe_ac_cookie) {
@@ -183,8 +191,16 @@ bbl_session_reset(bbl_session_s *session) {
     session->l2tp_session = NULL;
 
     /* Session traffic */
+    if(ctx->stats.session_traffic_flows >= session->session_traffic_flows) {
+        ctx->stats.session_traffic_flows -= session->session_traffic_flows;
+    }
     session->session_traffic_flows = 0;
+
+    if(ctx->stats.session_traffic_flows_verified >= session->session_traffic_flows_verified) {
+        ctx->stats.session_traffic_flows_verified -= session->session_traffic_flows_verified;
+    }
     session->session_traffic_flows_verified = 0;
+
     session->access_ipv4_tx_flow_id = 0;
     session->access_ipv4_tx_seq = 0;
     session->access_ipv4_tx_packet_len = 0;
@@ -653,7 +669,9 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->interface = access_config->access_if;
         session->network_interface = bbl_get_network_interface(ctx, access_config->network_interface);
         session->session_state = BBL_IDLE;
-        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        if(ctx->config.sessions_autostart) {
+            CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        }
         ctx->sessions++;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             ctx->sessions_pppoe++;
