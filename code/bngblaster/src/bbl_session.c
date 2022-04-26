@@ -128,9 +128,17 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
+/**
+ * bbl_session_reset
+ * 
+ * Reset session for reconnect.
+ * 
+ * @param session session
+ */
 static void
-bbl_session_reset(bbl_session_s *session) {
-    /* Reset session for reconnect */
+bbl_session_reset(bbl_session_s *session) {    
+    bbl_ctx_s *ctx = session->interface->ctx;
+
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
     session->pppoe_session_id = 0;
     if(session->pppoe_ac_cookie) {
@@ -183,8 +191,16 @@ bbl_session_reset(bbl_session_s *session) {
     session->l2tp_session = NULL;
 
     /* Session traffic */
+    if(ctx->stats.session_traffic_flows >= session->session_traffic_flows) {
+        ctx->stats.session_traffic_flows -= session->session_traffic_flows;
+    }
     session->session_traffic_flows = 0;
+
+    if(ctx->stats.session_traffic_flows_verified >= session->session_traffic_flows_verified) {
+        ctx->stats.session_traffic_flows_verified -= session->session_traffic_flows_verified;
+    }
     session->session_traffic_flows_verified = 0;
+
     session->access_ipv4_tx_flow_id = 0;
     session->access_ipv4_tx_seq = 0;
     session->access_ipv4_tx_packet_len = 0;

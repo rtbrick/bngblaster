@@ -301,6 +301,7 @@ bbl_a10nsp_pppoes_handler(bbl_interface_s *interface,
                             session->stats.network_ipv4_rx++;
                             if(!session->network_ipv4_rx_first_seq) {
                                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
+                                session->session_traffic_flows_verified++;
                                 ctx->stats.session_traffic_flows_verified++;
                                 if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
                                     LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
