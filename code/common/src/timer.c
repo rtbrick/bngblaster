@@ -290,8 +290,10 @@ timer_del_internal (timer_s *timer)
         /* Add to GC list */
         CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
         timer_root->gc++;
-        *timer->ptimer = NULL; /* delete references to this timer */
-        timer->ptimer= NULL;
+	if (timer->ptimer) {
+	    *timer->ptimer = NULL; /* delete references to this timer */
+	    timer->ptimer= NULL;
+	}
     }
 }
 
@@ -565,8 +567,14 @@ timer_walk(timer_root_s *root)
         LOG(TIMER_DETAIL, "  Sleep %lu.%06lus\n", sleep.tv_sec, sleep.tv_nsec / 1000);
         res = nanosleep(&sleep, &rem);
         if (res == -1) {
-            LOG(TIMER, "  nanosleep(): error %s (%d)\n", strerror(errno), errno);
-        }
+	    switch (errno) {
+	    case EINTR: /* Ctrl-C */
+		break;
+	    default:
+		LOG(TIMER, "  nanosleep(): error %s (%d)\n", strerror(errno), errno);
+		break;
+	    }
+	}
     }
 }
 

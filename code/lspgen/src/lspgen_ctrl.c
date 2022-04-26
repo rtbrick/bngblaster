@@ -38,6 +38,7 @@ lspgen_enqueue_node_packets(lsdb_ctx_t *ctx, lsdb_node_t *node)
 
         if (packet->on_change_list) {
             CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
+	    ctx->ctrl_stats.packets_queued--;
         }
         CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = true;
@@ -109,7 +110,14 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
                 timer_del(ctx->ctrl_socket_write_timer);
                 timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
                                    "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
-                return;
+
+		/*
+		 * Requeue all packets to the change list.
+		 */
+		lspgen_enqueue_all_packets(ctx);
+		LOG(ERROR, "Requeued %u packets to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
+
+		return;
             default:
                 LOG(ERROR, "write(): error %s (%d)\n", strerror(errno), errno);
                 break;
@@ -194,8 +202,20 @@ lspgen_ctrl_close_cb(timer_s *timer)
      /*
       * Close the connection.
       */
-     close(ctx->ctrl_socket_sockfd);
+     if (ctx->ctrl_socket_sockfd > 0) {
+	 close(ctx->ctrl_socket_sockfd);
+	 ctx->ctrl_socket_sockfd = 0;
+     }
      LOG(NORMAL, "Closing connection to %s\n", ctx->ctrl_socket_path);
+}
+
+bool
+lspgen_buffer_is_empty (lsdb_ctx_t *ctx) {
+    if (ctx->ctrl_io_buf.idx - ctx->ctrl_io_buf.start_idx) {
+	return false;
+    } else {
+	return true;
+    }
 }
 
 void
@@ -236,8 +256,8 @@ lspgen_ctrl_write_cb(timer_s *timer)
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;
 
         /*
-            * Hexdumping doubles the data plus 4 bytes for two quotation marks, comma and whitespace.
-            */
+	 * Hexdumping doubles the data plus 4 bytes for two quotation marks, comma and whitespace.
+	 */
         if (buffer_left < ((packet->buf.idx * 2) + 4)) {
 
             /* no space, release buffer and try later */
@@ -252,15 +272,25 @@ lspgen_ctrl_write_cb(timer_s *timer)
         lspgen_ctrl_encode_packet(ctx, packet);
 
         /*
-            * Packet got encoded, take packet off the change queue.
-            */
+	 * Packet got encoded, take packet off the change queue.
+	 */
         CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = false;
+        ctx->ctrl_stats.packets_queued--;
     }
 
      json_footer = "]\n}\n}\n";
      push_data(&ctx->ctrl_io_buf, (uint8_t *)json_footer, strlen(json_footer));
      lspgen_write_ctrl_buffer(ctx);
+
+     /*
+      * Optimization.
+      * If the buffer has been fully drained then kill the write timer right away,
+      * else keep it running. It will be killed once the close timer fires.
+      */
+     if (lspgen_buffer_is_empty(ctx)) {
+	 timer_del(ctx->ctrl_socket_write_timer);
+     }
 
      LOG(NORMAL, "Sent %u packets, %u bytes to %s\n",
      ctx->ctrl_stats.packets_sent,
@@ -283,9 +313,17 @@ lspgen_ctrl_connect_cb(timer_s *timer)
 
     ctx = timer->data;
 
+    if (ctx->ctrl_socket_close_timer) {
+	LOG(CTRL, "Close timer to %s still running, retry later\n", ctx->ctrl_socket_path);
+	return;
+    }
+
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
+    if (ctx->ctrl_socket_sockfd != 0) {
+	LOG(CTRL, "CTRL socket to %s still unfreed\n", ctx->ctrl_socket_path);
+    }
     ctx->ctrl_socket_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     res = connect(ctx->ctrl_socket_sockfd, (struct sockaddr *)&addr, SUN_LEN(&addr));
 
@@ -305,23 +343,22 @@ lspgen_ctrl_connect_cb(timer_s *timer)
         ctx->ctrl_io_buf.start_idx = 0;
         ctx->ctrl_io_buf.idx = 0;
 
-        /*
-         * Reset statistics.
-         */
-        memset(&ctx->ctrl_stats, 0, sizeof(ctx->ctrl_stats));
+	/*
+	 * Reset statistics.
+	 */
+	ctx->ctrl_stats.octets_sent = 0;
+	ctx->ctrl_stats.packets_sent = 0;
 
         /*
          * Write header before the first packet.
          */
         ctx->ctrl_packet_first = true;
 
-        /*
-         * Enqueue all packets to the change list, which will be worked in the write CB.
-         */
-        lspgen_enqueue_all_packets(ctx);
         LOG(NORMAL, "Enqueued %u packets to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
         return;
     }
 
+    close(ctx->ctrl_socket_sockfd);
+    ctx->ctrl_socket_sockfd = 0;
     LOG(ERROR, "Error connecting to %s, %s\n", ctx->ctrl_socket_path, strerror(errno));
 }
