@@ -357,7 +357,7 @@ bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     json_t *root;
 
     bbl_stats_t stats = {0};
-    bool reset = false;
+    int reset = 0;
     
     json_unpack(arguments, "{s:b}", "reset", &reset);
     bbl_stats_generate_multicast(ctx, &stats, reset);
