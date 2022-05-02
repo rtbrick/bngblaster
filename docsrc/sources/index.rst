@@ -71,6 +71,7 @@ Contents
    reports
    configuration/index
    api/index
+   controller
    troubleshooting
    reference/index
    faq
