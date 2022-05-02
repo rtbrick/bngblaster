@@ -518,6 +518,14 @@ json_parse_access_interface(bbl_ctx_s *ctx, json_t *access_interface, bbl_access
         }
     }
 
+    if (json_unpack(access_interface, "{s:s}", "access-aggregation-circuit-id", &s) == 0) {
+        access_config->aggregation_circuit_id = strdup(s);
+    } else {
+        if (ctx->config.aggregation_circuit_id) {
+            access_config->aggregation_circuit_id = strdup(ctx->config.aggregation_circuit_id);
+        }
+    }
+
     value = json_object_get(access_interface, "rate-up");
     if (value) {
         access_config->rate_up = json_number_value(value);
@@ -1675,6 +1683,9 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         }
         if (json_unpack(section, "{s:s}", "agent-remote-id", &s) == 0) {
             ctx->config.agent_remote_id = strdup(s);
+        }
+        if (json_unpack(section, "{s:s}", "access-aggregation-circuit-id", &s) == 0) {
+            ctx->config.aggregation_circuit_id = strdup(s);
         }
         value = json_object_get(section, "rate-up");
         if (json_is_number(value)) {

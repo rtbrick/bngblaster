@@ -1332,6 +1332,16 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, str_len);
                 vendor_len += 2 + str_len;
             }
+            if(pppoe->access_line->aaci) {
+                *buf = ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                str_len = strnlen(pppoe->access_line->aaci, 128);
+                *buf = str_len;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                memcpy(buf, pppoe->access_line->aaci, str_len);
+                BUMP_WRITE_BUFFER(buf, len, str_len);
+                vendor_len += 2 + str_len;
+            }
             if(pppoe->access_line->up || (access_line_profile && access_line_profile->act_up)) {
                 *buf = ACCESS_LINE_ACT_UP;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));

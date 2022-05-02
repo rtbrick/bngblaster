@@ -635,6 +635,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
 
     access_line.aci = session->agent_circuit_id;
     access_line.ari = session->agent_remote_id;
+    access_line.aaci = session->aggregation_circuit_id;
     access_line.up = session->rate_up;
     access_line.down = session->rate_down;
     access_line.dsl_type = session->dsl_type;
@@ -1129,6 +1130,7 @@ bbl_encode_padi(bbl_session_s *session)
     if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
+        access_line.aaci = session->aggregation_circuit_id;
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
         access_line.dsl_type = session->dsl_type;
@@ -1175,6 +1177,7 @@ bbl_encode_padr(bbl_session_s *session)
     if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
+        access_line.aaci = session->aggregation_circuit_id;
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
         access_line.dsl_type = session->dsl_type;
@@ -1338,6 +1341,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
     if((session->agent_circuit_id || session->agent_remote_id) && session->dhcp_state != BBL_DHCP_RELEASE) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
+        access_line.aaci = session->aggregation_circuit_id;
         access_line.up = session->rate_up;
         access_line.down = session->rate_down;
         access_line.dsl_type = session->dsl_type;

@@ -624,6 +624,9 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         /* Update ARI */
         update_strings(&session->agent_remote_id, access_config->agent_remote_id, NULL, NULL);
 
+        /* Update Access-Aggregation-Circuit-ID */
+        update_strings(&session->aggregation_circuit_id, access_config->aggregation_circuit_id, NULL, NULL);        
+
         /* Update CFM */
         if(access_config->cfm_cc) {
             session->cfm_cc = true;
