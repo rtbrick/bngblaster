@@ -1690,6 +1690,80 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         }
     }
 
+    /* Access Line Profiles Configuration */
+    section = json_object_get(root, "access-line-profiles");
+    if (json_is_array(section)) {
+        /* Config is provided as array (multiple access-line-profiles) */
+        size = json_array_size(section);
+        for (i = 0; i < size; i++) {
+            if (!access_line_profile) {
+                ctx->config.access_line_profile = calloc(1, sizeof(bbl_access_line_profile_s));
+                access_line_profile = ctx->config.access_line_profile;
+            } else {
+                access_line_profile->next = calloc(1, sizeof(bbl_access_line_profile_s));
+                access_line_profile = access_line_profile->next;
+            }
+            if (!json_parse_access_line_profile(json_array_get(section, i), access_line_profile)) {
+                return false;
+            }
+        }
+    }
+
+    /* Global Traffic Configuration */
+    section = json_object_get(root, "traffic");
+    if (json_is_object(section)) {
+        value = json_object_get(section, "autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.traffic_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "stop-verified");
+        if (json_is_boolean(value)) {
+            ctx->config.traffic_stop_verified = json_boolean_value(value);
+        }
+    }
+
+    /* Session Traffic Configuration */
+    section = json_object_get(root, "session-traffic");
+    if (json_is_object(section)) {
+        value = json_object_get(section, "autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.session_traffic_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "ipv4-pps");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv4_pps = json_number_value(value);
+        }
+        value = json_object_get(section, "ipv6-pps");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv6_pps = json_number_value(value);
+        }
+        value = json_object_get(section, "ipv6pd-pps");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
+        }
+        value = json_object_get(section, "ipv4-label");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv4_label = json_number_value(value);
+        }
+        if (json_unpack(section, "{s:s}", "ipv4-address", &s) == 0) {
+            if (!inet_pton(AF_INET, s, &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv4-address\n");
+                return false;
+            }
+            ctx->config.session_traffic_ipv4_address = ipv4;
+        }
+        value = json_object_get(section, "ipv6-label");
+        if (json_is_number(value)) {
+            ctx->config.session_traffic_ipv6_label = json_number_value(value);
+        }
+        if (json_unpack(section, "{s:s}", "ipv6-address", &s) == 0) {
+            if (!inet_pton(AF_INET6, s, &ctx->config.session_traffic_ipv6_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv6-address\n");
+                return false;
+            }
+        }
+    }
+
     /* BGP Configuration */
     sub = json_object_get(root, "bgp");
     if (json_is_array(sub)) {
@@ -1990,61 +2064,6 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
     }
 
-    /* Global Traffic Configuration */
-    section = json_object_get(root, "traffic");
-    if (json_is_object(section)) {
-        value = json_object_get(section, "autostart");
-        if (json_is_boolean(value)) {
-            ctx->config.traffic_autostart = json_boolean_value(value);
-        }
-        value = json_object_get(section, "stop-verified");
-        if (json_is_boolean(value)) {
-            ctx->config.traffic_stop_verified = json_boolean_value(value);
-        }
-    }
-
-    /* Session Traffic Configuration */
-    section = json_object_get(root, "session-traffic");
-    if (json_is_object(section)) {
-        value = json_object_get(section, "autostart");
-        if (json_is_boolean(value)) {
-            ctx->config.session_traffic_autostart = json_boolean_value(value);
-        }
-        value = json_object_get(section, "ipv4-pps");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv4_pps = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv6-pps");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv6_pps = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv6pd-pps");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv6pd_pps = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv4-label");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv4_label = json_number_value(value);
-        }
-        if (json_unpack(section, "{s:s}", "ipv4-address", &s) == 0) {
-            if (!inet_pton(AF_INET, s, &ipv4)) {
-                fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv4-address\n");
-                return false;
-            }
-            ctx->config.session_traffic_ipv4_address = ipv4;
-        }
-        value = json_object_get(section, "ipv6-label");
-        if (json_is_number(value)) {
-            ctx->config.session_traffic_ipv6_label = json_number_value(value);
-        }
-        if (json_unpack(section, "{s:s}", "ipv6-address", &s) == 0) {
-            if (!inet_pton(AF_INET6, s, &ctx->config.session_traffic_ipv6_address)) {
-                fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv6-address\n");
-                return false;
-            }
-        }
-    }
-
     /* Traffic Streams Configuration */
     section = json_object_get(root, "streams");
     if (json_is_array(section)) {
@@ -2059,25 +2078,6 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
                 stream_config = stream_config->next;
             }
             if (!json_parse_stream(ctx, json_array_get(section, i), stream_config)) {
-                return false;
-            }
-        }
-    }
-
-    /* Access Line Profiles Configuration */
-    section = json_object_get(root, "access-line-profiles");
-    if (json_is_array(section)) {
-        /* Config is provided as array (multiple access-line-profiles) */
-        size = json_array_size(section);
-        for (i = 0; i < size; i++) {
-            if (!access_line_profile) {
-                ctx->config.access_line_profile = calloc(1, sizeof(bbl_access_line_profile_s));
-                access_line_profile = ctx->config.access_line_profile;
-            } else {
-                access_line_profile->next = calloc(1, sizeof(bbl_access_line_profile_s));
-                access_line_profile = access_line_profile->next;
-            }
-            if (!json_parse_access_line_profile(json_array_get(section, i), access_line_profile)) {
                 return false;
             }
         }
