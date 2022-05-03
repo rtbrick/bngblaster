@@ -121,7 +121,7 @@ This directory contains the following files:</p>
 <li><p><cite>run.pcap</cite>: bngblaster traffic capture (if enabled)</p></li>
 <li><p><cite>run.sock</cite>: bngblaster control socket</p></li>
 <li><p><cite>run.stderr</cite>: bngblaster standard error</p></li>
-<li><p><cite>run.stdout`</cite>: bngblaster standard output</p></li>
+<li><p><cite>run.stdout</cite>: bngblaster standard output</p></li>
 </ul>
 </section>
 <section id="start-test">
@@ -139,8 +139,38 @@ defined in the body.</p>
 <h3>Command<a class="headerlink" href="#command" title="Permalink to this headline"></a></h3>
 <p><cite>POST /api/v1/bngblasters/&lt;instance-name&gt;/_command</cite></p>
 <p>The JSON body of this API call will be passed to the bngblaster instance
-control socket (<cite>/var/bngbnlaster/&lt;instance-name&gt;/run.sock`</cite>). The result will
+control socket (<cite>/var/bngbnlaster/&lt;instance-name&gt;/run.sock</cite>). The result will
 be passed back to the client.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>curl --location --request POST &#39;http://&lt;IP&gt;&gt;:8001/api/v1/instances/&lt;instance-name&gt;/_command&#39; \
+--header &#39;Content-Type: application/json&#39; \
+--data-raw &#39;{
+    &quot;command&quot;: &quot;session-info&quot;,
+    &quot;arguments&quot;: {
+        &quot;session-id&quot;: 1
+    }
+}&#39;
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;session-info&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;session-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Established&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;...&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The result code is passed as HTTP response status code.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
 </section>
 <section id="stop-test">
 <h3>Stop Test<a class="headerlink" href="#stop-test" title="Permalink to this headline"></a></h3>
@@ -151,7 +181,7 @@ be passed back to the client.</p>
 <h3>Delete Test Instance<a class="headerlink" href="#delete-test-instance" title="Permalink to this headline"></a></h3>
 <p><cite>DELETE /api/v1/bngblasters/&lt;instance-name&gt;</cite></p>
 <p>This API endpoint deletes the test instance directory. The corresponding
-test run is forcefully terminated (kill) if running.</p>
+test run is forcefully terminated (<cite>kill -9 &lt;pid&gt;</cite>) if running.</p>
 </section>
 </section>
 </section>
