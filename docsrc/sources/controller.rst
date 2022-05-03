@@ -40,7 +40,7 @@ This directory contains the following files:
 * `run.pcap`: bngblaster traffic capture (if enabled)
 * `run.sock`: bngblaster control socket
 * `run.stderr`: bngblaster standard error
-* `run.stdout``: bngblaster standard output 
+* `run.stdout`: bngblaster standard output 
 
 Start Test 
 ~~~~~~~~~~~
@@ -63,8 +63,45 @@ Command
 `POST /api/v1/bngblasters/<instance-name>/_command`
 
 The JSON body of this API call will be passed to the bngblaster instance 
-control socket (`/var/bngbnlaster/<instance-name>/run.sock``). The result will 
+control socket (`/var/bngbnlaster/<instance-name>/run.sock`). The result will 
 be passed back to the client.
+
+.. code-block:: none
+
+    curl --location --request POST 'http://<IP>>:8001/api/v1/instances/<instance-name>/_command' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "command": "session-info",
+        "arguments": {
+            "session-id": 1
+        }
+    }'
+
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "session-info": {
+            "type": "pppoe",
+            "session-id": 1,
+            "session-state": "Established",
+            "...": "..."
+        }
+    }
+
+
+The result code is passed as HTTP response status code.
+
+.. code-block:: json
+
+    {
+        "status": "warning",
+        "code": 404, 
+        "message": "session not found"
+    }
+
 
 Stop Test 
 ~~~~~~~~~
@@ -79,4 +116,4 @@ Delete Test Instance
 `DELETE /api/v1/bngblasters/<instance-name>`
 
 This API endpoint deletes the test instance directory. The corresponding
-test run is forcefully terminated (kill) if running. 
+test run is forcefully terminated (`kill -9 <pid>`) if running. 
