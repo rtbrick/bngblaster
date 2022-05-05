@@ -179,13 +179,13 @@ bbl_tcp_error_cb(void *arg, err_t err) {
     tcpc->err = err;
 
     if(tcpc->af == AF_INET) {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %u (%s)\n",
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
             tcpc->interface->name,
             format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
             format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port,
             err, tcp_err_string(err));
     } else {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %u (%s)\n",
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
             tcpc->interface->name,
             format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
             format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port,
@@ -224,7 +224,6 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
     /* Add send/receive callback functions. */
     tcp_sent(tpcb, bbl_tcp_sent_cb);
     tcp_recv(tpcb, bbl_tcp_recv_cb);
-    tcp_err(tpcb, bbl_tcp_error_cb);
     if(tcpc->poll_cb && tcpc->poll_interval) {
         tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval);
     }
@@ -286,6 +285,7 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
+    tcp_err(tcpc->pcb, bbl_tcp_error_cb);
 
     tcpc->af = AF_INET;
     tcpc->local_port = tcpc->pcb->local_port;
