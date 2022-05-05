@@ -236,12 +236,12 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
     /* Vendor Class Option */
-    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_CLASS);
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = htobe16(sizeof(uint32_t));
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint32_t*)buf = htobe32(RTBRICK);
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    //*(uint16_t*)buf = htobe16(DHCPV6_OPTION_VENDOR_CLASS);
+    //BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    //*(uint16_t*)buf = htobe16(sizeof(uint32_t));
+    //BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    //*(uint32_t*)buf = htobe32(RTBRICK);
+    //BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
 
     if(dhcpv6->access_line) {
         if(dhcpv6->access_line->aci) {
