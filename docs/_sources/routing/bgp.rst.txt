@@ -205,3 +205,31 @@ The python BGP RAW update generator is a python script which uses
 scapy to build BGP messages. Therefore this tool can be easily 
 modified, extend or used as blueprint for your own tools to generate
 valid BGP update streams. 
+
+The following example shows how to generate a BGP update stream 
+with IPv4 and labelled IPv6 prefixes (6PE).
+
+* 100000 x IPv4 prefixes over 1000 next-hops
+* 50000 x IPv6 prefixes over 1000 next-hops with 1000 different labels (label per next-hop)
+* 50000 x IPv6 prefixes over 1000 next-hops with label 2 
+
+.. code-block:: none
+
+    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000
+    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append
+    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib
+
+Per default the file is replaced but the option `--append` allows to append to an existing file. 
+The last update to an file should include the option `--end-of-rib` (optional). 
+
+The option `--streams <file>` (`-s`) automatically generates corresponding traffic streams
+for all prefixes. Per default this file is replaced but the option `--stream-append` allows
+to append to an existing file. 
+
+.. code-block:: none
+
+    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000 -s streams.json
+    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append -s streams.json --stream-append
+    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib -s streams.json --stream-append
+
+There are several options supported to further define the traffic streams like PPS and expected RX labels.

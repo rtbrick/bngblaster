@@ -36,8 +36,11 @@ The supported IO modes are listed with ``bngblaster -v`` but except
 the default mode (``packet_mmap_raw``) all packets are received in a Packet MMAP
 ring buffer and send directly trough RAW packet sockets.
 
-The interfaces used in BNG Blaster do not need IP addresses configured in the host
-operating system but they need to be in up state.
+The BNG Blaster implements all protocols in userspace. Therefore the user interfaces 
+must not have an IP address configured in the host operating system, to prevent the received 
+packets are handled by Kernel. 
+
+All used interfaces must be in an operational state up.
 
 .. code-block:: none
 

@@ -299,6 +299,20 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             if(ctx->sessions_established) {
                 ctx->sessions_established--;
             }
+        }
+        if(state == BBL_ESTABLISHED) {
+            /* Increment sessions established and decrement outstanding
+             * if new state is established. */
+            ctx->sessions_established++;
+            if(ctx->sessions_established > ctx->sessions_established_max) ctx->sessions_established_max = ctx->sessions_established;
+            if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
+            if(ctx->sessions_established == ctx->sessions) {
+                LOG_NOARG(INFO, "ALL SESSIONS ESTABLISHED\n");
+            }
+        } else if(state == BBL_PPP_TERMINATING) {
+            session->ipcp_state = BBL_PPP_CLOSED;
+            session->ip6cp_state = BBL_PPP_CLOSED;
+        } else if(state == BBL_TERMINATED) {
             if(session->dhcp_established) {
                 session->dhcp_established = false;
                 ctx->dhcp_established--;
@@ -315,21 +329,6 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
                 session->dhcpv6_requested = false;
                 ctx->dhcpv6_requested--;
             }
-        }
-
-        if(state == BBL_ESTABLISHED) {
-            /* Increment sessions established and decrement outstanding
-             * if new state is established. */
-            ctx->sessions_established++;
-            if(ctx->sessions_established > ctx->sessions_established_max) ctx->sessions_established_max = ctx->sessions_established;
-            if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
-            if(ctx->sessions_established == ctx->sessions) {
-                LOG_NOARG(INFO, "ALL SESSIONS ESTABLISHED\n");
-            }
-        } else if(state == BBL_PPP_TERMINATING) {
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
-        } else if(state == BBL_TERMINATED) {
             /* Stop all session tiemrs */
             timer_del(session->timer_arp);
             timer_del(session->timer_padi);

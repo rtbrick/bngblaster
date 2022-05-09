@@ -166,8 +166,10 @@ increase the <code class="docutils literal notranslate"><span class="pre">io-slo
 <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered as experimental. In
 the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
 ring buffer and send directly trough RAW packet sockets.</p>
-<p>The interfaces used in BNG Blaster do not need IP addresses configured in the host
-operating system but they need to be in up state.</p>
+<p>The BNG Blaster implements all protocols in userspace. Therefore the user interfaces
+must not have an IP address configured in the host operating system, to prevent the received
+packets are handled by Kernel.</p>
+<p>All used interfaces must be in an operational state up.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set dev &lt;interface&gt; up
 </pre></div>
 </div>
