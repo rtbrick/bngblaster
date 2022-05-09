@@ -46,6 +46,11 @@ void
 bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
     if(tcpc) {
         if(tcpc->pcb) {
+            tcp_arg(tcpc->pcb, NULL);
+            tcp_sent(tcpc->pcb, NULL);
+            tcp_recv(tcpc->pcb, NULL);
+            tcp_err(tcpc->pcb, NULL);
+            tcp_poll(tcpc->pcb, NULL, 0);
             tcp_close(tcpc->pcb);
         }
         tcpc->state = BBL_TCP_STATE_CLOSED;
@@ -100,17 +105,23 @@ bbl_tcp_ctx_new(bbl_interface_s *interface) {
 err_t 
 bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
     bbl_tcp_ctx_t *tcpc = arg;
-    uint16_t tx = tpcb->snd_buf;
+    uint16_t tx = tcp_sndbuf(tpcb);
+    err_t result = ERR_OK;
 
     UNUSED(len);
 
     if(tcpc->tx.offset < tcpc->tx.len) {
-        if((tcpc->tx.offset + tx) > tcpc->tx.len) {
-            tx = tcpc->tx.len - tcpc->tx.offset;
-        }
-        if(tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, tcpc->tx.flags) == ERR_OK) {
-            tcpc->state = BBL_TCP_STATE_SENDING;
-            tcpc->tx.offset += tx;
+        if(tx) {
+            if((tcpc->tx.offset + tx) > tcpc->tx.len) {
+                tx = tcpc->tx.len - tcpc->tx.offset;
+            }
+            result = tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, tcpc->tx.flags);
+            if(result == ERR_OK) {
+                tcpc->state = BBL_TCP_STATE_SENDING;
+                tcpc->tx.offset += tx;
+            }
+        } else {
+            result = ERR_MEM;
         }
     } else if(tcpc->pcb->unacked == NULL && tcpc->pcb->unsent == NULL) {
         /* Idle means that it is save to replace buffer. */
@@ -119,7 +130,11 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
             (tcpc->idle_cb)(tcpc->arg);
         }
     }
-    return ERR_OK;
+
+    if (result == ERR_MEM) {
+        tcp_output(tpcb);
+    }
+    return result;
 }
 
 err_t 
@@ -127,23 +142,23 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     bbl_tcp_ctx_t *tcpc = arg;
     struct pbuf *_p;
 
-    UNUSED(err); /* TODO!!! */
-
     if(p) {
-        if(tcpc->receive_cb) {
-            _p = p;
-            while(_p) {
-                (tcpc->receive_cb)(tcpc->arg, p->payload, p->len);
-                _p = _p->next;
+        if(err == ERR_OK) {
+            if(tcpc->receive_cb) {
+                _p = p;
+                while(_p) {
+                    (tcpc->receive_cb)(tcpc->arg, p->payload, p->len);
+                    _p = _p->next;
+                }
+                /* Signal application that read is finished. */
+                (tcpc->receive_cb)(tcpc->arg, NULL, 0);
             }
-            /* Signal application that read is finished. */
-            (tcpc->receive_cb)(tcpc->arg, NULL, 0);
+            tcpc->bytes_rx += p->tot_len;
+            tcp_recved(tpcb, p->tot_len);
         }
-        tcpc->bytes_rx += p->tot_len;
-        tcp_recved(tpcb, p->tot_len);
         pbuf_free(p);
     }
-    return ERR_OK;
+    return err;
 }
 
 /** 
@@ -164,13 +179,13 @@ bbl_tcp_error_cb(void *arg, err_t err) {
     tcpc->err = err;
 
     if(tcpc->af == AF_INET) {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %u (%s)\n",
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
             tcpc->interface->name,
             format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
             format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port,
             err, tcp_err_string(err));
     } else {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %u (%s)\n",
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
             tcpc->interface->name,
             format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
             format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port,
@@ -209,7 +224,6 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
     /* Add send/receive callback functions. */
     tcp_sent(tpcb, bbl_tcp_sent_cb);
     tcp_recv(tpcb, bbl_tcp_recv_cb);
-    tcp_err(tpcb, bbl_tcp_error_cb);
     if(tcpc->poll_cb && tcpc->poll_interval) {
         tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval);
     }
@@ -263,11 +277,15 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
     /* Bind local IP address and port */
     tcp_bind(tcpc->pcb, (const ip_addr_t*)src, 0);
 
+    /* Disable nagle algorithm */
+    tcp_nagle_disable(tcpc->pcb);
+
     /* Connect session */
     if(tcp_connect(tcpc->pcb, (const ip_addr_t*)dst, port, bbl_tcp_connected) != ERR_OK) {
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
+    tcp_err(tcpc->pcb, bbl_tcp_error_cb);
 
     tcpc->af = AF_INET;
     tcpc->local_port = tcpc->pcb->local_port;
