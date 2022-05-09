@@ -335,6 +335,29 @@ optional arguments:
 scapy to build BGP messages. Therefore this tool can be easily
 modified, extend or used as blueprint for your own tools to generate
 valid BGP update streams.</p>
+<p>The following example shows how to generate a BGP update stream
+with IPv4 and labelled IPv6 prefixes (6PE).</p>
+<ul class="simple">
+<li><p>100000 x IPv4 prefixes over 1000 next-hops</p></li>
+<li><p>50000 x IPv6 prefixes over 1000 next-hops with 1000 different labels (label per next-hop)</p></li>
+<li><p>50000 x IPv6 prefixes over 1000 next-hops with label 2</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000
+bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append
+bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib
+</pre></div>
+</div>
+<p>Per default the file is replaced but the option <cite>–append</cite> allows to append to an existing file.
+The last update to an file should include the option <cite>–end-of-rib</cite> (optional).</p>
+<p>The option <cite>–streams &lt;file&gt;</cite> (<cite>-s</cite>) automatically generates corresponding traffic streams
+for all prefixes. Per default this file is replaced but the option <cite>–stream-append</cite> allows
+to append to an existing file.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000 -s streams.json
+bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append -s streams.json --stream-append
+bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib -s streams.json --stream-append
+</pre></div>
+</div>
+<p>There are several options supported to further define the traffic streams like PPS and expected RX labels.</p>
 </section>
 </section>
 
