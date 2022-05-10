@@ -108,7 +108,7 @@ but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.</p>
 <p>OpenAPI: <a class="reference external" href="https://rtbrick.github.io/bngblaster-controller/">https://rtbrick.github.io/bngblaster-controller/</a></p>
 <section id="create-test-instance">
 <h3>Create Test Instance<a class="headerlink" href="#create-test-instance" title="Permalink to this headline"></a></h3>
-<p><cite>PUT /api/v1/bngblasters/&lt;instance-name&gt;</cite></p>
+<p><cite>PUT /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>This API endpoint creates a test instance if not already created. The body of this request
 is stored as bngblaster configuration (<cite>config.json</cite>).</p>
 <p>Each test instance creates a directory in <cite>/var/bngblaster/&lt;instance-name&gt;</cite>.
@@ -126,18 +126,18 @@ This directory contains the following files:</p>
 </section>
 <section id="start-test">
 <h3>Start Test<a class="headerlink" href="#start-test" title="Permalink to this headline"></a></h3>
-<p><cite>POST /api/v1/bngblasters/&lt;instance-name&gt;/_start</cite></p>
+<p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_start</cite></p>
 <p>The start API endpoint will start the bngblaster with the argument options
 defined in the body.</p>
 </section>
 <section id="status">
 <h3>Status<a class="headerlink" href="#status" title="Permalink to this headline"></a></h3>
-<p><cite>GET /api/v1/bngblasters/&lt;instance-name&gt;</cite></p>
+<p><cite>GET /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>The status API endpoint returns the status of the test.</p>
 </section>
 <section id="command">
 <h3>Command<a class="headerlink" href="#command" title="Permalink to this headline"></a></h3>
-<p><cite>POST /api/v1/bngblasters/&lt;instance-name&gt;/_command</cite></p>
+<p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_command</cite></p>
 <p>The JSON body of this API call will be passed to the bngblaster instance
 control socket (<cite>/var/bngbnlaster/&lt;instance-name&gt;/run.sock</cite>). The result will
 be passed back to the client.</p>
@@ -174,12 +174,12 @@ be passed back to the client.</p>
 </section>
 <section id="stop-test">
 <h3>Stop Test<a class="headerlink" href="#stop-test" title="Permalink to this headline"></a></h3>
-<p><cite>POST /api/v1/bngblasters/&lt;instance-name&gt;/_stop</cite></p>
+<p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_stop</cite></p>
 <p>The stop API endpoint will send the SIGINT signal to the corresponding BNG blaster instance (<cite>kill -INT &lt;pid&gt;</cite>).</p>
 </section>
 <section id="delete-test-instance">
 <h3>Delete Test Instance<a class="headerlink" href="#delete-test-instance" title="Permalink to this headline"></a></h3>
-<p><cite>DELETE /api/v1/bngblasters/&lt;instance-name&gt;</cite></p>
+<p><cite>DELETE /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>This API endpoint deletes the test instance directory. The corresponding
 test run is forcefully terminated (<cite>kill -9 &lt;pid&gt;</cite>) if running.</p>
 </section>
