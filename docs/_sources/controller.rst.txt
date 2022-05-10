@@ -25,7 +25,7 @@ OpenAPI: https://rtbrick.github.io/bngblaster-controller/
 Create Test Instance
 ~~~~~~~~~~~~~~~~~~~~
 
-`PUT /api/v1/bngblasters/<instance-name>` 
+`PUT /api/v1/instances/<instance-name>` 
 
 This API endpoint creates a test instance if not already created. The body of this request 
 is stored as bngblaster configuration (`config.json`).
@@ -45,7 +45,7 @@ This directory contains the following files:
 Start Test 
 ~~~~~~~~~~~
 
-`POST /api/v1/bngblasters/<instance-name>/_start`
+`POST /api/v1/instances/<instance-name>/_start`
 
 The start API endpoint will start the bngblaster with the argument options
 defined in the body.
@@ -53,14 +53,14 @@ defined in the body.
 Status
 ~~~~~~
 
-`GET /api/v1/bngblasters/<instance-name>`
+`GET /api/v1/instances/<instance-name>`
 
 The status API endpoint returns the status of the test. 
 
 Command 
 ~~~~~~~
 
-`POST /api/v1/bngblasters/<instance-name>/_command`
+`POST /api/v1/instances/<instance-name>/_command`
 
 The JSON body of this API call will be passed to the bngblaster instance 
 control socket (`/var/bngbnlaster/<instance-name>/run.sock`). The result will 
@@ -106,14 +106,14 @@ The result code is passed as HTTP response status code.
 Stop Test 
 ~~~~~~~~~
 
-`POST /api/v1/bngblasters/<instance-name>/_stop`
+`POST /api/v1/instances/<instance-name>/_stop`
 
 The stop API endpoint will send the SIGINT signal to the corresponding BNG blaster instance (`kill -INT <pid>`).
 
 Delete Test Instance
 ~~~~~~~~~~~~~~~~~~~~
 
-`DELETE /api/v1/bngblasters/<instance-name>`
+`DELETE /api/v1/instances/<instance-name>`
 
 This API endpoint deletes the test instance directory. The corresponding
 test run is forcefully terminated (`kill -9 <pid>`) if running. 
