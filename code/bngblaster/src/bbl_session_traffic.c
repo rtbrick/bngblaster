@@ -283,7 +283,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
         eth.next = &ip;
     }
     if(session->l2tp_session) {
-        ip.dst = L2TP_IPCP_IP_LOCAL;
+        ip.dst = MOCK_IP_LOCAL;
     } else if (session->a10nsp_session) {
         ip.dst = A10NSP_IP_LOCAL;
     } else {

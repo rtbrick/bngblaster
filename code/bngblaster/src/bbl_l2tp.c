@@ -955,7 +955,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             ipcp_rx = (bbl_ipcp_t*)l2tp->next;
             memset(&ipcp_tx, 0x0, sizeof(bbl_ipcp_t));
             if(ipcp_rx->code == PPP_CODE_CONF_REQUEST) {
-                if(ipcp_rx->address == L2TP_IPCP_IP_REMOTE) {
+                if(ipcp_rx->address == MOCK_IP_REMOTE) {
                     ipcp_rx->code = PPP_CODE_CONF_ACK;
                     if(l2tp_session->ipcp_state == BBL_PPP_LOCAL_ACK) {
                         l2tp_session->ipcp_state = BBL_PPP_OPENED;
@@ -963,7 +963,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                         l2tp_session->ipcp_state = BBL_PPP_PEER_ACK;
                         ipcp_tx.code = PPP_CODE_CONF_REQUEST;
                         ipcp_tx.identifier = 1;
-                        ipcp_tx.address = L2TP_IPCP_IP_LOCAL;
+                        ipcp_tx.address = MOCK_IP_LOCAL;
                         ipcp_tx.option_address = true;
                         bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ipcp_tx);
                     }
@@ -971,13 +971,13 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     ipcp_rx->options = NULL;
                     ipcp_rx->options_len = 0;
                     ipcp_rx->code = PPP_CODE_CONF_NAK;
-                    ipcp_rx->address = L2TP_IPCP_IP_REMOTE;
+                    ipcp_rx->address = MOCK_IP_REMOTE;
                     ipcp_rx->option_address = true;
                     if(ipcp_rx->option_dns1) {
-                        ipcp_rx->dns1 = L2TP_IPCP_DNS1;
+                        ipcp_rx->dns1 = MOCK_DNS1;
                     }
                     if(ipcp_rx->option_dns2) {
-                        ipcp_rx->dns2 = L2TP_IPCP_DNS2;
+                        ipcp_rx->dns2 = MOCK_DNS2;
                     }
                 }
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, ipcp_rx);
@@ -988,7 +988,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     l2tp_session->ipcp_state = BBL_PPP_LOCAL_ACK;
                     ipcp_tx.code = PPP_CODE_CONF_REQUEST;
                     ipcp_tx.identifier = 1;
-                    ipcp_tx.address = L2TP_IPCP_IP_LOCAL;
+                    ipcp_tx.address = MOCK_IP_LOCAL;
                     ipcp_tx.option_address = true;
                     bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, &ipcp_tx);
                 }
