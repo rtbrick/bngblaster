@@ -419,6 +419,9 @@ bbl_session_s *
 bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id);
 
 void
+bbl_session_free(bbl_session_s *session);
+
+void
 bbl_session_reset(bbl_session_s *session);
 
 void

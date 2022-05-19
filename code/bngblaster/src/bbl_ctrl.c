@@ -1174,6 +1174,7 @@ bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
             pthread_mutex_unlock(&stream->thread.mutex);
         }
     }
+    dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    
 }
 
