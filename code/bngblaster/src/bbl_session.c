@@ -412,6 +412,9 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
             case BBL_PPPOE_REQUEST:
             case BBL_PPP_LINK:
                 bbl_session_update_state(ctx, session, BBL_TERMINATING);
+                session->lcp_state = BBL_PPP_CLOSED;
+                session->ipcp_state = BBL_PPP_CLOSED;
+                session->ip6cp_state = BBL_PPP_CLOSED;
                 session->send_requests = BBL_SEND_DISCOVERY;
                 bbl_session_tx_qnode_insert(session);
                 break;
@@ -422,6 +425,7 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
                 bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
                 session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                 session->lcp_options_len = 0;
+                session->lcp_state = BBL_PPP_TERMINATE;
                 session->send_requests |= BBL_SEND_LCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
                 break;
