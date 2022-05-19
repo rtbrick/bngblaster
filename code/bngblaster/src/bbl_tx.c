@@ -976,6 +976,9 @@ bbl_lcp_timeout(timer_s *timer)
         if(session->lcp_retries > 3) {
             /* Send max 3 terminate requests. */
             bbl_session_update_state(ctx, session, BBL_TERMINATING);
+            session->lcp_state = BBL_PPP_CLOSED;
+            session->ipcp_state = BBL_PPP_CLOSED;
+            session->ip6cp_state = BBL_PPP_CLOSED;
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_tx_qnode_insert(session);
         } else {

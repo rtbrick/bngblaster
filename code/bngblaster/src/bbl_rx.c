@@ -45,6 +45,9 @@ bbl_lcp_echo(timer_s *timer)
         if(session->lcp_retries > ctx->config.lcp_keepalive_retry) {
             LOG(PPPOE, "LCP ECHO TIMEOUT (ID: %u)\n", session->session_id);
             /* Force terminate session after timeout. */
+            session->lcp_state = BBL_PPP_CLOSED;
+            session->ipcp_state = BBL_PPP_CLOSED;
+            session->ip6cp_state = BBL_PPP_CLOSED;
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_update_state(ctx, session, BBL_TERMINATING);
             bbl_session_tx_qnode_insert(session);
@@ -869,6 +872,7 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                 bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
                 session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                 session->lcp_options_len = 0;
+                session->lcp_state = BBL_PPP_TERMINATE;
                 session->send_requests |= BBL_SEND_LCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
                 break;
@@ -903,6 +907,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                     bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
                     session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                     session->lcp_options_len = 0;
+                    session->lcp_state = BBL_PPP_TERMINATE;
                     session->send_requests |= BBL_SEND_LCP_REQUEST;
                     bbl_session_tx_qnode_insert(session);
                 } else {
@@ -964,6 +969,7 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                 bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
                 session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                 session->lcp_options_len = 0;
+                session->lcp_state = BBL_PPP_TERMINATE;
                 session->send_requests |= BBL_SEND_LCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
                 break;
@@ -1434,21 +1440,25 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
             session->lcp_retries = 0;
             break;
         case PPP_CODE_TERM_REQUEST:
+            session->lcp_peer_identifier = lcp->identifier;
+            session->lcp_response_code = PPP_CODE_TERM_ACK;
+            session->lcp_options_len = 0;
+            session->lcp_state = BBL_PPP_TERMINATE;
+            session->send_requests = BBL_SEND_LCP_RESPONSE;
             if(session->session_state != BBL_PPP_TERMINATING) {
                 session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                 session->send_requests |= BBL_SEND_LCP_REQUEST;
             }
             bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
-            session->lcp_peer_identifier = lcp->identifier;
-            session->lcp_response_code = PPP_CODE_TERM_ACK;
-            session->lcp_options_len = 0;
-            session->send_requests = BBL_SEND_LCP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_TERM_ACK:
-            bbl_session_update_state(ctx, session, BBL_TERMINATING);
             session->lcp_retries = 0;
+            session->lcp_state = BBL_PPP_CLOSED;
+            session->ipcp_state = BBL_PPP_CLOSED;
+            session->ip6cp_state = BBL_PPP_CLOSED;
             session->send_requests = BBL_SEND_DISCOVERY;
+            bbl_session_update_state(ctx, session, BBL_TERMINATING);
             bbl_session_tx_qnode_insert(session);
             break;
         default:
