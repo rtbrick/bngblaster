@@ -50,7 +50,7 @@ endif()
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
-target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -pedantic -m64 -mtune=generic)
+target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -m64 -mtune=generic)
 set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 install(TARGETS bngblaster DESTINATION sbin)

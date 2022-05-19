@@ -16,7 +16,7 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(lspgen PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
 
-target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -pedantic -m64 -mtune=generic)
+target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -m64 -mtune=generic)
 set_property(TARGET lspgen PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 install(TARGETS lspgen DESTINATION sbin)

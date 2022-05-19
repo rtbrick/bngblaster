@@ -713,14 +713,14 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 void
 lspgen_sig_handler (int signum)
 {
-    LOG(NORMAL, "Received %s signal\n", sys_siglist[signum]);
+    LOG(NORMAL, "Received %s signal\n", strsignal(signum));
 
     switch (signum) {
-    case SIGINT:
-	loop_running = false; /* Get out of event loop */
-	break;
-    default:
-	break;
+        case SIGINT:
+            loop_running = false; /* Get out of event loop */
+            break;
+        default:
+            break;
     }
 }
 
