@@ -300,6 +300,7 @@ bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             }
         }
     }
+    dict_itor_free(itor);
 }
 
 void
@@ -889,8 +890,8 @@ bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t * stats) {
                     json_array_append(jobj_array, jobj_sub);
                 }
             }
-
         }
+        dict_itor_free(itor);
         json_object_set(jobj, "streams", jobj_array);
     }
 

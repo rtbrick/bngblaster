@@ -656,6 +656,7 @@ lspgen_gen_packet_node(lsdb_node_t *node)
 
             id++;
             if (id > 255) {
+                dict_itor_free(itor);
                 LOG(ERROR, "Exhausted fragments for node %s\n", lsdb_format_node(node));
                 return;
             }

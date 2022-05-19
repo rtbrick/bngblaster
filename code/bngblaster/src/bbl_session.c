@@ -128,6 +128,80 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     return ctx->session_list[session_id-1];
 }
 
+void
+bbl_session_free(bbl_session_s *session) 
+{
+    if(session->username) {
+        free(session->username);
+        session->username = NULL;
+    }
+    if(session->password) {
+        free(session->password);
+        session->password = NULL;
+    }
+    if(session->agent_circuit_id) {
+        free(session->agent_circuit_id);
+        session->agent_circuit_id = NULL;
+    }
+    if(session->agent_remote_id) {
+        free(session->agent_remote_id);
+        session->agent_remote_id = NULL;
+    }
+    if(session->cfm_ma_name) {
+        free(session->cfm_ma_name);
+        session->cfm_ma_name = NULL;
+    }
+
+    if(session->pppoe_ac_cookie) {
+        free(session->pppoe_ac_cookie);
+        session->pppoe_ac_cookie = NULL;
+    }
+    session->pppoe_ac_cookie_len = 0;
+    
+    if(!session->interface->ctx->config.pppoe_service_name) {
+        if(session->pppoe_service_name) {
+            free(session->pppoe_service_name);
+            session->pppoe_service_name = NULL;
+        }
+        session->pppoe_service_name_len = 0;
+    }
+
+    if(session->reply_message) {
+        free(session->reply_message);
+        session->reply_message = NULL;
+    }
+    
+    if(session->connections_status_message) {
+        free(session->connections_status_message);
+        session->connections_status_message = NULL;
+    }
+    
+    if(session->access_ipv4_tx_packet_template) {
+        free(session->access_ipv4_tx_packet_template);
+        session->access_ipv4_tx_packet_template = NULL;
+    }
+    if(session->network_ipv4_tx_packet_template) {
+        free(session->network_ipv4_tx_packet_template);
+        session->network_ipv4_tx_packet_template = NULL;
+    }
+    if(session->access_ipv6_tx_packet_template) {
+        free(session->access_ipv6_tx_packet_template);
+        session->access_ipv6_tx_packet_template = NULL;
+    }
+    if(session->network_ipv6_tx_packet_template) {
+        free(session->network_ipv6_tx_packet_template);
+        session->network_ipv6_tx_packet_template = NULL;
+    }
+    if(session->access_ipv6pd_tx_packet_template) {
+        free(session->access_ipv6pd_tx_packet_template);
+        session->access_ipv6pd_tx_packet_template = NULL;
+    }
+    if(session->network_ipv6pd_tx_packet_template) {
+        free(session->network_ipv6pd_tx_packet_template);
+        session->network_ipv6pd_tx_packet_template = NULL;
+    }
+}
+
 /**
  * bbl_session_reset
  * 
