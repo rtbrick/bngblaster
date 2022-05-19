@@ -102,6 +102,8 @@ bbl_ctx_del (bbl_ctx_s *ctx) {
     void *p = NULL;
     uint32_t i;
 
+    timer_flush_root(&ctx->timer_root);
+    
     /* Free access configuration memory. */
     while(access_config) {
         p = access_config;
@@ -125,7 +127,6 @@ bbl_ctx_del (bbl_ctx_s *ctx) {
     }
 
     pcapng_free(ctx);
-    timer_flush_root(&ctx->timer_root);
     free(ctx);
     return;
 }
