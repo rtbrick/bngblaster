@@ -97,7 +97,7 @@ bbl_ctx_add (void)
  * @param ctx global context
  */
 void
-bbl_ctx_del (bbl_ctx_s *ctx) {
+bbl_ctx_del(bbl_ctx_s *ctx) {
     bbl_access_config_s *access_config = ctx->config.access_config;
     void *p = NULL;
     uint32_t i;
@@ -122,9 +122,17 @@ bbl_ctx_del (bbl_ctx_s *ctx) {
     for(i = 0; i < ctx->sessions; i++) {
         p = ctx->session_list[i];
         if(p) {
+            bbl_session_free(p);
             free(p);
         }
     }
+    free(ctx->session_list);
+ 
+    /* Free hash table dictionaries. */
+    dict_free(ctx->vlan_session_dict, NULL);
+    dict_free(ctx->l2tp_session_dict, NULL);
+    dict_free(ctx->li_flow_dict, NULL);
+    dict_free(ctx->stream_flow_dict, NULL);
 
     pcapng_free(ctx);
     free(ctx);
