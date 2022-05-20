@@ -10,6 +10,19 @@
 #ifndef __BBL_INTERFACE_H__
 #define __BBL_INTERFACE_H__
 
+typedef struct bbl_io_vec_ {
+    uint8_t *sp;
+
+    bbl_ethernet_header_t *eth;
+    
+    uint8_t *eth_start;
+    uint16_t eth_len;
+
+    bool decoded;
+    bool ctrl;
+    uint32_t *tp_status;
+} bbl_io_vect_t;
+
 typedef struct bbl_interface_
 {
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
@@ -44,6 +57,8 @@ typedef struct bbl_interface_
 
         bool pollout;
         bool ctrl; /* control traffic */
+
+        bbl_io_vect_t *vec;
 
 #ifdef BNGBLASTER_NETMAP
         struct nm_desc *port;

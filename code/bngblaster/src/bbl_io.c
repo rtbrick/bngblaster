@@ -15,6 +15,7 @@
 #include "bbl_io_netmap.h"
 #endif
 
+
 void
 bbl_io_packet_mmap_rx_job(timer_s *timer) {
     bbl_interface_s *interface;
@@ -24,8 +25,6 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
     uint8_t *frame_ptr;
     struct tpacket2_hdr *tphdr;
 
-    uint8_t *eth_start;
-    uint16_t eth_len;
     uint16_t vlan;
 
     bbl_ethernet_header_t *eth;
@@ -55,65 +54,112 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
     /* Get RX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
+    bbl_io_vect_t *vec;
+    int vi = 0;
+    int i = 0;
     while (tphdr->tp_status & TP_STATUS_USER) {
-        eth_start = (uint8_t*)tphdr + tphdr->tp_mac;
-        eth_len = tphdr->tp_len;
-        interface->stats.packets_rx++;
-        interface->stats.bytes_rx += eth_len;
-        interface->io.ctrl = true;
-        decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
-        if(decode_result == PROTOCOL_SUCCESS) {
-            vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
-            if(eth->vlan_outer != vlan) {
-                /* The outer VLAN is stripped from header */
-                eth->vlan_inner = eth->vlan_outer;
-                eth->vlan_inner_priority = eth->vlan_outer_priority;
-                eth->vlan_outer = vlan;
-                eth->vlan_outer_priority = tphdr->tp_vlan_tci >> 13;
-                if(tphdr->tp_vlan_tpid == ETH_TYPE_QINQ) {
-                    eth->qinq = true;
+        vi = 0;
+        while(vi < IO_VEC_MAX && (tphdr->tp_status & TP_STATUS_USER)) {
+            vec = &interface->io.vec[vi++];
+
+            vec->eth_start = (uint8_t*)tphdr + tphdr->tp_mac;
+            vec->eth_len = tphdr->tp_len;
+
+            vec->tp_status = &tphdr->tp_status;
+            interface->stats.packets_rx++;
+            interface->stats.bytes_rx += vec->eth_len;
+
+            decode_result = decode_ethernet(vec->eth_start, vec->eth_len, vec->sp, SCRATCHPAD_LEN, &eth);
+            if(decode_result == PROTOCOL_SUCCESS) {
+                vec->eth = eth;
+                vec->decoded = true;
+                vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
+                if(eth->vlan_outer != vlan) {
+                    /* The outer VLAN is stripped from header */
+                    eth->vlan_inner = eth->vlan_outer;
+                    eth->vlan_inner_priority = eth->vlan_outer_priority;
+                    eth->vlan_outer = vlan;
+                    eth->vlan_outer_priority = tphdr->tp_vlan_tci >> 13;
+                    if(tphdr->tp_vlan_tpid == ETH_TYPE_QINQ) {
+                        eth->qinq = true;
+                    }
                 }
-            }
 #if 0
-            /* Copy RX timestamp */
-            eth->timestamp.tv_sec = tphdr->tp_sec; /* ktime/hw timestamp */
-            eth->timestamp.tv_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
+                /* Copy RX timestamp */
+                eth->timestamp.tv_sec = tphdr->tp_sec; /* ktime/hw timestamp */
+                eth->timestamp.tv_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
 #endif
-            /* Copy RX timestamp */
-            eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
-            eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            switch(interface->type) {
-                case INTERFACE_TYPE_ACCESS:
-                    bbl_rx_handler_access(eth, interface);
-                    break;
-                case INTERFACE_TYPE_NETWORK:
-                    bbl_rx_handler_network(eth, interface);
-                    break;
-                case INTERFACE_TYPE_A10NSP:
-                    bbl_rx_handler_a10nsp(eth, interface);
-                    break;
-                default:
-                    break;
+                /* Copy RX timestamp */
+                eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
+                eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
+
+            } else if (decode_result == UNKNOWN_PROTOCOL) {
+                vec->decoded = false;
+                interface->stats.packets_rx_drop_unknown++;
+            } else {
+                vec->decoded = false;
+                interface->stats.packets_rx_drop_decode_error++;
             }
-        } else if (decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.packets_rx_drop_unknown++;
-        } else {
-            interface->stats.packets_rx_drop_decode_error++;
+
+            interface->io.cursor_rx = (interface->io.cursor_rx + 1) % interface->io.req_rx.tp_frame_nr;
+
+            frame_ptr = interface->io.ring_rx + (interface->io.cursor_rx * interface->io.req_rx.tp_frame_size);
+            tphdr = (struct tpacket2_hdr*)frame_ptr;
         }
 
-        /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-            pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+        switch(interface->type) {
+            case INTERFACE_TYPE_ACCESS:
+                for(i=0; i < vi; i++) {
+                    vec = &interface->io.vec[i];
+                    if(vec->decoded) {
+                        interface->io.ctrl = true;
+                        bbl_rx_handler_access(vec->eth, interface);
+                        vec->ctrl = interface->io.ctrl;
+                    } else {
+                        vec->ctrl = false;
+                    }   
+                }
+                break;
+            case INTERFACE_TYPE_NETWORK:
+                for(i=0; i < vi; i++) {
+                    vec = &interface->io.vec[i];
+                    if(vec->decoded) {
+                        interface->io.ctrl = true;
+                        bbl_rx_handler_network(vec->eth, interface);
+                        vec->ctrl = interface->io.ctrl;
+                    } else {
+                        vec->ctrl = false;
+                    }   
+                }
+                break;
+            case INTERFACE_TYPE_A10NSP:
+                for(i=0; i < vi; i++) {
+                    vec = &interface->io.vec[i];
+                    if(vec->decoded) {
+                        interface->io.ctrl = true;
+                        bbl_rx_handler_a10nsp(vec->eth, interface);
+                        vec->ctrl = interface->io.ctrl;
+                    } else {
+                        vec->ctrl = false;
+                    }   
+                }
+                break;
+            default:
+                break;
         }
 
-        tphdr->tp_status = TP_STATUS_KERNEL; /* Return ownership back to kernel */
-        interface->io.cursor_rx = (interface->io.cursor_rx + 1) % interface->io.req_rx.tp_frame_nr;
-
-        frame_ptr = interface->io.ring_rx + (interface->io.cursor_rx * interface->io.req_rx.tp_frame_size);
-        tphdr = (struct tpacket2_hdr*)frame_ptr;
+        for(i=0; i < vi; i++) {
+            vec = &interface->io.vec[i];
+            /* Dump the packet into pcap file. */
+            if (ctx->pcap.write_buf && (vec->ctrl || ctx->pcap.include_streams)) {
+                pcapng_push_packet_header(ctx, &interface->rx_timestamp, vec->eth_start, vec->eth_len,
+                                          interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            }
+            *vec->tp_status = TP_STATUS_KERNEL;
+        }
     }
     pcapng_fflush(ctx);
+
 }
 
 void
@@ -421,6 +467,13 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     interface->io.mode = ctx->config.io_mode;
     interface->io.rx_buf = malloc(IO_BUFFER_LEN);
     interface->io.tx_buf = malloc(IO_BUFFER_LEN);
+
+    /* Init IO vector */
+    interface->io.vec = calloc(IO_VEC_MAX, sizeof(bbl_io_vect_t));
+    for(int i=0; i < IO_VEC_MAX; i++) {
+        interface->io.vec[i].sp = malloc(SCRATCHPAD_LEN);
+    }
+
 
 #ifdef BNGBLASTER_NETMAP
     if(interface->io.mode == IO_MODE_NETMAP) {

@@ -101,6 +101,8 @@
 #define BBL_AVG_SAMPLES             5
 #define DATA_TRAFFIC_MAX_LEN        1920
 
+#define IO_VEC_MAX 256
+
 typedef enum {
     IO_MODE_PACKET_MMAP_RAW = 0,    /* RX packet_mmap ring / TX raw sockets */
     IO_MODE_PACKET_MMAP,            /* RX/TX packet_mmap ring */
