@@ -23,9 +23,12 @@ enum {
 #define TLV_OVERHEAD               2
 
 #define ISIS_TLV_AREA              1
+#define ISIS_TLV_IS_REACH          2
 #define ISIS_TLV_AUTH             10
 #define ISIS_TLV_EXTD_IS_REACH    22
+#define ISIS_TLV_INT_IPV4_REACH  128
 #define ISIS_TLV_PROTOCOLS       129
+#define ISIS_TLV_EXT_IPV4_REACH  130
 #define ISIS_TLV_IPV4_ADDR       132
 #define ISIS_TLV_EXTD_IPV4_REACH 135
 #define ISIS_TLV_HOSTNAME        137
