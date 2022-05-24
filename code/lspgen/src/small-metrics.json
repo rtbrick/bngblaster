@@ -1,0 +1,64 @@
+{
+  "level1": [
+    {
+      "node_id": "1921.6800.0000.00",
+      "hostname": "node1",
+      "overload": true,
+      "attach": true,
+      "area_list": [
+        "49.0001/24"
+      ],
+      "protocol_list": [
+        "ipv6",
+        "ipv4"
+      ],
+      "ipv4_address_list": [
+        "192.168.0.0"
+      ],
+      "ipv4_prefix_list": [
+        {
+          "ipv4_prefix": "192.168.0.0/32",
+          "metric": 0,
+          "segment_id": 5,
+          "node_flag": true
+        },
+        {
+          "ipv4_prefix": "172.16.0.0/31",
+          "updown_flag": true,
+          "metric": 5000,
+          "small_metrics": true
+        },
+        {
+          "ipv4_prefix": "172.17.0.0/28",
+          "updown_flag": true,
+          "metric": 40,
+          "small_metrics": true
+        },
+        {
+          "ipv4_prefix": "10.1.2.0/24",
+          "metric": 500,
+          "small_metrics": true,
+	  "external_flag": true
+        }
+      ],
+      "neighbor_list": [
+        {
+          "remote_node_id": "1921.6800.0001.00",
+          "metric": 5000
+        },
+        {
+          "remote_node_id": "1921.6800.0002.00",
+          "metric": 500
+        },
+        {
+          "remote_node_id": "1921.6800.0003.00",
+          "metric": 100000
+        },
+        {
+          "remote_node_id": "1921.6800.0004.00",
+          "metric": 100
+        }
+      ]
+    }
+  ]
+}
