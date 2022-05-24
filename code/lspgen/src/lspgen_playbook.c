@@ -25,6 +25,7 @@ lspgen_read_playbook_step(playbook_act_t *act, json_t *obj)
 {
     playbook_step_t *step;
     json_t *value;
+    char step_name[128];
 
     step = calloc(1, sizeof(playbook_step_t));
     if (!step) {
@@ -49,8 +50,19 @@ lspgen_read_playbook_step(playbook_act_t *act, json_t *obj)
 	step->wait_s = json_integer_value(value);
     }
 
-    LOG(NORMAL, "  Add playbook step, config-file %s, merge-style %s, wait %us\n",
+    LOG(NORMAL, "Add playbook step, config-file %s, merge-style %s, wait %us\n",
 	step->config_file, val2key(merge_style_names, step->merge_style), step->wait_s);
+
+    /*
+     * Set up a context for storing the changes in this file.
+     */
+    snprintf(step_name, sizeof(step_name), "act %u, step %s", act->act_num, step->config_file);
+    step->change_ctx = lsdb_alloc_ctx("playbook", "isis", step_name);
+    if (!step->change_ctx) {
+	return;
+    }
+    step->change_ctx->config_filename = strdup(step->config_file);
+    lspgen_read_config(step->change_ctx);
 }
 
 void
@@ -106,7 +118,7 @@ lspgen_read_playbook_array(lsdb_ctx_t *ctx, json_t *array)
 }
 
 void
-lspgen_read_playbook (lsdb_ctx_t *ctx)
+lspgen_read_playbook(lsdb_ctx_t *ctx)
 {
     json_t *root_obj;
     json_error_t error;
@@ -145,7 +157,7 @@ lspgen_read_playbook (lsdb_ctx_t *ctx)
 }
 
 void
-lspgen_playbook_cb (timer_s *timer)
+lspgen_playbook_cb(timer_s *timer)
 {
     lsdb_ctx_t *ctx;
 

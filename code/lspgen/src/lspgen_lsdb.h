@@ -319,6 +319,7 @@ typedef struct playbook_act_
  */
 typedef struct playbook_step_ {
     CIRCLEQ_ENTRY(playbook_step_ ) step_qnode;
+    struct lsdb_ctx_ *change_ctx; /* record all changes in a change CTX */
     char *config_file;
     uint32_t wait_s; /* Wait <ms> before next step */
     uint8_t merge_style; /* replace/add/delete */
