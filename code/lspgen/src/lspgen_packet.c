@@ -329,6 +329,7 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
 void
 lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
 {
+    uint32_t metric, mask;
     uint8_t attr_len, flags;
     bool subtlv_present;
 
@@ -358,6 +359,26 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
             attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
             push_data(buf, (uint8_t *)attr->key.hostname, attr_len);
             break;
+        case ISIS_TLV_INT_IPV4_REACH: /* fall through */
+        case ISIS_TLV_EXT_IPV4_REACH:
+	    metric = attr->key.prefix.metric;
+	    if (metric > 63) {
+		metric = 63; /* limit metric to 6 bits */
+	    }
+	    flags = metric;
+            if (attr->key.prefix.updown_flag) {
+                flags |= 0x80;
+            }
+            push_be_uint(buf, 1, flags); /* default metric */
+            push_be_uint(buf, 1, 0x80); /* delay metric */
+            push_be_uint(buf, 1, 0x80); /* expense metric */
+            push_be_uint(buf, 1, 0x80); /* error metric */
+            push_data(buf, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4);
+	    mask = 0xffffffff;
+	    /* convert prefix length to mask */
+	    mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
+	    push_be_uint(buf, 4, mask);
+	    break;
         case ISIS_TLV_EXTD_IPV4_REACH:
             push_be_uint(buf, 4, attr->key.prefix.metric); /* Metric */
             flags = attr->key.prefix.ipv4_prefix.len & 0x3f;

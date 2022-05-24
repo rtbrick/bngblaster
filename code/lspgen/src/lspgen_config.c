@@ -486,6 +486,10 @@ lspgen_read_common_prefix_config(lsdb_attr_t *attr, json_t *obj)
     if (value && json_is_boolean(value)) {
         attr->key.prefix.s_flag = json_boolean_value(value);
     }
+    value = json_object_get(obj, "small_metrics");
+    if (value && json_is_boolean(value)) {
+        attr->key.prefix.small_metrics = json_boolean_value(value);
+    }
 }
 
 void
@@ -500,7 +504,18 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
 
         lspgen_read_common_prefix_config(&attr_template, obj);
 
-        attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+	/*
+	 * TLV type depends on small-metrics and external flag.
+	 */
+	if (attr_template.key.prefix.small_metrics) {
+	    if (attr_template.key.prefix.ext_flag) {
+		attr_template.key.attr_type = ISIS_TLV_EXT_IPV4_REACH;
+	    } else {
+		attr_template.key.attr_type = ISIS_TLV_INT_IPV4_REACH;
+	    }
+	} else {
+	    attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+	}
         lsdb_add_node_attr(node, &attr_template);
     }
 }
