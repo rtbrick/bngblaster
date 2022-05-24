@@ -683,7 +683,7 @@ isis_lsp_update_external(isis_instance_t *instance, isis_pdu_t *pdu) {
 
     if(pdu->pdu_type == ISIS_PDU_L1_LSP) {
         level = ISIS_LEVEL_1;
-    } else if(pdu->pdu_type == ISIS_PDU_L1_LSP) {
+    } else if(pdu->pdu_type == ISIS_PDU_L2_LSP) {
         level = ISIS_LEVEL_2;
     } else {
         return false;
