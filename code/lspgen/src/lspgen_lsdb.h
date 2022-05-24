@@ -216,7 +216,8 @@ typedef struct lsdb_attr_prefix_ {
     s_flag:1, /* domain wide flooding */
     adv_range:1, /* Advertise range (binding TLV) */
     adv_sid:1, /* Advertise SID */
-    adv_tag:1; /* Advertise Tag */
+    adv_tag:1, /* Advertise Tag */
+    small_metrics:1; /* old-style 6-bit metrics */
 
     uint8_t sid_algo;
     uint32_t metric;
