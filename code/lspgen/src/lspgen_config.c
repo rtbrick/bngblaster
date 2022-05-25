@@ -618,7 +618,21 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
 
     /* Generate an IS reach for the link */
     lsdb_reset_attr_template(&attr_template);
-    attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
+
+    value = json_object_get(link_obj, "small_metrics");
+    if (value && json_is_boolean(value)) {
+        attr_template.key.prefix.small_metrics = json_boolean_value(value);
+    }
+
+    /*
+     * TLV type depends on small-metrics.
+     */
+    if (attr_template.key.prefix.small_metrics) {
+	attr_template.key.attr_type = ISIS_TLV_IS_REACH;
+	attr_template.key.start_tlv = true;
+    } else {
+	attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
+    }
     memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);
     attr_template.key.link.metric = link_template.link_metric;
     lsdb_add_node_attr(node, &attr_template);
