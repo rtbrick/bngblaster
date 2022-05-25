@@ -55,7 +55,7 @@ version with optimization and without debug symbols.
 
 .. code-block:: none
 
-    git clone git@github.com:rtbrick/bngblaster.git
+    git clone https://github.com/rtbrick/bngblaster.git
     cd bngblaster
     mkdir build
     cd build
