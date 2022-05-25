@@ -128,11 +128,11 @@ upstream direction (from U to A10-NSP interface). Those headers allow the wholes
 the actual U interface for traffic received on the A10-NSP interface. This functionality is referred to
 as the intermediate agent functionality.</p>
 <p>The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts
-all PPPoE sessions received to verify forwarding and PPPoE header enrichment.</p>
+all DHCPv4 and PPPoE sessions received to verify forwarding and header enrichment.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>It is also planned to emulate a lightweight DHCPv4 and DHCPv6 server
-to verify IPoE forwarding and header enrichment.</p>
+<p>It is also planned to emulate a lightweight DHCPv6 server
+to verify IPv6 forwarding and header enrichment for IPoE.</p>
 </div>
 <p>Following a basic PPPoE/A10NSP configuration example which is
 detailed explained in the configuration section.</p>
