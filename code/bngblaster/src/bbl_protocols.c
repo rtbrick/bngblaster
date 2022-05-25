@@ -276,7 +276,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
 
 static uint8_t
 encode_dhcp_access_line(uint8_t *buf, access_line_t *access_line) {
-    uint8_t len = 0;
+    uint16_t len = 0;
     uint8_t *option_len;
     uint8_t *data_len;
 
