@@ -45,7 +45,7 @@ one more :ref:`traffic stream <streams>` bound to the sessions.
             ],
             "access": [
                 {
-                    "__comment__": "PPPoE",
+                    "__comment__": "PPPoE Client",
                     "interface": "veth1.2",
                     "type": "pppoe",
                     "outer-vlan-min": 1,
@@ -192,6 +192,63 @@ You can also try other :ref:`commands <api>` to get familiar with the API.
 
 After the test has stopped, you can also check the final JSON report (``jq . report.json``),
 log, and PCAP files. 
+
+DHCP
+----
+
+Let's repeat all the steps from the PPPoE example before but with the following
+IPoE DHCP configuration.
+
+**dhcp.json:**
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "a10nsp": [
+                {
+                    "__comment__": "DHCP Server",
+                    "interface": "veth1.1"
+                }
+            ],
+            "access": [
+                {
+                    "__comment__": "DHCP Client",
+                    "interface": "veth1.2",
+                    "type": "ipoe",
+                    "ipv6": false,
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan": 7,
+                    "stream-group-id": 1
+                }
+            ]
+        },
+        "access-line": {
+            "agent-remote-id": "DEU.RTBRICK.{session-global}",
+            "agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:{session-global}"
+        },
+        "dhcp": {
+            "enable": true,
+            "broadcast": false
+        },
+        "session-traffic": {
+            "ipv4-pps": 1
+        },
+        "streams": [
+            {
+                "stream-group-id": 1,
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "both",
+                "priority": 128,
+                "length": 256,
+                "pps": 1,
+                "a10nsp-interface": "veth1.1"
+            }
+        ]
+    }
+
 
 ISIS
 ----
