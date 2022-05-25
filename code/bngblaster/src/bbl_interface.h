@@ -41,6 +41,7 @@ typedef struct bbl_interface_
         uint8_t *ring_rx; /* RX ring buffer */
         uint16_t cursor_tx; /* slot # inside the ring buffer */
         uint16_t cursor_rx; /* slot # inside the ring buffer */
+        uint16_t queued_tx;
 
         bool pollout;
         bool ctrl; /* control traffic */

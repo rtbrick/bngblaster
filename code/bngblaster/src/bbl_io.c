@@ -216,44 +216,50 @@ bbl_io_packet_mmap_tx_job(timer_s *timer) {
         }
         interface->io.pollout = true;
         interface->stats.poll_tx++;
-        return;
-    }
-    interface->io.pollout = false;
+    } else {
+        interface->io.pollout = false;
 
-    /* Get TX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
+        /* Get TX timestamp */
+        clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
 
-    while(tx_result != EMPTY) {
-        /* Check if this slot available for writing. */
-        if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-            interface->stats.no_tx_buffer++;
-            break;
-        }
-        buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
-        tx_result = bbl_tx(ctx, interface, buf, &len);
-        if (tx_result == PROTOCOL_SUCCESS) {
-            packets++;
-            interface->stats.packets_tx++;
-            interface->stats.bytes_tx += len;
-            tphdr->tp_len = len;
-            tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-            interface->io.cursor_tx = (interface->io.cursor_tx + 1) % interface->io.req_tx.tp_frame_nr;
-            /* Dump the packet into pcap file. */
-            if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-                pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                          buf, len, interface->pcap_index,
-                                          PCAPNG_EPB_FLAGS_OUTBOUND);
+        while(tx_result != EMPTY) {
+            /* Check if this slot available for writing. */
+            if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
+                interface->stats.no_tx_buffer++;
+                break;
             }
-            frame_ptr = interface->io.ring_tx + (interface->io.cursor_tx * interface->io.req_tx.tp_frame_size);
-            tphdr = (struct tpacket2_hdr *)frame_ptr;
+            buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
+            tx_result = bbl_tx(ctx, interface, buf, &len);
+            if (tx_result == PROTOCOL_SUCCESS) {
+                packets++;
+                interface->stats.packets_tx++;
+                interface->stats.bytes_tx += len;
+                tphdr->tp_len = len;
+                tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+                interface->io.cursor_tx = (interface->io.cursor_tx + 1) % interface->io.req_tx.tp_frame_nr;
+                interface->io.queued_tx++;
+                /* Dump the packet into pcap file. */
+                if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+                    pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+                                            buf, len, interface->pcap_index,
+                                            PCAPNG_EPB_FLAGS_OUTBOUND);
+                }
+                frame_ptr = interface->io.ring_tx + (interface->io.cursor_tx * interface->io.req_tx.tp_frame_size);
+                tphdr = (struct tpacket2_hdr *)frame_ptr;
+            }
+        }
+        if(packets) {
+            pcapng_fflush(ctx);
         }
     }
-    if(packets) {
-        pcapng_fflush(ctx);
+
+    if(interface->io.queued_tx) {
         /* Notify kernel. */
         if (sendto(interface->io.fd_tx, NULL, 0 , 0, NULL, 0) == -1) {
             LOG(IO, "Sendto failed with errno: %i\n", errno);
             interface->stats.sendto_failed++;
+        } else {
+            interface->io.queued_tx = 0;
         }
     }
 }
@@ -315,6 +321,7 @@ bbl_io_packet_mmap_send(bbl_interface_s *interface, uint8_t *packet, uint16_t pa
     tphdr->tp_len = packet_len;
     tphdr->tp_status = TP_STATUS_SEND_REQUEST;
     interface->io.cursor_tx = (interface->io.cursor_tx + 1) % interface->io.req_tx.tp_frame_nr;
+    interface->io.queued_tx++;
     return true;
 }
 
