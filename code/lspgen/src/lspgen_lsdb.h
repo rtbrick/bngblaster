@@ -229,6 +229,8 @@ typedef struct lsdb_attr_prefix_ {
 typedef struct lsdb_attr_link_ {
     uint8_t remote_node_id[LSDB_MAX_NODE_ID_SIZE];
     uint32_t metric;
+    bool small_metrics; /* old-style 6-bit metrics */
+
 } lsdb_attr_link_t;
 
 typedef struct lsdb_attr_cap_ {
