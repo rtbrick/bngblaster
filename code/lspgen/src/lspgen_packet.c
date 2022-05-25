@@ -344,6 +344,18 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
         case ISIS_TLV_PROTOCOLS:
             push_be_uint(buf, 1, attr->key.protocol);
             break;
+        case ISIS_TLV_IS_REACH:
+            push_be_uint(buf, 1, 0); /* virtual */
+	    metric = attr->key.link.metric;
+	    if (metric > 63) {
+		metric = 63; /* limit metric to 6 bits */
+	    }
+            push_be_uint(buf, 1, metric); /* default metric */
+            push_be_uint(buf, 1, 0x80); /* delay metric */
+            push_be_uint(buf, 1, 0x80); /* expense metric */
+            push_be_uint(buf, 1, 0x80); /* error metric */
+            push_data(buf, attr->key.link.remote_node_id, 7);
+	    break;
         case ISIS_TLV_EXTD_IS_REACH:
             push_data(buf, attr->key.link.remote_node_id, 7);
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
