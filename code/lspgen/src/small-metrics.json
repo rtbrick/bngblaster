@@ -52,11 +52,13 @@
         },
         {
           "remote_node_id": "1921.6800.0003.00",
-          "metric": 100000
+          "metric": 100000,
+          "small_metrics": true
         },
         {
           "remote_node_id": "1921.6800.0004.00",
-          "metric": 100
+          "metric": 100,
+          "small_metrics": true
         }
       ]
     }
