@@ -29,6 +29,10 @@ typedef struct bbl_a10nsp_session_
 
     char *pppoe_ari;
     char *pppoe_aci;
+    char *dhcp_ari;
+    char *dhcp_aci;
+    char *dhcpv6_ari;
+    char *dhcpv6_aci;
 
     struct {
         uint64_t packets_tx;

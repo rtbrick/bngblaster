@@ -713,6 +713,25 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->rate_up = access_config->rate_up;
         session->rate_down = access_config->rate_down;
         session->dsl_type = access_config->dsl_type;
+        if(access_config->access_line_profile_id) {
+            access_line_profile = ctx->config.access_line_profile;
+            while(access_line_profile) {
+                if(access_line_profile->access_line_profile_id == access_config->access_line_profile_id) {
+                    session->access_line_profile = access_line_profile;
+                    if(session->rate_up == 0) {
+                        session->rate_up = access_line_profile->act_up;
+                    }
+                    if(session->rate_down == 0) {
+                        session->rate_down = access_line_profile->act_down;
+                    }
+                    if(session->dsl_type == 0) {
+                        session->dsl_type = access_line_profile->dsl_type;
+                    }
+                    break;
+                }
+                access_line_profile = access_line_profile->next;
+            }
+        }
 
         /* IGMP */
         session->igmp_autostart = access_config->igmp_autostart;
@@ -771,17 +790,6 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 return false;
             }
             timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
-        }
-
-        if(access_config->access_line_profile_id) {
-            access_line_profile = ctx->config.access_line_profile;
-            while(access_line_profile) {
-                if(access_line_profile->access_line_profile_id == access_config->access_line_profile_id) {
-                    session->access_line_profile = access_line_profile;
-                    break;
-                }
-                access_line_profile = access_line_profile->next;
-            }
         }
 
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
@@ -901,13 +909,17 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->a10nsp_session) {
-        a10nsp_session = json_pack("{ss si sb sb ss* ss* si si}",
+        a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* si si}",
             "interface", session->a10nsp_session->a10nsp_if->name,
             "s-vlan", session->a10nsp_session->s_vlan,
             "qinq-send", session->a10nsp_session->a10nsp_if->qinq,
             "qinq-received", session->a10nsp_session->qinq_received,
             "pppoe-aci", session->a10nsp_session->pppoe_aci,
             "pppoe-ari", session->a10nsp_session->pppoe_ari,
+            "dhcp-aci", session->a10nsp_session->dhcp_aci,
+            "dhcp-ari", session->a10nsp_session->dhcp_ari,
+            "dhcpv6-aci", session->a10nsp_session->dhcpv6_aci,
+            "dhcpv6-ari", session->a10nsp_session->dhcpv6_ari,
             "tx-packets", session->a10nsp_session->stats.packets_tx,
             "rx-packets", session->a10nsp_session->stats.packets_rx);
     }
