@@ -76,6 +76,8 @@ typedef struct bbl_access_config_
     uint32_t i2;
     uint32_t i2_step;
 
+    uint16_t ppp_mru;
+
     void *next; /* pointer to next access config element */
 } bbl_access_config_s;
 

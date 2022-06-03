@@ -446,6 +446,13 @@ json_parse_access_interface(bbl_ctx_s *ctx, json_t *access_interface, bbl_access
         access_config->access_third_vlan &= 4095;
     }
 
+    value = json_object_get(access_interface, "ppp-mru");
+    if (value) {
+        access_config->ppp_mru = json_number_value(value);
+    } else {
+        access_config->ppp_mru = ctx->config.ppp_mru;
+    }
+
     if (json_unpack(access_interface, "{s:s}", "address", &s) == 0) {
         if (!inet_pton(AF_INET, s, &ipv4)) {
             fprintf(stderr, "JSON config error: Invalid value for access->address\n");

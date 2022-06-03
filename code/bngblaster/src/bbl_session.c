@@ -227,6 +227,9 @@ bbl_session_reset(bbl_session_s *session) {
         }
         session->pppoe_service_name_len = 0;
     }
+    session->mru = session->access_config->ppp_mru;
+    session->peer_mru = 0;
+    session->peer_magic_number = 0;
     session->ip_address = 0;
     session->peer_ip_address = 0;
     session->dns1 = 0;
@@ -745,7 +748,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
 
         /* Set access type specifc values */
         if(session->access_type == ACCESS_TYPE_PPPOE) {
-            session->mru = ctx->config.ppp_mru;
+            session->mru = access_config->ppp_mru;
             session->magic_number = htobe32(i);
             if(ctx->config.pppoe_service_name) {
                 session->pppoe_service_name = (uint8_t*)ctx->config.pppoe_service_name;
