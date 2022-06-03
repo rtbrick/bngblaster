@@ -1368,7 +1368,7 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                 return;
             }
             if(lcp->mru) {
-                session->mru = lcp->mru;
+                session->peer_mru = lcp->mru;
             }
             if(lcp->magic) {
                 session->peer_magic_number = lcp->magic;
