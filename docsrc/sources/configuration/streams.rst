@@ -22,6 +22,12 @@
    * - `direction`
      - Mandatory stream direction (`upstream`, `downstream` or `both`)
      - `both`
+   * - `source-port`
+     - Overwrite the default source port
+     - 65056
+   * - `destination-port`
+     - Overwrite the default destination port
+     - 65056
    * - `ipv4-df`
      - Set IPv4 DF bit
      - true
@@ -32,7 +38,7 @@
      - VLAN priority
      - 0
    * - `length`
-     - Layer 3 (IP + payload) traffic length (76 - 9000)
+     - Layer 3 (IP header + payload) traffic length (76 - 9000)
      - 128
    * - `pps`
      - Stream traffic rate in packets per second
