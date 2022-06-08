@@ -22,6 +22,9 @@
    * - `direction`
      - Mandatory stream direction (`upstream`, `downstream` or `both`)
      - `both`
+   * - `ipv4-df`
+     - Set IPv4 DF bit
+     - true
    * - `priority`
      - IPv4 TOS / IPv6 TC
      - 0

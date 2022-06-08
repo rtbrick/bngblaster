@@ -46,6 +46,7 @@ typedef struct bbl_stream_config_
     char *network_interface;
     char *a10nsp_interface;
 
+    bool     ipv4_df;
     bool     tx_mpls1;
     uint32_t tx_mpls1_label;
     uint8_t  tx_mpls1_exp;
