@@ -1091,6 +1091,20 @@ json_parse_stream(bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_conf
         stream_config->a10nsp_interface = strdup(s);
     }
 
+    value = json_object_get(stream, "source-port");
+    if (value) {
+        stream_config->src_port = json_number_value(value);
+    } else {
+        stream_config->src_port = BBL_UDP_PORT;
+    }
+
+    value = json_object_get(stream, "destination-port");
+    if (value) {
+        stream_config->dst_port = json_number_value(value);
+    } else {
+        stream_config->dst_port = BBL_UDP_PORT;
+    }
+
     value = json_object_get(stream, "length");
     if (value) {
         stream_config->length = json_number_value(value);
