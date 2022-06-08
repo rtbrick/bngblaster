@@ -1187,6 +1187,14 @@ json_parse_stream(bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_conf
         }
     }
 
+    /* Set DF bit for IPv4 traffic (default true) */
+    value = json_object_get(stream, "ipv4-df");
+    if (json_is_boolean(value)) {
+        stream_config->ipv4_df = json_boolean_value(value);
+    } else {
+        stream_config->ipv4_df = true;
+    }
+
     /* MPLS labels */
     value = json_object_get(stream, "tx-label1");
     if (value) {

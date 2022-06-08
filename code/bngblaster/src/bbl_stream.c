@@ -189,6 +189,9 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                     ipv4.dst = network_if->ip.address;
                 }
             }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
+            }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -316,6 +319,9 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
                     ipv4.dst = A10NSP_IP_LOCAL;
                 }
             }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
+            }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -436,6 +442,9 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
                 } else {
                     ipv4.dst = A10NSP_IP_LOCAL;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -565,6 +574,9 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 } else {
                     ipv4.dst = network_if->ip.address;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -707,6 +719,9 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
                     return false;
                 }
             }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
+            }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
             ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -811,6 +826,9 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     l2tp.next = &ipv4;
     ipv4.dst = session->ip_address;
     ipv4.src = l2tp_tunnel->server->ip;
+    if(config->ipv4_df) {
+        ipv4.offset = IPV4_DF;
+    }
     ipv4.ttl = 64;
     ipv4.tos = config->priority;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
