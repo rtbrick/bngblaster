@@ -33,6 +33,9 @@ typedef struct bbl_stream_config_
     uint32_t max_packets;
     uint32_t start_delay;
 
+    uint16_t src_port;
+    uint16_t dst_port;
+
     uint16_t length;
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
