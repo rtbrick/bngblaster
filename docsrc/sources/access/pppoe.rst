@@ -7,6 +7,18 @@ Emulating PPP over Ethernet (PPPoE) sessions was initial
 use case of the BNG Blaster supporting 1:1 and N:1 VLAN
 mode.
 
+The BNG Blaster concept is leant to the idea of fail-fast.
+Therefore PPPoE sessions may not be established if not all 
+expected conditions are fulfilled. PPPoE sessions become 
+established only if all enabled network protocols
+(IPCP and IP6CP) are negotiated successful. 
+If IPCP is configured to request two DNS servers, 
+it fails if only one is returned.
+
+The BNG Blaster is not optimized for robustness. Actually the
+opposite is the case, to ensure it failed if the device under 
+test behaves faulty. 
+
 Configuration
 ~~~~~~~~~~~~~
 
