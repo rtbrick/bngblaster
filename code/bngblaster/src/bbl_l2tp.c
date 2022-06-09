@@ -1022,6 +1022,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             }
             break;
         case PROTOCOL_IPV4:
+            interface->io.ctrl = false;
             l2tp_session->stats.data_ipv4_rx++;
             ipv4 = (bbl_ipv4_t*)l2tp->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
