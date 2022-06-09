@@ -1292,6 +1292,10 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     pppoes = (bbl_pppoe_session_t*)eth->next;
     lcp = (bbl_lcp_t*)pppoes->next;
 
+    if(session->session_state < BBL_PPP_LINK) {
+        return;
+    }
+
     if(session->session_state == BBL_PPP_TERMINATING && 
        !(lcp->code == PPP_CODE_TERM_REQUEST || lcp->code == PPP_CODE_TERM_ACK)) {
         /* Only term-request/ack is accepted in terminating phase */
