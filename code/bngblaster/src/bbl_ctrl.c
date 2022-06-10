@@ -554,62 +554,6 @@ bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* 
     }
 }
 
-static void
-bbl_ctrl_session_ncp_open(bbl_session_s *session, bool ipcp) {
-    if(session->session_state == BBL_ESTABLISHED ||
-       session->session_state == BBL_PPP_NETWORK) {
-        if(ipcp) {
-            if(session->ipcp_state == BBL_PPP_CLOSED) {
-                session->ipcp_state = BBL_PPP_INIT;
-                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
-                session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
-            }
-        } else {
-            /* ip6cp */
-            if(session->ip6cp_state == BBL_PPP_CLOSED) {
-                session->ip6cp_state = BBL_PPP_INIT;
-                session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
-                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
-            }
-        }
-    }
-}
-
-static void
-bbl_ctrl_session_ncp_close(bbl_session_s *session, bool ipcp) {
-    if(session->session_state == BBL_ESTABLISHED ||
-       session->session_state == BBL_PPP_NETWORK) {
-        if(ipcp) {
-            if(session->ipcp_state == BBL_PPP_OPENED) {
-                session->ipcp_state = BBL_PPP_TERMINATE;
-                session->ipcp_request_code = PPP_CODE_TERM_REQUEST;
-                session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                session->ip_address = 0;
-                session->peer_ip_address = 0;
-                session->dns1 = 0;
-                session->dns2 = 0;
-                bbl_session_tx_qnode_insert(session);
-            }
-        } else { /* ip6cp */
-            if(session->ip6cp_state == BBL_PPP_OPENED) {
-                session->ip6cp_state = BBL_PPP_TERMINATE;
-                session->ip6cp_request_code = PPP_CODE_TERM_REQUEST;
-                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                /* Stop IPv6 */
-                session->ipv6_prefix.len = 0;
-                session->icmpv6_ra_received = false;
-                memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
-                memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-                /* Stop DHCPv6 */
-                bbl_dhcpv6_stop(session);
-                bbl_session_tx_qnode_insert(session);
-            }
-        }
-    }
-}
-
 ssize_t
 bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool open, bool ipcp) {
     bbl_session_s *session;
@@ -619,9 +563,9 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
         if(session) {
             if(session->access_type == ACCESS_TYPE_PPPOE) {
                 if(open) {
-                    bbl_ctrl_session_ncp_open(session, ipcp);
+                    bbl_session_ncp_open(session, ipcp);
                 } else {
-                    bbl_ctrl_session_ncp_close(session, ipcp);
+                    bbl_session_ncp_close(session, ipcp);
                 }
             } else {
                 return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
@@ -637,9 +581,9 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
             if(session) {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(open) {
-                        bbl_ctrl_session_ncp_open(session, ipcp);
+                        bbl_session_ncp_open(session, ipcp);
                     } else {
-                        bbl_ctrl_session_ncp_close(session, ipcp);
+                        bbl_session_ncp_close(session, ipcp);
                     }
                 }
             }
