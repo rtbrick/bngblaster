@@ -397,6 +397,11 @@ json_parse_access_interface(bbl_ctx_s *ctx, json_t *access_interface, bbl_access
         access_config->network_interface = strdup(s);
     }
 
+    value = json_object_get(access_interface, "monkey");
+    if (json_is_boolean(value)) {
+        access_config->monkey = json_boolean_value(value);
+    }
+
     value = json_object_get(access_interface, "qinq");
     if (json_is_boolean(value)) {
         access_config->qinq = json_boolean_value(value);

@@ -31,6 +31,7 @@ typedef struct bbl_access_config_
     uint16_t access_inner_vlan_max;
     uint16_t access_third_vlan;
 
+    bool monkey; /* enable monkey testing */
     bool qinq; /* use ethertype 0x8818 */
 
     /* Static */

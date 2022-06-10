@@ -81,6 +81,7 @@ typedef struct bbl_session_
     struct timer_ *timer_rate;
     struct timer_ *timer_cfm_cc;
     struct timer_ *timer_reconnect;
+    struct timer_ *timer_monkey;
 
     bbl_access_type_t access_type;
 
@@ -400,6 +401,9 @@ typedef struct bbl_session_
 
 } bbl_session_s;
 
+const char *
+session_state_string(uint32_t state);
+
 void
 bbl_session_tx_qnode_insert(struct bbl_session_ *session);
 
@@ -412,8 +416,11 @@ bbl_session_network_tx_qnode_insert(struct bbl_session_ *session);
 void
 bbl_session_network_tx_qnode_remove(struct bbl_session_ *session);
 
-const char *
-session_state_string(uint32_t state);
+void
+bbl_session_ncp_open(bbl_session_s *session, bool ipcp);
+
+void
+bbl_session_ncp_close(bbl_session_s *session, bool ipcp);
 
 bbl_session_s *
 bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id);
