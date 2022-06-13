@@ -12,4 +12,7 @@
 #define GIT_REF ""
 #define GIT_SHA ""
 
+#define COMPILER_ID ""
+#define COMPILER_VERSION ""
+
 #endif
