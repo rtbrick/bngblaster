@@ -1975,7 +1975,6 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
 
     bbl_icmpv6_t *icmpv6;
 
-    uint8_t  flags;
     uint8_t  option;
     uint16_t option_len;
 
@@ -2004,8 +2003,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                 return DECODE_ERROR;
             }
             BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
-            flags = *buf;
-            if(flags & ICMPV6_FLAGS_OTHER_CONFIG) icmpv6->other = true;
+            icmpv6->flags = *buf;
             BUMP_BUFFER(buf, len, 11);
             while(len > 2) {
                 option = *buf;

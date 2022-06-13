@@ -167,6 +167,8 @@
 #define IPV6_NEXT_HEADER_NO             59
 #define IPV6_NEXT_HEADER_INTERNAL       61
 
+
+#define ICMPV6_FLAGS_MANAGED            0x80
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
 #define ICMPV6_OPTION_PREFIX            3
 #define ICMPV6_OPTION_DNS               25
@@ -725,7 +727,7 @@ typedef struct bbl_arp_ {
 typedef struct bbl_icmpv6_ {
     uint8_t      type;
     uint8_t      code;
-    bool         other;
+    uint8_t      flags;
     ipv6_prefix  prefix;
     uint8_t     *mac;
     uint8_t     *data;
