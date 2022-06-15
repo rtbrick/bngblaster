@@ -31,6 +31,9 @@
    * - `autostart`
      - Start sessions automatically
      - true
+   * - `monkey-autostart`
+     - Start monkey testing automatically if enabled
+     - true
 
 Per default sessions are created by iteration over inner VLAN range first and 
 outer VLAN second. Which can be changed by ``iterate-vlan-outer`` to iterate 
