@@ -139,3 +139,6 @@
    * - `i2-step`
      - Iterator step per session
      - 1
+   * - `monkey`
+     - Enable monkey testing
+     - false
