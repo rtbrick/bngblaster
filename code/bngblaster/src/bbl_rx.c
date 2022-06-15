@@ -566,7 +566,9 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_rx_established_ipoe(eth, interface, session);
-            } else if(icmpv6->other && ctx->config.dhcpv6_enable) {
+            } else if(ctx->config.dhcpv6_enable && 
+                      (icmpv6->flags & ICMPV6_FLAGS_MANAGED ||
+                       icmpv6->flags & ICMPV6_FLAGS_OTHER_CONFIG)) {
                 bbl_dhcpv6_start(session);
                 bbl_session_tx_qnode_insert(session);
             }
@@ -1291,6 +1293,10 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
 
     pppoes = (bbl_pppoe_session_t*)eth->next;
     lcp = (bbl_lcp_t*)pppoes->next;
+
+    if(session->session_state < BBL_PPP_LINK) {
+        return;
+    }
 
     if(session->session_state == BBL_PPP_TERMINATING && 
        !(lcp->code == PPP_CODE_TERM_REQUEST || lcp->code == PPP_CODE_TERM_ACK)) {

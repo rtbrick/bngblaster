@@ -24,6 +24,7 @@ bool g_interactive = false; /* interactive mode using ncurses */
 bool g_init_phase = true;
 bool g_traffic = true;
 bool g_banner = true;
+bool g_monkey = true;
 
 extern char *g_log_file;
 volatile bool g_teardown = false;
@@ -214,13 +215,17 @@ bbl_print_version (void)
 {
     if(sizeof(BNGBLASTER_VERSION)-1) {
         printf("Version: %s\n", BNGBLASTER_VERSION);
+    } else {
+        printf("Version: DEV\n");
+    }
+    if(sizeof(COMPILER_ID)-1 + sizeof(COMPILER_VERSION)-1) {
+        printf("Compiler: %s (%s)\n", COMPILER_ID, COMPILER_VERSION);
     }
     if(sizeof(GIT_REF)-1 + sizeof(GIT_SHA)-1) {
         printf("GIT:\n");
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
     }
-
     printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
 #ifdef BNGBLASTER_NETMAP
     printf(", netmap");
@@ -541,6 +546,7 @@ main(int argc, char *argv[])
             exit(1);
         }
     }
+    g_monkey = ctx->config.monkey_autostart;
 
     if(username) ctx->config.username = username;
     if(password) ctx->config.password = password;

@@ -1975,7 +1975,6 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
 
     bbl_icmpv6_t *icmpv6;
 
-    uint8_t  flags;
     uint8_t  option;
     uint16_t option_len;
 
@@ -2004,8 +2003,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                 return DECODE_ERROR;
             }
             BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
-            flags = *buf;
-            if(flags & ICMPV6_FLAGS_OTHER_CONFIG) icmpv6->other = true;
+            icmpv6->flags = *buf;
             BUMP_BUFFER(buf, len, 11);
             while(len > 2) {
                 option = *buf;
@@ -2475,8 +2473,6 @@ decode_bbl(uint8_t *buf, uint16_t len,
     if(len < 48 || sp_len < sizeof(bbl_bbl_t)) {
         return DECODE_ERROR;
     }
-    /* Init BBL header */
-    bbl = (bbl_bbl_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bbl_t));
 
     if(len > 48) {
         /* Bump padding... */
@@ -2486,6 +2482,10 @@ decode_bbl(uint8_t *buf, uint16_t len,
     if(*(uint64_t*)buf != BBL_MAGIC_NUMBER) {
         return DECODE_ERROR;
     }
+
+    /* Init BBL header */
+    bbl = (bbl_bbl_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bbl_t));
+
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
     bbl->type = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
@@ -2611,8 +2611,15 @@ decode_udp(uint8_t *buf, uint16_t len,
                 udp->protocol = UDP_PROTOCOL_QMX_LI;
                 ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_t**)&udp->next);
             } else {
-                udp->protocol = 0;
-                udp->next = NULL;
+                /* Try if payload could be decoded as BBL! 
+                 * This fails fast if the 64 bit magic number 
+                 * is not found on the expected position. */
+                if(decode_bbl(buf, len, sp, sp_len, (bbl_bbl_t**)&udp->next) == PROTOCOL_SUCCESS) {
+                    udp->protocol = UDP_PROTOCOL_BBL;
+                } else {
+                    udp->protocol = 0;
+                    udp->next = NULL;
+                }
             }
             break;
     }

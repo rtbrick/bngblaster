@@ -189,103 +189,115 @@ addresses dynamically from the sessions.</p>
 <td><p>Mandatory stream direction (<cite>upstream</cite>, <cite>downstream</cite> or <cite>both</cite>)</p></td>
 <td><p><cite>both</cite></p></td>
 </tr>
-<tr class="row-even"><td><p><cite>priority</cite></p></td>
+<tr class="row-even"><td><p><cite>source-port</cite></p></td>
+<td><p>Overwrite the default source port</p></td>
+<td><p>65056</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>destination-port</cite></p></td>
+<td><p>Overwrite the default destination port</p></td>
+<td><p>65056</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipv4-df</cite></p></td>
+<td><p>Set IPv4 DF bit</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>priority</cite></p></td>
 <td><p>IPv4 TOS / IPv6 TC</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>vlan-priority</cite></p></td>
+<tr class="row-even"><td><p><cite>vlan-priority</cite></p></td>
 <td><p>VLAN priority</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>length</cite></p></td>
-<td><p>Layer 3 (IP + payload) traffic length (76 - 9000)</p></td>
+<tr class="row-odd"><td><p><cite>length</cite></p></td>
+<td><p>Layer 3 (IP header + payload) traffic length (76 - 9000)</p></td>
 <td><p>128</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>pps</cite></p></td>
+<tr class="row-even"><td><p><cite>pps</cite></p></td>
 <td><p>Stream traffic rate in packets per second</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>bps</cite></p></td>
+<tr class="row-odd"><td><p><cite>bps</cite></p></td>
 <td><p>Stream traffic rate in bits per second (layer 3)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>a10nsp-interface</cite></p></td>
+<tr class="row-even"><td><p><cite>a10nsp-interface</cite></p></td>
 <td><p>Select the corresponding A10NSP interface for this stream</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
+<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
 <td><p>Select the corresponding network interface for this stream</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>network-ipv4-address</cite></p></td>
+<tr class="row-even"><td><p><cite>network-ipv4-address</cite></p></td>
 <td><p>Overwrite network interface IPv4 address</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>network-ipv6-address</cite></p></td>
+<tr class="row-odd"><td><p><cite>network-ipv6-address</cite></p></td>
 <td><p>Overwrite network interface IPv6 address</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>destination-ipv4-address</cite></p></td>
+<tr class="row-even"><td><p><cite>destination-ipv4-address</cite></p></td>
 <td><p>Overwrite the IPv4 destination address</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>destination-ipv6-address</cite></p></td>
+<tr class="row-odd"><td><p><cite>destination-ipv6-address</cite></p></td>
 <td><p>Overwrite the IPv6 destination address</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>access-ipv4-source-address</cite></p></td>
+<tr class="row-even"><td><p><cite>access-ipv4-source-address</cite></p></td>
 <td><p>Overwrite the access IPv4 source address (client)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>access-ipv6-source-address</cite></p></td>
+<tr class="row-odd"><td><p><cite>access-ipv6-source-address</cite></p></td>
 <td><p>Overwrite the access IPv6 source address (client)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>threaded</cite></p></td>
+<tr class="row-even"><td><p><cite>threaded</cite></p></td>
 <td><p>Run those streams in separate threads</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>thread-group</cite></p></td>
+<tr class="row-odd"><td><p><cite>thread-group</cite></p></td>
 <td><p>Assign this stream to thread group (1-255)</p></td>
 <td><p>0 (thread per stream)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>max-packets</cite></p></td>
+<tr class="row-even"><td><p><cite>max-packets</cite></p></td>
 <td><p>Send a burst of N packets and stop</p></td>
 <td><p>0 (infinity)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>start-delay</cite></p></td>
+<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
 <td><p>Wait N seconds after session is established before start</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-label1</cite></p></td>
+<tr class="row-even"><td><p><cite>tx-label1</cite></p></td>
 <td><p>MPLS send (TX) label (outer label)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-label1-exp</cite></p></td>
+<tr class="row-odd"><td><p><cite>tx-label1-exp</cite></p></td>
 <td><p>EXP bits of first label (outer label)</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-label1-ttl</cite></p></td>
+<tr class="row-even"><td><p><cite>tx-label1-ttl</cite></p></td>
 <td><p>TTL of first label (outer label)</p></td>
 <td><p>255</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-label2</cite></p></td>
+<tr class="row-odd"><td><p><cite>tx-label2</cite></p></td>
 <td><p>MPLS send (TX) label (inner label)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-label2-exp</cite></p></td>
+<tr class="row-even"><td><p><cite>tx-label2-exp</cite></p></td>
 <td><p>EXP bits of first label (inner label)</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-label2-ttl</cite></p></td>
+<tr class="row-odd"><td><p><cite>tx-label2-ttl</cite></p></td>
 <td><p>TTL of first label (inner label)</p></td>
 <td><p>255</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-label1</cite></p></td>
+<tr class="row-even"><td><p><cite>rx-label1</cite></p></td>
 <td><p>Expected receive MPLS label (outer label)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>rx-label2</cite></p></td>
+<tr class="row-odd"><td><p><cite>rx-label2</cite></p></td>
 <td><p>Expected receive MPLS label (inner label)</p></td>
 <td></td>
 </tr>

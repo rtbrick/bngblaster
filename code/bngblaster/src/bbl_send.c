@@ -167,7 +167,7 @@ bbl_send_icmpv6_na(bbl_interface_s *interface,
     ipv6->ttl = 255;
     icmpv6->type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
     icmpv6->mac = interface->mac;
-    icmpv6->other = false;
+    icmpv6->flags = 0;
     icmpv6->data = NULL;
     icmpv6->data_len = 0;
     icmpv6->dns1 = NULL;

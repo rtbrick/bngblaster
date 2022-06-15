@@ -397,6 +397,11 @@ json_parse_access_interface(bbl_ctx_s *ctx, json_t *access_interface, bbl_access
         access_config->network_interface = strdup(s);
     }
 
+    value = json_object_get(access_interface, "monkey");
+    if (json_is_boolean(value)) {
+        access_config->monkey = json_boolean_value(value);
+    }
+
     value = json_object_get(access_interface, "qinq");
     if (json_is_boolean(value)) {
         access_config->qinq = json_boolean_value(value);
@@ -1091,6 +1096,20 @@ json_parse_stream(bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_conf
         stream_config->a10nsp_interface = strdup(s);
     }
 
+    value = json_object_get(stream, "source-port");
+    if (value) {
+        stream_config->src_port = json_number_value(value);
+    } else {
+        stream_config->src_port = BBL_UDP_PORT;
+    }
+
+    value = json_object_get(stream, "destination-port");
+    if (value) {
+        stream_config->dst_port = json_number_value(value);
+    } else {
+        stream_config->dst_port = BBL_UDP_PORT;
+    }
+
     value = json_object_get(stream, "length");
     if (value) {
         stream_config->length = json_number_value(value);
@@ -1185,6 +1204,14 @@ json_parse_stream(bbl_ctx_s *ctx, json_t *stream, bbl_stream_config *stream_conf
             fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv6-address\n");
             return false;
         }
+    }
+
+    /* Set DF bit for IPv4 traffic (default true) */
+    value = json_object_get(stream, "ipv4-df");
+    if (json_is_boolean(value)) {
+        stream_config->ipv4_df = json_boolean_value(value);
+    } else {
+        stream_config->ipv4_df = true;
     }
 
     /* MPLS labels */
@@ -1326,6 +1353,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         value = json_object_get(section, "autostart");
         if (json_is_boolean(value)) {
             ctx->config.sessions_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "monkey-autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.monkey_autostart = json_boolean_value(value);
         }
     }
 
@@ -2203,6 +2234,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.sessions_start_rate = 400;
     ctx->config.sessions_stop_rate = 400;
     ctx->config.sessions_autostart = true;
+    ctx->config.monkey_autostart = true;
     ctx->config.pppoe_discovery_timeout = 5;
     ctx->config.pppoe_discovery_retry = 10;
     ctx->config.ppp_mru = 1492;

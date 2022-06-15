@@ -156,8 +156,8 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
-    udp.src = BBL_UDP_PORT;
-    udp.dst = BBL_UDP_PORT;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -188,6 +188,9 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                 } else {
                     ipv4.dst = network_if->ip.address;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -289,8 +292,8 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
-    udp.src = BBL_UDP_PORT;
-    udp.dst = BBL_UDP_PORT;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -315,6 +318,9 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
                 } else {
                     ipv4.dst = A10NSP_IP_LOCAL;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -410,8 +416,8 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner_priority = config->vlan_priority;
 
-    udp.src = BBL_UDP_PORT;
-    udp.dst = BBL_UDP_PORT;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -436,6 +442,9 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
                 } else {
                     ipv4.dst = A10NSP_IP_LOCAL;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -533,8 +542,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
     eth.vlan_inner_priority = config->vlan_priority;
     eth.vlan_outer_priority = config->vlan_priority;
 
-    udp.src = BBL_UDP_PORT;
-    udp.dst = BBL_UDP_PORT;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -565,6 +574,9 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 } else {
                     ipv4.dst = network_if->ip.address;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -664,8 +676,8 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
         }
     }
 
-    udp.src = BBL_UDP_PORT;
-    udp.dst = BBL_UDP_PORT;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
@@ -706,6 +718,9 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
                 } else {
                     return false;
                 }
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
             }
             ipv4.ttl = 64;
             ipv4.tos = config->priority;
@@ -811,12 +826,15 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     l2tp.next = &ipv4;
     ipv4.dst = session->ip_address;
     ipv4.src = l2tp_tunnel->server->ip;
+    if(config->ipv4_df) {
+        ipv4.offset = IPV4_DF;
+    }
     ipv4.ttl = 64;
     ipv4.tos = config->priority;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
-    udp.src = BBL_UDP_PORT;
-    udp.dst = BBL_UDP_PORT;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
