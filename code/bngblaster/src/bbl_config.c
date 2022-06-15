@@ -1354,6 +1354,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.sessions_autostart = json_boolean_value(value);
         }
+        value = json_object_get(section, "monkey-autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.monkey_autostart = json_boolean_value(value);
+        }
     }
 
     /* IPoE Configuration */
@@ -2230,6 +2234,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.sessions_start_rate = 400;
     ctx->config.sessions_stop_rate = 400;
     ctx->config.sessions_autostart = true;
+    ctx->config.monkey_autostart = true;
     ctx->config.pppoe_discovery_timeout = 5;
     ctx->config.pppoe_discovery_retry = 10;
     ctx->config.ppp_mru = 1492;
