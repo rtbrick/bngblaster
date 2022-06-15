@@ -145,7 +145,7 @@
 #define IGMP_BLOCK_OLD_SOURCES          6
 
 #define IGMP_MAX_SOURCES                3
-#define IGMP_MAX_GROUPS                 8
+#define IGMP_MAX_GROUPS                 12
 
 #define IPV4_BROADCAST                  0xffffffff /* 255.255.255.255 */
 #define IPV4_MC_ALL_HOSTS               0x010000e0 /* 224.0.0.1 */
@@ -249,7 +249,8 @@ typedef enum protocol_error_ {
     UNKNOWN_PROTOCOL,
     WRONG_PROTOCOL_STATE,
     IGNORED,
-    EMPTY
+    EMPTY,
+    FULL,
 } protocol_error_t;
 
 typedef enum icmpv6_message_type_ {

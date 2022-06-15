@@ -127,6 +127,10 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     bbl_igmp_group_s *group = NULL;
     int i;
 
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
     /* Unpack further arguments */
     if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
@@ -172,7 +176,7 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
         if(!group) {
             return bbl_ctrl_status(fd, "error", 409, "no igmp group slot available");
         }
-
+         /* Join group... */
         memset(group, 0x0, sizeof(bbl_igmp_group_s));
         group->group = group_address;
         if(source1) group->source[0] = source1;
@@ -192,6 +196,106 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
 }
 
 ssize_t
+bbl_ctrl_igmp_join_iter(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+
+    bbl_session_s *session;
+    const char *s;
+    uint32_t group_address = 0;
+    uint32_t group_iter = 1;
+    int group_count = 0;
+    bbl_igmp_group_s *group = NULL;
+    uint32_t source1 = 0;
+    uint32_t source2 = 0;
+    uint32_t source3 = 0;
+    uint32_t i, i2;
+    uint32_t join_count;
+
+    /* Unpack group arguments */
+    if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &group_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid group address");
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing group address");
+    }
+    if (json_unpack(arguments, "{s:d}", "group-iter", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &group_iter)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid group-iter");
+        }
+        group_iter = be32toh(group_iter);
+    }
+    json_unpack(arguments, "{s:i}", "group-count", &group_count);
+    if(group_count < 1) group_count = 1;
+
+    /* Unpack source address arguments */
+    if (json_unpack(arguments, "{s:s}", "source1", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &source1)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid source1 address");
+        }
+    }
+    if (json_unpack(arguments, "{s:s}", "source2", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &source2)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid source2 address");
+        }
+    }
+    if (json_unpack(arguments, "{s:s}", "source3", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &source3)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid source3 address");
+        }
+    }
+
+    while(group_count) {
+        /* Iterate over all sessions */
+        join_count = 0;
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                /* Search for free slot ... */
+                for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
+                    group = &session->igmp_groups[i2];
+                    if(group->zapping) {
+                        continue;
+                    }
+                    if(group->group == group_address && 
+                       group->state != IGMP_GROUP_IDLE) {
+                        /* Group already exists. */
+                        group_address = htobe32(be32toh(group_address) + group_iter);
+                        break;
+                    }
+                    if(group->state != IGMP_GROUP_IDLE) {
+                        continue;
+                    }
+                    /* Join group. */
+                    memset(group, 0x0, sizeof(bbl_igmp_group_s));
+                    group->group = group_address;
+                    if(source1) group->source[0] = source1;
+                    if(source2) group->source[1] = source2;
+                    if(source3) group->source[2] = source3;
+                    group->state = IGMP_GROUP_JOINING;
+                    group->robustness_count = session->igmp_robustness;
+                    group->send = true;
+                    LOG(IGMP, "IGMP (ID: %u) join %s\n",
+                        session->session_id, format_ipv4_address(&group->group));
+                    session->send_requests |= BBL_SEND_IGMP;
+
+                    join_count++;
+                    if(--group_count == 0) {
+                        return bbl_ctrl_status(fd, "ok", 200, NULL);
+                    };
+                    /* Get next group address. */
+                    group_address = htobe32(be32toh(group_address) + group_iter);
+                    break;
+                }
+            }
+        }
+        /* Prevent infinity loops! */
+        if(!join_count) break;
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+
+ssize_t
 bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
 
     bbl_session_s *session;
@@ -204,6 +308,7 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
+    /* Unpack further arguments */
     if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group address");
@@ -245,6 +350,40 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
     }
+}
+
+ssize_t
+bbl_ctrl_igmp_leave_all(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+
+    bbl_session_s *session;
+    bbl_igmp_group_s *group = NULL;
+    uint32_t i, i2;
+
+    /* Iterate over all sessions */
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session) {
+            /* Search for group ... */
+            for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
+                group = &session->igmp_groups[i2];
+                if(group->zapping || group->state <= IGMP_GROUP_LEAVING) {
+                    continue;
+                }
+                group->state = IGMP_GROUP_LEAVING;
+                group->robustness_count = session->igmp_robustness;
+                group->send = true;
+                group->leave_tx_time.tv_sec = 0;
+                group->leave_tx_time.tv_nsec = 0;
+                group->last_mc_rx_time.tv_sec = 0;
+                group->last_mc_rx_time.tv_nsec = 0;
+                LOG(IGMP, "IGMP (ID: %u) leave %s\n",
+                    session->session_id, format_ipv4_address(&group->group));
+                session->send_requests |= BBL_SEND_IGMP;
+                bbl_session_tx_qnode_insert(session);
+            }
+        }
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 ssize_t
@@ -1347,7 +1486,9 @@ struct action actions[] = {
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start},
     {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop},
     {"igmp-join", bbl_ctrl_igmp_join},
+    {"igmp-join-iter", bbl_ctrl_igmp_join_iter},
     {"igmp-leave", bbl_ctrl_igmp_leave},
+    {"igmp-leave-all", bbl_ctrl_igmp_leave_all},
     {"igmp-info", bbl_ctrl_igmp_info},
     {"zapping-start", bbl_ctrl_zapping_start},
     {"zapping-stop", bbl_ctrl_zapping_stop},
