@@ -14,6 +14,7 @@
 #include "bbl_dhcpv6.h"
 
 extern volatile bool g_teardown;
+extern volatile bool g_monkey;
 
 const char *
 session_state_string(uint32_t state) {
@@ -217,7 +218,7 @@ void
 bbl_session_monkey_job(timer_s *timer) {
     bbl_session_s *session = timer->data;
 
-    if(g_teardown) {
+    if(g_teardown || !g_monkey) {
         return;
     }
 

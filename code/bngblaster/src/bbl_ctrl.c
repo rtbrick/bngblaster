@@ -30,6 +30,7 @@
 
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
+extern volatile bool g_monkey;
 
 typedef ssize_t callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
 
@@ -1305,6 +1306,24 @@ bbl_ctrl_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
+ssize_t
+bgp_ctrl_monkey_start(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    if(!g_monkey) {
+        LOG_NOARG(INFO, "Start monkey\n");
+    }
+    g_monkey = true;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+ssize_t
+bgp_ctrl_monkey_stop(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    if(g_monkey) {
+        LOG_NOARG(INFO, "Stop monkey\n");
+    }
+    g_monkey = false;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
 struct action {
     char *name;
     callback_function *fn;
@@ -1364,6 +1383,8 @@ struct action actions[] = {
     {"bgp-teardown", bgp_ctrl_teardown},
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
     {"bgp-raw-update", bgp_ctrl_raw_update},
+    {"monkey-start", bgp_ctrl_monkey_start},
+    {"monkey-stop", bgp_ctrl_monkey_stop},
     {NULL, NULL},
 };
 
