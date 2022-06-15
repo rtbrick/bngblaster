@@ -24,6 +24,7 @@ bool g_interactive = false; /* interactive mode using ncurses */
 bool g_init_phase = true;
 bool g_traffic = true;
 bool g_banner = true;
+bool g_monkey = true;
 
 extern char *g_log_file;
 volatile bool g_teardown = false;
@@ -545,6 +546,7 @@ main(int argc, char *argv[])
             exit(1);
         }
     }
+    g_monkey = ctx->config.monkey_autostart;
 
     if(username) ctx->config.username = username;
     if(password) ctx->config.password = password;
