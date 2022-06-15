@@ -94,17 +94,27 @@
 <tbody>
 <tr class="row-even"><td><p><cite>igmp-join</cite></p></td>
 <td><p>Join group</p></td>
-<td><p><cite>group</cite></p></td>
+<td><p><cite>session-id</cite>, <cite>group</cite></p></td>
 <td><p><cite>source1</cite>, <cite>source2</cite>, <cite>source3</cite></p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>igmp-leave</cite></p></td>
-<td><p>Leave group</p></td>
+<tr class="row-odd"><td><p><cite>igmp-join-iter</cite></p></td>
+<td><p>Join multiple groups over all sessions</p></td>
 <td><p><cite>group</cite></p></td>
+<td><p><cite>group-iter</cite>, <cite>group-count</cite>, <cite>source1</cite>, <cite>source2</cite>, <cite>source3</cite></p></td>
+</tr>
+<tr class="row-even"><td><p><cite>igmp-leave</cite></p></td>
+<td><p>Leave group</p></td>
+<td><p><cite>session-id</cite>, <cite>group</cite></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>igmp-leave-all</cite></p></td>
+<td><p>Leave all groups from all sessions</p></td>
+<td></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>igmp-info</cite></p></td>
 <td><p>Display group information</p></td>
-<td></td>
+<td><p><cite>session-id</cite></p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>zapping-start</cite></p></td>
