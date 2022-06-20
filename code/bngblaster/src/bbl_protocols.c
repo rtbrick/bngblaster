@@ -2252,12 +2252,12 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 dhcpv6->rapid = true;
                 break;
             case DHCPV6_OPTION_IA_NA:
-                if(decode_dhcpv6_ia_na(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
+                if(decode_dhcpv6_ia_na(buf, option_len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
                 }
                 break;
             case DHCPV6_OPTION_IA_PD:
-                if(decode_dhcpv6_ia_pd(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
+                if(decode_dhcpv6_ia_pd(buf, option_len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
                 }
                 break;
