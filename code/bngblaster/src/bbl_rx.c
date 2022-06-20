@@ -574,7 +574,11 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
-        bbl_send_icmpv6_na(interface, session, eth, ipv6, icmpv6);
+        if(memcmp(icmpv6->prefix.address, session->ipv6_address, IPV6_ADDR_LEN) == 0) {
+            bbl_send_icmpv6_na(interface, session, eth, ipv6, icmpv6);
+        } else if(memcmp(icmpv6->prefix.address, session->link_local_ipv6_address, IPV6_ADDR_LEN) == 0) {
+            bbl_send_icmpv6_na(interface, session, eth, ipv6, icmpv6);
+        }
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         bbl_send_icmpv6_echo_reply(interface, session, eth, ipv6, icmpv6);
     }
@@ -1901,6 +1905,8 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
     if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, interface->ip6.address, IPV6_ADDR_LEN) == 0) {
+            bbl_send_icmpv6_na(interface, NULL, eth, ipv6, icmpv6);
+        } else if(memcmp(icmpv6->prefix.address, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {
             bbl_send_icmpv6_na(interface, NULL, eth, ipv6, icmpv6);
         } else {
             secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
