@@ -574,7 +574,7 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
-        session->send_requests |= BBL_SEND_ICMPV6_NA;
+        bbl_send_icmpv6_na(interface, session, eth, ipv6, icmpv6);
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         bbl_send_icmpv6_echo_reply(interface, session, eth, ipv6, icmpv6);
     }
