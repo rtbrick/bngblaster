@@ -182,7 +182,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(dhcpv6->ia_na_option_len);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        memcpy(buf, dhcpv6->ia_pd_option, dhcpv6->ia_na_option_len);
+        memcpy(buf, dhcpv6->ia_na_option, dhcpv6->ia_na_option_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->ia_na_option_len);
     } else if(dhcpv6->ia_na_iaid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
