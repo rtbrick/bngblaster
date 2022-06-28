@@ -58,6 +58,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#command">Command</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stop-test">Stop Test</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#delete-test-instance">Delete Test Instance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#metrics">Metrics</a></li>
 </ul>
 </li>
 </ul>
@@ -129,6 +130,16 @@ This directory contains the following files:</p>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_start</cite></p>
 <p>The start API endpoint will start the bngblaster with the argument options
 defined in the body.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;error&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;ip&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>All supported argument options are explained in the OpenAPI schema.</p>
 </section>
 <section id="status">
 <h3>Status<a class="headerlink" href="#status" title="Permalink to this headline"></a></h3>
@@ -182,6 +193,60 @@ be passed back to the client.</p>
 <p><cite>DELETE /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>This API endpoint deletes the test instance directory. The corresponding
 test run is forcefully terminated (<cite>kill -9 &lt;pid&gt;</cite>) if running.</p>
+</section>
+<section id="metrics">
+<h3>Metrics<a class="headerlink" href="#metrics" title="Permalink to this headline"></a></h3>
+<p><cite>GET /api/v1/instances/metrics</cite></p>
+<p>This endpoint returns metrics for all instances in prometheus text format.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP instances_running The number of running instances
+# TYPE instances_running gauge
+instances_running{hostname=&quot;blaster&quot;} 0
+# HELP instances_total The total number of instances
+# TYPE instances_total gauge
+instances_total{hostname=&quot;blaster&quot;} 4
+</pre></div>
+</div>
+<p>The metric <cite>instances_total</cite> counts the number of test instance directories
+present and <cite>instances_running</cite> shows how many of them are running.</p>
+<p>Every metric is labelled with the hostname where the controller is running.</p>
+<p>Per default there are no metrics per instance. This has to be explicitly
+enabled during instance start (<cite>/api/v1/instances/&lt;instance-name&gt;/_start</cite>)
+using the new  <cite>metric_flags</cite> option.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;error&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;ip&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">],</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;metric_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;session_counters&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="s2">&quot;interfaces&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Currently the following metrics are supported:</p>
+<ul class="simple">
+<li><p><cite>session_counters</cite> session statistics</p></li>
+<li><p><cite>interfaces</cite> interface counters</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP sessions The total number of sessions
+# TYPE sessions counter
+sessions{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;} 10
+# HELP sessions_established The number of sessions in state established
+# TYPE sessions_established gauge
+sessions_established{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;} 10
+...
+</pre></div>
+</div>
+<p>Instance metrics are labelled with the instance name. All interface specific metrics
+are also labelled with the corresponding interface name.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP interfaces_rx_bytes Interface RX bytes
+# TYPE interfaces_rx_bytes counter
+interfaces_rx_bytes{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth1&quot;,interface_type=&quot;access&quot;} 36270
+...
+</pre></div>
+</div>
 </section>
 </section>
 </section>
