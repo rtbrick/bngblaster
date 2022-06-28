@@ -532,7 +532,7 @@ bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
                              "status", "ok",
                              "code", 200,
-                             "session-counters",                    
+                             "session-counters",
                              "sessions", ctx->config.sessions,
                              "sessions-pppoe", ctx->sessions_pppoe,
                              "sessions-ipoe", ctx->sessions_ipoe,
