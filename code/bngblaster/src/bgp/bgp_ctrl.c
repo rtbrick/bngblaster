@@ -74,9 +74,9 @@ bgp_ctrl_session_json(bgp_session_t *session) {
     return root;
 }
 
-ssize_t
+int
 bgp_ctrl_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *sessions, *session;
 
     bgp_session_t *bgp_session = ctx->bgp_sessions;
@@ -129,15 +129,15 @@ bgp_ctrl_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unu
     return result;
 }
 
-ssize_t
+int
 bgp_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     bgp_teardown(ctx);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root;
 
     bgp_session_t *bgp_session = ctx->bgp_sessions;
@@ -217,9 +217,9 @@ bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     return result;
 }
 
-ssize_t
+int
 bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     bgp_raw_update_t *raw_update = ctx->bgp_raw_updates;
     json_t *root, *updates, *update;
 
@@ -249,9 +249,9 @@ bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute
     return result;
 }
 
-ssize_t
+int
 bgp_ctrl_disconnect(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root;
 
     bgp_session_t *bgp_session = ctx->bgp_sessions;
