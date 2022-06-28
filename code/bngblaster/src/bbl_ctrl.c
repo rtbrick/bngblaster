@@ -639,7 +639,7 @@ bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argu
 
 static json_t *
 bbl_ctrl_interfaces_json(bbl_interface_s *interface, const char *type) {
-    return json_pack("{ss si ss si si si si si si si si}",
+    return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                      "name", interface->name,
                      "ifindex", interface->ifindex,
                      "type", type,
