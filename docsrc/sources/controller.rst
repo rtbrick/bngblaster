@@ -60,9 +60,7 @@ defined in the body.
         ]
     }
 
-All supported argument options are explained in the corresponding
-`OpenAPI <https://rtbrick.github.io/bngblaster-controller/#/default/post_api_v1_instances__instance_name___start`_
-schema.
+All supported argument options are explained in the OpenAPI schema.
 
 Status
 ~~~~~~
