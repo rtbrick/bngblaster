@@ -62,9 +62,9 @@ isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
     return root;
 }
 
-ssize_t
+int
 isis_ctrl_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *adjacencies, *adjacency;
 
     adjacencies = json_array();
@@ -153,10 +153,10 @@ isis_ctrl_database_entries(hb_tree *lsdb) {
     return database;
 }
 
-ssize_t
+int
 isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
 
-    ssize_t result = 0;
+    int result = 0;
     json_t *root = NULL;
     json_t *database = NULL;
     isis_instance_t *instance = NULL;
@@ -211,7 +211,7 @@ isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((un
     }
 }
 
-ssize_t
+int
 isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
     char *file_path;
     int instance_id = 0;
@@ -245,7 +245,7 @@ isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((un
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
 
     protocol_error_t result;
@@ -312,7 +312,7 @@ isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 isis_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     isis_teardown(ctx);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
