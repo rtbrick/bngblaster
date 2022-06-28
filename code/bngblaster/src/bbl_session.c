@@ -715,7 +715,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
 
     /* For equal distribution of sessions over access configurations
      * and outer VLAN's, we loop first over all configurations and
-     * second over VLAN ranges as per configration. */
+     * second over VLAN ranges as per configuration. */
     while(i <= ctx->config.sessions) {
         if(access_config->vlan_mode == VLAN_MODE_N1) {
             if(access_config->access_outer_vlan_min) {

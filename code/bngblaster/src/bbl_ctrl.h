@@ -10,13 +10,13 @@
 #ifndef __BBL_CTRL_H__
 #define __BBL_CTRL_H__
 
-ssize_t
+int
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message);
 
 bool
-bbl_ctrl_socket_open (bbl_ctx_s *ctx);
+bbl_ctrl_socket_open(bbl_ctx_s *ctx);
 
 bool
-bbl_ctrl_socket_close (bbl_ctx_s *ctx);
+bbl_ctrl_socket_close(bbl_ctx_s *ctx);
 
 #endif

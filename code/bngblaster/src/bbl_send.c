@@ -159,11 +159,7 @@ bbl_send_icmpv6_na(bbl_interface_s *interface,
                   bbl_icmpv6_t *icmpv6) {
     update_eth(interface, session, eth);
     ipv6->dst = ipv6->src;
-    if(session) {
-        ipv6->src = session->ipv6_address;
-    } else {
-        ipv6->src = interface->ip6.address;
-    }
+    ipv6->src = icmpv6->prefix.address;
     ipv6->ttl = 255;
     icmpv6->type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
     icmpv6->mac = interface->mac;
