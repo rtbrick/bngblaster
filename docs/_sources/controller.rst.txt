@@ -133,7 +133,7 @@ test run is forcefully terminated (`kill -9 <pid>`) if running.
 Metrics
 ~~~~~~~
 
-`GET /api/v1/instances/metrics`
+`GET /metrics`
 
 This endpoint returns metrics for all instances in prometheus text format. 
 
