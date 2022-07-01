@@ -144,7 +144,11 @@ bbl_send_arp_reply(bbl_interface_s *interface,
                   bbl_arp_t *arp) {
     update_eth(interface, session, eth);
     arp->code = ARP_REPLY;
-    arp->sender = interface->mac;
+    if(session) {
+        arp->sender = session->client_mac;
+    } else {
+        arp->sender = interface->mac;
+    }
     arp->sender_ip = arp->target_ip;
     arp->target = interface->gateway_mac;
     arp->target_ip = interface->gateway;
@@ -162,7 +166,11 @@ bbl_send_icmpv6_na(bbl_interface_s *interface,
     ipv6->src = icmpv6->prefix.address;
     ipv6->ttl = 255;
     icmpv6->type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
-    icmpv6->mac = interface->mac;
+    if(session) {
+        icmpv6->mac = session->client_mac;
+    } else {
+        icmpv6->mac = interface->mac;
+    }
     icmpv6->flags = 0;
     icmpv6->data = NULL;
     icmpv6->data_len = 0;
