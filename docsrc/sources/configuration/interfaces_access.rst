@@ -49,6 +49,9 @@
    * - `address`
      - Static IPv4 base address (IPoE only)
      - 
+   * - `ppp-mru`
+     - Overwrite PPP MRU (PPPoE only)
+     - 
    * - `address-iter`
      - Static IPv4 base address iterator (IPoE only)
      - 
@@ -136,3 +139,6 @@
    * - `i2-step`
      - Iterator step per session
      - 1
+   * - `monkey`
+     - Enable monkey testing
+     - false

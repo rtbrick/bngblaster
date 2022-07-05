@@ -1239,9 +1239,9 @@ bbl_encode_packet_discovery(bbl_session_s *session) {
             interface->stats.padr_tx++;
             break;
         case BBL_TERMINATING:
-            bbl_session_update_state(ctx, session, BBL_TERMINATED);
             result = bbl_encode_padt(session);
             interface->stats.padt_tx++;
+            bbl_session_update_state(ctx, session, BBL_TERMINATED);
             break;
         default:
             break;

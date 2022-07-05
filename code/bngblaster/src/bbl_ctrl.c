@@ -30,8 +30,9 @@
 
 extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
+extern volatile bool g_monkey;
 
-typedef ssize_t callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
+typedef int callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
 
 static char *
 string_or_na(char *string) {
@@ -42,9 +43,9 @@ string_or_na(char *string) {
     }
 }
 
-ssize_t
+int
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root = json_pack("{sssiss*}", "status", status, "code", code, "message", message);
     if(root) {
         result = json_dumpfd(root, fd, 0);
@@ -53,21 +54,21 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) 
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_multicast_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ctx->multicast_traffic = true;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ctx->multicast_traffic = false;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root = json_pack("{ss si s{si si}}",
                              "status", "ok",
                              "code", 200,
@@ -81,7 +82,7 @@ bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __att
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
     uint32_t i;
@@ -105,17 +106,17 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool statu
     }
 }
 
-ssize_t
+int
 bbl_ctrl_session_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_session_traffic(fd, ctx, session_id, true);
 }
 
-ssize_t
+int
 bbl_ctrl_session_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_session_traffic(fd, ctx, session_id, false);
 }
 
-ssize_t
+int
 bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
     const char *s;
@@ -126,6 +127,10 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     bbl_igmp_group_s *group = NULL;
     int i;
 
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
     /* Unpack further arguments */
     if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
@@ -171,7 +176,7 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
         if(!group) {
             return bbl_ctrl_status(fd, "error", 409, "no igmp group slot available");
         }
-
+         /* Join group... */
         memset(group, 0x0, sizeof(bbl_igmp_group_s));
         group->group = group_address;
         if(source1) group->source[0] = source1;
@@ -190,7 +195,106 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     }
 }
 
-ssize_t
+int
+bbl_ctrl_igmp_join_iter(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+
+    bbl_session_s *session;
+    const char *s;
+    uint32_t group_address = 0;
+    uint32_t group_iter = 1;
+    int group_count = 0;
+    bbl_igmp_group_s *group = NULL;
+    uint32_t source1 = 0;
+    uint32_t source2 = 0;
+    uint32_t source3 = 0;
+    uint32_t i, i2;
+    uint32_t join_count;
+
+    /* Unpack group arguments */
+    if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &group_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid group address");
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing group address");
+    }
+    if (json_unpack(arguments, "{s:d}", "group-iter", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &group_iter)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid group-iter");
+        }
+        group_iter = be32toh(group_iter);
+    }
+    json_unpack(arguments, "{s:i}", "group-count", &group_count);
+    if(group_count < 1) group_count = 1;
+
+    /* Unpack source address arguments */
+    if (json_unpack(arguments, "{s:s}", "source1", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &source1)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid source1 address");
+        }
+    }
+    if (json_unpack(arguments, "{s:s}", "source2", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &source2)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid source2 address");
+        }
+    }
+    if (json_unpack(arguments, "{s:s}", "source3", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &source3)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid source3 address");
+        }
+    }
+
+    while(group_count) {
+        /* Iterate over all sessions */
+        join_count = 0;
+        for(i = 0; i < ctx->sessions; i++) {
+            session = ctx->session_list[i];
+            if(session) {
+                /* Search for free slot ... */
+                for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
+                    group = &session->igmp_groups[i2];
+                    if(group->zapping) {
+                        continue;
+                    }
+                    if(group->group == group_address && 
+                       group->state != IGMP_GROUP_IDLE) {
+                        /* Group already exists. */
+                        group_address = htobe32(be32toh(group_address) + group_iter);
+                        break;
+                    }
+                    if(group->state != IGMP_GROUP_IDLE) {
+                        continue;
+                    }
+                    /* Join group. */
+                    memset(group, 0x0, sizeof(bbl_igmp_group_s));
+                    group->group = group_address;
+                    if(source1) group->source[0] = source1;
+                    if(source2) group->source[1] = source2;
+                    if(source3) group->source[2] = source3;
+                    group->state = IGMP_GROUP_JOINING;
+                    group->robustness_count = session->igmp_robustness;
+                    group->send = true;
+                    LOG(IGMP, "IGMP (ID: %u) join %s\n",
+                        session->session_id, format_ipv4_address(&group->group));
+                    session->send_requests |= BBL_SEND_IGMP;
+
+                    join_count++;
+                    if(--group_count == 0) {
+                        return bbl_ctrl_status(fd, "ok", 200, NULL);
+                    };
+                    /* Get next group address. */
+                    group_address = htobe32(be32toh(group_address) + group_iter);
+                    break;
+                }
+            }
+        }
+        /* Prevent infinity loops! */
+        if(!join_count) break;
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
 bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
 
     bbl_session_s *session;
@@ -203,6 +307,7 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
+    /* Unpack further arguments */
     if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group address");
@@ -246,9 +351,43 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
     }
 }
 
-ssize_t
+int
+bbl_ctrl_igmp_leave_all(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+
+    bbl_session_s *session;
+    bbl_igmp_group_s *group = NULL;
+    uint32_t i, i2;
+
+    /* Iterate over all sessions */
+    for(i = 0; i < ctx->sessions; i++) {
+        session = ctx->session_list[i];
+        if(session) {
+            /* Search for group ... */
+            for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
+                group = &session->igmp_groups[i2];
+                if(group->zapping || group->state <= IGMP_GROUP_LEAVING) {
+                    continue;
+                }
+                group->state = IGMP_GROUP_LEAVING;
+                group->robustness_count = session->igmp_robustness;
+                group->send = true;
+                group->leave_tx_time.tv_sec = 0;
+                group->leave_tx_time.tv_nsec = 0;
+                group->last_mc_rx_time.tv_sec = 0;
+                group->last_mc_rx_time.tv_nsec = 0;
+                LOG(IGMP, "IGMP (ID: %u) leave %s\n",
+                    session->session_id, format_ipv4_address(&group->group));
+                session->send_requests |= BBL_SEND_IGMP;
+                bbl_session_tx_qnode_insert(session);
+            }
+        }
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
 bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *groups, *record, *sources;
     bbl_session_s *session = NULL;
     bbl_igmp_group_s *group = NULL;
@@ -339,21 +478,21 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     }
 }
 
-ssize_t
+int
 bbl_ctrl_zapping_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ctx->zapping = true;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 bbl_ctrl_zapping_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     ctx->zapping = false;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root;
 
     bbl_stats_t stats = {0};
@@ -387,17 +526,37 @@ bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
-    json_t *root = json_pack("{ss si s{si si si si}}",
+    int result = 0;
+    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
                              "status", "ok",
                              "code", 200,
                              "session-counters",
                              "sessions", ctx->config.sessions,
-                             "sessions-established", ctx->sessions_established_max,
+                             "sessions-pppoe", ctx->sessions_pppoe,
+                             "sessions-ipoe", ctx->sessions_ipoe,
+                             "sessions-established", ctx->sessions_established,
+                             "sessions-established-max", ctx->sessions_established_max,
+                             "sessions-terminated", ctx->sessions_terminated,
                              "sessions-flapped", ctx->sessions_flapped,
-                             "dhcpv6-sessions-established", ctx->dhcpv6_established_max);
+                             "dhcp-sessions", ctx->dhcp_requested,
+                             "dhcp-sessions-established", ctx->dhcp_established,
+                             "dhcp-sessions-established-max", ctx->dhcp_established_max,
+                             "dhcpv6-sessions", ctx->dhcpv6_requested,
+                             "dhcpv6-sessions-established", ctx->dhcpv6_established,
+                             "dhcpv6-sessions-established-max", ctx->dhcpv6_established_max,
+                             "setup-time", ctx->stats.setup_time,
+                             "setup-rate", ctx->stats.cps,
+                             "setup-rate-min", ctx->stats.cps_min,
+                             "setup-rate-avg", ctx->stats.cps_avg,
+                             "setup-rate-max", ctx->stats.cps_max,
+                             "session-traffic-flows", ctx->stats.session_traffic_flows,
+                             "session-traffic-flows-verified", ctx->stats.session_traffic_flows_verified,
+                             "stream-traffic-flows", ctx->stats.stream_traffic_flows,
+                             "stream-traffic-flows-verified", ctx->stats.stream_traffic_flows_verified
+                            );
+
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
@@ -405,9 +564,9 @@ bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root;
     json_t *session_json;
     bbl_session_s *session;
@@ -442,7 +601,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
     }
 }
 
-ssize_t
+int
 bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     bbl_session_s *session;
 
@@ -479,24 +638,47 @@ bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argu
 }
 
 static json_t *
-bbl_ctrl_interfaces_json(bbl_interface_s *interace, const char *type) {
-    return json_pack("{ss si ss si si si si si si si si}",
-                     "name", interace->name,
-                     "ifindex", interace->ifindex,
+bbl_ctrl_interfaces_json(bbl_interface_s *interface, const char *type) {
+    return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+                     "name", interface->name,
+                     "ifindex", interface->ifindex,
                      "type", type,
-                     "tx-packets", interace->stats.packets_tx,
-                     "tx-bytes", interace->stats.bytes_tx, 
-                     "tx-pps", interace->stats.rate_packets_tx.avg,
-                     "tx-kbps", interace->stats.rate_bytes_tx.avg * 8 / 1000,
-                     "rx-packets", interace->stats.packets_rx, 
-                     "rx-bytes", interace->stats.bytes_rx,
-                     "rx-pps", interace->stats.rate_packets_rx.avg,
-                     "rx-kbps", interace->stats.rate_bytes_rx.avg * 8 / 1000);
+                     "tx-packets", interface->stats.packets_tx,
+                     "tx-bytes", interface->stats.bytes_tx, 
+                     "tx-pps", interface->stats.rate_packets_tx.avg,
+                     "tx-kbps", interface->stats.rate_bytes_tx.avg * 8 / 1000,
+                     "rx-packets", interface->stats.packets_rx, 
+                     "rx-bytes", interface->stats.bytes_rx,
+                     "rx-pps", interface->stats.rate_packets_rx.avg,
+                     "rx-kbps", interface->stats.rate_bytes_rx.avg * 8 / 1000,
+                     "tx-packets-multicast", interface->stats.mc_tx,
+                     "tx-pps-multicast", interface->stats.rate_mc_tx.avg,
+                     "tx-packets-session-ipv4", interface->stats.session_ipv4_tx,
+                     "tx-pps-session-ipv4", interface->stats.rate_session_ipv4_tx.avg,
+                     "rx-packets-session-ipv4", interface->stats.session_ipv4_rx,
+                     "rx-pps-session-ipv4", interface->stats.rate_session_ipv4_rx.avg,
+                     "loss-packets-session-ipv4", interface->stats.session_ipv4_loss,
+                     "tx-packets-session-ipv6", interface->stats.session_ipv6_tx,
+                     "tx-pps-session-ipv6", interface->stats.rate_session_ipv6_tx.avg,
+                     "rx-packets-session-ipv6", interface->stats.session_ipv6_rx,
+                     "rx-pps-session-ipv6", interface->stats.rate_session_ipv6_rx.avg,
+                     "loss-packets-session-ipv6", interface->stats.session_ipv6_loss,
+                     "tx-packets-session-ipv6pd", interface->stats.session_ipv6pd_tx,
+                     "tx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_tx.avg,
+                     "rx-packets-session-ipv6pd", interface->stats.session_ipv6pd_rx,
+                     "rx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_rx.avg,
+                     "loss-packets-session-ipv6pd", interface->stats.session_ipv6pd_loss,
+                     "tx-packets-streams", interface->stats.stream_tx,
+                     "tx-pps-streams", interface->stats.rate_stream_tx.avg,
+                     "rx-packets-streams", interface->stats.stream_rx,
+                     "rx-pps-streams", interface->stats.rate_stream_rx.avg,
+                     "loss-packets-streams", interface->stats.stream_loss
+                    );
 }
 
-ssize_t
+int
 bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *interfaces, *interface;
     int i;
 
@@ -527,7 +709,7 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
     int reconnect_delay = 0;
@@ -554,63 +736,7 @@ bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* 
     }
 }
 
-static void
-bbl_ctrl_session_ncp_open(bbl_session_s *session, bool ipcp) {
-    if(session->session_state == BBL_ESTABLISHED ||
-       session->session_state == BBL_PPP_NETWORK) {
-        if(ipcp) {
-            if(session->ipcp_state == BBL_PPP_CLOSED) {
-                session->ipcp_state = BBL_PPP_INIT;
-                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
-                session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
-            }
-        } else {
-            /* ip6cp */
-            if(session->ip6cp_state == BBL_PPP_CLOSED) {
-                session->ip6cp_state = BBL_PPP_INIT;
-                session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
-                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
-            }
-        }
-    }
-}
-
-static void
-bbl_ctrl_session_ncp_close(bbl_session_s *session, bool ipcp) {
-    if(session->session_state == BBL_ESTABLISHED ||
-       session->session_state == BBL_PPP_NETWORK) {
-        if(ipcp) {
-            if(session->ipcp_state == BBL_PPP_OPENED) {
-                session->ipcp_state = BBL_PPP_TERMINATE;
-                session->ipcp_request_code = PPP_CODE_TERM_REQUEST;
-                session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                session->ip_address = 0;
-                session->peer_ip_address = 0;
-                session->dns1 = 0;
-                session->dns2 = 0;
-                bbl_session_tx_qnode_insert(session);
-            }
-        } else { /* ip6cp */
-            if(session->ip6cp_state == BBL_PPP_OPENED) {
-                session->ip6cp_state = BBL_PPP_TERMINATE;
-                session->ip6cp_request_code = PPP_CODE_TERM_REQUEST;
-                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                /* Stop IPv6 */
-                session->ipv6_prefix.len = 0;
-                session->icmpv6_ra_received = false;
-                memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
-                memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-                /* Stop DHCPv6 */
-                bbl_dhcpv6_stop(session);
-                bbl_session_tx_qnode_insert(session);
-            }
-        }
-    }
-}
-
-ssize_t
+int
 bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool open, bool ipcp) {
     bbl_session_s *session;
     uint32_t i;
@@ -619,9 +745,9 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
         if(session) {
             if(session->access_type == ACCESS_TYPE_PPPOE) {
                 if(open) {
-                    bbl_ctrl_session_ncp_open(session, ipcp);
+                    bbl_session_ncp_open(session, ipcp);
                 } else {
-                    bbl_ctrl_session_ncp_close(session, ipcp);
+                    bbl_session_ncp_close(session, ipcp);
                 }
             } else {
                 return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
@@ -637,9 +763,9 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
             if(session) {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(open) {
-                        bbl_ctrl_session_ncp_open(session, ipcp);
+                        bbl_session_ncp_open(session, ipcp);
                     } else {
-                        bbl_ctrl_session_ncp_close(session, ipcp);
+                        bbl_session_ncp_close(session, ipcp);
                     }
                 }
             }
@@ -648,29 +774,29 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
     }
 }
 
-ssize_t
+int
 bbl_ctrl_session_ipcp_open(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, true, true);
 }
 
-ssize_t
+int
 bbl_ctrl_session_ipcp_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, false, true);
 }
 
-ssize_t
+int
 bbl_ctrl_session_ip6cp_open(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, true, false);
 }
 
-ssize_t
+int
 bbl_ctrl_session_ip6cp_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, false, false);
 }
 
-ssize_t
+int
 bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *flows, *flow;
     bbl_li_flow_t *li_flow;
     struct dict_itor *itor;
@@ -719,9 +845,9 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unu
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *tunnels, *tunnel;
 
     bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
@@ -802,9 +928,9 @@ l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
                      "data-ipv4-packets-tx", l2tp_session->stats.data_ipv4_tx);
 }
 
-ssize_t
+int
 bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *sessions;
 
     bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
@@ -873,7 +999,7 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
     json_t *sessions, *number;
 
@@ -920,7 +1046,7 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     }
 }
 
-ssize_t
+int
 bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
     bbl_l2tp_tunnel_t *l2tp_tunnel;
     bbl_l2tp_session_t *l2tp_session;
@@ -964,7 +1090,7 @@ bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __att
     }
 }
 
-ssize_t
+int
 bbl_ctrl_l2tp_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
     bbl_l2tp_tunnel_t *l2tp_tunnel;
@@ -1032,9 +1158,9 @@ bbl_ctrl_l2tp_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, jso
     }
 }
 
-ssize_t
+int
 bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root;
     json_t *json_streams = NULL;
     json_t *json_stream = NULL;
@@ -1087,7 +1213,7 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
     }
 }
 
-static ssize_t
+static int
 bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
     uint32_t i;
@@ -1112,17 +1238,17 @@ bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, 
     }
 }
 
-ssize_t
+int
 bbl_ctrl_stream_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_stream_traffic_start_stop(fd, ctx, session_id, true);
 }
 
-ssize_t
+int
 bbl_ctrl_stream_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_stream_traffic_start_stop(fd, ctx, session_id, false);
 }
 
-ssize_t
+int
 bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     bbl_stream *stream;
     struct dict_itor *itor;
@@ -1178,10 +1304,10 @@ bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
     return bbl_ctrl_status(fd, "ok", 200, NULL);    
 }
 
-ssize_t
+int
 bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
 
-    ssize_t result = 0;
+    int result = 0;
     json_t *root, *json_session, *json_sessions;
 
     bbl_session_s *session;
@@ -1219,7 +1345,7 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
     uint32_t i;
@@ -1243,17 +1369,17 @@ bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool sta
     }
 }
 
-ssize_t
+int
 bbl_ctrl_cfm_cc_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_cfm_cc_start_stop(fd, ctx, session_id, true);
 }
 
-ssize_t
+int
 bbl_ctrl_cfm_cc_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_cfm_cc_start_stop(fd, ctx, session_id, false);
 }
 
-ssize_t
+int
 bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     bbl_session_s *session;
     uint32_t i;
@@ -1277,19 +1403,19 @@ bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     }
 }
 
-ssize_t
+int
 bbl_ctrl_cfm_cc_rdi_on(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, true);
 }
 
-ssize_t
+int
 bbl_ctrl_cfm_cc_rdi_off(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, false);
 }
 
-ssize_t
+int
 bbl_ctrl_stream_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ssize_t result = 0;
+    int result = 0;
     json_t *root = json_pack("{ss si s{si si}}",
                              "status", "ok",
                              "code", 200,
@@ -1303,9 +1429,9 @@ bbl_ctrl_stream_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
     return result;
 }
 
-ssize_t
+int
 bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-    ssize_t result = 0;
+    int result = 0;
 
     json_t *root;
     json_t *json_stream = NULL;
@@ -1349,15 +1475,33 @@ bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
     }
 }
 
-ssize_t
+int
 bbl_ctrl_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     enable_disable_traffic(ctx, true);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-ssize_t
+int
 bbl_ctrl_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     enable_disable_traffic(ctx, false);
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+bgp_ctrl_monkey_start(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    if(!g_monkey) {
+        LOG_NOARG(INFO, "Start monkey\n");
+    }
+    g_monkey = true;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+bgp_ctrl_monkey_stop(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+    if(g_monkey) {
+        LOG_NOARG(INFO, "Stop monkey\n");
+    }
+    g_monkey = false;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
@@ -1369,10 +1513,6 @@ struct action {
 struct action actions[] = {
     {"interfaces", bbl_ctrl_interfaces},
     {"terminate", bbl_ctrl_session_terminate},
-    {"ipcp-open", bbl_ctrl_session_ipcp_open},
-    {"ipcp-close", bbl_ctrl_session_ipcp_close},
-    {"ip6cp-open", bbl_ctrl_session_ip6cp_open},
-    {"ip6cp-close", bbl_ctrl_session_ip6cp_close},
     {"session-counters", bbl_ctrl_session_counters},
     {"session-info", bbl_ctrl_session_info},
     {"session-start", bbl_ctrl_session_start},
@@ -1381,10 +1521,21 @@ struct action actions[] = {
     {"session-traffic-start", bbl_ctrl_session_traffic_start},
     {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
     {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
+    {"session-streams", bbl_ctrl_session_streams},
+    {"sessions-pending", bbl_ctrl_sessions_pending},
+    {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start},
+    {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
+    {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
+    {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
+    {"stream-info", bbl_ctrl_stream_info},
+    {"stream-stats", bbl_ctrl_stream_stats},
+    {"stream-reset", bbl_ctrl_stream_reset},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start},
     {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop},
     {"igmp-join", bbl_ctrl_igmp_join},
+    {"igmp-join-iter", bbl_ctrl_igmp_join_iter},
     {"igmp-leave", bbl_ctrl_igmp_leave},
+    {"igmp-leave-all", bbl_ctrl_igmp_leave_all},
     {"igmp-info", bbl_ctrl_igmp_info},
     {"zapping-start", bbl_ctrl_zapping_start},
     {"zapping-stop", bbl_ctrl_zapping_stop},
@@ -1395,15 +1546,10 @@ struct action actions[] = {
     {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
     {"l2tp-tunnel-terminate", bbl_ctrl_l2tp_tunnel_terminate},
     {"l2tp-session-terminate", bbl_ctrl_l2tp_session_terminate},
-    {"session-streams", bbl_ctrl_session_streams},
-    {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start},
-    {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
-    {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
-    {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
-    {"stream-info", bbl_ctrl_stream_info},
-    {"stream-stats", bbl_ctrl_stream_stats},
-    {"stream-reset", bbl_ctrl_stream_reset},
-    {"sessions-pending", bbl_ctrl_sessions_pending},
+    {"ipcp-open", bbl_ctrl_session_ipcp_open},
+    {"ipcp-close", bbl_ctrl_session_ipcp_close},
+    {"ip6cp-open", bbl_ctrl_session_ip6cp_open},
+    {"ip6cp-close", bbl_ctrl_session_ip6cp_close},
     {"cfm-cc-start", bbl_ctrl_cfm_cc_start},
     {"cfm-cc-stop", bbl_ctrl_cfm_cc_stop},
     {"cfm-cc-rdi-on", bbl_ctrl_cfm_cc_rdi_on},
@@ -1420,6 +1566,8 @@ struct action actions[] = {
     {"bgp-teardown", bgp_ctrl_teardown},
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
     {"bgp-raw-update", bgp_ctrl_raw_update},
+    {"monkey-start", bgp_ctrl_monkey_start},
+    {"monkey-stop", bgp_ctrl_monkey_stop},
     {NULL, NULL},
 };
 

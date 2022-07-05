@@ -145,7 +145,7 @@
 #define IGMP_BLOCK_OLD_SOURCES          6
 
 #define IGMP_MAX_SOURCES                3
-#define IGMP_MAX_GROUPS                 8
+#define IGMP_MAX_GROUPS                 12
 
 #define IPV4_BROADCAST                  0xffffffff /* 255.255.255.255 */
 #define IPV4_MC_ALL_HOSTS               0x010000e0 /* 224.0.0.1 */
@@ -167,6 +167,8 @@
 #define IPV6_NEXT_HEADER_NO             59
 #define IPV6_NEXT_HEADER_INTERNAL       61
 
+
+#define ICMPV6_FLAGS_MANAGED            0x80
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
 #define ICMPV6_OPTION_PREFIX            3
 #define ICMPV6_OPTION_DNS               25
@@ -247,7 +249,8 @@ typedef enum protocol_error_ {
     UNKNOWN_PROTOCOL,
     WRONG_PROTOCOL_STATE,
     IGNORED,
-    EMPTY
+    EMPTY,
+    FULL,
 } protocol_error_t;
 
 typedef enum icmpv6_message_type_ {
@@ -725,7 +728,7 @@ typedef struct bbl_arp_ {
 typedef struct bbl_icmpv6_ {
     uint8_t      type;
     uint8_t      code;
-    bool         other;
+    uint8_t      flags;
     ipv6_prefix  prefix;
     uint8_t     *mac;
     uint8_t     *data;

@@ -253,10 +253,10 @@ bbl_stats_job (timer_s *timer)
 
     if(g_view_selected == UI_VIEW_DEFAULT) {
         VISIBLE((ctx->sessions)) {
-            wprintw(stats_win, "\nSessions      %10lu (%lu PPPoE / %lu IPoE)\n", ctx->sessions, ctx->sessions_pppoe, ctx->sessions_ipoe);
+            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u IPoE)\n", ctx->sessions, ctx->sessions_pppoe, ctx->sessions_ipoe);
 
             /* Progress bar established sessions */
-            wprintw(stats_win, "  Established %10lu [", ctx->sessions_established);
+            wprintw(stats_win, "  Established %10u [", ctx->sessions_established);
             if(ctx->sessions == ctx->sessions_established) {
                 wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
                 wprintw(stats_win, "%s", bbl_format_progress(ctx->sessions, ctx->sessions_established));
@@ -269,14 +269,14 @@ bbl_stats_job (timer_s *timer)
             wprintw(stats_win, "]\n");
 
             /* Progress bar outstanding sessions */
-            wprintw(stats_win, "  Outstanding %10lu [", ctx->sessions_outstanding);
+            wprintw(stats_win, "  Outstanding %10u [", ctx->sessions_outstanding);
             wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
             wprintw(stats_win, "%s", bbl_format_progress(ctx->config.sessions_max_outstanding, ctx->sessions_outstanding));
             wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
             wprintw(stats_win, "]\n");
 
             /* Progress bar terminated sessions */
-            wprintw(stats_win, "  Terminated  %10lu [", ctx->sessions_terminated);
+            wprintw(stats_win, "  Terminated  %10u [", ctx->sessions_terminated);
             wattron(stats_win, COLOR_PAIR(COLOR_RED));
             wprintw(stats_win, "%s", bbl_format_progress(ctx->sessions, ctx->sessions_terminated));
             wattroff(stats_win, COLOR_PAIR(COLOR_RED));
@@ -314,10 +314,10 @@ bbl_stats_job (timer_s *timer)
                 wprintw(stats_win, "]\n");
             }
             /* Session stats */
-            wprintw(stats_win, "  Setup Time  %10lu ms\n", ctx->stats.setup_time);
+            wprintw(stats_win, "  Setup Time  %10u ms\n", ctx->stats.setup_time);
             wprintw(stats_win, "  Setup Rate  %10.02lf CPS (MIN: %0.02lf AVG: %0.02lf MAX: %0.02lf)\n",
                     ctx->stats.cps, ctx->stats.cps_min, ctx->stats.cps_avg, ctx->stats.cps_max);
-            wprintw(stats_win, "  Flapped     %10lu\n", ctx->sessions_flapped);
+            wprintw(stats_win, "  Flapped     %10u\n", ctx->sessions_flapped);
         }
 
         if(network_if) {
@@ -329,13 +329,13 @@ bbl_stats_job (timer_s *timer)
             }
             VISIBLE((ctx->config.l2tp_server)) {
                 wprintw(stats_win, "\nL2TP LNS Statistics\n");
-                wprintw(stats_win, "  Tunnels     %10lu\n", ctx->l2tp_tunnels);
-                wprintw(stats_win, "  Established %10lu\n", ctx->l2tp_tunnels_established);
-                wprintw(stats_win, "  Sessions    %10lu\n", ctx->l2tp_sessions);
+                wprintw(stats_win, "  Tunnels     %10u\n", ctx->l2tp_tunnels);
+                wprintw(stats_win, "  Established %10u\n", ctx->l2tp_tunnels_established);
+                wprintw(stats_win, "  Sessions    %10u\n", ctx->l2tp_sessions);
                 wprintw(stats_win, "  Packets:\n");
-                wprintw(stats_win, "    Tx Control              %10lu Retries: %lu\n",
+                wprintw(stats_win, "    Tx Control              %10u Retries: %u\n",
                     network_if->stats.l2tp_control_tx, network_if->stats.l2tp_control_retry);
-                wprintw(stats_win, "    Rx Control              %10lu Duplicate: %lu Out-of-Order: %lu\n",
+                wprintw(stats_win, "    Rx Control              %10u Duplicate: %u Out-of-Order: %u\n",
                     network_if->stats.l2tp_control_rx,
                     network_if->stats.l2tp_control_rx_dup,
                     network_if->stats.l2tp_control_rx_ooo);
@@ -545,11 +545,11 @@ bbl_stats_job (timer_s *timer)
         }
 
     } else if(g_view_selected == UI_VIEW_SESSION) {
-        wprintw(stats_win, "\nSession and Streams ( Session-Id: ", g_session_selected);
+        wprintw(stats_win, "\nSession and Streams ( Session-Id: ");
         wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
         wprintw(stats_win, "%u", g_session_selected);
         wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
-        wprintw(stats_win, " )\n", g_session_selected);
+        wprintw(stats_win, " )\n");
         session = bbl_session_get(ctx, g_session_selected);
         if(session) {
             wprintw(stats_win, "\n     State: %s \n", session_state_string(session->session_state));

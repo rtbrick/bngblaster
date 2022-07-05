@@ -134,6 +134,7 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
     l2tp.next = &ipv4;
     ipv4.dst = session->ip_address;
     ipv4.src = l2tp_tunnel->server->ip;
+    ipv4.offset = IPV4_DF;
     ipv4.ttl = 64;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
@@ -200,6 +201,7 @@ bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
     }
     ip.dst = session->ip_address;
     ip.src = A10NSP_IP_LOCAL;
+    ip.offset = IPV4_DF;
     ip.ttl = 64;
     ip.protocol = PROTOCOL_IPV4_UDP;
     ip.next = &udp;
@@ -283,7 +285,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
         eth.next = &ip;
     }
     if(session->l2tp_session) {
-        ip.dst = L2TP_IPCP_IP_LOCAL;
+        ip.dst = MOCK_IP_LOCAL;
     } else if (session->a10nsp_session) {
         ip.dst = A10NSP_IP_LOCAL;
     } else {

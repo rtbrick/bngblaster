@@ -31,6 +31,7 @@ typedef struct bbl_access_config_
     uint16_t access_inner_vlan_max;
     uint16_t access_third_vlan;
 
+    bool monkey; /* enable monkey testing */
     bool qinq; /* use ethertype 0x8818 */
 
     /* Static */
@@ -75,6 +76,8 @@ typedef struct bbl_access_config_
     uint32_t i1_step;
     uint32_t i2;
     uint32_t i2_step;
+
+    uint16_t ppp_mru;
 
     void *next; /* pointer to next access config element */
 } bbl_access_config_s;

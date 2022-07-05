@@ -182,7 +182,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(dhcpv6->ia_na_option_len);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        memcpy(buf, dhcpv6->ia_pd_option, dhcpv6->ia_na_option_len);
+        memcpy(buf, dhcpv6->ia_na_option, dhcpv6->ia_na_option_len);
         BUMP_WRITE_BUFFER(buf, len, dhcpv6->ia_na_option_len);
     } else if(dhcpv6->ia_na_iaid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
@@ -276,7 +276,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
 
 static uint8_t
 encode_dhcp_access_line(uint8_t *buf, access_line_t *access_line) {
-    uint8_t len = 0;
+    uint16_t len = 0;
     uint8_t *option_len;
     uint8_t *data_len;
 
@@ -313,7 +313,6 @@ encode_dhcp_access_line(uint8_t *buf, access_line_t *access_line) {
         *(uint32_t*)buf = htobe32(access_line->dsl_type);
         BUMP_WRITE_BUFFER(buf, &len, sizeof(uint32_t));
     }
-
     if(len > 7) {
         *option_len = len-2;
         *data_len = len-7;
@@ -401,7 +400,22 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = dhcp->address;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
-
+    if(dhcp->option_router) {
+        *buf = DHCP_OPTION_ROUTER;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = 4;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *(uint32_t*)buf = dhcp->router;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+    if(dhcp->option_lease_time) {
+        *buf = DHCP_OPTION_IP_ADDRESS_LEASE_TIME;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *buf = 4;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        *(uint32_t*)buf = htobe32(dhcp->lease_time);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
     if(dhcp->access_line) {
         /* RFC3046 Relay Agent Information Option (82) */
         *buf = DHCP_OPTION_RELAY_AGENT_INFORMATION;
@@ -1303,8 +1317,6 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
             pppoe_len += pppoe->ac_cookie_len;
         }
         if(pppoe->access_line) {
-            access_line_profile = pppoe->access_line->profile;
-
             *(uint16_t*)buf = htobe16(PPPOE_TAG_VENDOR);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
             vendor_len_field = (uint16_t*)buf;
@@ -1332,306 +1344,297 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, str_len);
                 vendor_len += 2 + str_len;
             }
-            if(pppoe->access_line->up || (access_line_profile && access_line_profile->act_up)) {
+            if(pppoe->access_line->up) {
                 *buf = ACCESS_LINE_ACT_UP;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = 4;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                if(pppoe->access_line->up) {
-                    *(uint32_t*)buf = htobe32(pppoe->access_line->up);
-                } else {
-                    *(uint32_t*)buf = htobe32(access_line_profile->act_up);
-                }
+                *(uint32_t*)buf = htobe32(pppoe->access_line->up);
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
-            if(pppoe->access_line->down || (access_line_profile && access_line_profile->act_down)) {
+            if(pppoe->access_line->down) {
                 *buf = ACCESS_LINE_ACT_DOWN;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = 4;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                if(pppoe->access_line->down) {
-                    *(uint32_t*)buf = htobe32(pppoe->access_line->down);
-                } else {
-                    *(uint32_t*)buf = htobe32(access_line_profile->act_down);
-                }
+                *(uint32_t*)buf = htobe32(pppoe->access_line->down);
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 vendor_len += 6;
             }
-            if(pppoe->access_line->dsl_type || (access_line_profile && access_line_profile->dsl_type)) {
+            if(pppoe->access_line->dsl_type) {
                 *buf = ACCESS_LINE_DSL_TYPE;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = 4;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                if(pppoe->access_line->dsl_type) {
-                    *(uint32_t*)buf = htobe32(pppoe->access_line->dsl_type);
-                } else {
+                *(uint32_t*)buf = htobe32(pppoe->access_line->dsl_type);
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                vendor_len += 6;
+            }
+            access_line_profile = pppoe->access_line->profile;
+            if(access_line_profile) {
+                if(access_line_profile->min_up) {
+                    *buf = ACCESS_LINE_MIN_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->min_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->min_down) {
+                    *buf = ACCESS_LINE_MIN_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->min_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->att_up) {
+                    *buf = ACCESS_LINE_ATT_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->att_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->att_down) {
+                    *buf = ACCESS_LINE_ATT_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->att_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->max_up) {
+                    *buf = ACCESS_LINE_MAX_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->max_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->max_down) {
+                    *buf = ACCESS_LINE_MAX_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->max_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->min_up_low) {
+                    *buf = ACCESS_LINE_MIN_UP_LOW;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->min_up_low);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->min_down_low) {
+                    *buf = ACCESS_LINE_MIN_DOWN_LOW;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->min_down_low);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->max_interl_delay_up) {
+                    *buf = ACCESS_LINE_MAX_INTERL_DELAY_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->max_interl_delay_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->act_interl_delay_up) {
+                    *buf = ACCESS_LINE_ACT_INTERL_DELAY_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->act_interl_delay_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->max_interl_delay_down) {
+                    *buf = ACCESS_LINE_MAX_INTERL_DELAY_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->max_interl_delay_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->act_interl_delay_down) {
+                    *buf = ACCESS_LINE_ACT_INTERL_DELAY_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->act_interl_delay_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->data_link_encaps) {
+                    *buf = ACCESS_LINE_DATA_LINK_ENCAPS;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    /* (1)byte   + (1)byte  + (1)byte
+                    * data link   encaps 1   encaps 2 */
+                    *(uint32_t*)buf = htobe32(access_line_profile->data_link_encaps);
+                    *buf = 3;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 5;
+                }
+                if(access_line_profile->dsl_type) {
+                    *buf = ACCESS_LINE_DSL_TYPE;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *(uint32_t*)buf = htobe32(access_line_profile->dsl_type);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
                 }
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->min_up) {
-                *buf = ACCESS_LINE_MIN_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->min_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->min_down) {
-                *buf = ACCESS_LINE_MIN_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->min_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->att_up) {
-                *buf = ACCESS_LINE_ATT_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->att_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->att_down) {
-                *buf = ACCESS_LINE_ATT_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->att_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->max_up) {
-                *buf = ACCESS_LINE_MAX_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->max_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->max_down) {
-                *buf = ACCESS_LINE_MAX_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->max_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->min_up_low) {
-                *buf = ACCESS_LINE_MIN_UP_LOW;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->min_up_low);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->min_down_low) {
-                *buf = ACCESS_LINE_MIN_DOWN_LOW;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->min_down_low);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->max_interl_delay_up) {
-                *buf = ACCESS_LINE_MAX_INTERL_DELAY_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->max_interl_delay_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->act_interl_delay_up) {
-                *buf = ACCESS_LINE_ACT_INTERL_DELAY_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->act_interl_delay_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->max_interl_delay_down) {
-                *buf = ACCESS_LINE_MAX_INTERL_DELAY_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->max_interl_delay_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->act_interl_delay_down) {
-                *buf = ACCESS_LINE_ACT_INTERL_DELAY_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->act_interl_delay_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->data_link_encaps) {
-                *buf = ACCESS_LINE_DATA_LINK_ENCAPS;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                /* (1)byte   + (1)byte  + (1)byte
-                 * data link   encaps 1   encaps 2 */
-                *(uint32_t*)buf = htobe32(access_line_profile->data_link_encaps);
-                *buf = 3;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 5;
-            }
-            if(access_line_profile && access_line_profile->dsl_type) {
-                *buf = ACCESS_LINE_DSL_TYPE;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->dsl_type);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->pon_type) {
-                *buf = ACCESS_LINE_PON_TYPE;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->pon_type);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->etr_up) {
-                *buf = ACCESS_LINE_ETR_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->etr_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->etr_down) {
-                *buf = ACCESS_LINE_ETR_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->etr_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->attetr_up) {
-                *buf = ACCESS_LINE_ATTETR_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->attetr_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->attetr_down) {
-                *buf = ACCESS_LINE_ATTETR_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->attetr_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->gdr_up) {
-                *buf = ACCESS_LINE_GDR_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->gdr_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->gdr_down) {
-                *buf = ACCESS_LINE_GDR_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->gdr_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->attgdr_up) {
-                *buf = ACCESS_LINE_ATTGDR_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->attgdr_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->attgdr_down) {
-                *buf = ACCESS_LINE_ATTGDR_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->attgdr_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->ont_onu_avg_down) {
-                *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_avg_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->ont_onu_peak_down) {
-                *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_peak_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->ont_onu_max_up) {
-                *buf = ACCESS_LINE_ONT_ONU_MAX_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_max_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->ont_onu_ass_up) {
-                *buf = ACCESS_LINE_ONT_ONU_ASS_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_ass_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->pon_max_up) {
-                *buf = ACCESS_LINE_PON_MAX_UP;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->pon_max_up);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
-            }
-            if(access_line_profile && access_line_profile->pon_max_down) {
-                *buf = ACCESS_LINE_PON_MAX_DOWN;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint32_t*)buf = htobe32(access_line_profile->pon_max_down);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                vendor_len += 6;
+                if(access_line_profile->pon_type) {
+                    *buf = ACCESS_LINE_PON_TYPE;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->pon_type);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->etr_up) {
+                    *buf = ACCESS_LINE_ETR_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->etr_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->etr_down) {
+                    *buf = ACCESS_LINE_ETR_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->etr_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->attetr_up) {
+                    *buf = ACCESS_LINE_ATTETR_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->attetr_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->attetr_down) {
+                    *buf = ACCESS_LINE_ATTETR_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->attetr_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->gdr_up) {
+                    *buf = ACCESS_LINE_GDR_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->gdr_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->gdr_down) {
+                    *buf = ACCESS_LINE_GDR_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->gdr_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->attgdr_up) {
+                    *buf = ACCESS_LINE_ATTGDR_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->attgdr_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->attgdr_down) {
+                    *buf = ACCESS_LINE_ATTGDR_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->attgdr_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->ont_onu_avg_down) {
+                    *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_avg_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->ont_onu_peak_down) {
+                    *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_peak_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->ont_onu_max_up) {
+                    *buf = ACCESS_LINE_ONT_ONU_MAX_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_max_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->ont_onu_ass_up) {
+                    *buf = ACCESS_LINE_ONT_ONU_ASS_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->ont_onu_ass_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->pon_max_up) {
+                    *buf = ACCESS_LINE_PON_MAX_UP;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->pon_max_up);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
+                if(access_line_profile->pon_max_down) {
+                    *buf = ACCESS_LINE_PON_MAX_DOWN;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(access_line_profile->pon_max_down);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    vendor_len += 6;
+                }
             }
             *vendor_len_field = htobe16(vendor_len);
             pppoe_len += 4 + vendor_len;
@@ -1972,7 +1975,6 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
 
     bbl_icmpv6_t *icmpv6;
 
-    uint8_t  flags;
     uint8_t  option;
     uint16_t option_len;
 
@@ -2001,8 +2003,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                 return DECODE_ERROR;
             }
             BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
-            flags = *buf;
-            if(flags & ICMPV6_FLAGS_OTHER_CONFIG) icmpv6->other = true;
+            icmpv6->flags = *buf;
             BUMP_BUFFER(buf, len, 11);
             while(len > 2) {
                 option = *buf;
@@ -2251,12 +2252,12 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 dhcpv6->rapid = true;
                 break;
             case DHCPV6_OPTION_IA_NA:
-                if(decode_dhcpv6_ia_na(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
+                if(decode_dhcpv6_ia_na(buf, option_len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
                 }
                 break;
             case DHCPV6_OPTION_IA_PD:
-                if(decode_dhcpv6_ia_pd(buf, len, dhcpv6) != PROTOCOL_SUCCESS) {
+                if(decode_dhcpv6_ia_pd(buf, option_len, dhcpv6) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
                 }
                 break;
@@ -2282,6 +2283,59 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     }
     *_dhcpv6 = dhcpv6;
     return ret_val;
+}
+
+static protocol_error_t
+decode_dhcp_agent(uint8_t *buf, uint16_t len,
+                  uint8_t *sp, uint16_t sp_len,
+                  bbl_dhcp_t *dhcp) {
+
+    access_line_t *access_line;
+    
+    uint8_t tlv_type;
+    uint8_t tlv_length;
+
+    if(dhcp->access_line) {
+        access_line = dhcp->access_line;
+    } else {
+        access_line = (access_line_t*)sp; 
+        BUMP_BUFFER(sp, sp_len, sizeof(access_line_t));
+        memset(access_line, 0x0, sizeof(access_line_t));
+        dhcp->access_line = access_line;
+    }
+
+    while(len > 2) {
+        tlv_type = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        tlv_length = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        switch (tlv_type) {
+            case ACCESS_LINE_ACI:
+                if(sp_len > tlv_length) {
+                    access_line->aci = (void*)sp;
+                    memcpy(sp, buf, tlv_length);
+                    /* zero terminate string */
+                    sp += tlv_length; *sp = 0; sp++;
+                } else {
+                    return DECODE_ERROR;
+                }
+                break;
+            case ACCESS_LINE_ARI:
+                if(sp_len > tlv_length) {
+                    access_line->ari = (void*)sp;
+                    memcpy(sp, buf, tlv_length);
+                    /* zero terminate string */
+                    sp += tlv_length; *sp = 0; sp++;
+                } else {
+                    return DECODE_ERROR;
+                }
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, tlv_length);
+    }
+    return PROTOCOL_SUCCESS;
 }
 
 /*
@@ -2392,6 +2446,11 @@ decode_dhcp(uint8_t *buf, uint16_t len,
                 dhcp->mtu = be16toh(*(uint16_t*)buf);
                 dhcp->option_mtu = true;
                 break;
+            case DHCP_OPTION_RELAY_AGENT_INFORMATION:
+                if(decode_dhcp_agent(buf, option_len, sp, sp_len, dhcp) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
+                }
+                break;
             default:
                 break;
         }
@@ -2414,8 +2473,6 @@ decode_bbl(uint8_t *buf, uint16_t len,
     if(len < 48 || sp_len < sizeof(bbl_bbl_t)) {
         return DECODE_ERROR;
     }
-    /* Init BBL header */
-    bbl = (bbl_bbl_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bbl_t));
 
     if(len > 48) {
         /* Bump padding... */
@@ -2425,6 +2482,10 @@ decode_bbl(uint8_t *buf, uint16_t len,
     if(*(uint64_t*)buf != BBL_MAGIC_NUMBER) {
         return DECODE_ERROR;
     }
+
+    /* Init BBL header */
+    bbl = (bbl_bbl_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bbl_t));
+
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
     bbl->type = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
@@ -2537,6 +2598,7 @@ decode_udp(uint8_t *buf, uint16_t len,
             ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
             break;
         case DHCP_UDP_CLIENT:
+        case DHCP_UDP_SERVER:
             udp->protocol = UDP_PROTOCOL_DHCP;
             ret_val = decode_dhcp(buf, len, sp, sp_len, (bbl_dhcp_t**)&udp->next);
             break;
@@ -2549,8 +2611,15 @@ decode_udp(uint8_t *buf, uint16_t len,
                 udp->protocol = UDP_PROTOCOL_QMX_LI;
                 ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_t**)&udp->next);
             } else {
-                udp->protocol = 0;
-                udp->next = NULL;
+                /* Try if payload could be decoded as BBL! 
+                 * This fails fast if the 64 bit magic number 
+                 * is not found on the expected position. */
+                if(decode_bbl(buf, len, sp, sp_len, (bbl_bbl_t**)&udp->next) == PROTOCOL_SUCCESS) {
+                    udp->protocol = UDP_PROTOCOL_BBL;
+                } else {
+                    udp->protocol = 0;
+                    udp->next = NULL;
+                }
             }
             break;
     }
@@ -3374,7 +3443,8 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    access_line = (access_line_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(access_line_t));
+    access_line = (access_line_t*)sp; 
+    BUMP_BUFFER(sp, sp_len, sizeof(access_line_t));
     memset(access_line, 0x0, sizeof(access_line_t));
     pppoe->access_line = access_line;
     while(len > 2) {

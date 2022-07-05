@@ -211,6 +211,6 @@ Multicast Limitations
 ~~~~~~~~~~~~~~~~~~~~~
 
 The BNG Blaster IGMP implementation supports up to 3 sources per group record
-and 8 group records per session.
+and 12 group records per session.
 
 The check for overlapping multicast traffic is supported for zapping tests only.

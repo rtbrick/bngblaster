@@ -50,6 +50,18 @@ Start Test
 The start API endpoint will start the bngblaster with the argument options
 defined in the body.
 
+.. code-block:: json
+
+    {
+        "logging": true,
+        "logging_flags": [
+            "error",
+            "ip"
+        ]
+    }
+
+All supported argument options are explained in the OpenAPI schema.
+
 Status
 ~~~~~~
 
@@ -117,3 +129,67 @@ Delete Test Instance
 
 This API endpoint deletes the test instance directory. The corresponding
 test run is forcefully terminated (`kill -9 <pid>`) if running. 
+
+Metrics
+~~~~~~~
+
+`GET /metrics`
+
+This endpoint returns metrics for all instances in prometheus text format. 
+
+.. code-block:: none
+
+    # HELP instances_running The number of running instances
+    # TYPE instances_running gauge
+    instances_running{hostname="blaster"} 0
+    # HELP instances_total The total number of instances
+    # TYPE instances_total gauge
+    instances_total{hostname="blaster"} 4
+
+The metric `instances_total` counts the number of test instance directories 
+present and `instances_running` shows how many of them are running. 
+
+Every metric is labelled with the hostname where the controller is running.
+
+Per default there are no metrics per instance. This has to be explicitly 
+enabled during instance start (`/api/v1/instances/<instance-name>/_start`) 
+using the new  `metric_flags` option.
+
+.. code-block:: json
+
+    {
+        "logging": true,
+        "logging_flags": [
+            "error",
+            "ip"
+        ],
+        "metric_flags": [
+            "session_counters",
+            "interfaces"
+        ]
+    }
+
+Currently the following metrics are supported:
+
+* `session_counters` session statistics
+* `interfaces` interface counters
+
+.. code-block:: none
+
+    # HELP sessions The total number of sessions
+    # TYPE sessions counter
+    sessions{hostname="blaster",instance_name="test"} 10
+    # HELP sessions_established The number of sessions in state established
+    # TYPE sessions_established gauge
+    sessions_established{hostname="blaster",instance_name="test"} 10
+    ...
+
+Instance metrics are labelled with the instance name. All interface specific metrics
+are also labelled with the corresponding interface name.
+
+.. code-block:: none
+
+    # HELP interfaces_rx_bytes Interface RX bytes
+    # TYPE interfaces_rx_bytes counter
+    interfaces_rx_bytes{hostname="blaster",instance_name="test",interface_name="eth1",interface_type="access"} 36270
+    ...

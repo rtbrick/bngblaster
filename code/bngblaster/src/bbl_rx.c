@@ -566,13 +566,19 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_rx_established_ipoe(eth, interface, session);
-            } else if(icmpv6->other && ctx->config.dhcpv6_enable) {
+            } else if(ctx->config.dhcpv6_enable && 
+                      (icmpv6->flags & ICMPV6_FLAGS_MANAGED ||
+                       icmpv6->flags & ICMPV6_FLAGS_OTHER_CONFIG)) {
                 bbl_dhcpv6_start(session);
                 bbl_session_tx_qnode_insert(session);
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
-        session->send_requests |= BBL_SEND_ICMPV6_NA;
+        if(memcmp(icmpv6->prefix.address, session->ipv6_address, IPV6_ADDR_LEN) == 0) {
+            bbl_send_icmpv6_na(interface, session, eth, ipv6, icmpv6);
+        } else if(memcmp(icmpv6->prefix.address, session->link_local_ipv6_address, IPV6_ADDR_LEN) == 0) {
+            bbl_send_icmpv6_na(interface, session, eth, ipv6, icmpv6);
+        }
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         bbl_send_icmpv6_echo_reply(interface, session, eth, ipv6, icmpv6);
     }
@@ -1292,6 +1298,10 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
     pppoes = (bbl_pppoe_session_t*)eth->next;
     lcp = (bbl_lcp_t*)pppoes->next;
 
+    if(session->session_state < BBL_PPP_LINK) {
+        return;
+    }
+
     if(session->session_state == BBL_PPP_TERMINATING && 
        !(lcp->code == PPP_CODE_TERM_REQUEST || lcp->code == PPP_CODE_TERM_ACK)) {
         /* Only term-request/ack is accepted in terminating phase */
@@ -1368,7 +1378,7 @@ bbl_rx_lcp(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                 return;
             }
             if(lcp->mru) {
-                session->mru = lcp->mru;
+                session->peer_mru = lcp->mru;
             }
             if(lcp->magic) {
                 session->peer_magic_number = lcp->magic;
@@ -1895,6 +1905,8 @@ bbl_rx_network_icmpv6(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     }
     if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, interface->ip6.address, IPV6_ADDR_LEN) == 0) {
+            bbl_send_icmpv6_na(interface, NULL, eth, ipv6, icmpv6);
+        } else if(memcmp(icmpv6->prefix.address, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {
             bbl_send_icmpv6_na(interface, NULL, eth, ipv6, icmpv6);
         } else {
             secondary_ip6 = interface->ctx->config.secondary_ip6_addresses;
