@@ -17,6 +17,49 @@ but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.
 
 Download and install debian package: https://github.com/rtbrick/bngblaster-controller/releases
 
+.. code-block:: none
+
+    $ wget https://github.com/rtbrick/bngblaster-controller/releases/download/<version>/bngblaster-controller_<version>_amd64.deb
+    $ sudo dpkg -i bngblaster-controller_<version>_amd64.deb
+
+
+The corresponding service will be started automatically. 
+
+.. code-block:: none
+
+    $ systemctl status rtbrick-bngblasterctrl.service
+    ● rtbrick-bngblasterctrl.service - RtBrick BNG Blaster Controller
+        Loaded: loaded (/lib/systemd/system/rtbrick-bngblasterctrl.service; enabled; vendor preset: enabled)
+        Active: active (running) since Fri 2022-07-01 11:14:01 UTC; 7min ago
+    Main PID: 682535 (bngblasterctrl)
+        Tasks: 8 (limit: 309235)
+        Memory: 2.6M
+        CGroup: /system.slice/rtbrick-bngblasterctrl.service
+                └─682535 /usr/local/bin/bngblasterctrl
+
+
+The BNG Blaster controller listens on port `8001` per default, 
+which can be changed using the argument `-addr` in the systemd
+service unit `/etc/systemd/system/bngblaster-controller.service`. 
+
+.. code-block:: none
+
+    $ sudo bngblasterctrl --help
+    Usage of bngblasterctrl:
+    -addr string
+            HTTP network address (default ":8001")
+    -color
+            turn on color of color output
+    -console
+            turn on pretty console logging (default true)
+    -d string
+            config folder (default "/var/bngblaster")
+    -debug
+            turn on debug logging
+    -e string
+            bngblaster executable (default "/usr/sbin/bngblaster")
+
+
 API
 ---
 
