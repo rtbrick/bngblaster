@@ -422,6 +422,7 @@ main(int argc, char *argv[])
     int ch = 0;
     uint32_t ipv4;
     bbl_stats_t stats = {0};
+    int exit_status = 1;
 
     const char *config_file = NULL;
     const char *config_streams_file = NULL;
@@ -436,7 +437,7 @@ main(int argc, char *argv[])
 
     ctx = bbl_ctx_add();
     if (!ctx) {
-        exit(1);
+        exit(2);
     }
 
     /* Clear logging global array. */
@@ -520,13 +521,13 @@ main(int argc, char *argv[])
                 break;
             default:
                 bbl_print_usage();
-                exit(1);
+                goto CLEANUP;
         }
     }
 
     if(!config_file) {
         fprintf(stderr, "Error: No configuration specified (-C / --config <file>)\n");
-        exit(1);
+        goto CLEANUP;
     }
 
 #if 0
@@ -538,12 +539,12 @@ main(int argc, char *argv[])
     bbl_config_init_defaults(ctx);
     if(!bbl_config_load_json(config_file, ctx)) {
         fprintf(stderr, "Error: Failed to load configuration file %s\n", config_file);
-        exit(1);
+        goto CLEANUP;
     }
     if(config_streams_file) {
         if(!bbl_config_streams_load_json(config_streams_file, ctx)) {
             fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_streams_file);
-            exit(1);
+            goto CLEANUP;
         }
     }
     g_monkey = ctx->config.monkey_autostart;
@@ -565,13 +566,13 @@ main(int argc, char *argv[])
     /* Init IS-IS instances. */
     if(!isis_init(ctx)) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
-        exit(1);
+        goto CLEANUP;
     }
 
     /* Add interfaces. */
     if(!bbl_add_interfaces(ctx)) {
         fprintf(stderr, "Error: Failed to add interfaces\n");
-        exit(1);
+        goto CLEANUP;
     }
 
     /* Init TCP. */
@@ -580,7 +581,7 @@ main(int argc, char *argv[])
     /* Init BGP sessions. */
     if(!bgp_init(ctx)) {
         fprintf(stderr, "Error: Failed to init BGP\n");
-        exit(1);
+        goto CLEANUP;
     }
 
     /* Start curses. */
@@ -592,12 +593,12 @@ main(int argc, char *argv[])
     if(!bbl_add_multicast_packets(ctx)) {
         if (interactive) endwin();
         fprintf(stderr, "Error: Failed to add multicast traffic\n");
-        exit(1);
+        goto CLEANUP;
     }
     if(!bbl_stream_raw_add(ctx)) {
         if (interactive) endwin();
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
-        exit(1);
+        goto CLEANUP;
     }
 
     /* Setup resources in case PCAP dumping is desired. */
@@ -608,7 +609,7 @@ main(int argc, char *argv[])
         if(!bbl_sessions_init(ctx)) {
             if (interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
-            exit(1);
+            goto CLEANUP;
         }
     }
 
@@ -619,7 +620,7 @@ main(int argc, char *argv[])
     if(ctx->ctrl_socket_path) {
         if(!bbl_ctrl_socket_open(ctx)) {
             if (interactive) endwin();
-            exit(1);
+            goto CLEANUP;
         }
     }
 
@@ -675,8 +676,10 @@ main(int argc, char *argv[])
     bbl_stats_generate(ctx, &stats);
     bbl_stats_stdout(ctx, &stats);
     bbl_stats_json(ctx, &stats);
+    exit_status = 0;
 
-    /* Cleanup ressources. */
+    /* Cleanup resources. */
+CLEANUP:
     bbl_interface_unlock_all(ctx);
     log_close();
     if(ctx->ctrl_socket_path) {
@@ -684,4 +687,5 @@ main(int argc, char *argv[])
     }
     bbl_ctx_del(ctx);
     ctx = NULL;
+    return exit_status;
 }
