@@ -437,7 +437,7 @@ main(int argc, char *argv[])
 
     ctx = bbl_ctx_add();
     if (!ctx) {
-        goto CLEANUP;
+        exit(2);
     }
 
     /* Clear logging global array. */
@@ -678,7 +678,7 @@ main(int argc, char *argv[])
     bbl_stats_json(ctx, &stats);
     exit_status = 0;
 
-    /* Cleanup ressources. */
+    /* Cleanup resources. */
 CLEANUP:
     bbl_interface_unlock_all(ctx);
     log_close();
