@@ -46,6 +46,10 @@ typedef struct bbl_interface_
         bool pollout;
         bool ctrl; /* control traffic */
 
+        bbl_rx_thread *rx_thread;
+        int fanout_id;
+        int fanout_type;
+
 #ifdef BNGBLASTER_NETMAP
         struct nm_desc *port;
 #endif
@@ -217,6 +221,20 @@ typedef struct bbl_interface_
     CIRCLEQ_HEAD(session_tx_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
     CIRCLEQ_HEAD(l2tp_tx_, bbl_l2tp_queue_ ) l2tp_tx_qhead; /* list of messages that want to transmit */
 } bbl_interface_s;
+
+typedef struct bbl_rx_thread_ {
+    
+    bbl_interface_s *interface;
+    pthread_t thread_id;
+    pthread_mutex_t mutex;
+
+    int id;
+    int fd;
+    struct tpacket_req req_rx;
+    struct sockaddr_ll addr;
+    
+    void *next; /* Next RX thread */
+} bbl_rx_thread;
 
 void
 bbl_interface_unlock_all(bbl_ctx_s *ctx);

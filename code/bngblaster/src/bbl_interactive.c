@@ -51,7 +51,7 @@ uint8_t g_network_if_selected = 0;
 uint8_t g_a10nsp_if_selected  = 0;
 /* This global variable is used to switch between views. */
 bbl_ui_view g_view_selected   = 0;
-/* This global variable is used to switch vetween sessions in some views. */
+/* This global variable is used to switch between sessions in some views. */
 uint32_t g_session_selected   = 1;
 
 extern const char banner[];

@@ -410,6 +410,169 @@ set_promisc(const char *ifname) {
     return setsockopt(sfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
 }
 
+bool
+bbl_io_rx_thread_setup(bbl_rx_thread *thread) {
+    bbl_interface_s *interface = thread->interface;
+    bbl_ctx_s *ctx = interface->ctx;
+
+    size_t ring_size;
+    int slots = ctx->config.io_slots;
+    int version = TPACKET_V2;
+    int fanout_arg;
+
+    thread->fd = socket(AF_PACKET, SOCK_RAW, htobe16(ETH_P_ALL));
+    if (thread->fd == -1) {
+        LOG(ERROR, "socket() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+        goto ERROR;
+    }
+
+    thread->addr.sll_family = AF_PACKET;
+    thread->addr.sll_ifindex = interface->ifindex;
+    thread->addr.sll_protocol = htobe16(ETH_P_ALL);
+    if (bind(thread->fd, (struct sockaddr*)&thread->addr, sizeof(thread->addr)) == -1) {
+        LOG(ERROR, "bind() RX error %s (%d) for interface %s\n",
+        strerror(errno), errno, interface->name);
+        goto ERROR;
+    }
+
+    /*
+     * Setup fanout.
+     */
+    fanout_arg = (thread->interface->io.fanout_id | (thread->interface->io.fanout_type << 16));
+    LOG(ERROR, "DEBUG: PID: %d FID %d for interface %s\n",
+        thread->interface->io.fanout_id, fanout_arg, interface->name);
+    if (setsockopt(thread->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
+        LOG(ERROR, "Fanout error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        goto ERROR;
+    }
+
+    if(interface->io.mode == IO_MODE_PACKET_MMAP_RAW || interface->io.mode == IO_MODE_PACKET_MMAP) {
+        if ((setsockopt(thread->fd, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
+            LOG(ERROR, "setsockopt() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+            goto ERROR;
+        }
+    }
+
+    /*
+     * Setup RX ringbuffer. Double the slots, such that we do not miss any packets.
+     */
+    if(interface->io.mode == IO_MODE_PACKET_MMAP_RAW || interface->io.mode == IO_MODE_PACKET_MMAP) {
+        slots <<= 1;
+        thread->req_rx.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */
+        thread->req_rx.tp_frame_size = interface->io.req_rx.tp_block_size/2; /* 2048 */
+        thread->req_rx.tp_block_nr = slots/2;
+        thread->req_rx.tp_frame_nr = slots;
+        if (setsockopt(thread->fd, SOL_PACKET, PACKET_RX_RING, &interface->io.req_rx, sizeof(interface->io.req_rx)) == -1) {
+            LOG(ERROR, "Allocating RX ringbuffer error %s (%d) for interface %s\n",
+                strerror(errno), errno, interface->name);
+            goto ERROR;
+        }
+
+        /* Open the shared memory RX window between kernel and userspace. */
+        ring_size = interface->io.req_rx.tp_block_nr * interface->io.req_rx.tp_block_size;
+        interface->io.ring_rx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->io.fd_rx, 0);
+    }
+
+
+    return true;
+
+ERROR:
+    /* ToDo: terminate blaster */
+    exit(5);
+    return false;
+}
+
+static void * 
+bbl_io_rx_thread(void *thread_data) {
+
+    bbl_rx_thread *thread = thread_data;
+    bbl_interface_s *interface = thread->interface;
+    bbl_ctx_s *ctx = interface->ctx;
+
+    struct sockaddr saddr;
+    int saddr_size = sizeof(saddr);
+
+    bbl_ethernet_header_t *eth;
+    protocol_error_t decode_result;
+
+    ssize_t recv_result;
+
+    struct timespec rem = {0};
+    struct timespec sleep = {0};
+    sleep.tv_nsec = 1 *MSEC;
+
+    bbl_io_rx_thread_setup(thread);
+
+    while(true) {
+        /* Get RX timestamp */
+        clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
+
+        while (true) {
+            recv_result = recvfrom(interface->io.fd_rx, interface->io.rx_buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
+            if(recv_result < 14 || recv_result > IO_BUFFER_LEN) {
+                break;
+            }
+            interface->stats.packets_rx++;
+            interface->stats.bytes_rx += recv_result;
+            interface->io.ctrl = true;
+            decode_result = decode_ethernet(interface->io.rx_buf, interface->io.rx_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
+            if(decode_result == PROTOCOL_SUCCESS) {
+                /* Copy RX timestamp */
+                eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
+                eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
+                switch(interface->type) {
+                    case INTERFACE_TYPE_ACCESS:
+                        bbl_rx_handler_access(eth, interface);
+                        break;
+                    case INTERFACE_TYPE_NETWORK:
+                        bbl_rx_handler_network(eth, interface);
+                        break;
+                    case INTERFACE_TYPE_A10NSP:
+                        bbl_rx_handler_a10nsp(eth, interface);
+                        break;
+                    default:
+                        break;
+                }
+            } else if (decode_result == UNKNOWN_PROTOCOL) {
+                interface->stats.packets_rx_drop_unknown++;
+            } else {
+                interface->stats.packets_rx_drop_decode_error++;
+            }
+
+            /* Dump the packet into pcap file. */
+            if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+                pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
+                                        interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            }
+        }
+        pcapng_fflush(ctx);
+        nanosleep(&sleep, &rem);
+    }
+
+    return NULL;
+}
+
+static bool 
+bbl_io_setup_rx_threaded(bbl_ctx_s *ctx, bbl_interface_s *interface) {
+    int i;
+    bbl_rx_thread *thread = NULL;
+
+    interface->io.fanout_id = getpid() & 0xffff;
+    interface->io.fanout_type = PACKET_FANOUT_HASH; /* HASH */
+
+    for(i = 0; i < ctx->config.io_rx_threads; i++) {
+        interface->io.rx_thread = calloc(1, sizeof(bbl_rx_thread));
+        interface->io.rx_thread->next = thread;
+        thread = interface->io.rx_thread;
+        thread->id = i;
+        thread->interface = interface;
+        LOG(INFO, "Setup thread %d for interface %s\n", thread->id, interface->name);
+        pthread_create(&thread->thread_id, NULL, bbl_io_rx_thread, (void *)thread);
+    }
+    return true;
+}
+
 /**
  * bbl_io_add_interface
  *
@@ -448,22 +611,10 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
         LOG(ERROR, "socket() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
         return false;
     }
-    interface->io.fd_rx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htobe16(ETH_P_ALL));
-    if (interface->io.fd_rx == -1) {
-        LOG(ERROR, "socket() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-        return false;
-    }
-
     /* Set TPACKET version 2 for packet_mmap ring. */
     if(interface->io.mode == IO_MODE_PACKET_MMAP) {
         if ((setsockopt(interface->io.fd_tx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
             LOG(ERROR, "setsockopt() TX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
-            return false;
-        }
-    }
-    if(interface->io.mode == IO_MODE_PACKET_MMAP_RAW || interface->io.mode == IO_MODE_PACKET_MMAP) {
-        if ((setsockopt(interface->io.fd_rx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
-            LOG(ERROR, "setsockopt() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
             return false;
         }
     }
@@ -474,12 +625,6 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     interface->io.addr.sll_protocol = 0;
     if (bind(interface->io.fd_tx, (struct sockaddr*)&interface->io.addr, sizeof(interface->io.addr)) == -1) {
         LOG(ERROR, "bind() TX error %s (%d) for interface %s\n",
-        strerror(errno), errno, interface->name);
-        return false;
-    }
-    interface->io.addr.sll_protocol = htobe16(ETH_P_ALL);
-    if (bind(interface->io.fd_rx, (struct sockaddr*)&interface->io.addr, sizeof(interface->io.addr)) == -1) {
-        LOG(ERROR, "bind() RX error %s (%d) for interface %s\n",
         strerror(errno), errno, interface->name);
         return false;
     }
@@ -546,6 +691,32 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
         timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_raw_tx_job);
     }
 
+    /* Setup RX ... */
+    if(ctx->config.io_rx_threads) {
+        /* ... with one or more RX threads (fanout) per interface */
+        return bbl_io_setup_rx_threaded(ctx, interface);
+    }
+
+    /* ... in main thread */
+    interface->io.fd_rx = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, htobe16(ETH_P_ALL));
+    if (interface->io.fd_rx == -1) {
+        LOG(ERROR, "socket() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+        return false;
+    }
+
+    if(interface->io.mode == IO_MODE_PACKET_MMAP_RAW || interface->io.mode == IO_MODE_PACKET_MMAP) {
+        if ((setsockopt(interface->io.fd_rx, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
+            LOG(ERROR, "setsockopt() RX error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
+            return false;
+        }
+    }
+    interface->io.addr.sll_protocol = htobe16(ETH_P_ALL);
+    if (bind(interface->io.fd_rx, (struct sockaddr*)&interface->io.addr, sizeof(interface->io.addr)) == -1) {
+        LOG(ERROR, "bind() RX error %s (%d) for interface %s\n",
+        strerror(errno), errno, interface->name);
+        return false;
+    }
+
     /*
      * Setup RX ringbuffer. Double the slots, such that we do not miss any packets.
      */
@@ -570,5 +741,6 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
     } else {
         timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_raw_rx_job);
     }
+
     return true;
 }

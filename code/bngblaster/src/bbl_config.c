@@ -1913,6 +1913,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.io_stream_max_ppi = json_number_value(value);
         }
+        value = json_object_get(section, "io-rx-threads");
+        if (json_is_number(value)) {
+            ctx->config.io_rx_threads = json_number_value(value);
+        }
         value = json_object_get(section, "capture-include-streams");
         if (json_is_boolean(value)) {
             ctx->pcap.include_streams = json_boolean_value(value);

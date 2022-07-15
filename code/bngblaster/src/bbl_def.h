@@ -192,6 +192,7 @@ typedef struct bbl_ctx_ bbl_ctx_s;
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_session_ bbl_session_s;
 typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
+typedef struct bbl_rx_thread_ bbl_rx_thread;
 typedef struct bbl_stream_thread_ bbl_stream_thread;
 typedef struct bbl_stream_config_ bbl_stream_config;
 typedef struct bbl_stream_ bbl_stream;
