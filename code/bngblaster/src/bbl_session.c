@@ -452,17 +452,9 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.icmp_tx = 0;
     session->stats.icmpv6_rx = 0;
     session->stats.icmpv6_tx = 0;
-    session->stats.network_ipv4_rx = 0;
-    session->stats.network_ipv4_tx = 0;
-    session->stats.network_ipv4_loss = 0;
-    session->stats.network_ipv6_rx = 0;
-    session->stats.network_ipv6_tx = 0;
-    session->stats.network_ipv6_loss = 0;
-    session->stats.network_ipv6pd_rx = 0;
-    session->stats.network_ipv6pd_tx = 0;
-    session->stats.network_ipv6pd_loss = 0;
 
     memset(&ctx->access_statistics[session->session_id-1], 0, sizeof(*ctx->access_statistics));
+    memset(&ctx->network_statistics[session->session_id-1], 0, sizeof(*ctx->network_statistics));
 }
 
 void
@@ -705,8 +697,10 @@ bbl_sessions_init(bbl_ctx_s *ctx)
     /* Init list of sessions */
     ctx->session_list = calloc(ctx->config.sessions, sizeof(*session));
     ctx->access_statistics = calloc(ctx->config.sessions, sizeof(*ctx->access_statistics));
+    ctx->network_statistics = calloc(ctx->config.sessions, sizeof(*ctx->network_statistics));
 
     memset(ctx->access_statistics, 0, ctx->config.sessions * sizeof(*ctx->access_statistics));
+    memset(ctx->network_statistics, 0, ctx->config.sessions * sizeof(*ctx->network_statistics));
     access_config = ctx->config.access_config;
 
     /* For equal distribution of sessions over access configurations
@@ -1003,6 +997,7 @@ bbl_session_json(bbl_session_s *session)
 
     if(session->session_traffic_flows) {
         bbl_access_traffic_statistics_s *access_stats = &session->interface->ctx->access_statistics[session->session_id-1];
+        bbl_network_traffic_statistics_s *network_stats = &session->interface->ctx->network_statistics[session->session_id-1];
         session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
             "total-flows", session->session_traffic_flows,
             "verified-flows", session->session_traffic_flows_verified,
@@ -1015,21 +1010,21 @@ bbl_session_json(bbl_session_s *session)
             "access-tx-session-packets", access_stats->ipv4_tx,
             "access-rx-session-packets", access_stats->ipv4_rx,
             "access-rx-session-packets-loss", access_stats->ipv4_loss,
-            "network-tx-session-packets", session->stats.network_ipv4_tx,
-            "network-rx-session-packets", session->stats.network_ipv4_rx,
-            "network-rx-session-packets-loss", session->stats.network_ipv4_loss,
+            "network-tx-session-packets", network_stats->ipv4_tx,
+            "network-rx-session-packets", network_stats->ipv4_rx,
+            "network-rx-session-packets-loss", network_stats->ipv4_loss,
             "access-tx-session-packets-ipv6", access_stats->ipv6_tx,
             "access-rx-session-packets-ipv6", access_stats->ipv6_rx,
             "access-rx-session-packets-ipv6-loss", access_stats->ipv6_loss,
-            "network-tx-session-packets-ipv6", session->stats.network_ipv6_tx,
-            "network-rx-session-packets-ipv6", session->stats.network_ipv6_rx,
-            "network-rx-session-packets-ipv6-loss", session->stats.network_ipv6_loss,
+            "network-tx-session-packets-ipv6", network_stats->ipv6_tx,
+            "network-rx-session-packets-ipv6", network_stats->ipv6_rx,
+            "network-rx-session-packets-ipv6-loss", network_stats->ipv6_loss,
             "access-tx-session-packets-ipv6pd", access_stats->ipv6pd_tx,
             "access-rx-session-packets-ipv6pd", access_stats->ipv6pd_rx,
             "access-rx-session-packets-ipv6pd-loss", access_stats->ipv6pd_loss,
-            "network-tx-session-packets-ipv6pd", session->stats.network_ipv6pd_tx,
-            "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
-            "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
+            "network-tx-session-packets-ipv6pd", network_stats->ipv6pd_tx,
+            "network-rx-session-packets-ipv6pd", network_stats->ipv6pd_rx,
+            "network-rx-session-packets-ipv6pd-loss", network_stats->ipv6pd_loss);
     }
 
     if(session->a10nsp_session) {

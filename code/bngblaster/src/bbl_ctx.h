@@ -69,7 +69,8 @@ typedef struct bbl_ctx_
     CIRCLEQ_HEAD(interface_, bbl_interface_ ) interface_qhead; /* list of interfaces */
 
     bbl_session_s *session_list; /* list for sessions */
-    bbl_access_traffic_statistics_s *access_statistics; /* list for sessions */
+    bbl_access_traffic_statistics_s *access_statistics; /* access traffic statistics per session */
+    bbl_network_traffic_statistics_s *network_statistics; /* network traffic statistics per session */
 
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */

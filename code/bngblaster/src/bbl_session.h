@@ -375,18 +375,6 @@ typedef struct bbl_session_
         uint32_t dhcpv6_tx_renew;
         uint32_t dhcpv6_tx_release;
 
-        uint64_t network_ipv4_rx;
-        uint64_t network_ipv4_tx;
-        uint64_t network_ipv4_loss;
-
-        uint64_t network_ipv6_rx;
-        uint64_t network_ipv6_tx;
-        uint64_t network_ipv6_loss;
-
-        uint64_t network_ipv6pd_rx;
-        uint64_t network_ipv6pd_tx;
-        uint64_t network_ipv6pd_loss;
-
         uint32_t flapped; /* flap counter */
     } stats;
 
@@ -405,6 +393,20 @@ typedef struct bbl_access_traffic_statistics {
     uint64_t ipv6pd_tx;
     uint64_t ipv6pd_loss;
 } bbl_access_traffic_statistics_s;
+
+typedef struct bbl_network_traffic_statistics {
+    uint64_t ipv4_rx;
+    uint64_t ipv4_tx;
+    uint64_t ipv4_loss;
+
+    uint64_t ipv6_rx;
+    uint64_t ipv6_tx;
+    uint64_t ipv6_loss;
+
+    uint64_t ipv6pd_rx;
+    uint64_t ipv6pd_tx;
+    uint64_t ipv6pd_loss;
+} bbl_network_traffic_statistics_s;
 
 const char *
 session_state_string(uint32_t state);

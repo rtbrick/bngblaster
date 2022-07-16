@@ -117,7 +117,7 @@ bbl_encode_packet_network_session_ipv4(bbl_interface_s *interface, bbl_session_s
         }
     }
 
-    session->stats.network_ipv4_tx++;
+    interface->ctx->network_statistics[session->session_id-1].ipv4_tx++;
     interface->stats.session_ipv4_tx++;
     if(session->l2tp_session) {
         interface->stats.l2tp_data_tx++;
@@ -150,7 +150,7 @@ bbl_encode_packet_network_session_ipv6(bbl_interface_s *interface, bbl_session_s
         }
     }
 
-    session->stats.network_ipv6_tx++;
+    interface->ctx->network_statistics[session->session_id-1].ipv6_tx++;
     interface->stats.session_ipv6_tx++;
 
     memcpy(session->write_buf, session->network_ipv6_tx_packet_template, session->network_ipv6_tx_packet_len);
@@ -177,7 +177,7 @@ bbl_encode_packet_network_session_ipv6pd(bbl_interface_s *interface, bbl_session
         }
     }
 
-    session->stats.network_ipv6pd_tx++;
+    interface->ctx->network_statistics[session->session_id-1].ipv6pd_tx++;
     interface->stats.session_ipv6pd_tx++;
 
     memcpy(session->write_buf, session->network_ipv6pd_tx_packet_template, session->network_ipv6pd_tx_packet_len);

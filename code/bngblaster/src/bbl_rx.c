@@ -1953,6 +1953,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
     bbl_udp_t *udp = NULL;
     bbl_bbl_t *bbl = NULL;
     bbl_session_s *session;
+    bbl_network_traffic_statistics_s *network_stats;
     uint64_t loss;
 
     switch(eth->type) {
@@ -2014,11 +2015,12 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
         if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
             session = bbl_session_get(ctx, bbl->session_id);
             if(session) {
+                network_stats = &ctx->network_statistics[bbl->session_id-1];
                 switch (bbl->sub_type) {
                     case BBL_SUB_TYPE_IPV4:
                         if(session->access_ipv4_tx_flow_id == bbl->flow_id) {
                             interface->stats.session_ipv4_rx++;
-                            session->stats.network_ipv4_rx++;
+                            network_stats->ipv4_rx++;
                             if(!session->network_ipv4_rx_first_seq) {
                                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
                                 session->session_traffic_flows_verified++;
@@ -2030,7 +2032,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                                 if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);
                                     interface->stats.session_ipv4_loss += loss;
-                                    session->stats.network_ipv4_loss += loss;
+                                    network_stats->ipv4_loss += loss;
                                     LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
                                         session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
                                 }
@@ -2045,7 +2047,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                     case BBL_SUB_TYPE_IPV6:
                         if(session->access_ipv6_tx_flow_id == bbl->flow_id) {
                             interface->stats.session_ipv6_rx++;
-                            session->stats.network_ipv6_rx++;
+                            network_stats->ipv6_rx++;
                             if(!session->network_ipv6_rx_first_seq) {
                                 session->network_ipv6_rx_first_seq = bbl->flow_seq;
                                 session->session_traffic_flows_verified++;
@@ -2057,7 +2059,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                                 if((session->network_ipv6_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv6_rx_last_seq +1);
                                     interface->stats.session_ipv6_loss += loss;
-                                    session->stats.network_ipv6_loss += loss;
+                                    network_stats->ipv6_loss += loss;
                                     LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
                                         session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6_rx_last_seq);
                                 }
@@ -2072,7 +2074,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                     case BBL_SUB_TYPE_IPV6PD:
                         if(session->access_ipv6pd_tx_flow_id == bbl->flow_id) {
                             interface->stats.session_ipv6pd_rx++;
-                            session->stats.network_ipv6pd_rx++;
+                            network_stats->ipv6pd_rx++;
                             if(!session->network_ipv6pd_rx_first_seq) {
                                 session->network_ipv6pd_rx_first_seq = bbl->flow_seq;
                                 session->session_traffic_flows_verified++;
@@ -2084,7 +2086,7 @@ bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
                                 if((session->network_ipv6pd_rx_last_seq +1) < bbl->flow_seq) {
                                     loss = bbl->flow_seq - (session->network_ipv6pd_rx_last_seq +1);
                                     interface->stats.session_ipv6pd_loss += loss;
-                                    session->stats.network_ipv6pd_loss += loss;
+                                    network_stats->ipv6pd_loss += loss;
                                     LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
                                         session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv6pd_rx_last_seq);
                                 }

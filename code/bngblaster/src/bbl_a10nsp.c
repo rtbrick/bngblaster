@@ -288,7 +288,7 @@ bbl_a10nsp_ipv4_stream_handler(bbl_interface_s *interface,
     } else {
         if(bbl->flow_id == session->access_ipv4_tx_flow_id) {
             interface->stats.session_ipv4_rx++;
-            session->stats.network_ipv4_rx++;
+            interface->ctx->network_statistics[session->session_id-1].ipv4_rx++;
             if(!session->network_ipv4_rx_first_seq) {
                 session->network_ipv4_rx_first_seq = bbl->flow_seq;
                 session->session_traffic_flows_verified++;
@@ -299,7 +299,7 @@ bbl_a10nsp_ipv4_stream_handler(bbl_interface_s *interface,
             } else {
                 if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
                     loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);
-                    session->stats.network_ipv4_loss += loss;
+                    interface->ctx->network_statistics[session->session_id-1].ipv4_loss += loss;
                     interface->stats.session_ipv4_loss += loss;
                     LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
                         session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
