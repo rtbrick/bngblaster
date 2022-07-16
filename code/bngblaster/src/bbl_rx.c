@@ -1719,7 +1719,7 @@ bbl_rx_handler_access_multicast(bbl_ethernet_header_t *eth, bbl_interface_s *int
     ctx = interface->ctx;
 
     for(session_index = 0; session_index < ctx->sessions; session_index++) {
-        session = ctx->session_list[session_index];
+        session = &ctx->session_list[session_index];
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {
@@ -1750,7 +1750,7 @@ bbl_rx_handler_access_broadcast(bbl_ethernet_header_t *eth, bbl_interface_s *int
     ctx = interface->ctx;
 
     for(session_index = 0; session_index < ctx->sessions; session_index++) {
-        session = ctx->session_list[session_index];
+        session = &ctx->session_list[session_index];
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {

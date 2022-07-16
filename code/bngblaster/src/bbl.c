@@ -66,7 +66,7 @@ enable_disable_traffic(bbl_ctx_s *ctx, bool status)
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+        session = &ctx->session_list[i];
         if(session) {
             session->session_traffic = status;
             session->stream_traffic = status;
@@ -311,7 +311,7 @@ bbl_ctrl_job (timer_s *timer)
         if(g_teardown_request) {
             /* Put all sessions on the teardown list. */
             for(i = 0; i < ctx->sessions; i++) {
-                session = ctx->session_list[i];
+                session = &ctx->session_list[i];
                 if(session) {
                     if(!CIRCLEQ_NEXT(session, session_teardown_qnode)) {
                         /* Add only if not already on teardown list. */
