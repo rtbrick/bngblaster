@@ -657,6 +657,8 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
     uint64_t loss;
     int i;
 
+    access_stats = &ctx->access_statistics[session->session_id-1];
+
     if(ipv4->offset & ~IPV4_DF) {
         /* Reassembling of fragmented IPv4 packets is currently not supported. */
         session->stats.accounting_packets_rx++;
@@ -681,7 +683,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
             udp = (bbl_udp_t*)ipv4->next;
             if (udp->protocol == UDP_PROTOCOL_DHCP) {
                 interface->stats.dhcp_rx++;
-                session->stats.dhcp_rx++;
+                access_stats->dhcp_rx++;
                 bbl_dhcp_rx(eth, (bbl_dhcp_t*)udp->next, session);
                 return;
             }
@@ -695,8 +697,6 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
 
     session->stats.accounting_packets_rx++;
     session->stats.accounting_bytes_rx += eth->length;
-
-    access_stats = &ctx->access_statistics[session->session_id-1];
     /* BBL receive handler */
     if(bbl) {
         interface->io.ctrl = false;

@@ -1275,6 +1275,7 @@ protocol_error_t
 bbl_encode_packet_dhcp(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
+    bbl_access_traffic_statistics_s *access_stats;
 
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t ipv4 = {0};
@@ -1291,6 +1292,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
 
     interface = session->interface;
     ctx = interface->ctx;
+    access_stats = &ctx->access_statistics[session->session_id-1];
 
     dhcp.header = &header;
 
@@ -1352,7 +1354,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
     switch(session->dhcp_state) {
         case BBL_DHCP_SELECTING:
             dhcp.type = DHCP_MESSAGE_DISCOVER;
-            session->stats.dhcp_tx_discover++;
+            access_stats->dhcp_tx_discover++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Discover send\n", session->session_id);
             eth.dst = (uint8_t*)broadcast_mac;
             ipv4.dst = IPV4_BROADCAST;
@@ -1370,7 +1372,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
             break;
         case BBL_DHCP_REQUESTING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
-            session->stats.dhcp_tx_request++;
+            access_stats->dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             dhcp.option_address = true;
             dhcp.address = session->dhcp_address;
@@ -1386,12 +1388,12 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
             break;
         case BBL_DHCP_RENEWING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
-            session->stats.dhcp_tx_request++;
+            access_stats->dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcp.type = DHCP_MESSAGE_RELEASE;
-            session->stats.dhcp_tx_release++;
+            access_stats->dhcp_tx_release++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
@@ -1414,7 +1416,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
         timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
     }
 
-    session->stats.dhcp_tx++;
+    access_stats->dhcp_tx++;
     interface->stats.dhcp_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);

@@ -151,6 +151,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
 
     bbl_interface_s *interface = session->interface;
     bbl_ctx_s *ctx = interface->ctx;
+    bbl_access_traffic_statistics_s *access_stats = &ctx->access_statistics[session->session_id-1];
 
     /* Ignore packets received in wrong state */
     if(session->dhcp_state == BBL_DHCP_INIT) {
@@ -164,15 +165,15 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
 
     switch(dhcp->type) {
         case DHCP_MESSAGE_OFFER:
-            session->stats.dhcp_rx_offer++;
+            access_stats->dhcp_rx_offer++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Offer received\n", session->session_id);
             break;
         case DHCP_MESSAGE_ACK:
-            session->stats.dhcp_rx_ack++;
+            access_stats->dhcp_rx_ack++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-ACK received\n", session->session_id);
             break;
         case DHCP_MESSAGE_NAK:
-            session->stats.dhcp_rx_nak++;
+            access_stats->dhcp_rx_nak++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-NAK received\n", session->session_id);
             break;
         default:
