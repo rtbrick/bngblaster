@@ -619,6 +619,7 @@ protocol_error_t
 bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
+    bbl_access_traffic_statistics_s *access_stats;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -641,6 +642,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
 
     interface = session->interface;
     ctx = interface->ctx;
+    access_stats = &ctx->access_statistics[session->session_id];
 
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -692,7 +694,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
-            session->stats.dhcpv6_tx_solicit++;
+            access_stats->dhcpv6_tx_solicit++;
             dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
             dhcpv6.server_duid_len = 0;
             dhcpv6.ia_na_option_len = 0;
@@ -702,19 +704,19 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
             break;
         case BBL_DHCP_REQUESTING:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
-            session->stats.dhcpv6_tx_request++;
+            access_stats->dhcpv6_tx_request++;
             dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RENEWING:
             dhcpv6.type = DHCPV6_MESSAGE_RENEW;
-            session->stats.dhcpv6_tx_renew++;
+            access_stats->dhcpv6_tx_renew++;
             dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
-            session->stats.dhcpv6_tx_release++;
+            access_stats->dhcpv6_tx_release++;
             dhcpv6.oro = false;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
             break;
@@ -726,7 +728,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
 
     timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
 
-    session->stats.dhcpv6_tx++;
+    access_stats->dhcpv6_tx++;
     interface->stats.dhcpv6_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);

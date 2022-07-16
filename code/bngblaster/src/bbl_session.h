@@ -354,15 +354,6 @@ typedef struct bbl_session_
         uint32_t dhcp_rx_nak;
         uint32_t dhcp_tx_release;
 
-        uint32_t dhcpv6_tx;
-        uint32_t dhcpv6_rx;
-        uint32_t dhcpv6_tx_solicit;
-        uint32_t dhcpv6_rx_advertise;
-        uint32_t dhcpv6_tx_request;
-        uint32_t dhcpv6_rx_reply;
-        uint32_t dhcpv6_tx_renew;
-        uint32_t dhcpv6_tx_release;
-
         uint32_t flapped; /* flap counter */
     } stats;
 
@@ -386,6 +377,15 @@ typedef struct bbl_access_traffic_statistics {
     uint64_t ipv6pd_loss;
     uint64_t ipv6pd_rx_first_seq;
     uint64_t ipv6pd_rx_last_seq;
+
+    uint32_t dhcpv6_tx;
+    uint32_t dhcpv6_rx;
+    uint32_t dhcpv6_tx_solicit;
+    uint32_t dhcpv6_rx_advertise;
+    uint32_t dhcpv6_tx_request;
+    uint32_t dhcpv6_rx_reply;
+    uint32_t dhcpv6_tx_renew;
+    uint32_t dhcpv6_tx_release;
 } bbl_access_traffic_statistics_s;
 
 typedef struct bbl_network_traffic_statistics {
