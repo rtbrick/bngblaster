@@ -63,7 +63,7 @@ bbl_stats_generate_multicast(bbl_ctx_s *ctx, bbl_stats_t *stats, bool reset) {
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+        session = &ctx->session_list[i];
         if(session) {
             /* Multicast */
             stats->mc_old_rx_after_first_new += session->stats.mc_old_rx_after_first_new;
@@ -140,7 +140,7 @@ bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats) {
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+        session = &ctx->session_list[i];
         if(session) {
             /* Session Traffic */
             if(session->access_ipv4_rx_first_seq) {
@@ -866,7 +866,7 @@ bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t * stats) {
     if(ctx->config.json_report_sessions) {
         jobj_array = json_array();
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 jobj_sub = bbl_session_json(session);
                 if(jobj_sub) {

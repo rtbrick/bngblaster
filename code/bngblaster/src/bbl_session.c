@@ -251,7 +251,7 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     if(session_id > ctx->sessions || session_id < 1) {
         return NULL;
     }
-    return ctx->session_list[session_id-1];
+    return &ctx->session_list[session_id-1];
 }
 
 void
@@ -699,7 +699,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
     bbl_access_line_profile_s *access_line_profile;
     dict_insert_result result;
 
-    uint32_t i = 1;  /* BNG Blaster internal session identifier */
+    uint32_t i = 0;  /* BNG Blaster internal session identifier */
 
     /* The variable t counts how many sessions are created in one
      * loop over all access configurations and is reset to zero
@@ -710,13 +710,13 @@ bbl_sessions_init(bbl_ctx_s *ctx)
 
 
     /* Init list of sessions */
-    ctx->session_list = calloc(ctx->config.sessions, sizeof(session));
+    ctx->session_list = calloc(ctx->config.sessions, sizeof(*session));
     access_config = ctx->config.access_config;
 
     /* For equal distribution of sessions over access configurations
      * and outer VLAN's, we loop first over all configurations and
      * second over VLAN ranges as per configuration. */
-    while(i <= ctx->config.sessions) {
+    while(i < ctx->config.sessions) {
         if(access_config->vlan_mode == VLAN_MODE_N1) {
             if(access_config->access_outer_vlan_min) {
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
@@ -764,11 +764,8 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         }
         t++;
         access_config->sessions++;
-        session = calloc(1, sizeof(bbl_session_s));
-        if (!session) {
-            LOG(ERROR, "Failed to allocate memory for session %u!\n", i);
-            return false;
-        }
+        session = &ctx->session_list[i++];
+
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         session->session_id = i; /* BNG Blaster internal session identifier */
@@ -903,8 +900,6 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         } else {
             ctx->sessions_ipoe++;
         }
-        /* Add session to list */
-        ctx->session_list[i-1] = session;
 
         if(access_config->vlan_mode == VLAN_MODE_11) {
             /* Add 1:1 sessions to VLAN/session dictionary */
@@ -926,7 +921,6 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         }
 
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
-        i++;
 NEXT:
         if(access_config->next) {
             access_config = access_config->next;
