@@ -642,7 +642,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
 
     interface = session->interface;
     ctx = interface->ctx;
-    access_stats = &ctx->access_statistics[session->session_id];
+    access_stats = &ctx->access_statistics[session->session_id-1];
 
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
