@@ -251,6 +251,7 @@ bbl_a10nsp_ipv4_stream_handler(bbl_interface_s *interface,
     bbl_udp_t *udp = (bbl_udp_t*)ipv4->next;
     bbl_bbl_t *bbl = (bbl_bbl_t*)udp->next;
 
+    bbl_network_traffic_statistics_s *network_stats;
     bbl_stream *stream;
     void **search = NULL;
     uint64_t loss;
@@ -287,25 +288,26 @@ bbl_a10nsp_ipv4_stream_handler(bbl_interface_s *interface,
         bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
     } else {
         if(bbl->flow_id == session->access_ipv4_tx_flow_id) {
+            network_stats = &ctx->network_statistics[session->session_id-1];
             interface->stats.session_ipv4_rx++;
-            interface->ctx->network_statistics[session->session_id-1].ipv4_rx++;
-            if(!session->network_ipv4_rx_first_seq) {
-                session->network_ipv4_rx_first_seq = bbl->flow_seq;
+            network_stats->ipv4_rx++;
+            if(!network_stats->ipv4_rx_first_seq) {
+                network_stats->ipv4_rx_first_seq = bbl->flow_seq;
                 session->session_traffic_flows_verified++;
                 ctx->stats.session_traffic_flows_verified++;
                 if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
                     LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
                 }
             } else {
-                if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
-                    loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);
-                    interface->ctx->network_statistics[session->session_id-1].ipv4_loss += loss;
+                if((network_stats->ipv4_rx_last_seq +1) < bbl->flow_seq) {
+                    loss = bbl->flow_seq - (network_stats->ipv4_rx_last_seq +1);
+                    network_stats->ipv4_loss += loss;
                     interface->stats.session_ipv4_loss += loss;
                     LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                        session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
+                        session->session_id, bbl->flow_id, bbl->flow_seq, network_stats->ipv4_rx_last_seq);
                 }
             }
-            session->network_ipv4_rx_last_seq = bbl->flow_seq;
+            network_stats->ipv4_rx_last_seq = bbl->flow_seq;
         }
     }
 }

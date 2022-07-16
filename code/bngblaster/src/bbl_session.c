@@ -410,24 +410,18 @@ bbl_session_reset(bbl_session_s *session) {
     session->network_ipv4_tx_flow_id = 0;
     session->network_ipv4_tx_seq = 0;
     session->network_ipv4_tx_packet_len = 0;
-    session->network_ipv4_rx_first_seq = 0;
-    session->network_ipv4_rx_last_seq = 0;
     session->access_ipv6_tx_flow_id = 0;
     session->access_ipv6_tx_seq = 0;
     session->access_ipv6_tx_packet_len = 0;
     session->network_ipv6_tx_flow_id = 0;
     session->network_ipv6_tx_seq = 0;
     session->network_ipv6_tx_packet_len = 0;
-    session->network_ipv6_rx_first_seq = 0;
-    session->network_ipv6_rx_last_seq = 0;
     session->access_ipv6pd_tx_flow_id = 0;
     session->access_ipv6pd_tx_seq = 0;
     session->access_ipv6pd_tx_packet_len = 0;
     session->network_ipv6pd_tx_flow_id = 0;
     session->network_ipv6pd_tx_seq = 0;
     session->network_ipv6pd_tx_packet_len = 0;
-    session->network_ipv6pd_rx_first_seq = 0;
-    session->network_ipv6pd_rx_last_seq = 0;
 
     /* Reset session stats */
     session->stats.igmp_rx = 0;
@@ -998,9 +992,9 @@ bbl_session_json(bbl_session_s *session)
             "first-seq-rx-access-ipv4", access_stats->ipv4_rx_first_seq,
             "first-seq-rx-access-ipv6", access_stats->ipv6_rx_first_seq,
             "first-seq-rx-access-ipv6pd", access_stats->ipv6pd_rx_first_seq,
-            "first-seq-rx-network-ipv4", session->network_ipv4_rx_first_seq,
-            "first-seq-rx-network-ipv6", session->network_ipv6_rx_first_seq,
-            "first-seq-rx-network-ipv6pd", session->network_ipv6pd_rx_first_seq,
+            "first-seq-rx-network-ipv4", network_stats->ipv4_rx_first_seq,
+            "first-seq-rx-network-ipv6", network_stats->ipv6_rx_first_seq,
+            "first-seq-rx-network-ipv6pd", network_stats->ipv6pd_rx_first_seq,
             "access-tx-session-packets", access_stats->ipv4_tx,
             "access-rx-session-packets", access_stats->ipv4_rx,
             "access-rx-session-packets-loss", access_stats->ipv4_loss,
