@@ -408,23 +408,23 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
                     /* Session traffic */
                     interface->stats.session_ipv6_rx++;
                     access_stats->ipv6_rx++;
-                    if(!session->access_ipv6_rx_first_seq) {
-                        session->access_ipv6_rx_first_seq = bbl->flow_seq;
+                    if(!access_stats->ipv6_rx_first_seq) {
+                        access_stats->ipv6_rx_first_seq = bbl->flow_seq;
                         session->session_traffic_flows_verified++;
                         ctx->stats.session_traffic_flows_verified++;
                         if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
                             LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
                         }
                     } else {
-                        if((session->access_ipv6_rx_last_seq +1) < bbl->flow_seq) {
-                            loss = bbl->flow_seq - (session->access_ipv6_rx_last_seq +1);
+                        if((access_stats->ipv6_rx_last_seq +1) < bbl->flow_seq) {
+                            loss = bbl->flow_seq - (access_stats->ipv6_rx_last_seq +1);
                             interface->stats.session_ipv6_loss += loss;
                             access_stats->ipv6_loss += loss;
                             LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6_rx_last_seq);
+                                session->session_id, bbl->flow_id, bbl->flow_seq, access_stats->ipv6_rx_last_seq);
                         }
                     }
-                    session->access_ipv6_rx_last_seq = bbl->flow_seq;
+                    access_stats->ipv6_rx_last_seq = bbl->flow_seq;
                 } else {
                     bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                 }
@@ -439,23 +439,23 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
                     /* Session traffic */
                     interface->stats.session_ipv6pd_rx++;
                     access_stats->ipv6pd_rx++;
-                    if(!session->access_ipv6pd_rx_first_seq) {
-                        session->access_ipv6pd_rx_first_seq = bbl->flow_seq;
+                    if(!access_stats->ipv6pd_rx_first_seq) {
+                        access_stats->ipv6pd_rx_first_seq = bbl->flow_seq;
                         session->session_traffic_flows_verified++;
                         ctx->stats.session_traffic_flows_verified++;
                         if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
                             LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
                         }
                     } else {
-                        if((session->access_ipv6pd_rx_last_seq +1) < bbl->flow_seq) {
-                            loss = bbl->flow_seq - (session->access_ipv6pd_rx_last_seq +1);
+                        if((access_stats->ipv6pd_rx_last_seq +1) < bbl->flow_seq) {
+                            loss = bbl->flow_seq - (access_stats->ipv6pd_rx_last_seq +1);
                             interface->stats.session_ipv6pd_loss += loss;
                             access_stats->ipv6pd_loss += loss;
                             LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv6pd_rx_last_seq);
+                                session->session_id, bbl->flow_id, bbl->flow_seq, access_stats->ipv6pd_rx_last_seq);
                         }
                     }
-                    session->access_ipv6pd_rx_last_seq = bbl->flow_seq;
+                    access_stats->ipv6pd_rx_last_seq = bbl->flow_seq;
                 } else {
                     bbl_rx_stream(interface, eth, bbl, ipv6->tos);
                 }
@@ -710,23 +710,23 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
                 /* Session traffic */
                 interface->stats.session_ipv4_rx++;
                 access_stats->ipv4_rx++;
-                if(!session->access_ipv4_rx_first_seq) {
-                    session->access_ipv4_rx_first_seq = bbl->flow_seq;
+                if(!access_stats->ipv4_rx_first_seq) {
+                    access_stats->ipv4_rx_first_seq = bbl->flow_seq;
                     session->session_traffic_flows_verified++;
                     ctx->stats.session_traffic_flows_verified++;
                     if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
                         LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
                     }
                 } else {
-                    if((session->access_ipv4_rx_last_seq +1) < bbl->flow_seq) {
-                        loss = bbl->flow_seq - (session->access_ipv4_rx_last_seq +1);
+                    if((access_stats->ipv4_rx_last_seq +1) < bbl->flow_seq) {
+                        loss = bbl->flow_seq - (access_stats->ipv4_rx_last_seq +1);
                         interface->stats.session_ipv4_loss += loss;
                         access_stats->ipv4_loss += loss;
                         LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                            session->session_id, bbl->flow_id, bbl->flow_seq, session->access_ipv4_rx_last_seq);
+                            session->session_id, bbl->flow_id, bbl->flow_seq, access_stats->ipv4_rx_last_seq);
                     }
                 }
-                session->access_ipv4_rx_last_seq = bbl->flow_seq;
+                access_stats->ipv4_rx_last_seq = bbl->flow_seq;
             } else {
                 bbl_rx_stream(interface, eth, bbl, ipv4->tos);
             }

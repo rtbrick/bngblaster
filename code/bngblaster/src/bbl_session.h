@@ -276,8 +276,6 @@ typedef struct bbl_session_
     uint64_t access_ipv4_tx_seq;
     uint8_t *access_ipv4_tx_packet_template;
     uint8_t  access_ipv4_tx_packet_len;
-    uint64_t access_ipv4_rx_first_seq;
-    uint64_t access_ipv4_rx_last_seq;
 
     uint64_t network_ipv4_tx_flow_id;
     uint64_t network_ipv4_tx_seq;
@@ -290,8 +288,6 @@ typedef struct bbl_session_
     uint64_t access_ipv6_tx_seq;
     uint8_t *access_ipv6_tx_packet_template;
     uint8_t  access_ipv6_tx_packet_len;
-    uint64_t access_ipv6_rx_first_seq;
-    uint64_t access_ipv6_rx_last_seq;
 
     uint64_t network_ipv6_tx_flow_id;
     uint64_t network_ipv6_tx_seq;
@@ -304,8 +300,6 @@ typedef struct bbl_session_
     uint64_t access_ipv6pd_tx_seq;
     uint8_t *access_ipv6pd_tx_packet_template;
     uint8_t  access_ipv6pd_tx_packet_len;
-    uint64_t access_ipv6pd_rx_first_seq;
-    uint64_t access_ipv6pd_rx_last_seq;
 
     uint64_t network_ipv6pd_tx_flow_id;
     uint64_t network_ipv6pd_tx_seq;
@@ -384,14 +378,20 @@ typedef struct bbl_access_traffic_statistics {
     uint64_t ipv4_rx;
     uint64_t ipv4_tx;
     uint64_t ipv4_loss;
+    uint64_t ipv4_rx_first_seq;
+    uint64_t ipv4_rx_last_seq;
 
     uint64_t ipv6_rx;
     uint64_t ipv6_tx;
     uint64_t ipv6_loss;
+    uint64_t ipv6_rx_first_seq;
+    uint64_t ipv6_rx_last_seq;
 
     uint64_t ipv6pd_rx;
     uint64_t ipv6pd_tx;
     uint64_t ipv6pd_loss;
+    uint64_t ipv6pd_rx_first_seq;
+    uint64_t ipv6pd_rx_last_seq;
 } bbl_access_traffic_statistics_s;
 
 typedef struct bbl_network_traffic_statistics {

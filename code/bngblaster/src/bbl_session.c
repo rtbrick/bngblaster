@@ -407,8 +407,6 @@ bbl_session_reset(bbl_session_s *session) {
     session->access_ipv4_tx_flow_id = 0;
     session->access_ipv4_tx_seq = 0;
     session->access_ipv4_tx_packet_len = 0;
-    session->access_ipv4_rx_first_seq = 0;
-    session->access_ipv4_rx_last_seq = 0;
     session->network_ipv4_tx_flow_id = 0;
     session->network_ipv4_tx_seq = 0;
     session->network_ipv4_tx_packet_len = 0;
@@ -417,8 +415,6 @@ bbl_session_reset(bbl_session_s *session) {
     session->access_ipv6_tx_flow_id = 0;
     session->access_ipv6_tx_seq = 0;
     session->access_ipv6_tx_packet_len = 0;
-    session->access_ipv6_rx_first_seq = 0;
-    session->access_ipv6_rx_last_seq = 0;
     session->network_ipv6_tx_flow_id = 0;
     session->network_ipv6_tx_seq = 0;
     session->network_ipv6_tx_packet_len = 0;
@@ -427,8 +423,6 @@ bbl_session_reset(bbl_session_s *session) {
     session->access_ipv6pd_tx_flow_id = 0;
     session->access_ipv6pd_tx_seq = 0;
     session->access_ipv6pd_tx_packet_len = 0;
-    session->access_ipv6pd_rx_first_seq = 0;
-    session->access_ipv6pd_rx_last_seq = 0;
     session->network_ipv6pd_tx_flow_id = 0;
     session->network_ipv6pd_tx_seq = 0;
     session->network_ipv6pd_tx_packet_len = 0;
@@ -1001,9 +995,9 @@ bbl_session_json(bbl_session_s *session)
         session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
             "total-flows", session->session_traffic_flows,
             "verified-flows", session->session_traffic_flows_verified,
-            "first-seq-rx-access-ipv4", session->access_ipv4_rx_first_seq,
-            "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
-            "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
+            "first-seq-rx-access-ipv4", access_stats->ipv4_rx_first_seq,
+            "first-seq-rx-access-ipv6", access_stats->ipv6_rx_first_seq,
+            "first-seq-rx-access-ipv6pd", access_stats->ipv6pd_rx_first_seq,
             "first-seq-rx-network-ipv4", session->network_ipv4_rx_first_seq,
             "first-seq-rx-network-ipv6", session->network_ipv6_rx_first_seq,
             "first-seq-rx-network-ipv6pd", session->network_ipv6pd_rx_first_seq,
