@@ -118,6 +118,7 @@ bbl_ctx_del(bbl_ctx_s *ctx) {
     }
 
     free(ctx->session_list);
+    free(ctx->access_statistics);
 
     /* Free hash table dictionaries. */
     dict_free(ctx->vlan_session_dict, NULL);

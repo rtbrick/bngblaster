@@ -16,8 +16,8 @@
 protocol_error_t
 bbl_encode_packet_session_ipv4 (bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    interface = session->interface;
+    bbl_interface_s *interface = session->interface;
+    bbl_access_traffic_statistics_s *access_stats = &interface->ctx->access_statistics[session->session_id-1];
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -30,7 +30,7 @@ bbl_encode_packet_session_ipv4 (bbl_session_s *session)
         }
     }
 
-    session->stats.access_ipv4_tx++;
+    access_stats->ipv4_tx++;
     interface->stats.session_ipv4_tx++;
 
     memcpy(session->write_buf, session->access_ipv4_tx_packet_template, session->access_ipv4_tx_packet_len);
@@ -46,8 +46,8 @@ bbl_encode_packet_session_ipv4 (bbl_session_s *session)
 protocol_error_t
 bbl_encode_packet_session_ipv6 (bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    interface = session->interface;
+    bbl_interface_s *interface = session->interface;
+    bbl_access_traffic_statistics_s *access_stats = &interface->ctx->access_statistics[session->session_id-1];
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -60,7 +60,7 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
         }
     }
 
-    session->stats.access_ipv6_tx++;
+    access_stats->ipv6_tx++;
     interface->stats.session_ipv6_tx++;
 
     memcpy(session->write_buf, session->access_ipv6_tx_packet_template, session->access_ipv6_tx_packet_len);
@@ -76,8 +76,8 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
 protocol_error_t
 bbl_encode_packet_session_ipv6pd (bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    interface = session->interface;
+    bbl_interface_s *interface = session->interface;
+    bbl_access_traffic_statistics_s *access_stats = &interface->ctx->access_statistics[session->session_id-1];
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -90,7 +90,7 @@ bbl_encode_packet_session_ipv6pd (bbl_session_s *session)
         }
     }
 
-    session->stats.access_ipv6pd_tx++;
+    access_stats->ipv6pd_tx++;
     interface->stats.session_ipv6pd_tx++;
 
     memcpy(session->write_buf, session->access_ipv6pd_tx_packet_template, session->access_ipv6pd_tx_packet_len);
