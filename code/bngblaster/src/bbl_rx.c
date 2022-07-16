@@ -377,11 +377,13 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
     bbl_bbl_t *bbl = NULL;
     uint64_t loss;
 
+    access_stats = &ctx->access_statistics[session->session_id-1];
+
     switch(udp->dst) {
         case DHCPV6_UDP_CLIENT:
         case DHCPV6_UDP_SERVER:
             interface->stats.dhcpv6_rx++;
-            session->stats.dhcpv6_rx++;
+            access_stats->dhcpv6_rx++;
             bbl_dhcpv6_rx(eth, (bbl_dhcpv6_t*)udp->next, session);
             return;
         case BBL_UDP_PORT:
@@ -393,8 +395,6 @@ bbl_rx_udp_ipv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *i
         default:
             break;
     }
-
-    access_stats = &ctx->access_statistics[session->session_id-1];
     /* BBL receive handler */
     if(bbl && bbl->type == BBL_TYPE_UNICAST_SESSION) {
         switch (bbl->sub_type) {

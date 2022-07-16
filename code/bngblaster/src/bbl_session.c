@@ -945,6 +945,8 @@ bbl_session_json(bbl_session_s *session)
     uint32_t dhcpv6_lease_expire_t1 = 0;
     uint32_t dhcpv6_lease_expire_t2 = 0;
 
+    bbl_access_traffic_statistics_s *access_stats = &session->interface->ctx->access_statistics[session->session_id-1];
+
     if(!session) {
         return NULL;
     }
@@ -984,7 +986,6 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->session_traffic_flows) {
-        bbl_access_traffic_statistics_s *access_stats = &session->interface->ctx->access_statistics[session->session_id-1];
         bbl_network_traffic_statistics_s *network_stats = &session->interface->ctx->network_statistics[session->session_id-1];
         session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
             "total-flows", session->session_traffic_flows,
@@ -1118,14 +1119,14 @@ bbl_session_json(bbl_session_s *session)
             "dhcpv6-lease-expire", dhcpv6_lease_expire,
             "dhcpv6-lease-expire-t1", dhcpv6_lease_expire_t1,
             "dhcpv6-lease-expire-t2", dhcpv6_lease_expire_t2,
-            "dhcpv6-tx", session->stats.dhcpv6_tx,
-            "dhcpv6-rx", session->stats.dhcpv6_rx,
-            "dhcpv6-tx-solicit", session->stats.dhcpv6_tx_solicit,
-            "dhcpv6-rx-advertise", session->stats.dhcpv6_rx_advertise,
-            "dhcpv6-tx-request", session->stats.dhcpv6_tx_request,
-            "dhcpv6-rx-reply", session->stats.dhcpv6_rx_reply,
-            "dhcpv6-tx-renew", session->stats.dhcpv6_tx_renew,
-            "dhcpv6-tx-release", session->stats.dhcpv6_tx_release,
+            "dhcpv6-tx", access_stats->dhcpv6_tx,
+            "dhcpv6-rx", access_stats->dhcpv6_rx,
+            "dhcpv6-tx-solicit", access_stats->dhcpv6_tx_solicit,
+            "dhcpv6-rx-advertise", access_stats->dhcpv6_rx_advertise,
+            "dhcpv6-tx-request", access_stats->dhcpv6_tx_request,
+            "dhcpv6-rx-reply", access_stats->dhcpv6_rx_reply,
+            "dhcpv6-tx-renew", access_stats->dhcpv6_tx_renew,
+            "dhcpv6-tx-release", access_stats->dhcpv6_tx_release,
             "dhcpv6-dns1", dhcpv6_dns1,
             "dhcpv6-dns2", dhcpv6_dns2,
             "tx-packets", session->stats.packets_tx,
