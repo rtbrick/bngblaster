@@ -337,14 +337,6 @@ typedef struct bbl_session_
         uint32_t mc_rx;
         uint32_t mc_loss; /* packet loss */
         uint32_t mc_not_received;
-        uint32_t arp_rx;
-        uint32_t arp_tx;
-        uint32_t icmp_rx;
-        uint32_t icmp_tx;
-        uint32_t icmpv6_rx;
-        uint32_t icmpv6_tx;
-        uint32_t ipv4_fragmented_rx;
-
         uint32_t flapped; /* flap counter */
     } stats;
 
@@ -368,6 +360,15 @@ typedef struct bbl_access_traffic_statistics {
     uint64_t ipv6pd_loss;
     uint64_t ipv6pd_rx_first_seq;
     uint64_t ipv6pd_rx_last_seq;
+
+    uint32_t arp_rx;
+    uint32_t arp_tx;
+    uint32_t icmp_rx;
+    uint32_t icmp_tx;
+    uint32_t icmpv6_rx;
+    uint32_t icmpv6_tx;
+    uint32_t ipv4_fragmented_rx;
+
 
     uint32_t dhcp_tx;
     uint32_t dhcp_rx;

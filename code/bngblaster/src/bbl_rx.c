@@ -534,8 +534,9 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
 
     bbl_icmpv6_t *icmpv6 = (bbl_icmpv6_t*)ipv6->next;
     bbl_ctx_s *ctx = interface->ctx;
+    bbl_access_traffic_statistics_s *access_stats = &ctx->access_statistics[session->session_id-1];
 
-    session->stats.icmpv6_rx++;
+    access_stats->icmpv6_rx++;
 
     if(session->a10nsp_session) {
         /* There is currently no IPv6 support
@@ -663,7 +664,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
         /* Reassembling of fragmented IPv4 packets is currently not supported. */
         session->stats.accounting_packets_rx++;
         session->stats.accounting_bytes_rx += eth->length;
-        session->stats.ipv4_fragmented_rx++;
+        access_stats->ipv4_fragmented_rx++;
         interface->stats.ipv4_fragmented_rx++;
         return;
     }
@@ -675,7 +676,7 @@ bbl_rx_ipv4(bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4, bbl_interface_s *inter
             bbl_rx_igmp(ipv4, session);
             return;
         case PROTOCOL_IPV4_ICMP:
-            session->stats.icmp_rx++;
+            access_stats->icmp_rx++;
             interface->stats.icmp_rx++;
             bbl_rx_icmp(eth, ipv4, session);
             return;

@@ -436,10 +436,6 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.mc_rx = 0;
     session->stats.mc_loss = 0;
     session->stats.mc_not_received = 0;
-    session->stats.icmp_rx = 0;
-    session->stats.icmp_tx = 0;
-    session->stats.icmpv6_rx = 0;
-    session->stats.icmpv6_tx = 0;
 
     memset(&ctx->access_statistics[session->session_id-1], 0, sizeof(*ctx->access_statistics));
     memset(&ctx->network_statistics[session->session_id-1], 0, sizeof(*ctx->network_statistics));
@@ -1061,7 +1057,7 @@ bbl_session_json(bbl_session_s *session)
             "dhcpv6-dns2", dhcpv6_dns2,
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx,
-            "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+            "rx-fragmented-packets", access_stats->ipv4_fragmented_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
 
@@ -1131,7 +1127,7 @@ bbl_session_json(bbl_session_s *session)
             "dhcpv6-dns2", dhcpv6_dns2,
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx,
-            "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+            "rx-fragmented-packets", access_stats->ipv4_fragmented_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
     }
