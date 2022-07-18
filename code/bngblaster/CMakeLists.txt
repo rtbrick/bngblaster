@@ -47,6 +47,11 @@ if(BNGBLASTER_NETMAP)
     target_link_libraries(bngblaster netmap)
 endif()
 
+# Add experimental AF_XDP support
+if(BNGBLASTER_AF_XDP)
+    add_definitions(-DBNGBLASTER_AF_XDP)
+endif()
+
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()

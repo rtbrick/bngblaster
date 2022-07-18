@@ -111,7 +111,8 @@ typedef enum {
     IO_MODE_PACKET_MMAP_RAW = 0,    /* RX packet_mmap ring / TX raw sockets */
     IO_MODE_PACKET_MMAP,            /* RX/TX packet_mmap ring */
     IO_MODE_RAW,                    /* RX/TX raw sockets */
-    IO_MODE_NETMAP                  /* RX/TX netmap ring */
+    IO_MODE_NETMAP,                 /* RX/TX netmap ring */
+    IO_MODE_AF_XDP                  /* RX/TX AF_XDP */
 } __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {

@@ -14,6 +14,9 @@
 #ifdef BNGBLASTER_NETMAP
 #include "bbl_io_netmap.h"
 #endif
+#ifdef BNGBLASTER_AF_XDP
+#include "bbl_io_af_xdp.h"
+#endif
 
 void
 bbl_io_packet_mmap_rx_job(timer_s *timer) {
@@ -364,6 +367,13 @@ bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
             result = false;
 #endif
             break;
+        case IO_MODE_AF_XDP:
+#ifdef BNGBLASTER_NETMAP
+            result = bbl_io_af_xdp_send(interface, packet, packet_len);
+#else
+            result = false;
+#endif
+            break;
     }
 
     if(result) {
@@ -432,6 +442,12 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
 #ifdef BNGBLASTER_NETMAP
     if(interface->io.mode == IO_MODE_NETMAP) {
         return bbl_io_netmap_add_interface(ctx, interface);
+    }
+#endif
+
+#ifdef BNGBLASTER_AF_XDP
+    if(interface->io.mode == IO_MODE_AF_XDP) {
+        return bbl_io_af_xdp_add_interface(ctx, interface);
     }
 #endif
 

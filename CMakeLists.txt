@@ -13,6 +13,7 @@ message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
 option(BNGBLASTER_NETMAP "Build with netmap support" OFF)
+option(BNGBLASTER_AF_XDP "Build with AF_XDP support" OFF)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 

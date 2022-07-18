@@ -1898,6 +1898,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
             } else if (strcmp(s, "netmap") == 0) {
                 ctx->config.io_mode = IO_MODE_NETMAP;
 #endif
+#if BNGBLASTER_AF_XDP
+            } else if (strcmp(s, "af_xdp") == 0) {
+                ctx->config.io_mode = IO_MODE_AF_XDP;
+#endif
             } else if (strcmp(s, "packet_mmap") == 0) {
                 ctx->config.io_mode = IO_MODE_PACKET_MMAP;
             } else if (strcmp(s, "raw") == 0) {
