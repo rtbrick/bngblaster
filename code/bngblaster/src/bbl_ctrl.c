@@ -97,7 +97,7 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool statu
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 session->session_traffic = status;
             }
@@ -248,7 +248,7 @@ bbl_ctrl_igmp_join_iter(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute_
         /* Iterate over all sessions */
         join_count = 0;
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 /* Search for free slot ... */
                 for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
@@ -360,7 +360,7 @@ bbl_ctrl_igmp_leave_all(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute_
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+        session = &ctx->session_list[i];
         if(session) {
             /* Search for group ... */
             for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
@@ -759,7 +759,7 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(open) {
@@ -1229,7 +1229,7 @@ bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, 
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 session->stream_traffic = status;
             }
@@ -1317,7 +1317,7 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+        session = &ctx->session_list[i];
         if(!session) continue;
         
         if(session->session_state != BBL_ESTABLISHED || 
@@ -1360,7 +1360,7 @@ bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool sta
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 session->cfm_cc = status;
             }
@@ -1394,7 +1394,7 @@ bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+            session = &ctx->session_list[i];
             if(session) {
                 session->cfm_rdi = status;
             }

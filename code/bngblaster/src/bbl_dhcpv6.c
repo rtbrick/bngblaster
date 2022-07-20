@@ -149,6 +149,7 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
 
     bbl_interface_s *interface = session->interface;
     bbl_ctx_s *ctx = interface->ctx;
+    bbl_access_traffic_statistics_s *access_stats = &ctx->access_statistics[session->session_id-1];
 
     /* Ignore packets received in wrong state */
     if(session->dhcpv6_state == BBL_DHCP_INIT) {
@@ -175,7 +176,7 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
 
     if(dhcpv6->type == DHCPV6_MESSAGE_REPLY) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Reply received\n", session->session_id);
-        session->stats.dhcpv6_rx_reply++;
+        access_stats->dhcpv6_rx_reply++;
         /* Handle DHCPv6 teardown */
         if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
             session->dhcpv6_state = session->dhcpv6_state == BBL_DHCP_INIT;
@@ -238,7 +239,7 @@ bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *s
         bbl_session_tx_qnode_insert(session);
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Advertise received\n", session->session_id);
-        session->stats.dhcpv6_rx_advertise++;
+        access_stats->dhcpv6_rx_advertise++;
         session->dhcpv6_state = BBL_DHCP_REQUESTING;
         session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;

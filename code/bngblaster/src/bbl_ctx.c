@@ -100,10 +100,9 @@ void
 bbl_ctx_del(bbl_ctx_s *ctx) {
     bbl_access_config_s *access_config = ctx->config.access_config;
     void *p = NULL;
-    uint32_t i;
 
     timer_flush_root(&ctx->timer_root);
-    
+
     /* Free access configuration memory. */
     while(access_config) {
         p = access_config;
@@ -118,16 +117,9 @@ bbl_ctx_del(bbl_ctx_s *ctx) {
         free(ctx->sp_tx);
     }
 
-    /* Free session memory. */
-    for(i = 0; i < ctx->sessions; i++) {
-        p = ctx->session_list[i];
-        if(p) {
-            bbl_session_free(p);
-            free(p);
-        }
-    }
     free(ctx->session_list);
- 
+    free(ctx->access_statistics);
+
     /* Free hash table dictionaries. */
     dict_free(ctx->vlan_session_dict, NULL);
     dict_free(ctx->l2tp_session_dict, NULL);

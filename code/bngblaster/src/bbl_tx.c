@@ -16,8 +16,8 @@
 protocol_error_t
 bbl_encode_packet_session_ipv4 (bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    interface = session->interface;
+    bbl_interface_s *interface = session->interface;
+    bbl_access_traffic_statistics_s *access_stats = &interface->ctx->access_statistics[session->session_id-1];
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -30,7 +30,7 @@ bbl_encode_packet_session_ipv4 (bbl_session_s *session)
         }
     }
 
-    session->stats.access_ipv4_tx++;
+    access_stats->ipv4_tx++;
     interface->stats.session_ipv4_tx++;
 
     memcpy(session->write_buf, session->access_ipv4_tx_packet_template, session->access_ipv4_tx_packet_len);
@@ -46,8 +46,8 @@ bbl_encode_packet_session_ipv4 (bbl_session_s *session)
 protocol_error_t
 bbl_encode_packet_session_ipv6 (bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    interface = session->interface;
+    bbl_interface_s *interface = session->interface;
+    bbl_access_traffic_statistics_s *access_stats = &interface->ctx->access_statistics[session->session_id-1];
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -60,7 +60,7 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
         }
     }
 
-    session->stats.access_ipv6_tx++;
+    access_stats->ipv6_tx++;
     interface->stats.session_ipv6_tx++;
 
     memcpy(session->write_buf, session->access_ipv6_tx_packet_template, session->access_ipv6_tx_packet_len);
@@ -76,8 +76,8 @@ bbl_encode_packet_session_ipv6 (bbl_session_s *session)
 protocol_error_t
 bbl_encode_packet_session_ipv6pd (bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    interface = session->interface;
+    bbl_interface_s *interface = session->interface;
+    bbl_access_traffic_statistics_s *access_stats = &interface->ctx->access_statistics[session->session_id-1];
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->session_state != BBL_ESTABLISHED ||
@@ -90,7 +90,7 @@ bbl_encode_packet_session_ipv6pd (bbl_session_s *session)
         }
     }
 
-    session->stats.access_ipv6pd_tx++;
+    access_stats->ipv6pd_tx++;
     interface->stats.session_ipv6pd_tx++;
 
     memcpy(session->write_buf, session->access_ipv6pd_tx_packet_template, session->access_ipv6pd_tx_packet_len);
@@ -117,7 +117,7 @@ bbl_encode_packet_network_session_ipv4(bbl_interface_s *interface, bbl_session_s
         }
     }
 
-    session->stats.network_ipv4_tx++;
+    interface->ctx->network_statistics[session->session_id-1].ipv4_tx++;
     interface->stats.session_ipv4_tx++;
     if(session->l2tp_session) {
         interface->stats.l2tp_data_tx++;
@@ -150,7 +150,7 @@ bbl_encode_packet_network_session_ipv6(bbl_interface_s *interface, bbl_session_s
         }
     }
 
-    session->stats.network_ipv6_tx++;
+    interface->ctx->network_statistics[session->session_id-1].ipv6_tx++;
     interface->stats.session_ipv6_tx++;
 
     memcpy(session->write_buf, session->network_ipv6_tx_packet_template, session->network_ipv6_tx_packet_len);
@@ -177,7 +177,7 @@ bbl_encode_packet_network_session_ipv6pd(bbl_interface_s *interface, bbl_session
         }
     }
 
-    session->stats.network_ipv6pd_tx++;
+    interface->ctx->network_statistics[session->session_id-1].ipv6pd_tx++;
     interface->stats.session_ipv6pd_tx++;
 
     memcpy(session->write_buf, session->network_ipv6pd_tx_packet_template, session->network_ipv6pd_tx_packet_len);
@@ -619,6 +619,7 @@ protocol_error_t
 bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
+    bbl_access_traffic_statistics_s *access_stats;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -641,6 +642,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
 
     interface = session->interface;
     ctx = interface->ctx;
+    access_stats = &ctx->access_statistics[session->session_id-1];
 
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -692,7 +694,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
-            session->stats.dhcpv6_tx_solicit++;
+            access_stats->dhcpv6_tx_solicit++;
             dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
             dhcpv6.server_duid_len = 0;
             dhcpv6.ia_na_option_len = 0;
@@ -702,19 +704,19 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
             break;
         case BBL_DHCP_REQUESTING:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
-            session->stats.dhcpv6_tx_request++;
+            access_stats->dhcpv6_tx_request++;
             dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RENEWING:
             dhcpv6.type = DHCPV6_MESSAGE_RENEW;
-            session->stats.dhcpv6_tx_renew++;
+            access_stats->dhcpv6_tx_renew++;
             dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
-            session->stats.dhcpv6_tx_release++;
+            access_stats->dhcpv6_tx_release++;
             dhcpv6.oro = false;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
             break;
@@ -726,7 +728,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
 
     timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
 
-    session->stats.dhcpv6_tx++;
+    access_stats->dhcpv6_tx++;
     interface->stats.dhcpv6_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -1273,6 +1275,7 @@ protocol_error_t
 bbl_encode_packet_dhcp(bbl_session_s *session) {
     bbl_interface_s *interface;
     bbl_ctx_s *ctx;
+    bbl_access_traffic_statistics_s *access_stats;
 
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t ipv4 = {0};
@@ -1289,6 +1292,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
 
     interface = session->interface;
     ctx = interface->ctx;
+    access_stats = &ctx->access_statistics[session->session_id-1];
 
     dhcp.header = &header;
 
@@ -1350,7 +1354,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
     switch(session->dhcp_state) {
         case BBL_DHCP_SELECTING:
             dhcp.type = DHCP_MESSAGE_DISCOVER;
-            session->stats.dhcp_tx_discover++;
+            access_stats->dhcp_tx_discover++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Discover send\n", session->session_id);
             eth.dst = (uint8_t*)broadcast_mac;
             ipv4.dst = IPV4_BROADCAST;
@@ -1368,7 +1372,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
             break;
         case BBL_DHCP_REQUESTING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
-            session->stats.dhcp_tx_request++;
+            access_stats->dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             dhcp.option_address = true;
             dhcp.address = session->dhcp_address;
@@ -1384,12 +1388,12 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
             break;
         case BBL_DHCP_RENEWING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
-            session->stats.dhcp_tx_request++;
+            access_stats->dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcp.type = DHCP_MESSAGE_RELEASE;
-            session->stats.dhcp_tx_release++;
+            access_stats->dhcp_tx_release++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
@@ -1412,7 +1416,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
         timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
     }
 
-    session->stats.dhcp_tx++;
+    access_stats->dhcp_tx++;
     interface->stats.dhcp_tx++;
 
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);

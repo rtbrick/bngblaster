@@ -251,7 +251,7 @@ bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
     if(session_id > ctx->sessions || session_id < 1) {
         return NULL;
     }
-    return ctx->session_list[session_id-1];
+    return &ctx->session_list[session_id-1];
 }
 
 void
@@ -407,33 +407,21 @@ bbl_session_reset(bbl_session_s *session) {
     session->access_ipv4_tx_flow_id = 0;
     session->access_ipv4_tx_seq = 0;
     session->access_ipv4_tx_packet_len = 0;
-    session->access_ipv4_rx_first_seq = 0;
-    session->access_ipv4_rx_last_seq = 0;
     session->network_ipv4_tx_flow_id = 0;
     session->network_ipv4_tx_seq = 0;
     session->network_ipv4_tx_packet_len = 0;
-    session->network_ipv4_rx_first_seq = 0;
-    session->network_ipv4_rx_last_seq = 0;
     session->access_ipv6_tx_flow_id = 0;
     session->access_ipv6_tx_seq = 0;
     session->access_ipv6_tx_packet_len = 0;
-    session->access_ipv6_rx_first_seq = 0;
-    session->access_ipv6_rx_last_seq = 0;
     session->network_ipv6_tx_flow_id = 0;
     session->network_ipv6_tx_seq = 0;
     session->network_ipv6_tx_packet_len = 0;
-    session->network_ipv6_rx_first_seq = 0;
-    session->network_ipv6_rx_last_seq = 0;
     session->access_ipv6pd_tx_flow_id = 0;
     session->access_ipv6pd_tx_seq = 0;
     session->access_ipv6pd_tx_packet_len = 0;
-    session->access_ipv6pd_rx_first_seq = 0;
-    session->access_ipv6pd_rx_last_seq = 0;
     session->network_ipv6pd_tx_flow_id = 0;
     session->network_ipv6pd_tx_seq = 0;
     session->network_ipv6pd_tx_packet_len = 0;
-    session->network_ipv6pd_rx_first_seq = 0;
-    session->network_ipv6pd_rx_last_seq = 0;
 
     /* Reset session stats */
     session->stats.igmp_rx = 0;
@@ -448,28 +436,9 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.mc_rx = 0;
     session->stats.mc_loss = 0;
     session->stats.mc_not_received = 0;
-    session->stats.icmp_rx = 0;
-    session->stats.icmp_tx = 0;
-    session->stats.icmpv6_rx = 0;
-    session->stats.icmpv6_tx = 0;
-    session->stats.access_ipv4_rx = 0;
-    session->stats.access_ipv4_tx = 0;
-    session->stats.access_ipv4_loss = 0;
-    session->stats.network_ipv4_rx = 0;
-    session->stats.network_ipv4_tx = 0;
-    session->stats.network_ipv4_loss = 0;
-    session->stats.access_ipv6_rx = 0;
-    session->stats.access_ipv6_tx = 0;
-    session->stats.access_ipv6_loss = 0;
-    session->stats.network_ipv6_rx = 0;
-    session->stats.network_ipv6_tx = 0;
-    session->stats.network_ipv6_loss = 0;
-    session->stats.access_ipv6pd_rx = 0;
-    session->stats.access_ipv6pd_tx = 0;
-    session->stats.access_ipv6pd_loss = 0;
-    session->stats.network_ipv6pd_rx = 0;
-    session->stats.network_ipv6pd_tx = 0;
-    session->stats.network_ipv6pd_loss = 0;
+
+    memset(&ctx->access_statistics[session->session_id-1], 0, sizeof(*ctx->access_statistics));
+    memset(&ctx->network_statistics[session->session_id-1], 0, sizeof(*ctx->network_statistics));
 }
 
 void
@@ -699,7 +668,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
     bbl_access_line_profile_s *access_line_profile;
     dict_insert_result result;
 
-    uint32_t i = 1;  /* BNG Blaster internal session identifier */
+    uint32_t i = 0;  /* BNG Blaster internal session identifier */
 
     /* The variable t counts how many sessions are created in one
      * loop over all access configurations and is reset to zero
@@ -710,13 +679,18 @@ bbl_sessions_init(bbl_ctx_s *ctx)
 
 
     /* Init list of sessions */
-    ctx->session_list = calloc(ctx->config.sessions, sizeof(session));
+    ctx->session_list = calloc(ctx->config.sessions, sizeof(*session));
+    ctx->access_statistics = calloc(ctx->config.sessions, sizeof(*ctx->access_statistics));
+    ctx->network_statistics = calloc(ctx->config.sessions, sizeof(*ctx->network_statistics));
+
+    memset(ctx->access_statistics, 0, ctx->config.sessions * sizeof(*ctx->access_statistics));
+    memset(ctx->network_statistics, 0, ctx->config.sessions * sizeof(*ctx->network_statistics));
     access_config = ctx->config.access_config;
 
     /* For equal distribution of sessions over access configurations
      * and outer VLAN's, we loop first over all configurations and
      * second over VLAN ranges as per configuration. */
-    while(i <= ctx->config.sessions) {
+    while(i < ctx->config.sessions) {
         if(access_config->vlan_mode == VLAN_MODE_N1) {
             if(access_config->access_outer_vlan_min) {
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
@@ -764,11 +738,8 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         }
         t++;
         access_config->sessions++;
-        session = calloc(1, sizeof(bbl_session_s));
-        if (!session) {
-            LOG(ERROR, "Failed to allocate memory for session %u!\n", i);
-            return false;
-        }
+        session = &ctx->session_list[i++];
+
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         session->session_id = i; /* BNG Blaster internal session identifier */
@@ -903,8 +874,6 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         } else {
             ctx->sessions_ipoe++;
         }
-        /* Add session to list */
-        ctx->session_list[i-1] = session;
 
         if(access_config->vlan_mode == VLAN_MODE_11) {
             /* Add 1:1 sessions to VLAN/session dictionary */
@@ -926,7 +895,6 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         }
 
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
-        i++;
 NEXT:
         if(access_config->next) {
             access_config = access_config->next;
@@ -973,6 +941,8 @@ bbl_session_json(bbl_session_s *session)
     uint32_t dhcpv6_lease_expire_t1 = 0;
     uint32_t dhcpv6_lease_expire_t2 = 0;
 
+    bbl_access_traffic_statistics_s *access_stats = &session->interface->ctx->access_statistics[session->session_id-1];
+
     if(!session) {
         return NULL;
     }
@@ -1012,33 +982,34 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->session_traffic_flows) {
+        bbl_network_traffic_statistics_s *network_stats = &session->interface->ctx->network_statistics[session->session_id-1];
         session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
             "total-flows", session->session_traffic_flows,
             "verified-flows", session->session_traffic_flows_verified,
-            "first-seq-rx-access-ipv4", session->access_ipv4_rx_first_seq,
-            "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
-            "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
-            "first-seq-rx-network-ipv4", session->network_ipv4_rx_first_seq,
-            "first-seq-rx-network-ipv6", session->network_ipv6_rx_first_seq,
-            "first-seq-rx-network-ipv6pd", session->network_ipv6pd_rx_first_seq,
-            "access-tx-session-packets", session->stats.access_ipv4_tx,
-            "access-rx-session-packets", session->stats.access_ipv4_rx,
-            "access-rx-session-packets-loss", session->stats.access_ipv4_loss,
-            "network-tx-session-packets", session->stats.network_ipv4_tx,
-            "network-rx-session-packets", session->stats.network_ipv4_rx,
-            "network-rx-session-packets-loss", session->stats.network_ipv4_loss,
-            "access-tx-session-packets-ipv6", session->stats.access_ipv6_tx,
-            "access-rx-session-packets-ipv6", session->stats.access_ipv6_rx,
-            "access-rx-session-packets-ipv6-loss", session->stats.access_ipv6_loss,
-            "network-tx-session-packets-ipv6", session->stats.network_ipv6_tx,
-            "network-rx-session-packets-ipv6", session->stats.network_ipv6_rx,
-            "network-rx-session-packets-ipv6-loss", session->stats.network_ipv6_loss,
-            "access-tx-session-packets-ipv6pd", session->stats.access_ipv6pd_tx,
-            "access-rx-session-packets-ipv6pd", session->stats.access_ipv6pd_rx,
-            "access-rx-session-packets-ipv6pd-loss", session->stats.access_ipv6pd_loss,
-            "network-tx-session-packets-ipv6pd", session->stats.network_ipv6pd_tx,
-            "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
-            "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
+            "first-seq-rx-access-ipv4", access_stats->ipv4_rx_first_seq,
+            "first-seq-rx-access-ipv6", access_stats->ipv6_rx_first_seq,
+            "first-seq-rx-access-ipv6pd", access_stats->ipv6pd_rx_first_seq,
+            "first-seq-rx-network-ipv4", network_stats->ipv4_rx_first_seq,
+            "first-seq-rx-network-ipv6", network_stats->ipv6_rx_first_seq,
+            "first-seq-rx-network-ipv6pd", network_stats->ipv6pd_rx_first_seq,
+            "access-tx-session-packets", access_stats->ipv4_tx,
+            "access-rx-session-packets", access_stats->ipv4_rx,
+            "access-rx-session-packets-loss", access_stats->ipv4_loss,
+            "network-tx-session-packets", network_stats->ipv4_tx,
+            "network-rx-session-packets", network_stats->ipv4_rx,
+            "network-rx-session-packets-loss", network_stats->ipv4_loss,
+            "access-tx-session-packets-ipv6", access_stats->ipv6_tx,
+            "access-rx-session-packets-ipv6", access_stats->ipv6_rx,
+            "access-rx-session-packets-ipv6-loss", access_stats->ipv6_loss,
+            "network-tx-session-packets-ipv6", network_stats->ipv6_tx,
+            "network-rx-session-packets-ipv6", network_stats->ipv6_rx,
+            "network-rx-session-packets-ipv6-loss", network_stats->ipv6_loss,
+            "access-tx-session-packets-ipv6pd", access_stats->ipv6pd_tx,
+            "access-rx-session-packets-ipv6pd", access_stats->ipv6pd_rx,
+            "access-rx-session-packets-ipv6pd-loss", access_stats->ipv6pd_loss,
+            "network-tx-session-packets-ipv6pd", network_stats->ipv6pd_tx,
+            "network-rx-session-packets-ipv6pd", network_stats->ipv6pd_rx,
+            "network-rx-session-packets-ipv6pd-loss", network_stats->ipv6pd_loss);
     }
 
     if(session->a10nsp_session) {
@@ -1086,7 +1057,7 @@ bbl_session_json(bbl_session_s *session)
             "dhcpv6-dns2", dhcpv6_dns2,
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx,
-            "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+            "rx-fragmented-packets", access_stats->ipv4_fragmented_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
 
@@ -1131,32 +1102,32 @@ bbl_session_json(bbl_session_s *session)
             "dhcp-lease-expire", dhcp_lease_expire,
             "dhcp-lease-expire-t1", dhcp_lease_expire_t1,
             "dhcp-lease-expire-t2", dhcp_lease_expire_t2,
-            "dhcp-tx", session->stats.dhcp_tx,
-            "dhcp-rx", session->stats.dhcp_rx,
-            "dhcp-tx-discover", session->stats.dhcp_tx_discover,
-            "dhcp-rx-offer", session->stats.dhcp_rx_offer,
-            "dhcp-tx-request", session->stats.dhcp_tx_request,
-            "dhcp-rx-ack", session->stats.dhcp_rx_ack,
-            "dhcp-rx-nak", session->stats.dhcp_rx_nak,
-            "dhcp-tx-release", session->stats.dhcp_tx_release,
+            "dhcp-tx", access_stats->dhcp_tx,
+            "dhcp-rx", access_stats->dhcp_rx,
+            "dhcp-tx-discover", access_stats->dhcp_tx_discover,
+            "dhcp-rx-offer", access_stats->dhcp_rx_offer,
+            "dhcp-tx-request", access_stats->dhcp_tx_request,
+            "dhcp-rx-ack", access_stats->dhcp_rx_ack,
+            "dhcp-rx-nak", access_stats->dhcp_rx_nak,
+            "dhcp-tx-release", access_stats->dhcp_tx_release,
             "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
             "dhcpv6-lease-time", session->dhcpv6_lease_time,
             "dhcpv6-lease-expire", dhcpv6_lease_expire,
             "dhcpv6-lease-expire-t1", dhcpv6_lease_expire_t1,
             "dhcpv6-lease-expire-t2", dhcpv6_lease_expire_t2,
-            "dhcpv6-tx", session->stats.dhcpv6_tx,
-            "dhcpv6-rx", session->stats.dhcpv6_rx,
-            "dhcpv6-tx-solicit", session->stats.dhcpv6_tx_solicit,
-            "dhcpv6-rx-advertise", session->stats.dhcpv6_rx_advertise,
-            "dhcpv6-tx-request", session->stats.dhcpv6_tx_request,
-            "dhcpv6-rx-reply", session->stats.dhcpv6_rx_reply,
-            "dhcpv6-tx-renew", session->stats.dhcpv6_tx_renew,
-            "dhcpv6-tx-release", session->stats.dhcpv6_tx_release,
+            "dhcpv6-tx", access_stats->dhcpv6_tx,
+            "dhcpv6-rx", access_stats->dhcpv6_rx,
+            "dhcpv6-tx-solicit", access_stats->dhcpv6_tx_solicit,
+            "dhcpv6-rx-advertise", access_stats->dhcpv6_rx_advertise,
+            "dhcpv6-tx-request", access_stats->dhcpv6_tx_request,
+            "dhcpv6-rx-reply", access_stats->dhcpv6_rx_reply,
+            "dhcpv6-tx-renew", access_stats->dhcpv6_tx_renew,
+            "dhcpv6-tx-release", access_stats->dhcpv6_tx_release,
             "dhcpv6-dns1", dhcpv6_dns1,
             "dhcpv6-dns2", dhcpv6_dns2,
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx,
-            "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+            "rx-fragmented-packets", access_stats->ipv4_fragmented_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
     }

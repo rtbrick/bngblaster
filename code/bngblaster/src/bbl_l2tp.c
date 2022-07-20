@@ -890,6 +890,7 @@ static void
 bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_session_t *l2tp_session) {
     bbl_ctx_s *ctx = interface->ctx;
     bbl_session_s *pppoe_session;
+    bbl_network_traffic_statistics_s *network_stats;
 
     bbl_lcp_t   *lcp_rx;
     bbl_pap_t   *pap_rx;
@@ -1062,26 +1063,27 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                     } else {
                         if(l2tp_session->pppoe_session) {
                             pppoe_session = l2tp_session->pppoe_session;
+                            network_stats = &ctx->network_statistics[pppoe_session->session_id-1];
                             if(bbl->flow_id == pppoe_session->access_ipv4_tx_flow_id) {
                                 interface->stats.session_ipv4_rx++;
-                                pppoe_session->stats.network_ipv4_rx++;
-                                if(!pppoe_session->network_ipv4_rx_first_seq) {
-                                    pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
+                                network_stats->ipv4_rx++;
+                                if(!network_stats->ipv4_rx_first_seq) {
+                                    network_stats->ipv4_rx_first_seq = bbl->flow_seq;
                                     pppoe_session->session_traffic_flows_verified++;
                                     ctx->stats.session_traffic_flows_verified++;
                                     if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
                                         LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
                                     }
                                 } else {
-                                    if((pppoe_session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
-                                        loss = bbl->flow_seq - (pppoe_session->network_ipv4_rx_last_seq +1);
+                                    if((network_stats->ipv4_rx_last_seq +1) < bbl->flow_seq) {
+                                        loss = bbl->flow_seq - (network_stats->ipv4_rx_last_seq +1);
                                         interface->stats.session_ipv4_loss += loss;
-                                        pppoe_session->stats.network_ipv4_loss += loss;
+                                        network_stats->ipv4_loss += loss;
                                         LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                            pppoe_session->session_id, bbl->flow_id, bbl->flow_seq, pppoe_session->network_ipv4_rx_last_seq);
+                                            pppoe_session->session_id, bbl->flow_id, bbl->flow_seq, network_stats->ipv4_rx_last_seq);
                                     }
                                 }
-                                pppoe_session->network_ipv4_rx_last_seq = bbl->flow_seq;
+                                network_stats->ipv4_rx_last_seq = bbl->flow_seq;
                             }
                         }
                     }
