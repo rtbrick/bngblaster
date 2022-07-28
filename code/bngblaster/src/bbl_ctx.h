@@ -88,16 +88,16 @@ typedef struct bbl_ctx_
 
     /* Interfaces */
     struct {
-        uint8_t count;
+        uint16_t count;
         char *names[BBL_MAX_INTERFACES]; /* list of all interface names */
 
-        uint8_t access_if_count;
+        uint16_t access_if_count;
         struct bbl_interface_ *access_if[BBL_MAX_INTERFACES];
 
-        uint8_t network_if_count;
+        uint16_t network_if_count;
         struct bbl_interface_ *network_if[BBL_MAX_INTERFACES];
 
-        uint8_t a10nsp_if_count;
+        uint16_t a10nsp_if_count;
         struct bbl_interface_ *a10nsp_if[BBL_MAX_INTERFACES];
     } interfaces;
 
