@@ -102,7 +102,7 @@
 
 #define DHCPV6_BUFFER               64
 
-#define BBL_MAX_INTERFACES          1024
+#define BBL_MAX_INTERFACES          32
 
 #define BBL_AVG_SAMPLES             5
 #define DATA_TRAFFIC_MAX_LEN        1920
