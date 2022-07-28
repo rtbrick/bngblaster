@@ -1703,6 +1703,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_is_number(value)) {
             ctx->config.igmp_max_join_delay = json_number_value(value);
         }
+        value = json_object_get(section, "robustness-interval");
+        if (json_is_number(value)) {
+            ctx->config.igmp_robustness_interval = json_number_value(value);
+        }
     }
 
     /* Access Line Configuration */
@@ -2274,6 +2278,7 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.igmp_source = 0;
     ctx->config.igmp_group_count = 1;
     ctx->config.igmp_zap_wait = true;
+    ctx->config.igmp_robustness_interval = 1000;
     ctx->config.traffic_autostart = true;
     ctx->config.session_traffic_autostart = true;
 }

@@ -91,7 +91,13 @@ bbl_stats_generate_multicast(bbl_ctx_s *ctx, bbl_stats_t *stats, bool reset) {
                 }
             }
 
-            stats->max_join_delay_violations += session->stats.max_join_delay_violations;
+            stats->join_delay_violations += session->stats.join_delay_violations;
+            stats->join_delay_violations_125ms += session->stats.join_delay_violations_125ms;
+            stats->join_delay_violations_250ms += session->stats.join_delay_violations_250ms;
+            stats->join_delay_violations_500ms += session->stats.join_delay_violations_500ms;
+            stats->join_delay_violations_1s += session->stats.join_delay_violations_1s;
+            stats->join_delay_violations_2s += session->stats.join_delay_violations_2s;
+
             stats->zapping_join_count += session->zapping_join_count;
             stats->zapping_leave_count += session->zapping_leave_count;
 
@@ -104,7 +110,12 @@ bbl_stats_generate_multicast(bbl_ctx_s *ctx, bbl_stats_t *stats, bool reset) {
                 session->stats.min_join_delay = 0;
                 session->stats.avg_join_delay = 0;
                 session->stats.max_join_delay = 0;
-                session->stats.max_join_delay_violations = 0;
+                session->stats.join_delay_violations = 0;
+                session->stats.join_delay_violations_125ms = 0;
+                session->stats.join_delay_violations_250ms = 0;
+                session->stats.join_delay_violations_500ms = 0;
+                session->stats.join_delay_violations_1s = 0;
+                session->stats.join_delay_violations_2s = 0;
                 session->stats.min_leave_delay = 0;
                 session->stats.avg_leave_delay = 0;
                 session->stats.max_leave_delay = 0;
@@ -546,21 +557,24 @@ bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t * stats) {
         if(ctx->config.igmp_zap_interval > 0) {
             printf("\nIGMP Zapping Stats:\n");
             printf("  Join Delay:\n");
-            printf("    MIN: %u ms\n", stats->min_join_delay);
-            printf("    AVG: %u ms\n", stats->avg_join_delay);
-            printf("    MAX: %u ms\n", stats->max_join_delay);
-
+            printf("    COUNT: %u\n", stats->zapping_join_count);
+            printf("    MIN: %ums\n", stats->min_join_delay);
+            printf("    AVG: %ums\n", stats->avg_join_delay);
+            printf("    MAX: %ums\n", stats->max_join_delay);
+            printf("    VIOLATIONS:\n");
             if(ctx->config.igmp_max_join_delay) {
-                printf("    VIOLATIONS: %u/%u (> %u ms)\n", 
-                    stats->max_join_delay_violations, 
-                    stats->zapping_join_count,
-                    ctx->config.igmp_max_join_delay);
+            printf("      > %u ms: %u\n", ctx->config.igmp_max_join_delay, stats->join_delay_violations);
             }
-
+            printf("      > 125ms: %u\n", stats->join_delay_violations_125ms);
+            printf("      > 250ms: %u\n", stats->join_delay_violations_250ms);
+            printf("      > 500ms: %u\n", stats->join_delay_violations_500ms);
+            printf("      > 1s: %u\n", stats->join_delay_violations_1s);
+            printf("      > 2s: %u\n", stats->join_delay_violations_2s);
             printf("  Leave Delay:\n");
-            printf("    MIN: %u ms\n", stats->min_leave_delay);
-            printf("    AVG: %u ms\n", stats->avg_leave_delay);
-            printf("    MAX: %u ms\n", stats->max_leave_delay);
+            printf("    COUNT: %u\n", stats->zapping_leave_count);
+            printf("    MIN: %ums\n", stats->min_leave_delay);
+            printf("    AVG: %ums\n", stats->avg_leave_delay);
+            printf("    MAX: %ums\n", stats->max_leave_delay);
             printf("  Multicast:\n");
             printf("    Overlap: %u packets\n", stats->mc_old_rx_after_first_new);
             printf("    Not Received: %u\n", stats->mc_not_received);
@@ -851,7 +865,15 @@ bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t * stats) {
             json_object_set(jobj_sub, "zapping-join-delay-ms-min", json_integer(stats->min_join_delay));
             json_object_set(jobj_sub, "zapping-join-delay-ms-avg", json_integer(stats->avg_join_delay));
             json_object_set(jobj_sub, "zapping-join-delay-ms-max", json_integer(stats->max_join_delay));
-            json_object_set(jobj_sub, "zapping-join-delay-violations", json_integer(stats->max_join_delay_violations));
+            if(ctx->config.igmp_max_join_delay) {
+                json_object_set(jobj_sub, "zapping-join-delay-violations", json_integer(stats->join_delay_violations));
+                json_object_set(jobj_sub, "zapping-join-delay-violations-threshold", json_integer(ctx->config.igmp_max_join_delay));
+            }
+            json_object_set(jobj_sub, "zapping-join-delay-violations-125ms", json_integer(stats->join_delay_violations_125ms));
+            json_object_set(jobj_sub, "zapping-join-delay-violations-250ms", json_integer(stats->join_delay_violations_250ms));
+            json_object_set(jobj_sub, "zapping-join-delay-violations-500ms", json_integer(stats->join_delay_violations_500ms));
+            json_object_set(jobj_sub, "zapping-join-delay-violations-1s", json_integer(stats->join_delay_violations_1s));
+            json_object_set(jobj_sub, "zapping-join-delay-violations-2s", json_integer(stats->join_delay_violations_2s));
             json_object_set(jobj_sub, "zapping-join-count", json_integer(stats->zapping_join_count));
             json_object_set(jobj_sub, "zapping-leave-delay-ms-min", json_integer(stats->min_leave_delay));
             json_object_set(jobj_sub, "zapping-leave-delay-ms-avg", json_integer(stats->avg_leave_delay));

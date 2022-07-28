@@ -129,7 +129,19 @@ bbl_igmp_zapping(timer_s *timer)
             session->stats.avg_join_delay = session->zapping_join_delay_sum / session->zapping_join_count;
             
             if(ctx->config.igmp_max_join_delay && join_delay > ctx->config.igmp_max_join_delay) {
-                session->stats.max_join_delay_violations++;
+                session->stats.join_delay_violations++;
+            }
+
+            if(join_delay > 2000) {
+                session->stats.join_delay_violations_2s++;
+            } else if(join_delay > 1000) {
+                session->stats.join_delay_violations_1s++;
+            } else if(join_delay > 500) {
+                session->stats.join_delay_violations_500ms++;
+            } else if(join_delay > 250) {
+                session->stats.join_delay_violations_250ms++;
+            } else if(join_delay > 125) {
+                session->stats.join_delay_violations_125ms++;
             }
 
             LOG(IGMP, "IGMP (ID: %u) ZAPPING %u ms join delay for group %s\n",

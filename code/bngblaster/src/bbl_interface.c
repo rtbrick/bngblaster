@@ -51,7 +51,8 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
     lock_pid = pid;
     lock_file = fopen(lock_path, "w");
     if(!lock_file) {
-        LOG(ERROR, "Failed to open interface lock file %s\n", lock_path);
+        LOG(ERROR, "Failed to open interface lock file %s %s (%d)\n", 
+            lock_path, strerror(errno), errno);
         return false;
     }
     fprintf(lock_file, "%d", lock_pid);
