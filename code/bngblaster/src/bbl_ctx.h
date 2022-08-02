@@ -291,6 +291,7 @@ typedef struct bbl_ctx_
         uint16_t igmp_zap_count;
         uint16_t igmp_zap_wait;
         uint16_t igmp_max_join_delay;
+        uint16_t igmp_robustness_interval;
 
         /* Multicast Traffic */
         bool send_multicast_traffic;

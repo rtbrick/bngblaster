@@ -336,7 +336,12 @@ typedef struct bbl_session_
         uint32_t min_join_delay;
         uint32_t avg_join_delay;
         uint32_t max_join_delay;
-        uint32_t max_join_delay_violations;
+        uint32_t join_delay_violations;
+        uint32_t join_delay_violations_125ms;
+        uint32_t join_delay_violations_250ms;
+        uint32_t join_delay_violations_500ms;
+        uint32_t join_delay_violations_1s;
+        uint32_t join_delay_violations_2s;
 
         uint32_t min_leave_delay;
         uint32_t avg_leave_delay;
