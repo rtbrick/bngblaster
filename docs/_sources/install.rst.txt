@@ -4,7 +4,7 @@ Installation
 ============
 
 The BNG Blaster should run on any modern linux distribution
-but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.
+but is primary tested on Ubuntu 18.04, 20.04 and 22.04 LTS.
 
 Install Ubuntu
 --------------
@@ -13,7 +13,11 @@ Install dependencies:
 
 .. code-block:: none
 
+    # Ubuntu 18.04 and 20.04
     sudo apt install -y libssl1.1 libncurses5 libjansson4
+    # Ubuntu 22.04
+    sudo apt install -y libssl1.1 libncurses5 libjansson4
+
 
 Download and install debian package: https://github.com/rtbrick/bngblaster/releases
 
@@ -37,6 +41,7 @@ and the following standard dependencies:
 
     # libdict
     wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
+    unzip libdict-debian.zip
     sudo dpkg -i libdict_1.0.1_amd64.deb
     sudo dpkg -i libdict-dev_1.0.1_amd64.deb
 
