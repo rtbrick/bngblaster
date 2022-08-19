@@ -47,7 +47,7 @@ typedef struct bgp_raw_update_ {
 
     /* Pointer to next instance */
     struct bgp_raw_update_ *next;
-} bgp_raw_update_t;
+} bgp_raw_update_s;
 
 /*
  * BGP Configuration
@@ -70,20 +70,18 @@ typedef struct bgp_config_ {
 
     /* Pointer to next instance */
     struct bgp_config_ *next;
-} bgp_config_t;
+} bgp_config_s;
 
 /*
  * BGP Session
  */
-typedef struct bgp_session_ {
-    struct bbl_ctx_ *ctx; /* parent */
-    
+typedef struct bgp_session_ {    
     uint32_t ipv4_local_address;
     uint32_t ipv4_peer_address;
 
-    bgp_config_t    *config;
+    bgp_config_s    *config;
     bbl_interface_s *interface;
-    bbl_tcp_ctx_t   *tcpc;
+    bbl_tcp_ctx_s   *tcpc;
 
     struct timer_ *connect_timer;
     struct timer_ *send_open_timer;
@@ -115,8 +113,8 @@ typedef struct bgp_session_ {
         uint32_t update_tx;
     } stats;
 
-    bgp_raw_update_t *raw_update_start;
-    bgp_raw_update_t *raw_update;
+    bgp_raw_update_s *raw_update_start;
+    bgp_raw_update_s *raw_update;
     bool raw_update_sending;
 
     struct timespec established_timestamp;
@@ -128,6 +126,6 @@ typedef struct bgp_session_ {
     uint8_t error_subcode;
     
     struct bgp_session_ *next; /* pointer to next instance */
-} bgp_session_t;
+} bgp_session_s;
 
 #endif

@@ -10,12 +10,12 @@
 #define __BBL_BGP_MESSAGE_H__
 
 void
-bgp_push_open_message(bgp_session_t *session);
+bgp_push_open_message(bgp_session_s *session);
 
 void
-bgp_push_keepalive_message(bgp_session_t *session);
+bgp_push_keepalive_message(bgp_session_s *session);
 
 void
-bgp_push_notification_message(bgp_session_t *session);
+bgp_push_notification_message(bgp_session_s *session);
 
 #endif

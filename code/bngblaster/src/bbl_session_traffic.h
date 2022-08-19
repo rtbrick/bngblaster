@@ -11,12 +11,12 @@
 #define __BBL_SESSION_TRAFFIC_H__
 
 bool
-bbl_session_traffic_start_ipv4(bbl_ctx_s *ctx, bbl_session_s *session);
+bbl_session_traffic_start_ipv4(bbl_session_s *session);
 
 bool
-bbl_session_traffic_start_ipv6(bbl_ctx_s *ctx, bbl_session_s *session);
+bbl_session_traffic_start_ipv6(bbl_session_s *session);
 
 bool
-bbl_session_traffic_start_ipv6pd(bbl_ctx_s *ctx, bbl_session_s *session);
+bbl_session_traffic_start_ipv6pd(bbl_session_s *session);
 
 #endif

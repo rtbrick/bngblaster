@@ -16,15 +16,15 @@ void
 bgp_session_update_job(timer_s *timer);
 
 void
-bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state);
+bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state);
 
 void
-bgp_session_connect(bgp_session_t *session, time_t delay);
+bgp_session_connect(bgp_session_s *session, time_t delay);
 
 void
-bgp_session_close(bgp_session_t *session);
+bgp_session_close(bgp_session_s *session);
 
 void
-bgp_restart_hold_timer(bgp_session_t *session, time_t timeout);
+bgp_restart_hold_timer(bgp_session_s *session, time_t timeout);
 
 #endif

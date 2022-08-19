@@ -69,8 +69,8 @@ typedef struct bbl_stream_config_
     bool threaded;
     uint8_t thread_group;
 
-    bbl_stream_config *next; /* Next stream config */
-} bbl_stream_config;
+    bbl_stream_config_s *next; /* Next stream config */
+} bbl_stream_config_s;
 
 typedef struct bbl_stream_
 {
@@ -80,7 +80,7 @@ typedef struct bbl_stream_
     struct timer_ *timer;
     struct timer_ *timer_rate;
 
-    bbl_stream_config *config;
+    bbl_stream_config_s *config;
     bbl_stream_direction_t direction;
 
     bbl_interface_s *interface;
@@ -127,16 +127,16 @@ typedef struct bbl_stream_
     bbl_rate_s rate_packets_tx;
     bbl_rate_s rate_packets_rx;
 
-    bbl_stream *next; /* Next stream of same session */
+    bbl_stream_s*next; /* Next stream of same session */
 
     /* Attributes used for threaded streams only! */
     struct {
-        bbl_stream_thread *thread;
-        bbl_stream *next; /* Next stream in same thread */
+        bbl_stream_thread_s *thread;
+        bbl_stream_s *next; /* Next stream in same thread */
         pthread_mutex_t mutex;
         bool can_send;
     } thread;
-} bbl_stream;
+} bbl_stream_s;
 
 /* Structure for traffic stream threads
  * with one or more streams. */
@@ -156,7 +156,7 @@ typedef struct bbl_stream_thread_
     /* Root for thread local timers */
     struct timer_root_ timer_root;
 
-    /* Timer for synchronice job of thread
+    /* Timer for synchronize job of thread
      * counters with main counters. */
     struct timer_ *sync_timer;
 
@@ -170,8 +170,8 @@ typedef struct bbl_stream_thread_
     } socket;
 
     uint32_t stream_count; /* Number of streams in group */
-    bbl_stream *stream; /* First stream in group */
-    bbl_stream *stream_tail; /* Last stream in group */
+    bbl_stream_s *stream; /* First stream in group */
+    bbl_stream_s *stream_tail; /* Last stream in group */
 
     /* Thread counters ... */
 
@@ -184,27 +184,30 @@ typedef struct bbl_stream_thread_
     uint64_t sendto_failed_last_sync;
 
     void *next; /* Next stream thread */
-} bbl_stream_thread;
+} bbl_stream_thread_s;
 
 void
-bbl_stream_delay(bbl_stream *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp);
+bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp);
 
 bool
-bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s *session);
+bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session);
 
 bool
-bbl_stream_raw_add(bbl_ctx_s *ctx);
+bbl_stream_raw_add();
 
 bool
-bbl_stream_start_threads(bbl_ctx_s *ctx);
+bbl_stream_start_threads();
 
 void
-bbl_stream_stop_threads(bbl_ctx_s *ctx);
+bbl_stream_stop_threads();
 
 void
 bbl_stream_tx_job(timer_s *timer);
 
 json_t *
-bbl_stream_json(bbl_stream *stream);
+bbl_stream_json(bbl_stream_s *stream);
+
+bool
+bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_t tos);
 
 #endif

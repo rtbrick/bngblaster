@@ -18,9 +18,9 @@
 #include "bgp_ctrl.h"
 
 bool
-bgp_init(bbl_ctx_s *ctx);
+bgp_init();
 
 void
-bgp_teardown(bbl_ctx_s *ctx);
+bgp_teardown();
 
 #endif

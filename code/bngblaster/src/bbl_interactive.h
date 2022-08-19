@@ -11,6 +11,6 @@
 #ifndef __BBL_INTERACTIVE_H__
 #define __BBL_INTERACTIVE_H__
 
-void bbl_init_curses(bbl_ctx_s *ctx);
+void bbl_init_curses();
 
 #endif

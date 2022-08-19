@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_pcap.h"
 #include "bbl_rx.h"
@@ -16,8 +15,9 @@
 #endif
 
 void
-bbl_io_packet_mmap_rx_job(timer_s *timer) {
-    bbl_interface_s *interface;
+bbl_io_packet_mmap_rx_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
     bbl_ctx_s *ctx;
     struct pollfd fds[1] = {0};
 
@@ -30,11 +30,6 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
 
     bbl_ethernet_header_t *eth;
     protocol_error_t decode_result;
-
-    interface = timer->data;
-    if (!interface) {
-        return;
-    }
 
     frame_ptr = interface->io.ring_rx + (interface->io.cursor_rx * interface->io.req_rx.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
@@ -50,8 +45,6 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
         return;
     }
 
-    ctx = interface->ctx;
-
     /* Get RX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
 
@@ -61,7 +54,7 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += eth_len;
         interface->io.ctrl = true;
-        decode_result = decode_ethernet(eth_start, eth_len, interface->ctx->sp_rx, SCRATCHPAD_LEN, &eth);
+        decode_result = decode_ethernet(eth_start, eth_len, g_ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
             if(eth->vlan_outer != vlan) {
@@ -82,27 +75,15 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
             eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            switch(interface->type) {
-                case INTERFACE_TYPE_ACCESS:
-                    bbl_rx_handler_access(eth, interface);
-                    break;
-                case INTERFACE_TYPE_NETWORK:
-                    bbl_rx_handler_network(eth, interface);
-                    break;
-                case INTERFACE_TYPE_A10NSP:
-                    bbl_rx_handler_a10nsp(eth, interface);
-                    break;
-                default:
-                    break;
-            }
+            bbl_rx_handler(interface, eth);
         } else if (decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.packets_rx_drop_unknown++;
+            interface->stats.unknown++;
         } else {
-            interface->stats.packets_rx_drop_decode_error++;
+            interface->stats.decode_error++;
         }
 
         /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+        if (g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
             pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
                                       interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
@@ -113,13 +94,13 @@ bbl_io_packet_mmap_rx_job(timer_s *timer) {
         frame_ptr = interface->io.ring_rx + (interface->io.cursor_rx * interface->io.req_rx.tp_frame_size);
         tphdr = (struct tpacket2_hdr*)frame_ptr;
     }
-    pcapng_fflush(ctx);
+    pcapng_fflush();
 }
 
 void
-bbl_io_raw_rx_job(timer_s *timer) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+bbl_io_raw_rx_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
 
     struct sockaddr saddr;
     int saddr_size = sizeof(saddr);
@@ -128,12 +109,6 @@ bbl_io_raw_rx_job(timer_s *timer) {
     protocol_error_t decode_result;
 
     ssize_t recv_result;
-
-    interface = timer->data;
-    if (!interface) {
-        return;
-    }
-    ctx = interface->ctx;
 
     /* Get RX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &interface->rx_timestamp);
@@ -151,38 +126,26 @@ bbl_io_raw_rx_job(timer_s *timer) {
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
             eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            switch(interface->type) {
-                case INTERFACE_TYPE_ACCESS:
-                    bbl_rx_handler_access(eth, interface);
-                    break;
-                case INTERFACE_TYPE_NETWORK:
-                    bbl_rx_handler_network(eth, interface);
-                    break;
-                case INTERFACE_TYPE_A10NSP:
-                    bbl_rx_handler_a10nsp(eth, interface);
-                    break;
-                default:
-                    break;
-            }
+            bbl_rx_handler(interface, eth);
         } else if (decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.packets_rx_drop_unknown++;
+            interface->stats.unknown++;
         } else {
-            interface->stats.packets_rx_drop_decode_error++;
+            interface->stats.decode_error++;
         }
 
         /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-            pcapng_push_packet_header(ctx, &interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
+        if (g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+            pcapng_push_packet_header(&interface->rx_timestamp, interface->io.rx_buf, interface->io.rx_len,
                                       interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
     }
-    pcapng_fflush(ctx);
+    pcapng_fflush();
 }
 
 void
-bbl_io_packet_mmap_tx_job(timer_s *timer) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+bbl_io_packet_mmap_tx_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
     protocol_error_t tx_result = IGNORED;
 
     struct tpacket2_hdr* tphdr;
@@ -192,12 +155,6 @@ bbl_io_packet_mmap_tx_job(timer_s *timer) {
     uint8_t *buf;
     uint16_t len;
     uint16_t packets = 0;
-
-    interface = timer->data;
-    if (!interface) {
-        return;
-    }
-    ctx = interface->ctx;
 
     frame_ptr = interface->io.ring_tx + (interface->io.cursor_tx * interface->io.req_tx.tp_frame_size);
     tphdr = (struct tpacket2_hdr *)frame_ptr;
@@ -225,11 +182,11 @@ bbl_io_packet_mmap_tx_job(timer_s *timer) {
         while(tx_result != EMPTY) {
             /* Check if this slot available for writing. */
             if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-                interface->stats.no_tx_buffer++;
+                interface->stats.no_buffer++;
                 break;
             }
             buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
-            tx_result = bbl_tx(ctx, interface, buf, &len);
+            tx_result = bbl_tx(interface, buf, &len);
             if (tx_result == PROTOCOL_SUCCESS) {
                 packets++;
                 interface->stats.packets_tx++;
@@ -239,17 +196,16 @@ bbl_io_packet_mmap_tx_job(timer_s *timer) {
                 interface->io.cursor_tx = (interface->io.cursor_tx + 1) % interface->io.req_tx.tp_frame_nr;
                 interface->io.queued_tx++;
                 /* Dump the packet into pcap file. */
-                if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-                    pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                            buf, len, interface->pcap_index,
-                                            PCAPNG_EPB_FLAGS_OUTBOUND);
+                if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+                    pcapng_push_packet_header(&interface->tx_timestamp, buf, len, 
+                                              interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
                 }
                 frame_ptr = interface->io.ring_tx + (interface->io.cursor_tx * interface->io.req_tx.tp_frame_size);
                 tphdr = (struct tpacket2_hdr *)frame_ptr;
             }
         }
         if(packets) {
-            pcapng_fflush(ctx);
+            pcapng_fflush();
         }
     }
 
@@ -257,7 +213,7 @@ bbl_io_packet_mmap_tx_job(timer_s *timer) {
         /* Notify kernel. */
         if (sendto(interface->io.fd_tx, NULL, 0 , 0, NULL, 0) == -1) {
             LOG(IO, "Sendto failed with errno: %i\n", errno);
-            interface->stats.sendto_failed++;
+                interface->stats.sendto_failed++;
         } else {
             interface->io.queued_tx = 0;
         }
@@ -265,17 +221,10 @@ bbl_io_packet_mmap_tx_job(timer_s *timer) {
 }
 
 void
-bbl_io_raw_tx_job(timer_s *timer) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+bbl_io_raw_tx_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
     protocol_error_t tx_result = PROTOCOL_SUCCESS;
-
-    interface = timer->data;
-    if (!interface) {
-        return;
-    }
-
-    ctx = interface->ctx;
 
     /* Get TX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &interface->tx_timestamp);
@@ -283,7 +232,7 @@ bbl_io_raw_tx_job(timer_s *timer) {
         /* If sendto fails, the failed packet remains in TX buffer to be retried
          * in the next interval. */
         if(!interface->io.tx_len) {
-            tx_result = bbl_tx(ctx, interface, interface->io.tx_buf, &interface->io.tx_len);
+            tx_result = bbl_tx(interface, interface->io.tx_buf, &interface->io.tx_len);
         }
         if(tx_result == PROTOCOL_SUCCESS) {
             if (sendto(interface->io.fd_tx, interface->io.tx_buf, interface->io.tx_len, 0, (struct sockaddr*)&interface->io.addr, sizeof(struct sockaddr_ll)) <0 ) {
@@ -294,26 +243,27 @@ bbl_io_raw_tx_job(timer_s *timer) {
             interface->stats.packets_tx++;
             interface->stats.bytes_tx += interface->io.tx_len;
             /* Dump the packet into pcap file. */
-            if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-                pcapng_push_packet_header(ctx, &interface->tx_timestamp,
+            if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+                pcapng_push_packet_header(&interface->tx_timestamp,
                                           interface->io.tx_buf, interface->io.tx_len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
             }
         }
         interface->io.tx_len = 0;
     }
-    pcapng_fflush(ctx);
+    pcapng_fflush();
 }
 
 bool
-bbl_io_packet_mmap_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+bbl_io_packet_mmap_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len)
+{
     struct tpacket2_hdr* tphdr;
     uint8_t *frame_ptr;
     uint8_t *buf;
     frame_ptr = interface->io.ring_tx + (interface->io.cursor_tx * interface->io.req_tx.tp_frame_size);
     tphdr = (struct tpacket2_hdr *)frame_ptr;
     if (tphdr->tp_status != TP_STATUS_AVAILABLE) {
-        interface->stats.no_tx_buffer++;
+        interface->stats.no_buffer++;
         return false;
     }
     buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
@@ -326,7 +276,8 @@ bbl_io_packet_mmap_send(bbl_interface_s *interface, uint8_t *packet, uint16_t pa
 }
 
 bool
-bbl_io_raw_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
+bbl_io_raw_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len)
+{
     if (sendto(interface->io.fd_tx, packet, packet_len, 0, (struct sockaddr*)&interface->io.addr, sizeof(struct sockaddr_ll)) <0 ) {
         LOG(IO, "Sendto failed with errno: %i\n", errno);
         interface->stats.sendto_failed++;
@@ -345,8 +296,8 @@ bbl_io_raw_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len
  * @param packet_len packet length
  */
 bool
-bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
-    bbl_ctx_s *ctx = interface->ctx;
+bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len)
+{
     bool result = false;
 
     switch (interface->io.mode) {
@@ -370,11 +321,10 @@ bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
         interface->stats.packets_tx++;
         interface->stats.bytes_tx += packet_len;
         /* Dump the packet into pcap file. */
-        if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-            pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                      packet, packet_len, interface->pcap_index,
-                                      PCAPNG_EPB_FLAGS_OUTBOUND);
-            pcapng_fflush(ctx);
+        if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+            pcapng_push_packet_header(&interface->tx_timestamp, packet, packet_len, 
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+            pcapng_fflush();
         }
     }
     return result;
@@ -386,7 +336,8 @@ bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len) {
  * This prevents the ioctl get flags / set flags race condition
  */
 static int
-set_promisc(const char *ifname) {
+set_promisc(const char *ifname)
+{
     struct packet_mreq mreq = {0};
     int sfd;
 
@@ -417,17 +368,14 @@ set_promisc(const char *ifname) {
  * @param interface interface.
  */
 bool
-bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
-
+bbl_io_add_interface(bbl_interface_s *interface)
+{
     size_t ring_size;
     char timer_name[32];
     int version = TPACKET_V2;
     int qdisc_bypass = 1;
-    int slots = ctx->config.io_slots;
+    int slots = g_ctx->config.io_slots;
 
-    interface->io.mode = ctx->config.io_mode;
-    interface->io.rx_buf = malloc(IO_BUFFER_LEN);
-    interface->io.tx_buf = malloc(IO_BUFFER_LEN);
 
 #ifdef BNGBLASTER_NETMAP
     if(interface->io.mode == IO_MODE_NETMAP) {
@@ -506,7 +454,7 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
      *          increased drops when network device transmit queues are busy;
      *          therefore, use at your own risk.
      */
-    if(ctx->config.qdisc_bypass) {
+    if(g_ctx->config.qdisc_bypass) {
         if (setsockopt(interface->io.fd_tx, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
             LOG(ERROR, "Setting qdisc bypass error %s (%d) for interface %s\n", strerror(errno), errno, interface->name);
             return false;
@@ -541,9 +489,9 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
         /* Open the shared memory TX window between kernel and userspace. */
         ring_size = interface->io.req_tx.tp_block_nr * interface->io.req_tx.tp_block_size;
         interface->io.ring_tx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->io.fd_tx, 0);
-        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_packet_mmap_tx_job);
+        timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, timer_name, 0, g_ctx->config.tx_interval, interface, &bbl_io_packet_mmap_tx_job);
     } else {
-        timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_raw_tx_job);
+        timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, timer_name, 0, g_ctx->config.tx_interval, interface, &bbl_io_raw_tx_job);
     }
 
     /*
@@ -566,9 +514,9 @@ bbl_io_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
         /* Open the shared memory RX window between kernel and userspace. */
         ring_size = interface->io.req_rx.tp_block_nr * interface->io.req_rx.tp_block_size;
         interface->io.ring_rx = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, interface->io.fd_rx, 0);
-        timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_packet_mmap_rx_job);
+        timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, timer_name, 0, g_ctx->config.rx_interval, interface, &bbl_io_packet_mmap_rx_job);
     } else {
-        timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_raw_rx_job);
+        timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, timer_name, 0, g_ctx->config.rx_interval, interface, &bbl_io_raw_rx_job);
     }
     return true;
 }

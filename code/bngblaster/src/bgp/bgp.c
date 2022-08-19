@@ -12,42 +12,39 @@
  * bgp_init
  * 
  * This function inits all BGP sessions. 
- * 
- * @param ctx global context
  */
 bool
-bgp_init(bbl_ctx_s *ctx) {
-
-    bgp_config_t *config = ctx->config.bgp_config;
-    bgp_session_t *session = NULL;
-    bbl_interface_s *network_if;
+bgp_init()
+{
+    bgp_config_s *config = g_ctx->config.bgp_config;
+    bgp_session_s *session = NULL;
+    bbl_network_interface_s *network_interface;
 
     while(config) {
         if(session) {
-            session->next = calloc(1, sizeof(bgp_session_t));
+            session->next = calloc(1, sizeof(bgp_session_s));
             session = session->next;
         } else {
-            session = calloc(1, sizeof(bgp_session_t));
-            ctx->bgp_sessions = session;
+            session = calloc(1, sizeof(bgp_session_s));
+            g_ctx->bgp_sessions = session;
         }
         if(!session) {
             return false;
         }
         
-        network_if = bbl_get_network_interface(ctx, config->network_interface);
-        if(!network_if) {
+        network_interface = bbl_get_network_interface(config->network_interface);
+        if(!network_interface) {
             free(session);
             return false;
         }
 
-        session->ctx = ctx;
         session->config = config;
-        session->interface = network_if;
+        session->interface = network_interface;
 
         if(config->ipv4_local_address) {
             session->ipv4_local_address = config->ipv4_local_address;
         } else {
-            session->ipv4_local_address = network_if->ip.address;
+            session->ipv4_local_address = network_interface->ip.address;
         }
         session->ipv4_peer_address = config->ipv4_peer_address;
         
@@ -59,7 +56,7 @@ bgp_init(bbl_ctx_s *ctx) {
 
         /* Init RAW update file */
         if(config->raw_update_file) {
-            session->raw_update_start = bgp_raw_update_load(ctx, config->raw_update_file, true);
+            session->raw_update_start = bgp_raw_update_load(config->raw_update_file, true);
             if(!session->raw_update_start) {
                 return false;
             }
@@ -72,7 +69,7 @@ bgp_init(bbl_ctx_s *ctx) {
             format_ipv4_address(&session->ipv4_peer_address));
 
         bgp_session_connect(session, 1);
-        ctx->routing_sessions++;
+        g_ctx->routing_sessions++;
 
         config = config->next;
     }
@@ -80,11 +77,11 @@ bgp_init(bbl_ctx_s *ctx) {
 }
 
 void
-bgp_teardown_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
-    bbl_ctx_s *ctx = session->interface->ctx;
-    if(ctx->routing_sessions) {
-        ctx->routing_sessions--;
+bgp_teardown_job(timer_s *timer)
+{
+    bgp_session_s *session = timer->data;
+    if(g_ctx->routing_sessions) {
+        g_ctx->routing_sessions--;
     }
 }
 
@@ -92,12 +89,11 @@ bgp_teardown_job(timer_s *timer) {
  * bgp_teardown
  * 
  * This function stops all BGP sessions. 
- * 
- * @param ctx global context
  */
 void
-bgp_teardown(bbl_ctx_s *ctx) {
-    bgp_session_t *session  = ctx->bgp_sessions;
+bgp_teardown()
+{
+    bgp_session_s *session  = g_ctx->bgp_sessions;
     while(session) {
         if(!session->teardown) {
             LOG(BGP, "BGP (%s %s - %s) teardown session\n",
@@ -112,7 +108,7 @@ bgp_teardown(bbl_ctx_s *ctx) {
             }
             bgp_session_close(session);
 
-            timer_add(&ctx->timer_root, &session->teardown_timer, 
+            timer_add(&g_ctx->timer_root, &session->teardown_timer, 
                       "BGP TEARDOWN", session->config->teardown_time, 0, session,
                       &bgp_teardown_job);
         }

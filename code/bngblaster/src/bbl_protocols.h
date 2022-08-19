@@ -878,6 +878,15 @@ typedef struct bbl_cfm_ {
     uint8_t    *ma_name;
 } bbl_cfm_t;
 
+struct keyval_ igmp_msg_names[] = {
+    { IGMP_TYPE_QUERY,      "general-query" },
+    { IGMP_TYPE_REPORT_V1,  "v1-report" },
+    { IGMP_TYPE_REPORT_V2,  "v2-report" },
+    { IGMP_TYPE_LEAVE,      "v2-leave" },
+    { IGMP_TYPE_REPORT_V3,  "v3-report" },
+    { 0, NULL}
+};
+
 /*
  * decode_ethernet
  */

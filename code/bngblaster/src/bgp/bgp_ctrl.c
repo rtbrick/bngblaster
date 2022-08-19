@@ -10,7 +10,8 @@
 #include "../bbl_ctrl.h"
 
 static const char *
-raw_update_state(bgp_session_t *session) {
+raw_update_state(bgp_session_s *session) 
+{
     if(session->raw_update) {
         if(session->update_start_timestamp.tv_sec) {
             if(session->raw_update_sending) {
@@ -27,7 +28,8 @@ raw_update_state(bgp_session_t *session) {
 }
 
 static json_t *
-bgp_ctrl_session_json(bgp_session_t *session) {
+bgp_ctrl_session_json(bgp_session_s *session)
+{
     json_t *root = NULL;
     json_t *stats = NULL;
     
@@ -75,11 +77,12 @@ bgp_ctrl_session_json(bgp_session_t *session) {
 }
 
 int
-bgp_ctrl_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     int result = 0;
     json_t *root, *sessions, *session;
 
-    bgp_session_t *bgp_session = ctx->bgp_sessions;
+    bgp_session_s *bgp_session = g_ctx->bgp_sessions;
 
     const char *s;
     uint32_t ipv4_local_address = 0;
@@ -130,18 +133,20 @@ bgp_ctrl_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unu
 }
 
 int
-bgp_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    bgp_teardown(ctx);
+bgp_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    bgp_teardown();
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     int result = 0;
     json_t *root;
 
-    bgp_session_t *bgp_session = ctx->bgp_sessions;
-    bgp_raw_update_t *raw_update;
+    bgp_session_s *bgp_session = g_ctx->bgp_sessions;
+    bgp_raw_update_s *raw_update;
 
     const char *s;
     const char *file_path;
@@ -169,7 +174,7 @@ bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
     }
 
     /* Load file. */
-    raw_update = bgp_raw_update_load(ctx, file_path, true);
+    raw_update = bgp_raw_update_load(file_path, true);
     if(!raw_update) {
         return bbl_ctrl_status(fd, "error", 400, "failed to load file");
     }
@@ -192,7 +197,7 @@ bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
         }
 
         bgp_session->raw_update = raw_update;
-        timer_add(&ctx->timer_root, &bgp_session->update_timer, 
+        timer_add(&g_ctx->timer_root, &bgp_session->update_timer, 
                  "BGP UPDATE", 0, 0, bgp_session,
                  &bgp_session_update_job);
         
@@ -218,9 +223,10 @@ bgp_ctrl_raw_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
 }
 
 int
-bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
-    bgp_raw_update_t *raw_update = ctx->bgp_raw_updates;
+    bgp_raw_update_s *raw_update = g_ctx->bgp_raw_updates;
     json_t *root, *updates, *update;
 
     updates = json_array();
@@ -250,11 +256,12 @@ bgp_ctrl_raw_update_list(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute
 }
 
 int
-bgp_ctrl_disconnect(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     int result = 0;
     json_t *root;
 
-    bgp_session_t *bgp_session = ctx->bgp_sessions;
+    bgp_session_s *bgp_session = g_ctx->bgp_sessions;
 
     const char *s;
 

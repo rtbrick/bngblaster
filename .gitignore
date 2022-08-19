@@ -67,6 +67,7 @@ sonar-project.properties
 
 # Config Files
 config
+code/common/src/config.h
 
 # Misc
 tmp

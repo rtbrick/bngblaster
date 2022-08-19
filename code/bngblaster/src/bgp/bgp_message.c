@@ -9,7 +9,8 @@
 #include "bgp.h"
 
 static void
-push_as4_capability(io_buffer_t *buffer, uint32_t as) {
+push_as4_capability(io_buffer_t *buffer, uint32_t as)
+{
     uint32_t cap_idx, length;
 
     push_be_uint(buffer, 1, 2); /* CAP code */
@@ -27,7 +28,8 @@ push_as4_capability(io_buffer_t *buffer, uint32_t as) {
 }
 
 static void
-push_mp_capability(io_buffer_t *buffer, uint16_t afi, uint8_t safi) {
+push_mp_capability(io_buffer_t *buffer, uint16_t afi, uint8_t safi)
+{
     uint32_t cap_idx, length;
 
     push_be_uint(buffer, 1, 2); /* CAP code */
@@ -47,7 +49,8 @@ push_mp_capability(io_buffer_t *buffer, uint16_t afi, uint8_t safi) {
 }
 
 void
-bgp_push_open_message(bgp_session_t *session) {
+bgp_push_open_message(bgp_session_s *session)
+{
     uint32_t open_start_idx, length, opt_parms_idx, opt_parms_length;
     io_buffer_t *buffer = &session->write_buf;
 
@@ -89,7 +92,8 @@ bgp_push_open_message(bgp_session_t *session) {
 }
 
 void
-bgp_push_keepalive_message(bgp_session_t *session) {
+bgp_push_keepalive_message(bgp_session_s *session)
+{
     uint32_t keepalive_start_idx, length;
     io_buffer_t *buffer = &session->write_buf;
 
@@ -109,7 +113,8 @@ bgp_push_keepalive_message(bgp_session_t *session) {
 }
 
 void
-bgp_push_notification_message(bgp_session_t *session) {
+bgp_push_notification_message(bgp_session_s *session)
+{
     uint32_t notification_start_idx, length;
     io_buffer_t *buffer = &session->write_buf;
 

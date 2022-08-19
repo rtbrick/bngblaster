@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
@@ -18,7 +17,8 @@ extern bool g_init_phase;
 extern bool g_traffic;
 
 void
-bbl_stream_delay(bbl_stream *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp) {
+bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
+{
     struct timespec delay;
     uint64_t delay_nsec;
     timespec_sub(&delay, rx_timestamp, bbl_timestamp);
@@ -36,7 +36,8 @@ bbl_stream_delay(bbl_stream *stream, struct timespec *rx_timestamp, struct times
 }
 
 static bool
-bbl_stream_can_send(bbl_stream *stream) {
+bbl_stream_can_send(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
 
     if(g_init_phase) {
@@ -112,12 +113,11 @@ FREE:
     return false;
 }
 
-bool
-bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
-
-    bbl_ctx_s *ctx = stream->interface->ctx;
+static bool
+bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
-    bbl_stream_config *config = stream->config;
+    bbl_stream_config_s *config = stream->config;
 
     uint16_t buf_len;
 
@@ -135,13 +135,13 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
      * - "network-interface" from access interface section
      * - first network interface from network section (default)
      */
-    bbl_interface_s *network_if;
+    bbl_network_interface_s *network_interface;
     if(config->network_interface) {
-        network_if = bbl_get_network_interface(ctx, config->network_interface);
+        network_interface = bbl_network_interface_get(config->network_interface);
     } else {
-        network_if = session->network_interface;
+        network_interface = session->network_interface;
     }
-    if(!network_if) {
+    if(!network_interface) {
         return false;
     }
 
@@ -162,7 +162,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
@@ -186,7 +186,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = network_if->ip.address;
+                    ipv4.dst = network_interface->ip.address;
                 }
             }
             if(config->ipv4_df) {
@@ -222,7 +222,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
                 if(*(uint64_t*)stream->config->ipv6_network_address) {
                     ipv6.dst = stream->config->ipv6_network_address;
                 } else {
-                    ipv6.dst = network_if->ip6.address;
+                    ipv6.dst = network_interface->ip6.address;
                 }
             }
             ipv6.ttl = 64;
@@ -251,12 +251,12 @@ bbl_stream_build_access_pppoe_packet(bbl_stream *stream) {
 }
 
 static bool
-bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
-
-    bbl_ctx_s *ctx = stream->interface->ctx;
+bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
-    bbl_a10nsp_session_t *a10nsp_session = session->a10nsp_session;
-    bbl_stream_config *config = stream->config;
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    bbl_a10nsp_interface_s *a10nsp_interface;
+    bbl_stream_config_s *config = stream->config;
 
     uint16_t buf_len;
 
@@ -267,8 +267,8 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
-    bbl_interface_s *a10nsp_if = bbl_get_a10nsp_interface(ctx, config->a10nsp_interface);
-    if(!(a10nsp_if && a10nsp_session)) {
+    a10nsp_interface = bbl_a10nsp_interface_get(config->a10nsp_interface);
+    if(!(a10nsp_interface && a10nsp_session)) {
         return false;
     }
 
@@ -282,7 +282,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
         bbl.direction = BBL_DIRECTION_DOWN;
         eth.dst = session->client_mac;
         eth.src = session->server_mac;
-        eth.qinq = a10nsp_if->qinq;
+        eth.qinq = a10nsp_interface->qinq;
         eth.vlan_outer = a10nsp_session->s_vlan;
     }
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
@@ -298,7 +298,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
@@ -378,12 +378,12 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
 }
 
 static bool
-bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
-
-    bbl_ctx_s *ctx = stream->interface->ctx;
+bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
-    bbl_a10nsp_session_t *a10nsp_session = session->a10nsp_session;
-    bbl_stream_config *config = stream->config;
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    bbl_a10nsp_interface_s *a10nsp_interface;
+    bbl_stream_config_s *config = stream->config;
 
     uint16_t buf_len;
 
@@ -393,8 +393,8 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
-    bbl_interface_s *a10nsp_if = bbl_get_a10nsp_interface(ctx, config->a10nsp_interface);
-    if(!(a10nsp_if && a10nsp_session)) {
+    a10nsp_interface = bbl_a10nsp_interface_get(config->a10nsp_interface);
+    if(!(a10nsp_interface && a10nsp_session)) {
         return false;
     }
 
@@ -408,7 +408,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
         bbl.direction = BBL_DIRECTION_DOWN;
         eth.dst = session->client_mac;
         eth.src = session->server_mac;
-        eth.qinq = a10nsp_if->qinq;
+        eth.qinq = a10nsp_interface->qinq;
         eth.vlan_outer = a10nsp_session->s_vlan;
     }
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
@@ -422,7 +422,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
@@ -501,12 +501,11 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream *stream) {
     return true;
 }
 
-bool
-bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
-
-    bbl_ctx_s *ctx = stream->interface->ctx;
+static bool
+bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
-    bbl_stream_config *config = stream->config;
+    bbl_stream_config_s *config = stream->config;
 
     uint16_t buf_len;
 
@@ -523,13 +522,13 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
      * - "network-interface" from access interface section
      * - first network interface from network section (default)
      */
-    bbl_interface_s *network_if;
+    bbl_network_interface_s *network_interface;
     if(config->network_interface) {
-        network_if = bbl_get_network_interface(ctx, config->network_interface);
+        network_interface = bbl_network_interface_get(config->network_interface, 0);
     } else {
-        network_if = session->network_interface;
+        network_interface = session->network_interface;
     }
-    if(!network_if) {
+    if(!network_interface) {
         return false;
     }
 
@@ -548,7 +547,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
@@ -572,7 +571,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = network_if->ip.address;
+                    ipv4.dst = network_interface->ip.address;
                 }
             }
             if(config->ipv4_df) {
@@ -608,7 +607,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
                 if(*(uint64_t*)stream->config->ipv6_network_address) {
                     ipv6.dst = stream->config->ipv6_network_address;
                 } else {
-                    ipv6.dst = network_if->ip6.address;
+                    ipv6.dst = network_interface->ip6.address;
                 }
             }
             ipv6.ttl = 64;
@@ -636,11 +635,11 @@ bbl_stream_build_access_ipoe_packet(bbl_stream *stream) {
     return true;
 }
 
-bool
-bbl_stream_build_network_packet(bbl_stream *stream) {
-
+static bool
+bbl_stream_build_network_packet(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
-    bbl_stream_config *config = stream->config;
+    bbl_stream_config_s *config = stream->config;
 
     uint16_t buf_len;
 
@@ -654,11 +653,11 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
 
     uint8_t mac[ETH_ADDR_LEN] = {0};
 
-    bbl_interface_s *network_if = stream->interface;
+    bbl_network_interface_s *network_interface = stream->interface;
 
-    eth.dst = network_if->gateway_mac;
-    eth.src = network_if->mac;
-    eth.vlan_outer = network_if->vlan;
+    eth.dst = network_interface->gateway_mac;
+    eth.src = network_interface->mac;
+    eth.vlan_outer = network_interface->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = 0;
 
@@ -683,7 +682,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     if(session) {
         bbl.session_id = session->session_id;
-        bbl.ifindex = session->interface->ifindex;
+        bbl.ifindex = session->vlan_key.ifindex;
         bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
         bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     }
@@ -698,7 +697,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             if(stream->config->ipv4_network_address) {
                 ipv4.src = stream->config->ipv4_network_address;
             } else {
-                ipv4.src = network_if->ip.address;
+                ipv4.src = network_interface->ip.address;
             }
             /* Destination address */
             if(stream->config->ipv4_destination_address) {
@@ -739,7 +738,7 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
             if(*(uint64_t*)stream->config->ipv6_network_address) {
                 ipv6.src = stream->config->ipv6_network_address;
             } else {
-                ipv6.src = network_if->ip6.address;
+                ipv6.src = network_interface->ip6.address;
             }
             /* Destination address */
             if(*(uint64_t*)stream->config->ipv6_destination_address) {
@@ -780,16 +779,16 @@ bbl_stream_build_network_packet(bbl_stream *stream) {
     return true;
 }
 
-bool
-bbl_stream_build_l2tp_packet(bbl_stream *stream) {
-
+static bool
+bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
-    bbl_stream_config *config = stream->config;
+    bbl_stream_config_s *config = stream->config;
 
-    bbl_l2tp_session_t *l2tp_session = stream->session->l2tp_session;
-    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_session_s *l2tp_session = stream->session->l2tp_session;
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
-    struct bbl_interface_ *interface = l2tp_tunnel->interface;
+    bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
 
     uint16_t buf_len;
 
@@ -801,9 +800,9 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     bbl_udp_t udp = {0};
     bbl_bbl_t bbl = {0};
 
-    eth.dst = interface->gateway_mac;
-    eth.src = interface->mac;
-    eth.vlan_outer = interface->vlan;
+    eth.dst = network_interface->gateway_mac;
+    eth.src = network_interface->mac;
+    eth.vlan_outer = network_interface->vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
@@ -839,7 +838,7 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
@@ -849,7 +848,6 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     if (config->length > 76) {
         bbl.padding = config->length - 76;
     }
-
     buf_len = config->length + 128;
     if(buf_len < 256) buf_len = 256;
     stream->buf = malloc(buf_len);
@@ -862,8 +860,9 @@ bbl_stream_build_l2tp_packet(bbl_stream *stream) {
     return true;
 }
 
-bool
-bbl_stream_build_packet(bbl_stream *stream) {
+static bool
+bbl_stream_build_packet(bbl_stream_s *stream)
+{
     if(stream->config->stream_group_id == 0) {
         /* RAW stream */
         return bbl_stream_build_network_packet(stream);
@@ -908,9 +907,9 @@ bbl_stream_build_packet(bbl_stream *stream) {
 }
 
 void *
-bbl_stream_tx_thread (void *thread_data) {
-
-    bbl_stream_thread *thread = thread_data;
+bbl_stream_tx_thread(void *thread_data)
+{
+    bbl_stream_thread_s *thread = thread_data;
 
     pthread_mutex_lock(&thread->mutex);
     timer_smear_all_buckets(&thread->timer_root);
@@ -938,9 +937,9 @@ bbl_stream_tx_thread (void *thread_data) {
  * @param thread
  */
 void
-bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
+bbl_stream_tx_thread_sync(bbl_stream_thread_s *thread) {
     bbl_interface_s *interface = thread->interface;
-    bbl_stream *stream = thread->stream;
+    bbl_stream_s *stream = thread->stream;
     bbl_session_s *session = NULL;
 
     uint64_t packets_tx;
@@ -1027,13 +1026,13 @@ bbl_stream_tx_thread_sync(bbl_stream_thread *thread) {
 
 void
 bbl_stream_tx_thread_sync_timer(timer_s *timer) {
-    bbl_stream_thread *thread = timer->data;
+    bbl_stream_thread_s *thread = timer->data;
     bbl_stream_tx_thread_sync(thread);
 }
 
-static bbl_stream_thread *
-bbl_stream_thread_create(uint8_t thread_group, bbl_stream *stream) {
-    bbl_stream_thread *thread;
+static bbl_stream_thread_s *
+bbl_stream_thread_create(uint8_t thread_group, bbl_stream_s *stream) {
+    bbl_stream_thread_s *thread;
     bbl_interface_s *interface = stream->interface;
 
     int qdisc_bypass = 1;
@@ -1043,7 +1042,7 @@ bbl_stream_thread_create(uint8_t thread_group, bbl_stream *stream) {
     } else {
         LOG(INFO, "Create stream TX thread for stream %s\n", stream->config->name);
     }
-    thread = calloc(1, sizeof(bbl_stream_thread));
+    thread = calloc(1, sizeof(bbl_stream_thread_s));
     thread->thread_group = thread_group;
     thread->interface = interface;
 
@@ -1092,14 +1091,14 @@ bbl_stream_thread_create(uint8_t thread_group, bbl_stream *stream) {
  * @param thread_group thread group
  * @param stream traffic stream
  */
-static bbl_stream_thread*
-bbl_stream_add_to_thread(bbl_ctx_s *ctx, uint8_t thread_group, bbl_stream *stream) {
+static bbl_stream_thread_s*
+bbl_stream_add_to_thread(uint8_t thread_group, bbl_stream_s *stream) {
 
-    bbl_stream_thread *thread;
+    bbl_stream_thread_s *thread;
 
     /* Search for existing thread group or create a new one */
-    if(ctx->stream_thread) {
-        thread = ctx->stream_thread;
+    if(g_ctx->stream_thread) {
+        thread = g_ctx->stream_thread;
         while(true) {
             /* The thread group zero means that this stream
              * requests a dedicated thread. The scope of thread
@@ -1123,7 +1122,7 @@ bbl_stream_add_to_thread(bbl_ctx_s *ctx, uint8_t thread_group, bbl_stream *strea
     } else {
         /* Create first thread */
         thread = bbl_stream_thread_create(thread_group, stream);
-        ctx->stream_thread = thread;
+        g_ctx->stream_thread = thread;
     }
 
     /* Append stream to thread */
@@ -1155,7 +1154,7 @@ bbl_stream_add_to_thread(bbl_ctx_s *ctx, uint8_t thread_group, bbl_stream *strea
 bool
 bbl_stream_start_threads(bbl_ctx_s *ctx) {
 
-    bbl_stream_thread *thread = ctx->stream_thread;
+    bbl_stream_thread_s *thread = g_ctx->stream_thread;
 
     while(thread) {
         if(thread->thread_group) {
@@ -1164,7 +1163,7 @@ bbl_stream_start_threads(bbl_ctx_s *ctx) {
             LOG(INFO, "Start stream TX thread for stream %s\n", thread->stream->config->name);
         }
         thread->active = true;
-        timer_add_periodic(&ctx->timer_root, &thread->sync_timer, "Stream TX Thread Sync", 1, 0, thread, &bbl_stream_tx_thread_sync_timer);
+        timer_add_periodic(&g_ctx->timer_root, &thread->sync_timer, "Stream TX Thread Sync", 1, 0, thread, &bbl_stream_tx_thread_sync_timer);
         pthread_create(&thread->thread_id, NULL, bbl_stream_tx_thread, (void *)thread);
         thread = thread->next;
     }
@@ -1179,7 +1178,7 @@ bbl_stream_start_threads(bbl_ctx_s *ctx) {
 void
 bbl_stream_stop_threads(bbl_ctx_s *ctx) {
 
-    bbl_stream_thread *thread = ctx->stream_thread;
+    bbl_stream_thread_s *thread = g_ctx->stream_thread;
     while(thread) {
         if(thread->active) {
             if(thread->thread_group) {
@@ -1201,9 +1200,8 @@ bbl_stream_stop_threads(bbl_ctx_s *ctx) {
 }
 
 uint64_t
-bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
+bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
 
-    bbl_ctx_s *ctx = stream->interface->ctx;
     uint64_t packets = 1;
     uint64_t packets_expected;
 
@@ -1239,8 +1237,8 @@ bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
         if(packets_expected > stream->send_window_packets) {
             packets = packets_expected - stream->send_window_packets;
         }
-        if(packets > ctx->config.io_stream_max_ppi) {
-            packets = ctx->config.io_stream_max_ppi;
+        if(packets > g_ctx->config.io_stream_max_ppi) {
+            packets = g_ctx->config.io_stream_max_ppi;
         }
     }
 
@@ -1260,7 +1258,7 @@ bbl_stream_send_window(bbl_stream *stream, struct timespec *now) {
 void
 bbl_stream_tx_job(timer_s *timer) {
 
-    bbl_stream *stream = timer->data;
+    bbl_stream_s *stream = timer->data;
     bbl_session_s *session = stream->session;
     bbl_interface_s *interface = stream->interface;
 
@@ -1321,8 +1319,8 @@ bbl_stream_tx_job(timer_s *timer) {
 
 void
 bbl_stream_tx_job_threaded (timer_s *timer) {
-    bbl_stream *stream = timer->data;
-    bbl_stream_thread *thread = stream->thread.thread;
+    bbl_stream_s *stream = timer->data;
+    bbl_stream_thread_s *thread = stream->thread.thread;
 
     struct timespec now;
 
@@ -1364,14 +1362,14 @@ bbl_stream_tx_job_threaded (timer_s *timer) {
 
 void
 bbl_stream_rate_job (timer_s *timer) {
-    bbl_stream *stream = timer->data;
+    bbl_stream_s *stream = timer->data;
     bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
     bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
 }
 
 void
 bbl_stream_rate_job_threaded (timer_s *timer) {
-    bbl_stream *stream = timer->data;
+    bbl_stream_s *stream = timer->data;
     pthread_mutex_lock(&stream->thread.mutex);
     bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
     bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
@@ -1379,12 +1377,12 @@ bbl_stream_rate_job_threaded (timer_s *timer) {
 }
 
 bool
-bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s *session) {
+bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session) {
 
-    bbl_stream_config *config;
-    bbl_stream *stream;
-    bbl_stream *session_stream;
-    bbl_stream_thread *thread;
+    bbl_stream_config_s *config;
+    bbl_stream_s *stream;
+    bbl_stream_s*session_stream;
+    bbl_stream_thread_s *thread;
     bbl_interface_s *network_if;
 
     dict_insert_result result;
@@ -1392,7 +1390,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
     time_t timer_sec = 0;
     long timer_nsec  = 0;
 
-    config = ctx->config.stream_config;
+    config = g_ctx->config.stream_config;
     while(config) {
         if(config->stream_group_id == access_config->stream_group_id) {
             /* *
@@ -1403,9 +1401,9 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
             * - first network interface from network section (default)
             */
             if(config->network_interface) {
-                network_if = bbl_get_network_interface(ctx, config->network_interface);
+                network_if = bbl_get_network_interface(config->network_interface);
             } else if(config->a10nsp_interface) {
-                network_if = bbl_get_a10nsp_interface(ctx, config->a10nsp_interface);
+                network_if = bbl_get_a10nsp_interface(config->a10nsp_interface);
             } else {
                 network_if = session->network_interface;
             }
@@ -1423,14 +1421,14 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 
             if(config->direction & STREAM_DIRECTION_UP) {
                 stream = calloc(1, sizeof(bbl_stream));
-                stream->flow_id = ctx->flow_id++;
+                stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
                 stream->direction = STREAM_DIRECTION_UP;
                 stream->interface = session->interface;
                 stream->session = session;
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
-                result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
+                result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
                     LOG(ERROR, "Failed to insert stream %s\n", config->name);
                     free(stream);
@@ -1442,7 +1440,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                 }
                 session->stream = stream;
                 if(config->threaded) {
-                    thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
+                    thread = bbl_stream_add_to_thread(g_ctx, config->thread_group, stream);
                     if(!thread) {
                         LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
                         free(stream);
@@ -1451,22 +1449,22 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
                     timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                    timer_add_periodic(&g_ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                    timer_add_periodic(&g_ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 }
-                ctx->stats.stream_traffic_flows++;
+                g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s added in upstream with %lf PPS (timer: %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
-                stream->flow_id = ctx->flow_id++;
+                stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
                 stream->direction = STREAM_DIRECTION_DOWN;
                 stream->interface = network_if;
                 stream->session = session;
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
-                result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
+                result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
                     LOG(ERROR, "Failed to insert stream %s\n", config->name);
                     free(stream);
@@ -1483,7 +1481,7 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     session->stream = stream;
                 }
                 if(config->threaded) {
-                    thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
+                    thread = bbl_stream_add_to_thread(g_ctx, config->thread_group, stream);
                     if(!thread) {
                         LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
                         free(stream);
@@ -1492,10 +1490,10 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
                     timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
                     timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                    timer_add_periodic(&g_ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                    timer_add_periodic(&g_ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 }
-                ctx->stats.stream_traffic_flows++;
+                g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s added in downstream with %lf PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
         }
@@ -1508,9 +1506,9 @@ bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s
 bool
 bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
-    bbl_stream_config *config;
-    bbl_stream *stream;
-    bbl_stream_thread *thread;
+    bbl_stream_config_s *config;
+    bbl_stream_s *stream;
+    bbl_stream_thread_s *thread;
     bbl_interface_s *network_if;
 
     dict_insert_result result;
@@ -1518,11 +1516,11 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
     time_t timer_sec = 0;
     long timer_nsec  = 0;
 
-    config = ctx->config.stream_config;
+    config = g_ctx->config.stream_config;
 
     while(config) {
         if(config->stream_group_id == 0) {
-            network_if = bbl_get_network_interface(ctx, config->network_interface);
+            network_if = bbl_get_network_interface(g_ctx, config->network_interface);
             if(!network_if) {
                 return false;
             }
@@ -1533,13 +1531,13 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 
             if(config->direction & STREAM_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream));
-                stream->flow_id = ctx->flow_id++;
+                stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
                 stream->direction = STREAM_DIRECTION_DOWN;
                 stream->interface = network_if;
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
-                result = dict_insert(ctx->stream_flow_dict, &stream->flow_id);
+                result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
                 if (!result.inserted) {
                     LOG(ERROR, "Failed to insert stream %s\n", config->name);
                     free(stream);
@@ -1547,7 +1545,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                 }
                 *result.datum_ptr = stream;
                 if(config->threaded) {
-                    thread = bbl_stream_add_to_thread(ctx, config->thread_group, stream);
+                    thread = bbl_stream_add_to_thread(g_ctx, config->thread_group, stream);
                     if(!thread) {
                         LOG(ERROR, "Failed to add stream %s to thread\n", config->name);
                         free(stream);
@@ -1556,10 +1554,10 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
                     timer_add_periodic(&thread->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job_threaded);
                     timer_add_periodic(&thread->timer_root, &stream->timer_rate, "Threaded Rate Computation", 1, 0, stream, &bbl_stream_rate_job_threaded);
                 } else {
-                    timer_add_periodic(&ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-                    timer_add_periodic(&ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
+                    timer_add_periodic(&g_ctx->timer_root, &stream->timer, config->name, timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+                    timer_add_periodic(&g_ctx->timer_root, &stream->timer_rate, "Rate Computation", 1, 0, stream, &bbl_stream_rate_job);
                 }
-                ctx->stats.stream_traffic_flows++;
+                g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "RAW traffic stream %s added in downstream with %lf PPS (timer %lu sec %lu nsec)\n", config->name, config->pps, timer_sec, timer_nsec);
             }
         }
@@ -1570,7 +1568,7 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
 }
 
 json_t *
-bbl_stream_json(bbl_stream *stream)
+bbl_stream_json(bbl_stream_s *stream)
 {
     json_t *root = NULL;
 
@@ -1620,4 +1618,73 @@ bbl_stream_json(bbl_stream *stream)
         json_object_set(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
     }
     return root;
+}
+
+bool
+bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_t tos) {
+    bbl_stream_s *stream;
+    bbl_mpls_t *mpls;
+    void **search = NULL;
+
+    search = dict_search(g_ctx->stream_flow_dict, &bbl->flow_id);
+    if(search) {
+        stream = *search;
+        if(stream->rx_first_seq) {
+            /* Stream already verified */
+            if((stream->rx_last_seq +1) < bbl->flow_seq) {
+                *loss = bbl->flow_seq - (stream->rx_last_seq +1);
+                stream->loss += *loss;
+                LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
+                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
+            }
+        } else {
+            /* Verify stream ... */
+            stream->rx_len = eth->length;
+            stream->rx_priority = tos;
+            stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
+            stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
+            mpls = eth->mpls;
+            if(mpls) {
+                stream->rx_mpls1 = true;
+                stream->rx_mpls1_label = mpls->label;
+                stream->rx_mpls1_exp = mpls->exp;
+                stream->rx_mpls1_ttl = mpls->ttl;
+                mpls = mpls->next;
+                if(mpls) {
+                    stream->rx_mpls2 = true;
+                    stream->rx_mpls2_label = mpls->label;
+                    stream->rx_mpls2_exp = mpls->exp;
+                    stream->rx_mpls2_ttl = mpls->ttl;
+                }
+            }
+            if(stream->config->rx_mpls1_label) {
+                /* Check if expected outer label is received ... */
+                if(stream->rx_mpls1_label != stream->config->rx_mpls1_label) {
+                    /* Wrong outer label received! */
+                    return;
+                }
+                if(stream->config->rx_mpls2_label) {
+                    /* Check if expected inner label is received ... */
+                    if(stream->rx_mpls2_label != stream->config->rx_mpls2_label) {
+                        /* Wrong inner label received! */
+                        return;
+                    }
+                }
+            }
+            stream->rx_first_seq = bbl->flow_seq;
+            g_ctx->stats.stream_traffic_flows_verified++;
+            if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
+                LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+            }
+            if(g_ctx->config.traffic_stop_verified) {
+                stream->stop = true;
+            }
+        }
+        stream->packets_rx++;
+        stream->rx_last_seq = bbl->flow_seq;
+        bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
+    } else {
+        return false;
+    }
+    return true;
 }

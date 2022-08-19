@@ -31,18 +31,22 @@
 #include "bbl_l2tp.h"
 #include "bbl_session.h"
 #include "bbl_ctx.h"
-#include "bbl_send.h"
+#include "bbl_txq.h"
 #include "bbl_interface.h"
+#include "bbl_lag.h"
+#include "bbl_access.h"
+#include "bbl_network.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
 #include "bbl_tcp.h"
 #include "bgp/bgp.h"
 #include "isis/isis.h"
 
+extern bbl_ctx_s *g_ctx;
 extern WINDOW *log_win;
 extern WINDOW *stats_win;
 
 void
-enable_disable_traffic(bbl_ctx_s *ctx, bool status);
+enable_disable_traffic(bool status);
 
 #endif

@@ -32,10 +32,11 @@ extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
 extern volatile bool g_monkey;
 
-typedef int callback_function(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments);
+typedef int callback_function(int fd, uint32_t session_id, json_t* arguments);
 
 static char *
-string_or_na(char *string) {
+string_or_na(char *string)
+{
     if(string) {
         return string;
     } else {
@@ -44,7 +45,8 @@ string_or_na(char *string) {
 }
 
 int
-bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) {
+bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
+{
     int result = 0;
     json_t *root = json_pack("{sssiss*}", "status", status, "code", code, "message", message);
     if(root) {
@@ -55,26 +57,29 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message) 
 }
 
 int
-bbl_ctrl_multicast_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ctx->multicast_traffic = true;
+bbl_ctrl_multicast_traffic_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    g_ctx->multicast_traffic = true;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bbl_ctrl_multicast_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ctx->multicast_traffic = false;
+bbl_ctrl_multicast_traffic_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    g_ctx->multicast_traffic = false;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root = json_pack("{ss si s{si si}}",
                              "status", "ok",
                              "code", 200,
                              "session-traffic",
-                             "total-flows", ctx->stats.session_traffic_flows,
-                             "verified-flows", ctx->stats.session_traffic_flows_verified);
+                             "total-flows", g_ctx->stats.session_traffic_flows,
+                             "verified-flows", g_ctx->stats.session_traffic_flows_verified);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
@@ -83,11 +88,12 @@ bbl_ctrl_session_traffic_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __att
 }
 
 int
-bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+bbl_ctrl_session_traffic(int fd, uint32_t session_id, bool status)
+{
     bbl_session_s *session;
     uint32_t i;
     if(session_id) {
-        session = bbl_session_get(ctx, session_id);
+        session = bbl_session_get(session_id);
         if(session) {
             session->session_traffic = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -96,8 +102,8 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool statu
         }
     } else {
         /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = g_ctx->session_list[i];
             if(session) {
                 session->session_traffic = status;
             }
@@ -107,17 +113,19 @@ bbl_ctrl_session_traffic(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool statu
 }
 
 int
-bbl_ctrl_session_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_traffic(fd, ctx, session_id, true);
+bbl_ctrl_session_traffic_start(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_session_traffic(fd, session_id, true);
 }
 
 int
-bbl_ctrl_session_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_traffic(fd, ctx, session_id, false);
+bbl_ctrl_session_traffic_stop(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_session_traffic(fd, session_id, false);
 }
 
 int
-bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
+bbl_ctrl_igmp_join(int fd, uint32_t session_id, json_t* arguments) {
     bbl_session_s *session;
     const char *s;
     uint32_t group_address = 0;
@@ -156,7 +164,7 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
     }
 
     /* Search session */
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         /* Search for free slot ... */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
@@ -196,8 +204,8 @@ bbl_ctrl_igmp_join(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
 }
 
 int
-bbl_ctrl_igmp_join_iter(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-
+bbl_ctrl_igmp_join_iter(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     bbl_session_s *session;
     const char *s;
     uint32_t group_address = 0;
@@ -247,8 +255,8 @@ bbl_ctrl_igmp_join_iter(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute_
     while(group_count) {
         /* Iterate over all sessions */
         join_count = 0;
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = g_ctx->session_list[i];
             if(session) {
                 /* Search for free slot ... */
                 for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
@@ -295,8 +303,8 @@ bbl_ctrl_igmp_join_iter(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute_
 }
 
 int
-bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
-
+bbl_ctrl_igmp_leave(int fd, uint32_t session_id, json_t* arguments)
+{
     bbl_session_s *session;
     const char *s;
     uint32_t group_address = 0;
@@ -316,7 +324,7 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
         return bbl_ctrl_status(fd, "error", 400, "missing group address");
     }
 
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         /* Search for group ... */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
@@ -352,15 +360,15 @@ bbl_ctrl_igmp_leave(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argumen
 }
 
 int
-bbl_ctrl_igmp_leave_all(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-
+bbl_ctrl_igmp_leave_all(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     bbl_session_s *session;
     bbl_igmp_group_s *group = NULL;
     uint32_t i, i2;
 
     /* Iterate over all sessions */
-    for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+    for(i = 0; i < g_ctx->sessions; i++) {
+        session = g_ctx->session_list[i];
         if(session) {
             /* Search for group ... */
             for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
@@ -386,7 +394,8 @@ bbl_ctrl_igmp_leave_all(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute_
 }
 
 int
-bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_igmp_info(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root, *groups, *record, *sources;
     bbl_session_s *session = NULL;
@@ -402,7 +411,7 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
 
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         groups = json_array();
         /* Add group informations */
@@ -479,19 +488,22 @@ bbl_ctrl_igmp_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argument
 }
 
 int
-bbl_ctrl_zapping_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ctx->zapping = true;
+bbl_ctrl_zapping_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    g_ctx->zapping = true;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bbl_ctrl_zapping_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    ctx->zapping = false;
+bbl_ctrl_zapping_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    g_ctx->zapping = false;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_zapping_stats(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root;
 
@@ -499,7 +511,7 @@ bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     int reset = 0;
     
     json_unpack(arguments, "{s:b}", "reset", &reset);
-    bbl_stats_generate_multicast(ctx, &stats, reset);
+    bbl_stats_generate_multicast(&stats, reset);
 
     root = json_pack("{ss si s{si si si si si si si si si si si si si si si si si}}",
                      "status", "ok",
@@ -509,7 +521,7 @@ bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
                      "join-delay-ms-avg", stats.avg_join_delay,
                      "join-delay-ms-max", stats.max_join_delay,
                      "join-delay-violations", stats.join_delay_violations,
-                     "join-delay-violations-threshold", ctx->config.igmp_max_join_delay,
+                     "join-delay-violations-threshold", g_ctx->config.igmp_max_join_delay,
                      "join-delay-violations-125ms", stats.join_delay_violations_125ms,
                      "join-delay-violations-250ms", stats.join_delay_violations_250ms,
                      "join-delay-violations-500ms", stats.join_delay_violations_500ms,
@@ -533,34 +545,35 @@ bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
 }
 
 int
-bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_counters(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
                              "status", "ok",
                              "code", 200,
                              "session-counters",
-                             "sessions", ctx->config.sessions,
-                             "sessions-pppoe", ctx->sessions_pppoe,
-                             "sessions-ipoe", ctx->sessions_ipoe,
-                             "sessions-established", ctx->sessions_established,
-                             "sessions-established-max", ctx->sessions_established_max,
-                             "sessions-terminated", ctx->sessions_terminated,
-                             "sessions-flapped", ctx->sessions_flapped,
-                             "dhcp-sessions", ctx->dhcp_requested,
-                             "dhcp-sessions-established", ctx->dhcp_established,
-                             "dhcp-sessions-established-max", ctx->dhcp_established_max,
-                             "dhcpv6-sessions", ctx->dhcpv6_requested,
-                             "dhcpv6-sessions-established", ctx->dhcpv6_established,
-                             "dhcpv6-sessions-established-max", ctx->dhcpv6_established_max,
-                             "setup-time", ctx->stats.setup_time,
-                             "setup-rate", ctx->stats.cps,
-                             "setup-rate-min", ctx->stats.cps_min,
-                             "setup-rate-avg", ctx->stats.cps_avg,
-                             "setup-rate-max", ctx->stats.cps_max,
-                             "session-traffic-flows", ctx->stats.session_traffic_flows,
-                             "session-traffic-flows-verified", ctx->stats.session_traffic_flows_verified,
-                             "stream-traffic-flows", ctx->stats.stream_traffic_flows,
-                             "stream-traffic-flows-verified", ctx->stats.stream_traffic_flows_verified
+                             "sessions", g_ctx->config.sessions,
+                             "sessions-pppoe", g_ctx->sessions_pppoe,
+                             "sessions-ipoe", g_ctx->sessions_ipoe,
+                             "sessions-established", g_ctx->sessions_established,
+                             "sessions-established-max", g_ctx->sessions_established_max,
+                             "sessions-terminated", g_ctx->sessions_terminated,
+                             "sessions-flapped", g_ctx->sessions_flapped,
+                             "dhcp-sessions", g_ctx->dhcp_requested,
+                             "dhcp-sessions-established", g_ctx->dhcp_established,
+                             "dhcp-sessions-established-max", g_ctx->dhcp_established_max,
+                             "dhcpv6-sessions", g_ctx->dhcpv6_requested,
+                             "dhcpv6-sessions-established", g_ctx->dhcpv6_established,
+                             "dhcpv6-sessions-established-max", g_ctx->dhcpv6_established_max,
+                             "setup-time", g_ctx->stats.setup_time,
+                             "setup-rate", g_ctx->stats.cps,
+                             "setup-rate-min", g_ctx->stats.cps_min,
+                             "setup-rate-avg", g_ctx->stats.cps_avg,
+                             "setup-rate-max", g_ctx->stats.cps_max,
+                             "session-traffic-flows", g_ctx->stats.session_traffic_flows,
+                             "session-traffic-flows-verified", g_ctx->stats.session_traffic_flows_verified,
+                             "stream-traffic-flows", g_ctx->stats.stream_traffic_flows,
+                             "stream-traffic-flows-verified", g_ctx->stats.stream_traffic_flows_verified
                             );
 
     if(root) {
@@ -571,7 +584,8 @@ bbl_ctrl_session_counters(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
 }
 
 int
-bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_info(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root;
     json_t *session_json;
@@ -582,7 +596,7 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
 
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         session_json = bbl_session_json(session);
         if(!session_json) {
@@ -608,7 +622,8 @@ bbl_ctrl_session_info(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argum
 }
 
 int
-bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_start(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
     bbl_session_s *session;
 
     if(g_teardown) {
@@ -620,23 +635,23 @@ bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argu
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
 
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         if(session->session_state == BBL_TERMINATED && 
            session->reconnect_delay == 0) {
-            ctx->sessions_flapped++;
+            g_ctx->sessions_flapped++;
             session->stats.flapped++;
             session->session_state = BBL_IDLE;
             bbl_session_reset(session);
-            if(ctx->sessions_terminated) {
-                ctx->sessions_terminated--;
+            if(g_ctx->sessions_terminated) {
+                g_ctx->sessions_terminated--;
             }
         } else if(session->session_state != BBL_IDLE || 
            CIRCLEQ_NEXT(session, session_idle_qnode) || 
            CIRCLEQ_PREV(session, session_idle_qnode)) {
            return bbl_ctrl_status(fd, "error", 405, "wrong session state");
         }
-        CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
         return bbl_ctrl_status(fd, "ok", 200, NULL);
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -644,11 +659,12 @@ bbl_ctrl_session_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* argu
 }
 
 static json_t *
-bbl_ctrl_interfaces_json(bbl_interface_s *interface, const char *type) {
+bbl_ctrl_network_interface_json(bbl_network_interface_s *interface)
+{
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                      "name", interface->name,
-                     "ifindex", interface->ifindex,
-                     "type", type,
+                     "ifindex", interface->interface->ifindex,
+                     "type", "network",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
                      "tx-pps", interface->stats.rate_packets_tx.avg,
@@ -682,24 +698,106 @@ bbl_ctrl_interfaces_json(bbl_interface_s *interface, const char *type) {
                     );
 }
 
+static json_t *
+bbl_ctrl_access_interface_json(bbl_access_interface_s *interface)
+{
+    return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+                     "name", interface->interface->name,
+                     "ifindex", interface->interface->ifindex,
+                     "type", "access",
+                     "tx-packets", interface->stats.packets_tx,
+                     "tx-bytes", interface->stats.bytes_tx, 
+                     "tx-pps", interface->stats.rate_packets_tx.avg,
+                     "tx-kbps", interface->stats.rate_bytes_tx.avg * 8 / 1000,
+                     "rx-packets", interface->stats.packets_rx, 
+                     "rx-bytes", interface->stats.bytes_rx,
+                     "rx-pps", interface->stats.rate_packets_rx.avg,
+                     "rx-kbps", interface->stats.rate_bytes_rx.avg * 8 / 1000,
+                     "rx-packets-multicast", interface->stats.mc_rx,
+                     "rx-pps-multicast", interface->stats.rate_mc_rx.avg,
+                     "loss-packets-multicast", interface->stats.mc_loss,
+                     "tx-packets-session-ipv4", interface->stats.session_ipv4_tx,
+                     "tx-pps-session-ipv4", interface->stats.rate_session_ipv4_tx.avg,
+                     "rx-packets-session-ipv4", interface->stats.session_ipv4_rx,
+                     "rx-pps-session-ipv4", interface->stats.rate_session_ipv4_rx.avg,
+                     "loss-packets-session-ipv4", interface->stats.session_ipv4_loss,
+                     "tx-packets-session-ipv6", interface->stats.session_ipv6_tx,
+                     "tx-pps-session-ipv6", interface->stats.rate_session_ipv6_tx.avg,
+                     "rx-packets-session-ipv6", interface->stats.session_ipv6_rx,
+                     "rx-pps-session-ipv6", interface->stats.rate_session_ipv6_rx.avg,
+                     "loss-packets-session-ipv6", interface->stats.session_ipv6_loss,
+                     "tx-packets-session-ipv6pd", interface->stats.session_ipv6pd_tx,
+                     "tx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_tx.avg,
+                     "rx-packets-session-ipv6pd", interface->stats.session_ipv6pd_rx,
+                     "rx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_rx.avg,
+                     "loss-packets-session-ipv6pd", interface->stats.session_ipv6pd_loss,
+                     "tx-packets-streams", interface->stats.stream_tx,
+                     "tx-pps-streams", interface->stats.rate_stream_tx.avg,
+                     "rx-packets-streams", interface->stats.stream_rx,
+                     "rx-pps-streams", interface->stats.rate_stream_rx.avg,
+                     "loss-packets-streams", interface->stats.stream_loss
+                    );
+}
+
+static json_t *
+bbl_ctrl_a10nsp_interface_json(bbl_a10nsp_interface_s *interface)
+{
+    return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+                     "name", interface->interface->name,
+                     "ifindex", interface->interface->ifindex,
+                     "type", "a10nsp",
+                     "tx-packets", interface->stats.packets_tx,
+                     "tx-bytes", interface->stats.bytes_tx, 
+                     "tx-pps", interface->stats.rate_packets_tx.avg,
+                     "tx-kbps", interface->stats.rate_bytes_tx.avg * 8 / 1000,
+                     "rx-packets", interface->stats.packets_rx, 
+                     "rx-bytes", interface->stats.bytes_rx,
+                     "rx-pps", interface->stats.rate_packets_rx.avg,
+                     "rx-kbps", interface->stats.rate_bytes_rx.avg * 8 / 1000,
+                     "tx-packets-session-ipv4", interface->stats.session_ipv4_tx,
+                     "tx-pps-session-ipv4", interface->stats.rate_session_ipv4_tx.avg,
+                     "rx-packets-session-ipv4", interface->stats.session_ipv4_rx,
+                     "rx-pps-session-ipv4", interface->stats.rate_session_ipv4_rx.avg,
+                     "loss-packets-session-ipv4", interface->stats.session_ipv4_loss,
+                     "tx-packets-session-ipv6", interface->stats.session_ipv6_tx,
+                     "tx-pps-session-ipv6", interface->stats.rate_session_ipv6_tx.avg,
+                     "rx-packets-session-ipv6", interface->stats.session_ipv6_rx,
+                     "rx-pps-session-ipv6", interface->stats.rate_session_ipv6_rx.avg,
+                     "loss-packets-session-ipv6", interface->stats.session_ipv6_loss,
+                     "tx-packets-session-ipv6pd", interface->stats.session_ipv6pd_tx,
+                     "tx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_tx.avg,
+                     "rx-packets-session-ipv6pd", interface->stats.session_ipv6pd_rx,
+                     "rx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_rx.avg,
+                     "loss-packets-session-ipv6pd", interface->stats.session_ipv6pd_loss,
+                     "tx-packets-streams", interface->stats.stream_tx,
+                     "tx-pps-streams", interface->stats.rate_stream_tx.avg,
+                     "rx-packets-streams", interface->stats.stream_rx,
+                     "rx-pps-streams", interface->stats.rate_stream_rx.avg,
+                     "loss-packets-streams", interface->stats.stream_loss
+                    );
+}
+
 int
-bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
-    json_t *root, *interfaces, *interface;
-    int i;
+    json_t *root, *interfaces;
+
+    bbl_interface_s *interface;
+    bbl_network_interface_s *network_interface;
 
     interfaces = json_array();
-    for(i=0; i < ctx->interfaces.access_if_count; i++) {
-        interface = bbl_ctrl_interfaces_json(ctx->interfaces.access_if[i], "access");
-        json_array_append(interfaces, interface);
-    }
-    for(i=0; i < ctx->interfaces.network_if_count; i++) {
-        interface = bbl_ctrl_interfaces_json(ctx->interfaces.network_if[i], "network");
-        json_array_append(interfaces, interface);
-    }
-    for(i=0; i < ctx->interfaces.a10nsp_if_count; i++) {
-        interface = bbl_ctrl_interfaces_json(ctx->interfaces.a10nsp_if[i], "a10nsp");
-        json_array_append(interfaces, interface);
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        network_interface = interface->network;
+        while(network_interface) {
+            json_array_append(interfaces, bbl_ctrl_network_interface_json(network_interface));
+            network_interface = network_interface->next;
+        }
+        if(interface->access) {
+            json_array_append(interfaces, bbl_ctrl_access_interface_json(interface->access));
+        } else if(interface->a10nsp) {
+            json_array_append(interfaces, bbl_ctrl_a10nsp_interface_json(interface->a10nsp));
+        }
     }
     root = json_pack("{ss si so}",
                      "status", "ok",
@@ -716,19 +814,20 @@ bbl_ctrl_interfaces(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
 }
 
 int
-bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
+bbl_ctrl_session_terminate(int fd, uint32_t session_id, json_t* arguments)
+{
     bbl_session_s *session;
     int reconnect_delay = 0;
 
     if(session_id) {
         /* Terminate single matching session ... */
-        session = bbl_session_get(ctx, session_id);
+        session = bbl_session_get(session_id);
         if(session) {
             json_unpack(arguments, "{s:i}", "reconnect-delay", &session->reconnect_delay);
             if(reconnect_delay > 0) {
                 session->reconnect_delay = reconnect_delay;
             }
-            bbl_session_clear(ctx, session);
+            bbl_session_clear(session);
             return bbl_ctrl_status(fd, "ok", 200, "terminate session");
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -743,11 +842,11 @@ bbl_ctrl_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* 
 }
 
 int
-bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool open, bool ipcp) {
+bbl_ctrl_session_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipcp) {
     bbl_session_s *session;
     uint32_t i;
     if(session_id) {
-        session = bbl_session_get(ctx, session_id);
+        session = bbl_session_get(session_id);
         if(session) {
             if(session->access_type == ACCESS_TYPE_PPPOE) {
                 if(open) {
@@ -764,8 +863,8 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
         }
     } else {
         /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = g_ctx->session_list[i];
             if(session) {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(open) {
@@ -781,34 +880,39 @@ bbl_ctrl_session_ncp_open_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, boo
 }
 
 int
-bbl_ctrl_session_ipcp_open(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, true, true);
+bbl_ctrl_session_ipcp_open(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_session_ncp_open_close(fd, session_id, true, true);
 }
 
 int
-bbl_ctrl_session_ipcp_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, false, true);
+bbl_ctrl_session_ipcp_close(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_session_ncp_open_close(fd, session_id, false, true);
 }
 
 int
-bbl_ctrl_session_ip6cp_open(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, true, false);
+bbl_ctrl_session_ip6cp_open(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_session_ncp_open_close(fd, session_id, true, false);
 }
 
 int
-bbl_ctrl_session_ip6cp_close(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_session_ncp_open_close(fd, ctx, session_id, false, false);
+bbl_ctrl_session_ip6cp_close(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_session_ncp_open_close(fd, session_id, false, false);
 }
 
 int
-bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_li_flows(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root, *flows, *flow;
     bbl_li_flow_t *li_flow;
     struct dict_itor *itor;
 
     flows = json_array();
-    itor = dict_itor_new(ctx->li_flow_dict);
+    itor = dict_itor_new(g_ctx->li_flow_dict);
     dict_itor_first(itor);
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
@@ -852,12 +956,13 @@ bbl_ctrl_li_flows(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unu
 }
 
 int
-bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_l2tp_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root, *tunnels, *tunnel;
 
-    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     tunnels = json_array();
 
@@ -901,7 +1006,8 @@ bbl_ctrl_l2tp_tunnels(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 }
 
 json_t *
-l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
+l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
+{
     char *proxy_auth_response = NULL;
 
     if(l2tp_session->proxy_auth_response) {
@@ -935,13 +1041,14 @@ l2tp_session_json(bbl_l2tp_session_t *l2tp_session) {
 }
 
 int
-bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+bbl_ctrl_l2tp_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     int result = 0;
     json_t *root, *sessions;
 
-    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
 
@@ -956,7 +1063,7 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     if(l2tp_tunnel_id && l2tp_session_id) {
         l2tp_key.tunnel_id = l2tp_tunnel_id;
         l2tp_key.session_id = l2tp_session_id;
-        search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+        search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
         if(search) {
             l2tp_session = *search;
             json_array_append(sessions, l2tp_session_json(l2tp_session));
@@ -967,7 +1074,7 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
         }
     } else if (l2tp_tunnel_id) {
         l2tp_key.tunnel_id = l2tp_tunnel_id;
-        search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+        search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
         if(search) {
             l2tp_session = *search;
             l2tp_tunnel = l2tp_session->tunnel;
@@ -1006,11 +1113,12 @@ bbl_ctrl_l2tp_sessions(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
 }
 
 int
-bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+bbl_ctrl_l2tp_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     json_t *sessions, *number;
 
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
 
@@ -1023,7 +1131,7 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
     }
     l2tp_key.tunnel_id = l2tp_tunnel_id;
-    search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+    search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
     if(search) {
         l2tp_session = *search;
         l2tp_tunnel = l2tp_session->tunnel;
@@ -1053,9 +1161,10 @@ bbl_ctrl_l2tp_csurq(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((u
 }
 
 int
-bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-    bbl_l2tp_session_t *l2tp_session;
+bbl_ctrl_l2tp_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
 
@@ -1069,7 +1178,7 @@ bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __att
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
     }
     l2tp_key.tunnel_id = l2tp_tunnel_id;
-    search = dict_search(ctx->l2tp_session_dict, &l2tp_key);
+    search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
     if(search) {
         l2tp_session = *search;
         l2tp_tunnel = l2tp_session->tunnel;
@@ -1097,10 +1206,11 @@ bbl_ctrl_l2tp_tunnel_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id __att
 }
 
 int
-bbl_ctrl_l2tp_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments) {
+bbl_ctrl_l2tp_session_terminate(int fd, uint32_t session_id, json_t* arguments)
+{
     bbl_session_s *session;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_session_s *l2tp_session;
 
     int result_code;
     int error_code;
@@ -1115,7 +1225,7 @@ bbl_ctrl_l2tp_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, jso
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
 
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         l2tp_session = session->l2tp_session;
         if(!l2tp_session) {
@@ -1165,21 +1275,21 @@ bbl_ctrl_l2tp_session_terminate(int fd, bbl_ctx_s *ctx, uint32_t session_id, jso
 }
 
 int
-bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
+bbl_ctrl_session_streams(int fd, uint32_t session_id, json_t* arguments __attribute__((unused))) {
     int result = 0;
     json_t *root;
     json_t *json_streams = NULL;
     json_t *json_stream = NULL;
 
     bbl_session_s *session;
-    bbl_stream *stream;
+    bbl_stream_s *stream;
 
     if(session_id == 0) {
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
 
-    session = bbl_session_get(ctx, session_id);
+    session = bbl_session_get(session_id);
     if(session) {
         stream = session->stream;
 
@@ -1220,12 +1330,13 @@ bbl_ctrl_session_streams(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* ar
 }
 
 static int
-bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+bbl_ctrl_stream_traffic_start_stop(int fd, uint32_t session_id, bool status)
+{
     bbl_session_s *session;
     uint32_t i;
 
     if(session_id) {
-        session = bbl_session_get(ctx, session_id);
+        session = bbl_session_get(session_id);
         if(session) {
             session->stream_traffic = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -1234,8 +1345,8 @@ bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, 
         }
     } else {
         /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = g_ctx->session_list[i];
             if(session) {
                 session->stream_traffic = status;
             }
@@ -1245,27 +1356,30 @@ bbl_ctrl_stream_traffic_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, 
 }
 
 int
-bbl_ctrl_stream_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_stream_traffic_start_stop(fd, ctx, session_id, true);
+bbl_ctrl_stream_traffic_start(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_stream_traffic_start_stop(fd, session_id, true);
 }
 
 int
-bbl_ctrl_stream_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_stream_traffic_start_stop(fd, ctx, session_id, false);
+bbl_ctrl_stream_traffic_stop(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_stream_traffic_start_stop(fd, session_id, false);
 }
 
 int
-bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    bbl_stream *stream;
+bbl_ctrl_stream_reset(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    bbl_stream_s *stream;
     struct dict_itor *itor;
     
-    ctx->stats.stream_traffic_flows_verified = 0;
+    g_ctx->stats.stream_traffic_flows_verified = 0;
 
     /* Iterate over all traffic streams */
-    itor = dict_itor_new(ctx->stream_flow_dict);
+    itor = dict_itor_new(g_ctx->stream_flow_dict);
     dict_itor_first(itor);
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream*)*dict_itor_datum(itor);
+        stream = (bbl_stream_s*)*dict_itor_datum(itor);
         if(!stream) {
             continue;
         }
@@ -1311,8 +1425,8 @@ bbl_ctrl_stream_reset(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 }
 
 int
-bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-
+bbl_ctrl_sessions_pending(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
     json_t *root, *json_session, *json_sessions;
 
@@ -1322,8 +1436,8 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
     json_sessions = json_array();
 
     /* Iterate over all sessions */
-    for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+    for(i = 0; i < g_ctx->sessions; i++) {
+        session = g_ctx->session_list[i];
         if(!session) continue;
         
         if(session->session_state != BBL_ESTABLISHED || 
@@ -1352,11 +1466,12 @@ bbl_ctrl_sessions_pending(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribut
 }
 
 int
-bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+bbl_ctrl_cfm_cc_start_stop(int fd, uint32_t session_id, bool status)
+{
     bbl_session_s *session;
     uint32_t i;
     if(session_id) {
-        session = bbl_session_get(ctx, session_id);
+        session = bbl_session_get(session_id);
         if(session) {
             session->cfm_cc = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -1365,8 +1480,8 @@ bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool sta
         }
     } else {
         /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = g_ctx->session_list[i];
             if(session) {
                 session->cfm_cc = status;
             }
@@ -1376,21 +1491,24 @@ bbl_ctrl_cfm_cc_start_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool sta
 }
 
 int
-bbl_ctrl_cfm_cc_start(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_cfm_cc_start_stop(fd, ctx, session_id, true);
+bbl_ctrl_cfm_cc_start(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_cfm_cc_start_stop(fd, session_id, true);
 }
 
 int
-bbl_ctrl_cfm_cc_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_cfm_cc_start_stop(fd, ctx, session_id, false);
+bbl_ctrl_cfm_cc_stop(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_cfm_cc_start_stop(fd, session_id, false);
 }
 
 int
-bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
+bbl_ctrl_cfm_cc_rdi(int fd, uint32_t session_id, bool status)
+{
     bbl_session_s *session;
     uint32_t i;
     if(session_id) {
-        session = bbl_session_get(ctx, session_id);
+        session = bbl_session_get(session_id);
         if(session) {
             session->cfm_rdi = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -1399,8 +1517,8 @@ bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
         }
     } else {
         /* Iterate over all sessions */
-        for(i = 0; i < ctx->sessions; i++) {
-            session = ctx->session_list[i];
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = g_ctx->session_list[i];
             if(session) {
                 session->cfm_rdi = status;
             }
@@ -1410,24 +1528,26 @@ bbl_ctrl_cfm_cc_rdi(int fd, bbl_ctx_s *ctx, uint32_t session_id, bool status) {
 }
 
 int
-bbl_ctrl_cfm_cc_rdi_on(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, true);
+bbl_ctrl_cfm_cc_rdi_on(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_cfm_cc_rdi(fd, session_id, true);
 }
 
 int
-bbl_ctrl_cfm_cc_rdi_off(int fd, bbl_ctx_s *ctx, uint32_t session_id, json_t* arguments __attribute__((unused))) {
-    return bbl_ctrl_cfm_cc_rdi(fd, ctx, session_id, false);
+bbl_ctrl_cfm_cc_rdi_off(int fd, uint32_t session_id, json_t* arguments __attribute__((unused)))
+{
+    return bbl_ctrl_cfm_cc_rdi(fd, session_id, false);
 }
 
 int
-bbl_ctrl_stream_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bbl_ctrl_stream_stats(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     int result = 0;
     json_t *root = json_pack("{ss si s{si si}}",
                              "status", "ok",
                              "code", 200,
                              "stream-stats",
-                             "total-flows", ctx->stats.stream_traffic_flows,
-                             "verified-flows", ctx->stats.stream_traffic_flows_verified);
+                             "total-flows", g_ctx->stats.stream_traffic_flows,
+                             "verified-flows", g_ctx->stats.stream_traffic_flows_verified);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
@@ -1436,13 +1556,14 @@ bbl_ctrl_stream_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 }
 
 int
-bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+bbl_ctrl_stream_info(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     int result = 0;
 
     json_t *root;
     json_t *json_stream = NULL;
 
-    bbl_stream *stream;
+    bbl_stream_s *stream;
     void **search = NULL;
 
     int number = 0;
@@ -1454,7 +1575,7 @@ bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
     }
 
     flow_id = number;
-    search = dict_search(ctx->stream_flow_dict, &flow_id);
+    search = dict_search(g_ctx->stream_flow_dict, &flow_id);
     if(search) {
         stream = *search;
         if(stream->thread.thread) {
@@ -1482,19 +1603,22 @@ bbl_ctrl_stream_info(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
 }
 
 int
-bbl_ctrl_traffic_start(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    enable_disable_traffic(ctx, true);
+bbl_ctrl_traffic_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    enable_disable_traffic(true);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bbl_ctrl_traffic_stop(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    enable_disable_traffic(ctx, false);
+bbl_ctrl_traffic_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    enable_disable_traffic(false);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bgp_ctrl_monkey_start(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bgp_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     if(!g_monkey) {
         LOG_NOARG(INFO, "Start monkey\n");
     }
@@ -1503,7 +1627,7 @@ bgp_ctrl_monkey_start(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t s
 }
 
 int
-bgp_ctrl_monkey_stop(int fd, bbl_ctx_s *ctx __attribute__((unused)), uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bgp_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
     if(g_monkey) {
         LOG_NOARG(INFO, "Stop monkey\n");
     }
@@ -1601,7 +1725,7 @@ bbl_ctrl_socket_job(timer_s *timer) {
         close(fd);
     }
 
-    fd = accept(ctx->ctrl_socket, 0, 0);
+    fd = accept(g_ctx->ctrl_socket, 0, 0);
     if(fd > 0) {
         /* New connection */
         root = json_loadfd(fd, flags, &error);
@@ -1647,8 +1771,8 @@ bbl_ctrl_socket_job(timer_s *timer) {
                             }
                         } else {
                             /* Use first interface as default. */
-                            if(ctx->interfaces.access_if[0]) {
-                                key.ifindex = ctx->interfaces.access_if[0]->ifindex;
+                            if(g_ctx->interfaces.access_if[0]) {
+                                key.ifindex = g_ctx->interfaces.access_if[0]->ifindex;
                             }
                         }
                         value = json_object_get(arguments, "outer-vlan");
@@ -1670,7 +1794,7 @@ bbl_ctrl_socket_job(timer_s *timer) {
                             }
                         }
                         if(key.outer_vlan_id) {
-                            search = dict_search(ctx->vlan_session_dict, &key);
+                            search = dict_search(g_ctx->vlan_session_dict, &key);
                             if(search) {
                                 session = *search;
                                 session_id = session->session_id;
@@ -1686,7 +1810,7 @@ bbl_ctrl_socket_job(timer_s *timer) {
                         bbl_ctrl_status(fd, "error", 400, "unknown command");
                         break;
                     } else if(strcmp(actions[i].name, command) == 0) {
-                        actions[i].fn(fd, ctx, session_id, arguments);
+                        actions[i].fn(fd, session_id, arguments);
                         break;
                     }
                 }
@@ -1699,42 +1823,42 @@ CLOSE:
 }
 
 bool
-bbl_ctrl_socket_open(bbl_ctx_s *ctx) {
+bbl_ctrl_socket_open() {
     struct sockaddr_un addr = {0};
-    ctx->ctrl_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-    if(ctx->ctrl_socket < 0) {
+    g_ctx->ctrl_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(g_ctx->ctrl_socket < 0) {
         fprintf(stderr, "Error: Failed to create ctrl socket\n");
         return false;
     }
     addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
+    strncpy(addr.sun_path, g_ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
 
-    unlink(ctx->ctrl_socket_path);
-    if (bind(ctx->ctrl_socket, (struct sockaddr *)&addr, SUN_LEN(&addr)) != 0) {
-        fprintf(stderr, "Error: Failed to bind ctrl socket %s (error %d)\n", ctx->ctrl_socket_path, errno);
+    unlink(g_ctx->ctrl_socket_path);
+    if (bind(g_ctx->ctrl_socket, (struct sockaddr *)&addr, SUN_LEN(&addr)) != 0) {
+        fprintf(stderr, "Error: Failed to bind ctrl socket %s (error %d)\n", g_ctx->ctrl_socket_path, errno);
         return false;
     }
 
-    if (listen(ctx->ctrl_socket, BACKLOG) != 0) {
-        fprintf(stderr, "Error: Failed to listen on ctrl socket %s (error %d)\n", ctx->ctrl_socket_path, errno);
+    if (listen(g_ctx->ctrl_socket, BACKLOG) != 0) {
+        fprintf(stderr, "Error: Failed to listen on ctrl socket %s (error %d)\n", g_ctx->ctrl_socket_path, errno);
         return false;
     }
 
     /* Change socket to non-blocking */
-    fcntl(ctx->ctrl_socket, F_SETFL, O_NONBLOCK);
+    fcntl(g_ctx->ctrl_socket, F_SETFL, O_NONBLOCK);
 
-    timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_timer, "CTRL Socket Timer", 0, 100 * MSEC, ctx, &bbl_ctrl_socket_job);
+    timer_add_periodic(&g_ctx->timer_root, &g_ctx->ctrl_socket_timer, "CTRL Socket Timer", 0, 100 * MSEC, g_ctx, &bbl_ctrl_socket_job);
 
-    LOG(INFO, "Opened control socket %s\n", ctx->ctrl_socket_path);
+    LOG(INFO, "Opened control socket %s\n", g_ctx->ctrl_socket_path);
     return true;
 }
 
 bool
-bbl_ctrl_socket_close(bbl_ctx_s *ctx) {
-    if(ctx->ctrl_socket) {
-        close(ctx->ctrl_socket);
-        ctx->ctrl_socket = 0;
-        unlink(ctx->ctrl_socket_path);
+bbl_ctrl_socket_close() {
+    if(g_ctx->ctrl_socket) {
+        close(g_ctx->ctrl_socket);
+        g_ctx->ctrl_socket = 0;
+        unlink(g_ctx->ctrl_socket_path);
     }
     return true;
 }

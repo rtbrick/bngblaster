@@ -56,27 +56,15 @@ bbl_io_netmap_rx_job (timer_s *timer)
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = interface->rx_timestamp.tv_sec;
             eth->timestamp.tv_nsec = interface->rx_timestamp.tv_nsec;
-            switch(interface->type) {
-                case INTERFACE_TYPE_ACCESS:
-                    bbl_rx_handler_access(eth, interface);
-                    break;
-                case INTERFACE_TYPE_NETWORK:
-                    bbl_rx_handler_network(eth, interface);
-                    break;
-                case INTERFACE_TYPE_A10NSP:
-                    bbl_rx_handler_a10nsp(eth, interface);
-                    break;
-                default:
-                    break;
-            }
+            bbl_rx_handler(interface, eth);
         } else if (decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.packets_rx_drop_unknown++;
+            interface->stats.unknown++;
         } else {
-            interface->stats.packets_rx_drop_decode_error++;
+            interface->stats.decode_error++;
         }
 
         /* Dump the packet into pcap file. */
-        if (ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+        if (g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
             pcapng_push_packet_header(ctx, &interface->rx_timestamp, eth_start, eth_len,
                                       interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
         }
@@ -115,7 +103,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
     while(tx_result != EMPTY) {
         /* Check if this slot available for writing. */
         if(nm_ring_empty(ring)) {
-            interface->stats.no_tx_buffer++;
+            interface->stats.no_buffer++;
             break;
         }
         i = ring->cur;
@@ -129,7 +117,7 @@ bbl_io_netmap_tx_job (timer_s *timer)
             ring->slot[i].len = len;
             ring->head = ring->cur = nm_ring_next(ring, i);
             /* Dump the packet into pcap file. */
-            if(ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
+            if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
                 pcapng_push_packet_header(ctx, &interface->tx_timestamp,
                                           buf, len, interface->pcap_index,
                                           PCAPNG_EPB_FLAGS_OUTBOUND);
@@ -158,7 +146,7 @@ bbl_io_netmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet
     uint8_t *buf;
     ring = NETMAP_TXRING(interface->io.port->nifp, 0);
     if (nm_ring_empty(ring)) {
-        interface->stats.no_tx_buffer++;
+        interface->stats.no_buffer++;
         return false;
     }
     i = ring->cur;
@@ -176,7 +164,7 @@ bbl_io_netmap_send (bbl_interface_s *interface, uint8_t *packet, uint16_t packet
  * @param interface interface.
  */
 bool
-bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
+bbl_io_netmap_add_interface(bbl_interface_s *interface) {
     char timer_name[128];
     char netmap_port[128];
 
@@ -199,9 +187,9 @@ bbl_io_netmap_add_interface(bbl_ctx_s *ctx, bbl_interface_s *interface) {
      * Add an periodic timer for polling I/O.
      */
     snprintf(timer_name, sizeof(timer_name), "%s TX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->tx_job, timer_name, 0, ctx->config.tx_interval, interface, &bbl_io_netmap_tx_job);
+    timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, timer_name, 0, g_ctx->config.tx_interval, interface, &bbl_io_netmap_tx_job);
     snprintf(timer_name, sizeof(timer_name), "%s RX", interface->name);
-    timer_add_periodic(&ctx->timer_root, &interface->rx_job, timer_name, 0, ctx->config.rx_interval, interface, &bbl_io_netmap_rx_job);
+    timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, timer_name, 0, g_ctx->config.rx_interval, interface, &bbl_io_netmap_rx_job);
 
     return true;
 }

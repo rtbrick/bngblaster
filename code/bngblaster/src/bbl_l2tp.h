@@ -88,7 +88,7 @@ typedef struct bbl_l2tp_server_
     /* List of L2TP tunnel instances
      * for the corresponding server. */
     CIRCLEQ_HEAD(tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
-} bbl_l2tp_server_t;
+} bbl_l2tp_server_s;
 
 /* L2TP Session Key */
 typedef struct l2tp_key_ {
@@ -110,7 +110,7 @@ typedef struct bbl_l2tp_queue_
     struct bbl_l2tp_tunnel_ *tunnel;
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) txq_qnode; /* TX queue */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) tx_qnode; /* TX request */
-} bbl_l2tp_queue_t;
+} bbl_l2tp_queue_s;
 
 /* L2TP Tunnel Instance */
 typedef struct bbl_l2tp_tunnel_
@@ -121,10 +121,10 @@ typedef struct bbl_l2tp_tunnel_
     CIRCLEQ_HEAD(txq_, bbl_l2tp_queue_) txq_qhead;
 
     /* Pointer to corresponding network interface */
-    struct bbl_interface_ *interface;
+    bbl_network_interface_s *interface;
 
     /* Pointer to L2TP server configuration */
-    bbl_l2tp_server_t *server;
+    bbl_l2tp_server_s *server;
 
     /* RFC5515 CSURQ */
     uint16_t *csurq_requests;
@@ -165,7 +165,7 @@ typedef struct bbl_l2tp_tunnel_
     char* error_message;
 
     bool zlb;
-    bbl_l2tp_queue_t *zlb_qnode;
+    bbl_l2tp_queue_s *zlb_qnode;
 
     struct {
         uint32_t control_rx;
@@ -193,15 +193,14 @@ typedef struct bbl_l2tp_tunnel_
     char *peer_name;
     char *peer_vendor;
 
-} bbl_l2tp_tunnel_t;
+} bbl_l2tp_tunnel_s;
 
 /* L2TP Session Instance */
 typedef struct bbl_l2tp_session_
 {
-
     CIRCLEQ_ENTRY(bbl_l2tp_session_) session_qnode;
 
-    bbl_l2tp_tunnel_t *tunnel;
+    bbl_l2tp_tunnel_s *tunnel;
     l2tp_session_state_t state;
 
     bbl_session_s *pppoe_session;
@@ -260,17 +259,25 @@ typedef struct bbl_l2tp_session_
     char *peer_sub_address;
     char *peer_ari;
     char *peer_aci;
-
-} bbl_l2tp_session_t;
+} bbl_l2tp_session_s;
 
 const char* l2tp_message_string(l2tp_message_type type);
 const char* l2tp_tunnel_state_string(l2tp_tunnel_state_t state);
 const char* l2tp_session_state_string(l2tp_session_state_t state);
 
-void bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session);
-void bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t state);
-void bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type);
-void bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface);
-void bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx);
+void 
+bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session);
+
+void 
+bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t state);
+
+void 
+bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, l2tp_message_type l2tp_type);
+
+void
+bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp);
+
+void 
+bbl_l2tp_stop_all_tunnel();
 
 #endif

@@ -44,14 +44,17 @@ typedef struct bbl_session_
     uint32_t send_requests;
     uint32_t network_send_requests;
 
-    CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
-    CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
 
-    struct bbl_interface_ *interface; /* where this session is attached to */
-    struct bbl_interface_ *network_interface; /* selected network interface */
-    struct bbl_access_config_ *access_config;
+    CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_a10nsp_tx_qnode;
+
+    bbl_access_config_s *access_config;
+    bbl_access_interface_s *access_interface; /* where this session is attached to */
+    bbl_network_interface_s *network_interface; /* selected network interface */
+    bbl_a10nsp_interface_s *a10nsp_interface; /* a10nsp interface */
 
     uint8_t *write_buf; /* pointer to the slot in the tx_ring */
     uint16_t write_idx;
@@ -88,7 +91,6 @@ typedef struct bbl_session_
     uint16_t stream_group_id;
     void *stream;
     bool stream_traffic;
-
     struct {
         uint32_t ifindex;
         uint16_t outer_vlan_id;
@@ -99,11 +101,11 @@ typedef struct bbl_session_
 
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_session_s *l2tp_session;
 
     /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */
-    bbl_a10nsp_session_t *a10nsp_session;
+    bbl_a10nsp_session_s *a10nsp_session;
 
     /* Authentication */
     char *username;
@@ -354,6 +356,7 @@ typedef struct bbl_session_
         uint32_t mc_rx;
         uint32_t mc_loss; /* packet loss */
         uint32_t mc_not_received;
+
         uint32_t arp_rx;
         uint32_t arp_tx;
         uint32_t icmp_rx;
@@ -428,7 +431,7 @@ void
 bbl_session_ncp_close(bbl_session_s *session, bool ipcp);
 
 bbl_session_s *
-bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id);
+bbl_session_get(uint32_t session_id);
 
 void
 bbl_session_free(bbl_session_s *session);
@@ -437,13 +440,19 @@ void
 bbl_session_reset(bbl_session_s *session);
 
 void
-bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t state);
+bbl_session_update_state(bbl_session_s *session, session_state_t state);
 
 void
-bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session);
+bbl_session_clear(bbl_session_s *session);
 
 bool
-bbl_sessions_init(bbl_ctx_s *ctx);
+bbl_sessions_init();
+
+uint32_t
+bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_t *eth);
+
+uint32_t
+bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_t *eth);
 
 json_t *
 bbl_session_json(bbl_session_s *session);

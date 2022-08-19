@@ -36,12 +36,12 @@ void
 isis_psnp_free(void *key, void *ptr);
 
 bool
-isis_init(bbl_ctx_s *ctx);
+isis_init();
 
 void
-isis_handler_rx(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
+isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth);
 
 void
-isis_teardown(bbl_ctx_s *ctx);
+isis_teardown();
 
 #endif

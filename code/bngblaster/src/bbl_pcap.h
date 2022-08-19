@@ -31,14 +31,20 @@
 #define DLT_EN10MB        1 /* Ethernet (10Mb) */
 #define DLT_NULL          0 /* RAW IP */
 
-/*
- * APIs
- */
-void pcapng_init(bbl_ctx_s *);
-void pcapng_free(bbl_ctx_s *);
-void pcapng_push_section_header(bbl_ctx_s *);
-void pcapng_push_interface_header(bbl_ctx_s *, uint, const char *);
-void pcapng_push_packet_header(bbl_ctx_s *, struct timespec *, u_char *, uint, uint, uint);
-void pcapng_fflush(bbl_ctx_s *);
+void
+pcapng_open();
+
+void
+pcapng_init();
+
+void
+pcapng_fflush();
+
+void
+pcapng_free();
+
+void
+pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
+                          uint32_t ifindex, uint32_t direction);
 
 #endif

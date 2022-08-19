@@ -10,7 +10,8 @@
 #include "../bbl_ctrl.h"
 
 static json_t *
-isis_ctrl_adjacency(isis_adjacency_t *adjacency) {
+isis_ctrl_adjacency(isis_adjacency_s *adjacency)
+{
     json_t *root = NULL;
     json_t *peer = NULL;
 
@@ -38,7 +39,8 @@ isis_ctrl_adjacency(isis_adjacency_t *adjacency) {
 }
 
 static json_t *
-isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
+isis_ctrl_adjacency_p2p(isis_adjacency_p2p_s *adjacency)
+{
     json_t *root = NULL;
     json_t *peer = NULL;
 
@@ -65,22 +67,29 @@ isis_ctrl_adjacency_p2p(isis_adjacency_p2p_t *adjacency) {
 }
 
 int
-isis_ctrl_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     int result = 0;
+    int level;
+    bbl_interface_s *interface;
+    bbl_network_interface_s *network_interface;
     json_t *root, *adjacencies, *adjacency;
 
     adjacencies = json_array();
-    for(int i=0; i < ctx->interfaces.network_if_count; i++) {
-        if(ctx->interfaces.network_if[i]->isis_adjacency_p2p) {
-           adjacency = isis_ctrl_adjacency_p2p(ctx->interfaces.network_if[i]->isis_adjacency_p2p);
-           if(adjacency) {
-               json_array_append(adjacencies, adjacency);
-           }
-        } else {
-            for(int level=0; level<ISIS_LEVELS; level++) {
-                adjacency = isis_ctrl_adjacency(ctx->interfaces.network_if[i]->isis_adjacency[level]);
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        network_interface = interface->network;
+        while(network_interface) {
+            if(network_interface->isis_adjacency_p2p) {
+                adjacency = isis_ctrl_adjacency_p2p(network_interface->isis_adjacency_p2p);
                 if(adjacency) {
                     json_array_append(adjacencies, adjacency);
+                }
+            } else {
+                for(level=0; level<ISIS_LEVELS; level++) {
+                    adjacency = isis_ctrl_adjacency(network_interface->isis_adjacency[level]);
+                    if(adjacency) {
+                        json_array_append(adjacencies, adjacency);
+                    }
                 }
             }
         }
@@ -100,9 +109,10 @@ isis_ctrl_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__(
 }
 
 static json_t *
-isis_ctrl_database_entries(hb_tree *lsdb) {
+isis_ctrl_database_entries(hb_tree *lsdb)
+{
     json_t *database, *entry;
-    isis_lsp_t *lsp;
+    isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
 
@@ -156,12 +166,12 @@ isis_ctrl_database_entries(hb_tree *lsdb) {
 }
 
 int
-isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-
+isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     int result = 0;
     json_t *root = NULL;
     json_t *database = NULL;
-    isis_instance_t *instance = NULL;
+    isis_instance_s *instance = NULL;
 
     int instance_id = 0;
     int level = 0;
@@ -178,7 +188,7 @@ isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((un
     }
 
     /* Search for matching instance */
-    instance = ctx->isis_instances;
+    instance = g_ctx->isis_instances;
     while(instance) {
         if(instance->config->id == instance_id) {
             break;
@@ -214,11 +224,12 @@ isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((un
 }
 
 int
-isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
+isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     char *file_path;
     int instance_id = 0;
 
-    isis_instance_t *instance = NULL;
+    isis_instance_s *instance = NULL;
 
     /* Unpack further arguments */
     if (json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
@@ -229,7 +240,7 @@ isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((un
     }
 
     /* Search for matching instance */
-    instance = ctx->isis_instances;
+    instance = g_ctx->isis_instances;
     while(instance) {
         if(instance->config->id == instance_id) {
             break;
@@ -248,17 +259,17 @@ isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((un
 }
 
 int
-isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments) {
-
+isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+{
     protocol_error_t result;
 
     json_t *value;
     size_t pdu_count;
 
     int instance_id = 0;
-    isis_instance_t *instance = NULL;
+    isis_instance_s *instance = NULL;
 
-    isis_pdu_t pdu = {0};
+    isis_pdu_s pdu = {0};
 
     const char *pdu_string;
     uint16_t pdu_string_len;
@@ -273,7 +284,7 @@ isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
     }
 
     /* Search for matching instance */
-    instance = ctx->isis_instances;
+    instance = g_ctx->isis_instances;
     while(instance) {
         if(instance->config->id == instance_id) {
             break;
@@ -315,7 +326,8 @@ isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((
 }
 
 int
-isis_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
-    isis_teardown(ctx);
+isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) 
+{
+    isis_teardown();
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

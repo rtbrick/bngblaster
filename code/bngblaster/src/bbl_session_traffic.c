@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_session.h"
 
@@ -89,8 +88,8 @@ bbl_session_traffic_ipv6pd(timer_s *timer)
 }
 
 static bool
-bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
-                                  struct bbl_interface_ *network_if)
+bbl_session_traffic_add_ipv4_l2tp(bbl_session_s *session,
+                                  bbl_network_interface_s *network_interface)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t l2tp_ipv4 = {0};
@@ -102,17 +101,17 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
     uint8_t *buf;
     uint16_t len = 0;
 
-    bbl_l2tp_session_t *l2tp_session = session->l2tp_session;
-    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_session_s *l2tp_session = session->l2tp_session;
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
     if(!session->network_ipv4_tx_packet_template) {
         session->network_ipv4_tx_packet_template = malloc(DATA_TRAFFIC_MAX_LEN);
     }
     buf = session->network_ipv4_tx_packet_template;
 
-    eth.dst = network_if->gateway_mac;
-    eth.src = network_if->mac;
-    eth.vlan_outer = network_if->vlan;
+    eth.dst = network_interface->gateway_mac;
+    eth.src = network_interface->mac;
+    eth.vlan_outer = network_interface->vlan;
     eth.vlan_inner = 0;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
@@ -144,15 +143,15 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
-        ctx->stats.session_traffic_flows++;
+        g_ctx->stats.session_traffic_flows++;
         session->session_traffic_flows++;
     }
-    session->network_ipv4_tx_flow_id = ctx->flow_id++;
+    session->network_ipv4_tx_flow_id = g_ctx->flow_id++;
     bbl.flow_id = session->network_ipv4_tx_flow_id;
     bbl.direction = BBL_DIRECTION_DOWN;
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
@@ -165,8 +164,8 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_ctx_s *ctx, bbl_session_s *session,
 }
 
 static bool
-bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
-                                    struct bbl_interface_ *a10nsp_if)
+bbl_session_traffic_add_ipv4_a10nsp(bbl_session_s *session,
+                                    bbl_a10nsp_interface_s *a10nsp_interface)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -176,7 +175,7 @@ bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
     uint8_t *buf;
     uint16_t len = 0;
 
-    bbl_a10nsp_session_t *a10nsp_session = session->a10nsp_session;
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
 
     if(!session->network_ipv4_tx_packet_template) {
         session->network_ipv4_tx_packet_template = malloc(DATA_TRAFFIC_MAX_LEN);
@@ -184,10 +183,10 @@ bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
     buf = session->network_ipv4_tx_packet_template;
 
     eth.dst = session->client_mac;
-    eth.src = a10nsp_if->mac;
+    eth.src = a10nsp_interface->mac;
     eth.vlan_outer = a10nsp_session->s_vlan;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.qinq = a10nsp_if->qinq;
+    eth.qinq = a10nsp_interface->qinq;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
         eth.next = &pppoe;
@@ -211,15 +210,15 @@ bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
-        ctx->stats.session_traffic_flows++;
+        g_ctx->stats.session_traffic_flows++;
         session->session_traffic_flows++;
     }
-    session->network_ipv4_tx_flow_id = ctx->flow_id++;
+    session->network_ipv4_tx_flow_id = g_ctx->flow_id++;
     bbl.flow_id = session->network_ipv4_tx_flow_id;
     bbl.direction = BBL_DIRECTION_DOWN;
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
@@ -231,7 +230,7 @@ bbl_session_traffic_add_ipv4_a10nsp(bbl_ctx_s *ctx, bbl_session_s *session,
 }
 
 static bool
-bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
+bbl_session_traffic_add_ipv4(bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_mpls_t mpls = {0};
@@ -242,22 +241,24 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     uint8_t *buf;
     uint16_t len = 0;
 
-    bbl_interface_s *network_if;
+    bbl_network_interface_s *network_interface;
 
-    if(session->l2tp_session) {
-        network_if = session->l2tp_session->tunnel->interface;
-    } else {
-        network_if = session->network_interface;
-    }
-    if(!network_if) {
-        return false;
+    if(!session->a10nsp_session) {
+        if(session->l2tp_session) {
+            network_interface = session->l2tp_session->tunnel->interface;
+        } else {
+            network_interface = session->network_interface;
+        }
+        if(!network_interface) {
+            return false;
+        }
     }
 
     /* Init BBL Session Key */
     bbl.type = BBL_TYPE_UNICAST_SESSION;
     bbl.sub_type = BBL_SUB_TYPE_IPV4;
     bbl.session_id = session->session_id;
-    bbl.ifindex = session->interface->ifindex;
+    bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
 
@@ -289,10 +290,10 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     } else if (session->a10nsp_session) {
         ip.dst = A10NSP_IP_LOCAL;
     } else {
-        if(ctx->config.session_traffic_ipv4_address) {
-            ip.dst = ctx->config.session_traffic_ipv4_address;
+        if(g_ctx->config.session_traffic_ipv4_address) {
+            ip.dst = g_ctx->config.session_traffic_ipv4_address;
         } else {
-            ip.dst = network_if->ip.address;
+            ip.dst = network_interface->ip.address;
         }
     }
     ip.src = session->ip_address;
@@ -306,10 +307,10 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     udp.next = &bbl;
     session->access_ipv4_tx_seq = 1;
     if(!session->access_ipv4_tx_flow_id) {
-        ctx->stats.session_traffic_flows++;
+        g_ctx->stats.session_traffic_flows++;
         session->session_traffic_flows++;
     }
-    session->access_ipv4_tx_flow_id = ctx->flow_id++;
+    session->access_ipv4_tx_flow_id = g_ctx->flow_id++;
     bbl.flow_id = session->access_ipv4_tx_flow_id;
     bbl.direction = BBL_DIRECTION_UP;
 
@@ -319,9 +320,9 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     session->access_ipv4_tx_packet_len = len;
 
     if(session->l2tp_session) {
-        return bbl_session_traffic_add_ipv4_l2tp(ctx, session, network_if);
+        return bbl_session_traffic_add_ipv4_l2tp(session, network_interface);
     } else if (session->a10nsp_session) {
-        return bbl_session_traffic_add_ipv4_a10nsp(ctx, session, network_if);
+        return bbl_session_traffic_add_ipv4_a10nsp(session, session->a10nsp_interface);
     }
 
     /* Prepare Network to Access (Session) Packet */
@@ -331,30 +332,30 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
     }
     buf = session->network_ipv4_tx_packet_template;
 
-    eth.dst = network_if->gateway_mac;
-    eth.src = network_if->mac;
+    eth.dst = network_interface->gateway_mac;
+    eth.src = network_interface->mac;
     eth.qinq = false;
-    eth.vlan_outer = network_if->vlan;
+    eth.vlan_outer = network_interface->vlan;
     eth.vlan_inner = 0;
-    if(ctx->config.session_traffic_ipv4_label) {
-        mpls.label = ctx->config.session_traffic_ipv4_label;
+    if(g_ctx->config.session_traffic_ipv4_label) {
+        mpls.label = g_ctx->config.session_traffic_ipv4_label;
         mpls.ttl = 64;
         eth.mpls = &mpls;
     }
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ip;
     ip.dst = session->ip_address;
-    if(ctx->config.session_traffic_ipv4_address) {
-        ip.src = ctx->config.session_traffic_ipv4_address;
+    if(g_ctx->config.session_traffic_ipv4_address) {
+        ip.src = g_ctx->config.session_traffic_ipv4_address;
     } else {
-        ip.src = network_if->ip.address;
+        ip.src = network_interface->ip.address;
     }
     session->network_ipv4_tx_seq = 1;
     if(!session->network_ipv4_tx_flow_id) {
-        ctx->stats.session_traffic_flows++;
+        g_ctx->stats.session_traffic_flows++;
         session->session_traffic_flows++;
     }
-    session->network_ipv4_tx_flow_id = ctx->flow_id++;
+    session->network_ipv4_tx_flow_id = g_ctx->flow_id++;
     bbl.flow_id = session->network_ipv4_tx_flow_id;
     bbl.direction = BBL_DIRECTION_DOWN;
 
@@ -366,7 +367,7 @@ bbl_session_traffic_add_ipv4(bbl_ctx_s *ctx, bbl_session_s *session)
 }
 
 static bool
-bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_pd)
+bbl_session_traffic_add_ipv6(bbl_session_s *session, bool ipv6_pd)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_mpls_t mpls = {0};
@@ -384,7 +385,7 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         return false;
     }
     if(ipv6_addr_not_zero(&ctx->config.session_traffic_ipv6_address)) {
-        network_ip = ctx->config.session_traffic_ipv6_address;
+        network_ip = g_ctx->config.session_traffic_ipv6_address;
     } else if(ipv6_addr_not_zero(&network_if->ip6.address)) {
         network_ip = network_if->ip6.address;
     }
@@ -409,10 +410,10 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         ip.src = session->delegated_ipv6_address;
         session->access_ipv6pd_tx_seq = 1;
         if(!session->access_ipv6pd_tx_flow_id) {
-            ctx->stats.session_traffic_flows++;
+            g_ctx->stats.session_traffic_flows++;
             session->session_traffic_flows++;
         }
-        session->access_ipv6pd_tx_flow_id = ctx->flow_id++;
+        session->access_ipv6pd_tx_flow_id = g_ctx->flow_id++;
         bbl.flow_id = session->access_ipv6pd_tx_flow_id;
     } else {
         bbl.sub_type = BBL_SUB_TYPE_IPV6;
@@ -423,10 +424,10 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         ip.src = session->ipv6_address;
         session->access_ipv6_tx_seq = 1;
         if(!session->access_ipv6_tx_flow_id) {
-            ctx->stats.session_traffic_flows++;
+            g_ctx->stats.session_traffic_flows++;
             session->session_traffic_flows++;
         }
-        session->access_ipv6_tx_flow_id = ctx->flow_id++;
+        session->access_ipv6_tx_flow_id = g_ctx->flow_id++;
         bbl.flow_id = session->access_ipv6_tx_flow_id;
     }
 
@@ -476,10 +477,10 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         ip.dst = session->delegated_ipv6_address;
         session->network_ipv6pd_tx_seq = 1;
         if(!session->network_ipv6pd_tx_flow_id) {
-            ctx->stats.session_traffic_flows++;
+            g_ctx->stats.session_traffic_flows++;
             session->session_traffic_flows++;
         }
-        session->network_ipv6pd_tx_flow_id = ctx->flow_id++;
+        session->network_ipv6pd_tx_flow_id = g_ctx->flow_id++;
         bbl.flow_id = session->network_ipv6pd_tx_flow_id;
     } else {
         if(!session->network_ipv6_tx_packet_template) {
@@ -489,10 +490,10 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
         ip.dst = session->ipv6_address;
         session->network_ipv6_tx_seq = 1;
         if(!session->network_ipv6_tx_flow_id) {
-            ctx->stats.session_traffic_flows++;
+            g_ctx->stats.session_traffic_flows++;
             session->session_traffic_flows++;
         }
-        session->network_ipv6_tx_flow_id = ctx->flow_id++;
+        session->network_ipv6_tx_flow_id = g_ctx->flow_id++;
         bbl.flow_id = session->network_ipv6_tx_flow_id;
     }
 
@@ -501,8 +502,8 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
     eth.qinq = false;
     eth.vlan_outer = network_if->vlan;
     eth.vlan_inner = 0;
-    if(ctx->config.session_traffic_ipv6_label) {
-        mpls.label = ctx->config.session_traffic_ipv6_label;
+    if(g_ctx->config.session_traffic_ipv6_label) {
+        mpls.label = g_ctx->config.session_traffic_ipv6_label;
         mpls.ttl = 64;
         eth.mpls = &mpls;
     }
@@ -523,24 +524,24 @@ bbl_session_traffic_add_ipv6(bbl_ctx_s *ctx, bbl_session_s *session, bool ipv6_p
 }
 
 bool
-bbl_session_traffic_start_ipv4(bbl_ctx_s *ctx, bbl_session_s *session) {
-
+bbl_session_traffic_start_ipv4(bbl_session_s *session)
+{
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv4_pps && session->ip_address &&
-       (ctx->interfaces.network_if_count || session->a10nsp_session)) {
+    if(g_ctx->config.session_traffic_ipv4_pps && session->ip_address &&
+       (g_ctx->interfaces.network_if_count || session->a10nsp_session)) {
         /* Start IPv4 Session Traffic */
-        if(bbl_session_traffic_add_ipv4(ctx, session)) {
-            if(ctx->config.session_traffic_ipv4_pps > 1) {
-                tx_interval = 1000000000 / ctx->config.session_traffic_ipv4_pps;
-                if(tx_interval < ctx->config.tx_interval) {
+        if(bbl_session_traffic_add_ipv4(session)) {
+            if(g_ctx->config.session_traffic_ipv4_pps > 1) {
+                tx_interval = 1000000000 / g_ctx->config.session_traffic_ipv4_pps;
+                if(tx_interval < g_ctx->config.tx_interval) {
                     /* It is not possible to send faster than TX interval. */
-                    tx_interval = ctx->config.tx_interval;
+                    tx_interval = g_ctx->config.tx_interval;
                 }
-                timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
                                    0, tx_interval, session, &bbl_session_traffic_ipv4);
             } else {
-                timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_session_traffic_ipv4, "Session Traffic IPv4",
                                    1, 0, session, &bbl_session_traffic_ipv4);
             }
             return true;
@@ -552,23 +553,23 @@ bbl_session_traffic_start_ipv4(bbl_ctx_s *ctx, bbl_session_s *session) {
 }
 
 bool
-bbl_session_traffic_start_ipv6(bbl_ctx_s *ctx, bbl_session_s *session) {
-
+bbl_session_traffic_start_ipv6(bbl_session_s *session)
+{
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv6_pps && *(uint64_t*)session->ipv6_address && ctx->interfaces.network_if_count) {
+    if(g_ctx->config.session_traffic_ipv6_pps && *(uint64_t*)session->ipv6_address && g_ctx->interfaces.network_if_count) {
         /* Start IPv6 Session Traffic */
-        if(bbl_session_traffic_add_ipv6(ctx, session, false)) {
-            if(ctx->config.session_traffic_ipv6_pps > 1) {
-                tx_interval = 1000000000 / ctx->config.session_traffic_ipv6_pps;
-                if(tx_interval < ctx->config.tx_interval) {
+        if(bbl_session_traffic_add_ipv6(session, false)) {
+            if(g_ctx->config.session_traffic_ipv6_pps > 1) {
+                tx_interval = 1000000000 / g_ctx->config.session_traffic_ipv6_pps;
+                if(tx_interval < g_ctx->config.tx_interval) {
                     /* It is not possible to send faster than TX interval. */
-                    tx_interval = ctx->config.tx_interval;
+                    tx_interval = g_ctx->config.tx_interval;
                 }
-                timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
                                    0, tx_interval, session, &bbl_session_traffic_ipv6);
             } else {
-                timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_session_traffic_ipv6, "Session Traffic IPv6",
                                    1, 0, session, &bbl_session_traffic_ipv6);
             }
             return true;
@@ -580,23 +581,23 @@ bbl_session_traffic_start_ipv6(bbl_ctx_s *ctx, bbl_session_s *session) {
 }
 
 bool
-bbl_session_traffic_start_ipv6pd(bbl_ctx_s *ctx, bbl_session_s *session) {
-
+bbl_session_traffic_start_ipv6pd(bbl_session_s *session)
+{
     uint64_t tx_interval;
 
-    if(ctx->config.session_traffic_ipv6pd_pps && *(uint64_t*)session->delegated_ipv6_address && ctx->interfaces.network_if_count) {
+    if(g_ctx->config.session_traffic_ipv6pd_pps && *(uint64_t*)session->delegated_ipv6_address && g_ctx->interfaces.network_if_count) {
         /* Start IPv6 PD Session Traffic */
-        if(bbl_session_traffic_add_ipv6(ctx, session, true)) {
-            if(ctx->config.session_traffic_ipv6pd_pps > 1) {
-                tx_interval = 1000000000 / ctx->config.session_traffic_ipv6pd_pps;
-                if(tx_interval < ctx->config.tx_interval) {
+        if(bbl_session_traffic_add_ipv6(session, true)) {
+            if(g_ctx->config.session_traffic_ipv6pd_pps > 1) {
+                tx_interval = 1000000000 / g_ctx->config.session_traffic_ipv6pd_pps;
+                if(tx_interval < g_ctx->config.tx_interval) {
                     /* It is not possible to send faster than TX interval. */
-                    tx_interval = ctx->config.tx_interval;
+                    tx_interval = g_ctx->config.tx_interval;
                 }
-                timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6 PD",
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6 PD",
                                    0, tx_interval, session, &bbl_session_traffic_ipv6pd);
             } else {
-                timer_add_periodic(&ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6 PD",
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_session_traffic_ipv6pd, "Session Traffic IPv6 PD",
                                    1, 0, session, &bbl_session_traffic_ipv6pd);
             }
             return true;

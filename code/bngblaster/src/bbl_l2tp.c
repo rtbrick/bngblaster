@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_l2tp_avp.h"
 #include "bbl_stream.h"
@@ -15,7 +14,7 @@
 #include <openssl/rand.h>
 
 void
-bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type);
+bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, l2tp_message_type l2tp_type);
 
 const char*
 l2tp_message_string(l2tp_message_type type)
@@ -72,10 +71,10 @@ l2tp_session_state_string(l2tp_session_state_t state)
  * bbl_l2tp_force_stop
  */
 static void
-bbl_l2tp_force_stop(bbl_l2tp_tunnel_t *l2tp_tunnel) {
-    bbl_interface_s *interface = l2tp_tunnel->interface;
-    bbl_l2tp_queue_t *q = NULL;
-    bbl_l2tp_queue_t *q_del = NULL;
+bbl_l2tp_force_stop(bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
+    bbl_l2tp_queue_s *q = NULL;
+    bbl_l2tp_queue_s *q_del = NULL;
 
     uint16_t ns = l2tp_tunnel->ns;
 
@@ -92,7 +91,7 @@ bbl_l2tp_force_stop(bbl_l2tp_tunnel_t *l2tp_tunnel) {
             q = CIRCLEQ_NEXT(q, txq_qnode);
             CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
             if(CIRCLEQ_NEXT(q_del, tx_qnode)) {
-                CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q_del, tx_qnode);
+                CIRCLEQ_REMOVE(&l2tp_tunnel->interface->l2tp_tx_qhead, q_del, tx_qnode);
             }
             free(q_del);
         } else {
@@ -115,20 +114,15 @@ bbl_l2tp_force_stop(bbl_l2tp_tunnel_t *l2tp_tunnel) {
  * @param l2tp_session L2TP session structure to be deleted.
  */
 void
-bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
-    bbl_ctx_s *ctx;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-
+bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
+{
     if(l2tp_session) {
-        l2tp_tunnel = l2tp_session->tunnel;
-        ctx = l2tp_tunnel->interface->ctx;
-
         if(l2tp_session->key.session_id) {
             /* Here we skip the session with ID zero which is the tunnel session. */
             LOG(DEBUG, "L2TP Debug (%s) Tunnel %u Session %u deleted\n",
-                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id, l2tp_session->key.session_id);
+                       l2tp_session->tunnel->server->host_name, l2tp_session->tunnel->tunnel_id, l2tp_session->key.session_id);
 
-            if(ctx->l2tp_sessions) ctx->l2tp_sessions--;
+            if(g_ctx->l2tp_sessions) g_ctx->l2tp_sessions--;
         }
         /* Remove session from tunnel object */
         if(CIRCLEQ_NEXT(l2tp_session, session_qnode) != NULL) {
@@ -136,7 +130,7 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
             CIRCLEQ_NEXT(l2tp_session, session_qnode) = NULL;
         }
         /* Remove session from dict */
-        dict_remove(ctx->l2tp_session_dict, &l2tp_session->key);
+        dict_remove(g_ctx->l2tp_session_dict, &l2tp_session->key);
 
         /* Remove session from PPPoE session */
         if(l2tp_session->pppoe_session) {
@@ -163,19 +157,15 @@ bbl_l2tp_session_delete(bbl_l2tp_session_t *l2tp_session) {
  * @param l2tp_tunnel L2TP tunnel structure to be deleted.
  */
 void
-bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
-    bbl_l2tp_queue_t *q;
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
+bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
+    bbl_l2tp_queue_s *q;
     if(l2tp_tunnel) {
         if(l2tp_tunnel->tunnel_id) {
             LOG(DEBUG, "L2TP Debug (%s) Tunnel %u deleted\n",
                     l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id);
         }
-        interface = l2tp_tunnel->interface;
-        ctx = interface->ctx;
-        if(ctx->l2tp_tunnels) ctx->l2tp_tunnels--;
+        if(g_ctx->l2tp_tunnels) g_ctx->l2tp_tunnels--;
 
         /* Delete timer */
         timer_del(l2tp_tunnel->timer_tx);
@@ -195,7 +185,7 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
             CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q, txq_qnode);
             CIRCLEQ_NEXT(q, txq_qnode) = NULL;
             if(CIRCLEQ_NEXT(q, tx_qnode) != NULL) {
-                CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
+                CIRCLEQ_REMOVE(&l2tp_tunnel->interface->l2tp_tx_qhead, q, tx_qnode);
                 CIRCLEQ_NEXT(q, tx_qnode) = NULL;
             }
             free(q);
@@ -221,12 +211,9 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_t *l2tp_tunnel) {
  * @param state New L2TP tunnel state.
  */
 void
-bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t state) {
-    bbl_ctx_s *ctx;
+bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t state) {
     if(l2tp_tunnel->state != state) {
         /* State has changed */
-        ctx = l2tp_tunnel->interface->ctx;
-
         LOG(DEBUG, "L2TP Debug (%s) Tunnel %u state changed from %s to %s\n",
                     l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
                     l2tp_tunnel_state_string(l2tp_tunnel->state),
@@ -234,17 +221,17 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
 
         if(state == BBL_L2TP_TUNNEL_ESTABLISHED) {
             /* New state established */
-            ctx->l2tp_tunnels_established++;
-            if(ctx->l2tp_tunnels_established > ctx->l2tp_tunnels_established_max) {
-                ctx->l2tp_tunnels_established_max = ctx->l2tp_tunnels_established;
+            g_ctx->l2tp_tunnels_established++;
+            if(g_ctx->l2tp_tunnels_established > g_ctx->l2tp_tunnels_established_max) {
+                g_ctx->l2tp_tunnels_established_max = g_ctx->l2tp_tunnels_established;
             }
             LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) established\n",
                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
                       l2tp_tunnel->peer_name,
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
         } else if (l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
-            if(ctx->l2tp_tunnels_established) {
-                ctx->l2tp_tunnels_established--;
+            if(g_ctx->l2tp_tunnels_established) {
+                g_ctx->l2tp_tunnels_established--;
             }
         }
         /* Set new state and reset state seconds */
@@ -257,11 +244,12 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_t *l2tp_tunnel, l2tp_tunnel_state_t
  * bbl_l2tp_tunnel_tx_job
  */
 void
-bbl_l2tp_tunnel_tx_job (timer_s *timer) {
-    bbl_l2tp_tunnel_t *l2tp_tunnel = timer->data;
-    bbl_interface_s *interface = l2tp_tunnel->interface;
-    bbl_l2tp_queue_t *q = NULL;
-    bbl_l2tp_queue_t *q_del = NULL;
+bbl_l2tp_tunnel_tx_job(timer_s *timer)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel = timer->data;
+    bbl_network_interface_s *interface = l2tp_tunnel->interface;
+    bbl_l2tp_queue_s *q = NULL;
+    bbl_l2tp_queue_s *q_del = NULL;
 
     struct timespec timestamp;
     struct timespec time_diff;
@@ -349,14 +337,12 @@ bbl_l2tp_tunnel_tx_job (timer_s *timer) {
 
 /**
  * bbl_l2tp_tunnel_control_job
- *
- * This function ...
  */
 void
-bbl_l2tp_tunnel_control_job (timer_s *timer) {
-    bbl_l2tp_tunnel_t *l2tp_tunnel = timer->data;
-    bbl_interface_s *interface = l2tp_tunnel->interface;
-    bbl_ctx_s *ctx = interface->ctx;
+bbl_l2tp_tunnel_control_job(timer_s *timer)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel = timer->data;
+    bbl_network_interface_s *interface = l2tp_tunnel->interface;
     l2tp_tunnel->state_seconds++;
     switch(l2tp_tunnel->state) {
         case BBL_L2TP_TUNNEL_WAIT_CTR_CONN:
@@ -393,7 +379,7 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
             break;
     }
     if(!l2tp_tunnel->timer_tx_active) {
-        timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
+        timer_add(&g_ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
         l2tp_tunnel->timer_tx_active = true;
     }
 }
@@ -409,12 +395,10 @@ bbl_l2tp_tunnel_control_job (timer_s *timer) {
  * @param l2tp_type L2TP message type (SCCRP, ICRP, ...).
  */
 void
-bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, l2tp_message_type l2tp_type) {
+bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, l2tp_message_type l2tp_type) {
 
-    bbl_interface_s *interface = l2tp_tunnel->interface;
-    bbl_ctx_s *ctx = interface->ctx;
-
-    bbl_l2tp_queue_t *q = calloc(1, sizeof(bbl_l2tp_queue_t));
+    bbl_network_interface_s *interface = l2tp_tunnel->interface;
+    bbl_l2tp_queue_s *q = calloc(1, sizeof(bbl_l2tp_queue_s));
 
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t ipv4 = {0};
@@ -476,7 +460,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
         } else {
             CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->txq_qhead, q, txq_qnode);
             if(!l2tp_tunnel->timer_tx_active) {
-                timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
+                timer_add(&g_ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                 l2tp_tunnel->timer_tx_active = true;
             }
         }
@@ -498,12 +482,12 @@ bbl_l2tp_send(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session, 
  * @param next Payload structure.
  */
 static void
-bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *next) {
+bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next) {
 
-    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
-    bbl_l2tp_server_t *l2tp_server = l2tp_tunnel->server;
-    bbl_interface_s *interface = l2tp_tunnel->interface;
-    bbl_l2tp_queue_t *q = calloc(1, sizeof(bbl_l2tp_queue_t));
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_server_s *l2tp_server = l2tp_tunnel->server;
+    bbl_network_interface_s *interface = l2tp_tunnel->interface;
+    bbl_l2tp_queue_s *q = calloc(1, sizeof(bbl_l2tp_queue_s));
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t ipv4 = {0};
     bbl_udp_t udp = {0};
@@ -553,16 +537,15 @@ bbl_l2tp_send_data(bbl_l2tp_session_t *l2tp_session, uint16_t protocol, void *ne
 }
 
 static void
-bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface) {
+bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp) {
     MD5_CTX md5_ctx;
 
-    bbl_ctx_s *ctx = interface->ctx;
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
 
-    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
-    bbl_l2tp_tunnel_t *l2tp_tunnel2;
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_tunnel_s *l2tp_tunnel2;
+    bbl_l2tp_session_s *l2tp_session;
 
     dict_insert_result result;
     void **search = NULL;
@@ -575,8 +558,8 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                        l2tp_server->host_name,
                        format_ipv4_address(&ipv4->src));
             /* Init tunnel ... */
-            l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_t));
-            ctx->l2tp_tunnels++;
+            l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
+            g_ctx->l2tp_tunnels++;
             CIRCLEQ_INIT(&l2tp_tunnel->txq_qhead);
             CIRCLEQ_INIT(&l2tp_tunnel->session_qhead);
             l2tp_tunnel->interface = interface;
@@ -615,16 +598,16 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             }
             /* Add dummy tunnel session, this session is only used
              * to search for tunnel using the same dictionary. */
-            l2tp_session = calloc(1, sizeof(bbl_l2tp_session_t));
+            l2tp_session = calloc(1, sizeof(bbl_l2tp_session_s));
             l2tp_session->state = BBL_L2TP_SESSION_MAX;
             l2tp_session->tunnel = l2tp_tunnel;
             l2tp_session->key.session_id = 0;
 
             /* Assign tunnel id ... */
             while(true) {
-                l2tp_session->key.tunnel_id = ctx->next_tunnel_id++;
+                l2tp_session->key.tunnel_id = g_ctx->next_tunnel_id++;
                 if(l2tp_session->key.tunnel_id == 0) continue; /* skip tunnel 0 */
-                search = dict_search(ctx->l2tp_session_dict, &l2tp_session->key);
+                search = dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key);
                 if(search) {
                     /* Used, try next ... */
                     continue;
@@ -633,7 +616,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
                 }
             }
             l2tp_tunnel->tunnel_id = l2tp_session->key.tunnel_id;
-            result = dict_insert(ctx->l2tp_session_dict, &l2tp_session->key);
+            result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
             if (!result.inserted) {
                 LOG(ERROR, "L2TP Error (%s) Failed to add tunnel session\n",
                             l2tp_tunnel->server->host_name);
@@ -643,7 +626,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             }
             *result.datum_ptr = l2tp_session;
             CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
-            if(ctx->l2tp_tunnels > ctx->l2tp_tunnels_max) ctx->l2tp_tunnels_max = ctx->l2tp_tunnels;
+            if(g_ctx->l2tp_tunnels > g_ctx->l2tp_tunnels_max) g_ctx->l2tp_tunnels_max = g_ctx->l2tp_tunnels;
             /* L2TP Challenge/Response */
             if(l2tp_server->secret) {
                 l2tp_tunnel->challenge = malloc(L2TP_MD5_DIGEST_LEN);
@@ -686,7 +669,7 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
             CIRCLEQ_INSERT_TAIL(&l2tp_server->tunnel_qhead, l2tp_tunnel, tunnel_qnode);
             /* Start control job
              * WARNING: Do not change the interval! */
-            timer_add_periodic(&ctx->timer_root, &l2tp_tunnel->timer_ctrl, "L2TP Control", 1, 0, l2tp_tunnel, &bbl_l2tp_tunnel_control_job);
+            timer_add_periodic(&g_ctx->timer_root, &l2tp_tunnel->timer_ctrl, "L2TP Control", 1, 0, l2tp_tunnel, &bbl_l2tp_tunnel_control_job);
             /* Prepare ZLB */
             bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_ZLB);
             /* Send response */
@@ -702,14 +685,12 @@ bbl_l2tp_sccrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
 }
 
 static void
-bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-    bbl_ctx_s *ctx = interface->ctx;
-
+bbl_l2tp_scccn_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
     uint8_t digest[L2TP_MD5_DIGEST_LEN];
     MD5_CTX md5_ctx;
     uint8_t l2tp_type = L2TP_MESSAGE_SCCCN;
 
-    UNUSED(ctx);
     UNUSED(eth);
 
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_WAIT_CTR_CONN) {
@@ -760,18 +741,17 @@ bbl_l2tp_scccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s 
 }
 
 static void
-bbl_l2tp_stopccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-
+bbl_l2tp_stopccn_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
     UNUSED(eth);
     UNUSED(l2tp);
     UNUSED(interface);
-
     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_RCVD_STOPCCN);
 }
 
 static void
-bbl_l2tp_csun_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-
+bbl_l2tp_csun_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
     UNUSED(eth);
     UNUSED(interface);
 
@@ -779,9 +759,8 @@ bbl_l2tp_csun_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 }
 
 static void
-bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-    bbl_ctx_s *ctx = interface->ctx;
-
+bbl_l2tp_icrq_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
     dict_insert_result result;
     void **search;
 
@@ -791,8 +770,8 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
         return;
     }
 
-    bbl_l2tp_session_t *l2tp_session = calloc(1, sizeof(bbl_l2tp_session_t));
-    ctx->l2tp_sessions++;
+    bbl_l2tp_session_s *l2tp_session = calloc(1, sizeof(bbl_l2tp_session_s));
+    g_ctx->l2tp_sessions++;
     l2tp_session->tunnel = l2tp_tunnel;
     l2tp_session->state = BBL_L2TP_SESSION_WAIT_CONN;
 
@@ -807,7 +786,7 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     while(true) {
         l2tp_session->key.session_id = l2tp_tunnel->next_session_id++;
         if(l2tp_session->key.session_id == 0) continue; /* skip tunnel 0 */
-        search = dict_search(ctx->l2tp_session_dict, &l2tp_session->key);
+        search = dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key);
         if(search) {
             /* Used, try next ... */
             continue;
@@ -815,7 +794,7 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             break;
         }
     }
-    result = dict_insert(ctx->l2tp_session_dict, &l2tp_session->key);
+    result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
     if (!result.inserted) {
         LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
                     l2tp_tunnel->server->host_name);
@@ -824,18 +803,17 @@ bbl_l2tp_icrq_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
     }
     *result.datum_ptr = l2tp_session;
     CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
-    if(ctx->l2tp_sessions > ctx->l2tp_sessions_max) {
-        ctx->l2tp_sessions_max = ctx->l2tp_sessions;
+    if(g_ctx->l2tp_sessions > g_ctx->l2tp_sessions_max) {
+        g_ctx->l2tp_sessions_max = g_ctx->l2tp_sessions;
     }
     bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICRP);
 }
 
 static void
-bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_session_t *l2tp_session) {
-    bbl_ctx_s *ctx = interface->ctx;
-    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+bbl_l2tp_iccn_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_session, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
-    UNUSED(ctx);
     UNUSED(eth);
     UNUSED(l2tp);
 
@@ -862,11 +840,10 @@ bbl_l2tp_iccn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 }
 
 static void
-bbl_l2tp_cdn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_session_t *l2tp_session) {
-    bbl_ctx_s *ctx = interface->ctx;
-    bbl_l2tp_tunnel_t *l2tp_tunnel = l2tp_session->tunnel;
+bbl_l2tp_cdn_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_session, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
-    UNUSED(ctx);
     UNUSED(eth);
     UNUSED(l2tp);
 
@@ -887,8 +864,8 @@ bbl_l2tp_cdn_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *i
 }
 
 static void
-bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface, bbl_l2tp_session_t *l2tp_session) {
-    bbl_ctx_s *ctx = interface->ctx;
+bbl_l2tp_data_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_session, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
     bbl_session_s *pppoe_session;
 
     bbl_lcp_t   *lcp_rx;
@@ -906,7 +883,7 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
 
     char reply_message[sizeof(L2TP_REPLY_MESSAGE)+16];
 
-    bbl_stream *stream;
+    bbl_stream_s *stream;
     void **search = NULL;
     uint64_t loss;
 
@@ -1022,14 +999,14 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
             }
             break;
         case PROTOCOL_IPV4:
-            interface->io.ctrl = false;
+            interface->interface->io.ctrl = false;
             l2tp_session->stats.data_ipv4_rx++;
             ipv4 = (bbl_ipv4_t*)l2tp->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
                     bbl = (bbl_bbl_t*)udp->next;
-                    search = dict_search(ctx->stream_flow_dict, &bbl->flow_id);
+                    search = dict_search(g_ctx->stream_flow_dict, &bbl->flow_id);
                     if(search) {
                         stream = *search;
                         if(stream->rx_first_seq) {
@@ -1048,11 +1025,11 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                             stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
                             stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
                             stream->rx_first_seq = bbl->flow_seq;
-                            ctx->stats.stream_traffic_flows_verified++;
-                            if(ctx->stats.stream_traffic_flows_verified == ctx->stats.stream_traffic_flows) {
+                            g_ctx->stats.stream_traffic_flows_verified++;
+                            if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
                                 LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
                             }
-                            if(ctx->config.traffic_stop_verified) {
+                            if(g_ctx->config.traffic_stop_verified) {
                                 stream->stop = true;
                             }
                         }
@@ -1068,8 +1045,8 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
                                 if(!pppoe_session->network_ipv4_rx_first_seq) {
                                     pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
                                     pppoe_session->session_traffic_flows_verified++;
-                                    ctx->stats.session_traffic_flows_verified++;
-                                    if(ctx->stats.session_traffic_flows_verified == ctx->stats.session_traffic_flows) {
+                                    g_ctx->stats.session_traffic_flows_verified++;
+                                    if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
                                         LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
                                     }
                                 } else {
@@ -1098,35 +1075,35 @@ bbl_l2tp_data_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *
  *
  * This function handles all received L2TPv2 traffic.
  *
- * @param eth Received ethernet packet.
- * @param l2tp L2TP header of received ethernet packet.
- * @param interface Receiving interface.
+ * @param interface receiving interface
+ * @param eth received ethernet header
+ * @param l2tp L2TP header of received ethernet packet
  */
 void
-bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_s *interface) {
-    bbl_ctx_s *ctx = interface->ctx;
+bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+{
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
-    bbl_l2tp_session_t *l2tp_session;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
+    bbl_l2tp_session_s *l2tp_session;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     l2tp_key_t key = {0};
     void **search = NULL;
 
     if(l2tp->type == L2TP_MESSAGE_SCCRQ) {
-        bbl_l2tp_sccrq_rx(eth, l2tp, interface);
+        bbl_l2tp_sccrq_rx(interface, eth, l2tp);
         return;
     }
 
     key.tunnel_id = l2tp->tunnel_id;
     key.session_id = l2tp->session_id;
-    search = dict_search(ctx->l2tp_session_dict, &key);
+    search = dict_search(g_ctx->l2tp_session_dict, &key);
     if(!search && l2tp->type && key.session_id != 0) {
         /* Try with session zero (tunnel session) in case
          * the corresponding session was already deleted.
          * This is required for reliable delivery of control
          * messages. */
         key.session_id = 0;
-        search = dict_search(ctx->l2tp_session_dict, &key);
+        search = dict_search(g_ctx->l2tp_session_dict, &key);
     }
     if(search) {
         l2tp_session = *search;
@@ -1157,12 +1134,13 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                 l2tp_tunnel->zlb = true;
                 /* Start tx timer */
                 if(!l2tp_tunnel->timer_tx_active) {
-                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
+                    timer_add(&g_ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 
+                              0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                     l2tp_tunnel->timer_tx_active = true;
                 }
             }
             /* Reliable Delivery of Control Messages */
-            switch (l2tp_tunnel->server->congestion_mode) {
+            switch(l2tp_tunnel->server->congestion_mode) {
                 case BBL_L2TP_CONGESTION_AGGRESSIVE:
                     l2tp_tunnel->cwnd = l2tp_tunnel->peer_receive_window;
                     break;
@@ -1203,28 +1181,28 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
             }
             /* Handle received packet */
             if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_TERMINATED) {
-                switch (l2tp->type) {
+                switch(l2tp->type) {
                     case L2TP_MESSAGE_SCCCN:
-                        bbl_l2tp_scccn_rx(eth, l2tp, interface, l2tp_tunnel);
+                        bbl_l2tp_scccn_rx(interface, l2tp_tunnel, eth, l2tp);
                         return;
                     case L2TP_MESSAGE_STOPCCN:
-                        bbl_l2tp_stopccn_rx(eth, l2tp, interface, l2tp_tunnel);
+                        bbl_l2tp_stopccn_rx(interface, l2tp_tunnel, eth, l2tp);
                         return;
                     case L2TP_MESSAGE_ICRQ:
-                        bbl_l2tp_icrq_rx(eth, l2tp, interface, l2tp_tunnel);
+                        bbl_l2tp_icrq_rx(interface, l2tp_tunnel, eth, l2tp);
                         return;
                     case L2TP_MESSAGE_ICCN:
                         if(l2tp_session->key.session_id) {
-                            bbl_l2tp_iccn_rx(eth, l2tp, interface, l2tp_session);
+                            bbl_l2tp_iccn_rx(interface, l2tp_session, eth, l2tp);
                             return;
                         }
                         break;
                     case L2TP_MESSAGE_CSUN:
-                        bbl_l2tp_csun_rx(eth, l2tp, interface, l2tp_tunnel);
+                        bbl_l2tp_csun_rx(interface, l2tp_tunnel, eth, l2tp);
                         return;
                     case L2TP_MESSAGE_CDN:
                         if(l2tp_session->key.session_id) {
-                            bbl_l2tp_cdn_rx(eth, l2tp, interface, l2tp_session);
+                            bbl_l2tp_cdn_rx(interface, l2tp_session, eth, l2tp);
                             return;
                         }
                         break;
@@ -1245,7 +1223,8 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
                 l2tp_tunnel->stats.control_rx_dup++;
                 interface->stats.l2tp_control_rx_dup++;
                 if(!l2tp_tunnel->timer_tx_active) {
-                    timer_add(&ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
+                    timer_add(&g_ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 
+                              0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                     l2tp_tunnel->timer_tx_active = true;
                 }
             } else {
@@ -1269,12 +1248,13 @@ bbl_l2tp_handler_rx(bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp, bbl_interface_
 /**
  * bbl_l2tp_stop_all_tunnel
  *
- * This function greacefully teardowns all L2TP tunnels.
+ * This function gracefully teardown all L2TP tunnels.
  */
 void
-bbl_l2tp_stop_all_tunnel(bbl_ctx_s *ctx) {
-    bbl_l2tp_server_t *l2tp_server = ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_t *l2tp_tunnel;
+bbl_l2tp_stop_all_tunnel()
+{
+    bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
     while(l2tp_server) {
         CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
             if(l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {

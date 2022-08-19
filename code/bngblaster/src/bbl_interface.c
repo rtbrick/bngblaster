@@ -10,18 +10,26 @@
 #include "bbl_io.h"
 #include <sys/stat.h>
 
+void
+bbl_interface_rate_job(timer_s *timer) {
+    bbl_interface_s *interface = timer->data;
+    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
+}
+
 /**
  * bbl_interface_lock
  *
  * @brief This functions locks the interface
  * creating the file "/run/lock/bngblaster_<interface>.lock".
  *
- * @param ctx global context
  * @param interface interface
  * @return false if failed to lock (e.g. in use)
  */
 static bool
-bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
+bbl_interface_lock(char *interface_name)
 {
     FILE *lock_file;
     char  lock_path[FILE_PATH_LEN];
@@ -39,11 +47,11 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
             snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d", lock_pid);
             if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
                 LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
-                if(!ctx->config.interface_lock_force) return false;
+                if(!g_ctx->config.interface_lock_force) return false;
             }
         } else {
             LOG(ERROR, "Invalid interface lock file %s\n", lock_path);
-            if(!ctx->config.interface_lock_force) return false;
+            if(!g_ctx->config.interface_lock_force) return false;
         }
         fclose(lock_file);
     }
@@ -64,392 +72,179 @@ bbl_interface_lock(bbl_ctx_s *ctx, char *interface_name)
  * bbl_interface_unlock_all
  *
  * @brief This functions unlocks all interfaces.
- *
- * @param ctx global context
  */
 void
-bbl_interface_unlock_all(bbl_ctx_s *ctx)
+bbl_interface_unlock_all()
 {
     char lock_path[FILE_PATH_LEN];
-    for(int i = 0; i < ctx->interfaces.count; i++) {
-        snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", ctx->interfaces.names[i]);
+    struct bbl_interface_ *interface;
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", interface->name);
         remove(lock_path);
     }
+}
+
+static bool
+bbl_interface_set_kernel_info(bbl_interface_s *interface)
+{
+    struct ifreq ifr = {0};
+
+    if(interface->io.mode == IO_MODE_DPDK) {
+        /* This will not work for DPDK bound interfaces. */
+        return true;
+    }
+
+    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
+        LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        close(fd);
+        return false;
+    }
+    memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
+
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
+        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
+            strerror(errno), errno, interface->name);
+        close(fd);
+        return false;
+    }
+    interface->ifindex = ifr.ifr_ifindex;
+
+    close(fd);
+    return true;
 }
 
 /**
  * bbl_add_interface
  *
- * @param ctx global context
  * @param interface interface name
+ * @param link_config optional link configuration
  * @return interface
  */
 static bbl_interface_s *
-bbl_add_interface(bbl_ctx_s *ctx, char *interface_name)
+bbl_interface_add(char *interface_name, bbl_link_config_s *link_config)
 {
     bbl_interface_s *interface;
-    struct ifreq ifr;
-
-    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-    if(!bbl_interface_lock(ctx, interface_name)) {
-        return NULL;
-    }
 
     interface = calloc(1, sizeof(bbl_interface_s));
     if (!interface) {
         LOG(ERROR, "No memory for interface %s\n", interface_name);
         return NULL;
     }
-
     interface->name = strdup(interface_name);
-    interface->ctx = ctx;
-    CIRCLEQ_INSERT_TAIL(&ctx->interface_qhead, interface, interface_qnode);
-
-    interface->pcap_index = ctx->pcap.index;
-    ctx->pcap.index++;
-
-    ctx->interfaces.names[ctx->interfaces.count++] = interface->name;
-
-    /*
-     * TX list init.
-     */
-    CIRCLEQ_INIT(&interface->session_tx_qhead);
-    CIRCLEQ_INIT(&interface->l2tp_tx_qhead);
-
-    /*
-     * Obtain the interface MAC address.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface_name);
-    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
-        LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
+    interface->pcap_index = g_ctx->pcap.index++;
+    
+    if(!bbl_interface_lock(interface_name)) {
         return NULL;
     }
-    memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
+    CIRCLEQ_INSERT_TAIL(&g_ctx->interface_qhead, interface, interface_qnode);
 
-    /*
-     * Obtain the interface index.
-     */
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
-        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
+    if(!bbl_interface_set_kernel_info(interface)) {
         return NULL;
     }
-    interface->ifindex = ifr.ifr_ifindex;
+
+    interface->config = link_config;
+    interface->io.rx_buf = malloc(IO_BUFFER_LEN);
+    interface->io.tx_buf = malloc(IO_BUFFER_LEN);
+    interface->io.mode = link_config->io_mode;
+    if(*(uint64_t*)link_config->mac & 0xffffffffffff00) {
+        memcpy(interface->mac, link_config->mac, ETH_ADDR_LEN);
+    }
+    if(!bbl_lag_interface_add(interface, link_config)) {
+        return NULL;
+    }
 
     /* The BNG Blaster supports multiple IO modes where packet_mmap is
      * selected per default. */
-    if(!bbl_io_add_interface(ctx, interface)) {
-        LOG(ERROR, "Failed to add interface %s\n", interface->name);
+    if(!bbl_io_add_interface(interface)) {
         return NULL;
     }
 
     /*
      * Timer to compute periodic rates.
      */
-    timer_add_periodic(&ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-                       &bbl_compute_interface_rate_job);
-
+    timer_add_periodic(&g_ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
+                       &bbl_interface_rate_job);
     return interface;
 }
 
 /**
- * bbl_interface_present
+ * bbl_interface_get
+ * 
+ * Get interface by name. 
  *
- * @param ctx global context
  * @param interface_name interface name
- * @return true if interface is already added
+ * @return the interface or NULL
  */
-static bool
-bbl_interface_present(bbl_ctx_s *ctx, char *interface_name)
+bbl_interface_s *
+bbl_interface_get(char *interface_name)
 {
-    for(int i = 0; i < ctx->interfaces.count; i++) {
-        if (strcmp(ctx->interfaces.names[i], interface_name) == 0) {
-            return true;
+    bbl_interface_s *interface;
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if (strcmp(interface->name, interface_name) == 0) {
+            return interface;
         }
     }
-    return false;
+    return NULL;
 }
 
 /**
- * bbl_add_access_interfaces
- *
- * @param ctx global context
+ * bbl_interface_init
  */
 static bool
-bbl_add_access_interfaces(bbl_ctx_s *ctx)
+bbl_interface_init()
 {
-    bbl_access_config_s *access_config = ctx->config.access_config;
-    struct bbl_interface_ *access_if;
-    int i;
+    bbl_link_config_s *link_config = g_ctx->config.link_config;
+    struct bbl_interface_ *interface;
 
-    while(access_config) {
-        for(i = 0; i < ctx->interfaces.access_if_count; i++) {
-            if(ctx->interfaces.access_if[i]->name) {
-                if (strcmp(ctx->interfaces.access_if[i]->name, access_config->interface) == 0) {
-                    /* Interface already added! */
-                    access_config->access_if = ctx->interfaces.access_if[i];
-                    goto NEXT;
-                }
-            }
-        }
-        access_if = bbl_add_interface(ctx, access_config->interface);
-        if (!access_if) {
-            LOG(ERROR, "Failed to add access interface %s\n", access_config->interface);
+    while(link_config) {
+        if(bbl_interface_get(link_config->interface) != NULL) {
+            LOG(ERROR, "Failed to add link %s (duplicate link configuration)\n", 
+                link_config->interface);
             return false;
         }
-        access_if->type = INTERFACE_TYPE_ACCESS;
-        access_config->access_if = access_if;
-        if(ctx->interfaces.access_if_count < BBL_MAX_INTERFACES) {
-            ctx->interfaces.access_if[ctx->interfaces.access_if_count++] = access_if;
-        } else {
-            LOG(ERROR, "Failed to add access interface %s (limit reached)\n", access_config->interface);
+        interface = bbl_interface_add(link_config->interface, link_config);
+        if (!interface) {
+            LOG(ERROR, "Failed to add link %s\n", link_config->interface);
             return false;
         }
-        bbl_send_init_interface(access_if, BBL_SEND_DEFAULT_SIZE);
-NEXT:
-        access_config = access_config->next;
+        link_config = link_config->next;
     }
     return true;
 }
 
 /**
- * bbl_add_network_interfaces
- *
- * @param ctx global context
- */
-static bool
-bbl_add_network_interfaces(bbl_ctx_s *ctx)
-{
-    bbl_network_config_s *network_config = ctx->config.network_config;
-    struct bbl_interface_ *network_if;
-    isis_instance_t *isis;
-    bool isis_result;
-
-    while(network_config) {
-        if(bbl_interface_present(ctx, network_config->interface)) {
-            LOG(ERROR, "Failed to add network interface %s (already added)\n", network_config->interface);
-            return false;
-        }
-        network_if = bbl_add_interface(ctx, network_config->interface);
-        if (!network_if) {
-            LOG(ERROR, "Failed to add network interface %s\n", network_config->interface);
-            return false;
-        }
-        network_if->type = INTERFACE_TYPE_NETWORK;
-        network_config->network_if = network_if;
-        if(ctx->interfaces.network_if_count < BBL_MAX_INTERFACES) {
-            ctx->interfaces.network_if[ctx->interfaces.network_if_count++] = network_if;
-        } else {
-            LOG(ERROR, "Failed to add network interface %s (limit reached)\n", network_config->interface);
-            return false;
-        }
-
-        bbl_send_init_interface(network_if, BBL_SEND_DEFAULT_SIZE);
-
-        /* Init ethernet */
-        network_if->vlan = network_config->vlan;
-
-        /* Copy gateway MAC from config (default 00:00:00:00:00:00) */
-        memcpy(network_if->gateway_mac, network_config->gateway_mac, ETH_ADDR_LEN);
-
-        /* Init IPv4 */
-        if(network_config->ip.address && network_config->gateway) {
-            network_if->ip.address = network_config->ip.address;
-            network_if->ip.len = network_config->ip.len;
-            network_if->gateway = network_config->gateway;
-            /* Send initial ARP request */
-            network_if->send_requests |= BBL_IF_SEND_ARP_REQUEST;
-        }
-
-        /* Init link-local IPv6 address */
-        network_if->ip6_ll[0]  = 0xfe;
-        network_if->ip6_ll[1]  = 0x80;
-        network_if->ip6_ll[8]  = network_if->mac[0];
-        network_if->ip6_ll[9]  = network_if->mac[1];
-        network_if->ip6_ll[10] = network_if->mac[2];
-        network_if->ip6_ll[11] = 0xff;
-        network_if->ip6_ll[12] = 0xfe;
-        network_if->ip6_ll[13] = network_if->mac[3];
-        network_if->ip6_ll[14] = network_if->mac[4];
-        network_if->ip6_ll[15] = network_if->mac[5];
-
-        /* Init IPv6 */
-        if(ipv6_prefix_not_zero(&network_config->ip6) && 
-           ipv6_addr_not_zero(&network_config->gateway6)) {
-            /* Init global IPv6 address */
-            memcpy(&network_if->ip6, &network_config->ip6, sizeof(ipv6_prefix));
-            memcpy(&network_if->gateway6, &network_config->gateway6, sizeof(ipv6addr_t));
-            memcpy(&network_if->gateway6_solicited_node_multicast, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
-            memcpy(((uint8_t*)&network_if->gateway6_solicited_node_multicast)+13,
-                   ((uint8_t*)&network_if->gateway6)+13, 3);
-
-            /* Send initial ICMPv6 NS */
-            network_if->send_requests |= BBL_IF_SEND_ICMPV6_NS;
-        }
-
-        network_if->gateway_resolve_wait = network_config->gateway_resolve_wait;
-
-        /* Init TCP */
-        if(!bbl_tcp_interface_init(network_if, network_config)) {
-            LOG(ERROR, "Failed to init TCP for network interface %s\n", 
-                network_config->interface);
-            return false;
-        }
-
-        /* Init routing protocols */ 
-        if(network_config->isis_instance_id) {
-            isis_result = false;
-            isis = ctx->isis_instances;
-            while (isis) {
-                if(isis->config->id == network_config->isis_instance_id) {
-                    isis_result = isis_adjacency_init(network_config, network_if, isis);
-                    if(!isis_result) {
-                        LOG(ERROR, "Failed to enable IS-IS for network interface %s (adjacency init failed)\n", 
-                            network_config->interface);
-                        return false;
-                    }
-                    break;
-                }
-                isis = isis->next;
-            }
-            if(!isis_result) {
-                LOG(ERROR, "Failed to enable IS-IS for network interface %s (instance not found)\n",  
-                    network_config->interface);
-                return false;
-            }
-        }
-        /* Next ... */
-        network_config = network_config->next;
-    }
-    return true;
-}
-
-/**
- * bbl_add_a10nsp_interfaces
- *
- * @param ctx global context
- */
-static bool
-bbl_add_a10nsp_interfaces(bbl_ctx_s *ctx)
-{
-    bbl_a10nsp_config_s *a10nsp_config = ctx->config.a10nsp_config;
-    struct bbl_interface_ *a10nsp_if;
-
-    while(a10nsp_config) {
-        if(bbl_interface_present(ctx, a10nsp_config->interface)) {
-            LOG(ERROR, "Failed to add a10nsp interface %s (already added)\n", a10nsp_config->interface);
-            return false;
-        }
-        a10nsp_if = bbl_add_interface(ctx, a10nsp_config->interface);
-        if (!a10nsp_if) {
-            LOG(ERROR, "Failed to add a10nsp interface %s\n", a10nsp_config->interface);
-            return false;
-        }
-        a10nsp_if->type = INTERFACE_TYPE_A10NSP;
-        a10nsp_config->a10nsp_if = a10nsp_if;
-        a10nsp_if->qinq = a10nsp_config->qinq;
-        if(*(uint32_t*)a10nsp_config->mac) {
-            memcpy(a10nsp_if->mac, a10nsp_config->mac, ETH_ADDR_LEN);
-        }
-
-        if(ctx->interfaces.a10nsp_if_count < BBL_MAX_INTERFACES) {
-            ctx->interfaces.a10nsp_if[ctx->interfaces.a10nsp_if_count++] = a10nsp_if;
-        } else {
-            LOG(ERROR, "Failed to add a10nsp interface %s (limit reached)\n", a10nsp_config->interface);
-            return false;
-        }
-
-        bbl_send_init_interface(a10nsp_if, BBL_SEND_DEFAULT_SIZE);
-
-        a10nsp_config = a10nsp_config->next;
-    }
-    return true;
-}
-
-/**
- * bbl_add_interfaces
+ * bbl_interface_init
  *
  * @brief This function will add and initialize
  * all interfaces defined in the configuration.
  *
- * @param ctx global context
  * @return true if all interfaces are
  * added and initialised successfully
  */
 bool
-bbl_add_interfaces(bbl_ctx_s *ctx)
+bbl_interface_init()
 {
-    /* Add network interfaces */
-    if(!bbl_add_access_interfaces(ctx)) {
+    /* LAG must be added before links, so that links
+     * can reference to LAG. */
+    if(!bbl_lag_add()) {
         return false;
     }
-    /* Add access interfaces */
-    if(!bbl_add_network_interfaces(ctx)) {
+    if(!bbl_interface_links_add()) {
         return false;
     }
-
-    /* Add a10nsp interfaces */
-    if(!bbl_add_a10nsp_interfaces(ctx)) {
+    if(!bbl_access_interfaces_add()) {
+        return false;
+    }
+    if(!bbl_network_interfaces_add()) {
+        return false;
+    }
+    if(!bbl_a10nsp_add()) {
         return false;
     }
     return true;
-}
-
-/**
- * bbl_get_network_interface
- *
- * @brief This function returns the network interface
- * with the given name or the first interface
- * if name is NULL.
- *
- * @param ctx global context
- * @param interface interface name
- * @return interface
- */
-bbl_interface_s *
-bbl_get_network_interface(bbl_ctx_s *ctx, char *interface_name)
-{
-    for(int i = 0; i < ctx->interfaces.network_if_count; i++) {
-        if(ctx->interfaces.network_if[i]) {
-            if(interface_name) {
-                if (strcmp(ctx->interfaces.network_if[i]->name, interface_name) == 0) {
-                    return ctx->interfaces.network_if[i];
-                }
-            } else {
-                return ctx->interfaces.network_if[i];
-            }
-        }
-    }
-    return NULL;
-}
-
-/**
- * bbl_get_a10nsp_interface
- *
- * @brief This function returns the network interface
- * with the given name.
- *
- * @param ctx global context
- * @param interface interface name
- * @return interface
- */
-bbl_interface_s *
-bbl_get_a10nsp_interface(bbl_ctx_s *ctx, char *interface_name)
-{
-    if(!interface_name) {
-        return NULL;
-    }
-    for(int i = 0; i < ctx->interfaces.a10nsp_if_count; i++) {
-        if(ctx->interfaces.a10nsp_if[i]) {
-            if (strcmp(ctx->interfaces.a10nsp_if[i]->name, interface_name) == 0) {
-                return ctx->interfaces.a10nsp_if[i];
-            }
-        }
-    }
-    return NULL;
 }

@@ -115,12 +115,6 @@ typedef enum {
 } __attribute__ ((__packed__)) bbl_io_mode_t;
 
 typedef enum {
-    INTERFACE_TYPE_ACCESS = 0,
-    INTERFACE_TYPE_NETWORK,
-    INTERFACE_TYPE_A10NSP
-} __attribute__ ((__packed__)) bbl_interface_type_t;
-
-typedef enum {
     ACCESS_TYPE_PPPOE = 0,
     ACCESS_TYPE_IPOE
 } __attribute__ ((__packed__)) bbl_access_type_t;
@@ -189,12 +183,16 @@ typedef enum {
 } __attribute__ ((__packed__)) dhcp_state_t;
 
 typedef struct bbl_ctx_ bbl_ctx_s;
+typedef struct bbl_lag_ bbl_lag_s;
 typedef struct bbl_interface_ bbl_interface_s;
+typedef struct bbl_access_interface_ bbl_access_interface_s;
+typedef struct bbl_network_interface_ bbl_network_interface_s;
+typedef struct bbl_a10nsp_interface_ bbl_a10nsp_interface_s;
+typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_s;
 typedef struct bbl_session_ bbl_session_s;
-typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_t;
-typedef struct bbl_stream_thread_ bbl_stream_thread;
-typedef struct bbl_stream_config_ bbl_stream_config;
-typedef struct bbl_stream_ bbl_stream;
-typedef struct bbl_tcp_ctx_ bbl_tcp_ctx_t;
+typedef struct bbl_stream_thread_ bbl_stream_thread_s;
+typedef struct bbl_stream_config_ bbl_stream_config_s;
+typedef struct bbl_stream_ bbl_stream_s;
+typedef struct bbl_tcp_ctx_ bbl_tcp_ctx_s;
 
 #endif

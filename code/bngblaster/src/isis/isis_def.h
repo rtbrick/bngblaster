@@ -85,10 +85,10 @@
 #define ISIS_MAX_PDU_LEN                1492 /* 1500-3 byte LLC */
 #define ISIS_MD5_DIGEST_LEN             16
 
-typedef struct isis_config_ isis_config_t;
-typedef struct isis_instance_ isis_instance_t;
-typedef struct isis_adjacency_ isis_adjacency_t;
-typedef struct isis_adjacency_p2p_ isis_adjacency_p2p_t;
+typedef struct isis_config_ isis_config_s;
+typedef struct isis_instance_ isis_instance_s;
+typedef struct isis_adjacency_ isis_adjacency_s;
+typedef struct isis_adjacency_p2p_ isis_adjacency_p2p_s;
 
 /* ENUMS ... */
 
@@ -130,7 +130,7 @@ typedef enum isis_pdu_type_ {
 /* IS-IS TLV Codepoints
  * https://www.iana.org/assignments/isis-tlv-codepoints/isis-tlv-codepoints.xhtml
  */
-typedef enum isis_tlv_type_ {   
+typedef enum isis_tlv_sype_ {   
     ISIS_TLV_AREA_ADDRESSES         = 1,
     ISIS_TLV_PADDING                = 8,
     ISIS_TLV_LSP_ENTRIES            = 9,
@@ -145,7 +145,7 @@ typedef enum isis_tlv_type_ {
     ISIS_TLV_IPV6_REACHABILITY      = 236,
     ISIS_TLV_P2P_ADJACENCY_STATE    = 240,
     ISIS_TLV_ROUTER_CAPABILITY      = 242
-} isis_tlv_type;
+} isis_tlv_sype;
 
 /* STRUCTURES ... */
 
@@ -153,7 +153,7 @@ typedef struct isis_tlv_ {
     uint8_t  type;
     uint8_t  len;
     uint8_t  value[];
-} __attribute__ ((__packed__)) isis_tlv_t;
+} __attribute__ ((__packed__)) isis_tlv_s;
 
 typedef struct isis_sub_tlv_ {
     uint8_t  type;
@@ -167,13 +167,13 @@ typedef struct isis_lsp_entry_ {
     uint64_t  lsp_id;
     uint32_t  seq;
     uint16_t  checksum;
-} __attribute__ ((__packed__)) isis_lsp_entry_t;
+} __attribute__ ((__packed__)) isis_lsp_entry_s;
 
 typedef struct isis_area_ {
     const char *str;
     uint8_t     len;
     uint8_t    *value;
-} isis_area_t;
+} isis_area_s;
 
 typedef struct isis_external_connection_ {
     uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
@@ -183,7 +183,7 @@ typedef struct isis_external_connection_ {
     } level[ISIS_LEVELS];
 
     struct isis_external_connection_ *next;
-} isis_external_connection_t;
+} isis_external_connection_s;
 
 /*
  * IS-IS Instance Configuration
@@ -212,7 +212,7 @@ typedef struct isis_config_ {
     const char         *system_id_str;
     uint8_t             system_id[ISIS_SYSTEM_ID_LEN];
 
-    isis_area_t        *area;
+    isis_area_s        *area;
     uint8_t             area_count;
 
     bool                protocol_ipv4;
@@ -233,19 +233,19 @@ typedef struct isis_config_ {
 
     /* Pointer to next instance */
     struct isis_config_ *next; 
-} isis_config_t;
+} isis_config_s;
 
 typedef struct isis_peer_ {
     uint8_t  level;
     uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
     uint16_t holding_time;
     char    *hostname;
-} isis_peer_t;
+} isis_peer_s;
 
 typedef struct isis_adjacency_ {
-    bbl_interface_s *interface;
-    isis_instance_t *instance;
-    isis_peer_t     *peer;
+    bbl_network_interface_s *interface;
+    isis_instance_s *instance;
+    isis_peer_s *peer;
 
     /* Pointer to next adjacency of 
      * corresponding instance with 
@@ -282,12 +282,12 @@ typedef struct isis_adjacency_ {
         uint32_t lsp_tx;
     } stats;
 
-} isis_adjacency_t;
+} isis_adjacency_s;
 
 typedef struct isis_adjacency_p2p_ {
-    bbl_interface_s *interface;
-    isis_instance_t *instance;
-    isis_peer_t     *peer;
+    bbl_network_interface_s *interface;
+    isis_instance_s *instance;
+    isis_peer_s *peer;
     
     uint8_t level;
     uint8_t state;
@@ -297,13 +297,10 @@ typedef struct isis_adjacency_p2p_ {
         uint32_t hello_tx;
     } stats;
 
-} isis_adjacency_p2p_t;
+} isis_adjacency_p2p_s;
 
 typedef struct isis_instance_ {
-
-    struct bbl_ctx_ *ctx; /* parent */
-
-    isis_config_t  *config;
+    isis_config_s  *config;
     bool            overload;
 
     bool            teardown;
@@ -312,11 +309,11 @@ typedef struct isis_instance_ {
 
     struct {
         hb_tree *lsdb;
-        isis_adjacency_t *adjacency;
+        isis_adjacency_s *adjacency;
     } level[ISIS_LEVELS];
 
     struct isis_instance_ *next; /* pointer to next instance */
-} isis_instance_t;
+} isis_instance_s;
 
 /*
  * IS-IS PDU context
@@ -332,7 +329,7 @@ typedef struct isis_pdu_ {
 
     uint8_t  pdu[ISIS_MAX_PDU_LEN];
     uint16_t pdu_len;
-} isis_pdu_t;
+} isis_pdu_s;
 
 typedef struct isis_lsp_ {
 
@@ -340,11 +337,11 @@ typedef struct isis_lsp_ {
     uint64_t csnp_scan;
     uint8_t  level;
 
-    isis_instance_t *instance;
+    isis_instance_s *instance;
 
     struct {
         isis_lsp_source   type;
-        isis_adjacency_t *adjacency;
+        isis_adjacency_s *adjacency;
     } source;
 
     /* LSP receive timestamp for 
@@ -363,14 +360,14 @@ typedef struct isis_lsp_ {
     char *auth_key;
 
     struct isis_pdu_ pdu;
-} isis_lsp_t;
+} isis_lsp_s;
 
 /* IS-IS LSP flood entry */
 typedef struct isis_flood_entry_ {
-    isis_lsp_t     *lsp;
+    isis_lsp_s     *lsp;
     bool            wait_ack;
     uint32_t        tx_count;
     struct timespec tx_timestamp;
-} isis_flood_entry_t;
+} isis_flood_entry_s;
 
 #endif
