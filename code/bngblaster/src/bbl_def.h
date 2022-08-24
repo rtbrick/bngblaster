@@ -45,14 +45,6 @@
 #include "lwip/api.h"
 #endif
 
-/* Experimental NETMAP Support */
-#ifdef BNGBLASTER_NETMAP
-#define LIBNETMAP_NOTHREADSAFE
-#include <net/netmap.h>
-#define NETMAP_WITH_LIBS
-#include <net/netmap_user.h>
-#endif
-
 #define IO_BUFFER_LEN               9216
 #define SCRATCHPAD_LEN              4096
 #define CHALLENGE_LEN               16
@@ -108,11 +100,10 @@
 #define DATA_TRAFFIC_MAX_LEN        1920
 
 typedef enum {
-    IO_MODE_PACKET_MMAP_RAW = 0,    /* RX packet_mmap ring / TX raw sockets */
-    IO_MODE_PACKET_MMAP,            /* RX/TX packet_mmap ring */
-    IO_MODE_RAW,                    /* RX/TX raw sockets */
-    IO_MODE_NETMAP                  /* RX/TX netmap ring */
-} __attribute__ ((__packed__)) bbl_io_mode_t;
+    INTERFACE_DISABLED = 0,
+    INTERFACE_UP,
+    INTERFACE_DOWN
+} __attribute__ ((__packed__)) bbl_interface_state_type_t;
 
 typedef enum {
     ACCESS_TYPE_PPPOE = 0,

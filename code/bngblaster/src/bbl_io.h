@@ -21,6 +21,7 @@
 #ifndef __BBL_IO_H__
 #define __BBL_IO_H__
 
+
 bool
 bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len);
 

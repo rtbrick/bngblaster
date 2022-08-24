@@ -1812,6 +1812,9 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         return bbl_tx_encode_interface_packet(interface, buf, len);
     }
 
+    if(interface->state != INTERFACE_UP) {
+        return EMPTY;
+    }
 
     if(interface->access) {
         access_interface = interface->access;

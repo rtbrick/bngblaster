@@ -93,7 +93,7 @@ bbl_network_interfaces_add()
         CIRCLEQ_INSERT_TAIL(&g_ctx->network_interface_qhead, network_interface, network_interface_qnode);
 
         /* Init TXQ */
-        network_interface->txq = calloc(1, sizeof(bbl_txq_t));
+        network_interface->txq = calloc(1, sizeof(bbl_txq_s));
         bbl_txq_init(network_interface->txq, BBL_TXQ_DEFAULT_SIZE);
 
         /* Init ethernet */

@@ -11,7 +11,8 @@
 #include "bbl_session.h"
 
 bool
-bbl_txq_init(bbl_txq_t *txq, uint16_t size) {
+bbl_txq_init(bbl_txq_s *txq, uint16_t size)
+{
     txq->ring = malloc(size * sizeof(bbl_txq_slot_t));
     if(!txq->ring) {
         return false;
@@ -24,7 +25,8 @@ bbl_txq_init(bbl_txq_t *txq, uint16_t size) {
 }
 
 bool
-bbl_txq_is_empty(bbl_txq_t *txq) {
+bbl_txq_is_empty(bbl_txq_s *txq)
+{
     if(txq->read == txq->write) {
         return true;
     }
@@ -32,7 +34,8 @@ bbl_txq_is_empty(bbl_txq_t *txq) {
 }
 
 bool
-bbl_txq_is_full(bbl_txq_t *txq) {
+bbl_txq_is_full(bbl_txq_s *txq)
+{
     if(txq->read == txq->next) {
         return true;
     }
@@ -48,7 +51,8 @@ bbl_txq_is_full(bbl_txq_t *txq) {
  * @return number of bytes copied
  */
 uint16_t
-bbl_txq_from_buffer(bbl_txq_t *txq, uint8_t *buf) {
+bbl_txq_from_buffer(bbl_txq_s *txq, uint8_t *buf)
+{
     bbl_txq_slot_t *slot;
 
     if(txq->read == txq->write) {
@@ -73,7 +77,8 @@ bbl_txq_from_buffer(bbl_txq_t *txq, uint8_t *buf) {
  * @return bbl_txq_result_t
  */
 bbl_txq_result_t
-bbl_txq_to_buffer(bbl_txq_t *txq, bbl_ethernet_header_t *eth) {
+bbl_txq_to_buffer(bbl_txq_s *txq, bbl_ethernet_header_t *eth)
+{
     bbl_txq_slot_t *slot;
 
     if(txq->read == txq->next) {
@@ -91,5 +96,41 @@ bbl_txq_to_buffer(bbl_txq_t *txq, bbl_ethernet_header_t *eth) {
     } else {
         txq->stats.encode_error++;
         return BBL_TXQ_ENCODE_ERROR;
+    }
+}
+
+bbl_txq_slot_t *
+bbl_txq_read_slot(bbl_txq_s *txq) {
+    if(txq->read == txq->write) {
+        return NULL;
+    }
+    return txq->ring + txq->read;
+}
+
+void
+bbl_txq_read_next(bbl_txq_s *txq) 
+{
+    txq->read++;
+    if(txq->read == txq->size) {
+        txq->read = 0;
+    }
+}
+
+bbl_txq_slot_t *
+bbl_txq_write_slot(bbl_txq_s *txq) {
+    if(txq->read == txq->next) {
+        txq->stats.full++;
+        return NULL;
+    }
+
+    return txq->ring + txq->write;
+}
+
+void
+bbl_txq_write_next(bbl_txq_s *txq) 
+{
+    txq->write = txq->next++;
+    if(txq->next == txq->size) {
+        txq->next = 0;
     }
 }

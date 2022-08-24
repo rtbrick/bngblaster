@@ -71,7 +71,7 @@ bbl_access_interfaces_add()
             CIRCLEQ_INSERT_TAIL(&g_ctx->access_interface_qhead, access_interface, access_interface_qnode);
 
             /* Init TXQ */
-            access_interface->txq = calloc(1, sizeof(bbl_txq_t));
+            access_interface->txq = calloc(1, sizeof(bbl_txq_s));
             bbl_txq_init(access_interface->txq, BBL_TXQ_DEFAULT_SIZE);
 
             /* TX list init */
@@ -254,7 +254,7 @@ bbl_access_igmp_zapping(timer_s *timer)
         }
     }
 
-    if(!ctx->zapping && group->state < IGMP_GROUP_ACTIVE) {
+    if(!g_ctx->zapping && group->state < IGMP_GROUP_ACTIVE) {
         return;
     }
 

@@ -123,8 +123,18 @@ typedef struct bbl_link_config_
     char *interface;
     char *description;
     uint8_t mac[ETH_ADDR_LEN];
-    bbl_io_mode_t io_mode;
+    io_mode_t io_mode;
 
+    uint16_t io_slots;
+    uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
+
+    bool qdisc_bypass;
+
+    uint64_t tx_interval; /* TX interval in nsec */
+    uint64_t rx_interval; /* RX interval in nsec */
+
+    uint8_t tx_threads;
+    uint8_t rx_threads;
     uint8_t lag_id;
 
     uint32_t lacp_priority;

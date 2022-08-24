@@ -10,9 +10,6 @@
 #include "bbl_pcap.h"
 #include "bbl_rx.h"
 #include "bbl_tx.h"
-#ifdef BNGBLASTER_NETMAP
-#include "bbl_io_netmap.h"
-#endif
 
 void
 bbl_io_packet_mmap_rx_job(timer_s *timer)
@@ -308,13 +305,8 @@ bbl_io_send(bbl_interface_s *interface, uint8_t *packet, uint16_t packet_len)
         case IO_MODE_PACKET_MMAP:
             result = bbl_io_packet_mmap_send(interface, packet, packet_len);
             break;
-        case IO_MODE_NETMAP:
-#ifdef BNGBLASTER_NETMAP
-            result = bbl_io_netmap_send(interface, packet, packet_len);
-#else
-            result = false;
-#endif
-            break;
+        default:
+            return false;
     }
 
     if(result) {
@@ -375,13 +367,6 @@ bbl_io_add_interface(bbl_interface_s *interface)
     int version = TPACKET_V2;
     int qdisc_bypass = 1;
     int slots = g_ctx->config.io_slots;
-
-
-#ifdef BNGBLASTER_NETMAP
-    if(interface->io.mode == IO_MODE_NETMAP) {
-        return bbl_io_netmap_add_interface(ctx, interface);
-    }
-#endif
 
     /*
      * Open RAW socket for all ethertypes.

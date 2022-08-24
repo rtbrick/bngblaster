@@ -13,7 +13,7 @@
 typedef struct bbl_access_interface_
 {
     bbl_interface_s *interface;
-    bbl_txq_t *txq;
+    bbl_txq_s *txq;
 
     uint8_t mac[ETH_ADDR_LEN];
     uint32_t send_requests;

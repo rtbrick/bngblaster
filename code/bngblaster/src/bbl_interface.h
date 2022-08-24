@@ -21,40 +21,18 @@ typedef struct bbl_interface_
     bbl_access_interface_s *access;
     bbl_network_interface_s *network;
 
+    bbl_interface_state_type_t state;
     uint8_t mac[ETH_ADDR_LEN];
-
     uint32_t send_requests;
     
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
     CIRCLEQ_ENTRY(bbl_interface_) interface_lag_qnode;
 
     struct {
-        bbl_io_mode_t mode;
-
-        int fd_tx;
-        int fd_rx;
-
-        struct tpacket_req req_tx;
-        struct tpacket_req req_rx;
-        struct sockaddr_ll addr;
-
-        uint8_t *rx_buf; /* RX buffer */
-        uint16_t rx_len;
-        uint8_t *tx_buf; /* TX buffer */
-        uint16_t tx_len;
-
-        uint8_t *ring_tx; /* TX ring buffer */
-        uint8_t *ring_rx; /* RX ring buffer */
-        uint16_t cursor_tx; /* slot # inside the ring buffer */
-        uint16_t cursor_rx; /* slot # inside the ring buffer */
-        uint16_t queued_tx;
-
-        bool pollout;
-        bool ctrl; /* control traffic */
-
-#ifdef BNGBLASTER_NETMAP
-        struct nm_desc *port;
-#endif
+        io_handle_s *rx;
+        io_handle_s *tx;
+        uint8_t *sp;
+        bool ctrl;
     } io;
 
     uint32_t ifindex; /* interface index */
@@ -83,10 +61,6 @@ typedef struct bbl_interface_
     struct timer_ *tx_job;
     struct timer_ *rx_job;
     struct timer_ *rate_job;
-
-    struct timespec tx_timestamp; /* user space timestamps */
-    struct timespec rx_timestamp; /* user space timestamps */
-
 } bbl_interface_s;
 
 void

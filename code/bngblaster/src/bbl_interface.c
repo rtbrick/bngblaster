@@ -25,7 +25,7 @@ bbl_interface_rate_job(timer_s *timer) {
  * @brief This functions locks the interface
  * creating the file "/run/lock/bngblaster_<interface>.lock".
  *
- * @param interface interface
+ * @param interface_name interface name
  * @return false if failed to lock (e.g. in use)
  */
 static bool
@@ -84,45 +84,11 @@ bbl_interface_unlock_all()
     }
 }
 
-static bool
-bbl_interface_set_kernel_info(bbl_interface_s *interface)
-{
-    struct ifreq ifr = {0};
-
-    if(interface->io.mode == IO_MODE_DPDK) {
-        /* This will not work for DPDK bound interfaces. */
-        return true;
-    }
-
-    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
-        LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
-        close(fd);
-        return false;
-    }
-    memcpy(&interface->mac, ifr.ifr_hwaddr.sa_data, IFHWADDRLEN);
-
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
-        LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
-            strerror(errno), errno, interface->name);
-        close(fd);
-        return false;
-    }
-    interface->ifindex = ifr.ifr_ifindex;
-
-    close(fd);
-    return true;
-}
-
 /**
  * bbl_add_interface
  *
  * @param interface interface name
- * @param link_config optional link configuration
+ * @param link_config link configuration
  * @return interface
  */
 static bbl_interface_s *
@@ -143,32 +109,17 @@ bbl_interface_add(char *interface_name, bbl_link_config_s *link_config)
     }
     CIRCLEQ_INSERT_TAIL(&g_ctx->interface_qhead, interface, interface_qnode);
 
-    if(!bbl_interface_set_kernel_info(interface)) {
-        return NULL;
-    }
-
     interface->config = link_config;
-    interface->io.rx_buf = malloc(IO_BUFFER_LEN);
-    interface->io.tx_buf = malloc(IO_BUFFER_LEN);
-    interface->io.mode = link_config->io_mode;
-    if(*(uint64_t*)link_config->mac & 0xffffffffffff00) {
-        memcpy(interface->mac, link_config->mac, ETH_ADDR_LEN);
-    }
     if(!bbl_lag_interface_add(interface, link_config)) {
         return NULL;
     }
-
-    /* The BNG Blaster supports multiple IO modes where packet_mmap is
-     * selected per default. */
-    if(!bbl_io_add_interface(interface)) {
+    if(!io_interface_init(interface)) {
         return NULL;
     }
 
-    /*
-     * Timer to compute periodic rates.
-     */
-    timer_add_periodic(&g_ctx->timer_root, &interface->rate_job, "Rate Computation", 1, 0, interface,
-                       &bbl_interface_rate_job);
+    /* Timer to compute periodic rates. */
+    timer_add_periodic(&g_ctx->timer_root, &interface->rate_job, "Rate Computation", 
+                       1, 0, interface, &bbl_interface_rate_job);
     return interface;
 }
 

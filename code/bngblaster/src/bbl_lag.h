@@ -19,7 +19,7 @@ typedef struct bbl_lag_
     CIRCLEQ_HEAD(interface_, bbl_interface_ ) interface_qhead; /* list of interfaces */
     CIRCLEQ_ENTRY(bbl_lag_) lag_qnode;
 
-    bool up;
+    bbl_interface_state_type_t state;
 
     struct {
         uint64_t packets_tx;
@@ -32,6 +32,9 @@ typedef struct bbl_lag_
         bbl_rate_s rate_bytes_rx;
     } stats;
 
+    struct timer_ *lacp_timer;
+
+    struct timer_ *tx_job;
     struct timer_ *rate_job;
 } bbl_lag_s;
 

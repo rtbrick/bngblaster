@@ -317,12 +317,66 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             return false;
         }
     }
-
+    value = json_object_get(link, "qdisc-bypass");
+    if (json_is_number(value)) {
+        link_config->qdisc_bypass = json_number_value(value);
+    } else {
+        link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
+    }
+    if (json_unpack(link, "{s:s}", "io-mode", &s) == 0) {
+        if (strcmp(s, "packet_mmap_raw") == 0) {
+            link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
+        } else if (strcmp(s, "packet_mmap") == 0) {
+            link_config->io_mode = IO_MODE_PACKET_MMAP;
+        } else if (strcmp(s, "raw") == 0) {
+            link_config->io_mode = IO_MODE_RAW;
+#if BNGBLASTER_DPDK
+        } else if (strcmp(s, "dpdk") == 0) {
+            link_config->io_mode = IO_MODE_DPDK;
+#endif
+        } else {
+            fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
+            return false;
+        }
+    } else {
+        link_config->io_mode = g_ctx->config.io_mode;
+    }
+    value = json_object_get(link, "io-slots");
+    if (json_is_number(value)) {
+        link_config->io_slots = json_number_value(value);
+    } else {
+        link_config->io_slots = g_ctx->config.io_slots;
+    }
+    value = json_object_get(link, "io-stream-max-ppi");
+    if (json_is_number(value)) {
+        link_config->io_stream_max_ppi = json_number_value(value);
+    } else {
+        link_config->io_stream_max_ppi = g_ctx->config.io_stream_max_ppi;
+    }
+    value = json_object_get(link, "tx-interval");
+    if (json_is_number(value)) {
+        link_config->tx_interval = json_number_value(value) * MSEC;
+    } else {
+        link_config->tx_interval = g_ctx->config.tx_interval;
+    }
+    value = json_object_get(link, "rx-interval");
+    if (json_is_number(value)) {
+        link_config->rx_interval = json_number_value(value) * MSEC;
+    } else {
+        link_config->rx_interval = g_ctx->config.rx_interval;
+    }
+    value = json_object_get(link, "tx-threads");
+    if (value) {
+        link_config->tx_threads = json_number_value(value);
+    }
+    value = json_object_get(link, "rx-threads");
+    if (value) {
+        link_config->rx_threads = json_number_value(value);
+    }
     value = json_object_get(link, "lag-id");
     if (value) {
         link_config->lag_id = json_number_value(value);
     }
-
     value = json_object_get(link, "lacp-priority");
     if (value) {
         link_config->lacp_priority = json_number_value(value);
@@ -334,25 +388,6 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->lacp_interval = json_number_value(value);
     } else {
         link_config->lacp_interval = 1000;
-    }
-
-    if (json_unpack(link, "{s:s}", "io-mode", &s) == 0) {
-        if (strcmp(s, "packet_mmap_raw") == 0) {
-            link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
-#if BNGBLASTER_NETMAP
-        } else if (strcmp(s, "netmap") == 0) {
-            link_config->io_mode = IO_MODE_NETMAP;
-#endif
-        } else if (strcmp(s, "packet_mmap") == 0) {
-            link_config->io_mode = IO_MODE_PACKET_MMAP;
-        } else if (strcmp(s, "raw") == 0) {
-            link_config->io_mode = IO_MODE_RAW;
-        } else {
-            fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
-            return false;
-        }
-    } else {
-        link_config->io_mode = g_ctx->config.io_mode;
     }
     return true;
 }
@@ -2036,14 +2071,14 @@ json_parse_config(json_t *root)
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if (strcmp(s, "packet_mmap_raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
-#if BNGBLASTER_NETMAP
-            } else if (strcmp(s, "netmap") == 0) {
-                g_ctx->config.io_mode = IO_MODE_NETMAP;
-#endif
             } else if (strcmp(s, "packet_mmap") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP;
             } else if (strcmp(s, "raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_RAW;
+#if BNGBLASTER_DPDK
+            } else if (strcmp(s, "dpdk") == 0) {
+                g_ctx->config.io_mode = IO_MODE_DPDK;
+#endif
             } else {
                 fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
                 return false;

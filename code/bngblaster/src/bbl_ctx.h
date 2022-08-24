@@ -87,6 +87,7 @@ typedef struct bbl_ctx_
     char *ctrl_socket_path;
 
     void *stream_thread; /* single linked list of threads */
+    io_thread_s *io_threads; /* single linked list of threads */
 
     bool tcp;
 

@@ -15,7 +15,7 @@ typedef struct bbl_network_interface_
     char *name;
     bbl_interface_s *interface;
     struct bbl_network_interface_ *next;
-    bbl_txq_t *txq;
+    bbl_txq_s *txq;
 
     uint16_t vlan;
     bbl_mpls_t tx_label;

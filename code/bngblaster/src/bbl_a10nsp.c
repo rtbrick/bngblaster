@@ -63,7 +63,7 @@ bbl_a10nsp_interfaces_add()
         CIRCLEQ_INSERT_TAIL(&g_ctx->a10nsp_interface_qhead, a10nsp_interface, a10nsp_interface_qnode);
 
         /* Init TXQ */
-        a10nsp_interface->txq = calloc(1, sizeof(bbl_txq_t));
+        a10nsp_interface->txq = calloc(1, sizeof(bbl_txq_s));
         bbl_txq_init(a10nsp_interface->txq, BBL_TXQ_DEFAULT_SIZE);
 
         /* Init ethernet */

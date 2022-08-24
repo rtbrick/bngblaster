@@ -230,8 +230,8 @@ bbl_print_version (void)
         printf("  SHA: %s\n", GIT_SHA);
     }
     printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
-#ifdef BNGBLASTER_NETMAP
-    printf(", netmap");
+#ifdef BNGBLASTER_DPDK
+    printf(", dpdk");
 #endif
     printf("\n");
 }
