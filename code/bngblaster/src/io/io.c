@@ -14,36 +14,36 @@
  *
  * Send single packet trough given interface.
  *
- * @param interface interface.
- * @param packet packet to be send
- * @param packet_len packet length
+ * @param io IO handle.
  */
 bool
-bbl_io_send(bbl_interface_t *interface, uint8_t *packet, uint16_t packet_len) {
-    bbl_ctx_t *ctx = interface->ctx;
+io_send(io_handle_s *io) {
     bool result = false;
+    bbl_interface_s *interface;
 
-    switch (interface->io.mode) {
+    assert(io->direction == IO_EGRESS);
+
+    switch (io->mode) {
         case IO_MODE_PACKET_MMAP_RAW:
         case IO_MODE_RAW:
-            result = bbl_io_raw_send(interface, packet, packet_len);
+            result = io_raw_send(io);
             break;
         case IO_MODE_PACKET_MMAP:
-            result = bbl_io_packet_mmap_send(interface, packet, packet_len);
+            result = io_packet_mmap_send(io);
             break;
         default:
             return false;
     }
 
-    if(result) {
+    if(result && io->thread == NULL) {
+        interface = io->interface;
         interface->stats.packets_tx++;
-        interface->stats.bytes_tx += packet_len;
+        interface->stats.bytes_tx += io->buf_len;
         /* Dump the packet into pcap file. */
-        if(g_ctx->pcap.write_buf && (interface->io.ctrl || ctx->pcap.include_streams)) {
-            pcapng_push_packet_header(ctx, &interface->tx_timestamp,
-                                      packet, packet_len, interface->pcap_index,
-                                      PCAPNG_EPB_FLAGS_OUTBOUND);
-            pcapng_fflush(ctx);
+        if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            pcapng_fflush();
         }
     }
     return result;

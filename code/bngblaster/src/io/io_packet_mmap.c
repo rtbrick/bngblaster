@@ -301,11 +301,12 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
 }
 
 bool
-io_packet_mmap_send(io_handle_s *io, uint8_t *buf, uint16_t len)
+io_packet_mmap_send(io_handle_s *io)
 {
     bbl_interface_s *interface = io->interface;
 
     uint8_t *frame_ptr;
+    uint8_t *tphdr_buf;
 
     struct tpacket2_hdr *tphdr;
 
@@ -323,11 +324,10 @@ io_packet_mmap_send(io_handle_s *io, uint8_t *buf, uint16_t len)
         return false;
     }
     io->polled = false;
-    io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
-    io->buf_len = len;
     io->queued++;
-    memcpy(io->buf, buf, len);
-    tphdr->tp_len = len;
+    tphdr_buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
+    memcpy(tphdr_buf, io->buf, io->buf_len);
+    tphdr->tp_len = io->buf_len;
     tphdr->tp_status = TP_STATUS_SEND_REQUEST;
     /* Request send from kernel. */
     tphdr->tp_status = TP_STATUS_SEND_REQUEST;

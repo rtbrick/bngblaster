@@ -1255,16 +1255,100 @@ bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
     return packets;
 }
 
-void
-bbl_stream_tx_job(timer_s *timer) {
+static void
+bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
+{
+    bbl_session_s *session = stream->session;
+    if(stream->direction == STREAM_DIRECTION_UP) {
+        if(stream->access_interface) {
+            stream->access_interface->stats.packets_tx += packets;
+            stream->access_interface->stats.bytes_tx += bytes;
+            stream->access_interface->stats.stream_tx += packets;
+            if(stream->session) {
+                stream->session->stats.packets_tx += packets;
+                stream->session->stats.bytes_tx += bytes;
+                stream->session->stats.accounting_packets_tx += packets;
+                stream->session->stats.accounting_bytes_tx += bytes;
+            }
+        }
+    } else {
+        if(stream->network_interface) {
+            stream->network_interface->stats.packets_tx += packets;
+            stream->network_interface->stats.bytes_tx += bytes;
+            stream->network_interface->stats.stream_tx += packets;
+            if(session && session->l2tp_session) {
+                stream->network_interface->stats.l2tp_data_tx += packets;
+                session->l2tp_session->tunnel->stats.data_tx += packets;
+                session->l2tp_session->stats.data_tx += packets;
+                session->l2tp_session->stats.data_ipv4_tx += packets;
+            }
+        } else if(stream->a10nsp_interface) {
+            stream->a10nsp_interface->stats.packets_tx += packets;
+            stream->a10nsp_interface->stats.bytes_tx += bytes;
+            stream->a10nsp_interface->stats.stream_tx += packets;
+            if(session && session->a10nsp_session) {
+                session->a10nsp_session->stats.packets_tx += packets;
+            }
+        }
+    }
+}
 
+static void
+bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
+{
+    bbl_session_s *session = stream->session;
+    if(stream->direction == STREAM_DIRECTION_DOWN) {
+        if(stream->access_interface) {
+            stream->access_interface->stats.packets_rx += packets;
+            stream->access_interface->stats.bytes_rx += bytes;
+            stream->access_interface->stats.stream_rx += packets;
+            if(stream->session) {
+                stream->session->stats.packets_rx += packets;
+                stream->session->stats.bytes_rx += bytes;
+                stream->session->stats.accounting_packets_rx += packets;
+                stream->session->stats.accounting_bytes_rx += bytes;
+            }
+        }
+    } else {
+        if(stream->network_interface) {
+            stream->network_interface->stats.packets_rx += packets;
+            stream->network_interface->stats.bytes_rx += bytes;
+            stream->network_interface->stats.stream_rx += packets;
+            if(session && session->l2tp_session) {
+                stream->network_interface->stats.l2tp_data_rx += packets;
+                session->l2tp_session->tunnel->stats.data_rx += packets;
+                session->l2tp_session->stats.data_rx += packets;
+                session->l2tp_session->stats.data_ipv4_rx += packets;
+            }
+        } else if(stream->a10nsp_interface) {
+            stream->a10nsp_interface->stats.packets_rx += packets;
+            stream->a10nsp_interface->stats.bytes_rx += bytes;
+            stream->a10nsp_interface->stats.stream_rx += packets;
+            if(session && session->a10nsp_session) {
+                session->a10nsp_session->stats.packets_rx += packets;
+            }
+        }
+    }
+}
+
+void
+bbl_stream_tx_job(timer_s *timer)
+{
     bbl_stream_s *stream = timer->data;
     bbl_session_s *session = stream->session;
-    bbl_interface_s *interface = stream->interface;
+
+    io_handle_s *io;
+    io_thread_s *thread = stream->thread;
+    if(stream->thread) {
+        io = stream->thread->io;
+    } else {
+        io = interface->io.tx;
+    }
 
     struct timespec now;
 
     uint64_t packets = 1;
+    uint64_t send = 0;
 
     if(!bbl_stream_can_send(stream)) {
         return;
@@ -1287,92 +1371,56 @@ bbl_stream_tx_job(timer_s *timer) {
     /* Update BBL header fields */
     *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
     *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
+
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet ... */
-        if(!bbl_io_send(interface, stream->buf, stream->tx_len)) {
+        if(!io_send(io)) {
             return;
         }
-        interface->stats.stream_tx++;
         stream->send_window_packets++;
         stream->packets_tx++;
         stream->flow_seq++;
         packets--;
-        if(session) {
-            if(stream->direction == STREAM_DIRECTION_UP) {
-                session->stats.packets_tx++;
-                session->stats.bytes_tx += stream->tx_len;
-                session->stats.accounting_packets_tx++;
-                session->stats.accounting_bytes_tx += stream->tx_len;
-            } else {
-                if(session->l2tp_session) {
-                    interface->stats.l2tp_data_tx++;
-                    session->l2tp_session->tunnel->stats.data_tx++;
-                    session->l2tp_session->stats.data_tx++;
-                    session->l2tp_session->stats.data_ipv4_tx++;
-                }
-            }
-        }
+        send++;
+    }
+    if(!thread) {
+        bbl_stream_tx_stats(stream, send, send*stream->tx_len);
     }
 }
 
 void
-bbl_stream_tx_job_threaded (timer_s *timer) {
+bbl_stream_ctrl_job (timer_s *timer) {
     bbl_stream_s *stream = timer->data;
-    bbl_stream_thread_s *thread = stream->thread.thread;
-
-    struct timespec now;
+    bbl_session_s *session = stream->session;
+    io_thread_s *thread = stream->thread;
 
     uint64_t packets;
 
-    pthread_mutex_lock(&stream->thread.mutex);
-    if(!stream->thread.can_send) {
-        pthread_mutex_unlock(&stream->thread.mutex);
-        return;
-    }
+    uint64_t packets_tx;
+    uint64_t bytes_tx;
+    uint64_t packets_rx;
+    uint64_t bytes_rx;
 
-    pthread_mutex_lock(&thread->mutex);
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    packets = bbl_stream_send_window(stream, &now);
-
-    /* Update BBL header fields */
-    *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
-    *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
-    while(packets) {
-        *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
-        /* Send packet ... */
-        if (sendto(thread->socket.fd_tx, stream->buf, stream->tx_len, 0, (struct sockaddr*)&thread->socket.addr, sizeof(struct sockaddr_ll)) <0 ) {
-            LOG(IO, "Thread: Sendto failed with errno: %i\n", errno);
-            thread->sendto_failed++;
-            packets = 0;
-        } else {
-            stream->packets_tx++;
-            stream->send_window_packets++;
-            stream->flow_seq++;
-            packets--;
-            thread->packets_tx++;
-            thread->bytes_tx += stream->tx_len;
-        }
-    }
-    pthread_mutex_unlock(&thread->mutex);
-    pthread_mutex_unlock(&stream->thread.mutex);
-}
-
-void
-bbl_stream_rate_job (timer_s *timer) {
-    bbl_stream_s *stream = timer->data;
+    /* Update rates. */
     bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
     bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
-}
 
-void
-bbl_stream_rate_job_threaded (timer_s *timer) {
-    bbl_stream_s *stream = timer->data;
-    pthread_mutex_lock(&stream->thread.mutex);
-    bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
-    bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
-    pthread_mutex_unlock(&stream->thread.mutex);
+    /* Update interface/session statistics for threaded stream. */
+    if(thread) {
+        /* Calculate TX packets/bytes since last sync. */
+        packets = stream->packets_tx;
+        packets_tx = packets - stream->last_sync_packets_tx;
+        bytes_tx = packets_tx * stream->tx_len;
+        stream->last_sync_packets_tx = packets;
+        bbl_stream_tx_stats(stream, packets_tx, bytes_tx);
+        /* Calculate RX packets/bytes since last sync. */
+        packets = stream->packets_rx;
+        packets_rx = packets - stream->last_sync_packets_rx;
+        bytes_rx = packets_rx * stream->rx_len;
+        stream->last_sync_packets_rx = packets;
+        bbl_stream_rx_stats(stream, packets_tx, bytes_tx);
+    }
 }
 
 bool
