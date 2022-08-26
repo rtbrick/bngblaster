@@ -17,8 +17,10 @@
 #include "io_def.h"
 #include "io_socket.h"
 #include "io_interface.h"
+#include "io_thread.h"
 
 #include "io_raw.h"
 #include "io_packet_mmap.h"
+#include "io_dpdk.h"
 
 #endif

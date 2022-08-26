@@ -50,7 +50,6 @@ bbl_io_packet_mmap_rx_job(timer_s *timer)
         eth_len = tphdr->tp_len;
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += eth_len;
-        interface->io.ctrl = true;
         decode_result = decode_ethernet(eth_start, eth_len, g_ctx->sp_rx, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;

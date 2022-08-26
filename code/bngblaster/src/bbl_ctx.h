@@ -96,8 +96,7 @@ typedef struct bbl_ctx_
     isis_instance_s *isis_instances;
 
     /* Scratchpad memory */
-    uint8_t *sp_rx;
-    uint8_t *sp_tx;
+    uint8_t *sp;
 
     /* PCAP */
     struct {

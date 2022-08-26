@@ -8,63 +8,175 @@
  */
 #include "io.h"
 
-void
-io_thread_rx_job(timer_s *timer)
-{
-    io_handle_s *io = timer->data;
-    bbl_txq_s *txq = io->txq;
-    bbl_txq_slot_t *slot;
-    bbl_interface_s *interface = io->interface;
+/** 
+ * This function searches for the BNG Blaster data
+ * traffic signature and returns true if found.
+ * 
+ * @param buf start of packet
+ * @param len length of packet
+ * @return true for BNG Blaster stream traffic
+ */
+static bool
+packet_is_bbl(uint8_t *buf, uint16_t len) {
+    if(len < BBL_MIN_LEN) {
+        return false;
+    }
+    buf += len - BBL_HEADER_LEN;
+    if(*(uint64_t*)buf == BBL_MAGIC_NUMBER) {
+        return true;
+    }
+    return false;
+}
 
+/** 
+ * This function redirects the packet in the
+ * IO buffer to the main thread via the TXQ 
+ * ring buffer. 
+ * 
+ * @param thread thread handle
+ * @param io IO handle
+ * @return IO_REDIRECT if successfully redirected
+ */
+static io_result_t
+redirect(io_thread_s *thread, io_handle_s *io)
+{
+    bbl_txq_slot_t *slot;
+
+    assert(io->direction == IO_INGRESS);
+    assert(io->thread != NULL);
+
+    if(io->buf_len > BBL_TXQ_BUFFER_LEN) {
+        return IO_ERROR;
+    }
+
+    if(!(slot = bbl_txq_write_slot(thread->txq))) {
+        return IO_FULL;
+    }
+
+    slot->timestamp.tv_sec = io->timestamp.tv_sec;
+    slot->timestamp.tv_nsec = io->timestamp.tv_nsec;
+    slot->vlan_tci = io->vlan_tci;
+    slot->vlan_tpid = io->vlan_tpid;
+    slot->packet_len = io->buf_len;
+    memcpy(slot->packet, io->buf, io->buf_len);
+    bbl_txq_write_next(thread->txq);
+    return IO_REDIRECT;
+}
+
+/** 
+ * This function processes all received packets
+ * from RX threads. 
+ * 
+ * @param thread thread handle
+ * @param io IO handle
+ * @return IO result
+ */
+io_result_t
+io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
+{
+    assert(io->direction == IO_INGRESS);
+    assert(io->thread != NULL);
+
+    bbl_ethernet_header_t *eth;
+    uint16_t vlan;
+
+    protocol_error_t decode_result;
+    if(likely(packet_is_bbl(io->buf, io->buf_len))) {
+        /** Process */
+        decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
+        if(decode_result == PROTOCOL_SUCCESS) {
+            vlan = io->vlan_tci & ETH_VLAN_ID_MAX;
+            if(eth->vlan_outer != vlan) {
+                /* The outer VLAN is stripped from header */
+                eth->vlan_inner = eth->vlan_outer;
+                eth->vlan_inner_priority = eth->vlan_outer_priority;
+                eth->vlan_outer = vlan;
+                eth->vlan_outer_priority = io->vlan_tci >> 13;
+                if(io->vlan_tpid == ETH_TYPE_QINQ) {
+                    eth->qinq = true;
+                }
+            }
+            bbl_rx_handler(io->interface, eth);
+            return IO_SUCCESS;
+        }
+    }
+    /** Redirect to main thread. */
+    return redirect(thread, io);
+}
+
+/** 
+ * This job is scheduled in the main loop receiving 
+ * packets from a RX thread via TXQ ring buffer. 
+ */
+void
+io_thread_main_rx_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
+
+    io_handle_s *io = interface->io.rx;
+    io_thread_s *thread;
+
+    bbl_txq_slot_t *slot;
     bbl_ethernet_header_t *eth;
     uint16_t vlan;
 
     protocol_error_t decode_result;
     bool pcap = false;
 
-    while(slot = bbl_txq_read_slot(txq)) {
-        decode_result = decode_ethernet(slot->packet, slot->packet_len, interface->io.sp, SCRATCHPAD_LEN, &eth);
-        if(decode_result == PROTOCOL_SUCCESS) {
-            vlan = slot->vlan_tci & ETH_VLAN_ID_MAX;
-            if(vlan && eth->vlan_outer != vlan) {
-                /* Restore outer VLAN */
-                eth->vlan_inner = eth->vlan_outer;
-                eth->vlan_inner_priority = eth->vlan_outer_priority;
-                eth->vlan_outer = vlan;
-                eth->vlan_outer_priority = slot->vlan_tci >> 13;
-                if(slot->vlan_tpid == ETH_TYPE_QINQ) {
-                    eth->qinq = true;
+    while(io) {
+        thread = io->thread;
+        if(thread) {
+            while(slot = bbl_txq_read_slot(thread->txq)) {
+                decode_result = decode_ethernet(slot->packet, slot->packet_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
+                if(decode_result == PROTOCOL_SUCCESS) {
+                    vlan = slot->vlan_tci & ETH_VLAN_ID_MAX;
+                    if(vlan && eth->vlan_outer != vlan) {
+                        /* Restore outer VLAN */
+                        eth->vlan_inner = eth->vlan_outer;
+                        eth->vlan_inner_priority = eth->vlan_outer_priority;
+                        eth->vlan_outer = vlan;
+                        eth->vlan_outer_priority = slot->vlan_tci >> 13;
+                        if(slot->vlan_tpid == ETH_TYPE_QINQ) {
+                            eth->qinq = true;
+                        }
+                    }
+                    /* Copy RX timestamp */
+                    eth->timestamp.tv_sec = slot->timestamp.tv_sec;
+                    eth->timestamp.tv_nsec = slot->timestamp.tv_nsec;
+                    bbl_rx_handler(interface, eth);
+                } else if (decode_result == UNKNOWN_PROTOCOL) {
+                    interface->stats.unknown++;
+                } else {
+                    interface->stats.decode_error++;
                 }
+                /* Dump the packet into pcap file. */
+                if (g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+                    pcap = true;
+                    pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                              interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+                }
+                bbl_txq_read_next(thread->txq);
             }
-            /* Copy RX timestamp */
-            eth->timestamp.tv_sec = slot->timestamp.tv_sec;
-            eth->timestamp.tv_nsec = slot->timestamp.tv_nsec;
-            bbl_rx_handler(interface, eth);
-        } else if (decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.unknown++;
-        } else {
-            interface->stats.decode_error++;
         }
-        /* Dump the packet into pcap file. */
-        if (g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
-            pcap = true;
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                    interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
-        }
-        bbl_txq_read_next(txq);
+        io = io->next;
     }
     if(pcap) {
         pcapng_fflush();
     }
 }
 
+/** 
+ * This job is scheduled in the main loop sending 
+ * packets to the TX thread via TXQ ring buffer. 
+ */
 void
-io_thread_tx_job(timer_s *timer)
+io_thread_main_tx_job(timer_s *timer)
 {
-    io_handle_s *io = timer->data;
-    bbl_txq_s *txq = io->txq;
+    bbl_interface_s *interface = timer->data;
+    io_handle_s *io = interface->io.tx;
+    io_thread_s *thread = io->thread;
+    bbl_txq_s *txq = thread->txq;
     bbl_txq_slot_t *slot;
-    bbl_interface_s *interface = io->interface;
 
     protocol_error_t tx_result = IGNORED;
 
@@ -95,18 +207,32 @@ io_thread_tx_job(timer_s *timer)
     }
 }
 
-void *
-io_thread_timer(void *thread_data)
+void
+io_thread_main(void *thread_data)
 {
     io_thread_s *thread = thread_data;
+    if(thread->setup_fn) {
+        (*thread->setup_fn)(thread);
+    }
+    if(thread->run_fn) {
+        (*thread->run_fn)(thread);
+    }
+    if(thread->teardown_fn) {
+        (*thread->teardown_fn)(thread);
+    }
+    thread->active = false;
+    thread->stopped = true;
+}
+
+void
+io_thread_timer_loop(io_thread_s *thread)
+{
     pthread_mutex_lock(&thread->mutex);
-    timer_smear_all_buckets(&thread->timer_root);
+    timer_smear_all_buckets(&thread->timer.root);
     pthread_mutex_unlock(&thread->mutex);
     while(thread->active) {
-        timer_walk(&thread->timer_root);
+        timer_walk(&thread->timer.root);
     }
-    thread->stopped = true;
-    return NULL;
 }
 
 bool
@@ -118,6 +244,7 @@ io_thread_init(io_handle_s *io)
 
     uint16_t slots = config->io_slots;
 
+    /* Add thread */
     thread = calloc(1, sizeof(io_thread_s));
     thread->next = g_ctx->io_threads;
     g_ctx->io_threads = thread;
@@ -126,6 +253,14 @@ io_thread_init(io_handle_s *io)
     io->fanout_id = interface->ifindex;
     io->fanout_type = PACKET_FANOUT_HASH;
 
+    /* Init thread TXQ */
+    if(io->direction == IO_INGRESS && slots < (UINT16_MAX/2)) {
+        slots = slots*2;
+    }
+    thread->txq = calloc(1, sizeof(bbl_txq_s));
+    if(!(thread->txq && bbl_txq_init(thread->txq, slots))) {
+        return false;
+    }
 
     /* Init thread mutex */
     if (pthread_mutex_init(&thread->mutex, NULL) != 0) {
@@ -134,32 +269,25 @@ io_thread_init(io_handle_s *io)
     }
 
     /* Init thread timer root */
-    timer_init_root(&thread->timer_root);
+    timer_init_root(&thread->timer.root);
 
-    if(io->direction == IO_INGRESS) {
-        
-        if(slots < (UINT16_MAX/2)) {
-            slots = slots*2;
-        }    
+    /* Default run function which might be overwritten. */
+    thread->run_fn = io_thread_timer_loop;
 
-
+    /* Add thread main loop timers jobs */
+    if(io->direction == IO_INGRESS && !interface->rx_job) {
         /** Start job reading from RX thread TXQ. */
-        timer_add_periodic(&g_ctx->timer_root, &thread->main_rx_job, "RX", 
+        timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 
                            0, config->rx_interval, 
-                           io, &io_thread_rx_job);
-    } else if(!interface->tx_job) {
+                           io, &io_thread_main_rx_job);
+    }
+
+    if(io->direction == IO_EGRESS && !interface->tx_job) {
         /** Start job writing to first TX thread TXQ */
-        timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "TX", 
-                           0, config->rx_interval, 
-                           io, &io_thread_tx_job);
+        timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, "TX", 
+                           0, config->tx_interval, 
+                           interface, &io_thread_main_tx_job);
     }
-
-    /* Init TXQ */
-    io->txq = calloc(1, sizeof(bbl_txq_s));
-    if(!(io->txq && bbl_txq_init(io->txq, slots))) {
-        return false;
-    }
-
     return true;
 }
 
@@ -168,7 +296,7 @@ io_thread_start_all()
 {
     io_thread_s *thread = g_ctx->io_threads;
     while(thread) {
-        pthread_create(&thread->thread, NULL, thread->start_fn, (void *)thread);
+        pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
         thread = thread->next;
     }
 }
@@ -178,11 +306,8 @@ io_thread_stop_all()
 {
     io_thread_s *thread = g_ctx->io_threads;
     while(thread) {
-        pthread_mutex_lock(&thread->mutex);
         thread->active = false;
-        pthread_mutex_unlock(&thread->mutex);
         thread = thread->next;
-
     }
     /* Wait for threads to be stopped */
     thread = g_ctx->io_threads;

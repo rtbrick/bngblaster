@@ -24,6 +24,7 @@
 #define BBL_MAGIC_NUMBER                0x5274427269636b21
 #define BBL_UDP_PORT                    65056
 #define BBL_HEADER_LEN                  48
+#define BBL_MIN_LEN                     90
 #define BBL_TYPE_UNICAST_SESSION        1
 #define BBL_TYPE_MULTICAST              2
 #define BBL_SUB_TYPE_IPV4               1

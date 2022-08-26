@@ -54,31 +54,30 @@ typedef struct io_handle_ {
     uint16_t queued;
     bool polled;
 
+    io_thread_s *thread;
     bbl_interface_s *interface;
-    bbl_txq_s *txq;
-
-    uint8_t *sp;
+    bbl_ethernet_header_t *eth;
     uint8_t *buf;
     uint16_t buf_len;
-
-    bbl_ethernet_header_t *eth;
-
+    uint16_t vlan_tci;
+    uint16_t vlan_tpid;
+    
     struct timespec timestamp; /* user space timestamps */
-
-    io_thread_s *thread;
 
     struct {
         uint64_t packets;
         uint64_t bytes;
-
-        uint64_t stream_packets;
-        uint64_t stream_bytes;
+        uint64_t protocol_errors;
+        uint64_t io_errors;
+        uint64_t no_buffer;
+        uint64_t polled;
     } stats;
 
     struct io_handle_ *next;
 } io_handle_s;
 
-typedef void (*io_thread_start_fn)(void *arg);
+typedef void (*io_thread_cb_fn)(io_thread_s *thread);
+typedef bool (*io_thread_stream_cb_fn)(bbl_stream_s *stream);
 
 typedef struct io_thread_ {
     pthread_t thread;
@@ -86,15 +85,31 @@ typedef struct io_thread_ {
     volatile bool active;
     volatile bool stopped;
 
-    io_thread_start_fn start_fn;
+    uint32_t pps_reserved;
 
-    struct timer_root_ timer_root;
-    struct timer_ *ctrl_timer;
-    struct timer_ *io_timer;
+    io_thread_cb_fn setup_fn;
+    io_thread_cb_fn run_fn;
+    io_thread_cb_fn teardown_fn;
 
-    struct timer_ *main_rx_job; /* main loop RX job */
+    io_thread_stream_cb_fn stream_tx_fn;
+
+    uint8_t *sp;
 
     io_handle_s *io;
+    bbl_txq_s *txq;
+ 
+    struct {
+        uint32_t count;
+        bbl_stream_s *head;
+        bbl_stream_s *tail;
+    } stream;
+
+    struct {
+        struct timer_root_ root;
+        struct timer_ *ctrl;
+        struct timer_ *io;
+    } timer;
+
     struct io_thread_ *next;
 } io_thread_s;
 

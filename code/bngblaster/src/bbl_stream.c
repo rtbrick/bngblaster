@@ -1287,7 +1287,6 @@ bbl_stream_tx_job(timer_s *timer) {
     /* Update BBL header fields */
     *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
     *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
-    interface->io.ctrl = false;
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet ... */
@@ -1661,13 +1660,13 @@ bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_
                 /* Check if expected outer label is received ... */
                 if(stream->rx_mpls1_label != stream->config->rx_mpls1_label) {
                     /* Wrong outer label received! */
-                    return;
+                    return false;
                 }
                 if(stream->config->rx_mpls2_label) {
                     /* Check if expected inner label is received ... */
                     if(stream->rx_mpls2_label != stream->config->rx_mpls2_label) {
                         /* Wrong inner label received! */
-                        return;
+                        return false;
                     }
                 }
             }

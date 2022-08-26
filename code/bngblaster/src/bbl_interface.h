@@ -31,7 +31,6 @@ typedef struct bbl_interface_
     struct {
         io_handle_s *rx;
         io_handle_s *tx;
-        uint8_t *sp;
         bool ctrl;
     } io;
 

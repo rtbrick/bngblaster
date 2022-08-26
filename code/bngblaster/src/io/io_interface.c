@@ -77,7 +77,7 @@ io_interface_init_rx(bbl_interface_s *interface)
     while(count) {
         io = calloc(1, sizeof(io_handle_s));
         if(!io) return false;
-        io->id = count--;
+        io->id = --count;
         io->mode = config->io_mode;
         if(io->mode == IO_MODE_PACKET_MMAP_RAW) {
             io->mode = IO_MODE_PACKET_MMAP;
@@ -85,7 +85,6 @@ io_interface_init_rx(bbl_interface_s *interface)
         io->direction = IO_INGRESS;
         io->next = interface->io.rx;
         interface->io.rx = io->next;
-        io->sp = malloc(SCRATCHPAD_LEN);
         io->interface = interface;
         switch(io->mode) {
             case IO_MODE_PACKET_MMAP:
@@ -101,6 +100,64 @@ io_interface_init_rx(bbl_interface_s *interface)
             default:
                 return false;
         }
+        if(config->rx_threads) {
+            if(!io_thread_init) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool
+io_interface_init_tx(bbl_interface_s *interface)
+{
+    bbl_link_config_s *config = interface->config;
+    io_handle_s *io;
+    
+    uint8_t count = 1;
+    if(config->tx_threads) {
+        count = config->tx_threads;
+    }
+
+    while(count) {
+        io = calloc(1, sizeof(io_handle_s));
+        if(!io) return false;
+        io->id = -count;
+        io->mode = config->io_mode;
+        if(io->mode == IO_MODE_PACKET_MMAP_RAW) {
+            io->mode = IO_MODE_RAW;
+        }
+        io->direction = IO_EGRESS;
+        io->next = interface->io.tx;
+        interface->io.tx = io->next;
+        io->interface = interface;
+        if(config->rx_threads) {
+            if(!io_thread_init) {
+                return false;
+            }
+        }
+        switch(io->mode) {
+            case IO_MODE_PACKET_MMAP:
+                if(!io_packet_mmap_init(io)) {
+                    return false;
+                }
+                break;
+            case IO_MODE_RAW:
+                if(!io_raw_init(io)) {
+                    return false;
+                }
+                break;
+            default:
+                return false;
+        }
+
+    }
+    
+    if(config->tx_threads) {
+        /* TODO: Add config! */
+        /* Reserve N PPS for control traffic. */
+        interface->io.tx->thread->pps_reserved = 1000;
     }
     return true;
 }
@@ -122,9 +179,15 @@ io_interface_init(bbl_interface_s *interface)
     if(*(uint64_t*)config->mac & 0xffffffffffff00) {
         memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
     }
-    interface->io.sp = malloc(SCRATCHPAD_LEN);
 
     /* RX */
+    if(!io_interface_init_rx(interface)) {
+        return false;
+    }
 
-
+    /* TX */
+    if(!io_interface_init_tx(interface)) {
+        return false;
+    }
+    return true;
 }
