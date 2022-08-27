@@ -2316,7 +2316,7 @@ json_parse_config(json_t *root)
             }
             value = json_object_get(sub, "data-length");
             if (json_is_boolean(value)) {
-                l2tp_server->data_lenght = json_boolean_value(value);
+                l2tp_server->data_length = json_boolean_value(value);
             }
             value = json_object_get(sub, "data-offset");
             if (json_is_boolean(value)) {

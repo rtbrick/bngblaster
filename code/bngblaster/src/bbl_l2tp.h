@@ -70,7 +70,7 @@ typedef struct bbl_l2tp_server_
     uint16_t max_retry;
 
     bool data_control_priority;
-    bool data_lenght;
+    bool data_length;
     bool data_offset;
 
     uint8_t control_tos;

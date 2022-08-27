@@ -128,7 +128,7 @@ bbl_session_traffic_add_ipv4_l2tp(bbl_session_s *session,
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
     l2tp.protocol = PROTOCOL_IPV4;
-    l2tp.with_length = l2tp_tunnel->server->data_lenght;
+    l2tp.with_length = l2tp_tunnel->server->data_length;
     l2tp.with_offset = l2tp_tunnel->server->data_offset;
     l2tp.next = &ipv4;
     ipv4.dst = session->ip_address;

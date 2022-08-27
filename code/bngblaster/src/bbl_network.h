@@ -132,6 +132,6 @@ bool
 bbl_network_interfaces_add();
 
 bbl_network_interface_s*
-bbl_network_interface_get(char *interface_name, uint16_t vlan);
+bbl_network_interface_get(char *interface_name);
 
 #endif

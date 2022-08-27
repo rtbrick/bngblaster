@@ -511,7 +511,7 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
     l2tp.protocol = protocol;
-    l2tp.with_length = l2tp_server->data_lenght;
+    l2tp.with_length = l2tp_server->data_length;
     l2tp.with_offset = l2tp_server->data_offset;
     if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
         if(l2tp_server->data_control_priority) {

@@ -96,7 +96,7 @@ bbl_add_multicast_packets()
     bbl_network_interface_s *interface;
 
     if(g_ctx->config.send_multicast_traffic && g_ctx->config.igmp_group_count) {
-        interface = bbl_network_interface_get(g_ctx->config.multicast_traffic_network_interface, 0);
+        interface = bbl_network_interface_get(g_ctx->config.multicast_traffic_network_interface);
         if(!interface) {
             return false;
         }

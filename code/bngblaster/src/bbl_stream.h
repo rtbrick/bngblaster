@@ -85,12 +85,13 @@ typedef struct bbl_stream_
     bbl_session_s *session;
     bbl_stream_s *session_next; /* Next stream of same session */
     bbl_stream_s *thread_next; /* Next stream of same thread */
-    io_stream_s *thread;
 
+    io_thread_s *thread;
+
+    bbl_interface_s *interface;
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
-
 
     uint8_t *buf;
     uint16_t tx_len;

@@ -193,29 +193,24 @@ bbl_network_interfaces_add()
  * interface found if name is NULL.
  *
  * @param interface_name interface name
- * @param vlan VLAN
  * @return network interface
  */
 bbl_network_interface_s*
-bbl_network_interface_get(char *interface_name, uint16_t vlan)
+bbl_network_interface_get(char *interface_name)
 {
     struct bbl_interface_ *interface;
     bbl_network_interface_s *network_interface;
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        if(interface_name) {
-            if(strcmp(interface->name, interface_name) == 0) {
-                network_interface = interface->network;
-                while(network_interface) {
-                    if(network_interface->vlan == vlan) {
-                        return network_interface;
-                    }
-                    network_interface = network_interface->next;
-                }
-                return NULL;
+        network_interface = interface->network;
+        while(network_interface) {
+            if(!interface_name) {
+                return network_interface;
             }
-        } else if(interface->network) {
-            return interface->network;
+            if(strcmp(network_interface->name, interface_name) == 0) {
+                return network_interface;
+            }
+            network_interface = network_interface->next;
         }
     }
     return NULL;

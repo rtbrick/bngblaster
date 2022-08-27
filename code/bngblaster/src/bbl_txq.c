@@ -100,7 +100,8 @@ bbl_txq_to_buffer(bbl_txq_s *txq, bbl_ethernet_header_t *eth)
 }
 
 bbl_txq_slot_t *
-bbl_txq_read_slot(bbl_txq_s *txq) {
+bbl_txq_read_slot(bbl_txq_s *txq)
+{
     if(txq->read == txq->write) {
         return NULL;
     }
@@ -117,7 +118,8 @@ bbl_txq_read_next(bbl_txq_s *txq)
 }
 
 bbl_txq_slot_t *
-bbl_txq_write_slot(bbl_txq_s *txq) {
+bbl_txq_write_slot(bbl_txq_s *txq)
+{
     if(txq->read == txq->next) {
         txq->stats.full++;
         return NULL;

@@ -33,6 +33,9 @@ poll_kernel(io_handle_s *io, short events)
     }
 }
 
+/**
+ * This job is for PACKET_MMAP RX in main thread!
+ */
 void
 io_packet_mmap_rx_job(timer_s *timer)
 {
@@ -110,6 +113,9 @@ io_packet_mmap_rx_job(timer_s *timer)
     }
 }
 
+/**
+ * This job is for PACKET_MMAP TX in main thread!
+ */
 void
 io_packet_mmap_tx_job(timer_s *timer)
 {
@@ -177,7 +183,8 @@ io_packet_mmap_tx_job(timer_s *timer)
     if(io->queued) {
         /* Notify kernel. */
         if(sendto(io->fd, NULL, 0, 0, NULL, 0) == -1) {
-            LOG(IO, "Sendto failed with errno: %i\n", errno);
+            LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
+                interface->name, strerror(errno), errno);
             io->stats.io_errors++;
         } else {
             io->queued = 0;
@@ -246,6 +253,8 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
     io_thread_s *thread = timer->data;
     io_handle_s *io = thread->io;
     bbl_interface_s *interface = io->interface;
+
+    bbl_txq_s *txq = thread->txq;
     bbl_txq_slot_t *slot;
 
     struct tpacket2_hdr* tphdr;
@@ -268,7 +277,7 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
     } else {
         io->polled = false;
 
-        while(slot = bbl_txq_read_slot(thread->txq)) {
+        while(slot = bbl_txq_read_slot(txq)) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
@@ -286,13 +295,15 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
             io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
             frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
+            bbl_txq_read_next(txq);
         }
     }
 
     if(io->queued) {
         /* Notify kernel. */
         if(sendto(io->fd, NULL, 0, 0, NULL, 0) == -1) {
-            LOG(IO, "Sendto failed with errno: %i\n", errno);
+            LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
+                interface->name, strerror(errno), errno);
             io->stats.io_errors++;
         } else {
             io->queued = 0;
@@ -338,7 +349,8 @@ io_packet_mmap_send(io_handle_s *io)
     if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
         /* Notify kernel. */
         if(sendto(io->fd, NULL, 0, 0, NULL, 0) == -1) {
-            LOG(IO, "Sendto failed with errno: %i\n", errno);
+            LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
+                interface->name, strerror(errno), errno);
             io->stats.io_errors++;
         } else {
             io->queued = 0;
@@ -375,4 +387,5 @@ io_packet_mmap_init(io_handle_s *io)
                 config->tx_interval, interface, &io_packet_mmap_tx_job);
         }
     }
+    return true;
 }

@@ -9,4 +9,10 @@
 #ifndef __BBL_IO_RAW_H__
 #define __BBL_IO_RAW_H__
 
+bool
+io_raw_send(io_handle_s *io);
+
+bool
+io_raw_init(io_handle_s *io);
+
 #endif
