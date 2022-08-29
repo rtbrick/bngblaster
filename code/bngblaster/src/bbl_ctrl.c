@@ -1384,17 +1384,15 @@ bbl_ctrl_stream_reset(int fd, uint32_t session_id __attribute__((unused)), json_
             continue;
         }
 
-        /** TODO: Not thread save!!! */
         stream->flow_seq = 1;
         stream->rx_first_seq = 0;
         stream->rx_last_seq = 0;
         stream->stop = false;
-        stream->packets_tx = 0;
-        stream->packets_rx = 0;
-        stream->last_sync_packets_rx = 0;
-        stream->last_sync_packets_tx = 0;
-        stream->last_sync_loss = 0;
-        stream->last_sync_wrong_session = 0;
+
+        stream->reset_packets_tx = stream->packets_tx;
+        stream->reset_packets_rx = stream->packets_rx;
+        stream->reset_loss = stream->loss;
+        stream->reset_wrong_session = stream->wrong_session;
 
         stream->min_delay_ns = 0;
         stream->max_delay_ns = 0;

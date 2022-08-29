@@ -125,12 +125,19 @@ typedef struct bbl_stream_
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
     struct timer_ *timer_ctrl;
-    uint64_t last_sync_packets_rx;
     uint64_t last_sync_packets_tx;
+    uint64_t last_sync_packets_rx;
     uint64_t last_sync_loss;
     uint64_t last_sync_wrong_session;
-    bbl_rate_s rate_packets_rx;
+
+    uint64_t reset_packets_tx;
+    uint64_t reset_packets_rx;
+    uint64_t reset_loss;
+    uint64_t reset_wrong_session;
+
     bbl_rate_s rate_packets_tx;
+    bbl_rate_s rate_packets_rx;
+
 } bbl_stream_s;
 
 void
