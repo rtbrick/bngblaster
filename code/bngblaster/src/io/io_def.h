@@ -57,6 +57,7 @@ typedef struct io_handle_ {
     io_thread_s *thread;
     bbl_interface_s *interface;
     bbl_ethernet_header_t *eth;
+
     uint8_t *buf;
     uint16_t buf_len;
     uint16_t vlan_tci;

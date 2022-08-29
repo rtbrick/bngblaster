@@ -268,53 +268,17 @@ typedef struct bbl_session_
     /* Multicast Traffic */
     uint64_t mc_rx_last_seq;
 
-    /* Session Traffic */
-    bool session_traffic;
-
-    uint8_t session_traffic_flows;
-    uint8_t session_traffic_flows_verified;
-
-    uint64_t access_ipv4_tx_flow_id;
-    uint64_t access_ipv4_tx_seq;
-    uint8_t *access_ipv4_tx_packet_template;
-    uint8_t  access_ipv4_tx_packet_len;
-    uint64_t access_ipv4_rx_first_seq;
-    uint64_t access_ipv4_rx_last_seq;
-
-    uint64_t network_ipv4_tx_flow_id;
-    uint64_t network_ipv4_tx_seq;
-    uint8_t *network_ipv4_tx_packet_template;
-    uint8_t  network_ipv4_tx_packet_len;
-    uint64_t network_ipv4_rx_first_seq;
-    uint64_t network_ipv4_rx_last_seq;
-
-    uint64_t access_ipv6_tx_flow_id;
-    uint64_t access_ipv6_tx_seq;
-    uint8_t *access_ipv6_tx_packet_template;
-    uint8_t  access_ipv6_tx_packet_len;
-    uint64_t access_ipv6_rx_first_seq;
-    uint64_t access_ipv6_rx_last_seq;
-
-    uint64_t network_ipv6_tx_flow_id;
-    uint64_t network_ipv6_tx_seq;
-    uint8_t *network_ipv6_tx_packet_template;
-    uint8_t  network_ipv6_tx_packet_len;
-    uint64_t network_ipv6_rx_first_seq;
-    uint64_t network_ipv6_rx_last_seq;
-
-    uint64_t access_ipv6pd_tx_flow_id;
-    uint64_t access_ipv6pd_tx_seq;
-    uint8_t *access_ipv6pd_tx_packet_template;
-    uint8_t  access_ipv6pd_tx_packet_len;
-    uint64_t access_ipv6pd_rx_first_seq;
-    uint64_t access_ipv6pd_rx_last_seq;
-
-    uint64_t network_ipv6pd_tx_flow_id;
-    uint64_t network_ipv6pd_tx_seq;
-    uint8_t *network_ipv6pd_tx_packet_template;
-    uint8_t  network_ipv6pd_tx_packet_len;
-    uint64_t network_ipv6pd_rx_first_seq;
-    uint64_t network_ipv6pd_rx_last_seq;
+    struct {
+        bool enabled;
+        uint8_t flows;
+        uint8_t flows_verified;
+        bbl_stream_s *ipv4_up;
+        bbl_stream_s *ipv4_down;
+        bbl_stream_s *ipv6_up;
+        bbl_stream_s *ipv6_down;
+        bbl_stream_s *ipv6pd_up;
+        bbl_stream_s *ipv6pd_down;
+    } session_traffic;
 
     struct {
         uint64_t packets_tx;
@@ -382,27 +346,6 @@ typedef struct bbl_session_
         uint32_t dhcpv6_rx_reply;
         uint32_t dhcpv6_tx_renew;
         uint32_t dhcpv6_tx_release;
-
-        uint64_t access_ipv4_rx;
-        uint64_t access_ipv4_tx;
-        uint64_t access_ipv4_loss;
-        uint64_t network_ipv4_rx;
-        uint64_t network_ipv4_tx;
-        uint64_t network_ipv4_loss;
-
-        uint64_t access_ipv6_rx;
-        uint64_t access_ipv6_tx;
-        uint64_t access_ipv6_loss;
-        uint64_t network_ipv6_rx;
-        uint64_t network_ipv6_tx;
-        uint64_t network_ipv6_loss;
-
-        uint64_t access_ipv6pd_rx;
-        uint64_t access_ipv6pd_tx;
-        uint64_t access_ipv6pd_loss;
-        uint64_t network_ipv6pd_rx;
-        uint64_t network_ipv6pd_tx;
-        uint64_t network_ipv6pd_loss;
 
         uint32_t flapped; /* flap counter */
     } stats;

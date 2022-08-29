@@ -16,7 +16,7 @@ extern volatile bool g_teardown;
 extern bool g_init_phase;
 extern bool g_traffic;
 
-void
+static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
 {
     struct timespec delay;
@@ -53,20 +53,20 @@ bbl_stream_can_send(bbl_stream_s *stream)
             if(session->l2tp && session->l2tp_session == NULL) {
                 goto FREE;
             }
-            switch (stream->config->type) {
-                case STREAM_IPV4:
+            switch(stream->config->type) {
+                case BBL_SUB_TYPE_IPV4:
                     if(session->ipcp_state == BBL_PPP_OPENED) {
                         return true;
                     }
                     break;
-                case STREAM_IPV6:
+                case BBL_SUB_TYPE_IPV6:
                     if(session->ip6cp_state == BBL_PPP_OPENED &&
                        session->icmpv6_ra_received &&
                        *(uint64_t*)session->ipv6_address) {
                         return true;
                     }
                     break;
-                case STREAM_IPV6PD:
+                case BBL_SUB_TYPE_IPV6PD:
                     if(session->ip6cp_state == BBL_PPP_OPENED &&
                        session->icmpv6_ra_received &&
                        *(uint64_t*)session->delegated_ipv6_address &&
@@ -78,19 +78,19 @@ bbl_stream_can_send(bbl_stream_s *stream)
                     break;
             }
         } else if (session->access_type == ACCESS_TYPE_IPOE) {
-            switch (stream->config->type) {
-                case STREAM_IPV4:
+            switch(stream->config->type) {
+                case BBL_SUB_TYPE_IPV4:
                     if(session->ip_address) {
                         return true;
                     }
                     break;
-                case STREAM_IPV6:
+                case BBL_SUB_TYPE_IPV6:
                     if(*(uint64_t*)session->ipv6_address &&
                        session->icmpv6_ra_received) {
                         return true;
                     }
                     break;
-                case STREAM_IPV6PD:
+                case BBL_SUB_TYPE_IPV6PD:
                     if(*(uint64_t*)session->delegated_ipv6_address &&
                        session->icmpv6_ra_received &&
                        session->dhcpv6_state >= BBL_DHCP_BOUND) {
@@ -169,8 +169,8 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     bbl.tos = config->priority;
     bbl.direction = BBL_DIRECTION_UP;
 
-    switch (stream->config->type) {
-        case STREAM_IPV4:
+    switch(stream->config->type) {
+        case BBL_SUB_TYPE_IPV4:
             pppoe.protocol = PROTOCOL_IPV4;
             pppoe.next = &ipv4;
             /* Source address */
@@ -201,15 +201,15 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
                 bbl.padding = config->length - 76;
             }
             break;
-        case STREAM_IPV6:
-        case STREAM_IPV6PD:
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
             pppoe.protocol = PROTOCOL_IPV6;
             pppoe.next = &ipv6;
             /* Source address */
             if(*(uint64_t*)stream->config->ipv6_access_src_address) {
                 ipv6.src = stream->config->ipv6_access_src_address;
             } else {
-                if(stream->config->type == STREAM_IPV6) {
+                if(stream->config->type == BBL_SUB_TYPE_IPV6) {
                     ipv6.src = session->ipv6_address;
                 } else {
                     ipv6.src = session->delegated_ipv6_address;
@@ -272,7 +272,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
         return false;
     }
 
-    if(stream->direction == STREAM_DIRECTION_UP) {
+    if(stream->direction == BBL_DIRECTION_UP) {
         bbl.direction = BBL_DIRECTION_UP;
         eth.dst = session->server_mac;
         eth.src = session->client_mac;
@@ -303,8 +303,8 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
     bbl.tos = config->priority;
-    switch (stream->config->type) {
-        case STREAM_IPV4:
+    switch(stream->config->type) {
+        case BBL_SUB_TYPE_IPV4:
             pppoe.protocol = PROTOCOL_IPV4;
             pppoe.next = &ipv4;
             /* Source address */
@@ -331,12 +331,12 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
                 bbl.padding = config->length - 76;
             }
             break;
-        case STREAM_IPV6:
-        case STREAM_IPV6PD:
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
             pppoe.protocol = PROTOCOL_IPV6;
             pppoe.next = &ipv6;
             /* Source address */
-            if(stream->config->type == STREAM_IPV6) {
+            if(stream->config->type == BBL_SUB_TYPE_IPV6) {
                 ipv6.src = session->ipv6_address;
             } else {
                 ipv6.src = session->delegated_ipv6_address;
@@ -398,7 +398,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
         return false;
     }
 
-    if(stream->direction == STREAM_DIRECTION_UP) {
+    if(stream->direction == BBL_DIRECTION_UP) {
         bbl.direction = BBL_DIRECTION_UP;
         eth.dst = session->server_mac;
         eth.src = session->client_mac;
@@ -427,8 +427,8 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
     bbl.tos = config->priority;
-    switch (stream->config->type) {
-        case STREAM_IPV4:
+    switch(stream->config->type) {
+        case BBL_SUB_TYPE_IPV4:
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
             /* Source address */
@@ -455,12 +455,12 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
                 bbl.padding = config->length - 76;
             }
             break;
-        case STREAM_IPV6:
-        case STREAM_IPV6PD:
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             /* Source address */
-            if(stream->config->type == STREAM_IPV6) {
+            if(stream->config->type == BBL_SUB_TYPE_IPV6) {
                 ipv6.src = session->ipv6_address;
             } else {
                 ipv6.src = session->delegated_ipv6_address;
@@ -554,8 +554,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     bbl.tos = config->priority;
     bbl.direction = BBL_DIRECTION_UP;
 
-    switch (stream->config->type) {
-        case STREAM_IPV4:
+    switch(stream->config->type) {
+        case BBL_SUB_TYPE_IPV4:
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
             /* Source address */
@@ -586,15 +586,15 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
                 bbl.padding = config->length - 76;
             }
             break;
-        case STREAM_IPV6:
-        case STREAM_IPV6PD:
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             /* Source address */
             if(*(uint64_t*)stream->config->ipv6_access_src_address) {
                 ipv6.src = stream->config->ipv6_access_src_address;
             } else {
-                if(stream->config->type == STREAM_IPV6) {
+                if(stream->config->type == BBL_SUB_TYPE_IPV6) {
                     ipv6.src = session->ipv6_address;
                 } else {
                     ipv6.src = session->delegated_ipv6_address;
@@ -689,8 +689,8 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     bbl.flow_id = stream->flow_id;
     bbl.tos = config->priority;
     bbl.direction = BBL_DIRECTION_DOWN;
-    switch (stream->config->type) {
-        case STREAM_IPV4:
+    switch(stream->config->type) {
+        case BBL_SUB_TYPE_IPV4:
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
             /* Source address */
@@ -730,8 +730,8 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
                 bbl.padding = config->length - 76;
             }
             break;
-        case STREAM_IPV6:
-        case STREAM_IPV6PD:
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             /* Source address */
@@ -745,7 +745,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
                 ipv6.dst = stream->config->ipv6_destination_address;
             } else {
                 if(session) {
-                    if(stream->config->type == STREAM_IPV6) {
+                    if(stream->config->type == BBL_SUB_TYPE_IPV6) {
                         ipv6.dst = session->ipv6_address;
                     } else {
                         ipv6.dst = session->delegated_ipv6_address;
@@ -870,7 +870,7 @@ bbl_stream_build_packet(bbl_stream_s *stream)
     if(stream->session) {
         if(stream->session->access_type == ACCESS_TYPE_PPPOE) {
             if(stream->session->l2tp_session) {
-                if(stream->direction == STREAM_DIRECTION_UP) {
+                if(stream->direction == BBL_DIRECTION_UP) {
                     return bbl_stream_build_access_pppoe_packet(stream);
                 } else {
                     return bbl_stream_build_l2tp_packet(stream);
@@ -878,11 +878,11 @@ bbl_stream_build_packet(bbl_stream_s *stream)
             } else if(stream->session->a10nsp_session) {
                 return bbl_stream_build_a10nsp_pppoe_packet(stream);
             } else {
-                switch (stream->config->type) {
-                    case STREAM_IPV4:
-                    case STREAM_IPV6:
-                    case STREAM_IPV6PD:
-                        if(stream->direction == STREAM_DIRECTION_UP) {
+                switch(stream->config->type) {
+                    case BBL_SUB_TYPE_IPV4:
+                    case BBL_SUB_TYPE_IPV6:
+                    case BBL_SUB_TYPE_IPV6PD:
+                        if(stream->direction == BBL_DIRECTION_UP) {
                             return bbl_stream_build_access_pppoe_packet(stream);
                         } else {
                             return bbl_stream_build_network_packet(stream);
@@ -895,7 +895,7 @@ bbl_stream_build_packet(bbl_stream_s *stream)
             if(stream->session->a10nsp_session) {
                 return bbl_stream_build_a10nsp_ipoe_packet(stream);
             } else {
-                if(stream->direction == STREAM_DIRECTION_UP) {
+                if(stream->direction == BBL_DIRECTION_UP) {
                     return bbl_stream_build_access_ipoe_packet(stream);
                 } else {
                     return bbl_stream_build_network_packet(stream);
@@ -966,110 +966,303 @@ static void
 bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
 {
     bbl_session_s *session = stream->session;
-    if(stream->direction == STREAM_DIRECTION_UP) {
-        if(stream->access_interface) {
-            stream->access_interface->stats.packets_tx += packets;
-            stream->access_interface->stats.bytes_tx += bytes;
-            stream->access_interface->stats.stream_tx += packets;
-            if(stream->session) {
-                stream->session->stats.packets_tx += packets;
-                stream->session->stats.bytes_tx += bytes;
-                stream->session->stats.accounting_packets_tx += packets;
-                stream->session->stats.accounting_bytes_tx += bytes;
+    bbl_access_interface_s *access_interface;
+    bbl_network_interface_s *network_interface;
+    bbl_a10nsp_interface_s *a10nsp_interface;
+
+    if(stream->direction == BBL_DIRECTION_UP) {
+        access_interface = stream->access_interface;
+        session = stream->session;
+        if(access_interface) {
+            access_interface->stats.packets_tx += packets;
+            access_interface->stats.bytes_tx += bytes;
+            access_interface->stats.stream_tx += packets;
+            if(session) {
+                session->stats.packets_tx += packets;
+                session->stats.bytes_tx += bytes;
+                session->stats.accounting_packets_tx += packets;
+                session->stats.accounting_bytes_tx += bytes;
+                if(stream->session_traffic) {
+                    switch(stream->type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            access_interface->stats.session_ipv4_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            access_interface->stats.session_ipv6_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            access_interface->stats.session_ipv6pd_tx += packets;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         }
     } else {
         if(stream->network_interface) {
-            stream->network_interface->stats.packets_tx += packets;
-            stream->network_interface->stats.bytes_tx += bytes;
-            stream->network_interface->stats.stream_tx += packets;
-            if(session && session->l2tp_session) {
-                stream->network_interface->stats.l2tp_data_tx += packets;
-                session->l2tp_session->tunnel->stats.data_tx += packets;
-                session->l2tp_session->stats.data_tx += packets;
-                session->l2tp_session->stats.data_ipv4_tx += packets;
+            network_interface = stream->network_interface;
+            network_interface->stats.packets_tx += packets;
+            network_interface->stats.bytes_tx += bytes;
+            network_interface->stats.stream_tx += packets;
+            if(session) {
+                if(session->l2tp_session) {
+                    network_interface->stats.l2tp_data_tx += packets;
+                    session->l2tp_session->tunnel->stats.data_tx += packets;
+                    session->l2tp_session->stats.data_tx += packets;
+                    if(stream->type == BBL_SUB_TYPE_IPV4) {
+                        session->l2tp_session->stats.data_ipv4_tx += packets;
+                    }
+                }
+                if(stream->session_traffic) {
+                    switch(stream->type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            network_interface->stats.session_ipv4_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            network_interface->stats.session_ipv6_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            network_interface->stats.session_ipv6pd_tx += packets;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         } else if(stream->a10nsp_interface) {
-            stream->a10nsp_interface->stats.packets_tx += packets;
-            stream->a10nsp_interface->stats.bytes_tx += bytes;
-            stream->a10nsp_interface->stats.stream_tx += packets;
-            if(session && session->a10nsp_session) {
-                session->a10nsp_session->stats.packets_tx += packets;
+            a10nsp_interface = stream->a10nsp_interface;
+            a10nsp_interface->stats.packets_tx += packets;
+            a10nsp_interface->stats.bytes_tx += bytes;
+            a10nsp_interface->stats.stream_tx += packets;
+            if(session) {
+                if(session->a10nsp_session) {
+                    session->a10nsp_session->stats.packets_tx += packets;
+                }
+                if(stream->session_traffic) {
+                    switch(stream->type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            a10nsp_interface->stats.session_ipv4_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            a10nsp_interface->stats.session_ipv6_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            a10nsp_interface->stats.session_ipv6pd_tx += packets;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         }
     }
 }
 
 static void
-bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
+bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint64_t loss)
 {
     bbl_session_s *session = stream->session;
-    if(stream->direction == STREAM_DIRECTION_DOWN) {
-        if(stream->access_interface) {
-            stream->access_interface->stats.packets_rx += packets;
-            stream->access_interface->stats.bytes_rx += bytes;
-            stream->access_interface->stats.stream_rx += packets;
-            if(stream->session) {
-                stream->session->stats.packets_rx += packets;
-                stream->session->stats.bytes_rx += bytes;
-                stream->session->stats.accounting_packets_rx += packets;
-                stream->session->stats.accounting_bytes_rx += bytes;
+    bbl_access_interface_s *access_interface;
+    bbl_network_interface_s *network_interface;
+    bbl_a10nsp_interface_s *a10nsp_interface;
+
+    if(stream->direction == BBL_DIRECTION_DOWN) {
+        access_interface = stream->access_interface;
+        session = stream->session;
+        if(access_interface) {
+            access_interface->stats.packets_rx += packets;
+            access_interface->stats.bytes_rx += bytes;
+            access_interface->stats.stream_rx += packets;
+            access_interface->stats.stream_loss += loss;
+            if(session) {
+                session->stats.packets_rx += packets;
+                session->stats.bytes_rx += bytes;
+                session->stats.accounting_packets_rx += packets;
+                session->stats.accounting_bytes_rx += bytes;
+                if(stream->session_traffic) {
+                    switch(stream->type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            access_interface->stats.session_ipv4_rx += packets;
+                            access_interface->stats.session_ipv4_loss += loss;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            access_interface->stats.session_ipv6_rx += packets;
+                            access_interface->stats.session_ipv6_loss += loss;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            access_interface->stats.session_ipv6pd_rx += packets;
+                            access_interface->stats.session_ipv6pd_loss += loss;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         }
     } else {
         if(stream->network_interface) {
-            stream->network_interface->stats.packets_rx += packets;
-            stream->network_interface->stats.bytes_rx += bytes;
-            stream->network_interface->stats.stream_rx += packets;
-            if(session && session->l2tp_session) {
-                stream->network_interface->stats.l2tp_data_rx += packets;
-                session->l2tp_session->tunnel->stats.data_rx += packets;
-                session->l2tp_session->stats.data_rx += packets;
-                session->l2tp_session->stats.data_ipv4_rx += packets;
+            network_interface = stream->network_interface;
+            network_interface->stats.packets_rx += packets;
+            network_interface->stats.bytes_rx += bytes;
+            network_interface->stats.stream_rx += packets;
+            if(session) {
+                if(session->l2tp_session) {
+                    network_interface->stats.l2tp_data_rx += packets;
+                    session->l2tp_session->tunnel->stats.data_rx += packets;
+                    session->l2tp_session->stats.data_rx += packets;
+                    if(stream->type == BBL_SUB_TYPE_IPV4) {
+                        session->l2tp_session->stats.data_ipv4_rx += packets;
+                    }
+                }
+                if(stream->session_traffic) {
+                    switch(stream->type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            network_interface->stats.session_ipv4_rx += packets;
+                            network_interface->stats.session_ipv4_loss += loss;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            network_interface->stats.session_ipv6_rx += packets;
+                            network_interface->stats.session_ipv6_loss += loss;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            network_interface->stats.session_ipv6pd_rx += packets;
+                            network_interface->stats.session_ipv6pd_loss += loss;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         } else if(stream->a10nsp_interface) {
-            stream->a10nsp_interface->stats.packets_rx += packets;
-            stream->a10nsp_interface->stats.bytes_rx += bytes;
-            stream->a10nsp_interface->stats.stream_rx += packets;
-            if(session && session->a10nsp_session) {
-                session->a10nsp_session->stats.packets_rx += packets;
+            a10nsp_interface = stream->a10nsp_interface;
+            a10nsp_interface->stats.packets_rx += packets;
+            a10nsp_interface->stats.bytes_rx += bytes;
+            a10nsp_interface->stats.stream_rx += packets;
+            if(session) {
+                if(session->a10nsp_session) {
+                    session->a10nsp_session->stats.packets_rx += packets;
+                }
+                if(stream->session_traffic) {
+                    switch(stream->type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            a10nsp_interface->stats.session_ipv4_rx += packets;
+                            a10nsp_interface->stats.session_ipv4_loss += loss;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            a10nsp_interface->stats.session_ipv6_rx += packets;
+                            a10nsp_interface->stats.session_ipv6_loss += loss;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            a10nsp_interface->stats.session_ipv6pd_rx += packets;
+                            a10nsp_interface->stats.session_ipv6pd_loss += loss;
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
         }
     }
 }
 
+static void
+bbl_stream_rx_wrong_session(bbl_stream_s *stream) 
+{
+    uint64_t packets;
+    uint64_t packets_delta;
+
+    packets = stream->wrong_session;
+    packets_delta = packets - stream->last_sync_wrong_session;
+    stream->last_sync_wrong_session = packets;
+
+    if(stream->access_interface) {
+        switch(stream->type) {
+            case BBL_SUB_TYPE_IPV4:
+                stream->access_interface->stats.session_ipv4_wrong_session += packets_delta;
+                break;
+            case BBL_SUB_TYPE_IPV6:
+                stream->access_interface->stats.session_ipv6_wrong_session += packets_delta;
+                break;
+            case BBL_SUB_TYPE_IPV6PD:
+                stream->access_interface->stats.session_ipv6pd_wrong_session += packets_delta;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 void
-bbl_stream_ctrl_job(timer_s *timer) {
-    bbl_stream_s *stream = timer->data;
+bbl_stream_ctrl(bbl_stream_s *stream)
+{
     bbl_session_s *session = stream->session;
     io_thread_s *thread = stream->thread;
 
     uint64_t packets;
+    uint64_t packets_delta;
+    uint64_t bytes_delta;
+    uint64_t loss_delta;
 
-    uint64_t packets_tx;
-    uint64_t bytes_tx;
-    uint64_t packets_rx;
-    uint64_t bytes_rx;
+    if(unlikely(stream->wrong_session)) {
+        bbl_stream_rx_wrong_session(stream);
+    }
+
+    if(!stream->verified) {
+        if(stream->rx_first_seq) {
+            if(stream->session_traffic) {
+                if(session) {
+                    stream->verified = true;
+                    session->session_traffic.flows_verified++;
+                    g_ctx->stats.session_traffic_flows_verified++;
+                    if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
+                        LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                    }
+                }
+            } else {
+                stream->verified = true;
+                g_ctx->stats.stream_traffic_flows_verified++;
+                if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
+                    LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+                }
+            }
+        }
+        if(stream->verified) {
+            if(g_ctx->config.traffic_stop_verified) {
+                stream->stop = true;
+            }
+        } else {
+            return;
+        }
+    }
 
     /* Update rates. */
     bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
     bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
 
-    /* Update interface/session statistics for threaded stream. */
-    if(thread) {
-        /* Calculate TX packets/bytes since last sync. */
-        packets = stream->packets_tx;
-        packets_tx = packets - stream->last_sync_packets_tx;
-        bytes_tx = packets_tx * stream->tx_len;
-        stream->last_sync_packets_tx = packets;
-        bbl_stream_tx_stats(stream, packets_tx, bytes_tx);
-        /* Calculate RX packets/bytes since last sync. */
-        packets = stream->packets_rx;
-        packets_rx = packets - stream->last_sync_packets_rx;
-        bytes_rx = packets_rx * stream->rx_len;
-        stream->last_sync_packets_rx = packets;
-        bbl_stream_rx_stats(stream, packets_tx, bytes_tx);
-    }
+    /* Calculate TX packets/bytes since last sync. */
+    packets = stream->packets_tx;
+    packets_delta = packets - stream->last_sync_packets_tx;
+    bytes_delta = packets_delta * stream->tx_len;
+    stream->last_sync_packets_tx = packets;
+    bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
+    /* Calculate RX packets/bytes since last sync. */
+    packets = stream->packets_rx;
+    packets_delta = packets - stream->last_sync_packets_rx;
+    bytes_delta = packets_delta * stream->rx_len;
+    stream->last_sync_packets_rx = packets;
+    /* Calculate RX loss since last sync. */
+    packets = stream->loss;
+    loss_delta = packets - stream->last_sync_loss;
+    stream->last_sync_loss = packets;
+    bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
+}
+
+
+void
+bbl_stream_ctrl_job(timer_s *timer) {
+    bbl_stream_s *stream = timer->data;
+    bbl_stream_ctrl(stream);
 }
 
 void
@@ -1123,9 +1316,6 @@ bbl_stream_tx_job(timer_s *timer)
         stream->flow_seq++;
         packets--;
         send++;
-    }
-    if(!thread) {
-        bbl_stream_tx_stats(stream, send, send*stream->tx_len);
     }
 }
 
@@ -1207,12 +1397,12 @@ bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session) {
             timer_sec = timer_nsec / 1000000000;
             timer_nsec = timer_nsec % 1000000000;
 
-            if(config->direction & STREAM_DIRECTION_UP) {
+            if(config->direction & BBL_DIRECTION_UP) {
                 stream = calloc(1, sizeof(bbl_stream_s));
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
-                stream->direction = STREAM_DIRECTION_UP;
+                stream->direction = BBL_DIRECTION_UP;
                 stream->interface = session->access_interface->interface;
                 stream->access_interface = session->access_interface;
                 stream->session = session;
@@ -1233,12 +1423,12 @@ bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session) {
                 LOG(DEBUG, "Traffic stream %s added to %s (upstream) with %lf PPS (timer: %lu sec %lu nsec)\n", 
                     interface->name, config->name, config->pps, timer_sec, timer_nsec);
             }
-            if(config->direction & STREAM_DIRECTION_DOWN) {
+            if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
-                stream->direction = STREAM_DIRECTION_DOWN;
+                stream->direction = BBL_DIRECTION_DOWN;
                 stream->interface = interface;
                 stream->network_interface = network_interface;
                 stream->a10nsp_interface = a10nsp_interface;
@@ -1300,12 +1490,12 @@ bbl_stream_raw_add(bbl_ctx_s *ctx) {
             timer_sec = timer_nsec / 1000000000;
             timer_nsec = timer_nsec % 1000000000;
 
-            if(config->direction & STREAM_DIRECTION_DOWN) {
+            if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
-                stream->direction = STREAM_DIRECTION_DOWN;
+                stream->direction = BBL_DIRECTION_DOWN;
                 stream->interface = network_interface->interface;
                 stream->network_interface = network_interface;
                 stream->tx_interval = timer_sec * 1e9 + timer_nsec;
@@ -1339,7 +1529,7 @@ bbl_stream_json(bbl_stream_s *stream)
 
     root = json_pack("{ss* ss si si si si si si si si si si si si si si si si si si sf sf sf}",
         "name", stream->config->name,
-        "direction", stream->direction == STREAM_DIRECTION_UP ? "upstream" : "downstream",
+        "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
         "flow-id", stream->flow_id,
         "rx-first-seq", stream->rx_first_seq,
         "rx-last-seq", stream->rx_last_seq,
@@ -1381,11 +1571,19 @@ bbl_stream_json(bbl_stream_s *stream)
     return root;
 }
 
-bool
-bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_t tos) {
+bbl_stream_s *
+bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos)
+{
     bbl_stream_s *stream;
     bbl_mpls_t *mpls;
     void **search = NULL;
+
+    uint64_t loss = 0;
+
+    eth->bbl = true;
+    if(bbl->type == BBL_TYPE_MULTICAST) {
+        return NULL;
+    }
 
     search = dict_search(g_ctx->stream_flow_dict, &bbl->flow_id);
     if(search) {
@@ -1393,8 +1591,8 @@ bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_
         if(stream->rx_first_seq) {
             /* Stream already verified */
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
-                *loss = bbl->flow_seq - (stream->rx_last_seq +1);
-                stream->loss += *loss;
+                loss = bbl->flow_seq - (stream->rx_last_seq +1);
+                stream->loss += loss;
                 LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
                     bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
             }
@@ -1422,30 +1620,40 @@ bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_
                 /* Check if expected outer label is received ... */
                 if(stream->rx_mpls1_label != stream->config->rx_mpls1_label) {
                     /* Wrong outer label received! */
-                    return false;
+                    return stream;
                 }
                 if(stream->config->rx_mpls2_label) {
                     /* Check if expected inner label is received ... */
                     if(stream->rx_mpls2_label != stream->config->rx_mpls2_label) {
                         /* Wrong inner label received! */
-                        return false;
+                        return stream;
                     }
                 }
             }
+            if(stream->session_traffic) {
+                if(bbl->type != BBL_TYPE_UNICAST_SESSION ||
+                   bbl->sub_type != stream->type || 
+                   bbl->direction != stream->direction) {
+                    return stream;
+                }
+                if(stream->session) {
+                    if(bbl->outer_vlan_id != stream->session->vlan_key.outer_vlan_id ||
+                       bbl->inner_vlan_id != stream->session->vlan_key.inner_vlan_id ||
+                       bbl->session_id != stream->session->session_id) {
+                        stream->wrong_session++;
+                        return stream;
+                    }
+                } else {
+                    return stream;
+                }
+            }
             stream->rx_first_seq = bbl->flow_seq;
-            g_ctx->stats.stream_traffic_flows_verified++;
-            if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
-                LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
-            }
-            if(g_ctx->config.traffic_stop_verified) {
-                stream->stop = true;
-            }
         }
         stream->packets_rx++;
         stream->rx_last_seq = bbl->flow_seq;
         bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
+        return stream;
     } else {
-        return false;
+        return NULL;
     }
-    return true;
 }

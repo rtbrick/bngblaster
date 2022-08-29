@@ -63,6 +63,51 @@ redirect(io_thread_s *thread, io_handle_s *io)
     return IO_REDIRECT;
 }
 
+io_result_t
+io_thread_network_rx_bbl(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth) 
+{
+    bbl_ipv4_t *ipv4 = NULL;
+    bbl_ipv6_t *ipv6 = NULL;
+    bbl_udp_t *udp = NULL;
+    bbl_bbl_t *bbl = NULL;
+
+    switch(eth->type) {
+        case ETH_TYPE_IPV4:
+            ipv4 = (bbl_ipv4_t*)eth->next;
+        case ETH_TYPE_IPV6:
+            ipv6 = (bbl_ipv6_t*)eth->next;
+    }
+}
+
+io_result_t
+io_thread_access_rx_bbl(bbl_access_interface_s *interface, bbl_ethernet_header_t *eth) 
+{
+
+}
+
+io_result_t
+io_thread_a10nsp_rx_bbl(bbl_a10nsp_interface_s *interface, bbl_ethernet_header_t *eth) 
+{
+
+}
+
+io_result_t
+io_thread_rx_bbl(bbl_interface_s *interface, bbl_ethernet_header_t *eth) 
+{
+    bbl_network_interface_s *network_interface = interface->network;
+    while(network_interface) {
+        if(network_interface->vlan == eth->vlan_outer) {
+            return io_thread_network_rx_bbl(network_interface, eth);
+        }
+    }
+    if(interface->access) {
+        return io_thread_access_rx_bbl(interface->access, eth);
+    } else if(interface->a10nsp) {
+        return io_thread_a10nsp_rx_bbl(interface->a10nsp, eth);
+    }
+    return IO_REDIRECT;
+}
+
 /** 
  * This function processes all received packets
  * from RX threads. 
@@ -242,7 +287,10 @@ io_thread_init(io_handle_s *io)
     bbl_link_config_s *config = interface->config;
     io_thread_s *thread;
 
-    uint16_t slots = config->io_slots;
+    uint16_t slots = config->io_slots_tx;
+    if(io->direction == IO_INGRESS) {
+        slots = config->io_slots_rx;
+    }
 
     /* Add thread */
     thread = calloc(1, sizeof(io_thread_s));
@@ -253,10 +301,10 @@ io_thread_init(io_handle_s *io)
     io->fanout_id = interface->ifindex;
     io->fanout_type = PACKET_FANOUT_HASH;
 
+    /* Allocate thread scratchpad memory */
+    thread->sp = malloc(SCRATCHPAD_LEN);
+
     /* Init thread TXQ */
-    if(io->direction == IO_INGRESS && slots < (UINT16_MAX/2)) {
-        slots = slots*2;
-    }
     thread->txq = calloc(1, sizeof(bbl_txq_s));
     if(!(thread->txq && bbl_txq_init(thread->txq, slots))) {
         return false;
@@ -271,12 +319,12 @@ io_thread_init(io_handle_s *io)
     /* Init thread timer root */
     timer_init_root(&thread->timer.root);
 
-    /* Default run function which might be overwritten. */
+    /* Default run function which might be overwritten */
     thread->run_fn = io_thread_timer_loop;
 
-    /* Add thread main loop timers jobs */
+    /* Add thread main loop timers/jobs */
     if(io->direction == IO_INGRESS && !interface->rx_job) {
-        /** Start job reading from RX thread TXQ. */
+        /** Start job reading from RX thread TXQ */
         timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 
                            0, config->rx_interval, 
                            io, &io_thread_main_rx_job);
@@ -313,5 +361,6 @@ io_thread_stop_all()
     thread = g_ctx->io_threads;
     while(thread) {
         pthread_join(thread->thread, NULL);
+        thread = thread->next;
     }
 }

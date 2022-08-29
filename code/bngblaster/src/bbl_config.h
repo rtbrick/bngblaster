@@ -125,7 +125,8 @@ typedef struct bbl_link_config_
     uint8_t mac[ETH_ADDR_LEN];
     io_mode_t io_mode;
 
-    uint16_t io_slots;
+    uint16_t io_slots_tx;
+    uint16_t io_slots_rx;
     uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
     bool qdisc_bypass;

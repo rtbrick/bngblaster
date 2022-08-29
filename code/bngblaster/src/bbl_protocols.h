@@ -32,6 +32,7 @@
 #define BBL_SUB_TYPE_IPV6PD             3
 #define BBL_DIRECTION_UP                1
 #define BBL_DIRECTION_DOWN              2
+#define BBL_DIRECTION_BOTH              3
 
 #define BROADBAND_FORUM_VENDOR_ID       3561
 
@@ -499,6 +500,7 @@ typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; /* destination MAC address */
     uint8_t  *src; /* source MAC address */
 
+    bool      bbl;
     bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
     uint16_t  vlan_outer; /* outer VLAN identifier */

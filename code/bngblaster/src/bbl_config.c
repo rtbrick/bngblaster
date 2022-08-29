@@ -343,9 +343,19 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     }
     value = json_object_get(link, "io-slots");
     if (json_is_number(value)) {
-        link_config->io_slots = json_number_value(value);
+        link_config->io_slots_tx = json_number_value(value);
+        link_config->io_slots_rx = json_number_value(value);
     } else {
-        link_config->io_slots = g_ctx->config.io_slots;
+        link_config->io_slots_tx = g_ctx->config.io_slots;
+        link_config->io_slots_rx = g_ctx->config.io_slots;
+    }
+    value = json_object_get(link, "io-slots-tx");
+    if (json_is_number(value)) {
+        link_config->io_slots_tx = json_number_value(value);
+    }
+    value = json_object_get(link, "io-slots-rx");
+    if (json_is_number(value)) {
+        link_config->io_slots_rx = json_number_value(value);
     }
     value = json_object_get(link, "io-stream-max-ppi");
     if (json_is_number(value)) {
@@ -1217,11 +1227,11 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 
     if (json_unpack(stream, "{s:s}", "type", &s) == 0) {
         if (strcmp(s, "ipv4") == 0) {
-            stream_config->type = STREAM_IPV4;
+            stream_config->type = BBL_SUB_TYPE_IPV4;
         } else if (strcmp(s, "ipv6") == 0) {
-            stream_config->type = STREAM_IPV6;
+            stream_config->type = BBL_SUB_TYPE_IPV6;
         } else if (strcmp(s, "ipv6pd") == 0) {
-            stream_config->type = STREAM_IPV6PD;
+            stream_config->type = BBL_SUB_TYPE_IPV6PD;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for stream->type\n");
             return false;
@@ -1233,17 +1243,17 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 
     if (json_unpack(stream, "{s:s}", "direction", &s) == 0) {
         if (strcmp(s, "upstream") == 0) {
-            stream_config->direction = STREAM_DIRECTION_UP;
+            stream_config->direction = BBL_DIRECTION_UP;
         } else if (strcmp(s, "downstream") == 0) {
-            stream_config->direction = STREAM_DIRECTION_DOWN;
+            stream_config->direction = BBL_DIRECTION_DOWN;
         } else if (strcmp(s, "both") == 0) {
-            stream_config->direction = STREAM_DIRECTION_BOTH;
+            stream_config->direction = BBL_DIRECTION_BOTH;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for stream->direction\n");
             return false;
         }
     } else {
-        stream_config->direction = STREAM_DIRECTION_BOTH;
+        stream_config->direction = BBL_DIRECTION_BOTH;
         return false;
     }
 
@@ -1446,23 +1456,23 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     /* Validate configuration */
     if (stream_config->stream_group_id == 0) {
         /* RAW stream */
-        if (stream_config->type == STREAM_IPV4) {
+        if (stream_config->type == BBL_SUB_TYPE_IPV4) {
             if (!stream_config->ipv4_destination_address) {
                 fprintf(stderr, "JSON config error: Missing destination-ipv4-address for RAW stream %s\n", stream_config->name);
                 return false;
             }
         }
-        if (stream_config->type == STREAM_IPV6) {
+        if (stream_config->type == BBL_SUB_TYPE_IPV6) {
             if (!*(uint64_t*)stream_config->ipv6_destination_address) {
                 fprintf(stderr, "JSON config error: Missing destination-ipv6-address for RAW stream %s\n", stream_config->name);
                 return false;
             }
         }
-        if (stream_config->type == STREAM_IPV6PD) {
+        if (stream_config->type == BBL_SUB_TYPE_IPV6PD) {
             fprintf(stderr, "JSON config error: Invalid type for RAW stream %s\n", stream_config->name);
             return false;
         }
-        if (stream_config->direction != STREAM_DIRECTION_DOWN) {
+        if (stream_config->direction != BBL_DIRECTION_DOWN) {
             fprintf(stderr, "JSON config error: Invalid direction for RAW stream %s\n", stream_config->name);
             return false;
         }

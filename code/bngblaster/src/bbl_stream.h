@@ -9,25 +9,12 @@
 #ifndef __BBL_STREAM_H__
 #define __BBL_STREAM_H__
 
-typedef enum {
-    STREAM_IPV4,    /* From/to framed IPv4 address */
-    STREAM_IPV6,    /* From/to framed IPv6 address */
-    STREAM_IPV6PD,  /* From/to delegated IPv6 address */
-} __attribute__ ((__packed__)) bbl_stream_type_t;
-
-typedef enum {
-    STREAM_DIRECTION_UP     = 1,
-    STREAM_DIRECTION_DOWN   = 2,
-    STREAM_DIRECTION_BOTH   = 3
-} __attribute__ ((__packed__)) bbl_stream_direction_t;
-
 typedef struct bbl_stream_config_
 {
     char *name;
-    uint16_t stream_group_id;
 
-    bbl_stream_type_t type;
-    bbl_stream_direction_t direction;
+    uint8_t type;
+    uint8_t direction;
 
     double pps;
     uint32_t max_packets;
@@ -80,7 +67,9 @@ typedef struct bbl_stream_
     struct timer_ *timer_tx;
 
     bbl_stream_config_s *config;
-    bbl_stream_direction_t direction;
+
+    uint8_t type;
+    uint8_t direction;
 
     bbl_session_s *session;
     bbl_stream_s *session_next; /* Next stream of same session */
@@ -100,6 +89,8 @@ typedef struct bbl_stream_
     uint64_t rx_last_seq;
     uint64_t tx_interval; /* TX interval in nsec */
 
+    bool session_traffic;;
+    bool verified;
     bool wait;
     bool stop;
 
@@ -112,6 +103,8 @@ typedef struct bbl_stream_
 
     uint64_t packets_rx;
     uint64_t loss;
+    uint64_t wrong_session;
+
     uint64_t min_delay_ns;
     uint64_t max_delay_ns;
 
@@ -134,16 +127,14 @@ typedef struct bbl_stream_
     struct timer_ *timer_ctrl;
     uint64_t last_sync_packets_rx;
     uint64_t last_sync_packets_tx;
+    uint64_t last_sync_loss;
+    uint64_t last_sync_wrong_session;
     bbl_rate_s rate_packets_rx;
     bbl_rate_s rate_packets_tx;
-
 } bbl_stream_s;
 
 void
 bbl_stream_tx_job(timer_s *timer);
-
-void
-bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp);
 
 bool
 bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session);
@@ -151,8 +142,11 @@ bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session);
 bool
 bbl_stream_raw_add();
 
+void
+bbl_stream_ctrl(bbl_stream_s *stream);
+
 bool
-bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint64_t *loss, uint8_t tos);
+bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos);
 
 json_t *
 bbl_stream_json(bbl_stream_s *stream);

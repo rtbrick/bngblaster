@@ -345,53 +345,16 @@ bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
 }
 
 static void
-bbl_a10nsp_ipv4_stream_handler(bbl_a10nsp_interface_s *interface,
-                               bbl_session_s *session,
-                               bbl_ethernet_header_t *eth,
-                               bbl_ipv4_t *ipv4) 
-{
-    bbl_udp_t *udp = (bbl_udp_t*)ipv4->next;
-    bbl_bbl_t *bbl = (bbl_bbl_t*)udp->next;
-
-    uint64_t loss = 0;
-    if(bbl_stream_rx(eth, bbl, &loss, ipv4->tos)) {
-        interface->stats.stream_rx++;
-        interface->stats.stream_loss += loss;
-    } else {
-        if(bbl->flow_id == session->access_ipv4_tx_flow_id) {
-            interface->stats.session_ipv4_rx++;
-            session->stats.network_ipv4_rx++;
-            if(!session->network_ipv4_rx_first_seq) {
-                session->network_ipv4_rx_first_seq = bbl->flow_seq;
-                session->session_traffic_flows_verified++;
-                g_ctx->stats.session_traffic_flows_verified++;
-                if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
-                    LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
-                }
-            } else {
-                if((session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
-                    loss = bbl->flow_seq - (session->network_ipv4_rx_last_seq +1);
-                    session->stats.network_ipv4_loss += loss;
-                    interface->stats.session_ipv4_loss += loss;
-                    LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                        session->session_id, bbl->flow_id, bbl->flow_seq, session->network_ipv4_rx_last_seq);
-                }
-            }
-            session->network_ipv4_rx_last_seq = bbl->flow_seq;
-        }
-    }
-}
-
-static void
 bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
                           bbl_session_s *session,
                           bbl_ethernet_header_t *eth)
 {
+    bbl_stream_s *stream;
     bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
 
     bbl_ipv4_t  *ipv4;
     bbl_udp_t   *udp;
-
+        
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
             bbl_a10nsp_lcp_handler(interface, session, eth);
@@ -410,7 +373,10 @@ bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
-                    bbl_a10nsp_ipv4_stream_handler(interface, session, eth, ipv4);
+                    stream = bbl_stream_rx(eth, (bbl_bbl_t*)udp->next, ipv4->tos);
+                    if(stream && stream->a10nsp_interface == NULL) {
+                        stream->a10nsp_interface = interface;
+                    }
                 }
             }
             break;
@@ -503,6 +469,7 @@ bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
                         bbl_ethernet_header_t *eth)
 {
+    bbl_stream_s *stream;
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
     bbl_udp_t *udp;
 
@@ -517,7 +484,10 @@ bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
             if (udp->protocol == UDP_PROTOCOL_DHCP) {
                 bbl_a10nsp_dhcp_handler(interface, session, eth);
             } else if(udp->protocol == UDP_PROTOCOL_BBL) {
-                bbl_a10nsp_ipv4_stream_handler(interface, session, eth, ipv4);
+                stream = bbl_stream_rx(eth, (bbl_bbl_t*)udp->next, ipv4->tos);
+                if(stream && stream->a10nsp_interface == NULL) {
+                    stream->a10nsp_interface = interface;
+                }
             }
         break;    
     }

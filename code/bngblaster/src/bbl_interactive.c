@@ -602,14 +602,14 @@ bbl_stats_job(timer_s *timer)
                     rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
                     if(i >= stats_win_postion && i < 16+stats_win_postion) {
                         wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name,
-                                stream->direction == STREAM_DIRECTION_UP ? "up" : "down",
+                                stream->direction == BBL_DIRECTION_UP ? "up" : "down",
                                 stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, stream->loss);
                     } else if (i == 16+stats_win_postion) {   
                         wprintw(stats_win, "  ...\n");
                     }
                     i++;
 
-                    if(stream->direction == STREAM_DIRECTION_UP) {
+                    if(stream->direction == BBL_DIRECTION_UP) {
                         stream_sum_up_tx_pps += stream->rate_packets_tx.avg;
                         stream_sum_up_tx_kbps += tx_kbps;
                         stream_sum_up_rx_pps += stream->rate_packets_rx.avg;

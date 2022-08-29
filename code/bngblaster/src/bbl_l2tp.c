@@ -1004,64 +1004,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_se
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_t*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_BBL) {
-                    bbl = (bbl_bbl_t*)udp->next;
-                    interface->interface->io.ctrl = false;
-                    search = dict_search(g_ctx->stream_flow_dict, &bbl->flow_id);
-                    if(search) {
-                        stream = *search;
-                        if(stream->rx_first_seq) {
-                            /* Stream already verified */
-                            if((stream->rx_last_seq +1) < bbl->flow_seq) {
-                                loss = bbl->flow_seq - (stream->rx_last_seq +1);
-                                stream->loss += loss;
-                                interface->stats.stream_loss += loss;
-                                LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
-                                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
-                            }
-                        } else {
-                            /* Verify stream ... */
-                            stream->rx_len = eth->length;
-                            stream->rx_priority = ipv4->tos;
-                            stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
-                            stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
-                            stream->rx_first_seq = bbl->flow_seq;
-                            g_ctx->stats.stream_traffic_flows_verified++;
-                            if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
-                                LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
-                            }
-                            if(g_ctx->config.traffic_stop_verified) {
-                                stream->stop = true;
-                            }
-                        }
-                        stream->packets_rx++;
-                        stream->rx_last_seq = bbl->flow_seq;
-                        bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
-                    } else {
-                        if(l2tp_session->pppoe_session) {
-                            pppoe_session = l2tp_session->pppoe_session;
-                            if(bbl->flow_id == pppoe_session->access_ipv4_tx_flow_id) {
-                                interface->stats.session_ipv4_rx++;
-                                pppoe_session->stats.network_ipv4_rx++;
-                                if(!pppoe_session->network_ipv4_rx_first_seq) {
-                                    pppoe_session->network_ipv4_rx_first_seq = bbl->flow_seq;
-                                    pppoe_session->session_traffic_flows_verified++;
-                                    g_ctx->stats.session_traffic_flows_verified++;
-                                    if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
-                                        LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
-                                    }
-                                } else {
-                                    if((pppoe_session->network_ipv4_rx_last_seq +1) < bbl->flow_seq) {
-                                        loss = bbl->flow_seq - (pppoe_session->network_ipv4_rx_last_seq +1);
-                                        interface->stats.session_ipv4_loss += loss;
-                                        pppoe_session->stats.network_ipv4_loss += loss;
-                                        LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                            pppoe_session->session_id, bbl->flow_id, bbl->flow_seq, pppoe_session->network_ipv4_rx_last_seq);
-                                    }
-                                }
-                                pppoe_session->network_ipv4_rx_last_seq = bbl->flow_seq;
-                            }
-                        }
-                    }
+                    bbl_stream_rx(eth, (bbl_bbl_t*)udp->next, ipv4->tos);
                 }
             }
             break;

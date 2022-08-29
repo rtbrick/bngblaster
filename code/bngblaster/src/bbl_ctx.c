@@ -59,8 +59,7 @@ bbl_ctx_add()
     }
 
     /* Allocate scratchpad memory. */
-    g_ctx->sp_rx = malloc(SCRATCHPAD_LEN);
-    g_ctx->sp_tx = malloc(SCRATCHPAD_LEN);
+    g_ctx->sp = malloc(SCRATCHPAD_LEN);
 
     /* Initialize timer root. */
     timer_init_root(&g_ctx->timer_root);
