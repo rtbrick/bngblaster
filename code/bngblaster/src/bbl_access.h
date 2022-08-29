@@ -110,17 +110,28 @@ typedef struct bbl_access_interface_
     struct timer_ *rate_job;
 
     CIRCLEQ_ENTRY(bbl_access_interface_) access_interface_qnode;
-    CIRCLEQ_HEAD(session_tx_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
+    CIRCLEQ_HEAD(session_tx_access_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
 
 } bbl_access_interface_s;
 
 bool
 bbl_access_interfaces_add();
 
-void
-bbl_access_rx_established_ipoe(bbl_access_interface_s *interface, bbl_session_s *session, bbl_ethernet_header_t *eth);
+bbl_access_interface_s*
+bbl_access_interface_get(char *interface_name);
 
 void
-bbl_access_rx_established_pppoe(bbl_access_interface_s *interface, bbl_session_s *session, bbl_ethernet_header_t *eth);
+bbl_access_rx_established_ipoe(bbl_access_interface_s *interface, 
+                               bbl_session_s *session, 
+                               bbl_ethernet_header_t *eth);
+
+void
+bbl_access_rx_established_pppoe(bbl_access_interface_s *interface, 
+                                bbl_session_s *session, 
+                                bbl_ethernet_header_t *eth);
+
+void
+bbl_access_rx_handler(bbl_access_interface_s *interface, 
+                      bbl_ethernet_header_t *eth);
 
 #endif

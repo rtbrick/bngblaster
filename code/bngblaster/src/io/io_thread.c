@@ -63,51 +63,6 @@ redirect(io_thread_s *thread, io_handle_s *io)
     return IO_REDIRECT;
 }
 
-io_result_t
-io_thread_network_rx_bbl(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth) 
-{
-    bbl_ipv4_t *ipv4 = NULL;
-    bbl_ipv6_t *ipv6 = NULL;
-    bbl_udp_t *udp = NULL;
-    bbl_bbl_t *bbl = NULL;
-
-    switch(eth->type) {
-        case ETH_TYPE_IPV4:
-            ipv4 = (bbl_ipv4_t*)eth->next;
-        case ETH_TYPE_IPV6:
-            ipv6 = (bbl_ipv6_t*)eth->next;
-    }
-}
-
-io_result_t
-io_thread_access_rx_bbl(bbl_access_interface_s *interface, bbl_ethernet_header_t *eth) 
-{
-
-}
-
-io_result_t
-io_thread_a10nsp_rx_bbl(bbl_a10nsp_interface_s *interface, bbl_ethernet_header_t *eth) 
-{
-
-}
-
-io_result_t
-io_thread_rx_bbl(bbl_interface_s *interface, bbl_ethernet_header_t *eth) 
-{
-    bbl_network_interface_s *network_interface = interface->network;
-    while(network_interface) {
-        if(network_interface->vlan == eth->vlan_outer) {
-            return io_thread_network_rx_bbl(network_interface, eth);
-        }
-    }
-    if(interface->access) {
-        return io_thread_access_rx_bbl(interface->access, eth);
-    } else if(interface->a10nsp) {
-        return io_thread_a10nsp_rx_bbl(interface->a10nsp, eth);
-    }
-    return IO_REDIRECT;
-}
-
 /** 
  * This function processes all received packets
  * from RX threads. 
@@ -141,8 +96,9 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
                     eth->qinq = true;
                 }
             }
-            bbl_rx_handler(io->interface, eth);
-            return IO_SUCCESS;
+            if(bbl_rx_thread(io->interface, eth)) {
+                return IO_SUCCESS;
+            }
         }
     }
     /** Redirect to main thread. */

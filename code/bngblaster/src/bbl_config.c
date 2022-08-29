@@ -1982,7 +1982,7 @@ json_parse_config(json_t *root)
             g_ctx->config.session_traffic_ipv6_label = json_number_value(value);
         }
         if (json_unpack(section, "{s:s}", "ipv6-address", &s) == 0) {
-            if (!inet_pton(AF_INET6, s, &ctx->config.session_traffic_ipv6_address)) {
+            if (!inet_pton(AF_INET6, s, &g_ctx->config.session_traffic_ipv6_address)) {
                 fprintf(stderr, "JSON config error: Invalid value for session-traffic->ipv6-address\n");
                 return false;
             }

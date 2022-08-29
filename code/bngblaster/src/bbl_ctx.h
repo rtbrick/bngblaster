@@ -142,7 +142,7 @@ typedef struct bbl_ctx_
         uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
         bool qdisc_bypass;
-        bbl_io_mode_t io_mode;
+        io_mode_t io_mode;
 
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */

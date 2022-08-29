@@ -87,7 +87,6 @@ bbl_init_stats_win()
 void
 bbl_read_key_job(timer_s *timer)
 {
-    bbl_ctx_s *ctx = timer->data;
     int ch;
 
     ch = getch();

@@ -108,11 +108,8 @@ bbl_ctx_del() {
         free(p);
     }
 
-    if(g_ctx->sp_rx) {
-        free(g_ctx->sp_rx);
-    }
-    if(g_ctx->sp_tx) {
-        free(g_ctx->sp_tx);
+    if(g_ctx->sp) {
+        free(g_ctx->sp);
     }
 
     /* Free session memory. */

@@ -307,31 +307,6 @@ bbl_session_free(bbl_session_s *session)
         free(session->connections_status_message);
         session->connections_status_message = NULL;
     }
-    
-    if(session->access_ipv4_tx_packet_template) {
-        free(session->access_ipv4_tx_packet_template);
-        session->access_ipv4_tx_packet_template = NULL;
-    }
-    if(session->network_ipv4_tx_packet_template) {
-        free(session->network_ipv4_tx_packet_template);
-        session->network_ipv4_tx_packet_template = NULL;
-    }
-    if(session->access_ipv6_tx_packet_template) {
-        free(session->access_ipv6_tx_packet_template);
-        session->access_ipv6_tx_packet_template = NULL;
-    }
-    if(session->network_ipv6_tx_packet_template) {
-        free(session->network_ipv6_tx_packet_template);
-        session->network_ipv6_tx_packet_template = NULL;
-    }
-    if(session->access_ipv6pd_tx_packet_template) {
-        free(session->access_ipv6pd_tx_packet_template);
-        session->access_ipv6pd_tx_packet_template = NULL;
-    }
-    if(session->network_ipv6pd_tx_packet_template) {
-        free(session->network_ipv6pd_tx_packet_template);
-        session->network_ipv6pd_tx_packet_template = NULL;
-    }
 }
 
 /**
@@ -398,10 +373,10 @@ bbl_session_reset(bbl_session_s *session) {
     session->l2tp_session = NULL;
 
     /* Session traffic */
-    if(g_ctx->stats.session_traffic_flows >= session->session_traffic_flows) {
-        g_ctx->stats.session_traffic_flows -= session->session_traffic_flows;
+    if(g_ctx->stats.session_traffic_flows >= session->session_traffic.flows) {
+        g_ctx->stats.session_traffic_flows -= session->session_traffic.flows;
     }
-    session->session_traffic_flows = 0;
+    session->session_traffic.flows = 0;
 
     if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic_flows_verified) {
         g_ctx->stats.session_traffic_flows_verified -= session->session_traffic_flows_verified;
@@ -694,7 +669,7 @@ update_strings(char **target, const char *source, uint32_t *i, bbl_access_config
 }
 
 bool
-bbl_sessions_init(bbl_ctx_s *ctx)
+bbl_sessions_init()
 {
     bbl_session_s *session;
     bbl_access_config_s *access_config;
@@ -893,7 +868,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
             }
         }
         session->access_interface = access_config->access_interface;
-        session->network_interface = bbl_get_network_interface(ctx, access_config->network_interface);
+        session->network_interface = bbl_network_interface_get(access_config->network_interface);
         session->session_state = BBL_IDLE;
         if(g_ctx->config.sessions_autostart) {
             CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
@@ -914,8 +889,13 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 *result.datum_ptr = session;
             }
         }
+
+        if(g_ctx->config.session_traffic_ipv4_pps) {
+
+        }
+
         if(access_config->stream_group_id) {
-            if(!bbl_stream_add(g_ctx, access_config, session)) {
+            if(!bbl_stream_add(access_config, session)) {
                 LOG_NOARG(ERROR, "Failed to create session traffic stream!\n");
                 return false;
             }

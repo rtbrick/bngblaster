@@ -12,6 +12,7 @@
 typedef struct bbl_stream_config_
 {
     char *name;
+    uint16_t stream_group_id;
 
     uint8_t type;
     uint8_t direction;
@@ -73,7 +74,6 @@ typedef struct bbl_stream_
 
     bbl_session_s *session;
     bbl_stream_s *session_next; /* Next stream of same session */
-    bbl_stream_s *thread_next; /* Next stream of same thread */
 
     io_thread_s *thread;
 
@@ -89,7 +89,7 @@ typedef struct bbl_stream_
     uint64_t rx_last_seq;
     uint64_t tx_interval; /* TX interval in nsec */
 
-    bool session_traffic;;
+    bool session_traffic;
     bool verified;
     bool wait;
     bool stop;
@@ -145,8 +145,8 @@ bbl_stream_raw_add();
 void
 bbl_stream_ctrl(bbl_stream_s *stream);
 
-bool
-bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos);
+bbl_stream_s *
+bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session);
 
 json_t *
 bbl_stream_json(bbl_stream_s *stream);

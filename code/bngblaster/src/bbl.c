@@ -254,8 +254,6 @@ bbl_print_usage (void)
 void
 bbl_smear_job (timer_s *timer)
 {
-    bbl_ctx_s *ctx = timer->data;
-
     /* LCP Keepalive Interval */
     if(g_ctx->config.lcp_keepalive_interval) {
         timer_smear_bucket(&ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 0);
@@ -585,23 +583,24 @@ main(int argc, char *argv[])
     bbl_tcp_init();
 
     /* Init BGP sessions. */
-    if(!bgp_init(g_ctx)) {
+    if(!bgp_init()) {
         fprintf(stderr, "Error: Failed to init BGP\n");
         goto CLEANUP;
     }
 
     /* Start curses. */
     if (interactive) {
-        bbl_init_curses(g_ctx);
+        bbl_init_curses();
     }
 
     /* Add traffic. */
-    if(!bbl_add_multicast_packets(g_ctx)) {
+    if(!bbl_add_multicast_packets()) {
         if (interactive) endwin();
         fprintf(stderr, "Error: Failed to add multicast traffic\n");
         goto CLEANUP;
     }
-    if(!bbl_stream_raw_add(g_ctx)) {
+
+    if(!bbl_stream_raw_add()) {
         if (interactive) endwin();
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
         goto CLEANUP;
@@ -611,9 +610,9 @@ main(int argc, char *argv[])
     pcapng_init(g_ctx);
 
     /* Setup test. */
-    if(g_ctx->interfaces.access_if_count) {
-        if(!bbl_sessions_init(g_ctx)) {
-            if (interactive) endwin();
+    if(bbl_access_interface_get(NULL)) {
+        if(!bbl_sessions_init()) {
+            if(interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
             goto CLEANUP;
         }
@@ -645,7 +644,7 @@ main(int argc, char *argv[])
     }
 
     /* Start threads. */
-    bbl_stream_start_threads(g_ctx);
+    io_thread_start_all(g_ctx);
 
     /* Start event loop. */
     log_open();
@@ -672,7 +671,7 @@ main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_stop);
 
     /* Stop threads. */
-    bbl_stream_stop_threads();
+    io_thread_stop_all();
 
     /* Stop curses. Do this before the final reports. */
     if(g_interactive) {

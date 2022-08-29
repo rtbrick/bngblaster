@@ -11,8 +11,10 @@
 
 #include "../bbl.h"
 #include "../bbl_pcap.h"
+#include "../bbl_stream.h"
 #include "../bbl_rx.h"
 #include "../bbl_tx.h"
+#include "../bbl_txq.h"
 
 #include "io_def.h"
 #include "io_socket.h"

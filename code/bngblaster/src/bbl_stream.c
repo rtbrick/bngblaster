@@ -1197,7 +1197,6 @@ void
 bbl_stream_ctrl(bbl_stream_s *stream)
 {
     bbl_session_s *session = stream->session;
-    io_thread_s *thread = stream->thread;
 
     uint64_t packets;
     uint64_t packets_delta;
@@ -1257,7 +1256,6 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     stream->last_sync_loss = packets;
     bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
 }
-
 
 void
 bbl_stream_ctrl_job(timer_s *timer) {
@@ -1326,18 +1324,19 @@ bbl_stream_add_jobs(bbl_stream_s *stream, time_t timer_sec, long timer_nsec)
     
     io_handle_s *io = interface->io.tx;
     io_thread_s *thread = io->thread;
-    io_thread_s *thread_iter;
 
     if(thread) {
-        thread_iter = thread;
-        while(thread_iter) {
-            if(thread_iter->pps_reserved < thread->pps_reserved) {
-                thread = thread_iter;
+        while(io && io->thread) {
+            if(io->thread->pps_reserved < thread->pps_reserved) {
+                thread = io->thread;
             }
+            io = io->next;
         }
+        thread->pps_reserved += stream->config->pps;
+
+        stream->thread = thread;
         timer_add_periodic(&thread->timer.root, &stream->timer_tx, stream->config->name, 
                            timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-        thread->pps_reserved += stream->config->pps;
     } else {
         timer_add_periodic(&g_ctx->timer_root, &stream->timer_tx, stream->config->name, 
                            timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
@@ -1463,7 +1462,7 @@ bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session) {
 }
 
 bool
-bbl_stream_raw_add(bbl_ctx_s *ctx) {
+bbl_stream_raw_add() {
 
     bbl_stream_config_s *config;
     bbl_stream_s *stream;
@@ -1572,16 +1571,16 @@ bbl_stream_json(bbl_stream_s *stream)
 }
 
 bbl_stream_s *
-bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos)
+bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session)
 {
+    bbl_bbl_t *bbl = eth->bbl;
     bbl_stream_s *stream;
     bbl_mpls_t *mpls;
     void **search = NULL;
 
     uint64_t loss = 0;
 
-    eth->bbl = true;
-    if(bbl->type == BBL_TYPE_MULTICAST) {
+    if(!(bbl && bbl->type == BBL_TYPE_UNICAST_SESSION)) {
         return NULL;
     }
 
@@ -1599,7 +1598,7 @@ bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos)
         } else {
             /* Verify stream ... */
             stream->rx_len = eth->length;
-            stream->rx_priority = tos;
+            stream->rx_priority = eth->tos;
             stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
             stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
             mpls = eth->mpls;
@@ -1620,31 +1619,26 @@ bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_bbl_t *bbl, uint8_t tos)
                 /* Check if expected outer label is received ... */
                 if(stream->rx_mpls1_label != stream->config->rx_mpls1_label) {
                     /* Wrong outer label received! */
-                    return stream;
+                    return NULL;
                 }
                 if(stream->config->rx_mpls2_label) {
                     /* Check if expected inner label is received ... */
                     if(stream->rx_mpls2_label != stream->config->rx_mpls2_label) {
                         /* Wrong inner label received! */
-                        return stream;
+                        return NULL;
                     }
                 }
             }
-            if(stream->session_traffic) {
-                if(bbl->type != BBL_TYPE_UNICAST_SESSION ||
-                   bbl->sub_type != stream->type || 
-                   bbl->direction != stream->direction) {
-                    return stream;
-                }
-                if(stream->session) {
-                    if(bbl->outer_vlan_id != stream->session->vlan_key.outer_vlan_id ||
-                       bbl->inner_vlan_id != stream->session->vlan_key.inner_vlan_id ||
-                       bbl->session_id != stream->session->session_id) {
-                        stream->wrong_session++;
-                        return stream;
-                    }
-                } else {
-                    return stream;
+            if(bbl->sub_type != stream->type || 
+                bbl->direction != stream->direction) {
+                return NULL;
+            }
+            if(session && stream->session_traffic) {
+                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id ||
+                   bbl->session_id != session->session_id) {
+                    stream->wrong_session++;
+                    return NULL;
                 }
             }
             stream->rx_first_seq = bbl->flow_seq;

@@ -384,7 +384,7 @@ bbl_session_traffic_add_ipv6(bbl_session_s *session, bool ipv6_pd)
     if(!network_if) {
         return false;
     }
-    if(ipv6_addr_not_zero(&ctx->config.session_traffic_ipv6_address)) {
+    if(ipv6_addr_not_zero(&g_ctx->config.session_traffic_ipv6_address)) {
         network_ip = g_ctx->config.session_traffic_ipv6_address;
     } else if(ipv6_addr_not_zero(&network_if->ip6.address)) {
         network_ip = network_if->ip6.address;

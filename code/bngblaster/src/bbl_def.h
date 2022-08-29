@@ -174,6 +174,7 @@ typedef enum {
 } __attribute__ ((__packed__)) dhcp_state_t;
 
 typedef struct bbl_ctx_ bbl_ctx_s;
+typedef struct bbl_txq_ bbl_txq_s;
 typedef struct bbl_lag_ bbl_lag_s;
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_access_interface_ bbl_access_interface_s;

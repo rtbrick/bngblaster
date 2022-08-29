@@ -99,7 +99,6 @@ bbl_a10nsp_interface_s*
 bbl_a10nsp_interface_get(char *interface_name)
 {
     struct bbl_interface_ *interface;
-    bbl_network_interface_s *network_interface;
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         if(interface_name) {
@@ -351,9 +350,6 @@ bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
 {
     bbl_stream_s *stream;
     bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
-
-    bbl_ipv4_t  *ipv4;
-    bbl_udp_t   *udp;
         
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
@@ -367,18 +363,6 @@ bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
             break;
         case PROTOCOL_IP6CP:
             bbl_a10nsp_ip6cp_handler(interface, session, eth);
-            break;
-        case PROTOCOL_IPV4:
-            ipv4 = (bbl_ipv4_t*)pppoes->next;
-            if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
-                udp = (bbl_udp_t*)ipv4->next;
-                if(udp->protocol == UDP_PROTOCOL_BBL) {
-                    stream = bbl_stream_rx(eth, (bbl_bbl_t*)udp->next, ipv4->tos);
-                    if(stream && stream->a10nsp_interface == NULL) {
-                        stream->a10nsp_interface = interface;
-                    }
-                }
-            }
             break;
         default:
             break;
@@ -473,23 +457,15 @@ bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
     bbl_udp_t *udp;
 
-    if(ipv4->offset & ~IPV4_DF) {
-        /* Reassembling of fragmented IPv4 packets is currently not supported. */
-         return;
-    }
-
     switch(ipv4->protocol) {
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_t*)ipv4->next;
-            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+            if(udp->protocol == UDP_PROTOCOL_DHCP) {
                 bbl_a10nsp_dhcp_handler(interface, session, eth);
-            } else if(udp->protocol == UDP_PROTOCOL_BBL) {
-                stream = bbl_stream_rx(eth, (bbl_bbl_t*)udp->next, ipv4->tos);
-                if(stream && stream->a10nsp_interface == NULL) {
-                    stream->a10nsp_interface = interface;
-                }
             }
-        break;    
+            break;
+        default:
+            break;
     }
 }
 

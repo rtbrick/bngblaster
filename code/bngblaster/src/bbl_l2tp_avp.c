@@ -635,10 +635,8 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
 }
 
 bool
-bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel) {
-
-    bbl_ctx_s *ctx = l2tp_tunnel->interface->ctx;
-
+bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
     bbl_l2tp_avp_t avp = {0};

@@ -123,7 +123,7 @@ typedef struct bbl_network_interface_
     struct timer_ *rate_job;
 
     CIRCLEQ_ENTRY(bbl_network_interface_) network_interface_qnode;
-    CIRCLEQ_HEAD(session_tx_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
+    CIRCLEQ_HEAD(session_tx_network_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
     CIRCLEQ_HEAD(l2tp_tx_, bbl_l2tp_queue_ ) l2tp_tx_qhead; /* list of messages that want to transmit */
 
 } bbl_network_interface_s;
@@ -133,5 +133,9 @@ bbl_network_interfaces_add();
 
 bbl_network_interface_s*
 bbl_network_interface_get(char *interface_name);
+
+void
+bbl_network_rx_handler(bbl_network_interface_s *interface, 
+                       bbl_ethernet_header_t *eth);
 
 #endif

@@ -1000,13 +1000,6 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_se
             break;
         case PROTOCOL_IPV4:
             l2tp_session->stats.data_ipv4_rx++;
-            ipv4 = (bbl_ipv4_t*)l2tp->next;
-            if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
-                udp = (bbl_udp_t*)ipv4->next;
-                if(udp->protocol == UDP_PROTOCOL_BBL) {
-                    bbl_stream_rx(eth, (bbl_bbl_t*)udp->next, ipv4->tos);
-                }
-            }
             break;
         default:
             break;

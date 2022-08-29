@@ -493,6 +493,23 @@ typedef struct bbl_isis_t {
     uint16_t pdu_len;
 } bbl_isis_t;
 
+typedef struct bbl_bbl_ {
+    uint16_t     padding;
+    uint8_t      type;
+    uint8_t      sub_type;
+    uint8_t      direction;
+    uint8_t      tos;
+    uint32_t     session_id;
+    uint32_t     ifindex;
+    uint16_t     outer_vlan_id;
+    uint16_t     inner_vlan_id;
+    uint32_t     mc_source;
+    uint32_t     mc_group;
+    uint64_t     flow_id;
+    uint64_t     flow_seq;
+    struct timespec timestamp;
+} bbl_bbl_t;
+
 /*
  * Ethernet Header Structure
  */
@@ -500,7 +517,8 @@ typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; /* destination MAC address */
     uint8_t  *src; /* source MAC address */
 
-    bool      bbl;
+    uint8_t   tos;
+
     bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
     uint16_t  vlan_outer; /* outer VLAN identifier */
@@ -511,6 +529,7 @@ typedef struct bbl_ethernet_header_ {
     uint8_t   vlan_outer_priority;
     uint8_t   vlan_inner_priority;
 
+    bbl_bbl_t  *bbl;  /* BBL stream header */
     bbl_mpls_t *mpls; /* MPLS */
     void       *next; /* next header */
 
@@ -838,23 +857,6 @@ typedef struct bbl_l2tp_ {
     void       *payload; /* l2tp payload */
     uint16_t    payload_len; /* l2tp payload length */
 } bbl_l2tp_t;
-
-typedef struct bbl_bbl_ {
-    uint16_t     padding;
-    uint8_t      type;
-    uint8_t      sub_type;
-    uint8_t      direction;
-    uint8_t      tos;
-    uint32_t     session_id;
-    uint32_t     ifindex;
-    uint16_t     outer_vlan_id;
-    uint16_t     inner_vlan_id;
-    uint32_t     mc_source;
-    uint32_t     mc_group;
-    uint64_t     flow_id;
-    uint64_t     flow_seq;
-    struct timespec timestamp;
-} bbl_bbl_t;
 
 typedef struct bbl_qmx_li_ {
     uint32_t     header;

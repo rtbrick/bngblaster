@@ -1383,22 +1383,18 @@ bbl_ctrl_stream_reset(int fd, uint32_t session_id __attribute__((unused)), json_
         if(!stream) {
             continue;
         }
-        if(stream->thread.thread) {
-            pthread_mutex_lock(&stream->thread.mutex);
-            stream->thread.thread->packets_tx = 0;
-            stream->thread.thread->packets_tx_last_sync = 0;
-            stream->thread.thread->bytes_tx = 0;
-            stream->thread.thread->bytes_tx_last_sync = 0;
-        }
 
+        /** TODO: Not thread save!!! */
         stream->flow_seq = 1;
         stream->rx_first_seq = 0;
         stream->rx_last_seq = 0;
         stream->stop = false;
         stream->packets_tx = 0;
         stream->packets_rx = 0;
-        stream->packets_tx_last_sync = 0;
-        stream->packets_rx_last_sync = 0;
+        stream->last_sync_packets_rx = 0;
+        stream->last_sync_packets_tx = 0;
+        stream->last_sync_loss = 0;
+        stream->last_sync_wrong_session = 0;
 
         stream->min_delay_ns = 0;
         stream->max_delay_ns = 0;
@@ -1412,13 +1408,6 @@ bbl_ctrl_stream_reset(int fd, uint32_t session_id __attribute__((unused)), json_
         stream->rx_mpls2_label = 0;
         stream->rx_mpls2_exp = 0;
         stream->rx_mpls2_ttl = 0;
-
-        stream->packets_rx_last_sync = 0;
-        stream->packets_rx_last_sync = 0;
-
-        if(stream->thread.thread) {
-            pthread_mutex_unlock(&stream->thread.mutex);
-        }
     }
     dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    
@@ -1441,12 +1430,12 @@ bbl_ctrl_sessions_pending(int fd, uint32_t session_id __attribute__((unused)), j
         if(!session) continue;
         
         if(session->session_state != BBL_ESTABLISHED || 
-           session->session_traffic_flows != session->session_traffic_flows_verified) {
+           session->session_traffic.flows != session->session_traffic.flows_verified) {
             json_session = json_pack("{si ss si si}",
                                      "session-id", session->session_id,
                                      "session-state", session_state_string(session->session_state),
-                                     "session-traffic-flows", session->session_traffic_flows,
-                                     "session-traffic-flows-verified", session->session_traffic_flows_verified);
+                                     "session-traffic-flows", session->session_traffic.flows,
+                                     "session-traffic-flows-verified", session->session_traffic.flows_verified);
             json_array_append(json_sessions, json_session);
         }
     }
@@ -1578,9 +1567,6 @@ bbl_ctrl_stream_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     search = dict_search(g_ctx->stream_flow_dict, &flow_id);
     if(search) {
         stream = *search;
-        if(stream->thread.thread) {
-            pthread_mutex_lock(&stream->thread.mutex);
-        }
         json_stream = bbl_stream_json(stream);
         root = json_pack("{ss si so*}",
                          "status", "ok",
@@ -1592,9 +1578,6 @@ bbl_ctrl_stream_info(int fd, uint32_t session_id __attribute__((unused)), json_t
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");
             json_decref(json_stream);
-        }
-        if(stream->thread.thread) {
-            pthread_mutex_unlock(&stream->thread.mutex);
         }
         return result;
     } else {
@@ -1703,7 +1686,7 @@ struct action actions[] = {
 
 void
 bbl_ctrl_socket_job(timer_s *timer) {
-    bbl_ctx_s *ctx = timer->data;
+
     size_t i;
     size_t flags = JSON_DISABLE_EOF_CHECK;
     json_error_t error;
@@ -1713,9 +1696,13 @@ bbl_ctrl_socket_job(timer_s *timer) {
     const char *command = NULL;
     uint32_t session_id = 0;
 
+    bbl_access_interface_s *access_interface;
+
     vlan_session_key_t key = {0};
     bbl_session_s *session;
     void **search;
+
+    UNUSED(timer);
 
     /* ToDo: Add connection manager!
      * This is just a temporary workaround! Finally we need
@@ -1771,8 +1758,9 @@ bbl_ctrl_socket_job(timer_s *timer) {
                             }
                         } else {
                             /* Use first interface as default. */
-                            if(g_ctx->interfaces.access_if[0]) {
-                                key.ifindex = g_ctx->interfaces.access_if[0]->ifindex;
+                            access_interface = bbl_access_interface_get(NULL);
+                            if(access_interface) {
+                                key.ifindex = access_interface->interface->ifindex;
                             }
                         }
                         value = json_object_get(arguments, "outer-vlan");

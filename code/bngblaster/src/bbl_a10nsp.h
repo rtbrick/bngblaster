@@ -73,7 +73,7 @@ typedef struct bbl_a10nsp_interface_
     struct timer_ *rate_job;
 
     CIRCLEQ_ENTRY(bbl_a10nsp_interface_) a10nsp_interface_qnode;
-    CIRCLEQ_HEAD(session_tx_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
+    CIRCLEQ_HEAD(session_tx_a10nsp_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
 
 } bbl_a10nsp_interface_s;
 
