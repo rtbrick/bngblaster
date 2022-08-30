@@ -1373,11 +1373,10 @@ bbl_stream_add_jobs(bbl_stream_s *stream, time_t timer_sec, long timer_nsec)
 static bool 
 bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    bbl_network_interface_s *network_interface;
-    bbl_a10nsp_interface_s *a10nsp_interface;
-
-    bbl_stream_s *stream;
+    bbl_interface_s *interface = NULL;
+    bbl_network_interface_s *network_interface = NULL;
+    bbl_a10nsp_interface_s *a10nsp_interface = NULL;
+    bbl_stream_s *stream = NULL;
 
     dict_insert_result result;
 

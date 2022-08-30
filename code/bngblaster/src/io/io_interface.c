@@ -86,7 +86,7 @@ io_interface_init_rx(bbl_interface_s *interface)
         }
         io->direction = IO_INGRESS;
         io->next = interface->io.rx;
-        interface->io.rx = io->next;
+        interface->io.rx = io;
         io->interface = interface;
         if(config->rx_threads) {
             if(!io_thread_init(io)) {

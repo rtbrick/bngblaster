@@ -44,23 +44,21 @@ redirect(io_thread_s *thread, io_handle_s *io)
 
     assert(io->direction == IO_INGRESS);
     assert(io->thread != NULL);
-
     if(io->buf_len > BBL_TXQ_BUFFER_LEN) {
         return IO_ERROR;
     }
 
-    if(!(slot = bbl_txq_write_slot(thread->txq))) {
-        return IO_FULL;
+    if((slot = bbl_txq_write_slot(thread->txq))) {
+        slot->timestamp.tv_sec = io->timestamp.tv_sec;
+        slot->timestamp.tv_nsec = io->timestamp.tv_nsec;
+        slot->vlan_tci = io->vlan_tci;
+        slot->vlan_tpid = io->vlan_tpid;
+        slot->packet_len = io->buf_len;
+        memcpy(slot->packet, io->buf, io->buf_len);
+        bbl_txq_write_next(thread->txq);
+        return IO_REDIRECT;
     }
-
-    slot->timestamp.tv_sec = io->timestamp.tv_sec;
-    slot->timestamp.tv_nsec = io->timestamp.tv_nsec;
-    slot->vlan_tci = io->vlan_tci;
-    slot->vlan_tpid = io->vlan_tpid;
-    slot->packet_len = io->buf_len;
-    memcpy(slot->packet, io->buf, io->buf_len);
-    bbl_txq_write_next(thread->txq);
-    return IO_REDIRECT;
+    return IO_FULL;
 }
 
 /** 
@@ -81,6 +79,7 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
     uint16_t vlan;
 
     protocol_error_t decode_result;
+
     if(likely(packet_is_bbl(io->buf, io->buf_len))) {
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
@@ -123,7 +122,6 @@ io_thread_main_rx_job(timer_s *timer)
 
     protocol_error_t decode_result;
     bool pcap = false;
-
     while(io) {
         thread = io->thread;
         if(thread) {
@@ -244,7 +242,6 @@ io_thread_init(io_handle_s *io)
     bbl_link_config_s *config = interface->config;
     io_thread_s *thread;
 
-    
     uint16_t slots = config->io_slots_tx;
     if(io->direction == IO_INGRESS) {
         LOG(DEBUG, "Init RX thread for interface %s\n", interface->name);
@@ -273,7 +270,7 @@ io_thread_init(io_handle_s *io)
     }
 
     /* Init thread mutex */
-    if (pthread_mutex_init(&thread->mutex, NULL) != 0) {
+    if(pthread_mutex_init(&thread->mutex, NULL) != 0) {
         LOG_NOARG(ERROR, "Failed to init mutex\n");
         return false;
     }
@@ -289,7 +286,7 @@ io_thread_init(io_handle_s *io)
         /** Start job reading from RX thread TXQ */
         timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 
                            0, config->rx_interval, 
-                           io, &io_thread_main_rx_job);
+                           interface, &io_thread_main_rx_job);
     }
 
     if(io->direction == IO_EGRESS && !interface->tx_job) {
