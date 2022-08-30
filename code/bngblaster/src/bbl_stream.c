@@ -1419,6 +1419,7 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream->flow_id = g_ctx->flow_id++;
         stream->flow_seq = 1;
         stream->config = config;
+        stream->type = config->type;
         stream->direction = BBL_DIRECTION_UP;
         stream->interface = session->access_interface->interface;
         stream->access_interface = session->access_interface;
@@ -1443,6 +1444,7 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream->flow_id = g_ctx->flow_id++;
         stream->flow_seq = 1;
         stream->config = config;
+        stream->type = config->type;
         stream->direction = BBL_DIRECTION_DOWN;
         stream->interface = interface;
         stream->network_interface = network_interface;
@@ -1561,6 +1563,7 @@ bbl_stream_init() {
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
+                stream->type = config->type;
                 stream->direction = BBL_DIRECTION_DOWN;
                 stream->interface = network_interface->interface;
                 stream->network_interface = network_interface;

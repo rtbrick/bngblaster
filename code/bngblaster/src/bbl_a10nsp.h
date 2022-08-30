@@ -32,14 +32,6 @@ typedef struct bbl_a10nsp_interface_
         uint64_t bytes_tx;
         uint64_t bytes_rx;
 
-        /* Packet Stats */
-        uint32_t arp_tx;
-        uint32_t arp_rx;
-        uint32_t icmp_tx;
-        uint32_t icmp_rx;
-        uint32_t icmpv6_tx;
-        uint32_t icmpv6_rx;
-
         uint64_t session_ipv4_tx;
         uint64_t session_ipv4_rx;
         uint64_t session_ipv4_loss;

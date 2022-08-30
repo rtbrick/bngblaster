@@ -103,8 +103,8 @@ bbl_read_key_job(timer_s *timer)
             }
             /* Skip access interface and session views
              * if there is no access interface. */
-            if(g_access_if) {
-                switch (g_view_selected) {
+            if(!g_access_if) {
+                switch(g_view_selected) {
                     case UI_VIEW_ACCESS_IF_STATS:
                     case UI_VIEW_SESSION:
                         g_view_selected = UI_VIEW_DEFAULT;

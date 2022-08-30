@@ -17,18 +17,14 @@ bbl_a10nsp_interface_rate_job(timer_s *timer)
     bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
     bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
     bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
-    if(g_ctx->stats.stream_traffic_flows) {
-        bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
-    }
-    if(g_ctx->stats.session_traffic_flows) {
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
-    }
+    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
 }
 
 /**
@@ -532,6 +528,10 @@ bbl_a10nsp_rx_handler(bbl_a10nsp_interface_s *interface,
 {
     bbl_session_s *session;
     uint32_t session_id = 0;
+
+    interface->stats.packets_rx++;
+    interface->stats.bytes_rx += eth->length;
+
     /* The session-id is mapped into the last 3 bytes of
      * the client MAC address. The original approach using
      * VLAN identifiers was not working reliable as some NIC

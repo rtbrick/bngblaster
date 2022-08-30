@@ -21,18 +21,14 @@ bbl_network_interface_rate_job(timer_s *timer) {
     bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx);
     bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
     bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
-    if(g_ctx->stats.stream_traffic_flows) {
-        bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
-    }
-    if(g_ctx->stats.session_traffic_flows) {
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-        bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
-    }
+    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
 }
 
 static bool
@@ -380,6 +376,9 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
     bbl_ipv4_t *ipv4 = NULL;
     bbl_ipv6_t *ipv6 = NULL;
     bbl_udp_t *udp = NULL;
+
+    interface->stats.packets_rx++;
+    interface->stats.bytes_rx += eth->length;
 
     switch(eth->type) {
         case ETH_TYPE_ARP:
