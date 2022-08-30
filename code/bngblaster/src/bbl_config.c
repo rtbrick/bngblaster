@@ -285,6 +285,12 @@ link_add(char *interface_name)
     link_config = calloc(1, sizeof(bbl_link_config_s));
     link_config->interface = strdup(interface_name);
     link_config->io_mode = g_ctx->config.io_mode;
+    link_config->io_slots_rx = g_ctx->config.io_slots;
+    link_config->io_slots_tx = g_ctx->config.io_slots;
+    link_config->io_stream_max_ppi = g_ctx->config.io_stream_max_ppi;
+    link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
+    link_config->tx_interval = g_ctx->config.tx_interval;
+    link_config->rx_interval = g_ctx->config.rx_interval;
     link_config->next = g_ctx->config.link_config;
     g_ctx->config.link_config = link_config;
 }

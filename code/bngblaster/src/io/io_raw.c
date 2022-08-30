@@ -197,7 +197,7 @@ io_raw_init(io_handle_s *io)
             timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 0, 
                 config->rx_interval, io, &io_raw_rx_job);
         } else {
-            timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "TX", 0, 
+            timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, "TX", 0, 
                 config->tx_interval, io, &io_raw_tx_job);
         }
     }

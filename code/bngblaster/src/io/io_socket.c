@@ -58,7 +58,7 @@ set_packet_version(io_handle_s *io, int version) {
 }
 
 /* Setup ringbuffer. */
-static void *
+static bool
 set_ring(io_handle_s *io, int slots) {
     /* The following are conditions that are checked in packet_set_ring:
      * - tp_block_size must be a multiple of PAGE_SIZE (1)
@@ -87,9 +87,13 @@ set_ring(io_handle_s *io, int slots) {
     if (setsockopt(io->fd, SOL_PACKET, flag, &io->req, sizeof(struct tpacket_req)) == -1) {
         LOG(ERROR, "Allocating ringbuffer error for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
-        return NULL;
+        return false;
     }
-    return mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, io->fd, 0);
+    io->ring = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, io->fd, 0);
+    if(!io->ring) {
+        return false;
+    }
+    return true;
 }
 
 

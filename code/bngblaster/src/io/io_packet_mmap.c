@@ -381,7 +381,7 @@ io_packet_mmap_init(io_handle_s *io)
             timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 0, 
                 config->rx_interval, io, &io_packet_mmap_rx_job);
         } else {
-            timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "TX", 0, 
+            timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, "TX", 0, 
                 config->tx_interval, io, &io_packet_mmap_tx_job);
         }
     }
