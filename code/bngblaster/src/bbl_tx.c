@@ -1535,6 +1535,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             }
             return PROTOCOL_SUCCESS;
         }
+        network_interface = network_interface->next;
     }
     return result;
 }
