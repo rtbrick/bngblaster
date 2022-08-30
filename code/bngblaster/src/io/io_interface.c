@@ -134,7 +134,7 @@ io_interface_init_tx(bbl_interface_s *interface)
         io->next = interface->io.tx;
         interface->io.tx = io;
         io->interface = interface;
-        if(config->rx_threads) {
+        if(config->tx_threads) {
             if(!io_thread_init(io)) {
                 return false;
             }
