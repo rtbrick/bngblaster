@@ -519,6 +519,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     json_t *value = NULL;
     const char *s = NULL;
     uint32_t ipv4;
+    double number;
 
     value = json_object_get(access_interface, "i1-start");
     if (value) {
@@ -819,7 +820,11 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
     value = json_object_get(access_interface, "stream-group-id");
     if (value) {
-        access_config->stream_group_id = json_number_value(value);
+        number = json_number_value(value);
+        if(number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for access->stream-group-id\n");
+        }
+        access_config->stream_group_id = number;
     }
 
     value = json_object_get(access_interface, "cfm-cc");
@@ -1266,7 +1271,11 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 
     value = json_object_get(stream, "stream-group-id");
     if (value) {
-        stream_config->stream_group_id = json_number_value(value);
+        number = json_number_value(value);
+        if(number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id\n");
+        }
+        stream_config->stream_group_id = number;
     }
 
     if (json_unpack(stream, "{s:s}", "network-interface", &s) == 0) {
@@ -1435,22 +1444,6 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if (value) {
         stream_config->rx_mpls2 = true;
         stream_config->rx_mpls2_label = json_number_value(value);
-    }
-
-    /* Threading */
-    value = json_object_get(stream, "threaded");
-    if (json_is_boolean(value)) {
-        stream_config->threaded = json_boolean_value(value);
-    }
-    value = json_object_get(stream, "thread-group");
-    if (value) {
-        number = json_number_value(value);
-        if(number > 0 && number < 256) {
-            stream_config->thread_group = number;
-        } else {
-            fprintf(stderr, "JSON config error: Invalid thread-group (valid range is 1-255) for stream %s\n", stream_config->name);
-            return false;
-        }
     }
 
     /* Validate configuration */

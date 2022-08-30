@@ -72,7 +72,7 @@ typedef struct bbl_ctx_
     CIRCLEQ_HEAD(network_interface_, bbl_network_interface_ ) network_interface_qhead; /* list of interfaces */
     CIRCLEQ_HEAD(a10nsp_interface_, bbl_a10nsp_interface_ ) a10nsp_interface_qhead; /* list of interfaces */
 
-    bbl_session_s **session_list; /* list of sessions */
+    bbl_session_s *session_list; /* list of sessions */
 
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
@@ -170,7 +170,13 @@ typedef struct bbl_ctx_
         void *access_line_profile;
 
         /* Traffic Streams */
-        void *stream_config;
+        bbl_stream_config_s *stream_config;
+        bbl_stream_config_s *stream_config_session_ipv4_up;
+        bbl_stream_config_s *stream_config_session_ipv4_down;
+        bbl_stream_config_s *stream_config_session_ipv6_up;
+        bbl_stream_config_s *stream_config_session_ipv6_down;
+        bbl_stream_config_s *stream_config_session_ipv6pd_up;
+        bbl_stream_config_s *stream_config_session_ipv6pd_down;
 
         /* BGP Instances */
         bgp_config_s *bgp_config;
@@ -292,6 +298,7 @@ typedef struct bbl_ctx_
         bool send_multicast_traffic;
         uint8_t multicast_traffic_tos;
         uint16_t multicast_traffic_len;
+        uint16_t multicast_traffic_pps;
         char *multicast_traffic_network_interface;
 
         /* Global Traffic */
@@ -325,7 +332,7 @@ bbl_compare_key64(void *key1, void *key2);
 uint32_t
 bbl_key64_hash(const void* k);
 
-bbl_ctx_s *
+bool
 bbl_ctx_add();
 
 void

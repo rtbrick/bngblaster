@@ -21,7 +21,7 @@ typedef struct bbl_interface_
     bbl_access_interface_s *access;
     bbl_network_interface_s *network;
 
-    bbl_interface_state_type_t state;
+    interface_state_t state;
     uint8_t mac[ETH_ADDR_LEN];
     uint32_t send_requests;
     

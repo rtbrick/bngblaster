@@ -79,9 +79,9 @@ typedef struct bgp_session_ {
     uint32_t ipv4_local_address;
     uint32_t ipv4_peer_address;
 
-    bgp_config_s    *config;
-    bbl_interface_s *interface;
-    bbl_tcp_ctx_s   *tcpc;
+    bgp_config_s *config;
+    bbl_network_interface_s *interface;
+    bbl_tcp_ctx_s *tcpc;
 
     struct timer_ *connect_timer;
     struct timer_ *send_open_timer;

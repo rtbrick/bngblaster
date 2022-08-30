@@ -9,6 +9,8 @@
 #ifndef __BBL_IO_H__
 #define __BBL_IO_H__
 
+#include <assert.h>
+
 #include "../bbl.h"
 #include "../bbl_pcap.h"
 #include "../bbl_stream.h"
@@ -24,5 +26,8 @@
 #include "io_raw.h"
 #include "io_packet_mmap.h"
 #include "io_dpdk.h"
+
+bool
+io_send(io_handle_s *io);
 
 #endif

@@ -348,9 +348,7 @@ bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
                           bbl_session_s *session,
                           bbl_ethernet_header_t *eth)
 {
-    bbl_stream_s *stream;
     bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
-        
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
             bbl_a10nsp_lcp_handler(interface, session, eth);
@@ -453,7 +451,6 @@ bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
                         bbl_ethernet_header_t *eth)
 {
-    bbl_stream_s *stream;
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
     bbl_udp_t *udp;
 
@@ -493,7 +490,7 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
         session->a10nsp_session->a10nsp_interface = interface;
         session->a10nsp_session->s_vlan = eth->vlan_outer;
         session->a10nsp_session->qinq_received = eth->qinq;
-        session->network_interface = interface;
+        session->a10nsp_interface = interface;
     }
     session->a10nsp_session->stats.packets_rx++;
 

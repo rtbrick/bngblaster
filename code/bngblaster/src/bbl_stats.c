@@ -63,7 +63,7 @@ bbl_stats_generate_multicast(bbl_stats_t *stats, bool reset)
 
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
-        session = g_ctx->session_list[i];
+        session = &g_ctx->session_list[i];
         if(session) {
             /* Multicast */
             stats->mc_old_rx_after_first_new += session->stats.mc_old_rx_after_first_new;
@@ -137,22 +137,24 @@ bbl_stats_generate_multicast(bbl_stats_t *stats, bool reset)
 void
 bbl_stats_generate(bbl_stats_t * stats)
 {
-    bbl_session_s *session;
     bbl_stream_s *stream;
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
-
-    struct dict_itor *itor;
-    uint32_t i;
 
     float pps;
 
     bbl_stats_update_cps();
     bbl_stats_generate_multicast(stats, false);
 
+    struct dict_itor *itor;
+
+#if 0
+    bbl_session_s *session;
+    uint32_t i;
+
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
-        session = g_ctx->session_list[i];
+        session = &g_ctx->session_list[i];
         if(session) {
             /* Session Traffic */
             if(session->access_ipv4_rx_first_seq) {
@@ -222,6 +224,7 @@ bbl_stats_generate(bbl_stats_t * stats)
             }
         }
     }
+#endif
 
     if(stats->sessions_access_ipv4_rx) {
         stats->avg_access_ipv4_rx_first_seq = stats->avg_access_ipv4_rx_first_seq / stats->sessions_access_ipv4_rx;
@@ -588,7 +591,7 @@ bbl_stats_json(bbl_stats_t * stats)
     json_t *jobj_sub    = NULL;
     json_t *jobj_sub2   = NULL;
 
-    int i;
+    uint32_t i;
 
     if(!g_ctx->config.json_report_filename) return;
 
@@ -757,7 +760,7 @@ bbl_stats_json(bbl_stats_t * stats)
     json_object_set(jobj, "access-interfaces", jobj_array);
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        a10nsp_interface = interface->access;
+        a10nsp_interface = interface->a10nsp;
         if(a10nsp_interface) {
             jobj_sub = json_object();
             json_object_set(jobj_sub, "name", json_string(interface->name));
@@ -890,7 +893,7 @@ bbl_stats_json(bbl_stats_t * stats)
     if(g_ctx->config.json_report_sessions) {
         jobj_array = json_array();
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
                 jobj_sub = bbl_session_json(session);
                 if(jobj_sub) {

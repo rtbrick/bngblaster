@@ -67,12 +67,11 @@ bbl_lag_add()
         lag->id = lag_config->id;
         lag->interface = strdup(name);
         lag->config = lag_config;
-        lag->up = true;
         
-        CIRCLEQ_INIT(&lag->interface_qhead);
+        CIRCLEQ_INIT(&lag->lag_interface_qhead);
         CIRCLEQ_INSERT_TAIL(&g_ctx->lag_qhead, lag, lag_qnode);
 
-        timer_add_periodic(&g_ctx->timer_root, &lag->rate_job, "Rate Computation", 1, 0, bbl_lag_rate_job, &bbl_lag_rate_job);
+        timer_add_periodic(&g_ctx->timer_root, &lag->rate_job, "Rate Computation", 1, 0, lag, &bbl_lag_rate_job);
         lag_config = lag_config->next;
     }
     return true;
@@ -91,7 +90,7 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             return false;
         }
         interface->lag = lag;
-        CIRCLEQ_INSERT_TAIL(&lag->interface_qhead, interface, interface_lag_qnode);
+        CIRCLEQ_INSERT_TAIL(&lag->lag_interface_qhead, interface, interface_lag_qnode);
     }
     return true;
 }

@@ -16,10 +16,10 @@ typedef struct bbl_lag_
     char *interface;
 
     bbl_lag_config_s *config;
-    CIRCLEQ_HEAD(interface_, bbl_interface_ ) interface_qhead; /* list of interfaces */
+    CIRCLEQ_HEAD(lag_interface_, bbl_interface_ ) lag_interface_qhead; /* list of interfaces */
     CIRCLEQ_ENTRY(bbl_lag_) lag_qnode;
 
-    bbl_interface_state_type_t state;
+    interface_state_t state;
 
     struct {
         uint64_t packets_tx;

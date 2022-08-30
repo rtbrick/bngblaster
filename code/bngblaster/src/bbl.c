@@ -69,85 +69,12 @@ enable_disable_traffic(bool status)
 
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
-        session = g_ctx->session_list[i];
+        session = &g_ctx->session_list[i];
         if(session) {
-            session->session_traffic = status;
-            session->stream_traffic = status;
+            session->session_traffic.active = status;
+            session->streams.active = status;
         }
     }
-}
-
-static bool
-bbl_add_multicast_packets()
-{
-    bbl_ethernet_header_t eth = {0};
-    bbl_ipv4_t ip = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
-    uint8_t mac[ETH_ADDR_LEN] = {0};
-    uint8_t *buf;
-
-    uint32_t group;
-    uint32_t source;
-
-    int i;
-    uint16_t len = 0;
-
-    bbl_network_interface_s *interface;
-
-    if(g_ctx->config.send_multicast_traffic && g_ctx->config.igmp_group_count) {
-        interface = bbl_network_interface_get(g_ctx->config.multicast_traffic_network_interface);
-        if(!interface) {
-            return false;
-        }
-
-        interface->mc_packets = malloc(g_ctx->config.igmp_group_count * 2000);
-        buf = interface->mc_packets;
-
-        for(i = 0; i < g_ctx->config.igmp_group_count; i++) {
-            len = 0;
-            bbl.flow_id = g_ctx->flow_id++;
-
-            group = be32toh(g_ctx->config.igmp_group) + i * be32toh(g_ctx->config.igmp_group_iter);
-            if(g_ctx->config.igmp_source) {
-                source = g_ctx->config.igmp_source;
-            } else {
-                source = interface->ip.address;
-            }
-            group = htobe32(group);
-            /* Generate multicast destination MAC */
-            ipv4_multicast_mac(group, mac);
-            eth.src = interface->mac;
-            eth.dst = mac;
-            eth.vlan_outer = interface->vlan;
-            eth.type = ETH_TYPE_IPV4;
-            eth.next = &ip;
-            ip.src = source;
-            ip.dst = group;
-            ip.ttl = 64;
-            ip.tos = g_ctx->config.multicast_traffic_tos;
-            ip.protocol = PROTOCOL_IPV4_UDP;
-            ip.next = &udp;
-            udp.src = BBL_UDP_PORT;
-            udp.dst = BBL_UDP_PORT;
-            udp.protocol = UDP_PROTOCOL_BBL;
-            udp.next = &bbl;
-            if(g_ctx->config.multicast_traffic_len > 76) {
-                bbl.padding = g_ctx->config.multicast_traffic_len - 76;
-            }
-            bbl.type = BBL_TYPE_MULTICAST;
-            bbl.direction = BBL_DIRECTION_DOWN;
-            bbl.tos = g_ctx->config.multicast_traffic_tos;
-            bbl.mc_source = ip.src;
-            bbl.mc_group = group ;
-            if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
-                return false;
-            }
-            buf = buf + len;
-        }
-        interface->mc_packet_len = len;
-    }
-    return true;
 }
 
 /*
@@ -252,15 +179,16 @@ bbl_print_usage (void)
 }
 
 void
-bbl_smear_job (timer_s *timer)
+bbl_smear_job(timer_s *timer)
 {
+    UNUSED(timer);
     /* LCP Keepalive Interval */
     if(g_ctx->config.lcp_keepalive_interval) {
-        timer_smear_bucket(&ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 0);
+        timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 0);
     }
     if(g_ctx->config.lcp_keepalive_interval != 5) {
         /* Default Retry Interval */
-        timer_smear_bucket(&ctx->timer_root, 5, 0);
+        timer_smear_bucket(&g_ctx->timer_root, 5, 0);
     }
 }
 
@@ -316,7 +244,7 @@ bbl_ctrl_job(timer_s *timer)
         if(g_teardown_request) {
             /* Put all sessions on the teardown list. */
             for(i = 0; i < g_ctx->sessions; i++) {
-                session = g_ctx->session_list[i];
+                session = &g_ctx->session_list[i];
                 if(session) {
                     if(!CIRCLEQ_NEXT(session, session_teardown_qnode)) {
                         /* Add only if not already on teardown list. */
@@ -439,8 +367,7 @@ main(int argc, char *argv[])
     const char *igmp_zap_interval = NULL;
     bool  interactive = false;
 
-    g_ctx = bbl_ctx_add();
-    if (!g_ctx) {
+    if(!bbl_ctx_add()) {
         exit(2);
     }
 
@@ -568,13 +495,13 @@ main(int argc, char *argv[])
     if(igmp_zap_interval) g_ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
     /* Init IS-IS instances. */
-    if(!isis_init(g_ctx)) {
+    if(!isis_init()) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
         goto CLEANUP;
     }
 
     /* Init interfaces. */
-    if(!bbl_interface_init(g_ctx)) {
+    if(!bbl_interface_init()) {
         fprintf(stderr, "Error: Failed to init interfaces\n");
         goto CLEANUP;
     }
@@ -588,26 +515,15 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
-    /* Start curses. */
-    if (interactive) {
-        bbl_init_curses();
-    }
-
-    /* Add traffic. */
-    if(!bbl_add_multicast_packets()) {
-        if (interactive) endwin();
-        fprintf(stderr, "Error: Failed to add multicast traffic\n");
-        goto CLEANUP;
-    }
-
-    if(!bbl_stream_raw_add()) {
+    /* Init streams. */
+    if(!bbl_stream_init()) {
         if (interactive) endwin();
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
         goto CLEANUP;
     }
 
     /* Setup resources in case PCAP dumping is desired. */
-    pcapng_init(g_ctx);
+    pcapng_init();
 
     /* Setup test. */
     if(bbl_access_interface_get(NULL)) {
@@ -616,6 +532,11 @@ main(int argc, char *argv[])
             fprintf(stderr, "Error: Failed to init sessions\n");
             goto CLEANUP;
         }
+    }
+
+    /* Start curses. */
+    if (interactive) {
+        bbl_init_curses();
     }
 
     /* Setup control job. */

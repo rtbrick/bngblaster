@@ -17,7 +17,8 @@
  * @param io IO handle.
  */
 bool
-io_send(io_handle_s *io) {
+io_send(io_handle_s *io)
+{
     bool result = false;
     bbl_interface_s *interface;
 

@@ -95,7 +95,7 @@ bbl_ctrl_session_traffic(int fd, uint32_t session_id, bool status)
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
-            session->session_traffic = status;
+            session->session_traffic.active = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -103,9 +103,9 @@ bbl_ctrl_session_traffic(int fd, uint32_t session_id, bool status)
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
-                session->session_traffic = status;
+                session->session_traffic.active = status;
             }
         }
         return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -256,7 +256,7 @@ bbl_ctrl_igmp_join_iter(int fd, uint32_t session_id __attribute__((unused)), jso
         /* Iterate over all sessions */
         join_count = 0;
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
                 /* Search for free slot ... */
                 for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
@@ -368,7 +368,7 @@ bbl_ctrl_igmp_leave_all(int fd, uint32_t session_id __attribute__((unused)), jso
 
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
-        session = g_ctx->session_list[i];
+        session = &g_ctx->session_list[i];
         if(session) {
             /* Search for group ... */
             for(i2=0; i2 < IGMP_MAX_GROUPS; i2++) {
@@ -864,7 +864,7 @@ bbl_ctrl_session_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipc
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     if(open) {
@@ -1291,13 +1291,13 @@ bbl_ctrl_session_streams(int fd, uint32_t session_id, json_t* arguments __attrib
 
     session = bbl_session_get(session_id);
     if(session) {
-        stream = session->stream;
+        stream = session->streams.head;
 
         json_streams = json_array();
         while(stream) {
             json_stream = bbl_stream_json(stream);
             json_array_append(json_streams, json_stream);
-            stream = stream->next;
+            stream = stream->session_next;
         }
         root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}",
                          "status", "ok",
@@ -1338,7 +1338,7 @@ bbl_ctrl_stream_traffic_start_stop(int fd, uint32_t session_id, bool status)
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
-            session->stream_traffic = status;
+            session->streams.active = status;
             return bbl_ctrl_status(fd, "ok", 200, NULL);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
@@ -1346,9 +1346,9 @@ bbl_ctrl_stream_traffic_start_stop(int fd, uint32_t session_id, bool status)
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
-                session->stream_traffic = status;
+                session->streams.active = status;
             }
         }
         return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -1383,29 +1383,7 @@ bbl_ctrl_stream_reset(int fd, uint32_t session_id __attribute__((unused)), json_
         if(!stream) {
             continue;
         }
-
-        stream->flow_seq = 1;
-        stream->rx_first_seq = 0;
-        stream->rx_last_seq = 0;
-        stream->stop = false;
-
-        stream->reset_packets_tx = stream->packets_tx;
-        stream->reset_packets_rx = stream->packets_rx;
-        stream->reset_loss = stream->loss;
-        stream->reset_wrong_session = stream->wrong_session;
-
-        stream->min_delay_ns = 0;
-        stream->max_delay_ns = 0;
-
-        stream->rx_mpls1 = false;
-        stream->rx_mpls1_label = 0;
-        stream->rx_mpls1_exp = 0;
-        stream->rx_mpls1_ttl = 0;
-
-        stream->rx_mpls2 = false;
-        stream->rx_mpls2_label = 0;
-        stream->rx_mpls2_exp = 0;
-        stream->rx_mpls2_ttl = 0;
+        bbl_stream_reset(stream);
     }
     dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    
@@ -1424,7 +1402,7 @@ bbl_ctrl_sessions_pending(int fd, uint32_t session_id __attribute__((unused)), j
 
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
-        session = g_ctx->session_list[i];
+        session = &g_ctx->session_list[i];
         if(!session) continue;
         
         if(session->session_state != BBL_ESTABLISHED || 
@@ -1468,7 +1446,7 @@ bbl_ctrl_cfm_cc_start_stop(int fd, uint32_t session_id, bool status)
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
                 session->cfm_cc = status;
             }
@@ -1505,7 +1483,7 @@ bbl_ctrl_cfm_cc_rdi(int fd, uint32_t session_id, bool status)
     } else {
         /* Iterate over all sessions */
         for(i = 0; i < g_ctx->sessions; i++) {
-            session = g_ctx->session_list[i];
+            session = &g_ctx->session_list[i];
             if(session) {
                 session->cfm_rdi = status;
             }

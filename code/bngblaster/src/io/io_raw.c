@@ -51,7 +51,7 @@ io_raw_rx_job(timer_s *timer)
             interface->stats.decode_error++;
         }
         /* Dump the packet into pcap file */
-        if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+        if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
             pcap = true;
             pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                       interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
@@ -113,7 +113,6 @@ void
 io_raw_thread_rx_run_fn(io_thread_s *thread)
 {
     io_handle_s *io = thread->io;
-    bbl_interface_s *interface = io->interface;
 
     struct sockaddr saddr;
     int saddr_size = sizeof(saddr);
@@ -151,7 +150,7 @@ io_raw_thread_tx_job(timer_s *timer)
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
-    while(slot = bbl_txq_read_slot(txq)) {
+    while((slot = bbl_txq_read_slot(txq))) {
         if(sendto(io->fd, slot->packet, slot->packet_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
             LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
                 io->interface->name, strerror(errno), errno);

@@ -12,7 +12,6 @@
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
 #include "bbl_tx.h"
-#include "bbl_session_traffic.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -182,7 +181,6 @@ void
 bbl_access_igmp_zapping(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    bbl_access_interface_s *interface = session->access_interface;
 
     uint32_t next_group;
     bbl_igmp_group_s *group;
@@ -366,7 +364,6 @@ void
 bbl_access_igmp_initial_join(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    bbl_access_interface_s *interface = session->access_interface;
     uint32_t initial_group;
     bbl_igmp_group_s *group;
 
@@ -425,9 +422,7 @@ bbl_access_rx_udp_ipv6(bbl_access_interface_s *interface,
                        bbl_session_s *session,
                        bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6)
 {
-    bbl_stream_s *stream;
     bbl_udp_t *udp = (bbl_udp_t*)ipv6->next;
-    uint64_t loss;
 
     switch(udp->dst) {
         case DHCPV6_UDP_CLIENT:
@@ -467,6 +462,8 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
     bool ipv4 = true;
     bool ipv6 = true;
 
+    UNUSED(interface);
+
     if(session->access_config->ipv4_enable) {
         if(!session->arp_resolved ||
            (session->access_config->dhcp_enable && session->dhcp_state < BBL_DHCP_BOUND)) {
@@ -492,11 +489,6 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
                     /* Start IGMP */
                     timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
                 }
-                bbl_session_traffic_start_ipv4(session);
-            }
-            if(session->access_config->ipv6_enable) {
-                bbl_session_traffic_start_ipv6(session);
-                bbl_session_traffic_start_ipv6pd(session);
             }
             if(session->cfm_cc) {
                 /* Start CFM CC (currently fixed set to 1s) */
@@ -529,6 +521,7 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                 memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
                 *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
+                session->endpoint.ipv6 = ENDPOINT_ACTIVE;
                 LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d\n",
                     session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
                 if(icmpv6->dns1) {
@@ -536,9 +529,6 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     if(icmpv6->dns2) {
                         memcpy(&session->ipv6_dns2, icmpv6->dns2, IPV6_ADDR_LEN);
                     }
-                }
-                if(session->access_type == ACCESS_TYPE_PPPOE&& session->l2tp == false) {
-                    bbl_session_traffic_start_ipv6(session);
                 }
             }
             if(session->access_type == ACCESS_TYPE_IPOE) {
@@ -630,7 +620,6 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
                    bbl_session_s *session, 
                    bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4) 
 {
-    bbl_stream_s *stream;
     bbl_udp_t *udp;
     bbl_bbl_t *bbl = NULL;
     bbl_igmp_group_s *group = NULL;
@@ -784,6 +773,8 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
     pppoes = (bbl_pppoe_session_t*)eth->next;
     pap = (bbl_pap_t*)pppoes->next;
 
+    UNUSED(interface);
+
     if(session->session_state == BBL_PPP_AUTH) {
         switch(pap->code) {
             case PAP_CODE_ACK:
@@ -858,6 +849,8 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
 
     l2tp_key_t key = {0};
     void **search = NULL;
+
+    UNUSED(interface);
 
     pppoes = (bbl_pppoe_session_t*)eth->next;
     chap = (bbl_chap_t*)pppoes->next;
@@ -994,6 +987,8 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
     bool ipcp = false;
     bool ip6cp = false;
 
+    UNUSED(interface);
+
     if(g_ctx->config.ipcp_enable == false || session->ipcp_state == BBL_PPP_OPENED) ipcp = true;
     if(g_ctx->config.ip6cp_enable == false || session->ip6cp_state == BBL_PPP_OPENED) ip6cp = true;
 
@@ -1018,7 +1013,6 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
                     /* Start IGMP */
                     timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
                 }
-                bbl_session_traffic_start_ipv4(session);
             }
         }
     }
@@ -1067,7 +1061,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_LOCAL_ACK:
                     session->ip6cp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(eth, interface, session);
+                    bbl_access_rx_established_pppoe(interface, session, eth);
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
@@ -1101,7 +1095,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_PEER_ACK:
                     session->ip6cp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(eth, interface, session);
+                    bbl_access_rx_established_pppoe(interface, session, eth);
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
@@ -1172,7 +1166,8 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_LOCAL_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(eth, interface, session);
+                    bbl_access_rx_established_pppoe(interface, session, eth);
+                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
                     LOG(IP, "IPv4 (ID: %u) address %s\n",
                         session->session_id, format_ipv4_address(&session->ip_address));
                     break;
@@ -1207,7 +1202,8 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(eth, interface, session);
+                    bbl_access_rx_established_pppoe(interface, session, eth);
+                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->ip_address));
                     break;
@@ -1278,6 +1274,8 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
 {
     bbl_pppoe_session_t *pppoes;
     bbl_lcp_t *lcp;
+
+    UNUSED(interface);
 
     pppoes = (bbl_pppoe_session_t*)eth->next;
     lcp = (bbl_lcp_t*)pppoes->next;
@@ -1713,7 +1711,7 @@ bbl_access_rx_handler_multicast(bbl_access_interface_s *interface,
     uint32_t session_index;
 
     for(session_index = 0; session_index < g_ctx->sessions; session_index++) {
-        session = g_ctx->session_list[session_index];
+        session = &g_ctx->session_list[session_index];
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {
@@ -1743,7 +1741,7 @@ bbl_access_rx_handler_broadcast(bbl_access_interface_s *interface,
     uint32_t session_index;
 
     for(session_index = 0; session_index < g_ctx->sessions; session_index++) {
-        session = g_ctx->session_list[session_index];
+        session = &g_ctx->session_list[session_index];
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {

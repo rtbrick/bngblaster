@@ -18,4 +18,7 @@ io_thread_start_all();
 void
 io_thread_stop_all();
 
+io_result_t
+io_thread_rx_handler(io_thread_s *thread, io_handle_s *io);
+
 #endif

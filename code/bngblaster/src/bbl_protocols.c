@@ -11,7 +11,7 @@
 #include "bbl_access_line.h"
 #include "isis/isis_def.h"
 
-protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_l2tp_t **_l2tp);
+protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_ethernet_header_t *eth, bbl_l2tp_t **_l2tp);
 protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
 
 /*
@@ -2597,7 +2597,7 @@ decode_udp(uint8_t *buf, uint16_t len,
             break;
         case L2TP_UDP_PORT:
             udp->protocol = UDP_PROTOCOL_L2TP;
-            ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
+            ret_val = decode_l2tp(buf, len, sp, sp_len, eth, (bbl_l2tp_t**)&udp->next);
             break;
         case DHCP_UDP_CLIENT:
         case DHCP_UDP_SERVER:
@@ -3274,6 +3274,7 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_l2tp(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
+            bbl_ethernet_header_t *eth,
             bbl_l2tp_t **_l2tp) {
 
     protocol_error_t ret_val = UNKNOWN_PROTOCOL;
@@ -3401,10 +3402,10 @@ decode_l2tp(uint8_t *buf, uint16_t len,
         /* Decode protocol */
         switch(l2tp->protocol) {
             case PROTOCOL_IPV4:
-                ret_val = decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&l2tp->next);
+                ret_val = decode_ipv4(buf, len, sp, sp_len, eth, (bbl_ipv4_t**)&l2tp->next);
                 break;
             case PROTOCOL_IPV6:
-                ret_val = decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&l2tp->next);
+                ret_val = decode_ipv6(buf, len, sp, sp_len, eth, (bbl_ipv6_t**)&l2tp->next);
                 break;
             case PROTOCOL_LCP:
                 ret_val = decode_ppp_lcp(buf, len, sp, sp_len, (bbl_lcp_t**)&l2tp->next);

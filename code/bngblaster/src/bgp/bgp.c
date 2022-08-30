@@ -32,7 +32,7 @@ bgp_init()
             return false;
         }
         
-        network_interface = bbl_get_network_interface(config->network_interface);
+        network_interface = bbl_network_interface_get(config->network_interface);
         if(!network_interface) {
             free(session);
             return false;
@@ -79,7 +79,7 @@ bgp_init()
 void
 bgp_teardown_job(timer_s *timer)
 {
-    bgp_session_s *session = timer->data;
+    UNUSED(timer);
     if(g_ctx->routing_sessions) {
         g_ctx->routing_sessions--;
     }

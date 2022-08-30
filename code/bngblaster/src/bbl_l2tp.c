@@ -342,7 +342,6 @@ void
 bbl_l2tp_tunnel_control_job(timer_s *timer)
 {
     bbl_l2tp_tunnel_s *l2tp_tunnel = timer->data;
-    bbl_network_interface_s *interface = l2tp_tunnel->interface;
     l2tp_tunnel->state_seconds++;
     switch(l2tp_tunnel->state) {
         case BBL_L2TP_TUNNEL_WAIT_CTR_CONN:
@@ -685,12 +684,15 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth
 }
 
 static void
-bbl_l2tp_scccn_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_scccn_rx(bbl_network_interface_s *interface, 
+                  bbl_l2tp_tunnel_s *l2tp_tunnel, 
+                  bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
     uint8_t digest[L2TP_MD5_DIGEST_LEN];
     MD5_CTX md5_ctx;
     uint8_t l2tp_type = L2TP_MESSAGE_SCCCN;
 
+    UNUSED(interface);
     UNUSED(eth);
 
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_WAIT_CTR_CONN) {
@@ -741,29 +743,37 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tu
 }
 
 static void
-bbl_l2tp_stopccn_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_stopccn_rx(bbl_network_interface_s *interface, 
+                    bbl_l2tp_tunnel_s *l2tp_tunnel, 
+                    bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
+    UNUSED(interface);
     UNUSED(eth);
     UNUSED(l2tp);
-    UNUSED(interface);
+
     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_RCVD_STOPCCN);
 }
 
 static void
-bbl_l2tp_csun_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_csun_rx(bbl_network_interface_s *interface, 
+                 bbl_l2tp_tunnel_s *l2tp_tunnel, 
+                 bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
-    UNUSED(eth);
     UNUSED(interface);
+    UNUSED(eth);
 
     bbl_l2tp_avp_decode_csun(l2tp, l2tp_tunnel);
 }
 
 static void
-bbl_l2tp_icrq_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_icrq_rx(bbl_network_interface_s *interface, 
+                 bbl_l2tp_tunnel_s *l2tp_tunnel, 
+                 bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
     dict_insert_result result;
     void **search;
 
+    UNUSED(interface);
     UNUSED(eth);
 
     if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
@@ -810,10 +820,13 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface, bbl_l2tp_tunnel_s *l2tp_tun
 }
 
 static void
-bbl_l2tp_iccn_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_session, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_iccn_rx(bbl_network_interface_s *interface, 
+                 bbl_l2tp_session_s *l2tp_session,
+                 bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
     bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
+    UNUSED(interface);
     UNUSED(eth);
     UNUSED(l2tp);
 
@@ -840,10 +853,13 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_se
 }
 
 static void
-bbl_l2tp_cdn_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_session, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_cdn_rx(bbl_network_interface_s *interface, 
+                bbl_l2tp_session_s *l2tp_session, 
+                bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
     bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
+    UNUSED(interface);
     UNUSED(eth);
     UNUSED(l2tp);
 
@@ -864,10 +880,10 @@ bbl_l2tp_cdn_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_ses
 }
 
 static void
-bbl_l2tp_data_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_session, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_data_rx(bbl_network_interface_s *interface, 
+                 bbl_l2tp_session_s *l2tp_session, 
+                 bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
 {
-    bbl_session_s *pppoe_session;
-
     bbl_lcp_t   *lcp_rx;
     bbl_pap_t   *pap_rx;
     bbl_pap_t    pap_tx;
@@ -877,15 +893,11 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_se
     bbl_ipcp_t   ipcp_tx;
     bbl_ip6cp_t *ip6cp_rx;
     bbl_ip6cp_t  ip6cp_tx;
-    bbl_ipv4_t  *ipv4;
-    bbl_udp_t   *udp;
-    bbl_bbl_t   *bbl;
+
+    UNUSED(eth);
+    UNUSED(interface);
 
     char reply_message[sizeof(L2TP_REPLY_MESSAGE)+16];
-
-    bbl_stream_s *stream;
-    void **search = NULL;
-    uint64_t loss;
 
     if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
         return;
@@ -1016,7 +1028,9 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface, bbl_l2tp_session_s *l2tp_se
  * @param l2tp L2TP header of received ethernet packet
  */
 void
-bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_l2tp_t *l2tp)
+bbl_l2tp_handler_rx(bbl_network_interface_s *interface, 
+                    bbl_ethernet_header_t *eth, 
+                    bbl_l2tp_t *l2tp)
 {
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
     bbl_l2tp_session_s *l2tp_session;
@@ -1048,7 +1062,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *e
             /* L2TP Data Packet */
             l2tp_tunnel->stats.data_rx++;
             interface->stats.l2tp_data_rx++;
-            bbl_l2tp_data_rx(eth, l2tp, interface, l2tp_session);
+            bbl_l2tp_data_rx(interface, l2tp_session, eth, l2tp);
             return;
         }
         /* L2TP Control Packet */

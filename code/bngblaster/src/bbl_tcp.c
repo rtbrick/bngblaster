@@ -356,6 +356,7 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
         return NULL;
     }
 
+    UNUSED(interface);
     UNUSED(src);
     UNUSED(dst);
     UNUSED(port);
@@ -431,7 +432,7 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
     eth.type = ETH_TYPE_IPV4;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_txq_to_buffer(interface, &eth) != BBL_TXQ_OK) {
+    if(bbl_txq_to_buffer(interface->txq, &eth) != BBL_TXQ_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -454,7 +455,7 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     eth.type = ETH_TYPE_IPV6;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_txq_to_buffer(interface, &eth) != BBL_TXQ_OK) {
+    if(bbl_txq_to_buffer(interface->txq, &eth) != BBL_TXQ_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;

@@ -114,10 +114,9 @@ bbl_ctx_del() {
 
     /* Free session memory. */
     for(i = 0; i < g_ctx->sessions; i++) {
-        p = g_ctx->session_list[i];
+        p = &g_ctx->session_list[i];
         if(p) {
             bbl_session_free(p);
-            free(p);
         }
     }
     free(g_ctx->session_list);

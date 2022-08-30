@@ -74,9 +74,6 @@
 #define BBL_SEND_ICMPV6_RS          0x00000200
 #define BBL_SEND_DHCPV6_REQUEST     0x00000400
 #define BBL_SEND_IGMP               0x00000800
-#define BBL_SEND_SESSION_IPV4       0x00002000
-#define BBL_SEND_SESSION_IPV6       0x00004000
-#define BBL_SEND_SESSION_IPV6PD     0x00008000
 #define BBL_SEND_ARP_REQUEST        0x00010000
 #define BBL_SEND_ARP_REPLY          0x00020000
 #define BBL_SEND_DHCP_REQUEST       0x00040000
@@ -99,21 +96,22 @@
 #define BBL_AVG_SAMPLES             5
 #define DATA_TRAFFIC_MAX_LEN        1920
 
-typedef enum {
-    INTERFACE_DISABLED = 0,
-    INTERFACE_UP,
-    INTERFACE_DOWN
-} __attribute__ ((__packed__)) bbl_interface_state_type_t;
 
 typedef enum {
     ACCESS_TYPE_PPPOE = 0,
     ACCESS_TYPE_IPOE
-} __attribute__ ((__packed__)) bbl_access_type_t;
+} __attribute__ ((__packed__)) access_type_t;
 
 typedef enum {
     VLAN_MODE_11 = 0,   /* VLAN mode 1:1 */
     VLAN_MODE_N1        /* VLAN mode N:1 */
-} __attribute__ ((__packed__)) bbl_vlan_mode_t;
+} __attribute__ ((__packed__)) vlan_mode_t;
+
+typedef enum {
+    INTERFACE_DISABLED = 0,
+    INTERFACE_UP,
+    INTERFACE_DOWN
+} __attribute__ ((__packed__)) interface_state_t;
 
 typedef enum {
     IGMP_GROUP_IDLE = 0,
@@ -122,6 +120,12 @@ typedef enum {
     IGMP_GROUP_JOINING,
     IGMP_GROUP_MAX
 } __attribute__ ((__packed__)) igmp_group_state_t;
+
+typedef enum {
+    ENDPOINT_DISABLED = 0,
+    ENDPOINT_ENABLED,
+    ENDPOINT_ACTIVE,
+} __attribute__ ((__packed__)) endpoint_state_t;
 
 /*
  * Session state

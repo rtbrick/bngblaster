@@ -17,6 +17,8 @@ typedef struct bbl_stream_config_
     uint8_t type;
     uint8_t direction;
 
+    bool session_traffic;
+
     double pps;
     uint32_t max_packets;
     uint32_t start_delay;
@@ -54,9 +56,6 @@ typedef struct bbl_stream_config_
     bool     rx_mpls2;
     uint32_t rx_mpls2_label;
 
-    bool threaded;
-    uint8_t thread_group;
-
     bbl_stream_config_s *next; /* Next stream config */
 } bbl_stream_config_s;
 
@@ -84,15 +83,13 @@ typedef struct bbl_stream_
 
     uint8_t *buf;
     uint16_t tx_len;
-    uint16_t rx_len;
-    uint64_t rx_first_seq;
-    uint64_t rx_last_seq;
     uint64_t tx_interval; /* TX interval in nsec */
 
     bool session_traffic;
     bool verified;
     bool wait;
     bool stop;
+    bool reset;
 
     struct timespec wait_start;
     struct timespec send_window_start;
@@ -107,6 +104,10 @@ typedef struct bbl_stream_
 
     uint64_t min_delay_ns;
     uint64_t max_delay_ns;
+
+    uint16_t rx_len;
+    uint64_t rx_first_seq;
+    uint64_t rx_last_seq;
 
     uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  rx_outer_vlan_pbit;
@@ -144,16 +145,19 @@ void
 bbl_stream_tx_job(timer_s *timer);
 
 bool
-bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session);
+bbl_stream_session_init(bbl_session_s *session);
 
 bool
-bbl_stream_raw_add();
+bbl_stream_init();
 
 void
 bbl_stream_ctrl(bbl_stream_s *stream);
 
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session);
+
+void
+bbl_stream_reset(bbl_stream_s *stream);
 
 json_t *
 bbl_stream_json(bbl_stream_s *stream);

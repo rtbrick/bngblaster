@@ -31,7 +31,7 @@ typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
 
 typedef struct bbl_tcp_ctx_
 {
-    bbl_interface_s *interface;
+    bbl_network_interface_s *interface;
 
     uint8_t af; /* AF_INET or AF_INET6 */
 

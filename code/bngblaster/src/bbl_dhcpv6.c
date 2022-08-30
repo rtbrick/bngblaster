@@ -9,7 +9,6 @@
 #include "bbl.h"
 #include "bbl_dhcpv6.h"
 #include "bbl_session.h"
-#include "bbl_session_traffic.h"
 #include "bbl_rx.h"
 
 /**
@@ -22,19 +21,17 @@
 void
 bbl_dhcpv6_stop(bbl_session_s *session)
 {
-    bbl_access_interface_s *interface = session->access_interface;
-
     LOG(DHCP, "DHCP (ID: %u) Stop DHCPv6\n", session->session_id);
 
     /* Reset session IP configuration */
     if(session->access_type == ACCESS_TYPE_IPOE) {
         session->ipv6_prefix.len = 0;
         memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
-        timer_del(session->timer_session_traffic_ipv6);
+        session->endpoint.ipv6 = ENDPOINT_ENABLED;
     }
     session->delegated_ipv6_prefix.len = 0;
     memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
-    timer_del(session->timer_session_traffic_ipv6pd);
+    session->endpoint.ipv6pd = ENDPOINT_ENABLED;
 
     /* Reset DHCPv6 */
     timer_del(session->timer_dhcpv6);
@@ -206,22 +203,22 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcpv6_t *
                 memcpy(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 memcpy(&session->ipv6_prefix.address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 session->ipv6_prefix.len = 128;
+                session->endpoint.ipv6 = ENDPOINT_ACTIVE;
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_NA address %s/128\n", session->session_id,
                     format_ipv6_address(&session->ipv6_address));
             }
             if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len) {
                 /* IA_PD */
+                session->endpoint.ipv6pd = ENDPOINT_ACTIVE;
                 if(dhcpv6->ia_pd_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_pd_valid_lifetime;
                 if(dhcpv6->ia_pd_t1) session->dhcpv6_t1 = dhcpv6->ia_pd_t1;
                 if(dhcpv6->ia_pd_t2) session->dhcpv6_t2 = dhcpv6->ia_pd_t2;
                 memcpy(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
                 session->delegated_ipv6_address[15] = 0x01;
+                session->endpoint.ipv6pd = ENDPOINT_ACTIVE;
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
-                if(session->access_type == ACCESS_TYPE_PPPOE && session->l2tp == false) {
-                    bbl_session_traffic_start_ipv6pd(session);
-                }
             }
         }
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;

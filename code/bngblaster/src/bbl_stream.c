@@ -10,11 +10,18 @@
 #include "bbl_session.h"
 #include "bbl_stream.h"
 #include "bbl_stats.h"
-#include "bbl_io.h"
 
 extern volatile bool g_teardown;
 extern bool g_init_phase;
 extern bool g_traffic;
+
+const char g_multicast_traffic[] = "multicast-traffic";
+const char g_session_traffic_ipv4_up[] = "session-traffic-ipv4-up";
+const char g_session_traffic_ipv4_down[] = "session-traffic-ipv4-down";
+const char g_session_traffic_ipv6_up[] = "session-traffic-ipv6-up";
+const char g_session_traffic_ipv6_down[] = "session-traffic-ipv6-down";
+const char g_session_traffic_ipv6pd_up[] = "session-traffic-ipv6pd-up";
+const char g_session_traffic_ipv6pd_down[] = "session-traffic-ipv6pd-down";
 
 static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
@@ -42,6 +49,12 @@ bbl_stream_can_send(bbl_stream_s *stream)
 
     if(g_init_phase) {
         return false;
+    }
+
+    if(stream->reset) {
+        stream->reset = false;
+        stream->flow_seq = 1;
+        goto FREE;
     }
 
     if(stream->config->stream_group_id == 0) {
@@ -524,7 +537,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
      */
     bbl_network_interface_s *network_interface;
     if(config->network_interface) {
-        network_interface = bbl_network_interface_get(config->network_interface, 0);
+        network_interface = bbl_network_interface_get(config->network_interface);
     } else {
         network_interface = session->network_interface;
     }
@@ -1292,10 +1305,21 @@ bbl_stream_tx_job(timer_s *timer)
         }
     }
 
-    if(!g_traffic || stream->stop || (session && !session->stream_traffic)) {
-        /* Close send window */
+    /* Close send window */
+    if(!g_traffic || stream->stop) {
         stream->send_window_packets = 0;
         return;
+    }
+    if(session) {
+        if(stream->session_traffic) {
+            if(!session->session_traffic.active) {
+                stream->send_window_packets = 0;
+                return;
+            }
+        } else if(!session->streams.active) {
+            stream->send_window_packets = 0;
+            return;
+        }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -1346,140 +1370,183 @@ bbl_stream_add_jobs(bbl_stream_s *stream, time_t timer_sec, long timer_nsec)
     return true;
 }
 
-bool
-bbl_stream_add(bbl_access_config_s *access_config, bbl_session_s *session) {
-
-    bbl_stream_config_s *config;
-    bbl_stream_s *stream;
-    
+static bool 
+bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
+{
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
 
-    bbl_stream_s *session_stream;
+    bbl_stream_s *stream;
 
     dict_insert_result result;
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
 
-    config = g_ctx->config.stream_config;
-    while(config) {
-        if(config->stream_group_id == access_config->stream_group_id) {
-            /* *
-            * The corresponding network interfaces will be selected
-            * in the following order:
-            * - "network-interface" from stream section
-            * - "network-interface" from access interface section
-            * - first network interface from network section (default)
-            */
-            if(config->network_interface) {
-                network_interface = bbl_network_interface_get(config->network_interface);
-            } else if(config->a10nsp_interface) {
-                a10nsp_interface = bbl_get_a10nsp_interface(config->a10nsp_interface);
-            } else if(session->network_interface) {
-                network_interface = session->network_interface;
-            } else if(session->a10nsp_interface) {
-                a10nsp_interface = session->a10nsp_interface;
-            }
+    /* *
+    * The corresponding network interfaces will be selected
+    * in the following order:
+    * - "network-interface" from stream section
+    * - "network-interface" from access interface section
+    * - first network interface from network section (default)
+    */
+    if(config->network_interface) {
+        network_interface = bbl_network_interface_get(config->network_interface);
+    } else if(config->a10nsp_interface) {
+        a10nsp_interface = bbl_a10nsp_interface_get(config->a10nsp_interface);
+    } else if(session->network_interface) {
+        network_interface = session->network_interface;
+    } else if(session->a10nsp_interface) {
+        a10nsp_interface = session->a10nsp_interface;
+    }
 
-            if(a10nsp_interface) {
-                interface = a10nsp_interface->interface;
-            } else if (network_interface) {
-                interface = network_interface->interface;
-            } else {
-                LOG_NOARG(ERROR, "Failed to add stream because of missing network/a01nsp interface\n");
-                return false;
-            }
+    if(a10nsp_interface) {
+        interface = a10nsp_interface->interface;
+    } else if (network_interface) {
+        interface = network_interface->interface;
+    } else {
+        LOG_NOARG(ERROR, "Failed to add stream because of missing network/a01nsp interface\n");
+        return false;
+    }
 
-            timer_nsec = SEC / config->pps;
-            timer_sec = timer_nsec / 1000000000;
-            timer_nsec = timer_nsec % 1000000000;
+    timer_nsec = SEC / config->pps;
+    timer_sec = timer_nsec / 1000000000;
+    timer_nsec = timer_nsec % 1000000000;
 
-            if(config->direction & BBL_DIRECTION_UP) {
-                stream = calloc(1, sizeof(bbl_stream_s));
-                stream->flow_id = g_ctx->flow_id++;
-                stream->flow_seq = 1;
-                stream->config = config;
-                stream->direction = BBL_DIRECTION_UP;
-                stream->interface = session->access_interface->interface;
-                stream->access_interface = session->access_interface;
-                stream->session = session;
-                stream->tx_interval = timer_sec * 1e9 + timer_nsec;
-                result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
-                if (!result.inserted) {
-                    LOG(ERROR, "Failed to insert stream %s\n", config->name);
-                    free(stream);
-                    return false;
-                }
-                *result.datum_ptr = stream;
-                if(session->stream) {
-                    stream->session_next = session->stream;
-                }
-                session->stream = stream;
-                bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
-                g_ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s added to %s (upstream) with %lf PPS (timer: %lu sec %lu nsec)\n", 
-                    interface->name, config->name, config->pps, timer_sec, timer_nsec);
-            }
-            if(config->direction & BBL_DIRECTION_DOWN) {
-                stream = calloc(1, sizeof(bbl_stream_s));
-                stream->flow_id = g_ctx->flow_id++;
-                stream->flow_seq = 1;
-                stream->config = config;
-                stream->direction = BBL_DIRECTION_DOWN;
-                stream->interface = interface;
-                stream->network_interface = network_interface;
-                stream->a10nsp_interface = a10nsp_interface;
-                stream->session = session;
-                stream->tx_interval = timer_sec * 1e9 + timer_nsec;
-                result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
-                if (!result.inserted) {
-                    LOG(ERROR, "Failed to insert stream %s\n", config->name);
-                    free(stream);
-                    return false;
-                }
-                *result.datum_ptr = stream;
-                if(session->stream) {
-                    session_stream = session->stream;
-                    while(session_stream->session_next) {
-                        session_stream = session_stream->session_next;
-                    }
-                    session_stream->session_next = stream;
-                } else {
-                    session->stream = stream;
-                }
-                bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
-                g_ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s added to %s (downstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
-                    interface->name, config->name, config->pps, timer_sec, timer_nsec);
-            }
+    if(config->direction & BBL_DIRECTION_UP) {
+        stream = calloc(1, sizeof(bbl_stream_s));
+        stream->flow_id = g_ctx->flow_id++;
+        stream->flow_seq = 1;
+        stream->config = config;
+        stream->direction = BBL_DIRECTION_UP;
+        stream->interface = session->access_interface->interface;
+        stream->access_interface = session->access_interface;
+        stream->session = session;
+        stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+        result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
+        if (!result.inserted) {
+            LOG(ERROR, "Failed to insert stream %s\n", config->name);
+            free(stream);
+            return false;
         }
-        config = config->next;
+        *result.datum_ptr = stream;
+        stream->session_next = session->streams.head;
+        session->streams.head = stream;
+        bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
+        g_ctx->stats.stream_traffic_flows++;
+        LOG(DEBUG, "Traffic stream %s added to %s (upstream) with %lf PPS (timer: %lu sec %lu nsec)\n", 
+            interface->name, config->name, config->pps, timer_sec, timer_nsec);
+    }
+    if(config->direction & BBL_DIRECTION_DOWN) {
+        stream = calloc(1, sizeof(bbl_stream_s));
+        stream->flow_id = g_ctx->flow_id++;
+        stream->flow_seq = 1;
+        stream->config = config;
+        stream->direction = BBL_DIRECTION_DOWN;
+        stream->interface = interface;
+        stream->network_interface = network_interface;
+        stream->a10nsp_interface = a10nsp_interface;
+        stream->session = session;
+        stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+        result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
+        if (!result.inserted) {
+            LOG(ERROR, "Failed to insert stream %s\n", config->name);
+            free(stream);
+            return false;
+        }
+        *result.datum_ptr = stream;
+        stream->session_next = session->streams.head;
+        session->streams.head = stream;
+        bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
+        g_ctx->stats.stream_traffic_flows++;
+        LOG(DEBUG, "Traffic stream %s added to %s (downstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
+            interface->name, config->name, config->pps, timer_sec, timer_nsec);
+    }
+    return true;
+}
+
+bool
+bbl_stream_session_init(bbl_session_s *session)
+{
+    bbl_stream_config_s *config;
+
+    /** Add session traffic ... */
+    if(g_ctx->config.stream_config_session_ipv4_up && session->endpoint.ipv4) {
+        if(!bbl_stream_add(g_ctx->config.stream_config_session_ipv4_up, session)) {
+            return false;
+        }
+        session->session_traffic.ipv4_up = session->streams.head;
+    }
+    if(g_ctx->config.stream_config_session_ipv4_down && session->endpoint.ipv4) {
+        if(!bbl_stream_add(g_ctx->config.stream_config_session_ipv4_down, session)) {
+            return false;
+        }
+        session->session_traffic.ipv4_down = session->streams.head;
+    }
+    if(g_ctx->config.stream_config_session_ipv6_up && session->endpoint.ipv6) {
+        if(!bbl_stream_add(g_ctx->config.stream_config_session_ipv6_up, session)) {
+            return false;
+        }
+        session->session_traffic.ipv6_up = session->streams.head;
+    }
+    if(g_ctx->config.stream_config_session_ipv6_down && session->endpoint.ipv6) {
+        if(!bbl_stream_add(g_ctx->config.stream_config_session_ipv6_down, session)) {
+            return false;
+        }
+        session->session_traffic.ipv6_down = session->streams.head;
+    }
+    if(g_ctx->config.stream_config_session_ipv6pd_up && session->endpoint.ipv6pd) {
+        if(!bbl_stream_add(g_ctx->config.stream_config_session_ipv6pd_up, session)) {
+            return false;
+        }
+        session->session_traffic.ipv6pd_up = session->streams.head;
+    }
+    if(g_ctx->config.stream_config_session_ipv6pd_down && session->endpoint.ipv6pd) {
+        if(!bbl_stream_add(g_ctx->config.stream_config_session_ipv6pd_down, session)) {
+            return false;
+        }
+        session->session_traffic.ipv6pd_down = session->streams.head;
+    }
+
+    /** Add streams of corresponding stream-group-id */
+    if(session->streams.group_id) {
+        config = g_ctx->config.stream_config;
+        while(config) {
+            if(config->stream_group_id == session->streams.group_id) {
+                if(!bbl_stream_add(config, session)) {
+                    return false;
+                }
+            }
+            config = config->next;
+        }
     }
 
     return true;
 }
 
 bool
-bbl_stream_raw_add() {
+bbl_stream_init() {
 
     bbl_stream_config_s *config;
     bbl_stream_s *stream;
 
-    bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
 
     dict_insert_result result;
 
     time_t timer_sec = 0;
     long timer_nsec  = 0;
+    int i;
 
+    uint32_t group;
+    uint32_t source;
+
+    /* Add RAW streams */
     config = g_ctx->config.stream_config;
-
     while(config) {
         if(config->stream_group_id == 0) {
-            network_interface = bbl_get_network_interface(config->network_interface);
+            network_interface = bbl_network_interface_get(config->network_interface);
             if(!network_interface) {
                 LOG_NOARG(ERROR, "Failed to add RAW stream because of missing network interface\n");
                 return false;
@@ -1508,13 +1575,158 @@ bbl_stream_raw_add() {
                 bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
                 g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "RAW traffic stream %s added to %s (downstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
-                    interface->name, config->name, config->pps, timer_sec, timer_nsec);
+                    network_interface->name, config->name, config->pps, timer_sec, timer_nsec);
             }
         }
         config = config->next;
     }
 
+    /* Add autogenerated multicast streams */
+    if(g_ctx->config.send_multicast_traffic && g_ctx->config.igmp_group_count) {
+        network_interface = bbl_network_interface_get(g_ctx->config.multicast_traffic_network_interface);
+        if(!network_interface) {
+            LOG_NOARG(ERROR, "Failed to add multicast streams because of missing network interface\n");
+            return false;
+        }
+
+        timer_nsec = SEC / g_ctx->config.multicast_traffic_pps;
+        timer_sec = timer_nsec / 1000000000;
+        timer_nsec = timer_nsec % 1000000000;
+
+        for(i = 0; i < g_ctx->config.igmp_group_count; i++) {
+
+            group = be32toh(g_ctx->config.igmp_group) + i * be32toh(g_ctx->config.igmp_group_iter);
+            if(g_ctx->config.igmp_source) {
+                source = g_ctx->config.igmp_source;
+            } else {
+                source = network_interface->ip.address;
+            }
+            group = htobe32(group);
+
+            config = calloc(1, sizeof(bbl_stream_config_s));
+            config->name = (char*)g_multicast_traffic;
+            config->type = BBL_SUB_TYPE_IPV4;
+            config->direction = BBL_DIRECTION_DOWN;
+            config->pps = g_ctx->config.multicast_traffic_pps;
+            config->length = g_ctx->config.multicast_traffic_len;
+            config->priority = g_ctx->config.multicast_traffic_tos;
+            config->ipv4_destination_address = group;
+            config->ipv4_network_address = source;
+        }
+    }
+
+    /* Add session traffic stream configurations */
+    if(g_ctx->config.session_traffic_ipv4_pps) {
+        /* Upstream */
+        config = calloc(1, sizeof(bbl_stream_config_s));
+        config->name = (char*)g_session_traffic_ipv4_up;
+        config->stream_group_id = UINT16_MAX;
+        config->type = BBL_SUB_TYPE_IPV4;
+        config->direction = BBL_DIRECTION_UP;
+        config->session_traffic = true;
+        config->pps = g_ctx->config.session_traffic_ipv4_pps;
+        config->ipv4_network_address = g_ctx->config.session_traffic_ipv4_address;
+        g_ctx->config.stream_config_session_ipv4_up = config;
+        /* Downstream */
+        config = calloc(1, sizeof(bbl_stream_config_s));
+        config->name = (char*)g_session_traffic_ipv4_down;
+        config->stream_group_id = UINT16_MAX;
+        config->type = BBL_SUB_TYPE_IPV4;
+        config->direction = BBL_DIRECTION_DOWN;
+        config->session_traffic = true;
+        config->pps = g_ctx->config.session_traffic_ipv4_pps;
+        config->ipv4_network_address = g_ctx->config.session_traffic_ipv4_address;
+        if(g_ctx->config.session_traffic_ipv4_label) {
+            config->tx_mpls1 = true;
+            config->tx_mpls1_label = g_ctx->config.session_traffic_ipv4_label;
+        }
+        g_ctx->config.stream_config_session_ipv4_down = config;
+    }
+    if(g_ctx->config.session_traffic_ipv6_pps) {
+        /* Upstream */
+        config = calloc(1, sizeof(bbl_stream_config_s));
+        config->name = (char*)g_session_traffic_ipv6_up;
+        config->stream_group_id = UINT16_MAX;
+        config->type = BBL_SUB_TYPE_IPV6;
+        config->direction = BBL_DIRECTION_UP;
+        config->session_traffic = true;
+        config->pps = g_ctx->config.session_traffic_ipv6_pps;
+        memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
+        g_ctx->config.stream_config_session_ipv6_up = config;
+        /* Downstream */
+        config = calloc(1, sizeof(bbl_stream_config_s));
+        config->name = (char*)g_session_traffic_ipv6_down;
+        config->stream_group_id = UINT16_MAX;
+        config->type = BBL_SUB_TYPE_IPV6;
+        config->direction = BBL_DIRECTION_DOWN;
+        config->session_traffic = true;
+        config->pps = g_ctx->config.session_traffic_ipv6_pps;
+        memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
+        if(g_ctx->config.session_traffic_ipv6_label) {
+            config->tx_mpls1 = true;
+            config->tx_mpls1_label = g_ctx->config.session_traffic_ipv6_label;
+        }
+        g_ctx->config.stream_config_session_ipv6_down = config;
+    }
+    if(g_ctx->config.session_traffic_ipv6pd_pps) {
+        /* Upstream */
+        config = calloc(1, sizeof(bbl_stream_config_s));
+        config->name = (char*)g_session_traffic_ipv6pd_up;
+        config->stream_group_id = UINT16_MAX;
+        config->type = BBL_SUB_TYPE_IPV6PD;
+        config->direction = BBL_DIRECTION_UP;
+        config->session_traffic = true;
+        config->pps = g_ctx->config.session_traffic_ipv6_pps;
+        memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
+        g_ctx->config.stream_config_session_ipv6pd_up = config;
+        /* Downstream */
+        config = calloc(1, sizeof(bbl_stream_config_s));
+        config->name = (char*)g_session_traffic_ipv6pd_down;
+        config->stream_group_id = UINT16_MAX;
+        config->type = BBL_SUB_TYPE_IPV6PD;
+        config->direction = BBL_DIRECTION_DOWN;
+        config->session_traffic = true;
+        config->pps = g_ctx->config.session_traffic_ipv6_pps;
+        memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
+        if(g_ctx->config.session_traffic_ipv6_label) {
+            config->tx_mpls1 = true;
+            config->tx_mpls1_label = g_ctx->config.session_traffic_ipv6_label;
+        }
+        g_ctx->config.stream_config_session_ipv6pd_down = config;
+    }
     return true;
+}
+
+void
+bbl_stream_reset(bbl_stream_s *stream)
+{
+    if(!stream) return;
+
+    stream->reset = true;
+
+    stream->reset_packets_tx = stream->packets_tx;
+    stream->reset_packets_rx = stream->packets_rx;
+    stream->reset_loss = stream->loss;
+    stream->reset_wrong_session = stream->wrong_session;
+
+    stream->min_delay_ns = 0;
+    stream->max_delay_ns = 0;
+    stream->rx_len = 0;
+    stream->rx_first_seq = 0;
+    stream->rx_last_seq = 0;
+    stream->rx_priority = 0;
+    stream->rx_outer_vlan_pbit = 0;
+    stream->rx_inner_vlan_pbit = 0;
+    stream->rx_mpls1 = false;
+    stream->rx_mpls1_exp = 0;
+    stream->rx_mpls1_ttl = 0;
+    stream->rx_mpls1_label = 0;
+    stream->rx_mpls2 = false;
+    stream->rx_mpls2_exp = 0;
+    stream->rx_mpls2_ttl = 0;
+    stream->rx_mpls2_label = 0;
+    stream->verified = false;
+    stream->stop = false;
 }
 
 json_t *

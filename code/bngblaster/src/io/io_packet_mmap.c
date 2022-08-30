@@ -70,7 +70,6 @@ io_packet_mmap_rx_job(timer_s *timer)
         io->buf_len = tphdr->tp_len;
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += io->buf_len;
-        interface->io.ctrl = true;
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
@@ -96,7 +95,7 @@ io_packet_mmap_rx_job(timer_s *timer)
             interface->stats.decode_error++;
         }
         /* Dump the packet into pcap file */
-        if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+        if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
             pcap = true;
             pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                       interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
@@ -196,7 +195,6 @@ void
 io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
 {
     io_handle_s *io = thread->io;
-    bbl_interface_s *interface = io->interface;
 
     uint16_t cursor = io->cursor;
     uint16_t frame_size = io->req.tp_frame_size;
@@ -277,7 +275,7 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
     } else {
         io->polled = false;
 
-        while(slot = bbl_txq_read_slot(txq)) {
+        while((slot = bbl_txq_read_slot(txq))) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;

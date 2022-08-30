@@ -56,6 +56,7 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
             }
         }
     }
+    return false;
 }
 
 static bool
@@ -112,7 +113,7 @@ bbl_rx_handler(bbl_interface_s *interface,
             bbl_access_rx_handler(interface->access, eth);
         }
     } else if(interface->a10nsp) {
-        if(!bbl_rx_stream_a10nsp(interface->access, eth)) {
+        if(!bbl_rx_stream_a10nsp(interface->a10nsp, eth)) {
             bbl_a10nsp_rx_handler(interface->a10nsp, eth);
         }
     }

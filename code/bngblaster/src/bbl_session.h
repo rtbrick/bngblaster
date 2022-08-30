@@ -42,7 +42,6 @@ typedef struct bbl_session_
 
     session_state_t session_state;
     uint32_t send_requests;
-    uint32_t network_send_requests;
 
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
@@ -54,7 +53,6 @@ typedef struct bbl_session_
     bbl_access_config_s *access_config;
     bbl_access_interface_s *access_interface; /* where this session is attached to */
     bbl_network_interface_s *network_interface; /* selected network interface */
-    bbl_a10nsp_interface_s *a10nsp_interface; /* a10nsp interface */
 
     uint8_t *write_buf; /* pointer to the slot in the tx_ring */
     uint16_t write_idx;
@@ -78,19 +76,19 @@ typedef struct bbl_session_
     struct timer_ *timer_zapping;
     struct timer_ *timer_icmpv6;
     struct timer_ *timer_session;
-    struct timer_ *timer_session_traffic_ipv4;
-    struct timer_ *timer_session_traffic_ipv6;
-    struct timer_ *timer_session_traffic_ipv6pd;
     struct timer_ *timer_rate;
     struct timer_ *timer_cfm_cc;
     struct timer_ *timer_reconnect;
     struct timer_ *timer_monkey;
 
-    bbl_access_type_t access_type;
+    access_type_t access_type;
 
-    uint16_t stream_group_id;
-    void *stream;
-    bool stream_traffic;
+    struct {
+        endpoint_state_t ipv4;
+        endpoint_state_t ipv6;
+        endpoint_state_t ipv6pd;
+    } endpoint;
+
     struct {
         uint32_t ifindex;
         uint16_t outer_vlan_id;
@@ -106,6 +104,7 @@ typedef struct bbl_session_
     /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */
     bbl_a10nsp_session_s *a10nsp_session;
+    bbl_a10nsp_interface_s *a10nsp_interface; /* a10nsp interface */
 
     /* Authentication */
     char *username;
@@ -270,6 +269,14 @@ typedef struct bbl_session_
 
     struct {
         bool enabled;
+        bool active;
+        uint16_t group_id;
+        bbl_stream_s *head;
+    } streams;
+
+    struct {
+        bool enabled;
+        bool active;
         uint8_t flows;
         uint8_t flows_verified;
         bbl_stream_s *ipv4_up;
@@ -360,12 +367,6 @@ bbl_session_tx_qnode_insert(struct bbl_session_ *session);
 
 void
 bbl_session_tx_qnode_remove(struct bbl_session_ *session);
-
-void
-bbl_session_network_tx_qnode_insert(struct bbl_session_ *session);
-
-void
-bbl_session_network_tx_qnode_remove(struct bbl_session_ *session);
 
 void
 bbl_session_ncp_open(bbl_session_s *session, bool ipcp);

@@ -172,7 +172,6 @@ bbl_network_interfaces_add()
         }
 
         /* TX list init */
-        CIRCLEQ_INIT(&network_interface->session_tx_qhead);
         CIRCLEQ_INIT(&network_interface->l2tp_tx_qhead);
 
         /* Timer to compute periodic rates */
@@ -250,7 +249,7 @@ bbl_network_icmp_reply(bbl_network_interface_s *interface,
                        bbl_ipv4_t *ipv4,
                        bbl_icmp_t *icmp) {
     uint32_t dst = ipv4->dst;
-    update_eth(interface, eth);
+    bbl_network_update_eth(interface, eth);
     ipv4->dst = ipv4->src;
     ipv4->src = dst;
     ipv4->ttl = 64;
@@ -263,7 +262,7 @@ bbl_network_icmpv6_na(bbl_network_interface_s *interface,
                       bbl_ethernet_header_t *eth,
                       bbl_ipv6_t *ipv6,
                       bbl_icmpv6_t *icmpv6) {
-    update_eth(interface, eth);
+    bbl_network_update_eth(interface, eth);
     ipv6->dst = ipv6->src;
     ipv6->src = icmpv6->prefix.address;
     ipv6->ttl = 255;
@@ -283,7 +282,7 @@ bbl_network_icmpv6_echo_reply(bbl_network_interface_s *interface,
                               bbl_ipv6_t *ipv6,
                               bbl_icmpv6_t *icmpv6) {
     uint8_t *dst = ipv6->dst;
-    update_eth(interface, eth);
+    bbl_network_update_eth(interface, eth);
     ipv6->dst = ipv6->src;
     ipv6->src = dst;
     ipv6->ttl = 255;
@@ -319,7 +318,8 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_t *et
 }
 
 static void
-bbl_network_rx_icmpv6(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth) {
+bbl_network_rx_icmpv6(bbl_network_interface_s *interface, 
+                      bbl_ethernet_header_t *eth) {
     bbl_ipv6_t *ipv6;
     bbl_icmpv6_t *icmpv6;
     bbl_secondary_ip6_s *secondary_ip6;
@@ -354,7 +354,8 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface, bbl_ethernet_header_t 
 }
 
 static void
-bbl_network_rx_icmp(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4)
+bbl_network_rx_icmp(bbl_network_interface_s *interface, 
+                    bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4)
 {
     bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
     if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
@@ -378,7 +379,6 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
     bbl_ipv4_t *ipv4 = NULL;
     bbl_ipv6_t *ipv6 = NULL;
     bbl_udp_t *udp = NULL;
-    bbl_session_s *session;
 
     switch(eth->type) {
         case ETH_TYPE_ARP:
@@ -401,7 +401,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 }
             } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
                 interface->stats.icmp_rx++;
-                bbl_network_rx_icmp(eth, ipv4, interface);
+                bbl_network_rx_icmp(interface, eth, ipv4);
                 return;
             } else if(ipv4->protocol == PROTOCOL_IPV4_TCP) {
                 interface->stats.tcp_rx++;
@@ -412,7 +412,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
         case ETH_TYPE_IPV6:
             ipv6 = (bbl_ipv6_t*)eth->next;
             if(ipv6->protocol == IPV6_NEXT_HEADER_ICMPV6) {
-                bbl_network_rx_icmpv6(eth, interface);
+                bbl_network_rx_icmpv6(interface, eth);
                 return;
             }
             break;

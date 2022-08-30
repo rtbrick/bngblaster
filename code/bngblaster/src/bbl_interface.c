@@ -7,7 +7,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
-#include "bbl_io.h"
 #include <sys/stat.h>
 
 void
@@ -92,7 +91,7 @@ bbl_interface_unlock_all()
  * @return interface
  */
 static bbl_interface_s *
-bbl_interface_add(char *interface_name, bbl_link_config_s *link_config)
+bbl_interface_link_add(char *interface_name, bbl_link_config_s *link_config)
 {
     bbl_interface_s *interface;
 
@@ -124,30 +123,10 @@ bbl_interface_add(char *interface_name, bbl_link_config_s *link_config)
 }
 
 /**
- * bbl_interface_get
- * 
- * Get interface by name. 
- *
- * @param interface_name interface name
- * @return the interface or NULL
- */
-bbl_interface_s *
-bbl_interface_get(char *interface_name)
-{
-    bbl_interface_s *interface;
-    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        if (strcmp(interface->name, interface_name) == 0) {
-            return interface;
-        }
-    }
-    return NULL;
-}
-
-/**
- * bbl_interface_init
+ * bbl_interface_links_add
  */
 static bool
-bbl_interface_init()
+bbl_interface_links_add()
 {
     bbl_link_config_s *link_config = g_ctx->config.link_config;
     struct bbl_interface_ *interface;
@@ -158,7 +137,7 @@ bbl_interface_init()
                 link_config->interface);
             return false;
         }
-        interface = bbl_interface_add(link_config->interface, link_config);
+        interface = bbl_interface_link_add(link_config->interface, link_config);
         if (!interface) {
             LOG(ERROR, "Failed to add link %s\n", link_config->interface);
             return false;
@@ -194,8 +173,28 @@ bbl_interface_init()
     if(!bbl_network_interfaces_add()) {
         return false;
     }
-    if(!bbl_a10nsp_add()) {
+    if(!bbl_a10nsp_interfaces_add()) {
         return false;
     }
     return true;
+}
+
+/**
+ * bbl_interface_get
+ * 
+ * Get interface by name. 
+ *
+ * @param interface_name interface name
+ * @return the interface or NULL
+ */
+bbl_interface_s *
+bbl_interface_get(char *interface_name)
+{
+    bbl_interface_s *interface;
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if (strcmp(interface->name, interface_name) == 0) {
+            return interface;
+        }
+    }
+    return NULL;
 }

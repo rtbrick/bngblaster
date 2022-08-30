@@ -569,7 +569,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     PDU_CURSOR_RST(pdu);
     memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
 
-    timer_add(&interface->ctx->timer_root, 
+    timer_add(&g_ctx->timer_root, 
               &lsp->timer_lifetime, 
               "ISIS LIFETIME", lsp->lifetime, 0, lsp,
               &isis_lsp_lifetime_job);

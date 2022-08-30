@@ -127,7 +127,7 @@ io_thread_main_rx_job(timer_s *timer)
     while(io) {
         thread = io->thread;
         if(thread) {
-            while(slot = bbl_txq_read_slot(thread->txq)) {
+            while((slot = bbl_txq_read_slot(thread->txq))) {
                 decode_result = decode_ethernet(slot->packet, slot->packet_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
                 if(decode_result == PROTOCOL_SUCCESS) {
                     vlan = slot->vlan_tci & ETH_VLAN_ID_MAX;
@@ -151,7 +151,7 @@ io_thread_main_rx_job(timer_s *timer)
                     interface->stats.decode_error++;
                 }
                 /* Dump the packet into pcap file. */
-                if (g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+                if (g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                     pcap = true;
                     pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                               interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
@@ -187,7 +187,7 @@ io_thread_main_tx_job(timer_s *timer)
     struct timespec timestamp;
     clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
-    while(slot = bbl_txq_write_slot(txq)) {
+    while((slot = bbl_txq_write_slot(txq))) {
         tx_result = bbl_tx(interface, slot->packet, &slot->packet_len);
         if(tx_result == PROTOCOL_SUCCESS) {
             interface->stats.packets_tx++;
@@ -208,7 +208,7 @@ io_thread_main_tx_job(timer_s *timer)
     }
 }
 
-void
+void *
 io_thread_main(void *thread_data)
 {
     io_thread_s *thread = thread_data;
@@ -223,6 +223,7 @@ io_thread_main(void *thread_data)
     }
     thread->active = false;
     thread->stopped = true;
+    return NULL;
 }
 
 void

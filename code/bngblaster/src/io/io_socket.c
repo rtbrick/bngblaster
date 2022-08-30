@@ -82,7 +82,7 @@ set_ring(io_handle_s *io, int slots) {
 
     ring_size = io->req.tp_block_nr * io->req.tp_block_size;
 
-    LOG(DEBUG, "Setup %d byte packet_mmap ringbuffer (%d slots) for interface %s\n", 
+    LOG(DEBUG, "Setup %lu byte packet_mmap ringbuffer (%d slots) for interface %s\n", 
         ring_size, slots, io->interface->name);
     if (setsockopt(io->fd, SOL_PACKET, flag, &io->req, sizeof(struct tpacket_req)) == -1) {
         LOG(ERROR, "Allocating ringbuffer error for interface %s - %s (%d)\n",
@@ -97,12 +97,18 @@ bool
 io_socket_open(io_handle_s *io) {
 
     bbl_interface_s *interface = io->interface;
+    bbl_link_config_s *config = interface->config;
 
     assert(io->mode == IO_MODE_PACKET_MMAP || io->mode == IO_MODE_RAW);
 
     int protocol = 0;
     if(io->direction == IO_INGRESS) {
         protocol = htobe16(ETH_P_ALL);
+    }
+
+    uint16_t slots = config->io_slots_tx;
+    if(io->direction == IO_INGRESS) {
+        slots = config->io_slots_rx;
     }
 
     /* Open RAW socket for all ethertypes.
@@ -131,7 +137,7 @@ io_socket_open(io_handle_s *io) {
         if(!set_packet_version(io, TPACKET_V2)) {
             return false;
         }
-        if(!set_ring(io, interface->config->io_slots)) {
+        if(!set_ring(io, slots)) {
             return false;
         }
         if(!set_fanout(io)) {

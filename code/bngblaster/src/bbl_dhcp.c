@@ -20,8 +20,6 @@
 void
 bbl_dhcp_stop(bbl_session_s *session)
 {
-    bbl_access_interface_s *interface = session->access_interface;
-
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     /* Reset session IP configuration */
@@ -30,9 +28,6 @@ bbl_dhcp_stop(bbl_session_s *session)
     session->peer_ip_address = 0;
     session->dns1 = 0;
     session->dns2 = 0;
-
-    /* Stop session traffic */
-    timer_del(session->timer_session_traffic_ipv4);
 
     /* Stop multicast ... */
     timer_del(session->timer_igmp);
@@ -151,8 +146,6 @@ bbl_dhcp_t2(timer_s *timer)
 void
 bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp)
 {
-    bbl_access_interface_s *interface = session->access_interface;
-
     /* Ignore packets received in wrong state */
     if(session->dhcp_state == BBL_DHCP_INIT) {
         return;
@@ -218,6 +211,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp
                 }
                 /* Update session ... */
                 if(session->dhcp_address != session->ip_address) {
+                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->dhcp_address));
                 }
