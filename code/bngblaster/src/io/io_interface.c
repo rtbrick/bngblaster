@@ -88,6 +88,11 @@ io_interface_init_rx(bbl_interface_s *interface)
         io->next = interface->io.rx;
         interface->io.rx = io->next;
         io->interface = interface;
+        if(config->rx_threads) {
+            if(!io_thread_init(io)) {
+                return false;
+            }
+        }
         switch(io->mode) {
             case IO_MODE_PACKET_MMAP:
                 if(!io_packet_mmap_init(io)) {
@@ -101,11 +106,6 @@ io_interface_init_rx(bbl_interface_s *interface)
                 break;
             default:
                 return false;
-        }
-        if(config->rx_threads) {
-            if(!io_thread_init(io)) {
-                return false;
-            }
         }
     }
     return true;

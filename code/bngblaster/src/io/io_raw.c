@@ -148,7 +148,7 @@ io_raw_thread_tx_job(timer_s *timer)
 
     assert(io->mode == IO_MODE_RAW);
     assert(io->direction == IO_EGRESS);
-    assert(io->thread == NULL);
+    assert(io->thread);
 
     while((slot = bbl_txq_read_slot(txq))) {
         if(sendto(io->fd, slot->packet, slot->packet_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {

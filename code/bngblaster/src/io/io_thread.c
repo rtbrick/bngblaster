@@ -244,9 +244,13 @@ io_thread_init(io_handle_s *io)
     bbl_link_config_s *config = interface->config;
     io_thread_s *thread;
 
+    
     uint16_t slots = config->io_slots_tx;
     if(io->direction == IO_INGRESS) {
+        LOG(DEBUG, "Init RX thread for interface %s\n", interface->name);
         slots = config->io_slots_rx;
+    } else {
+        LOG(DEBUG, "Init TX thread for interface %s\n", interface->name);
     }
 
     /* Add thread */
@@ -255,6 +259,7 @@ io_thread_init(io_handle_s *io)
     g_ctx->io_threads = thread;
 
     io->thread = thread;
+    thread->io = io;
     io->fanout_id = interface->ifindex;
     io->fanout_type = PACKET_FANOUT_HASH;
 
@@ -301,6 +306,7 @@ io_thread_start_all()
 {
     io_thread_s *thread = g_ctx->io_threads;
     while(thread) {
+        thread->active = true;
         pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
         thread = thread->next;
     }
