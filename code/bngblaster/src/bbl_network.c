@@ -87,6 +87,7 @@ bbl_network_interfaces_add()
         network_interface = calloc(1, sizeof(bbl_network_interface_s));
         network_interface->next = interface->network;
         interface->network = network_interface;
+        network_interface->interface = interface;
         network_config->network_interface = network_interface;
         network_interface->name = strdup(ifname);
 

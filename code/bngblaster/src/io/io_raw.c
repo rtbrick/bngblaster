@@ -195,10 +195,10 @@ io_raw_init(io_handle_s *io)
     } else {
         if(io->direction == IO_INGRESS) {
             timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 0, 
-                config->rx_interval, interface, &io_raw_rx_job);
+                config->rx_interval, io, &io_raw_rx_job);
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "TX", 0, 
-                config->tx_interval, interface, &io_raw_tx_job);
+                config->tx_interval, io, &io_raw_tx_job);
         }
     }
     return true;

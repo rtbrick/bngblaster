@@ -114,7 +114,7 @@ io_socket_open(io_handle_s *io) {
     /* Open RAW socket for all ethertypes.
      * https://man7.org/linux/man-pages/man7/packet.7.html */
     io->fd = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, protocol);
-    if (io->fd == -1) {
+    if(io->fd == -1) {
         LOG(ERROR, "Failed to open socket for interface %s - %s (%d)\n", 
             io->interface->name, strerror(errno), errno);
         return false;

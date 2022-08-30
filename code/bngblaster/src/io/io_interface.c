@@ -123,14 +123,14 @@ io_interface_init_tx(bbl_interface_s *interface)
     while(count) {
         io = calloc(1, sizeof(io_handle_s));
         if(!io) return false;
-        io->id = -count;
+        io->id = --count;
         io->mode = config->io_mode;
         if(io->mode == IO_MODE_PACKET_MMAP_RAW) {
             io->mode = IO_MODE_RAW;
         }
         io->direction = IO_EGRESS;
         io->next = interface->io.tx;
-        interface->io.tx = io->next;
+        interface->io.tx = io;
         io->interface = interface;
         if(config->rx_threads) {
             if(!io_thread_init(io)) {

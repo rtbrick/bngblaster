@@ -58,6 +58,7 @@ bbl_a10nsp_interfaces_add()
 
         a10nsp_interface = calloc(1, sizeof(bbl_a10nsp_interface_s));
         interface->a10nsp = a10nsp_interface;
+        a10nsp_interface->interface = interface;
         a10nsp_config->a10nsp_interface = a10nsp_interface;
 
         CIRCLEQ_INSERT_TAIL(&g_ctx->a10nsp_interface_qhead, a10nsp_interface, a10nsp_interface_qnode);

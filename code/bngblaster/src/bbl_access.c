@@ -66,6 +66,7 @@ bbl_access_interfaces_add()
         if(!interface->access) {
             access_interface = calloc(1, sizeof(bbl_access_interface_s));
             interface->access = access_interface;
+            access_interface->interface = interface;
 
             CIRCLEQ_INSERT_TAIL(&g_ctx->access_interface_qhead, access_interface, access_interface_qnode);
 
