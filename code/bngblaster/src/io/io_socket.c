@@ -70,7 +70,7 @@ set_ring(io_handle_s *io, int slots) {
     size_t ring_size = 0;
     int flag = 0;
 
-    if(io->direction == IO_EGRESS) {
+    if(io->direction == IO_INGRESS) {
         flag = PACKET_RX_RING;
     } else {
         flag = PACKET_TX_RING;
@@ -95,7 +95,6 @@ set_ring(io_handle_s *io, int slots) {
     }
     return true;
 }
-
 
 bool
 io_socket_open(io_handle_s *io) {
