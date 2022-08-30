@@ -102,6 +102,7 @@ bbl_interface_link_add(char *interface_name, bbl_link_config_s *link_config)
     }
     interface->name = strdup(interface_name);
     interface->pcap_index = g_ctx->pcap.index++;
+    interface->state = INTERFACE_UP;
     
     if(!bbl_interface_lock(interface_name)) {
         return NULL;

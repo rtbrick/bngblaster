@@ -1330,7 +1330,7 @@ bbl_stream_tx_job(timer_s *timer)
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet */
-        if(!io_send(io)) {
+        if(!io_send(io, stream->buf, stream->tx_len)) {
             return;
         }
         stream->send_window_packets++;

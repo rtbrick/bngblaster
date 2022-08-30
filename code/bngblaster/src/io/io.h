@@ -28,6 +28,6 @@
 #include "io_dpdk.h"
 
 bool
-io_send(io_handle_s *io);
+io_send(io_handle_s *io, uint8_t *buf, uint16_t len);
 
 #endif

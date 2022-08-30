@@ -17,7 +17,7 @@
  * @param io IO handle.
  */
 bool
-io_send(io_handle_s *io)
+io_send(io_handle_s *io, uint8_t *buf, uint16_t len)
 {
     bool result = false;
     bbl_interface_s *interface;
@@ -27,10 +27,10 @@ io_send(io_handle_s *io)
     switch (io->mode) {
         case IO_MODE_PACKET_MMAP_RAW:
         case IO_MODE_RAW:
-            result = io_raw_send(io);
+            result = io_raw_send(io, buf, len);
             break;
         case IO_MODE_PACKET_MMAP:
-            result = io_packet_mmap_send(io);
+            result = io_packet_mmap_send(io, buf, len);
             break;
         default:
             return false;
@@ -42,7 +42,7 @@ io_send(io_handle_s *io)
         interface->stats.bytes_tx += io->buf_len;
         /* Dump the packet into pcap file. */
         if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+            pcapng_push_packet_header(&io->timestamp, buf, len,
                                       interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
             pcapng_fflush();
         }

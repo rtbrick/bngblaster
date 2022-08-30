@@ -45,9 +45,9 @@ extern bool g_banner;
 extern bool g_interactive;
 
 /* This global variable is used to switch between access interfaces. */
-bbl_access_interface_s *g_access_if;
-bbl_network_interface_s *g_network_if;
-bbl_a10nsp_interface_s *g_a10nsp_if;
+bbl_access_interface_s *g_access_if = NULL;
+bbl_network_interface_s *g_network_if = NULL;
+bbl_a10nsp_interface_s *g_a10nsp_if = NULL;
 
 /* This global variable is used to switch between views. */
 bbl_ui_view g_view_selected   = 0;
@@ -103,7 +103,7 @@ bbl_read_key_job(timer_s *timer)
             }
             /* Skip access interface and session views
              * if there is no access interface. */
-            if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
+            if(g_access_if) {
                 switch (g_view_selected) {
                     case UI_VIEW_ACCESS_IF_STATS:
                     case UI_VIEW_SESSION:
@@ -116,14 +116,14 @@ bbl_read_key_job(timer_s *timer)
             bbl_init_stats_win();
             break;
         case KEY_F(2):
-            if(!CIRCLEQ_EMPTY(&g_ctx->network_interface_qhead)) {
+            if(g_network_if) {
                 g_network_if = CIRCLEQ_LOOP_NEXT(&g_ctx->network_interface_qhead, 
                     g_network_if, network_interface_qnode);
                 bbl_init_stats_win();
             }
             break;
         case KEY_F(3):
-            if(!CIRCLEQ_EMPTY(&g_ctx->a10nsp_interface_qhead)) {
+            if(g_a10nsp_if) {
                 g_a10nsp_if = CIRCLEQ_LOOP_NEXT(&g_ctx->a10nsp_interface_qhead, 
                     g_a10nsp_if, a10nsp_interface_qnode);
                 bbl_init_stats_win();
@@ -152,7 +152,7 @@ bbl_read_key_job(timer_s *timer)
                     g_session_selected = 1;
                 }
             } else {
-                if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
+                if(g_access_if) {
                     g_access_if = CIRCLEQ_LOOP_NEXT(&g_ctx->access_interface_qhead, 
                         g_access_if, access_interface_qnode);
                     bbl_init_stats_win();
@@ -638,9 +638,15 @@ bbl_stats_job(timer_s *timer)
 void
 bbl_init_curses()
 {
-    g_access_if = CIRCLEQ_FIRST(&g_ctx->access_interface_qhead);
-    g_network_if = CIRCLEQ_FIRST(&g_ctx->network_interface_qhead);
-    g_a10nsp_if = CIRCLEQ_FIRST(&g_ctx->a10nsp_interface_qhead);
+    if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
+        g_access_if = CIRCLEQ_FIRST(&g_ctx->access_interface_qhead);
+    }
+    if(!CIRCLEQ_EMPTY(&g_ctx->network_interface_qhead)) {
+        g_network_if = CIRCLEQ_FIRST(&g_ctx->network_interface_qhead);
+    }
+    if(!CIRCLEQ_EMPTY(&g_ctx->a10nsp_interface_qhead)) {
+        g_a10nsp_if = CIRCLEQ_FIRST(&g_ctx->a10nsp_interface_qhead);
+    }
 
     initscr();
     cbreak();

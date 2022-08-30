@@ -162,9 +162,9 @@ io_raw_thread_tx_job(timer_s *timer)
 }
 
 bool
-io_raw_send(io_handle_s *io)
+io_raw_send(io_handle_s *io, uint8_t *buf, uint16_t len)
 {
-    if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
+    if(sendto(io->fd, buf, len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
         LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
             io->interface->name, strerror(errno), errno);
         io->stats.io_errors++;
@@ -181,6 +181,8 @@ io_raw_init(io_handle_s *io)
     
     io_thread_s *thread = io->thread;
     
+    io->buf = malloc(IO_BUFFER_LEN);
+
     if(!io_socket_open(io)) {
         return false;
     }
