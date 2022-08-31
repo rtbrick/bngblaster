@@ -10,12 +10,12 @@
 #define __BBL_ISIS_P2P_HELLO_H__
 
 protocol_error_t
-isis_p2p_hello_encode(bbl_interface_s *interface, 
+isis_p2p_hello_encode(bbl_network_interface_s *interface, 
                       uint8_t *buf, uint16_t *len, 
                       bbl_ethernet_header_t *eth);
 
 void
-isis_p2p_hello_handler_rx(bbl_interface_s *interface,
-                          isis_pdu_t *pdu);
+isis_p2p_hello_handler_rx(bbl_network_interface_s *interface,
+                          isis_pdu_s *pdu);
                     
 #endif

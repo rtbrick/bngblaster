@@ -13,31 +13,32 @@
  * 
  * This function inits the IS-IS adjacency. 
  *
- * @param config network interface configuration
  * @param interface network interface
+ * @param config network interface configuration
+ * @param instance IS-IS instance
  */
 bool 
-isis_adjacency_init(bbl_network_config_s *interface_config,
-                    bbl_interface_s *interface,
-                    isis_instance_t *instance) {
-    
-    isis_config_t        *config = instance->config;
-    isis_adjacency_t     *adjacency;
-    isis_adjacency_p2p_t *adjacency_p2p;
+isis_adjacency_init(bbl_network_interface_s *interface,
+                    bbl_network_config_s *interface_config,
+                    isis_instance_s *instance)
+{
+    isis_config_s *config = instance->config;
+    isis_adjacency_s *adjacency;
+    isis_adjacency_p2p_s *adjacency_p2p;
     
     uint8_t level;
 
     LOG(ISIS, "Add network interface %s to IS-IS instance %u\n", 
-        interface_config->interface, interface_config->isis_instance_id);
+        interface->name, interface_config->isis_instance_id);
 
     /* Init P2P adjacency. */
     if(interface_config->isis_p2p) {
-        adjacency_p2p = calloc(1, sizeof(isis_adjacency_p2p_t));
+        adjacency_p2p = calloc(1, sizeof(isis_adjacency_p2p_s));
         if(!adjacency_p2p) return false;
         interface->isis_adjacency_p2p = adjacency_p2p;
         adjacency_p2p->interface = interface;
         adjacency_p2p->instance  = instance; 
-        adjacency_p2p->peer = calloc(1, sizeof(isis_peer_t));
+        adjacency_p2p->peer = calloc(1, sizeof(isis_peer_s));
         if(!adjacency_p2p->peer) return false;
         adjacency_p2p->level = interface_config->isis_level;
         adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
@@ -50,7 +51,7 @@ isis_adjacency_init(bbl_network_config_s *interface_config,
         if(!(interface_config->isis_level & level)) {
             continue;
         }
-        adjacency = calloc(1, sizeof(isis_adjacency_t));
+        adjacency = calloc(1, sizeof(isis_adjacency_s));
         if(!adjacency) return false;
         interface->isis_adjacency[i] = adjacency;
         adjacency->interface = interface;
@@ -58,7 +59,7 @@ isis_adjacency_init(bbl_network_config_s *interface_config,
         if(interface_config->isis_p2p) {
             adjacency->peer = adjacency_p2p->peer;
         } else {
-            adjacency->peer = calloc(1, sizeof(isis_peer_t));
+            adjacency->peer = calloc(1, sizeof(isis_peer_s));
             if(!adjacency->peer) return false;
         }
         if(instance->level[i].adjacency) {
@@ -82,13 +83,12 @@ isis_adjacency_init(bbl_network_config_s *interface_config,
 /**
  * isis_adjacency_up
  *
- * @param adjacency ISIS adjacency
+ * @param adjacency IS-IS adjacency
  */
 void 
-isis_adjacency_up(isis_adjacency_t *adjacency) {
-
-    bbl_ctx_s *ctx = adjacency->interface->ctx;
-    isis_config_t *config = adjacency->instance->config;
+isis_adjacency_up(isis_adjacency_s *adjacency)
+{
+    isis_config_s *config = adjacency->instance->config;
 
     if(adjacency->state == ISIS_ADJACENCY_STATE_UP) {
         return;
@@ -101,38 +101,29 @@ isis_adjacency_up(isis_adjacency_t *adjacency) {
 
     adjacency->state = ISIS_ADJACENCY_STATE_UP;
 
-    timer_add_periodic(&ctx->timer_root, &adjacency->timer_tx, 
-        "ISIS TX", 
-        0, config->lsp_tx_interval * MSEC, adjacency,
-        &isis_lsp_tx_job);
+    timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_tx, 
+        "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_sx_job);
 
-    timer_add_periodic(&ctx->timer_root, &adjacency->timer_retry, 
-        "ISIS RETRY", 
-        config->lsp_retry_interval, 0, adjacency,
-        &isis_lsp_retry_job);
+    timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_retry, 
+        "ISIS RETRY", config->lsp_retry_interval, 0, adjacency, &isis_lsp_retry_job);
 
-    timer_add_periodic(&ctx->timer_root, &adjacency->timer_csnp, 
-        "ISIS CSNP", 
-        config->csnp_interval, 0, adjacency,
-        &isis_csnp_job);
+    timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_csnp, 
+        "ISIS CSNP", config->csnp_interval, 0, adjacency, &isis_csnp_job);
 
-    timer_add(&ctx->timer_root, &adjacency->timer_csnp_next, 
-        "ISIS CSNP", 
-        0, 10 * MSEC, adjacency,
-        &isis_csnp_job);
+    timer_add(&g_ctx->timer_root, &adjacency->timer_csnp_next, 
+        "ISIS CSNP", 0, 10 * MSEC, adjacency, &isis_csnp_job);
 
-    ctx->routing_sessions++;
+    g_ctx->routing_sessions++;
 }
 
 /**
  * isis_adjacency_down
  *
- * @param adjacency ISIS adjacency
+ * @param adjacency IS-IS adjacency
  */
 void
-isis_adjacency_down(isis_adjacency_t *adjacency) {
-
-    bbl_ctx_s *ctx = adjacency->interface->ctx;
+isis_adjacency_down(isis_adjacency_s *adjacency)
+{
 
     if(adjacency->state == ISIS_ADJACENCY_STATE_DOWN) {
         return;
@@ -151,5 +142,5 @@ isis_adjacency_down(isis_adjacency_t *adjacency) {
     timer_del(adjacency->timer_csnp_next);
     timer_del(adjacency->timer_holding);
 
-    if(ctx->routing_sessions) ctx->routing_sessions--;
+    if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
 }

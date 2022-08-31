@@ -18,11 +18,11 @@
  * @param adjacency ISIS adjacency
  */
 void
-isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency) {
-
+isis_lsp_flood_adjacency(isis_lsp_s *lsp, isis_adjacency_s *adjacency)
+{
     void **search = NULL;
     dict_insert_result result; 
-    isis_flood_entry_t *flood;
+    isis_flood_entry_s *flood;
 
     /* Add to flood tree if not already present. */
     search = hb_tree_search(adjacency->flood_tree, &lsp->id);
@@ -33,7 +33,7 @@ isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency) {
     } else {
         result = hb_tree_insert(adjacency->flood_tree,  &lsp->id);
         if (result.inserted) {
-            flood = calloc(1, sizeof(isis_flood_entry_t));
+            flood = calloc(1, sizeof(isis_flood_entry_s));
             flood->lsp = lsp;
             *result.datum_ptr = flood;
             lsp->refcount++;
@@ -54,11 +54,11 @@ isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency) {
  * @param lsp LSP
  */
 void
-isis_lsp_flood(isis_lsp_t *lsp) {
+isis_lsp_flood(isis_lsp_s *lsp)
+{
+    isis_adjacency_s *adjacency;
 
-    isis_adjacency_t *adjacency;
-
-    /* Iterare over all adjacencies of the corresponding 
+    /* Iterate over all adjacencies of the corresponding 
      * instance and with the same level. */
     adjacency = lsp->instance->level[lsp->level-1].adjacency;
     while(adjacency) {
@@ -97,11 +97,11 @@ NEXT:
  * @param csnp_scan CSNP scan/job identifier
  */
 void
-isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t *pdu, uint64_t csnp_scan) {
-
-    isis_tlv_t *tlv;
-    isis_lsp_t *lsp;
-    isis_lsp_entry_t *lsp_entry;
+isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s *pdu, uint64_t csnp_scan)
+{
+    isis_tlv_s *tlv;
+    isis_lsp_s *lsp;
+    isis_lsp_entry_s *lsp_entry;
 
     dict_remove_result removed;
     void **search = NULL;
@@ -117,7 +117,7 @@ isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t 
             /* Each TLV can contain multiple LSP entries. */
             offset = 0;
             while(offset + ISIS_LSP_ENTRY_LEN <= tlv->len) {
-                lsp_entry = (isis_lsp_entry_t *)(tlv->value+offset);
+                lsp_entry = (isis_lsp_entry_s *)(tlv->value+offset);
                 offset += ISIS_LSP_ENTRY_LEN;
                 lsp_id = be64toh(lsp_entry->lsp_id);
                 search = hb_tree_search(lsdb, &lsp_id);
@@ -145,10 +145,11 @@ isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t 
 }
 
 void
-isis_lsp_gc_job(timer_s *timer) {
-    isis_instance_t *instance = timer->data;
+isis_lsp_gc_job(timer_s *timer)
+{
+    isis_instance_s *instance = timer->data;
 
-    isis_lsp_t *lsp;
+    isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
 
@@ -174,10 +175,11 @@ isis_lsp_gc_job(timer_s *timer) {
 }
 
 void
-isis_lsp_retry_job(timer_s *timer) {
-    isis_adjacency_t *adjacency = timer->data;
+isis_lsp_retry_job(timer_s *timer)
+{
+    isis_adjacency_s *adjacency = timer->data;
 
-    isis_flood_entry_t *entry;
+    isis_flood_entry_s *entry;
     hb_itor *itor;
     bool next;
 
@@ -205,7 +207,7 @@ isis_lsp_retry_job(timer_s *timer) {
 
 void
 isis_lsp_refresh_job(timer_s *timer) {
-    isis_lsp_t *lsp = timer->data;
+    isis_lsp_s *lsp = timer->data;
     lsp->seq++;
     *(uint32_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(lsp->seq);
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
@@ -216,8 +218,9 @@ isis_lsp_refresh_job(timer_s *timer) {
 }
 
 void
-isis_lsp_lifetime_job(timer_s *timer) {
-    isis_lsp_t *lsp = timer->data;
+isis_lsp_lifetime_job(timer_s *timer)
+{
+    isis_lsp_s *lsp = timer->data;
 
     LOG(ISIS, "ISIS %s-LSP %s (seq %u) lifetime expired \n", 
         isis_level_string(lsp->level), 
@@ -228,10 +231,11 @@ isis_lsp_lifetime_job(timer_s *timer) {
 }
 
 void
-isis_lsp_tx_job(timer_s *timer) {
-    isis_adjacency_t *adjacency = timer->data;
-    isis_flood_entry_t *entry;
-    isis_lsp_t *lsp;
+isis_lsp_sx_job(timer_s *timer)
+{
+    isis_adjacency_s *adjacency = timer->data;
+    isis_flood_entry_s *entry;
+    isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
     uint16_t window = adjacency->window_size;
@@ -279,7 +283,7 @@ isis_lsp_tx_job(timer_s *timer) {
 
             isis.pdu = lsp->pdu.pdu;
             isis.pdu_len = lsp->pdu.pdu_len;
-            if(bbl_send_to_buffer(adjacency->interface, &eth) != BBL_SEND_OK) {
+            if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) != BBL_TXQ_OK) {
                 break;
             }
             entry->wait_ack = true;
@@ -295,9 +299,10 @@ isis_lsp_tx_job(timer_s *timer) {
     hb_itor_free(itor);
 }
 
-isis_lsp_t *
-isis_lsp_new(uint64_t id, uint8_t level, isis_instance_t *instance) {
-    isis_lsp_t *lsp = calloc(1, sizeof(isis_lsp_t));
+isis_lsp_s *
+isis_lsp_new(uint64_t id, uint8_t level, isis_instance_s *instance)
+{
+    isis_lsp_s *lsp = calloc(1, sizeof(isis_lsp_s));
     lsp->id = id;
     lsp->level = level;
     lsp->instance = instance;
@@ -307,21 +312,19 @@ isis_lsp_new(uint64_t id, uint8_t level, isis_instance_t *instance) {
 /**
  * This function adds/updates 
  * the self originated LSP entries. 
- * 
- * @param ctx global context
+ *
  * @param instance  ISIS instance
  * @param level ISIS level
  * @return true (success) / false (error)
  */
 bool
-isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
-
-    bbl_ctx_s        *ctx       = instance->ctx;
-    isis_config_t    *config    = instance->config;
-    isis_adjacency_t *adjacency = NULL;
-    isis_lsp_t       *lsp       = NULL;
+isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
+{
+    isis_config_s    *config    = instance->config;
+    isis_adjacency_s *adjacency = NULL;
+    isis_lsp_s       *lsp       = NULL;
     uint64_t          lsp_id    = 0;
-    isis_pdu_t       *pdu;
+    isis_pdu_s       *pdu;
     
     ipv4_prefix loopback_prefix;
 
@@ -331,7 +334,7 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
 
     isis_auth_type auth_type = ISIS_AUTH_NONE;
 
-    isis_external_connection_t *external_connection = NULL;
+    isis_external_connection_s *external_connection = NULL;
 
     /* Create LSP-ID */
     memcpy(&lsp_id, &config->system_id, ISIS_SYSTEM_ID_LEN);
@@ -366,7 +369,7 @@ isis_lsp_self_update(isis_instance_t *instance, uint8_t level) {
         timer_del(lsp->timer_refresh);
     } else {
         lsp->lifetime = config->lsp_lifetime;
-        timer_add_periodic(&ctx->timer_root, &lsp->timer_refresh, 
+        timer_add_periodic(&g_ctx->timer_root, &lsp->timer_refresh, 
                            "ISIS LSP refresh", config->lsp_refresh_interval, 0, lsp, 
                            &isis_lsp_refresh_job);
     }
@@ -470,13 +473,13 @@ NEXT:
  * @param level ISIS level
  */
 void
-isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
+isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level) {
 
-    isis_adjacency_t *adjacency = interface->isis_adjacency[level-1];
-    isis_instance_t  *instance  = NULL;
-    isis_config_t    *config    = NULL;
+    isis_adjacency_s *adjacency = interface->isis_adjacency[level-1];
+    isis_instance_s  *instance  = NULL;
+    isis_config_s    *config    = NULL;
 
-    isis_lsp_t *lsp = NULL;
+    isis_lsp_s *lsp = NULL;
     uint64_t    lsp_id;
     uint32_t    seq;
 
@@ -564,9 +567,9 @@ isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) 
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     PDU_CURSOR_RST(pdu);
-    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_t));
+    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
 
-    timer_add(&interface->ctx->timer_root, 
+    timer_add(&g_ctx->timer_root, 
               &lsp->timer_lifetime, 
               "ISIS LIFETIME", lsp->lifetime, 0, lsp,
               &isis_lsp_lifetime_job);
@@ -581,10 +584,8 @@ ACK:
         lsp->refcount++;
         if(!adjacency->timer_psnp_started) {
             adjacency->timer_psnp_started = true;
-            timer_add(&interface->ctx->timer_root, 
-                      &adjacency->timer_psnp_next, 
-                      "ISIS PSNP", 1, 0, adjacency,
-                      &isis_psnp_job);
+            timer_add(&g_ctx->timer_root, &adjacency->timer_psnp_next, 
+                      "ISIS PSNP", 1, 0, adjacency, &isis_psnp_job);
         }
     }
     return;
@@ -597,16 +598,16 @@ ACK:
  * @param level ISIS level
  */
 void
-isis_lsp_purge_external(isis_instance_t *instance, uint8_t level) {
-
-    isis_config_t *config = instance->config;
+isis_lsp_purge_external(isis_instance_s *instance, uint8_t level)
+{
+    isis_config_s *config = instance->config;
     hb_tree *lsdb = instance->level[level-1].lsdb;
 
-    isis_lsp_t *lsp;
+    isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
 
-    isis_pdu_t *pdu;
+    isis_pdu_s *pdu;
     isis_auth_type auth_type = ISIS_AUTH_NONE;
 
     struct timespec now;
@@ -670,9 +671,9 @@ isis_lsp_purge_external(isis_instance_t *instance, uint8_t level) {
  * @param pdu received ISIS PDU
  */
 bool
-isis_lsp_update_external(isis_instance_t *instance, isis_pdu_t *pdu) {
-
-    isis_lsp_t *lsp = NULL;
+isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
+{
+    isis_lsp_s *lsp = NULL;
     uint64_t    lsp_id;
     uint32_t    seq;
     uint8_t     level;
@@ -725,9 +726,9 @@ isis_lsp_update_external(isis_instance_t *instance, isis_pdu_t *pdu) {
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     PDU_CURSOR_RST(pdu);
-    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_t));
+    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
 
-    timer_add(&instance->ctx->timer_root, 
+    timer_add(&g_ctx->timer_root, 
               &lsp->timer_lifetime, 
               "ISIS LIFETIME", lsp->lifetime, 0, lsp,
               &isis_lsp_lifetime_job);

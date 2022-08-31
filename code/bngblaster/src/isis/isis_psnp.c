@@ -9,26 +9,27 @@
 #include "isis.h"
 
 void
-isis_psnp_job (timer_s *timer) {
-    isis_adjacency_t *adjacency = timer->data;
-    isis_instance_t *instance = adjacency->instance;
-    isis_config_t *config = instance->config;
+isis_psnp_job (timer_s *timer)
+{
+    isis_adjacency_s *adjacency = timer->data;
+    isis_instance_s *instance = adjacency->instance;
+    isis_config_s *config = instance->config;
 
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
-    isis_lsp_t *lsp;
+    isis_lsp_s *lsp;
     void **search = NULL;
 
     uint64_t lsp_id_zero = 0;
     int entries = 0;
 
-    isis_pdu_t pdu = {0};
+    isis_pdu_s pdu = {0};
     uint8_t level = adjacency->level;
     uint16_t remaining_lifetime;
 
-    isis_tlv_t *tlv;
-    isis_lsp_entry_t *entry;
+    isis_tlv_s *tlv;
+    isis_lsp_entry_s *entry;
 
     bbl_ethernet_header_t eth = {0};
     bbl_isis_t isis = {0};
@@ -59,10 +60,10 @@ isis_psnp_job (timer_s *timer) {
     /* TLV section */
     isis_pdu_add_tlv_auth(&pdu, auth, key);
 
-    tlv = (isis_tlv_t *)PDU_CURSOR(&pdu);
+    tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
     tlv->type = ISIS_TLV_LSP_ENTRIES;
     tlv->len = 0;
-    PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_t));
+    PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
 
     search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
     while(search) {
@@ -76,32 +77,30 @@ isis_psnp_job (timer_s *timer) {
 
             if(tlv->len > UINT8_MAX-ISIS_LSP_ENTRY_LEN) {
                 /* Open next LSP entry TLV */
-                if(pdu.pdu_len+sizeof(isis_tlv_t)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
+                if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
                     adjacency->csnp_start = lsp->id;
                     break;
                 }
-                tlv = (isis_tlv_t *)PDU_CURSOR(&pdu);
+                tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
                 tlv->type = ISIS_TLV_LSP_ENTRIES;
                 tlv->len = 0;
-                PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_t));
+                PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
             } else {
                 if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
                     /* All entries do not fit into single PSNP. */
                     adjacency->timer_psnp_started = true;
-                    timer_add(&adjacency->interface->ctx->timer_root, 
-                              &adjacency->timer_psnp_next, 
-                              "ISIS PSNP", 0, 10*MSEC, adjacency,
-                              &isis_psnp_job);
+                    timer_add(&g_ctx->timer_root, &adjacency->timer_psnp_next, 
+                              "ISIS PSNP", 0, 10*MSEC, adjacency, &isis_psnp_job);
                     break;
                 }
             }
-            tlv->len+=sizeof(isis_lsp_entry_t);
-            entry = (isis_lsp_entry_t *)PDU_CURSOR(&pdu);
+            tlv->len+=sizeof(isis_lsp_entry_s);
+            entry = (isis_lsp_entry_s *)PDU_CURSOR(&pdu);
             entry->lifetime = htobe16(remaining_lifetime);
             entry->lsp_id = htobe64(lsp->id);
             entry->seq = htobe32(lsp->seq);
             entry->checksum = *(uint16_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
-            PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_t));
+            PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
             entries++;
         }
         search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
@@ -128,9 +127,9 @@ isis_psnp_job (timer_s *timer) {
     }
     isis.pdu = pdu.pdu;
     isis.pdu_len = pdu.pdu_len;
-    if(bbl_send_to_buffer(adjacency->interface, &eth) == BBL_SEND_OK) {
+    if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) == BBL_TXQ_OK) {
         LOG(DEBUG, "ISIS TX %s on interface %s\n",
-            isis_pdu_type_string(isis.type), adjacency->interface->name);
+            isis_pdu_sype_string(isis.type), adjacency->interface->name);
         adjacency->stats.psnp_tx++;
     }
     return;
@@ -144,11 +143,11 @@ isis_psnp_job (timer_s *timer) {
  * @param level ISIS level
  */
 void
-isis_psnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
+isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level) {
 
-    isis_adjacency_t *adjacency = interface->isis_adjacency[level-1];
-    isis_instance_t  *instance  = NULL;
-    isis_config_t    *config    = NULL;
+    isis_adjacency_s *adjacency = interface->isis_adjacency[level-1];
+    isis_instance_s  *instance  = NULL;
+    isis_config_s    *config    = NULL;
 
     hb_tree *lsdb;
 

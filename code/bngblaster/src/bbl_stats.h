@@ -20,7 +20,8 @@ typedef struct bbl_rate_
     uint64_t avg_max;
 } bbl_rate_s;
 
-typedef struct bbl_stats_ {
+typedef struct bbl_stats_ 
+{
     uint32_t zapping_join_count;
     uint32_t zapping_leave_count;
 
@@ -105,12 +106,12 @@ typedef struct bbl_stats_ {
     uint64_t max_stream_delay_ns;
 } bbl_stats_t;
 
-void bbl_compute_avg_rate (bbl_rate_s *rate, uint64_t current_value);
-void bbl_stats_update_cps (bbl_ctx_s *ctx);
-void bbl_stats_generate_multicast(bbl_ctx_s *ctx, bbl_stats_t * stats, bool reset);
-void bbl_stats_generate(bbl_ctx_s *ctx, bbl_stats_t * stats);
-void bbl_stats_stdout(bbl_ctx_s *ctx, bbl_stats_t *stats);
-void bbl_stats_json(bbl_ctx_s *ctx, bbl_stats_t *stats);
-void bbl_compute_interface_rate_job(timer_s *timer);
+void bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value);
+
+void bbl_stats_update_cps();
+void bbl_stats_generate_multicast(bbl_stats_t *stats, bool reset);
+void bbl_stats_generate(bbl_stats_t *stats);
+void bbl_stats_stdout(bbl_stats_t *stats);
+void bbl_stats_json(bbl_stats_t *stats);
 
 #endif

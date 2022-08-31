@@ -11,7 +11,7 @@
 #include "bbl_access_line.h"
 #include "isis/isis_def.h"
 
-protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_l2tp_t **_l2tp);
+protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_ethernet_header_t *eth, bbl_l2tp_t **_l2tp);
 protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_t *l2tp);
 
 /*
@@ -2556,6 +2556,7 @@ decode_qmx_li(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_udp(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
+           bbl_ethernet_header_t *eth,
            bbl_udp_t **_udp) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -2592,10 +2593,11 @@ decode_udp(uint8_t *buf, uint16_t len,
         case BBL_UDP_PORT:
             udp->protocol = UDP_PROTOCOL_BBL;
             ret_val = decode_bbl(buf, len, sp, sp_len, (bbl_bbl_t**)&udp->next);
+            eth->bbl = udp->next;
             break;
         case L2TP_UDP_PORT:
             udp->protocol = UDP_PROTOCOL_L2TP;
-            ret_val = decode_l2tp(buf, len, sp, sp_len, (bbl_l2tp_t**)&udp->next);
+            ret_val = decode_l2tp(buf, len, sp, sp_len, eth, (bbl_l2tp_t**)&udp->next);
             break;
         case DHCP_UDP_CLIENT:
         case DHCP_UDP_SERVER:
@@ -2662,6 +2664,7 @@ decode_tcp(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_ipv6(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
+            bbl_ethernet_header_t *eth,
             bbl_ipv6_t **_ipv6) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -2682,6 +2685,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     }
 
     ipv6->tos = (be16toh(*(uint16_t*)buf) >> 4);
+    if(!eth->tos) eth->tos = ipv6->tos;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
     ipv6->payload_len = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -2706,7 +2710,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
             ret_val = decode_icmpv6(buf, len, sp, sp_len, (bbl_icmpv6_t**)&ipv6->next);
             break;
         case IPV6_NEXT_HEADER_UDP:
-            ret_val = decode_udp(buf, len, sp, sp_len, (bbl_udp_t**)&ipv6->next);
+            ret_val = decode_udp(buf, len, sp, sp_len, eth, (bbl_udp_t**)&ipv6->next);
             break;
         case IPV6_NEXT_HEADER_TCP:
             ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_t**)&ipv6->next);
@@ -2742,6 +2746,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_ipv4(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
+            bbl_ethernet_header_t *eth,
             bbl_ipv4_t **_ipv4) {
 
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
@@ -2775,6 +2780,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
     }
 
     ipv4->tos = header->ip_tos;
+    if(!eth->tos) eth->tos = ipv4->tos;
     ipv4->len = be16toh(header->ip_len);
     if(ipv4_header_len > ipv4->len ||
        ipv4->len > len)  {
@@ -2797,6 +2803,11 @@ decode_ipv4(uint8_t *buf, uint16_t len,
     }
     len = ipv4->payload_len;
 
+    if(ipv4->offset & ~IPV4_DF) {
+        /* Reassembling of fragmented IPv4 packets is currently not supported. */
+        ipv4->protocol = 0;
+    }
+
     switch(ipv4->protocol) {
         case PROTOCOL_IPV4_IGMP:
             ret_val = decode_igmp(buf, len, sp, sp_len, (bbl_igmp_t**)&ipv4->next);
@@ -2805,7 +2816,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
             ret_val = decode_icmp(buf, len, sp, sp_len, (bbl_icmp_t**)&ipv4->next);
             break;
         case PROTOCOL_IPV4_UDP:
-            ret_val = decode_udp(buf, len, sp, sp_len, (bbl_udp_t**)&ipv4->next);
+            ret_val = decode_udp(buf, len, sp, sp_len, eth, (bbl_udp_t**)&ipv4->next);
             break;
         case PROTOCOL_IPV4_TCP:
             ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_t**)&ipv4->next);
@@ -3263,6 +3274,7 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_l2tp(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
+            bbl_ethernet_header_t *eth,
             bbl_l2tp_t **_l2tp) {
 
     protocol_error_t ret_val = UNKNOWN_PROTOCOL;
@@ -3390,10 +3402,10 @@ decode_l2tp(uint8_t *buf, uint16_t len,
         /* Decode protocol */
         switch(l2tp->protocol) {
             case PROTOCOL_IPV4:
-                ret_val = decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&l2tp->next);
+                ret_val = decode_ipv4(buf, len, sp, sp_len, eth, (bbl_ipv4_t**)&l2tp->next);
                 break;
             case PROTOCOL_IPV6:
-                ret_val = decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&l2tp->next);
+                ret_val = decode_ipv6(buf, len, sp, sp_len, eth, (bbl_ipv6_t**)&l2tp->next);
                 break;
             case PROTOCOL_LCP:
                 ret_val = decode_ppp_lcp(buf, len, sp, sp_len, (bbl_lcp_t**)&l2tp->next);
@@ -3582,6 +3594,7 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_pppoe_session(uint8_t *buf, uint16_t len,
                      uint8_t *sp, uint16_t sp_len,
+                     bbl_ethernet_header_t *eth,
                      bbl_pppoe_session_t **pppoe_session) {
 
     protocol_error_t ret_val = UNKNOWN_PROTOCOL;
@@ -3615,10 +3628,10 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
     /* Decode protocol */
     switch(pppoe->protocol) {
         case PROTOCOL_IPV4:
-            ret_val = decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&pppoe->next);
+            ret_val = decode_ipv4(buf, len, sp, sp_len, eth, (bbl_ipv4_t**)&pppoe->next);
             break;
         case PROTOCOL_IPV6:
-            ret_val = decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&pppoe->next);
+            ret_val = decode_ipv6(buf, len, sp, sp_len, eth, (bbl_ipv6_t**)&pppoe->next);
             break;
         case PROTOCOL_LCP:
             ret_val = decode_ppp_lcp(buf, len, sp, sp_len, (bbl_lcp_t**)&pppoe->next);
@@ -3714,7 +3727,7 @@ decode_isis(uint8_t *buf, uint16_t len,
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,
-                bbl_ethernet_header_t **ethernet) {
+                bbl_ethernet_header_t **_eth) {
 
     bbl_ethernet_header_t *eth;
     bbl_mpls_t *mpls;
@@ -3727,7 +3740,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     /* Init ethernet header */
     eth = (bbl_ethernet_header_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ethernet_header_t));
     memset(eth, 0x0, sizeof(bbl_ethernet_header_t));
-    *ethernet = eth;
+    *_eth = eth;
 
     eth->length = len;
 
@@ -3818,15 +3831,15 @@ decode_ethernet(uint8_t *buf, uint16_t len,
 
     switch (eth->type) {
         case ETH_TYPE_PPPOE_SESSION:
-            return decode_pppoe_session(buf, len, sp, sp_len, (bbl_pppoe_session_t**)&eth->next);
+            return decode_pppoe_session(buf, len, sp, sp_len, eth, (bbl_pppoe_session_t**)&eth->next);
         case ETH_TYPE_PPPOE_DISCOVERY:
             return decode_pppoe_discovery(buf, len, sp, sp_len, (bbl_pppoe_discovery_t**)&eth->next);
         case ETH_TYPE_ARP:
             return decode_arp(buf, len, sp, sp_len, (bbl_arp_t**)&eth->next);
         case ETH_TYPE_IPV4:
-            return decode_ipv4(buf, len, sp, sp_len, (bbl_ipv4_t**)&eth->next);
+            return decode_ipv4(buf, len, sp, sp_len, eth, (bbl_ipv4_t**)&eth->next);
         case ETH_TYPE_IPV6:
-            return decode_ipv6(buf, len, sp, sp_len, (bbl_ipv6_t**)&eth->next);        
+            return decode_ipv6(buf, len, sp, sp_len, eth, (bbl_ipv6_t**)&eth->next);        
         default:
             break;
     }

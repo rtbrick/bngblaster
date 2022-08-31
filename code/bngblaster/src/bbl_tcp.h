@@ -3,7 +3,7 @@
  *
  * Christian Giese, February 2022
  *
- * Copyright (C) 2020-2021, RtBrick, Inc.
+ * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -31,7 +31,7 @@ typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
 
 typedef struct bbl_tcp_ctx_
 {
-    bbl_interface_s *interface;
+    bbl_network_interface_s *interface;
 
     uint8_t af; /* AF_INET or AF_INET6 */
 
@@ -71,36 +71,36 @@ typedef struct bbl_tcp_ctx_
     uint64_t packets_tx;
     uint64_t bytes_tx;
 
-} bbl_tcp_ctx_t;
+} bbl_tcp_ctx_s;
 
 const char *
 tcp_err_string(err_t err);
 
 void
-bbl_tcp_close(bbl_tcp_ctx_t *tcpc);
+bbl_tcp_close(bbl_tcp_ctx_s *tcpc);
 
 void
-bbl_tcp_ctx_free(bbl_tcp_ctx_t *tcpc);
+bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc);
 
-bbl_tcp_ctx_t *
-bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
-
-void
-bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4);
-
-bbl_tcp_ctx_t *
-bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
+bbl_tcp_ctx_s *
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
 
 void
-bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6);
+bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4);
+
+bbl_tcp_ctx_s *
+bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
+
+void
+bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6);
 
 bool
-bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len);
+bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len);
 
 bool
-bbl_tcp_interface_init(bbl_interface_s *interface, bbl_network_config_s *network_config);
+bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_config_s *config);
 
 void
-bbl_tcp_init(bbl_ctx_s *ctx);
+bbl_tcp_init();
 
 #endif

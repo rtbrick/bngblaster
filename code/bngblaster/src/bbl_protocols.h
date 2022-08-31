@@ -24,6 +24,7 @@
 #define BBL_MAGIC_NUMBER                0x5274427269636b21
 #define BBL_UDP_PORT                    65056
 #define BBL_HEADER_LEN                  48
+#define BBL_MIN_LEN                     90
 #define BBL_TYPE_UNICAST_SESSION        1
 #define BBL_TYPE_MULTICAST              2
 #define BBL_SUB_TYPE_IPV4               1
@@ -31,6 +32,7 @@
 #define BBL_SUB_TYPE_IPV6PD             3
 #define BBL_DIRECTION_UP                1
 #define BBL_DIRECTION_DOWN              2
+#define BBL_DIRECTION_BOTH              3
 
 #define BROADBAND_FORUM_VENDOR_ID       3561
 
@@ -492,12 +494,31 @@ typedef struct bbl_isis_t {
     uint16_t pdu_len;
 } bbl_isis_t;
 
+typedef struct bbl_bbl_ {
+    uint16_t     padding;
+    uint8_t      type;
+    uint8_t      sub_type;
+    uint8_t      direction;
+    uint8_t      tos;
+    uint32_t     session_id;
+    uint32_t     ifindex;
+    uint16_t     outer_vlan_id;
+    uint16_t     inner_vlan_id;
+    uint32_t     mc_source;
+    uint32_t     mc_group;
+    uint64_t     flow_id;
+    uint64_t     flow_seq;
+    struct timespec timestamp;
+} bbl_bbl_t;
+
 /*
  * Ethernet Header Structure
  */
 typedef struct bbl_ethernet_header_ {
     uint8_t  *dst; /* destination MAC address */
     uint8_t  *src; /* source MAC address */
+
+    uint8_t   tos;
 
     bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
@@ -509,6 +530,7 @@ typedef struct bbl_ethernet_header_ {
     uint8_t   vlan_outer_priority;
     uint8_t   vlan_inner_priority;
 
+    bbl_bbl_t  *bbl;  /* BBL stream header */
     bbl_mpls_t *mpls; /* MPLS */
     void       *next; /* next header */
 
@@ -836,23 +858,6 @@ typedef struct bbl_l2tp_ {
     void       *payload; /* l2tp payload */
     uint16_t    payload_len; /* l2tp payload length */
 } bbl_l2tp_t;
-
-typedef struct bbl_bbl_ {
-    uint16_t     padding;
-    uint8_t      type;
-    uint8_t      sub_type;
-    uint8_t      direction;
-    uint8_t      tos;
-    uint32_t     session_id;
-    uint32_t     ifindex;
-    uint16_t     outer_vlan_id;
-    uint16_t     inner_vlan_id;
-    uint32_t     mc_source;
-    uint32_t     mc_group;
-    uint64_t     flow_id;
-    uint64_t     flow_seq;
-    struct timespec timestamp;
-} bbl_bbl_t;
 
 typedef struct bbl_qmx_li_ {
     uint32_t     header;

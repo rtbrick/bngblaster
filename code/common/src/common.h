@@ -36,10 +36,22 @@
 #define ISO_STR_LEN                 64
 #define SUB_STR_LEN                 256
 
+#define CACHE_LINE_SIZE             64
+
 /* Macro Definitions */
 
+#define UNUSED(x) (void)x
+
+#ifndef likely
+#define likely(x)  __builtin_expect((x),1)
+#endif /* likely */
+
+#ifndef unlikely
+#define unlikely(x)  __builtin_expect((x),0)
+#endif /* unlikely */
+
+#define POWEROF2(x) ((((x)-1) & (x)) == 0) /* true if x is a power of 2 */
 #define BITS_TO_BYTES(_len) ((_len+7) >> 3)
-#define UNUSED(x)    (void)x
 
 /* Key-Value structure. */
 typedef struct keyval_ {

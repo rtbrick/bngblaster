@@ -11,7 +11,8 @@ extern bool g_init_phase;
 extern volatile bool g_teardown;
 
 const char *
-bgp_session_state_string(bgp_state_t state) {
+bgp_session_state_string(bgp_state_t state)
+{
     switch(state) {
         case BGP_CLOSED: return "closed";
         case BGP_IDLE: return "idle";
@@ -31,7 +32,8 @@ bgp_session_state_string(bgp_state_t state) {
  * @param session BGP session
  */
 void
-bgp_session_reset_read_buffer(bgp_session_t *session) {
+bgp_session_reset_read_buffer(bgp_session_s *session)
+{
     session->read_buf.idx = 0;
     session->read_buf.start_idx = 0;
 }
@@ -42,7 +44,8 @@ bgp_session_reset_read_buffer(bgp_session_t *session) {
  * @param session BGP session
  */
 void
-bgp_session_reset_write_buffer(bgp_session_t *session) {
+bgp_session_reset_write_buffer(bgp_session_s *session)
+{
     if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_SENDING) {
         return;
     }
@@ -56,8 +59,9 @@ bgp_session_reset_write_buffer(bgp_session_t *session) {
  * @param session BGP session
  */
 static bool
-bgp_session_send(bgp_session_t *session) {
-    bbl_tcp_ctx_t *tcpc = session->tcpc;
+bgp_session_send(bgp_session_s *session)
+{
+    bbl_tcp_ctx_s *tcpc = session->tcpc;
     if(tcpc && tcpc->state == BBL_TCP_STATE_SENDING && 
        tcpc->tx.buf == session->write_buf.data &&
        tcpc->tx.len < session->write_buf.idx) {
@@ -68,8 +72,9 @@ bgp_session_send(bgp_session_t *session) {
 }
 
 void
-bgp_session_keepalive_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
+bgp_session_keepalive_job(timer_s *timer)
+{
+    bgp_session_s *session = timer->data;
 
     if(session->state == BGP_ESTABLISHED) {
         if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
@@ -84,8 +89,9 @@ bgp_session_keepalive_job(timer_s *timer) {
 }
 
 void 
-bgp_raw_update_stop_cb(void *arg) {
-    bgp_session_t *session = (bgp_session_t*)arg;
+bgp_raw_update_stop_cb(void *arg)
+{
+    bgp_session_s *session = (bgp_session_s*)arg;
     struct timespec time_diff;
 
     session->tcpc->idle_cb = NULL;
@@ -106,14 +112,14 @@ bgp_raw_update_stop_cb(void *arg) {
         time_diff.tv_sec);
 
     if(session->config->start_traffic) {
-        enable_disable_traffic(session->ctx, true);
+        enable_disable_traffic(true);
     }
 }
 
 void
-bgp_session_update_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
-    bbl_ctx_s *ctx = session->interface->ctx;
+bgp_session_update_job(timer_s *timer) 
+{
+    bgp_session_s *session = timer->data;
 
     if(session->state == BGP_ESTABLISHED) {
         if(session->raw_update && !session->raw_update_sending) {
@@ -137,14 +143,15 @@ bgp_session_update_job(timer_s *timer) {
 
 RETRY:
     /* Try again ... */
-    timer_add_periodic(&ctx->timer_root, &session->connect_timer, 
+    timer_add_periodic(&g_ctx->timer_root, &session->connect_timer, 
                        "BGP UPDATE", 1, 0, session,
                        &bgp_session_update_job);
 
 }
 
 static void
-bgp_session_state_opensent(bgp_session_t *session) {
+bgp_session_state_opensent(bgp_session_s *session)
+{
     bgp_session_reset_write_buffer(session);
     bgp_push_open_message(session);
     bgp_session_send(session);
@@ -152,7 +159,8 @@ bgp_session_state_opensent(bgp_session_t *session) {
 }
 
 static void
-bgp_session_state_openconfirm(bgp_session_t *session) {
+bgp_session_state_openconfirm(bgp_session_s *session)
+{
     bgp_session_reset_write_buffer(session);
     bgp_push_keepalive_message(session);
     bgp_session_send(session);
@@ -161,8 +169,8 @@ bgp_session_state_openconfirm(bgp_session_t *session) {
 }
 
 static void
-bgp_session_state_estbalished(bgp_session_t *session) {
-    bbl_ctx_s *ctx = session->interface->ctx;
+bgp_session_state_established(bgp_session_s *session)
+{
     time_t keepalive_interval;
 
     clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
@@ -177,12 +185,12 @@ bgp_session_state_estbalished(bgp_session_t *session) {
         keepalive_interval = 1;
     }
 
-    timer_add_periodic(&ctx->timer_root, &session->keepalive_timer, 
+    timer_add_periodic(&g_ctx->timer_root, &session->keepalive_timer, 
                        "BGP KEEPALIVE", keepalive_interval, 0, session,
                        &bgp_session_keepalive_job);
 
     /* Start BGP updates */
-    timer_add(&ctx->timer_root, &session->update_timer, 
+    timer_add(&g_ctx->timer_root, &session->update_timer, 
               "BGP UPDATE", 0, 0, session,
               &bgp_session_update_job);
 }
@@ -193,9 +201,10 @@ bgp_session_state_estbalished(bgp_session_t *session) {
  * @param session BGP session
  */
 void
-bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state) {    
+bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
+{
     if (session->state == new_state) {
-	    return;
+        return;
     }
 
     LOG(BGP, "BGP (%s %s - %s) state changed from %s -> %s\n",
@@ -215,7 +224,7 @@ bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state) {
             bgp_session_state_openconfirm(session);
             break;
         case BGP_ESTABLISHED:
-            bgp_session_state_estbalished(session);
+            bgp_session_state_established(session);
             break;
         default:
             break;
@@ -223,14 +232,15 @@ bgp_session_state_change(bgp_session_t *session, bgp_state_t new_state) {
 }
 
 void 
-bgp_connected_cb(void *arg) {
-    bgp_session_t *session = (bgp_session_t*)arg;
+bgp_connected_cb(void *arg)
+{
+    bgp_session_s *session = (bgp_session_s*)arg;
     bgp_session_state_change(session, BGP_OPENSENT);
 }
 
 void 
 bgp_error_cb(void *arg, err_t err) {
-    bgp_session_t *session = (bgp_session_t*)arg;
+    bgp_session_s *session = (bgp_session_s*)arg;
 
     LOG(BGP, "BGP (%s %s - %s) TCP error %d (%s)\n",
         session->interface->name,
@@ -243,9 +253,9 @@ bgp_error_cb(void *arg, err_t err) {
 }
 
 void
-bgp_session_connect_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
-    bbl_ctx_s *ctx = session->interface->ctx;
+bgp_session_connect_job(timer_s *timer)
+{
+    bgp_session_s *session = timer->data;
     time_t timeout = 5;
 
     if(g_init_phase) {
@@ -287,7 +297,7 @@ bgp_session_connect_job(timer_s *timer) {
         return;
     }
 
-    timer_add_periodic(&ctx->timer_root, &session->connect_timer, 
+    timer_add_periodic(&g_ctx->timer_root, &session->connect_timer, 
                        "BGP CONNECT", timeout, 0, session,
                        &bgp_session_connect_job);
 }
@@ -296,10 +306,11 @@ bgp_session_connect_job(timer_s *timer) {
  * bgp_session_connect
  * 
  * @param session BGP session
+ * @param delay delay
  */
 void
-bgp_session_connect(bgp_session_t *session, time_t delay) {
-    bbl_ctx_s *ctx = session->interface->ctx;
+bgp_session_connect(bgp_session_s *session, time_t delay)
+{
     if(session->state == BGP_CLOSED) {
         bbl_tcp_ctx_free(session->tcpc);
         session->tcpc = NULL;
@@ -333,15 +344,16 @@ bgp_session_connect(bgp_session_t *session, time_t delay) {
 
         bgp_session_state_change(session, BGP_IDLE);
 
-        timer_add(&ctx->timer_root, &session->connect_timer, 
+        timer_add(&g_ctx->timer_root, &session->connect_timer, 
                   "BGP CONNECT", delay, 0, session,
                   &bgp_session_connect_job);
     }
 }
 
 void
-bgp_session_close_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
+bgp_session_close_job(timer_s *timer)
+{
+    bgp_session_s *session = timer->data;
     if(session->state > BGP_IDLE) {
         /* Close TCP session */
         bbl_tcp_close(session->tcpc);
@@ -358,8 +370,8 @@ bgp_session_close_job(timer_s *timer) {
  * @param session BGP session
  */
 void
-bgp_session_close(bgp_session_t *session) {
-    bbl_ctx_s *ctx = session->interface->ctx;
+bgp_session_close(bgp_session_s *session)
+{
     time_t delay = 0;
 
     /* Stop all timers */
@@ -387,14 +399,15 @@ bgp_session_close(bgp_session_t *session) {
         delay = 3;
     }
 
-    timer_add(&ctx->timer_root, &session->close_timer, 
+    timer_add(&g_ctx->timer_root, &session->close_timer, 
               "BGP CLOSE", delay, 0, session,
               &bgp_session_close_job);
 }
 
 void
-bgp_session_hold_timer_job(timer_s *timer) {
-    bgp_session_t *session = timer->data;
+bgp_session_hold_timer_job(timer_s *timer)
+{
+    bgp_session_s *session = timer->data;
 
     LOG(BGP, "BGP (%s %s - %s) session timeout\n",
         session->interface->name,
@@ -415,7 +428,8 @@ bgp_session_hold_timer_job(timer_s *timer) {
  * @param timeout timeout in seconds
  */
 void
-bgp_restart_hold_timer(bgp_session_t *session, time_t timeout) {
-    timer_add(&session->interface->ctx->timer_root, &session->hold_timer, 
+bgp_restart_hold_timer(bgp_session_s *session, time_t timeout)
+{
+    timer_add(&g_ctx->timer_root, &session->hold_timer, 
               "BGP TIMEOUT", timeout, 0, session, &bgp_session_hold_timer_job);
 }

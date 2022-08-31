@@ -67,8 +67,12 @@ typedef struct bbl_ctx_
     CIRCLEQ_HEAD(sessions_idle_, bbl_session_ ) sessions_idle_qhead;
     CIRCLEQ_HEAD(sessions_teardown_, bbl_session_ ) sessions_teardown_qhead;
     CIRCLEQ_HEAD(interface_, bbl_interface_ ) interface_qhead; /* list of interfaces */
+    CIRCLEQ_HEAD(lag_, bbl_lag_ ) lag_qhead; /* list of LAG groups */
+    CIRCLEQ_HEAD(access_interface_, bbl_access_interface_ ) access_interface_qhead; /* list of interfaces */
+    CIRCLEQ_HEAD(network_interface_, bbl_network_interface_ ) network_interface_qhead; /* list of interfaces */
+    CIRCLEQ_HEAD(a10nsp_interface_, bbl_a10nsp_interface_ ) a10nsp_interface_qhead; /* list of interfaces */
 
-    bbl_session_s **session_list; /* list for sessions */
+    bbl_session_s *session_list; /* list of sessions */
 
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
@@ -83,31 +87,16 @@ typedef struct bbl_ctx_
     char *ctrl_socket_path;
 
     void *stream_thread; /* single linked list of threads */
+    io_thread_s *io_threads; /* single linked list of threads */
 
     bool tcp;
 
-    /* Interfaces */
-    struct {
-        uint8_t count;
-        char *names[BBL_MAX_INTERFACES]; /* list of all interface names */
-
-        uint8_t access_if_count;
-        struct bbl_interface_ *access_if[BBL_MAX_INTERFACES];
-
-        uint8_t network_if_count;
-        struct bbl_interface_ *network_if[BBL_MAX_INTERFACES];
-
-        uint8_t a10nsp_if_count;
-        struct bbl_interface_ *a10nsp_if[BBL_MAX_INTERFACES];
-    } interfaces;
-
-    bgp_session_t *bgp_sessions;
-    bgp_raw_update_t *bgp_raw_updates;
-    isis_instance_t *isis_instances;
+    bgp_session_s *bgp_sessions;
+    bgp_raw_update_s *bgp_raw_updates;
+    isis_instance_s *isis_instances;
 
     /* Scratchpad memory */
-    uint8_t *sp_rx;
-    uint8_t *sp_tx;
+    uint8_t *sp;
 
     /* PCAP */
     struct {
@@ -153,7 +142,7 @@ typedef struct bbl_ctx_
         uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
         bool qdisc_bypass;
-        bbl_io_mode_t io_mode;
+        io_mode_t io_mode;
 
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */
@@ -161,6 +150,12 @@ typedef struct bbl_ctx_
 
         bbl_secondary_ip_s *secondary_ip_addresses;
         bbl_secondary_ip6_s *secondary_ip6_addresses;
+
+        /* LAG */
+        bbl_lag_config_s *lag_config;
+
+        /* Links */
+        bbl_link_config_s *link_config;
 
         /* Access Interfaces  */
         bbl_access_config_s *access_config;
@@ -175,13 +170,19 @@ typedef struct bbl_ctx_
         void *access_line_profile;
 
         /* Traffic Streams */
-        void *stream_config;
+        bbl_stream_config_s *stream_config;
+        bbl_stream_config_s *stream_config_session_ipv4_up;
+        bbl_stream_config_s *stream_config_session_ipv4_down;
+        bbl_stream_config_s *stream_config_session_ipv6_up;
+        bbl_stream_config_s *stream_config_session_ipv6_down;
+        bbl_stream_config_s *stream_config_session_ipv6pd_up;
+        bbl_stream_config_s *stream_config_session_ipv6pd_down;
 
         /* BGP Instances */
-        bgp_config_t *bgp_config;
+        bgp_config_s *bgp_config;
 
         /* ISIS Instances */
-        isis_config_t *isis_config;
+        isis_config_s *isis_config;
 
         /* Global Session Settings */
         uint32_t sessions;
@@ -297,6 +298,7 @@ typedef struct bbl_ctx_
         bool send_multicast_traffic;
         uint8_t multicast_traffic_tos;
         uint16_t multicast_traffic_len;
+        uint16_t multicast_traffic_pps;
         char *multicast_traffic_network_interface;
 
         /* Global Traffic */
@@ -314,7 +316,7 @@ typedef struct bbl_ctx_
         uint16_t    session_traffic_ipv6pd_pps;
 
         /* L2TP Server Config (LNS) */
-        bbl_l2tp_server_t *l2tp_server;
+        bbl_l2tp_server_s *l2tp_server;
     } config;
 } bbl_ctx_s;
 
@@ -330,10 +332,10 @@ bbl_compare_key64(void *key1, void *key2);
 uint32_t
 bbl_key64_hash(const void* k);
 
-bbl_ctx_s *
-bbl_ctx_add(void);
+bool
+bbl_ctx_add();
 
 void
-bbl_ctx_del(bbl_ctx_s *ctx);
+bbl_ctx_del();
 
 #endif
