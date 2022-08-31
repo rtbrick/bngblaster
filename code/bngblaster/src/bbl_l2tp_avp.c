@@ -179,7 +179,7 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
 
     uint8_t *cursor;
     uint8_t *value = avp->value;
-    uint16_t type  = avp->type;
+    uint16_t type  = htobe16(avp->type);
     uint16_t len   = 0;
     uint8_t  idx   = 0;
 
