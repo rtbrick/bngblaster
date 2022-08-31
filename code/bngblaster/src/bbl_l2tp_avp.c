@@ -187,6 +187,8 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
     uint16_t secret_len = 0;
 
     if(!(random_vector && l2tp_tunnel->server->secret)) {
+        LOG(DEBUG, "L2TP Error (%s) Missing random-vector or secret\n",
+            l2tp_tunnel->server->host_name);
         return false;
     }
 
@@ -205,6 +207,8 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
     value++;
 
     if (len + 2 > avp->len) {
+        LOG(DEBUG, "L2TP Error (%s) Decrypted length %u > AVP length %u\n",
+            l2tp_tunnel->server->host_name, len, avp->len);
         return false;
     }
 
