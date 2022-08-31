@@ -510,6 +510,11 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
         return;
     }
 
+    if(session->access_type == ACCESS_TYPE_PPPOE &&
+       session->ip6cp_state != BBL_PPP_OPENED) {
+        return;
+    }
+
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
         if(!session->icmpv6_ra_received) {
             /* The first RA received ... */
