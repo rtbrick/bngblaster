@@ -1111,6 +1111,7 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             network_interface->stats.packets_rx += packets;
             network_interface->stats.bytes_rx += bytes;
             network_interface->stats.stream_rx += packets;
+            network_interface->stats.stream_loss += loss;
             if(session) {
                 if(session->l2tp_session) {
                     network_interface->stats.l2tp_data_rx += packets;
@@ -1144,6 +1145,7 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             a10nsp_interface->stats.packets_rx += packets;
             a10nsp_interface->stats.bytes_rx += bytes;
             a10nsp_interface->stats.stream_rx += packets;
+            a10nsp_interface->stats.stream_loss += loss;
             if(session) {
                 if(session->a10nsp_session) {
                     session->a10nsp_session->stats.packets_rx += packets;
