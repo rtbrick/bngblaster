@@ -184,14 +184,13 @@ io_thread_main_tx_job(timer_s *timer)
     /* Get TX timestamp */
     struct timespec timestamp;
     clock_gettime(CLOCK_MONOTONIC, &timestamp);
-
     while((slot = bbl_txq_write_slot(txq))) {
         tx_result = bbl_tx(interface, slot->packet, &slot->packet_len);
         if(tx_result == PROTOCOL_SUCCESS) {
             interface->stats.packets_tx++;
             interface->stats.bytes_tx += slot->packet_len;
             /* Dump the packet into pcap file. */
-            if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+            if(g_ctx->pcap.write_buf) {
                 pcap = true;
                 pcapng_push_packet_header(&timestamp, slot->packet, slot->packet_len,
                                         interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);

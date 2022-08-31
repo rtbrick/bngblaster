@@ -176,7 +176,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcpv6_t *
         session->stats.dhcpv6_rx_reply++;
         /* Handle DHCPv6 teardown */
         if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
-            session->dhcpv6_state == BBL_DHCP_INIT;
+            session->dhcpv6_state = BBL_DHCP_INIT;
             if(session->session_state == BBL_TERMINATING) {
                 bbl_session_clear(session);
             }
@@ -209,7 +209,6 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcpv6_t *
             }
             if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len) {
                 /* IA_PD */
-                session->endpoint.ipv6pd = ENDPOINT_ACTIVE;
                 if(dhcpv6->ia_pd_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_pd_valid_lifetime;
                 if(dhcpv6->ia_pd_t1) session->dhcpv6_t1 = dhcpv6->ia_pd_t1;
                 if(dhcpv6->ia_pd_t2) session->dhcpv6_t2 = dhcpv6->ia_pd_t2;

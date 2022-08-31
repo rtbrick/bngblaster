@@ -161,7 +161,7 @@ io_packet_mmap_tx_job(timer_s *timer)
                 interface->stats.packets_tx++;
                 interface->stats.bytes_tx += io->buf_len;
                 /* Dump the packet into pcap file. */
-                if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+                if(g_ctx->pcap.write_buf) {
                     pcap = true;
                     pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                               interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);

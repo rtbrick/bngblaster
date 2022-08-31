@@ -85,7 +85,8 @@ bbl_rx_thread(bbl_interface_s *interface,
     while(network_interface) {
         if(network_interface->vlan == eth->vlan_outer) {
             return bbl_rx_stream_network(network_interface, eth);
-        } 
+        }
+        network_interface = network_interface->next;
     }
     if(interface->access) {
         return bbl_rx_stream_access(interface->access, eth);
@@ -106,7 +107,8 @@ bbl_rx_handler(bbl_interface_s *interface,
                 bbl_network_rx_handler(network_interface, eth);
             }
             return;
-        } 
+        }
+        network_interface = network_interface->next;
     }
     if(interface->access) {
         if(!bbl_rx_stream_access(interface->access, eth)) {

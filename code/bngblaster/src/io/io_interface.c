@@ -178,7 +178,7 @@ io_interface_init(bbl_interface_s *interface)
         set_kernel_info(interface);
         set_promisc(interface);
     }
-    if(*(uint64_t*)config->mac & 0xffffffffffff00) {
+    if(*(uint32_t*)config->mac) {
         memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
     }
 

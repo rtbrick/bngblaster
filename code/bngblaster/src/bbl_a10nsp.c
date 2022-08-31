@@ -65,7 +65,7 @@ bbl_a10nsp_interfaces_add()
 
         /* Init ethernet */
         a10nsp_interface->qinq = a10nsp_config->qinq;
-        if(*(uint64_t*)a10nsp_config->mac & 0xffffffffffff00) {
+        if(*(uint32_t*)a10nsp_config->mac) {
             memcpy(a10nsp_interface->mac, a10nsp_config->mac, ETH_ADDR_LEN);
         }
 

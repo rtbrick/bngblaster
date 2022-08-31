@@ -36,8 +36,8 @@ typedef struct bbl_txq_ {
 
     char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
-    volatile uint16_t write; /* current write slot */
-    volatile uint16_t next; /* next write slot */
+    atomic_uint_least16_t write; /* current write slot */
+    atomic_uint_least16_t next; /* next write slot */
     struct {
         uint32_t full; 
         uint32_t encode_error;
@@ -45,7 +45,7 @@ typedef struct bbl_txq_ {
 
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
-    volatile uint16_t read; /* current read slot */
+    atomic_uint_least16_t read; /* current read slot */
 } bbl_txq_s;
 
 bool

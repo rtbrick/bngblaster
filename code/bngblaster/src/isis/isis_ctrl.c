@@ -92,6 +92,7 @@ isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_
                     }
                 }
             }
+            network_interface = network_interface->next;
         }
     }
     root = json_pack("{ss si so}",

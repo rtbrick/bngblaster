@@ -20,7 +20,6 @@ bool
 io_send(io_handle_s *io, uint8_t *buf, uint16_t len)
 {
     bool result = false;
-    bbl_interface_s *interface;
 
     assert(io->direction == IO_EGRESS);
 
@@ -36,16 +35,11 @@ io_send(io_handle_s *io, uint8_t *buf, uint16_t len)
             return false;
     }
 
-    if(result && io->thread == NULL) {
-        interface = io->interface;
-        interface->stats.packets_tx++;
-        interface->stats.bytes_tx += io->buf_len;
+    if(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams && result && io->thread == NULL) {
         /* Dump the packet into pcap file. */
-        if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
-            pcapng_push_packet_header(&io->timestamp, buf, len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
-            pcapng_fflush();
-        }
+        pcapng_push_packet_header(&io->timestamp, buf, len,
+                                  io->interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+        pcapng_fflush();
     }
     return result;
 }

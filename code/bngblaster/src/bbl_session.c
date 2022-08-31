@@ -354,8 +354,8 @@ bbl_session_reset(bbl_session_s *session) {
     session->session_traffic.flows_verified = 0;
 
     if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
-    if(session->endpoint.ipv6) session->endpoint.ipv4 = ENDPOINT_ENABLED;
-    if(session->endpoint.ipv6pd) session->endpoint.ipv4 = ENDPOINT_ENABLED;
+    if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
+    if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
 
     bbl_stream_reset(session->session_traffic.ipv4_up);
     bbl_stream_reset(session->session_traffic.ipv4_down);
@@ -690,6 +690,16 @@ bbl_sessions_init()
         session->vlan_key.inner_vlan_id = access_config->access_inner_vlan;
         session->access_third_vlan = access_config->access_third_vlan;
         session->access_config = access_config;
+
+        if(access_config->ipv4_enable) {
+            session->endpoint.ipv4 = ENDPOINT_ENABLED;
+        }
+        if(access_config->ipv6_enable) {
+            session->endpoint.ipv6 = ENDPOINT_ENABLED;
+        }
+        if(access_config->dhcpv6_enable) {
+            session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+        }
 
         /* Set client OUI to locally administered */
         session->client_mac[0] = 0x02;

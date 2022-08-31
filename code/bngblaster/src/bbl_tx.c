@@ -417,7 +417,7 @@ bbl_tx_dhcpv6_timeout(timer_s *timer)
             bbl_session_tx_qnode_insert(session);
         } else {
             if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
-                session->dhcpv6_state == BBL_DHCP_INIT;
+                session->dhcpv6_state = BBL_DHCP_INIT;
                 if(session->session_state == BBL_TERMINATING) {
                     bbl_session_clear(session);
                 }
@@ -1535,6 +1535,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             }
             return PROTOCOL_SUCCESS;
         }
+        network_interface = network_interface->next;
     }
     return result;
 }

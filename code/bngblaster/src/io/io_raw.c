@@ -38,7 +38,6 @@ io_raw_rx_job(timer_s *timer)
         }
         interface->stats.packets_rx++;
         interface->stats.bytes_rx += io->buf_len;
-        interface->io.ctrl = true;
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             /* Copy RX timestamp */
@@ -96,7 +95,7 @@ io_raw_tx_job(timer_s *timer)
             interface->stats.packets_tx++;
             interface->stats.bytes_tx += io->buf_len;
             /* Dump the packet into pcap file. */
-            if(g_ctx->pcap.write_buf && (interface->io.ctrl || g_ctx->pcap.include_streams)) {
+            if(g_ctx->pcap.write_buf) {
                 pcap = true;
                 pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                           interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);

@@ -226,6 +226,7 @@ bbl_ctrl_job(timer_s *timer)
                         network_interface->name, format_ipv4_address(&network_interface->gateway));
                     return;
                 }
+                network_interface = network_interface->next;
             }
         }
         g_init_phase = false;

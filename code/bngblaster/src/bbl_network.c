@@ -95,7 +95,7 @@ bbl_network_interfaces_add()
 
         /* Init ethernet */
         network_interface->vlan = network_config->vlan;
-        if(*(uint64_t*)network_config->mac & 0xffffffffffff00) {
+        if(*(uint32_t*)network_config->mac) {
             memcpy(network_interface->mac, network_config->mac, ETH_ADDR_LEN);
         } else {
             memcpy(network_interface->mac, interface->mac, ETH_ADDR_LEN);

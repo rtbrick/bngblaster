@@ -56,6 +56,7 @@ bbl_txq_from_buffer(bbl_txq_s *txq, uint8_t *buf)
     bbl_txq_slot_t *slot;
 
     if(txq->read == txq->write) {
+        /* Empty! */
         return 0;
     }
 

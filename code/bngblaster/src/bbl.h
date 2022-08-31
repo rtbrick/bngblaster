@@ -16,7 +16,7 @@
 #include <curses.h>
 #include <jansson.h>
 #include <pthread.h>
-
+#include <stdatomic.h>
 #include <common_include.h>
 
 #include "bbl_def.h"
