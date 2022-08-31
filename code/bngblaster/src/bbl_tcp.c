@@ -3,7 +3,7 @@
  * 
  * Christian Giese, February 2022
  *
- * Copyright (C) 2020-2021, RtBrick, Inc.
+ * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl_tcp.h"
@@ -43,7 +43,7 @@ tcp_err_string(err_t err) {
  * @param tcpc TCP context
  */
 void
-bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
+bbl_tcp_close(bbl_tcp_ctx_s *tcpc) {
     if(tcpc) {
         if(tcpc->pcb) {
             tcp_arg(tcpc->pcb, NULL);
@@ -67,20 +67,20 @@ bbl_tcp_close(bbl_tcp_ctx_t *tcpc) {
  * @param tcpc TCP context
  */
 void
-bbl_tcp_ctx_free(bbl_tcp_ctx_t *tcpc) {
+bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc) {
     if(tcpc) {
         bbl_tcp_close(tcpc);
         free(tcpc);
     }
 }
 
-static bbl_tcp_ctx_t *
-bbl_tcp_ctx_new(bbl_interface_s *interface) {
+static bbl_tcp_ctx_s *
+bbl_tcp_ctx_new(bbl_network_interface_s *interface) {
     
-    bbl_tcp_ctx_t *tcp;
+    bbl_tcp_ctx_s *tcp;
 
     /* Init TCP context */
-    tcp = calloc(1, sizeof(bbl_tcp_ctx_t));
+    tcp = calloc(1, sizeof(bbl_tcp_ctx_s));
     if(!tcp) {
         return NULL;
     }
@@ -104,7 +104,7 @@ bbl_tcp_ctx_new(bbl_interface_s *interface) {
 
 err_t 
 bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
-    bbl_tcp_ctx_t *tcpc = arg;
+    bbl_tcp_ctx_s *tcpc = arg;
     uint16_t tx = tcp_sndbuf(tpcb);
     err_t result = ERR_OK;
 
@@ -139,7 +139,7 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
 
 err_t 
 bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
-    bbl_tcp_ctx_t *tcpc = arg;
+    bbl_tcp_ctx_s *tcpc = arg;
     struct pbuf *_p;
 
     if(p) {
@@ -173,7 +173,7 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
  */
 void 
 bbl_tcp_error_cb(void *arg, err_t err) {
-    bbl_tcp_ctx_t *tcpc = arg;
+    bbl_tcp_ctx_s *tcpc = arg;
     tcpc->state = BBL_TCP_STATE_CLOSED;
     tcpc->pcb = NULL;
     tcpc->err = err;
@@ -208,7 +208,7 @@ bbl_tcp_error_cb(void *arg, err_t err) {
  */
 err_t
 bbl_tcp_poll_cb(void *arg, struct tcp_pcb *tpcb) {
-    bbl_tcp_ctx_t *tcpc = arg;
+    bbl_tcp_ctx_s *tcpc = arg;
     if(tcpc->poll_cb) {
         return (tcpc->poll_cb)(tcpc->arg, tpcb);
     }
@@ -217,7 +217,7 @@ bbl_tcp_poll_cb(void *arg, struct tcp_pcb *tpcb) {
 
 err_t 
 bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
-    bbl_tcp_ctx_t *tcpc = arg;
+    bbl_tcp_ctx_s *tcpc = arg;
 
     UNUSED(err); /* TODO!!! */
 
@@ -259,12 +259,12 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
  * @param port destination port
  * @return TCP context
  */
-bbl_tcp_ctx_t *
-bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port) {
+bbl_tcp_ctx_s *
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port) {
 
-    bbl_tcp_ctx_t *tcpc;
+    bbl_tcp_ctx_s *tcpc;
 
-    if(!interface->ctx->tcp) {
+    if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return NULL;
     }
@@ -311,11 +311,11 @@ bbl_tcp_ipv4_connect(bbl_interface_s *interface, ipv4addr_t *src, ipv4addr_t *ds
  * @param interface receiving interface
  */
 void
-bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4) {
+bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4) {
     struct pbuf *pbuf;
     UNUSED(eth);
 
-    if(!interface->ctx->tcp) {
+    if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return;
     }
@@ -348,14 +348,15 @@ bbl_tcp_ipv4_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4
  * @param port destination port
  * @return TCP context
  */
-bbl_tcp_ctx_t *
-bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port) {
+bbl_tcp_ctx_s *
+bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port) {
 
-    if(!interface->ctx->tcp) {
+    if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return NULL;
     }
 
+    UNUSED(interface);
     UNUSED(src);
     UNUSED(dst);
     UNUSED(port);
@@ -370,11 +371,11 @@ bbl_tcp_ipv6_connect(bbl_interface_s *interface, ipv6addr_t *src, ipv6addr_t *ds
  * @param interface receiving interface
  */
 void
-bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6) {
+bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6) {
     struct pbuf *pbuf;
     UNUSED(eth);
 
-    if(!interface->ctx->tcp) {
+    if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return;
     }
@@ -397,10 +398,10 @@ bbl_tcp_ipv6_rx(bbl_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6
  * @param tcp 
  * @param buf 
  * @param len
- * @return true if successfull
+ * @return true if successful
  */
 bool
-bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len) {
+bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len) {
 
     if(tcpc->state == BBL_TCP_STATE_SENDING) {
         return false;
@@ -421,7 +422,7 @@ bbl_tcp_send(bbl_tcp_ctx_t *tcpc, uint8_t *buf, uint32_t len) {
  */
 err_t 
 bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t *ipaddr) {
-    bbl_interface_s *interface = netif->state;
+    bbl_network_interface_s *interface = netif->state;
     bbl_ethernet_header_t eth = {0};
     UNUSED(ipaddr);
 
@@ -431,7 +432,7 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
     eth.type = ETH_TYPE_IPV4;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_send_to_buffer(interface, &eth) != BBL_SEND_OK) {
+    if(bbl_txq_to_buffer(interface->txq, &eth) != BBL_TXQ_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -443,8 +444,8 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
  */
 err_t 
 bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t *ipaddr) {
-    bbl_tcp_ctx_t *tcpc = netif->state;
-    bbl_interface_s *interface = tcpc->interface;
+    bbl_tcp_ctx_s *tcpc = netif->state;
+    bbl_network_interface_s *interface = tcpc->interface;
     bbl_ethernet_header_t eth = {0};
     UNUSED(ipaddr);
 
@@ -454,7 +455,7 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     eth.type = ETH_TYPE_IPV6;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_send_to_buffer(interface, &eth) != BBL_SEND_OK) {
+    if(bbl_txq_to_buffer(interface->txq, &eth) != BBL_TXQ_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -470,33 +471,32 @@ bbl_tcp_netif_init(struct netif *netif) {
 }
 
 /**
- * bbl_tcp_interface_init
+ * bbl_tcp_network_interface_init
  * 
  * Init TCP (LwIP) network interface.  
  * 
- * @param interface interface
+ * @param interface network interface
+ * @param config network interface configuration
  * @return return true if successfully
  */
 bool
-bbl_tcp_interface_init(bbl_interface_s *interface, bbl_network_config_s *network_config) {
-    UNUSED(network_config);
-
-    if(!interface->ctx->tcp) return true;
-
+bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_config_s *config) {
+    if(!g_ctx->tcp) {
+        /* TCP not enabled! */
+        return true;
+    }
     if(!netif_add(&interface->netif, NULL, NULL, NULL, interface, bbl_tcp_netif_init, ip_input))  {
         return false;
     }
     interface->netif.state = interface;
-    interface->netif.mtu = network_config->mtu;
-    interface->netif.mtu6 = network_config->mtu;
+    interface->netif.mtu = config->mtu;
+    interface->netif.mtu6 = config->mtu;
     return true;
 }
 
 void
 bbl_tcp_timer(timer_s *timer) {
-    bbl_ctx_s *ctx = timer->data;
-
-    UNUSED(ctx);
+    UNUSED(timer);
     sys_check_timeouts();
 }
 
@@ -504,13 +504,10 @@ bbl_tcp_timer(timer_s *timer) {
  * bbl_tcp_init
  * 
  * Init TCP (LwIP) and start global TCP timer job. 
- * 
- * @param ctx global context
  */
 void
-bbl_tcp_init(bbl_ctx_s *ctx) {
-
-    if(!ctx->tcp) {
+bbl_tcp_init() {
+    if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return;
     }
@@ -518,6 +515,6 @@ bbl_tcp_init(bbl_ctx_s *ctx) {
     lwip_init();
 
     /* Start TCP timer */
-    timer_add_periodic(&ctx->timer_root, &ctx->tcp_timer, "TCP",
-                       0, BBL_TCP_INTERVAL, ctx, &bbl_tcp_timer);
+    timer_add_periodic(&g_ctx->timer_root, &g_ctx->tcp_timer, "TCP",
+                       0, BBL_TCP_INTERVAL, g_ctx, &bbl_tcp_timer);
 }

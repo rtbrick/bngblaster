@@ -10,13 +10,13 @@
 #define __BBL_ISIS_LSP_H__
 
 void
-isis_lsp_flood_adjacency(isis_lsp_t *lsp, isis_adjacency_t *adjacency);
+isis_lsp_flood_adjacency(isis_lsp_s *lsp, isis_adjacency_s *adjacency);
 
 void
-isis_lsp_flood(isis_lsp_t *lsp);
+isis_lsp_flood(isis_lsp_s *lsp);
 
 void
-isis_lsp_process_entries(isis_adjacency_t *adjacency, hb_tree *lsdb, isis_pdu_t *pdu, uint64_t csnp_scan);
+isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s *pdu, uint64_t csnp_scan);
 
 void
 isis_lsp_gc_job(timer_s *timer);
@@ -31,21 +31,21 @@ void
 isis_lsp_lifetime_job(timer_s *timer);
 
 void
-isis_lsp_tx_job(timer_s *timer);
+isis_lsp_sx_job(timer_s *timer);
 
-isis_lsp_t *
-isis_lsp_new(uint64_t id, uint8_t level, isis_instance_t *instance);
-
-bool
-isis_lsp_self_update(isis_instance_t *instance, uint8_t level);
-
-void
-isis_lsp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level);
-
-void
-isis_lsp_purge_external(isis_instance_t *instance, uint8_t level);
+isis_lsp_s *
+isis_lsp_new(uint64_t id, uint8_t level, isis_instance_s *instance);
 
 bool
-isis_lsp_update_external(isis_instance_t *instance, isis_pdu_t *pdu);
+isis_lsp_self_update(isis_instance_s *instance, uint8_t level);
+
+void
+isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level);
+
+void
+isis_lsp_purge_external(isis_instance_s *instance, uint8_t level);
+
+bool
+isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu);
 
 #endif

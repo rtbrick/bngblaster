@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 
 const char*
@@ -15,7 +14,7 @@ bbl_li_direction_string(uint8_t direction)
     switch(direction) {
         case 2: return "downstream";
         case 3: return "upstream";
-        default: return "invlid";
+        default: return "invalid";
     }
 }
 
@@ -42,17 +41,14 @@ bbl_li_sub_packet_type_string(uint8_t sub_packet_type)
 }
 
 /**
- * bbl_l2tp_handler_rx
+ * bbl_qmx_li_handler_rx
  *
- * This function handles all received L2TPv2 traffic.
- *
- * @param eth Received ethernet packet.
- * @param l2tp L2TP header of received ethernet packet.
- * @param interface Receiving interface.
+ * @param interface receiving interface
+ * @param eth received ethernet header
+ * @param qmx_li received LI header
  */
 void
-bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_interface_s *interface) {
-    bbl_ctx_s *ctx = interface->ctx;
+bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li) {
     bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
     bbl_udp_t *udp = (bbl_udp_t*)ipv4->next;
     bbl_ethernet_header_t *inner_eth;
@@ -66,7 +62,7 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
 
     UNUSED(eth);
 
-    search = dict_search(ctx->li_flow_dict, &qmx_li->header);
+    search = dict_search(g_ctx->li_flow_dict, &qmx_li->header);
     if(search) {
         li_flow = *search;
     } else {
@@ -80,7 +76,7 @@ bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_inte
         li_flow->packet_type = qmx_li->packet_type;
         li_flow->sub_packet_type = qmx_li->sub_packet_type;
         li_flow->liid = qmx_li->liid;
-        result = dict_insert(ctx->li_flow_dict, &qmx_li->header);
+        result = dict_insert(g_ctx->li_flow_dict, &qmx_li->header);
         if (!result.inserted) {
             free(li_flow);
             return;

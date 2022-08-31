@@ -14,9 +14,9 @@ int
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message);
 
 bool
-bbl_ctrl_socket_open(bbl_ctx_s *ctx);
+bbl_ctrl_socket_open();
 
 bool
-bbl_ctrl_socket_close(bbl_ctx_s *ctx);
+bbl_ctrl_socket_close();
 
 #endif

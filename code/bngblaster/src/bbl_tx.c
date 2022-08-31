@@ -7,191 +7,13 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_session.h"
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
 
-protocol_error_t
-bbl_encode_packet_session_ipv4 (bbl_session_s *session)
-{
-    bbl_interface_s *interface;
-    interface = session->interface;
-
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-            session->ipcp_state != BBL_PPP_OPENED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    } else {
-        if(session->session_state != BBL_ESTABLISHED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    }
-
-    session->stats.access_ipv4_tx++;
-    interface->stats.session_ipv4_tx++;
-
-    memcpy(session->write_buf, session->access_ipv4_tx_packet_template, session->access_ipv4_tx_packet_len);
-    session->write_idx = session->access_ipv4_tx_packet_len;
-
-    *(uint64_t*)(session->write_buf + (session->access_ipv4_tx_packet_len - 16)) = session->access_ipv4_tx_seq++;
-    *(uint32_t*)(session->write_buf + (session->access_ipv4_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(session->write_buf + (session->access_ipv4_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    interface->io.ctrl = false;
-    return PROTOCOL_SUCCESS;
-}
-
-protocol_error_t
-bbl_encode_packet_session_ipv6 (bbl_session_s *session)
-{
-    bbl_interface_s *interface;
-    interface = session->interface;
-
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-            session->ip6cp_state != BBL_PPP_OPENED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    } else {
-        if(session->session_state != BBL_ESTABLISHED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    }
-
-    session->stats.access_ipv6_tx++;
-    interface->stats.session_ipv6_tx++;
-
-    memcpy(session->write_buf, session->access_ipv6_tx_packet_template, session->access_ipv6_tx_packet_len);
-    session->write_idx = session->access_ipv6_tx_packet_len;
-
-    *(uint64_t*)(session->write_buf + (session->access_ipv6_tx_packet_len - 16)) = session->access_ipv6_tx_seq++;
-    *(uint32_t*)(session->write_buf + (session->access_ipv6_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(session->write_buf + (session->access_ipv6_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    interface->io.ctrl = false;
-    return PROTOCOL_SUCCESS;
-}
-
-protocol_error_t
-bbl_encode_packet_session_ipv6pd (bbl_session_s *session)
-{
-    bbl_interface_s *interface;
-    interface = session->interface;
-
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-            session->ip6cp_state != BBL_PPP_OPENED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    } else {
-        if(session->session_state != BBL_ESTABLISHED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    }
-
-    session->stats.access_ipv6pd_tx++;
-    interface->stats.session_ipv6pd_tx++;
-
-    memcpy(session->write_buf, session->access_ipv6pd_tx_packet_template, session->access_ipv6pd_tx_packet_len);
-    session->write_idx = session->access_ipv6pd_tx_packet_len;
-
-    *(uint64_t*)(session->write_buf + (session->access_ipv6pd_tx_packet_len - 16)) = session->access_ipv6pd_tx_seq++;
-    *(uint32_t*)(session->write_buf + (session->access_ipv6pd_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(session->write_buf + (session->access_ipv6pd_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    interface->io.ctrl = false;
-    return PROTOCOL_SUCCESS;
-}
-
-protocol_error_t
-bbl_encode_packet_network_session_ipv4(bbl_interface_s *interface, bbl_session_s *session)
-{
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-            session->ipcp_state != BBL_PPP_OPENED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    } else {
-        if(session->session_state != BBL_ESTABLISHED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    }
-
-    session->stats.network_ipv4_tx++;
-    interface->stats.session_ipv4_tx++;
-    if(session->l2tp_session) {
-        interface->stats.l2tp_data_tx++;
-        session->l2tp_session->tunnel->stats.data_tx++;
-        session->l2tp_session->stats.data_tx++;
-        session->l2tp_session->stats.data_ipv4_tx++;
-    }
-
-    memcpy(session->write_buf, session->network_ipv4_tx_packet_template, session->network_ipv4_tx_packet_len);
-    session->write_idx = session->network_ipv4_tx_packet_len;
-
-    *(uint64_t*)(session->write_buf + (session->network_ipv4_tx_packet_len - 16)) = session->network_ipv4_tx_seq++;
-    *(uint32_t*)(session->write_buf + (session->network_ipv4_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(session->write_buf + (session->network_ipv4_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    interface->io.ctrl = false;
-    return PROTOCOL_SUCCESS;
-}
-
-protocol_error_t
-bbl_encode_packet_network_session_ipv6(bbl_interface_s *interface, bbl_session_s *session)
-{
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-            session->ip6cp_state != BBL_PPP_OPENED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    } else {
-        if(session->session_state != BBL_ESTABLISHED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    }
-
-    session->stats.network_ipv6_tx++;
-    interface->stats.session_ipv6_tx++;
-
-    memcpy(session->write_buf, session->network_ipv6_tx_packet_template, session->network_ipv6_tx_packet_len);
-    session->write_idx = session->network_ipv6_tx_packet_len;
-
-    *(uint64_t*)(session->write_buf + (session->network_ipv6_tx_packet_len - 16)) = session->network_ipv6_tx_seq++;
-    *(uint32_t*)(session->write_buf + (session->network_ipv6_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(session->write_buf + (session->network_ipv6_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    interface->io.ctrl = false;
-    return PROTOCOL_SUCCESS;
-}
-
-protocol_error_t
-bbl_encode_packet_network_session_ipv6pd(bbl_interface_s *interface, bbl_session_s *session)
-{
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
-        if(session->session_state != BBL_ESTABLISHED ||
-            session->ip6cp_state != BBL_PPP_OPENED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    } else {
-        if(session->session_state != BBL_ESTABLISHED) {
-            return WRONG_PROTOCOL_STATE;
-        }
-    }
-
-    session->stats.network_ipv6pd_tx++;
-    interface->stats.session_ipv6pd_tx++;
-
-    memcpy(session->write_buf, session->network_ipv6pd_tx_packet_template, session->network_ipv6pd_tx_packet_len);
-    session->write_idx = session->network_ipv6pd_tx_packet_len;
-
-    *(uint64_t*)(session->write_buf + (session->network_ipv6pd_tx_packet_len - 16)) = session->network_ipv6pd_tx_seq++;
-    *(uint32_t*)(session->write_buf + (session->network_ipv6pd_tx_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-    *(uint32_t*)(session->write_buf + (session->network_ipv6pd_tx_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-    interface->io.ctrl = false;
-    return PROTOCOL_SUCCESS;
-}
-
 void
-bbl_igmp_timeout(timer_s *timer)
+bbl_tx_igmp_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     bbl_igmp_group_s *group = NULL;
@@ -236,11 +58,10 @@ bbl_igmp_timeout(timer_s *timer)
     return;
 }
 
-protocol_error_t
-bbl_encode_packet_igmp(bbl_session_s *session)
+static protocol_error_t
+bbl_tx_encode_packet_igmp(bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -255,8 +76,8 @@ bbl_encode_packet_igmp(bbl_session_s *session)
 
     bbl_igmp_group_s *group = NULL;
 
-    interface = session->interface;
-    ctx = interface->ctx;
+    struct timespec timestamp;
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -264,7 +85,7 @@ bbl_encode_packet_igmp(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
@@ -299,7 +120,7 @@ bbl_encode_packet_igmp(bbl_session_s *session)
             group = &session->igmp_groups[i];
             if(group->state == IGMP_GROUP_LEAVING) {
                 if(is_join) {
-                    if(!ctx->config.igmp_combined_leave_join) {
+                    if(!g_ctx->config.igmp_combined_leave_join) {
                         continue;
                     }
                 } else {
@@ -308,7 +129,7 @@ bbl_encode_packet_igmp(bbl_session_s *session)
             } else {
                 /* Joining ... */
                 if(is_leave) {
-                    if(!ctx->config.igmp_combined_leave_join) {
+                    if(!g_ctx->config.igmp_combined_leave_join) {
                         continue;
                     }
                 } else {
@@ -335,8 +156,8 @@ bbl_encode_packet_igmp(bbl_session_s *session)
                     if(group->state == IGMP_GROUP_LEAVING) {
                         gr->type = IGMP_BLOCK_OLD_SOURCES;
                         if(!group->leave_tx_time.tv_sec) {
-                            group->leave_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->leave_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->leave_tx_time.tv_sec = timestamp.tv_sec;
+                            group->leave_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     } else {
                         if(group->state == IGMP_GROUP_ACTIVE) {
@@ -345,8 +166,8 @@ bbl_encode_packet_igmp(bbl_session_s *session)
                             gr->type = IGMP_ALLOW_NEW_SOURCES;
                         }
                         if(!group->join_tx_time.tv_sec) {
-                            group->join_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->join_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->join_tx_time.tv_sec = timestamp.tv_sec;
+                            group->join_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     }
                 } else {
@@ -354,14 +175,14 @@ bbl_encode_packet_igmp(bbl_session_s *session)
                     if(group->state == IGMP_GROUP_LEAVING) {
                         gr->type = IGMP_CHANGE_TO_INCLUDE;
                         if(!group->leave_tx_time.tv_sec) {
-                            group->leave_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->leave_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->leave_tx_time.tv_sec = timestamp.tv_sec;
+                            group->leave_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     } else {
                         gr->type = IGMP_EXCLUDE;
                         if(!group->join_tx_time.tv_sec) {
-                            group->join_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->join_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->join_tx_time.tv_sec = timestamp.tv_sec;
+                            group->join_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     }
                 }
@@ -373,14 +194,14 @@ bbl_encode_packet_igmp(bbl_session_s *session)
                     if(group->state == IGMP_GROUP_LEAVING) {
                         igmp.type = IGMP_TYPE_LEAVE;
                         if(!group->leave_tx_time.tv_sec) {
-                            group->leave_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->leave_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->leave_tx_time.tv_sec = timestamp.tv_sec;
+                            group->leave_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     } else {
                         igmp.type = IGMP_TYPE_REPORT_V2;
                         if(!group->join_tx_time.tv_sec) {
-                            group->join_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->join_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->join_tx_time.tv_sec = timestamp.tv_sec;
+                            group->join_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     }
                 } else {
@@ -391,8 +212,8 @@ bbl_encode_packet_igmp(bbl_session_s *session)
                     } else {
                         igmp.type = IGMP_TYPE_REPORT_V1;
                         if(!group->join_tx_time.tv_sec) {
-                            group->join_tx_time.tv_sec = interface->tx_timestamp.tv_sec;
-                            group->join_tx_time.tv_nsec = interface->tx_timestamp.tv_nsec;
+                            group->join_tx_time.tv_sec = timestamp.tv_sec;
+                            group->join_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     }
                 }
@@ -415,42 +236,35 @@ bbl_encode_packet_igmp(bbl_session_s *session)
         return IGNORED;
     }
 
-    timer_add(&ctx->timer_root, &session->timer_igmp, "IGMP", 
-        (ctx->config.igmp_robustness_interval / 1000), 
-        (ctx->config.igmp_robustness_interval % 1000) * MSEC, 
-        session, &bbl_igmp_timeout);
+    timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", 
+              (g_ctx->config.igmp_robustness_interval / 1000), 
+              (g_ctx->config.igmp_robustness_interval % 1000) * MSEC, 
+              session, &bbl_tx_igmp_timeout);
 
     session->stats.igmp_tx++;
-    interface->stats.igmp_tx++;
+    access_interface->stats.igmp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
-bbl_pap_timeout(timer_s *timer)
+bbl_tx_pap_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    session = timer->data;
-    interface = session->interface;
+    bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_AUTH) {
-        interface->stats.pap_timeout++;
+        session->access_interface->stats.pap_timeout++;
         session->send_requests |= BBL_SEND_PAP_REQUEST;
         bbl_session_tx_qnode_insert(session);
     }
 }
 
-protocol_error_t
-bbl_encode_packet_pap_request(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_pap_request(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_pap_t pap = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.pap_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -458,7 +272,7 @@ bbl_encode_packet_pap_request(bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -472,36 +286,35 @@ bbl_encode_packet_pap_request(bbl_session_s *session) {
     pap.username_len = strlen(session->username);
     pap.password = session->password;
     pap.password_len = strlen(session->password);
-    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, &bbl_pap_timeout);
+
+    timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
+              5, 0, session, &bbl_tx_pap_timeout);
+
+    access_interface->stats.pap_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
-bbl_chap_timeout(timer_s *timer)
+bbl_tx_chap_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    session = timer->data;
-    interface = session->interface;
+    bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_AUTH) {
-        interface->stats.chap_timeout++;
+        session->access_interface->stats.chap_timeout++;
         session->send_requests |= BBL_SEND_CHAP_RESPONSE;
         bbl_session_tx_qnode_insert(session);
     }
 }
 
-protocol_error_t
-bbl_encode_packet_chap_response(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_chap_response(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_chap_t chap = {0};
 
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.chap_tx++;
+    access_interface->stats.chap_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -509,7 +322,7 @@ bbl_encode_packet_chap_response(bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -522,28 +335,29 @@ bbl_encode_packet_chap_response(bbl_session_s *session) {
     chap.challenge_len = CHALLENGE_LEN;
     chap.name = session->username;
     chap.name_len = strlen(session->username);
-    timer_add(&ctx->timer_root, &session->timer_auth, "Authentication Timeout", 5, 0, session, &bbl_chap_timeout);
+
+    timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout", 
+              5, 0, session, &bbl_tx_chap_timeout);
+
+    access_interface->stats.chap_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
 bbl_icmpv6_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    session = timer->data;
-    interface = session->interface;
+    bbl_session_s *session  = timer->data;
     if(!session->icmpv6_ra_received) {
-        interface->stats.icmpv6_rs_timeout++;
+        session->access_interface->stats.icmpv6_rs_timeout++;
         session->send_requests |= BBL_SEND_ICMPV6_RS;
         bbl_session_tx_qnode_insert(session);
     }
 }
 
-protocol_error_t
-bbl_encode_packet_icmpv6_rs(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -551,16 +365,12 @@ bbl_encode_packet_icmpv6_rs(bbl_session_s *session) {
     bbl_icmpv6_t icmpv6 = {0};
     uint8_t mac[ETH_ADDR_LEN];
 
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.icmpv6_tx++;
-
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
@@ -586,32 +396,30 @@ bbl_encode_packet_icmpv6_rs(bbl_session_s *session) {
     ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
     ipv6.next = &icmpv6;
     icmpv6.type = IPV6_ICMPV6_ROUTER_SOLICITATION;
-    timer_add(&ctx->timer_root, &session->timer_icmpv6, "ICMPv6", 5, 0, session, &bbl_icmpv6_timeout);
+
+    timer_add(&g_ctx->timer_root, &session->timer_icmpv6, "ICMPv6", 
+              5, 0, session, &bbl_icmpv6_timeout);
+
+    session->stats.icmpv6_tx++;
+    access_interface->stats.icmpv6_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
-bbl_dhcpv6_timeout(timer_s *timer)
+bbl_tx_dhcpv6_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
-    session = timer->data;
-    interface = session->interface;
-    ctx = interface->ctx;
-
+    bbl_session_s *session = timer->data;
     if(!(session->dhcpv6_state == BBL_DHCP_BOUND ||
          session->dhcpv6_state == BBL_DHCP_INIT)) {
-        interface->stats.dhcpv6_timeout++;
-        if(session->dhcpv6_retry < ctx->config.dhcpv6_retry) {
+        session->access_interface->stats.dhcpv6_timeout++;
+        if(session->dhcpv6_retry < g_ctx->config.dhcpv6_retry) {
             session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
             bbl_session_tx_qnode_insert(session);
         } else {
             if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
                 session->dhcpv6_state = BBL_DHCP_INIT;
                 if(session->session_state == BBL_TERMINATING) {
-                    bbl_session_clear(ctx, session);
+                    bbl_session_clear(session);
                 }
             } else {
                 bbl_dhcpv6_restart(session);
@@ -620,10 +428,10 @@ bbl_dhcpv6_timeout(timer_s *timer)
     }
 }
 
-protocol_error_t
-bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -644,9 +452,6 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     access_line.down = session->rate_down;
     access_line.dsl_type = session->dsl_type;
 
-    interface = session->interface;
-    ctx = interface->ctx;
-
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
@@ -657,7 +462,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
             return WRONG_PROTOCOL_STATE;
         }
         eth.dst = session->server_mac;
-        eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.type = ETH_TYPE_PPPOE_SESSION;
         eth.next = &pppoe;
         pppoe.session_id = session->pppoe_session_id;
@@ -667,7 +472,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
         /* IPoE */
         ipv6_multicast_mac(ipv6_multicast_all_dhcp, mac);
         eth.dst = mac;
-        eth.vlan_outer_priority = ctx->config.dhcpv6_vlan_priority;
+        eth.vlan_outer_priority = g_ctx->config.dhcpv6_vlan_priority;
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
@@ -675,7 +480,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
     ipv6.dst = (void*)ipv6_multicast_all_dhcp;
     ipv6.src = (void*)session->link_local_ipv6_address;
     ipv6.ttl = 64;
-    ipv6.tos = ctx->config.dhcpv6_tc;
+    ipv6.tos = g_ctx->config.dhcpv6_tc;
     ipv6.protocol = IPV6_NEXT_HEADER_UDP;
     ipv6.next = &udp;
     udp.dst = DHCPV6_UDP_SERVER;
@@ -698,7 +503,7 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
         case BBL_DHCP_SELECTING:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
             session->stats.dhcpv6_tx_solicit++;
-            dhcpv6.rapid = ctx->config.dhcpv6_rapid_commit;
+            dhcpv6.rapid = g_ctx->config.dhcpv6_rapid_commit;
             dhcpv6.server_duid_len = 0;
             dhcpv6.ia_na_option_len = 0;
             dhcpv6.ia_pd_option_len = 0;
@@ -727,35 +532,28 @@ bbl_encode_packet_dhcpv6_request(bbl_session_s *session) {
             return WRONG_PROTOCOL_STATE;
     }
 
+    timer_add(&g_ctx->timer_root, &session->timer_dhcpv6, "DHCPv6",
+              g_ctx->config.dhcpv6_timeout, 0, session, &bbl_tx_dhcpv6_timeout);
+
     session->dhcpv6_retry++;
-
-    timer_add(&ctx->timer_root, &session->timer_dhcpv6, "DHCPv6", ctx->config.dhcpv6_timeout, 0, session, &bbl_dhcpv6_timeout);
-
     session->stats.dhcpv6_tx++;
-    interface->stats.dhcpv6_tx++;
-
+    access_interface->stats.dhcpv6_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
-bbl_ip6cp_timeout(timer_s *timer)
+bbl_tx_ip6cp_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
-    session = timer->data;
-    interface = session->interface;
-    ctx = interface->ctx;
+    bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_NETWORK && session->ip6cp_state != BBL_PPP_OPENED) {
         if(session->ip6cp_retries) {
-            interface->stats.ip6cp_timeout++;
+            session->access_interface->stats.ip6cp_timeout++;
         }
-        if(session->ip6cp_retries > ctx->config.ip6cp_conf_request_retry) {
+        if(session->ip6cp_retries > g_ctx->config.ip6cp_conf_request_retry) {
             session->ip6cp_state = BBL_PPP_CLOSED;
             LOG(PPPOE, "IP6CP TIMEOUT (ID: %u)\n", session->session_id);
             if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
-                bbl_session_clear(ctx, session);
+                bbl_session_clear(session);
             }
         } else {
             session->send_requests |= BBL_SEND_IP6CP_REQUEST;
@@ -764,10 +562,10 @@ bbl_ip6cp_timeout(timer_s *timer)
     }
 }
 
-protocol_error_t
-bbl_encode_packet_ip6cp_request(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_ip6cp_request(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -777,17 +575,13 @@ bbl_encode_packet_ip6cp_request(bbl_session_s *session) {
         return WRONG_PROTOCOL_STATE;
     }
 
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.ip6cp_tx++;
-
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -800,22 +594,21 @@ bbl_encode_packet_ip6cp_request(bbl_session_s *session) {
     if(ip6cp.code == PPP_CODE_CONF_REQUEST) {
         ip6cp.ipv6_identifier = session->ip6cp_ipv6_identifier;
     }
-    timer_add(&ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout", ctx->config.ip6cp_conf_request_timeout, 0, session, &bbl_ip6cp_timeout);
+    timer_add(&g_ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout",
+              g_ctx->config.ip6cp_conf_request_timeout, 0, session, &bbl_tx_ip6cp_timeout);
+
+    access_interface->stats.ip6cp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_ip6cp_response(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ip6cp_t ip6cp = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.ip6cp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -823,7 +616,7 @@ bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -839,28 +632,24 @@ bbl_encode_packet_ip6cp_response (bbl_session_s *session) {
     } else {
         ip6cp.ipv6_identifier = session->ip6cp_ipv6_identifier;
     }
+
+    access_interface->stats.ip6cp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
 bbl_ipcp_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
-    session = timer->data;
-    interface = session->interface;
-    ctx = interface->ctx;
+    bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_NETWORK && session->ipcp_state != BBL_PPP_OPENED) {
         if(session->ipcp_retries) {
-            interface->stats.ipcp_timeout++;
+            session->access_interface->stats.ipcp_timeout++;
         }
-        if(session->ipcp_retries > ctx->config.ipcp_conf_request_retry) {
+        if(session->ipcp_retries > g_ctx->config.ipcp_conf_request_retry) {
             session->ipcp_state = BBL_PPP_CLOSED;
             LOG(PPPOE, "IPCP TIMEOUT (ID: %u)\n", session->session_id);
             if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
-                bbl_session_clear(ctx, session);
+                bbl_session_clear(session);
             }
         } else {
             session->send_requests |= BBL_SEND_IPCP_REQUEST;
@@ -869,10 +658,10 @@ bbl_ipcp_timeout(timer_s *timer)
     }
 }
 
-protocol_error_t
-bbl_encode_packet_ipcp_request(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_ipcp_request(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
@@ -882,17 +671,13 @@ bbl_encode_packet_ipcp_request(bbl_session_s *session) {
         return WRONG_PROTOCOL_STATE;
     }
 
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.ipcp_tx++;
-
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -903,35 +688,35 @@ bbl_encode_packet_ipcp_request(bbl_session_s *session) {
     ipcp.code = session->ipcp_request_code;
     ipcp.identifier = ++session->ipcp_identifier;
     if(ipcp.code == PPP_CODE_CONF_REQUEST) {
-        if(session->ip_address || ctx->config.ipcp_request_ip) {
+        if(session->ip_address || g_ctx->config.ipcp_request_ip) {
             ipcp.address = session->ip_address;
             ipcp.option_address = true;
         }
-        if(ctx->config.ipcp_request_dns1) {
+        if(g_ctx->config.ipcp_request_dns1) {
             ipcp.dns1 = session->dns1;
             ipcp.option_dns1 = true;
         }
-        if(ctx->config.ipcp_request_dns2) {
+        if(g_ctx->config.ipcp_request_dns2) {
             ipcp.dns2 = session->dns2;
             ipcp.option_dns2 = true;
         }
     }
-    timer_add(&ctx->timer_root, &session->timer_ipcp, "IPCP timeout", ctx->config.ipcp_conf_request_timeout, 0, session, &bbl_ipcp_timeout);
+
+    timer_add(&g_ctx->timer_root, &session->timer_ipcp, "IPCP timeout",
+              g_ctx->config.ipcp_conf_request_timeout, 0, session, &bbl_ipcp_timeout);
+
+    access_interface->stats.ipcp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet_ipcp_response(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_ipcp_response(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_ipcp_t ipcp = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.ipcp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -939,7 +724,7 @@ bbl_encode_packet_ipcp_response(bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -953,26 +738,21 @@ bbl_encode_packet_ipcp_response(bbl_session_s *session) {
         ipcp.options = session->ipcp_options;
         ipcp.options_len = session->ipcp_options_len;
     }
+
+    access_interface->stats.ipcp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
 void
 bbl_lcp_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
-    session = timer->data;
-    interface = session->interface;
-    ctx = interface->ctx;
-
+    bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_LINK && session->lcp_state != BBL_PPP_OPENED) {
         if(session->lcp_retries) {
-            interface->stats.lcp_timeout++;
+            session->access_interface->stats.lcp_timeout++;
         }
-        if(session->lcp_retries > ctx->config.lcp_conf_request_retry) {
-            bbl_session_clear(ctx, session);
+        if(session->lcp_retries > g_ctx->config.lcp_conf_request_retry) {
+            bbl_session_clear(session);
         } else {
             session->send_requests |= BBL_SEND_LCP_REQUEST;
             bbl_session_tx_qnode_insert(session);
@@ -980,31 +760,27 @@ bbl_lcp_timeout(timer_s *timer)
     } else if (session->session_state == BBL_PPP_TERMINATING) {
         if(session->lcp_retries > 3) {
             /* Send max 3 terminate requests. */
-            bbl_session_update_state(ctx, session, BBL_TERMINATING);
+            bbl_session_update_state(session, BBL_TERMINATING);
             session->lcp_state = BBL_PPP_CLOSED;
             session->ipcp_state = BBL_PPP_CLOSED;
             session->ip6cp_state = BBL_PPP_CLOSED;
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_tx_qnode_insert(session);
         } else {
-            bbl_session_clear(ctx, session);
+            bbl_session_clear(session);
         }
     }
 }
 
-protocol_error_t
-bbl_encode_packet_lcp_request(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_lcp_request(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_lcp_t lcp = {0};
     uint16_t timeout = 1; /* default timeout 1 second */
-
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.lcp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -1012,7 +788,7 @@ bbl_encode_packet_lcp_request(bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -1028,26 +804,26 @@ bbl_encode_packet_lcp_request(bbl_session_s *session) {
     } else if(lcp.code == PPP_CODE_CONF_REQUEST) {
         lcp.mru = session->mru;
         lcp.magic = session->magic_number;
-        timeout = ctx->config.lcp_conf_request_timeout;
+        timeout = g_ctx->config.lcp_conf_request_timeout;
     }
+
     if(timeout) {
-        timer_add(&ctx->timer_root, &session->timer_lcp, "LCP timeout", timeout, 0, session, &bbl_lcp_timeout);
+        timer_add(&g_ctx->timer_root, &session->timer_lcp, "LCP timeout", 
+                  timeout, 0, session, &bbl_lcp_timeout);
     }
+
+    access_interface->stats.lcp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet_lcp_response(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_lcp_response(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_session_t pppoe = {0};
     bbl_lcp_t lcp = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
-    interface->stats.lcp_tx++;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -1055,7 +831,7 @@ bbl_encode_packet_lcp_response(bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -1078,6 +854,8 @@ bbl_encode_packet_lcp_response(bbl_session_s *session) {
             lcp.magic = session->peer_magic_number;
         }
     }
+
+    access_interface->stats.lcp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -1101,18 +879,12 @@ bbl_padr_timeout(timer_s *timer)
     }
 }
 
-protocol_error_t
+static protocol_error_t
 bbl_encode_padi(bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_discovery_t pppoe = {0};
     access_line_t access_line = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -1120,7 +892,7 @@ bbl_encode_padi(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
@@ -1146,18 +918,12 @@ bbl_encode_padi(bbl_session_s *session)
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
+static protocol_error_t
 bbl_encode_padr(bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_discovery_t pppoe = {0};
     access_line_t access_line = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -1165,7 +931,7 @@ bbl_encode_padr(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
@@ -1192,17 +958,11 @@ bbl_encode_padr(bbl_session_s *session)
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
+static protocol_error_t
 bbl_encode_padt(bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
-
     bbl_ethernet_header_t eth = {0};
     bbl_pppoe_discovery_t pppoe = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
 
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
@@ -1210,7 +970,7 @@ bbl_encode_padt(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.pppoe_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_PPPOE_DISCOVERY;
     eth.next = &pppoe;
@@ -1220,33 +980,31 @@ bbl_encode_padt(bbl_session_s *session)
 }
 
 protocol_error_t
-bbl_encode_packet_discovery(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+bbl_tx_encode_packet_discovery(bbl_session_s *session) {
+    bbl_access_interface_s *access_interface = session->access_interface;
+
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
-    interface = session->interface;
-    ctx = interface->ctx;
-
-     switch(session->session_state) {
+    switch(session->session_state) {
         case BBL_PPPOE_INIT:
             result = bbl_encode_padi(session);
-            timer_add(&ctx->timer_root, &session->timer_padi, "PADI timeout", 5, 0, session, &bbl_padi_timeout);
-            interface->stats.padi_tx++;
-            if(!ctx->stats.first_session_tx.tv_sec) {
-                ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
-                ctx->stats.first_session_tx.tv_nsec = interface->tx_timestamp.tv_nsec;
+            timer_add(&g_ctx->timer_root, &session->timer_padi, "PADI timeout", 
+                      g_ctx->config.pppoe_discovery_timeout, 0, session, &bbl_padi_timeout);
+            access_interface->stats.padi_tx++;
+            if(!g_ctx->stats.first_session_tx.tv_sec) {
+                clock_gettime(CLOCK_MONOTONIC, &g_ctx->stats.first_session_tx);
             }
             break;
         case BBL_PPPOE_REQUEST:
             result = bbl_encode_padr(session);
-            timer_add(&ctx->timer_root, &session->timer_padr, "PADR timeout", 5, 0, session, &bbl_padr_timeout);
-            interface->stats.padr_tx++;
+            timer_add(&g_ctx->timer_root, &session->timer_padr, "PADR timeout", 
+                      g_ctx->config.pppoe_discovery_timeout, 0, session, &bbl_padr_timeout);
+            access_interface->stats.padr_tx++;
             break;
         case BBL_TERMINATING:
             result = bbl_encode_padt(session);
-            interface->stats.padt_tx++;
-            bbl_session_update_state(ctx, session, BBL_TERMINATED);
+            access_interface->stats.padt_tx++;
+            bbl_session_update_state(session, BBL_TERMINATED);
             break;
         default:
             break;
@@ -1258,14 +1016,11 @@ bbl_encode_packet_discovery(bbl_session_s *session) {
 void
 bbl_dhcp_timeout(timer_s *timer)
 {
-    bbl_session_s *session;
-    bbl_interface_s *interface;
-    session = timer->data;
-    interface = session->interface;
+    bbl_session_s *session = timer->data;
     if(!(session->dhcp_state == BBL_DHCP_INIT ||
          session->dhcp_state == BBL_DHCP_BOUND)) {
-        interface->stats.dhcp_timeout++;
-        if(session->dhcp_retry < interface->ctx->config.dhcp_retry) {
+        session->access_interface->stats.dhcp_timeout++;
+        if(session->dhcp_retry < g_ctx->config.dhcp_retry) {
             session->send_requests |= BBL_SEND_DHCP_REQUEST;
             bbl_session_tx_qnode_insert(session);
         } else {
@@ -1274,10 +1029,10 @@ bbl_dhcp_timeout(timer_s *timer)
     }
 }
 
-protocol_error_t
-bbl_encode_packet_dhcp(bbl_session_s *session) {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+static protocol_error_t
+bbl_tx_encode_packet_dhcp(bbl_session_s *session)
+{
+    bbl_access_interface_s *access_interface = session->access_interface;
 
     bbl_ethernet_header_t eth = {0};
     bbl_ipv4_t ipv4 = {0};
@@ -1292,9 +1047,6 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
         return IGNORED;
     }
 
-    interface = session->interface;
-    ctx = interface->ctx;
-
     dhcp.header = &header;
 
     eth.dst = session->dhcp_server_mac;
@@ -1303,7 +1055,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = ctx->config.dhcp_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.dhcp_vlan_priority;
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     eth.type = ETH_TYPE_IPV4;
@@ -1311,7 +1063,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
     ipv4.src = session->ip_address;
     ipv4.dst = session->dhcp_server;
     ipv4.ttl = 255;
-    ipv4.tos = ctx->config.dhcp_tos;
+    ipv4.tos = g_ctx->config.dhcp_tos;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
     udp.src = DHCP_UDP_CLIENT;
@@ -1324,7 +1076,7 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
     header.htype = 1; /* fixed set to ethernet */
     header.hlen = 6;
     header.xid = session->dhcp_xid;
-    if(ctx->config.dhcp_broadcast && session->dhcp_state < BBL_DHCP_BOUND) {
+    if(g_ctx->config.dhcp_broadcast && session->dhcp_state < BBL_DHCP_BOUND) {
         header.flags = htobe16(1 << 15);
         eth.dst = (uint8_t*)broadcast_mac;
         ipv4.dst = IPV4_BROADCAST;
@@ -1366,9 +1118,9 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
             dhcp.option_router = true;
             dhcp.option_host_name = true;
             dhcp.option_domain_name = true;
-            if(!ctx->stats.first_session_tx.tv_sec) {
-                ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
-                ctx->stats.first_session_tx.tv_nsec = interface->tx_timestamp.tv_nsec;
+            if(!g_ctx->stats.first_session_tx.tv_sec) {
+                g_ctx->stats.first_session_tx.tv_sec = now.tv_sec;
+                g_ctx->stats.first_session_tx.tv_nsec = now.tv_nsec;
             }
             break;
         case BBL_DHCP_REQUESTING:
@@ -1405,21 +1157,22 @@ bbl_encode_packet_dhcp(bbl_session_s *session) {
 
     session->dhcp_retry++;
     if(dhcp.type == DHCP_MESSAGE_RELEASE) {
-        if(session->dhcp_retry < ctx->config.dhcp_release_retry) {
-            timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_release_interval, 0, session, &bbl_dhcp_timeout);
+        if(session->dhcp_retry < g_ctx->config.dhcp_release_retry) {
+            timer_add(&g_ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 
+                      g_ctx->config.dhcp_release_interval, 0, session, &bbl_dhcp_timeout);
         } else {
             session->dhcp_state = BBL_DHCP_INIT;
             if(session->session_state == BBL_TERMINATING) {
-                bbl_session_clear(ctx, session);
+                bbl_session_clear(session);
             }
         }
     } else {
-        timer_add(&ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
+        timer_add(&g_ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 
+                  g_ctx->config.dhcp_timeout, 0, session, &bbl_dhcp_timeout);
     }
 
     session->stats.dhcp_tx++;
-    interface->stats.dhcp_tx++;
-
+    access_interface->stats.dhcp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -1431,16 +1184,13 @@ bbl_arp_timeout(timer_s *timer)
     bbl_session_tx_qnode_insert(session);
 }
 
-protocol_error_t
-bbl_encode_packet_arp_request(bbl_session_s *session)
+static protocol_error_t
+bbl_tx_encode_packet_arp_request(bbl_session_s *session)
 {
-    bbl_interface_s *interface;
-    bbl_ctx_s *ctx;
+    bbl_access_interface_s *access_interface = session->access_interface;
+
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
-
-    interface = session->interface;
-    ctx = interface->ctx;
 
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -1455,25 +1205,28 @@ bbl_encode_packet_arp_request(bbl_session_s *session)
     arp.target_ip = session->peer_ip_address;
 
     if(session->arp_resolved) {
-        if(ctx->config.arp_interval) {
-            timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
+        if(g_ctx->config.arp_interval) {
+            timer_add(&g_ctx->timer_root, &session->timer_arp, "ARP timeout", 
+                      g_ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
         }
     } else {
-        timer_add(&ctx->timer_root, &session->timer_arp, "ARP timeout", ctx->config.arp_timeout, 0, session, &bbl_arp_timeout);
+        timer_add(&g_ctx->timer_root, &session->timer_arp, "ARP timeout", 
+                  g_ctx->config.arp_timeout, 0, session, &bbl_arp_timeout);
     }
-    interface->stats.arp_tx++;
-    if(!ctx->stats.first_session_tx.tv_sec) {
-        ctx->stats.first_session_tx.tv_sec = interface->tx_timestamp.tv_sec;
-        ctx->stats.first_session_tx.tv_nsec = interface->tx_timestamp.tv_nsec;
+    if(!g_ctx->stats.first_session_tx.tv_sec) {
+        clock_gettime(CLOCK_MONOTONIC, &g_ctx->stats.first_session_tx);
     }
+
+    access_interface->stats.arp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet_arp_reply(bbl_session_s *session)
+static protocol_error_t
+bbl_tx_encode_packet_arp_reply(bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
+
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -1487,15 +1240,17 @@ bbl_encode_packet_arp_reply(bbl_session_s *session)
     arp.sender_ip = session->ip_address;
     arp.target = session->server_mac;
     arp.target_ip = session->peer_ip_address;
-    session->interface->stats.arp_tx++;
+
+    session->access_interface->stats.arp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet_cfm_cc(bbl_session_s *session)
+static protocol_error_t
+bbl_tx_encode_packet_cfm_cc(bbl_session_s *session)
 {
     bbl_ethernet_header_t eth = {0};
     bbl_cfm_t cfm = {0};
+
     eth.dst = session->server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -1515,12 +1270,13 @@ bbl_encode_packet_cfm_cc(bbl_session_s *session)
         cfm.ma_name_len = strlen(session->cfm_ma_name);
         cfm.ma_name = (uint8_t*)session->cfm_ma_name;
     }
-    session->interface->stats.cfm_cc_tx++;
+
+    session->access_interface->stats.cfm_cc_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
-protocol_error_t
-bbl_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *accounting)
+static protocol_error_t
+bbl_tx_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
 
@@ -1529,123 +1285,82 @@ bbl_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len, bool *acc
     session->write_idx = 0;
 
     if(session->send_requests & BBL_SEND_DISCOVERY) {
-        result = bbl_encode_packet_discovery(session);
+        result = bbl_tx_encode_packet_discovery(session);
         session->send_requests &= ~BBL_SEND_DISCOVERY;
     } else if (session->send_requests & BBL_SEND_LCP_REQUEST) {
-        result = bbl_encode_packet_lcp_request(session);
+        result = bbl_tx_encode_packet_lcp_request(session);
         session->send_requests &= ~BBL_SEND_LCP_REQUEST;
         session->lcp_retries++;
     } else if (session->send_requests & BBL_SEND_LCP_RESPONSE) {
-        result = bbl_encode_packet_lcp_response(session);
+        result = bbl_tx_encode_packet_lcp_response(session);
         session->send_requests &= ~BBL_SEND_LCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_PAP_REQUEST) {
-        result = bbl_encode_packet_pap_request(session);
+        result = bbl_tx_encode_packet_pap_request(session);
         session->send_requests &= ~BBL_SEND_PAP_REQUEST;
         session->auth_retries++;
     } else if (session->send_requests & BBL_SEND_CHAP_RESPONSE) {
-        result = bbl_encode_packet_chap_response(session);
+        result = bbl_tx_encode_packet_chap_response(session);
         session->send_requests &= ~BBL_SEND_CHAP_RESPONSE;
         session->auth_retries++;
     } else if (session->send_requests & BBL_SEND_IPCP_REQUEST) {
-        result = bbl_encode_packet_ipcp_request(session);
+        result = bbl_tx_encode_packet_ipcp_request(session);
         session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
         session->ipcp_retries++;
     } else if (session->send_requests & BBL_SEND_IPCP_RESPONSE) {
-        result = bbl_encode_packet_ipcp_response(session);
+        result = bbl_tx_encode_packet_ipcp_response(session);
         session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_IP6CP_REQUEST) {
-        result = bbl_encode_packet_ip6cp_request(session);
+        result = bbl_tx_encode_packet_ip6cp_request(session);
         session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
         session->ip6cp_retries++;
     } else if (session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
-        result = bbl_encode_packet_ip6cp_response(session);
+        result = bbl_tx_encode_packet_ip6cp_response(session);
         session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
     } else if (session->send_requests & BBL_SEND_ICMPV6_RS) {
-        result = bbl_encode_packet_icmpv6_rs(session);
+        result = bbl_tx_encode_packet_icmpv6_rs(session);
         session->send_requests &= ~BBL_SEND_ICMPV6_RS;
     } else if (session->send_requests & BBL_SEND_DHCPV6_REQUEST) {
-        result = bbl_encode_packet_dhcpv6_request(session);
+        result = bbl_tx_encode_packet_dhcpv6_request(session);
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
     } else if (session->send_requests & BBL_SEND_IGMP) {
-        result = bbl_encode_packet_igmp(session);
-    }  else if (session->send_requests & BBL_SEND_SESSION_IPV4) {
-        result = bbl_encode_packet_session_ipv4(session);
-        session->send_requests &= ~BBL_SEND_SESSION_IPV4;
-        *accounting = true;
-    } else if (session->send_requests & BBL_SEND_SESSION_IPV6) {
-        result = bbl_encode_packet_session_ipv6(session);
-        session->send_requests &= ~BBL_SEND_SESSION_IPV6;
-        *accounting = true;
-    } else if (session->send_requests & BBL_SEND_SESSION_IPV6PD) {
-        result = bbl_encode_packet_session_ipv6pd(session);
-        session->send_requests &= ~BBL_SEND_SESSION_IPV6PD;
-        *accounting = true;
+        result = bbl_tx_encode_packet_igmp(session);
     } else if (session->send_requests & BBL_SEND_ARP_REQUEST) {
-        result = bbl_encode_packet_arp_request(session);
+        result = bbl_tx_encode_packet_arp_request(session);
         session->send_requests &= ~BBL_SEND_ARP_REQUEST;
     } else if (session->send_requests & BBL_SEND_ARP_REPLY) {
-        result = bbl_encode_packet_arp_reply(session);
+        result = bbl_tx_encode_packet_arp_reply(session);
         session->send_requests &= ~BBL_SEND_ARP_REPLY;
     } else if (session->send_requests & BBL_SEND_DHCP_REQUEST) {
-        result = bbl_encode_packet_dhcp(session);
+        result = bbl_tx_encode_packet_dhcp(session);
         session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
     } else if (session->send_requests & BBL_SEND_CFM_CC) {
-        result = bbl_encode_packet_cfm_cc(session);
+        result = bbl_tx_encode_packet_cfm_cc(session);
         session->send_requests &= ~BBL_SEND_CFM_CC;
     } else {
         session->send_requests = 0;
     }
-
-    *len = session->write_idx;
-    return result;
-}
-
-protocol_error_t
-bbl_encode_network_packet(bbl_interface_s *interface, bbl_session_s *session, uint8_t *buf, uint16_t *len)
-{
-    protocol_error_t result = UNKNOWN_PROTOCOL;
-
-    /* Reset write buffer. */
-    session->write_buf = buf;
-    session->write_idx = 0;
-
-    if (session->network_send_requests & BBL_SEND_SESSION_IPV4) {
-        result = bbl_encode_packet_network_session_ipv4(interface, session);
-        session->network_send_requests &= ~BBL_SEND_SESSION_IPV4;
-    } else if (session->network_send_requests & BBL_SEND_SESSION_IPV6) {
-        result = bbl_encode_packet_network_session_ipv6(interface, session);
-        session->network_send_requests &= ~BBL_SEND_SESSION_IPV6;
-    } else if (session->network_send_requests & BBL_SEND_SESSION_IPV6PD) {
-        result = bbl_encode_packet_network_session_ipv6pd(interface, session);
-        session->network_send_requests &= ~BBL_SEND_SESSION_IPV6PD;
-    } else {
-        session->network_send_requests = 0;
-    }
-
     *len = session->write_idx;
     return result;
 }
 
 void
-bbl_network_arp_timeout(timer_s *timer)
+bbl_tx_network_arp_timeout(timer_s *timer)
 {
-    bbl_interface_s *interface = timer->data;
+    bbl_network_interface_s *interface = timer->data;
     interface->send_requests |= BBL_IF_SEND_ARP_REQUEST;
 }
 
 void
-bbl_network_nd_timeout(timer_s *timer)
+bbl_tx_network_nd_timeout(timer_s *timer)
 {
-    bbl_interface_s *interface = timer->data;
+    bbl_network_interface_s *interface = timer->data;
     interface->send_requests |= BBL_IF_SEND_ICMPV6_NS;
 }
 
 static protocol_error_t
-bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
+bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
     protocol_error_t result = UNKNOWN_PROTOCOL;
-
-    bbl_ctx_s *ctx = interface->ctx;
 
     bbl_ethernet_header_t eth = {0};
     bbl_arp_t arp = {0};
@@ -1666,11 +1381,11 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
         arp.sender_ip = interface->ip.address;
         arp.target_ip = interface->gateway;
         if(interface->arp_resolved) {
-            timer_add(&ctx->timer_root, &interface->timer_arp, "ARP timeout", 
-                      300, 0, interface, &bbl_network_arp_timeout);
+            timer_add(&g_ctx->timer_root, &interface->timer_arp, "ARP timeout", 
+                      300, 0, interface, &bbl_tx_network_arp_timeout);
         } else {
-            timer_add(&ctx->timer_root, &interface->timer_arp, "ARP timeout", 
-                      1, 0, interface, &bbl_network_arp_timeout);
+            timer_add(&g_ctx->timer_root, &interface->timer_arp, "ARP timeout", 
+                      1, 0, interface, &bbl_tx_network_arp_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NS) {
@@ -1688,11 +1403,11 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
         memcpy(icmpv6.prefix.address, interface->gateway6, IPV6_ADDR_LEN);
         icmpv6.mac = interface->mac;
         if(interface->icmpv6_nd_resolved) {
-            timer_add(&ctx->timer_root, &interface->timer_nd, "ND timeout", 
-                      300, 0, interface, &bbl_network_nd_timeout);
+            timer_add(&g_ctx->timer_root, &interface->timer_nd, "ND timeout", 
+                      300, 0, interface, &bbl_tx_network_nd_timeout);
         } else {
-            timer_add(&ctx->timer_root, &interface->timer_nd, "ND timeout", 
-                      1, 0, interface, &bbl_network_nd_timeout);
+            timer_add(&g_ctx->timer_root, &interface->timer_nd, "ND timeout", 
+                      1, 0, interface, &bbl_tx_network_nd_timeout);
         }
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ISIS_P2P_HELLO) {
@@ -1705,155 +1420,122 @@ bbl_encode_interface_packet(bbl_interface_s *interface, uint8_t *buf, uint16_t *
     return result;
 }
 
+static protocol_error_t
+bbl_tx_encode_interface_packet(bbl_interface_s *interface, 
+                               uint8_t *buf, uint16_t *len)
+{
+    protocol_error_t result = UNKNOWN_PROTOCOL;
+    interface->send_requests = 0;
+
+    UNUSED(buf);
+    UNUSED(len);
+    return result;
+}
+
 /**
  * bbl_tx
  *
  * This function should be called as long a send buffer is available or
  * return code is not EMPTY.
  *
- * @param ctx pointer to ethernet header structure of received packet
  * @param interface pointer to interface on which packet was received
  * @param buf send buffer where packet can be crafted
  * @param len length of the crafted packet
  */
 protocol_error_t
-bbl_tx(bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
+bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
-    protocol_error_t result = EMPTY; /* EMPTY means that everthing was send */
+    protocol_error_t result = EMPTY; /* EMPTY means that everything was send */
+
+    bbl_network_interface_s *network_interface;
+    bbl_access_interface_s *access_interface;
+    bbl_a10nsp_interface_s *a10nsp_interface;
     bbl_session_s *session;
-    bbl_l2tp_queue_t *l2tpq;
+    bbl_l2tp_queue_s *l2tpq;
 
-    bool accounting;
-
-    interface->io.ctrl = true;
-
-    /* Write per interface frames like ARP, ICMPv6 NS or LLDP. */
+    /* Interface packets like LACP or LLDP. */
     if(interface->send_requests) {
-        return bbl_encode_interface_packet(interface, buf, len);
+        return bbl_tx_encode_interface_packet(interface, buf, len);
     }
 
-    /* Send packets from interface send buffer. */
-    if(!bbl_send_is_empty(interface)) {
-        *len = bbl_send_from_buffer(interface, buf);
-        if(*len) {
-            return PROTOCOL_SUCCESS;
-        } else {
-            return SEND_ERROR;
+    if(interface->state != INTERFACE_UP) {
+        return EMPTY;
+    }
+
+    if(interface->access) {
+        access_interface = interface->access;
+        if(!bbl_txq_is_empty(access_interface->txq)) {
+            *len = bbl_txq_from_buffer(access_interface->txq, buf);
+            if(*len) {
+                return PROTOCOL_SUCCESS;
+            } else {
+                return SEND_ERROR;
+            }
+        }
+        /* Session packets. */
+        if(!CIRCLEQ_EMPTY(&access_interface->session_tx_qhead)) {
+            session = CIRCLEQ_FIRST(&access_interface->session_tx_qhead);
+            if(session->send_requests != 0) {
+                result = bbl_tx_encode_packet(session, buf, len);
+                if(result == PROTOCOL_SUCCESS) {
+                    session->stats.packets_tx++;
+                    session->stats.bytes_tx += *len;
+                }
+                /* Remove only from TX queue if all requests are processed! */
+                if(session->send_requests == 0) {
+                    bbl_session_tx_qnode_remove(session);
+                } else {
+                    /* Move to the end. */
+                    bbl_session_tx_qnode_remove(session);
+                    bbl_session_tx_qnode_insert(session);
+                }
+            } else {
+                bbl_session_tx_qnode_remove(session);
+            }
+            return result;
+        }
+    } else if (interface->a10nsp) {
+        a10nsp_interface = interface->a10nsp;
+        if(!bbl_txq_is_empty(a10nsp_interface->txq)) {
+            *len = bbl_txq_from_buffer(a10nsp_interface->txq, buf);
+            if(*len) {
+                return PROTOCOL_SUCCESS;
+            } else {
+                return SEND_ERROR;
+            }
         }
     }
 
-    switch(interface->type) {
-        case INTERFACE_TYPE_ACCESS:
-            /* Write per session frames. */
-            if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
-                session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
-
-                if(session->send_requests != 0) {
-                    accounting = false;
-                    result = bbl_encode_packet(session, buf, len, &accounting);
-                    if(result == PROTOCOL_SUCCESS) {
-                        session->stats.packets_tx++;
-                        session->stats.bytes_tx += *len;
-                        if(accounting) {
-                            session->stats.accounting_packets_tx++;
-                            session->stats.accounting_bytes_tx += *len;
-                        }
-                    }
-                    /* Remove only from TX queue if all requests are processed! */
-                    if(session->send_requests == 0) {
-                        bbl_session_tx_qnode_remove(session);
-                    } else {
-                        /* Move to the end. */
-                        bbl_session_tx_qnode_remove(session);
-                        bbl_session_tx_qnode_insert(session);
-                    }
-                } else {
-                    bbl_session_tx_qnode_remove(session);
-                }
-                return result;
-            }
-            break;
-        case INTERFACE_TYPE_NETWORK:
-            /* Write per session frames. */
-            if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
-                session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
-                if(session->network_send_requests != 0) {
-                    result = bbl_encode_network_packet(interface, session, buf, len);
-                    /* Remove only from TX queue if all requests are processed! */
-                    if(session->network_send_requests == 0) {
-                        bbl_session_network_tx_qnode_remove(session);
-                    } else {
-                        /* Move to the end. */
-                        bbl_session_network_tx_qnode_remove(session);
-                        bbl_session_network_tx_qnode_insert(session);
-                    }
-                } else {
-                    bbl_session_network_tx_qnode_remove(session);
-                }
-                return result;
-            }
-            /* Write L2TP frames. */
-            if (!CIRCLEQ_EMPTY(&interface->l2tp_tx_qhead)) {
-                /* Pop element from queue. */
-                l2tpq = CIRCLEQ_FIRST(&interface->l2tp_tx_qhead);
-                CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, l2tpq, tx_qnode);
-                CIRCLEQ_NEXT(l2tpq, tx_qnode) = NULL;
-                CIRCLEQ_PREV(l2tpq, tx_qnode) = NULL;
-                /* Copy packet from queue to ring buffer. */
-                memcpy(buf, l2tpq->packet, l2tpq->packet_len);
-                *len = l2tpq->packet_len;
-                if(l2tpq->data) {
-                    free(l2tpq);
-                }
+    network_interface = interface->network;
+    while(network_interface) {
+        /* Network interface packets like ARP. */
+        if(network_interface->send_requests) {
+            return bbl_tx_encode_network_packet(network_interface, buf, len);
+        }
+        if(!bbl_txq_is_empty(network_interface->txq)) {
+            *len = bbl_txq_from_buffer(network_interface->txq, buf);
+            if(*len) {
                 return PROTOCOL_SUCCESS;
+            } else {
+                return SEND_ERROR;
             }
-            /* Write Multicast frames. */
-            if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count && ctx->multicast_traffic) {
-                if(interface->mc_packet_cursor < ctx->config.igmp_group_count) {
-                    interface->io.ctrl = false;
-                    memcpy(buf, interface->mc_packets + (interface->mc_packet_cursor*interface->mc_packet_len), interface->mc_packet_len);
-                    *(uint64_t*)(buf + (interface->mc_packet_len - 16)) = interface->mc_packet_seq;
-                    *(uint32_t*)(buf + (interface->mc_packet_len - 8)) = interface->tx_timestamp.tv_sec;
-                    *(uint32_t*)(buf + (interface->mc_packet_len - 4)) = interface->tx_timestamp.tv_nsec;
-                    *len = interface->mc_packet_len;
-                    interface->mc_packet_cursor++;
-                    interface->stats.mc_tx++;
-                    return PROTOCOL_SUCCESS;
-                } else {
-                    /* This must be the last send operation in this function to fill up remaining slots
-                     * with multicast traffic but all other types of traffic have priority. */
-                    interface->mc_packet_cursor = 0;
-                    interface->mc_packet_seq++;
-                }
+        }
+        /* L2TP packets. */
+        if (!CIRCLEQ_EMPTY(&network_interface->l2tp_tx_qhead)) {
+            /* Pop element from queue. */
+            l2tpq = CIRCLEQ_FIRST(&network_interface->l2tp_tx_qhead);
+            CIRCLEQ_REMOVE(&network_interface->l2tp_tx_qhead, l2tpq, tx_qnode);
+            CIRCLEQ_NEXT(l2tpq, tx_qnode) = NULL;
+            CIRCLEQ_PREV(l2tpq, tx_qnode) = NULL;
+            /* Copy packet from queue to ring buffer. */
+            memcpy(buf, l2tpq->packet, l2tpq->packet_len);
+            *len = l2tpq->packet_len;
+            if(l2tpq->data) {
+                free(l2tpq);
             }
-            break;
-        case INTERFACE_TYPE_A10NSP:
-            /* Write per session frames. */
-            if (!CIRCLEQ_EMPTY(&interface->session_tx_qhead)) {
-                session = CIRCLEQ_FIRST(&interface->session_tx_qhead);
-                if(session->network_send_requests != 0) {
-                    result = bbl_encode_network_packet(interface, session, buf, len);
-                    if(result == PROTOCOL_SUCCESS) {
-                        if(session->a10nsp_session) {
-                            session->a10nsp_session->stats.packets_tx++;
-                        }
-                    }
-                    /* Remove only from TX queue if all requests are processed! */
-                    if(session->network_send_requests == 0) {
-                        bbl_session_network_tx_qnode_remove(session);
-                    } else {
-                        /* Move to the end. */
-                        bbl_session_network_tx_qnode_remove(session);
-                        bbl_session_network_tx_qnode_insert(session);
-                    }
-                } else {
-                    bbl_session_network_tx_qnode_remove(session);
-                }
-                return result;
-            }
-            break;
-        default:
-            break;
+            return PROTOCOL_SUCCESS;
+        }
+        network_interface = network_interface->next;
     }
     return result;
 }

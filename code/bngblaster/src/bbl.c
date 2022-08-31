@@ -19,6 +19,9 @@
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
 
+/* Global Context */
+bbl_ctx_s *g_ctx = NULL;
+
 /* Global Variables */
 bool g_interactive = false; /* interactive mode using ncurses */
 bool g_init_phase = true;
@@ -56,95 +59,22 @@ teardown_handler(int sig)
 }
 
 void
-enable_disable_traffic(bbl_ctx_s *ctx, bool status)
+enable_disable_traffic(bool status)
 {
     bbl_session_s *session;
     uint32_t i;
 
     g_traffic = status;
-    ctx->multicast_traffic = status;
+    g_ctx->multicast_traffic = status;
 
     /* Iterate over all sessions */
-    for(i = 0; i < ctx->sessions; i++) {
-        session = ctx->session_list[i];
+    for(i = 0; i < g_ctx->sessions; i++) {
+        session = &g_ctx->session_list[i];
         if(session) {
-            session->session_traffic = status;
-            session->stream_traffic = status;
+            session->session_traffic.active = status;
+            session->streams.active = status;
         }
     }
-}
-
-static bool
-bbl_add_multicast_packets(bbl_ctx_s *ctx)
-{
-    bbl_ethernet_header_t eth = {0};
-    bbl_ipv4_t ip = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
-    uint8_t mac[ETH_ADDR_LEN] = {0};
-    uint8_t *buf;
-
-    uint32_t group;
-    uint32_t source;
-
-    int i;
-    uint16_t len = 0;
-
-    struct bbl_interface_ *interface;
-
-    if(ctx->config.send_multicast_traffic && ctx->config.igmp_group_count) {
-        interface = bbl_get_network_interface(ctx, ctx->config.multicast_traffic_network_interface);
-        if(!interface) {
-            return false;
-        }
-
-        interface->mc_packets = malloc(ctx->config.igmp_group_count * 2000);
-        buf = interface->mc_packets;
-
-        for(i = 0; i < ctx->config.igmp_group_count; i++) {
-            len = 0;
-            bbl.flow_id = ctx->flow_id++;
-
-            group = be32toh(ctx->config.igmp_group) + i * be32toh(ctx->config.igmp_group_iter);
-            if(ctx->config.igmp_source) {
-                source = ctx->config.igmp_source;
-            } else {
-                source = interface->ip.address;
-            }
-            group = htobe32(group);
-            /* Generate multicast destination MAC */
-            ipv4_multicast_mac(group, mac);
-            eth.src = interface->mac;
-            eth.dst = mac;
-            eth.vlan_outer = interface->vlan;
-            eth.type = ETH_TYPE_IPV4;
-            eth.next = &ip;
-            ip.src = source;
-            ip.dst = group;
-            ip.ttl = 64;
-            ip.tos = ctx->config.multicast_traffic_tos;
-            ip.protocol = PROTOCOL_IPV4_UDP;
-            ip.next = &udp;
-            udp.src = BBL_UDP_PORT;
-            udp.dst = BBL_UDP_PORT;
-            udp.protocol = UDP_PROTOCOL_BBL;
-            udp.next = &bbl;
-            if(ctx->config.multicast_traffic_len > 76) {
-                bbl.padding = ctx->config.multicast_traffic_len - 76;
-            }
-            bbl.type = BBL_TYPE_MULTICAST;
-            bbl.direction = BBL_DIRECTION_DOWN;
-            bbl.tos = ctx->config.multicast_traffic_tos;
-            bbl.mc_source = ip.src;
-            bbl.mc_group = group ;
-            if(encode_ethernet(buf, &len, &eth) != PROTOCOL_SUCCESS) {
-                return false;
-            }
-            buf = buf + len;
-        }
-        interface->mc_packet_len = len;
-    }
-    return true;
 }
 
 /*
@@ -227,8 +157,8 @@ bbl_print_version (void)
         printf("  SHA: %s\n", GIT_SHA);
     }
     printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
-#ifdef BNGBLASTER_NETMAP
-    printf(", netmap");
+#ifdef BNGBLASTER_DPDK
+    printf(", dpdk");
 #endif
     printf("\n");
 }
@@ -249,26 +179,27 @@ bbl_print_usage (void)
 }
 
 void
-bbl_smear_job (timer_s *timer)
+bbl_smear_job(timer_s *timer)
 {
-    bbl_ctx_s *ctx = timer->data;
-
+    UNUSED(timer);
     /* LCP Keepalive Interval */
-    if(ctx->config.lcp_keepalive_interval) {
-        timer_smear_bucket(&ctx->timer_root, ctx->config.lcp_keepalive_interval, 0);
+    if(g_ctx->config.lcp_keepalive_interval) {
+        timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 0);
     }
-    if(ctx->config.lcp_keepalive_interval != 5) {
+    if(g_ctx->config.lcp_keepalive_interval != 5) {
         /* Default Retry Interval */
-        timer_smear_bucket(&ctx->timer_root, 5, 0);
+        timer_smear_bucket(&g_ctx->timer_root, 5, 0);
     }
 }
 
 void
-bbl_ctrl_job (timer_s *timer)
+bbl_ctrl_job(timer_s *timer)
 {
-    bbl_ctx_s *ctx = timer->data;
+    UNUSED(timer);
     bbl_session_s *session;
     bbl_interface_s *interface;
+    bbl_network_interface_s *network_interface;
+
     int rate = 0;
     uint32_t i;
 
@@ -279,60 +210,63 @@ bbl_ctrl_job (timer_s *timer)
      * Wait for all network interfaces to be resolved. */
     if(g_init_phase && !g_teardown) {
         LOG_NOARG(INFO, "Resolve network interfaces\n");
-        for(i = 0; i < ctx->interfaces.network_if_count; i++) {
-            interface = ctx->interfaces.network_if[i];
-            if(interface->gateway_resolve_wait == false) {
-                continue;
-            }
-            if(ipv6_addr_not_zero(&interface->gateway6) && !interface->icmpv6_nd_resolved) {
-                LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n",
-                    interface->name, format_ipv6_address(&interface->gateway6));
-                return;
-            }
-            if(interface->gateway && !interface->arp_resolved) {
-                LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n",
-                    interface->name, format_ipv4_address(&interface->gateway));
-                return;
+        CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+            network_interface = interface->network;
+            while(network_interface) {
+                if(network_interface->gateway_resolve_wait == false) {
+                    continue;
+                }
+                if(ipv6_addr_not_zero(&network_interface->gateway6) && !network_interface->icmpv6_nd_resolved) {
+                    LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n",
+                        network_interface->name, format_ipv6_address(&network_interface->gateway6));
+                    return;
+                }
+                if(network_interface->gateway && !network_interface->arp_resolved) {
+                    LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n",
+                        network_interface->name, format_ipv4_address(&network_interface->gateway));
+                    return;
+                }
+                network_interface = network_interface->next;
             }
         }
         g_init_phase = false;
         LOG_NOARG(INFO, "All network interfaces resolved\n");
-        clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_resolved);
+        clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_resolved);
     }
 
-    if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
+    if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
 
     if(g_teardown) {
         if(g_teardown_countdown) g_teardown_countdown--;
-        if(ctx->l2tp_tunnels && ctx->sessions_terminated >= ctx->sessions) {
-            bbl_l2tp_stop_all_tunnel(ctx);
+        if(g_ctx->l2tp_tunnels && g_ctx->sessions_terminated >= g_ctx->sessions) {
+            bbl_l2tp_stop_all_tunnel();
         }
         /* Teardown phase ... */
         if(g_teardown_request) {
             /* Put all sessions on the teardown list. */
-            for(i = 0; i < ctx->sessions; i++) {
-                session = ctx->session_list[i];
+            for(i = 0; i < g_ctx->sessions; i++) {
+                session = &g_ctx->session_list[i];
                 if(session) {
                     if(!CIRCLEQ_NEXT(session, session_teardown_qnode)) {
                         /* Add only if not already on teardown list. */
-                        CIRCLEQ_INSERT_TAIL(&ctx->sessions_teardown_qhead, session, session_teardown_qnode);
+                        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_teardown_qhead, session, session_teardown_qnode);
                     }
                 }
             }
             /* Teardown routing protocols. */
-            isis_teardown(ctx);
-            bgp_teardown(ctx);
+            isis_teardown();
+            bgp_teardown();
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
-            rate = ctx->config.sessions_stop_rate;
-            while (!CIRCLEQ_EMPTY(&ctx->sessions_teardown_qhead)) {
-                session = CIRCLEQ_FIRST(&ctx->sessions_teardown_qhead);
+            rate = g_ctx->config.sessions_stop_rate;
+            while (!CIRCLEQ_EMPTY(&g_ctx->sessions_teardown_qhead)) {
+                session = CIRCLEQ_FIRST(&g_ctx->sessions_teardown_qhead);
                 if(rate > 0) {
                     if(session->session_state != BBL_IDLE) rate--;
-                    bbl_session_clear(ctx, session);
+                    bbl_session_clear(session);
                     /* Remove from teardown queue. */
-                    CIRCLEQ_REMOVE(&ctx->sessions_teardown_qhead, session, session_teardown_qnode);
+                    CIRCLEQ_REMOVE(&g_ctx->sessions_teardown_qhead, session, session_teardown_qnode);
                     CIRCLEQ_NEXT(session, session_teardown_qnode) = NULL;
                     CIRCLEQ_PREV(session, session_teardown_qnode) = NULL;
                 } else {
@@ -342,10 +276,10 @@ bbl_ctrl_job (timer_s *timer)
         }
     } else {
         /* Wait N seconds (default 0) before we start to setup sessions. */
-        if(ctx->config.sessions_start_delay) {
+        if(g_ctx->config.sessions_start_delay) {
             clock_gettime(CLOCK_MONOTONIC, &timestamp);
-            timespec_sub(&time_diff, &timestamp, &ctx->timestamp_resolved);
-            if(time_diff.tv_sec < ctx->config.sessions_start_delay) {
+            timespec_sub(&time_diff, &timestamp, &g_ctx->timestamp_resolved);
+            if(time_diff.tv_sec < g_ctx->config.sessions_start_delay) {
                 return;
             }
         }
@@ -353,13 +287,13 @@ bbl_ctrl_job (timer_s *timer)
          * and start as much as permitted per interval based on max
          * outstanding and setup rate. Sessions started will be removed
          * from idle list. */
-        bbl_stats_update_cps(ctx);
-        rate = ctx->config.sessions_start_rate;
-        while (!CIRCLEQ_EMPTY(&ctx->sessions_idle_qhead)) {
-            session = CIRCLEQ_FIRST(&ctx->sessions_idle_qhead);
+        bbl_stats_update_cps();
+        rate = g_ctx->config.sessions_start_rate;
+        while (!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
+            session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
             if(rate > 0) {
-                if(ctx->sessions_outstanding < ctx->config.sessions_max_outstanding) {
-                    ctx->sessions_outstanding++;
+                if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
+                    g_ctx->sessions_outstanding++;
                     /* Start session */
                     switch (session->access_type) {
                         case ACCESS_TYPE_PPPOE:
@@ -394,7 +328,7 @@ bbl_ctrl_job (timer_s *timer)
                     }
                     bbl_session_tx_qnode_insert(session);
                     /* Remove from idle queue */
-                    CIRCLEQ_REMOVE(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+                    CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
                     CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
                     CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
                 } else {
@@ -417,7 +351,6 @@ bbl_ctrl_job (timer_s *timer)
 int
 main(int argc, char *argv[])
 {
-    bbl_ctx_s *ctx = NULL;
     int long_index = 0;
     int ch = 0;
     uint32_t ipv4;
@@ -435,8 +368,7 @@ main(int argc, char *argv[])
     const char *igmp_zap_interval = NULL;
     bool  interactive = false;
 
-    ctx = bbl_ctx_add();
-    if (!ctx) {
+    if(!bbl_ctx_add()) {
         exit(2);
     }
 
@@ -462,17 +394,17 @@ main(int argc, char *argv[])
                 bbl_print_usage();
                 exit(0);
             case 'P':
-                ctx->pcap.filename = optarg;
+                g_ctx->pcap.filename = optarg;
                 break;
             case 'j':
                 if (strcmp("sessions", optarg) == 0) {
-                    ctx->config.json_report_sessions = true;
+                    g_ctx->config.json_report_sessions = true;
                 } else if (strcmp("streams", optarg) == 0) {
-                    ctx->config.json_report_streams = true;
+                    g_ctx->config.json_report_streams = true;
                 }
                 break;
             case 'J':
-                ctx->config.json_report_filename = optarg;
+                g_ctx->config.json_report_filename = optarg;
                 break;
             case 'C':
                 config_file = optarg;
@@ -511,10 +443,10 @@ main(int argc, char *argv[])
                 interactive = true;
                 break;
             case 'S':
-                ctx->ctrl_socket_path = optarg;
+                g_ctx->ctrl_socket_path = optarg;
                 break;
             case 'f':
-                ctx->config.interface_lock_force = true;
+                g_ctx->config.interface_lock_force = true;
                 break;
             case 'b':
                 g_banner = false;
@@ -536,89 +468,85 @@ main(int argc, char *argv[])
 #endif
 
     /* Init config. */
-    bbl_config_init_defaults(ctx);
-    if(!bbl_config_load_json(config_file, ctx)) {
+    bbl_config_init_defaults();
+    if(!bbl_config_load_json(config_file)) {
         fprintf(stderr, "Error: Failed to load configuration file %s\n", config_file);
         goto CLEANUP;
     }
     if(config_streams_file) {
-        if(!bbl_config_streams_load_json(config_streams_file, ctx)) {
+        if(!bbl_config_streams_load_json(config_streams_file)) {
             fprintf(stderr, "Error: Failed to load stream configuration file %s\n", config_streams_file);
             goto CLEANUP;
         }
     }
-    g_monkey = ctx->config.monkey_autostart;
+    g_monkey = g_ctx->config.monkey_autostart;
 
-    if(username) ctx->config.username = username;
-    if(password) ctx->config.password = password;
-    if(sessions) ctx->config.sessions = atoi(sessions);
+    if(username) g_ctx->config.username = username;
+    if(password) g_ctx->config.password = password;
+    if(sessions) g_ctx->config.sessions = atoi(sessions);
     if(igmp_group) {
         inet_pton(AF_INET, igmp_group, &ipv4);
-        ctx->config.igmp_group = ipv4;
+        g_ctx->config.igmp_group = ipv4;
     }
     if(igmp_source) {
         inet_pton(AF_INET, igmp_source, &ipv4);
-        ctx->config.igmp_source = ipv4;
+        g_ctx->config.igmp_source = ipv4;
     }
-    if(igmp_group_count) ctx->config.igmp_group_count = atoi(igmp_group_count);
-    if(igmp_zap_interval) ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
+    if(igmp_group_count) g_ctx->config.igmp_group_count = atoi(igmp_group_count);
+    if(igmp_zap_interval) g_ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
     /* Init IS-IS instances. */
-    if(!isis_init(ctx)) {
+    if(!isis_init()) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
         goto CLEANUP;
     }
 
-    /* Add interfaces. */
-    if(!bbl_add_interfaces(ctx)) {
-        fprintf(stderr, "Error: Failed to add interfaces\n");
+    /* Init interfaces. */
+    if(!bbl_interface_init()) {
+        fprintf(stderr, "Error: Failed to init interfaces\n");
         goto CLEANUP;
     }
 
     /* Init TCP. */
-    bbl_tcp_init(ctx);
+    bbl_tcp_init();
 
     /* Init BGP sessions. */
-    if(!bgp_init(ctx)) {
+    if(!bgp_init()) {
         fprintf(stderr, "Error: Failed to init BGP\n");
         goto CLEANUP;
     }
 
-    /* Start curses. */
-    if (interactive) {
-        bbl_init_curses(ctx);
-    }
-
-    /* Add traffic. */
-    if(!bbl_add_multicast_packets(ctx)) {
-        if (interactive) endwin();
-        fprintf(stderr, "Error: Failed to add multicast traffic\n");
-        goto CLEANUP;
-    }
-    if(!bbl_stream_raw_add(ctx)) {
+    /* Init streams. */
+    if(!bbl_stream_init()) {
         if (interactive) endwin();
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
         goto CLEANUP;
     }
 
     /* Setup resources in case PCAP dumping is desired. */
-    pcapng_init(ctx);
+    pcapng_init();
 
     /* Setup test. */
-    if(ctx->interfaces.access_if_count) {
-        if(!bbl_sessions_init(ctx)) {
-            if (interactive) endwin();
+    if(bbl_access_interface_get(NULL)) {
+        if(!bbl_sessions_init()) {
+            if(interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
             goto CLEANUP;
         }
     }
 
+    /* Start curses. */
+    if (interactive) {
+        bbl_init_curses();
+    }
+
     /* Setup control job. */
-    timer_add_periodic(&ctx->timer_root, &ctx->control_timer, "Control Timer", 1, 0, ctx, &bbl_ctrl_job);
+    timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 
+                       1, 0, g_ctx, &bbl_ctrl_job);
 
     /* Setup control socket and job */
-    if(ctx->ctrl_socket_path) {
-        if(!bbl_ctrl_socket_open(ctx)) {
+    if(g_ctx->ctrl_socket_path) {
+        if(!bbl_ctrl_socket_open()) {
             if (interactive) endwin();
             goto CLEANUP;
         }
@@ -626,29 +554,30 @@ main(int argc, char *argv[])
 
     /* Start smear job. Use a crazy nsec bucket '12345678',
      * such that we do not accidentally smear ourselves. */
-    timer_add_periodic(&ctx->timer_root, &ctx->smear_timer, "Timer Smearing", 45, 12345678, ctx, &bbl_smear_job);
+    timer_add_periodic(&g_ctx->timer_root, &g_ctx->smear_timer, "Timer Smearing", 
+                       45, 12345678, g_ctx, &bbl_smear_job);
 
     /* Smear all buckets. */
-    timer_smear_all_buckets(&ctx->timer_root);
+    timer_smear_all_buckets(&g_ctx->timer_root);
 
     /* Prevent traffic from autostart. */
-    if(ctx->config.traffic_autostart == false) {
-        enable_disable_traffic(ctx, false);
+    if(g_ctx->config.traffic_autostart == false) {
+        enable_disable_traffic(false);
     }
 
     /* Start threads. */
-    bbl_stream_start_threads(ctx);
+    io_thread_start_all(g_ctx);
 
     /* Start event loop. */
     log_open();
-    clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_start);
+    clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
     while(g_teardown_request_count < 10) {
-        if(!(ctx->l2tp_tunnels || ctx->routing_sessions)) {
-            if(ctx->sessions) {
+        if(!(g_ctx->l2tp_tunnels || g_ctx->routing_sessions)) {
+            if(g_ctx->sessions) {
                 /* With sessions, wait for all sessions
                  * to be terminated. */
-                if(ctx->sessions_terminated >= ctx->sessions && ctx->l2tp_tunnels == 0) {
+                if(g_ctx->sessions_terminated >= g_ctx->sessions && g_ctx->l2tp_tunnels == 0) {
                     break;
                 }
             } else {
@@ -659,12 +588,12 @@ main(int argc, char *argv[])
                 }
             }
         }
-        timer_walk(&ctx->timer_root);
+        timer_walk(&g_ctx->timer_root);
     }
-    clock_gettime(CLOCK_MONOTONIC, &ctx->timestamp_stop);
+    clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_stop);
 
     /* Stop threads. */
-    bbl_stream_stop_threads(ctx);
+    io_thread_stop_all();
 
     /* Stop curses. Do this before the final reports. */
     if(g_interactive) {
@@ -673,19 +602,18 @@ main(int argc, char *argv[])
     }
 
     /* Generate reports. */
-    bbl_stats_generate(ctx, &stats);
-    bbl_stats_stdout(ctx, &stats);
-    bbl_stats_json(ctx, &stats);
+    bbl_stats_generate(&stats);
+    bbl_stats_stdout(&stats);
+    bbl_stats_json(&stats);
     exit_status = 0;
 
     /* Cleanup resources. */
 CLEANUP:
-    bbl_interface_unlock_all(ctx);
+    bbl_interface_unlock_all();
     log_close();
-    if(ctx->ctrl_socket_path) {
-        bbl_ctrl_socket_close(ctx);
+    if(g_ctx->ctrl_socket_path) {
+        bbl_ctrl_socket_close();
     }
-    bbl_ctx_del(ctx);
-    ctx = NULL;
+    bbl_ctx_del();
     return exit_status;
 }

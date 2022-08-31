@@ -9,7 +9,8 @@
 #include "isis.h"
 
 const char *
-isis_source_string(uint8_t source) {
+isis_source_string(uint8_t source)
+{
     switch(source) {
         case ISIS_SOURCE_SELF: return "self";
         case ISIS_SOURCE_ADJACENCY: return "adjacency";
@@ -19,7 +20,8 @@ isis_source_string(uint8_t source) {
 }
 
 const char *
-isis_level_string(uint8_t level) {
+isis_level_string(uint8_t level)
+{
     switch(level) {
         case 1: return "L1";
         case 2: return "L2";
@@ -29,7 +31,8 @@ isis_level_string(uint8_t level) {
 }
 
 const char *
-isis_p2p_adjacency_state_string(uint8_t state) {
+isis_p2p_adjacency_state_string(uint8_t state)
+{
     switch(state) {
         case ISIS_P2P_ADJACENCY_STATE_UP: return "Up";
         case ISIS_P2P_ADJACENCY_STATE_INIT: return "Init";
@@ -39,7 +42,8 @@ isis_p2p_adjacency_state_string(uint8_t state) {
 }
 
 const char *
-isis_adjacency_state_string(uint8_t state) {
+isis_adjacency_state_string(uint8_t state)
+{
     switch(state) {
         case ISIS_ADJACENCY_STATE_DOWN: return "Up";
         case ISIS_ADJACENCY_STATE_UP: return "Down";
@@ -48,7 +52,8 @@ isis_adjacency_state_string(uint8_t state) {
 }
 
 const char *
-isis_pdu_type_string(uint8_t type) {
+isis_pdu_sype_string(uint8_t type)
+{
     switch(type) {
         case ISIS_PDU_L1_HELLO: return "L1-Hello";
         case ISIS_PDU_L2_HELLO: return "L2-Hello";
@@ -72,11 +77,11 @@ isis_pdu_type_string(uint8_t type) {
  * 
  * @param str area string
  * @param area area structure
- * @return true if successfull
+ * @return true if successful
  */
 bool
-isis_str_to_area(const char *str, isis_area_t *area) {
-    
+isis_str_to_area(const char *str, isis_area_s *area)
+{
     int len = 0;
     uint16_t *a;
     char *ptr;
@@ -113,7 +118,7 @@ isis_str_to_area(const char *str, isis_area_t *area) {
 }
 
 /**
- * isis_area_to_str
+ * isis_area_so_str
  * 
  * Format an IS-IS area as string 
  * in one of 4 static buffers.
@@ -122,7 +127,8 @@ isis_str_to_area(const char *str, isis_area_t *area) {
  * @return IS-IS area string
  */
 char *
-isis_area_to_str(isis_area_t *area) {
+isis_area_so_str(isis_area_s *area)
+{
     static char buffer[4][ISIS_MAX_AREA_STR_LEN];
     static int idx = 0;
     char *ret;
@@ -148,10 +154,11 @@ isis_area_to_str(isis_area_t *area) {
  *
  * @param str system-id string
  * @param system_id system-id
- * @return true if successfull
+ * @return true if successful
  */
 bool
-isis_str_to_system_id(const char *str, uint8_t *system_id) {    
+isis_str_to_system_id(const char *str, uint8_t *system_id)
+{
     sscanf(str, "%hx.%hx.%hx", 
            &((uint16_t*)system_id)[0], 
            &((uint16_t*)system_id)[1], 

@@ -19,6 +19,6 @@ typedef struct isis_mrt_hdr_ {
 } __attribute__ ((__packed__)) isis_mrt_hdr_t;
 
 bool
-isis_mrt_load(isis_instance_t  *instance, char *file_path);
+isis_mrt_load(isis_instance_s *instance, char *file_path);
 
 #endif

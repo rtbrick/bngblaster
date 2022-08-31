@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_l2tp_avp.h"
 #include <openssl/md5.h>
@@ -23,7 +22,8 @@
  *                     [until Length is reached]...                |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
 static bool
-bbl_l2tp_avp_decode(uint8_t **_buf, uint16_t *_len, bbl_l2tp_avp_t *avp) {
+bbl_l2tp_avp_decode(uint8_t **_buf, uint16_t *_len, bbl_l2tp_avp_t *avp)
+{
     uint8_t *buf = *_buf;
     uint16_t len = *_len;
 
@@ -56,7 +56,8 @@ bbl_l2tp_avp_decode(uint8_t **_buf, uint16_t *_len, bbl_l2tp_avp_t *avp) {
 
 /* bbl_l2tp_avp_encode */
 static void
-bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp) {
+bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp)
+{
     uint16_t avp_len_field;
     uint8_t *buf = *_buf;
 
@@ -94,7 +95,8 @@ bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp) {
 static void
 bbl_l2tp_avp_encode_result_code(uint8_t **_buf, uint16_t *len,
                                 uint16_t result_code, uint16_t error_code,
-                                char *error_message) {
+                                char *error_message)
+{
     uint8_t *avp_len_field;
     uint16_t avp_len = L2TP_AVP_HDR_LEN;
     uint8_t *buf = *_buf;
@@ -128,7 +130,8 @@ bbl_l2tp_avp_encode_result_code(uint8_t **_buf, uint16_t *len,
 
 static void
 bbl_l2tp_avp_encode_disconnect_code(uint8_t **_buf, uint16_t *len,
-                                    bbl_l2tp_session_t *l2tp_session) {
+                                    bbl_l2tp_session_s *l2tp_session)
+{
     uint8_t *avp_len_field;
     uint16_t avp_len = L2TP_AVP_HDR_LEN;
     uint8_t *buf = *_buf;
@@ -169,9 +172,9 @@ bbl_l2tp_avp_encode_disconnect_code(uint8_t **_buf, uint16_t *len,
 
 /* bbl_l2tp_avp_unhide */
 static bool
-bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
-                    *random_vector, uint16_t random_vector_len) {
-
+bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
+                    *random_vector, uint16_t random_vector_len)
+{
     MD5_CTX ctx;
 
     uint8_t  digest[L2TP_MD5_DIGEST_LEN];
@@ -233,8 +236,8 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
 }
 
 bool
-bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session) {
-
+bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session)
+{
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
     bbl_l2tp_avp_t avp = {0};
@@ -480,8 +483,8 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel, bb
 }
 
 bool
-bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-
+bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
     bbl_l2tp_avp_t avp = {0};
@@ -636,15 +639,13 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
 }
 
 bool
-bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
-
-    bbl_ctx_s *ctx = l2tp_tunnel->interface->ctx;
-
+bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
     bbl_l2tp_avp_t avp = {0};
 
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t key = {0};
     void **search = NULL;
 
@@ -666,7 +667,7 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
                             return false;
                         }
                         key.session_id = be16toh(*(uint16_t*)(avp.value+2));
-                        search = dict_search(ctx->l2tp_session_dict, &key);
+                        search = dict_search(g_ctx->l2tp_session_dict, &key);
                         if(search) {
                             l2tp_session = *search;
                             if(l2tp_session->connect_speed_update_enabled && l2tp_session->state == BBL_L2TP_SESSION_ESTABLISHED) {
@@ -707,9 +708,9 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel) {
 }
 
 void
-bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session,
-                               l2tp_message_type l2tp_type, uint8_t *buf, uint16_t *len) {
-
+bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session,
+                               l2tp_message_type l2tp_type, uint8_t *buf, uint16_t *len)
+{
     bbl_l2tp_avp_t avp = {0};
 
     uint16_t v16;

@@ -20,6 +20,6 @@ void
 bbl_dhcpv6_restart(bbl_session_s *session);
 
 void
-bbl_dhcpv6_rx(bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6, bbl_session_s *session);
+bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6);
 
 #endif
