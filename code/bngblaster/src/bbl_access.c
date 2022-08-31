@@ -810,11 +810,13 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
                     session->ipcp_state = BBL_PPP_INIT;
                     session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
                 }
                 if(g_ctx->config.ip6cp_enable) {
                     session->ip6cp_state = BBL_PPP_INIT;
                     session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
                 }
                 bbl_session_tx_qnode_insert(session);
                 break;
@@ -911,11 +913,13 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
                     session->ipcp_state = BBL_PPP_INIT;
                     session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
                 }
                 if(g_ctx->config.ip6cp_enable) {
                     session->ip6cp_state = BBL_PPP_INIT;
                     session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
                 }
                 bbl_session_tx_qnode_insert(session);
                 break;
