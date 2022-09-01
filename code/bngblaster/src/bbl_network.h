@@ -57,8 +57,9 @@ typedef struct bbl_network_interface_
         uint64_t bytes_tx;
         uint64_t bytes_rx;
 
+        uint64_t unknown;
         uint64_t mc_tx;
-
+        
         /* Packet Stats */
         uint32_t arp_tx;
         uint32_t arp_rx;
@@ -99,6 +100,7 @@ typedef struct bbl_network_interface_
 
         uint32_t isis_rx;
         uint32_t isis_tx;
+        uint32_t isis_rx_error;
 
         /* Rate Stats */
 

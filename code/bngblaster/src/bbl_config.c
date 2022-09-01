@@ -323,12 +323,6 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             return false;
         }
     }
-    value = json_object_get(link, "qdisc-bypass");
-    if (json_is_number(value)) {
-        link_config->qdisc_bypass = json_number_value(value);
-    } else {
-        link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
-    }
     if (json_unpack(link, "{s:s}", "io-mode", &s) == 0) {
         if (strcmp(s, "packet_mmap_raw") == 0) {
             link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
@@ -369,6 +363,12 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     } else {
         link_config->io_stream_max_ppi = g_ctx->config.io_stream_max_ppi;
     }
+    value = json_object_get(link, "qdisc-bypass");
+    if (json_is_number(value)) {
+        link_config->qdisc_bypass = json_number_value(value);
+    } else {
+        link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
+    }
     value = json_object_get(link, "tx-interval");
     if (json_is_number(value)) {
         link_config->tx_interval = json_number_value(value) * MSEC;
@@ -384,10 +384,14 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     value = json_object_get(link, "tx-threads");
     if (value) {
         link_config->tx_threads = json_number_value(value);
+    } else {
+        link_config->tx_threads = g_ctx->config.tx_threads;
     }
     value = json_object_get(link, "rx-threads");
     if (value) {
         link_config->rx_threads = json_number_value(value);
+    } else {
+        link_config->rx_threads = g_ctx->config.rx_threads;
     }
     value = json_object_get(link, "lag-id");
     if (value) {
@@ -1878,6 +1882,10 @@ json_parse_config(json_t *root)
         if (json_is_number(value)) {
             g_ctx->config.multicast_traffic_tos = json_number_value(value);
         }
+        value = json_object_get(section, "multicast-traffic-pps");
+        if (json_is_number(value)) {
+            g_ctx->config.multicast_traffic_pps = json_number_value(value);
+        }
         if (json_unpack(section, "{s:s}", "network-interface", &s) == 0) {
             g_ctx->config.multicast_traffic_network_interface = strdup(s);
         }
@@ -2061,22 +2069,6 @@ json_parse_config(json_t *root)
     /* Interface Configuration */
     section = json_object_get(root, "interfaces");
     if (json_is_object(section)) {
-        value = json_object_get(section, "tx-interval");
-        if (json_is_number(value)) {
-            g_ctx->config.tx_interval = json_number_value(value) * MSEC;
-        }
-        value = json_object_get(section, "rx-interval");
-        if (json_is_number(value)) {
-            g_ctx->config.rx_interval = json_number_value(value) * MSEC;
-        }
-        value = json_object_get(section, "qdisc-bypass");
-        if (json_is_boolean(value)) {
-            g_ctx->config.qdisc_bypass = json_boolean_value(value);
-        }
-        value = json_object_get(section, "io-slots");
-        if (json_is_number(value)) {
-            g_ctx->config.io_slots = json_number_value(value);
-        }
         if (json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if (strcmp(s, "packet_mmap_raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
@@ -2095,9 +2087,33 @@ json_parse_config(json_t *root)
         } else {
             g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
         }
+        value = json_object_get(section, "io-slots");
+        if (json_is_number(value)) {
+            g_ctx->config.io_slots = json_number_value(value);
+        }
         value = json_object_get(section, "io-stream-max-ppi");
         if (json_is_number(value)) {
             g_ctx->config.io_stream_max_ppi = json_number_value(value);
+        }
+        value = json_object_get(section, "qdisc-bypass");
+        if (json_is_boolean(value)) {
+            g_ctx->config.qdisc_bypass = json_boolean_value(value);
+        }
+        value = json_object_get(section, "tx-interval");
+        if (json_is_number(value)) {
+            g_ctx->config.tx_interval = json_number_value(value) * MSEC;
+        }
+        value = json_object_get(section, "rx-interval");
+        if (json_is_number(value)) {
+            g_ctx->config.rx_interval = json_number_value(value) * MSEC;
+        }
+        value = json_object_get(section, "tx-threads");
+        if (value) {
+            g_ctx->config.tx_threads = json_number_value(value);
+        }
+        value = json_object_get(section, "rx-threads");
+        if (value) {
+            g_ctx->config.rx_threads = json_number_value(value);
         }
         value = json_object_get(section, "capture-include-streams");
         if (json_is_boolean(value)) {
@@ -2463,7 +2479,7 @@ bbl_config_streams_load_json(const char *filename)
 void
 bbl_config_init_defaults()
 {
-    g_ctx->pcap.include_streams = true;
+    g_ctx->pcap.include_streams = false;
     g_ctx->config.username = g_default_user;
     g_ctx->config.password = g_default_pass;
     g_ctx->config.tx_interval = 1 * MSEC;
@@ -2517,6 +2533,7 @@ bbl_config_init_defaults()
     g_ctx->config.igmp_group_count = 1;
     g_ctx->config.igmp_zap_wait = true;
     g_ctx->config.igmp_robustness_interval = 1000;
+    g_ctx->config.multicast_traffic_pps = 1000;
     g_ctx->config.traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }

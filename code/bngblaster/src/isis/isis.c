@@ -112,13 +112,14 @@ isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth) 
     if(result != PROTOCOL_SUCCESS) {
         LOG(ISIS, "ISIS RX %s PDU decode error on interface %s\n", 
             isis_pdu_sype_string(pdu.pdu_type), interface->name);
-        interface->interface->stats.decode_error++;
+        interface->stats.isis_rx_error++;
         return;
     }
 
     if(!isis_pdu_validate_checksum(&pdu)) {
         LOG(ISIS, "ISIS RX %s PDU checksum error on interface %s\n", 
             isis_pdu_sype_string(pdu.pdu_type), interface->name);
+        interface->stats.isis_rx_error++;
         return;
     }
 

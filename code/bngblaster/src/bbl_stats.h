@@ -81,6 +81,13 @@ typedef struct bbl_stats_
     float avg_network_ipv6pd_rx_seconds;
     float max_network_ipv6pd_rx_seconds;
 
+    uint64_t access_ipv4_rx_first_seq_1s;
+    uint64_t network_ipv4_rx_first_seq_1s;
+    uint64_t access_ipv6_rx_first_seq_1s;
+    uint64_t network_ipv6_rx_first_seq_1s;
+    uint64_t access_ipv6pd_rx_first_seq_1s;
+    uint64_t network_ipv6pd_rx_first_seq_1s;
+
     uint32_t sessions_access_ipv4_rx;
     uint32_t sessions_network_ipv4_rx;
     uint32_t sessions_access_ipv6_rx;

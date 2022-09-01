@@ -495,14 +495,21 @@ main(int argc, char *argv[])
     if(igmp_group_count) g_ctx->config.igmp_group_count = atoi(igmp_group_count);
     if(igmp_zap_interval) g_ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
+    /* Init curses. */
+    if (interactive) {
+        bbl_init_curses_window();
+    }
+
     /* Init IS-IS instances. */
     if(!isis_init()) {
+        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to init IS-IS\n");
         goto CLEANUP;
     }
 
     /* Init interfaces. */
     if(!bbl_interface_init()) {
+        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to init interfaces\n");
         goto CLEANUP;
     }
@@ -512,13 +519,14 @@ main(int argc, char *argv[])
 
     /* Init BGP sessions. */
     if(!bgp_init()) {
+        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to init BGP\n");
         goto CLEANUP;
     }
 
     /* Init streams. */
     if(!bbl_stream_init()) {
-        if (interactive) endwin();
+        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
         goto CLEANUP;
     }
@@ -536,7 +544,7 @@ main(int argc, char *argv[])
     }
 
     /* Start curses. */
-    if (interactive) {
+    if(interactive) {
         bbl_init_curses();
     }
 
@@ -547,7 +555,7 @@ main(int argc, char *argv[])
     /* Setup control socket and job */
     if(g_ctx->ctrl_socket_path) {
         if(!bbl_ctrl_socket_open()) {
-            if (interactive) endwin();
+            if(interactive) endwin();
             goto CLEANUP;
         }
     }

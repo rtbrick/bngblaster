@@ -963,6 +963,7 @@ static void
 bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
 {
     bbl_session_s *session = stream->session;
+    bbl_interface_s *interface;
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
@@ -974,6 +975,9 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             access_interface->stats.packets_tx += packets;
             access_interface->stats.bytes_tx += bytes;
             access_interface->stats.stream_tx += packets;
+            interface = access_interface->interface;
+            interface->stats.packets_tx += packets;
+            interface->stats.bytes_tx += bytes;
             if(session) {
                 session->stats.packets_tx += packets;
                 session->stats.bytes_tx += bytes;
@@ -1002,6 +1006,9 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             network_interface->stats.packets_tx += packets;
             network_interface->stats.bytes_tx += bytes;
             network_interface->stats.stream_tx += packets;
+            interface = network_interface->interface;
+            interface->stats.packets_tx += packets;
+            interface->stats.bytes_tx += bytes;
             if(session) {
                 if(session->l2tp_session) {
                     network_interface->stats.l2tp_data_tx += packets;
@@ -1032,6 +1039,9 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             a10nsp_interface->stats.packets_tx += packets;
             a10nsp_interface->stats.bytes_tx += bytes;
             a10nsp_interface->stats.stream_tx += packets;
+            interface = a10nsp_interface->interface;
+            interface->stats.packets_tx += packets;
+            interface->stats.bytes_tx += bytes;
             if(session) {
                 if(session->a10nsp_session) {
                     session->a10nsp_session->stats.packets_tx += packets;
@@ -1060,6 +1070,7 @@ static void
 bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint64_t loss)
 {
     bbl_session_s *session = stream->session;
+    bbl_interface_s *interface;
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
@@ -1072,6 +1083,10 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             access_interface->stats.bytes_rx += bytes;
             access_interface->stats.stream_rx += packets;
             access_interface->stats.stream_loss += loss;
+            interface = access_interface->interface;
+            interface->stats.packets_rx += packets;
+            interface->stats.bytes_rx += bytes;
+            interface->stats.loss += loss;
             if(session) {
                 session->stats.packets_rx += packets;
                 session->stats.bytes_rx += bytes;
@@ -1104,6 +1119,10 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             network_interface->stats.bytes_rx += bytes;
             network_interface->stats.stream_rx += packets;
             network_interface->stats.stream_loss += loss;
+            interface = network_interface->interface;
+            interface->stats.packets_rx += packets;
+            interface->stats.bytes_rx += bytes;
+            interface->stats.loss += loss;
             if(session) {
                 if(session->l2tp_session) {
                     network_interface->stats.l2tp_data_rx += packets;
@@ -1138,6 +1157,10 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             a10nsp_interface->stats.bytes_rx += bytes;
             a10nsp_interface->stats.stream_rx += packets;
             a10nsp_interface->stats.stream_loss += loss;
+            interface = a10nsp_interface->interface;
+            interface->stats.packets_rx += packets;
+            interface->stats.bytes_rx += bytes;
+            interface->stats.loss += loss;
             if(session) {
                 if(session->a10nsp_session) {
                     session->a10nsp_session->stats.packets_rx += packets;
@@ -1806,8 +1829,14 @@ bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session)
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
                 loss = bbl->flow_seq - (stream->rx_last_seq +1);
                 stream->loss += loss;
-                LOG(LOSS, "LOSS flow: %lu seq: %lu last: %lu\n",
-                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
+                if(session) {
+                    LOG(LOSS, "LOSS (ID: %u) Unicast flow: %lu seq: %lu last: %lu\n",
+                        session->session_id, bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
+
+                } else {
+                    LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu\n",
+                        bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
+                }
             }
         } else {
             /* Verify stream ... */
