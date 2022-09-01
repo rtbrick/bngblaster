@@ -25,7 +25,10 @@
 
 #include "io_raw.h"
 #include "io_packet_mmap.h"
+
+#ifdef BNGBLASTER_DPDK
 #include "io_dpdk.h"
+#endif
 
 bool
 io_send(io_handle_s *io, uint8_t *buf, uint16_t len);

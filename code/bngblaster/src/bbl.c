@@ -495,6 +495,14 @@ main(int argc, char *argv[])
     if(igmp_group_count) g_ctx->config.igmp_group_count = atoi(igmp_group_count);
     if(igmp_zap_interval) g_ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
 
+#ifdef BNGBLASTER_DPDK
+    /* Init DPDK. */
+    if(!io_dpdk_init()) {
+        fprintf(stderr, "Error: Failed to init DPDK\n");
+        goto CLEANUP;
+    }
+#endif
+
     /* Init curses. */
     if (interactive) {
         bbl_init_curses_window();
