@@ -79,7 +79,7 @@ typedef struct ip6_addr_packed ip6_addr_p_t;
 #  include "arch/bpstruct.h"
 #endif
 PACK_STRUCT_BEGIN
-struct ip6_hdr {
+struct lwip_ip6_hdr {
   /** version / traffic class / flow label */
   PACK_STRUCT_FIELD(u32_t _v_tc_fl);
   /** payload length */

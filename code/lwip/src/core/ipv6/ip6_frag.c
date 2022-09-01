@@ -551,7 +551,7 @@ ip6_reass(struct pbuf *p)
 
   if (valid) {
     /* All fragments have been received */
-    struct ip6_hdr* iphdr_ptr;
+    struct lwip_ip6_hdr* iphdr_ptr;
 
     /* chain together the pbufs contained within the ip6_reassdata list. */
     iprh = (struct ip6_reass_helper*) ipr->p->payload;
@@ -610,7 +610,7 @@ ip6_reass(struct pbuf *p)
       (size_t)((u8_t*)p->payload - (u8_t*)ipr->iphdr));
 
     /* This is where the IPv6 header is now. */
-    iphdr_ptr = (struct ip6_hdr*)((u8_t*)ipr->iphdr +
+    iphdr_ptr = (struct lwip_ip6_hdr*)((u8_t*)ipr->iphdr +
       sizeof(struct ip6_frag_hdr));
 
     /* Adjust datagram length by adding header lengths. */
@@ -719,8 +719,8 @@ ip6_frag_free_pbuf_custom(struct pbuf *p)
 err_t
 ip6_frag(struct pbuf *p, struct netif *netif, const ip6_addr_t *dest)
 {
-  struct ip6_hdr *original_ip6hdr;
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *original_ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   struct ip6_frag_hdr *frag_hdr;
   struct pbuf *rambuf;
 #if !LWIP_NETIF_TX_SINGLE_PBUF
@@ -738,7 +738,7 @@ ip6_frag(struct pbuf *p, struct netif *netif, const ip6_addr_t *dest)
 
   identification++;
 
-  original_ip6hdr = (struct ip6_hdr *)p->payload;
+  original_ip6hdr = (struct lwip_ip6_hdr *)p->payload;
 
   /* @todo we assume there are no options in the unfragmentable part (IPv6 header). */
   LWIP_ASSERT("p->tot_len >= IP6_HLEN", p->tot_len >= IP6_HLEN);
@@ -767,7 +767,7 @@ ip6_frag(struct pbuf *p, struct netif *netif, const ip6_addr_t *dest)
     }
     /* fill in the IP header */
     SMEMCPY(rambuf->payload, original_ip6hdr, IP6_HLEN);
-    ip6hdr = (struct ip6_hdr *)rambuf->payload;
+    ip6hdr = (struct lwip_ip6_hdr *)rambuf->payload;
     frag_hdr = (struct ip6_frag_hdr *)((u8_t*)rambuf->payload + IP6_HLEN);
 #else
     /* When not using a static buffer, create a chain of pbufs.
@@ -783,7 +783,7 @@ ip6_frag(struct pbuf *p, struct netif *netif, const ip6_addr_t *dest)
     LWIP_ASSERT("this needs a pbuf in one piece!",
                 (rambuf->len >= (IP6_HLEN)));
     SMEMCPY(rambuf->payload, original_ip6hdr, IP6_HLEN);
-    ip6hdr = (struct ip6_hdr *)rambuf->payload;
+    ip6hdr = (struct lwip_ip6_hdr *)rambuf->payload;
     frag_hdr = (struct ip6_frag_hdr *)((u8_t*)rambuf->payload + IP6_HLEN);
 
     /* Can just adjust p directly for needed offset. */
