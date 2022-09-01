@@ -98,6 +98,10 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
             if(bbl_rx_thread(io->interface, eth)) {
                 return IO_SUCCESS;
             }
+        } else if(decode_result == UNKNOWN_PROTOCOL) {
+            io->stats.unknown++;
+        } else {
+            io->stats.protocol_errors++;
         }
     }
     /** Redirect to main thread. */
@@ -144,9 +148,9 @@ io_thread_main_rx_job(timer_s *timer)
                     eth->timestamp.tv_nsec = slot->timestamp.tv_nsec;
                     bbl_rx_handler(interface, eth);
                 } else if (decode_result == UNKNOWN_PROTOCOL) {
-                    interface->stats.unknown++;
+                    io->stats.unknown++;
                 } else {
-                    interface->stats.decode_error++;
+                    io->stats.protocol_errors++;
                 }
                 /* Dump the packet into pcap file. */
                 if (g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {

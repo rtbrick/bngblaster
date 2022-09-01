@@ -636,18 +636,8 @@ bbl_stats_job(timer_s *timer)
  * Curses init.
  */
 void
-bbl_init_curses()
+bbl_init_curses_window()
 {
-    if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
-        g_access_if = CIRCLEQ_FIRST(&g_ctx->access_interface_qhead);
-    }
-    if(!CIRCLEQ_EMPTY(&g_ctx->network_interface_qhead)) {
-        g_network_if = CIRCLEQ_FIRST(&g_ctx->network_interface_qhead);
-    }
-    if(!CIRCLEQ_EMPTY(&g_ctx->a10nsp_interface_qhead)) {
-        g_a10nsp_if = CIRCLEQ_FIRST(&g_ctx->a10nsp_interface_qhead);
-    }
-
     initscr();
     cbreak();
     noecho();
@@ -674,10 +664,25 @@ bbl_init_curses()
     bbl_init_stats_win();
     wrefresh(stats_win);
 
+    g_interactive = true;
+}
+
+void
+bbl_init_curses()
+{
+    if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
+        g_access_if = CIRCLEQ_FIRST(&g_ctx->access_interface_qhead);
+    }
+    if(!CIRCLEQ_EMPTY(&g_ctx->network_interface_qhead)) {
+        g_network_if = CIRCLEQ_FIRST(&g_ctx->network_interface_qhead);
+    }
+    if(!CIRCLEQ_EMPTY(&g_ctx->a10nsp_interface_qhead)) {
+        g_a10nsp_if = CIRCLEQ_FIRST(&g_ctx->a10nsp_interface_qhead);
+    }
+
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->stats_timer, "Statistics Timer",
                        0, 100 * MSEC, g_ctx, &bbl_stats_job);
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->keyboard_timer, "Keyboard Reader",
                        0, 100 * MSEC, g_ctx, &bbl_read_key_job);
 
-    g_interactive = true;
 }

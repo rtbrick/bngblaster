@@ -11,6 +11,10 @@
 #ifndef __BBL_INTERACTIVE_H__
 #define __BBL_INTERACTIVE_H__
 
-void bbl_init_curses();
+void
+bbl_init_curses_window();
+
+void
+bbl_init_curses();
 
 #endif

@@ -1467,6 +1467,8 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         if(!bbl_txq_is_empty(access_interface->txq)) {
             *len = bbl_txq_from_buffer(access_interface->txq, buf);
             if(*len) {
+                access_interface->stats.packets_tx++;
+                access_interface->stats.bytes_tx += *len;
                 return PROTOCOL_SUCCESS;
             } else {
                 return SEND_ERROR;
@@ -1478,6 +1480,8 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             if(session->send_requests != 0) {
                 result = bbl_tx_encode_packet(session, buf, len);
                 if(result == PROTOCOL_SUCCESS) {
+                    access_interface->stats.packets_tx++;
+                    access_interface->stats.bytes_tx += *len;
                     session->stats.packets_tx++;
                     session->stats.bytes_tx += *len;
                 }
@@ -1499,6 +1503,8 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         if(!bbl_txq_is_empty(a10nsp_interface->txq)) {
             *len = bbl_txq_from_buffer(a10nsp_interface->txq, buf);
             if(*len) {
+                a10nsp_interface->stats.packets_tx++;
+                a10nsp_interface->stats.packets_tx += *len;
                 return PROTOCOL_SUCCESS;
             } else {
                 return SEND_ERROR;
@@ -1515,6 +1521,8 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         if(!bbl_txq_is_empty(network_interface->txq)) {
             *len = bbl_txq_from_buffer(network_interface->txq, buf);
             if(*len) {
+                network_interface->stats.packets_tx++;
+                network_interface->stats.bytes_tx += *len;
                 return PROTOCOL_SUCCESS;
             } else {
                 return SEND_ERROR;
@@ -1533,6 +1541,8 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             if(l2tpq->data) {
                 free(l2tpq);
             }
+            network_interface->stats.packets_tx++;
+            network_interface->stats.bytes_tx += *len;
             return PROTOCOL_SUCCESS;
         }
         network_interface = network_interface->next;

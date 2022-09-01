@@ -31,6 +31,8 @@ typedef struct bbl_a10nsp_interface_
         uint64_t packets_rx;
         uint64_t bytes_tx;
         uint64_t bytes_rx;
+        
+        uint64_t unknown;
 
         uint64_t session_ipv4_tx;
         uint64_t session_ipv4_rx;

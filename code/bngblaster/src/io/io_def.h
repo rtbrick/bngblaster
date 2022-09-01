@@ -53,6 +53,7 @@ typedef struct io_handle_ {
     uint16_t cursor; /* ring buffer cursor */
     uint16_t queued;
     bool polled;
+    bool ctrl;
 
     io_thread_s *thread;
     bbl_interface_s *interface;
@@ -68,6 +69,7 @@ typedef struct io_handle_ {
     struct {
         uint64_t packets;
         uint64_t bytes;
+        uint64_t unknown;
         uint64_t protocol_errors;
         uint64_t io_errors;
         uint64_t no_buffer;

@@ -123,6 +123,7 @@ typedef struct bbl_link_config_
     char *interface;
     char *description;
     uint8_t mac[ETH_ADDR_LEN];
+
     io_mode_t io_mode;
 
     uint16_t io_slots_tx;

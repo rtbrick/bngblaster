@@ -90,9 +90,9 @@ io_packet_mmap_rx_job(timer_s *timer)
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
             bbl_rx_handler(interface, eth);
         } else if(decode_result == UNKNOWN_PROTOCOL) {
-            interface->stats.unknown++;
+            io->stats.unknown++;
         } else {
-            interface->stats.decode_error++;
+            io->stats.protocol_errors++;
         }
         /* Dump the packet into pcap file */
         if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {

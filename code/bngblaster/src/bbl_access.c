@@ -76,10 +76,10 @@ bbl_access_interfaces_add()
             /* Timer to compute periodic rates */
             timer_add_periodic(&g_ctx->timer_root, &access_interface->rate_job, "Rate Computation", 1, 0, access_interface,
                                &bbl_access_interface_rate_job);
+
+            LOG(DEBUG, "Added access interface %s\n", access_config->interface);
         }
         access_config->access_interface = interface->access;
-
-        LOG(DEBUG, "Added access interface %s\n", access_config->interface);
         access_config = access_config->next;
     }
     return true;
@@ -619,15 +619,56 @@ bbl_access_rx_icmp(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_ipv4_
 }
 
 static void
+bbl_access_rx_ipv4_mc(bbl_access_interface_s *interface, 
+                      bbl_session_s *session, 
+                      bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4)
+{
+    bbl_bbl_t *bbl = eth->bbl;
+    bbl_igmp_group_s *group = NULL;
+    uint64_t loss;
+    int i;
+
+    for(i=0; i < IGMP_MAX_GROUPS; i++) {
+        group = &session->igmp_groups[i];
+        if(ipv4->dst == group->group) {
+            group->packets++;
+            group->last_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
+            group->last_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
+            if(group->state >= IGMP_GROUP_ACTIVE) {
+                if(!group->first_mc_rx_time.tv_sec) {
+                    group->first_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
+                    group->first_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
+                    if(bbl) {
+                        session->mc_rx_last_seq = bbl->flow_seq;
+                    }
+                } else if(bbl) {
+                    if((session->mc_rx_last_seq +1) < bbl->flow_seq) {
+                        loss = bbl->flow_seq - (session->mc_rx_last_seq +1);
+                        interface->stats.mc_loss += loss;
+                        session->stats.mc_loss += loss;
+                        group->loss += loss;
+                        LOG(LOSS, "LOSS (ID: %u) Multicast flow: %lu seq: %lu last: %lu\n",
+                            session->session_id, bbl->flow_id, bbl->flow_seq, session->mc_rx_last_seq);
+                    }
+                    session->mc_rx_last_seq = bbl->flow_seq;
+                }
+            } else {
+                if(session->zapping_joined_group && (session->zapping_leaved_group == group)) {
+                    if(session->zapping_joined_group->first_mc_rx_time.tv_sec) {
+                        session->stats.mc_old_rx_after_first_new++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+static void
 bbl_access_rx_ipv4(bbl_access_interface_s *interface, 
                    bbl_session_s *session, 
                    bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4) 
 {
     bbl_udp_t *udp;
-    bbl_bbl_t *bbl = NULL;
-    bbl_igmp_group_s *group = NULL;
-    uint64_t loss;
-    int i;
 
     if(ipv4->offset & ~IPV4_DF) {
         /* Reassembling of fragmented IPv4 packets is currently not supported. */
@@ -652,12 +693,10 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_t*)ipv4->next;
             if(udp->protocol == UDP_PROTOCOL_DHCP) {
-                interface->stats.dhcp_rx++;
                 session->stats.dhcp_rx++;
+                interface->stats.dhcp_rx++;
                 bbl_dhcp_rx(session, eth, (bbl_dhcp_t*)udp->next);
                 return;
-            } else if(udp->protocol == UDP_PROTOCOL_BBL) {
-                bbl = (bbl_bbl_t*)udp->next;
             }
             break;
         default:
@@ -667,74 +706,12 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
     session->stats.accounting_packets_rx++;
     session->stats.accounting_bytes_rx += eth->length;
 
-    /* BBL receive handler */
-    if(bbl) { 
-        if(bbl->type == BBL_TYPE_MULTICAST) {
-            /* Multicast receive handler */
-            for(i=0; i < IGMP_MAX_GROUPS; i++) {
-                group = &session->igmp_groups[i];
-                if(ipv4->dst == group->group) {
-                    if(group->state >= IGMP_GROUP_ACTIVE) {
-                        interface->stats.mc_rx++;
-                        session->stats.mc_rx++;
-                        group->packets++;
-                        if(!group->first_mc_rx_time.tv_sec) {
-                            group->first_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
-                            group->first_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
-                        } else if((session->mc_rx_last_seq +1) < bbl->flow_seq) {
-                            loss = bbl->flow_seq - (session->mc_rx_last_seq +1);
-                            interface->stats.mc_loss += loss;
-                            session->stats.mc_loss += loss;
-                            group->loss += loss;
-                            LOG(LOSS, "LOSS (ID: %u) flow: %lu seq: %lu last: %lu\n",
-                                session->session_id, bbl->flow_id, bbl->flow_seq, session->mc_rx_last_seq);
-                        }
-                        session->mc_rx_last_seq = bbl->flow_seq;
-                    } else {
-                        interface->stats.mc_rx++;
-                        session->stats.mc_rx++;
-                        group->packets++;
-                        group->last_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
-                        group->last_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
-                        if(session->zapping_joined_group &&
-                            session->zapping_leaved_group == group) {
-                            if(session->zapping_joined_group->first_mc_rx_time.tv_sec) {
-                                session->stats.mc_old_rx_after_first_new++;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    } else {
-        /* Multicast receive handler */
-        for(i=0; i < IGMP_MAX_GROUPS; i++) {
-            group = &session->igmp_groups[i];
-            if(ipv4->dst == group->group) {
-                if(group->state >= IGMP_GROUP_ACTIVE) {
-                    interface->stats.mc_rx++;
-                    session->stats.mc_rx++;
-                    group->packets++;
-                    if(!group->first_mc_rx_time.tv_sec) {
-                        group->first_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
-                        group->first_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
-                    }
-                } else {
-                    interface->stats.mc_rx++;
-                    session->stats.mc_rx++;
-                    group->packets++;
-                    group->last_mc_rx_time.tv_sec = eth->timestamp.tv_sec;
-                    group->last_mc_rx_time.tv_nsec = eth->timestamp.tv_nsec;
-                    if(session->zapping_joined_group &&
-                       session->zapping_leaved_group == group) {
-                        if(session->zapping_joined_group->first_mc_rx_time.tv_sec) {
-                            session->stats.mc_old_rx_after_first_new++;
-                        }
-                    }
-                }
-            }
-        }
+    /* All IPv4 multicast addresses start with 1110 */
+    if((ipv4->dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
+        interface->stats.mc_rx++;
+        session->stats.mc_rx++;
+        bbl_access_rx_ipv4_mc(interface, session, eth, ipv4);
+        return;
     }
 }
 
@@ -1512,7 +1489,7 @@ bbl_access_rx_session(bbl_access_interface_s *interface,
             bbl_access_rx_ipv6(interface, session, eth, (bbl_ipv6_t*)pppoes->next);
             break;
         default:
-            interface->interface->stats.unknown++;
+            interface->stats.unknown++;
             break;
     }
 }
@@ -1627,7 +1604,7 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
             session->send_requests = 0;
             break;
         default:
-            interface->interface->stats.unknown++;
+            interface->stats.unknown++;
             break;
     }
 }
@@ -1732,7 +1709,7 @@ bbl_access_rx_handler_multicast(bbl_access_interface_s *interface,
                         bbl_access_rx_ipv6(interface, session, eth, (bbl_ipv6_t*)eth->next);
                         break;
                     default:
-                        interface->interface->stats.unknown++;
+                        interface->stats.unknown++;
                         break;
                 }
             }
@@ -1763,7 +1740,7 @@ bbl_access_rx_handler_broadcast(bbl_access_interface_s *interface,
                         bbl_access_rx_ipv4(interface, session, eth, (bbl_ipv4_t*)eth->next);
                         break;
                     default:
-                        interface->interface->stats.unknown++;
+                        interface->stats.unknown++;
                         break;
                 }
             }
@@ -1832,7 +1809,7 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
                             bbl_access_rx_session(interface, session, eth);
                             break;
                         default:
-                            interface->interface->stats.unknown++;
+                            interface->stats.unknown++;
                             break;
                     }
                     break;
@@ -1849,12 +1826,12 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
                             bbl_access_rx_ipv6(interface, session, eth, (bbl_ipv6_t*)eth->next);
                             break;
                         default:
-                            interface->interface->stats.unknown++;
+                            interface->stats.unknown++;
                             break;
                     }
                     break;
                 default:
-                    interface->interface->stats.unknown++;
+                    interface->stats.unknown++;
                     break;
             }
         }

@@ -40,13 +40,7 @@ typedef struct bbl_interface_
         uint64_t packets_rx;
         uint64_t bytes_tx;
         uint64_t bytes_rx;
-        uint64_t unknown;
-        uint64_t encode_errors;
-        uint64_t decode_error;
-        uint64_t sendto_failed;
-        uint64_t no_buffer;
-        uint64_t poll_tx;
-        uint64_t poll_rx;
+        uint64_t loss;
 
         /* Rate Stats */
 

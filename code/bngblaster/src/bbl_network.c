@@ -422,5 +422,5 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
         default:
             break;
     }
-    interface->interface->stats.unknown++;
+    interface->stats.unknown++;
 }

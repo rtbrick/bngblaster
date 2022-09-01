@@ -140,6 +140,8 @@ bbl_stats_generate(bbl_stats_t * stats)
     bbl_stream_s *stream;
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
+    bbl_session_s *session;
+    uint32_t i;
 
     float pps;
 
@@ -148,83 +150,121 @@ bbl_stats_generate(bbl_stats_t * stats)
 
     struct dict_itor *itor;
 
-#if 0
-    bbl_session_s *session;
-    uint32_t i;
-
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
         session = &g_ctx->session_list[i];
         if(session) {
             /* Session Traffic */
-            if(session->access_ipv4_rx_first_seq) {
+            stream = session->session_traffic.ipv4_down;
+            if(stream && stream->rx_first_seq) {
                 stats->sessions_access_ipv4_rx++;
-                stats->avg_access_ipv4_rx_first_seq += session->access_ipv4_rx_first_seq;
+                stats->avg_access_ipv4_rx_first_seq += stream->rx_first_seq;
                 if(stats->min_access_ipv4_rx_first_seq) {
-                    if(session->access_ipv4_rx_first_seq < stats->min_access_ipv4_rx_first_seq) stats->min_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
+                    if(stream->rx_first_seq < stats->min_access_ipv4_rx_first_seq) {
+                        stats->min_access_ipv4_rx_first_seq = stream->rx_first_seq;
+                    }
                 } else {
-                    stats->min_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
+                    stats->min_access_ipv4_rx_first_seq = stream->rx_first_seq;
                 }
-                if(session->access_ipv4_rx_first_seq > stats->max_access_ipv4_rx_first_seq) stats->max_access_ipv4_rx_first_seq = session->access_ipv4_rx_first_seq;
+                if(stream->rx_first_seq > stats->max_access_ipv4_rx_first_seq) {
+                    stats->max_access_ipv4_rx_first_seq = stream->rx_first_seq;
+                }
+                if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv4_pps) {
+                    stats->access_ipv4_rx_first_seq_1s++;
+                }
             }
-
-            if(session->network_ipv4_rx_first_seq) {
+            stream = session->session_traffic.ipv4_up;
+            if(stream && stream->rx_first_seq) {
                 stats->sessions_network_ipv4_rx++;
-                stats->avg_network_ipv4_rx_first_seq += session->network_ipv4_rx_first_seq;
+                stats->avg_network_ipv4_rx_first_seq += stream && stream->rx_first_seq;
                 if(stats->min_network_ipv4_rx_first_seq) {
-                    if(session->network_ipv4_rx_first_seq < stats->min_network_ipv4_rx_first_seq) stats->min_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
+                    if(stream && stream->rx_first_seq < stats->min_network_ipv4_rx_first_seq) {
+                        stats->min_network_ipv4_rx_first_seq = stream && stream->rx_first_seq;
+                    }
                 } else {
-                    stats->min_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
+                    stats->min_network_ipv4_rx_first_seq = stream && stream->rx_first_seq;
                 }
-                if(session->network_ipv4_rx_first_seq > stats->max_network_ipv4_rx_first_seq) stats->max_network_ipv4_rx_first_seq = session->network_ipv4_rx_first_seq;
+                if(stream && stream->rx_first_seq > stats->max_network_ipv4_rx_first_seq) {
+                    stats->max_network_ipv4_rx_first_seq = stream && stream->rx_first_seq;
+                }
+                if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv4_pps) {
+                    stats->network_ipv4_rx_first_seq_1s++;
+                }
             }
-
-            if(session->access_ipv6_rx_first_seq) {
+            stream = session->session_traffic.ipv6_down;
+            if(stream && stream->rx_first_seq) {
                 stats->sessions_access_ipv6_rx++;
-                stats->avg_access_ipv6_rx_first_seq += session->access_ipv6_rx_first_seq;
+                stats->avg_access_ipv6_rx_first_seq += stream->rx_first_seq;
                 if(stats->min_access_ipv6_rx_first_seq) {
-                    if(session->access_ipv6_rx_first_seq < stats->min_access_ipv6_rx_first_seq) stats->min_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
+                    if(stream->rx_first_seq < stats->min_access_ipv6_rx_first_seq) {
+                        stats->min_access_ipv6_rx_first_seq = stream->rx_first_seq;
+                    }
                 } else {
-                    stats->min_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
+                    stats->min_access_ipv6_rx_first_seq = stream->rx_first_seq;
                 }
-                if(session->access_ipv6_rx_first_seq > stats->max_access_ipv6_rx_first_seq) stats->max_access_ipv6_rx_first_seq = session->access_ipv6_rx_first_seq;
+                if(stream->rx_first_seq > stats->max_access_ipv6_rx_first_seq) {
+                    stats->max_access_ipv6_rx_first_seq = stream->rx_first_seq;
+                }
+                if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv6_pps) {
+                    stats->access_ipv6_rx_first_seq_1s++;
+                }
             }
-
-            if(session->network_ipv6_rx_first_seq) {
+            stream = session->session_traffic.ipv6_up;
+            if(stream && stream->rx_first_seq) {
                 stats->sessions_network_ipv6_rx++;
-                stats->avg_network_ipv6_rx_first_seq += session->network_ipv6_rx_first_seq;
+                stats->avg_network_ipv6_rx_first_seq += stream->rx_first_seq;
                 if(stats->min_network_ipv6_rx_first_seq) {
-                    if(session->network_ipv6_rx_first_seq < stats->min_network_ipv6_rx_first_seq) stats->min_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
+                    if(stream->rx_first_seq < stats->min_network_ipv6_rx_first_seq) {
+                        stats->min_network_ipv6_rx_first_seq = stream->rx_first_seq;
+                    }
                 } else {
-                    stats->min_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
+                    stats->min_network_ipv6_rx_first_seq = stream->rx_first_seq;
                 }
-                if(session->network_ipv6_rx_first_seq > stats->max_network_ipv6_rx_first_seq) stats->max_network_ipv6_rx_first_seq = session->network_ipv6_rx_first_seq;
+                if(stream->rx_first_seq > stats->max_network_ipv6_rx_first_seq) {
+                    stats->max_network_ipv6_rx_first_seq = stream->rx_first_seq;
+                }
+                if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv6_pps) {
+                    stats->network_ipv6_rx_first_seq_1s++;
+                }
             }
-
-            if(session->access_ipv6pd_rx_first_seq) {
+            stream = session->session_traffic.ipv6pd_down;
+            if(stream && stream->rx_first_seq) {
                 stats->sessions_access_ipv6pd_rx++;
-                stats->avg_access_ipv6pd_rx_first_seq += session->access_ipv6pd_rx_first_seq;
+                stats->avg_access_ipv6pd_rx_first_seq += stream->rx_first_seq;
                 if(stats->min_access_ipv6pd_rx_first_seq) {
-                    if(session->access_ipv6pd_rx_first_seq < stats->min_access_ipv6pd_rx_first_seq) stats->min_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
+                    if(stream->rx_first_seq < stats->min_access_ipv6pd_rx_first_seq) {
+                        stats->min_access_ipv6pd_rx_first_seq = stream->rx_first_seq;
+                    }
                 } else {
-                    stats->min_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
+                    stats->min_access_ipv6pd_rx_first_seq = stream->rx_first_seq;
                 }
-                if(session->access_ipv6pd_rx_first_seq > stats->max_access_ipv6pd_rx_first_seq) stats->max_access_ipv6pd_rx_first_seq = session->access_ipv6pd_rx_first_seq;
+                if(stream->rx_first_seq > stats->max_access_ipv6pd_rx_first_seq) {
+                    stats->max_access_ipv6pd_rx_first_seq = stream->rx_first_seq;
+                }
+                if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv6pd_pps) {
+                    stats->access_ipv6pd_rx_first_seq_1s++;
+                }
             }
-
-            if(session->network_ipv6pd_rx_first_seq) {
+            stream = session->session_traffic.ipv6pd_up;
+            if(stream && stream->rx_first_seq) {
                 stats->sessions_network_ipv6pd_rx++;
-                stats->avg_network_ipv6pd_rx_first_seq += session->network_ipv6pd_rx_first_seq;
+                stats->avg_network_ipv6pd_rx_first_seq += stream->rx_first_seq;
                 if(stats->min_network_ipv6pd_rx_first_seq) {
-                    if(session->network_ipv6pd_rx_first_seq < stats->min_network_ipv6pd_rx_first_seq) stats->min_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
+                    if(stream->rx_first_seq < stats->min_network_ipv6pd_rx_first_seq) {
+                        stats->min_network_ipv6pd_rx_first_seq = stream->rx_first_seq;
+                    }
                 } else {
-                    stats->min_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
+                    stats->min_network_ipv6pd_rx_first_seq = stream->rx_first_seq;
                 }
-                if(session->network_ipv6pd_rx_first_seq > stats->max_network_ipv6pd_rx_first_seq) stats->max_network_ipv6pd_rx_first_seq = session->network_ipv6pd_rx_first_seq;
+                if(stream->rx_first_seq > stats->max_network_ipv6pd_rx_first_seq) {
+                    stats->max_network_ipv6pd_rx_first_seq = stream->rx_first_seq;
+                }
+                if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv6pd_pps) {
+                    stats->network_ipv6pd_rx_first_seq_1s = stream->rx_first_seq;
+                }
             }
         }
     }
-#endif
 
     if(stats->sessions_access_ipv4_rx) {
         stats->avg_access_ipv4_rx_first_seq = stats->avg_access_ipv4_rx_first_seq / stats->sessions_access_ipv4_rx;
@@ -366,14 +406,8 @@ bbl_stats_stdout(bbl_stats_t *stats) {
 
         printf("\nInterface ( %s ):\n", interface->name);
         printf("  TX:                %10lu packets\n", interface->stats.packets_tx);
-        printf("  RX:                %10lu packets\n", interface->stats.packets_rx);
-        printf("  TX Encode Error:   %10lu packets\n", interface->stats.encode_errors);
-        printf("  RX Decode Error:   %10lu packets\n", interface->stats.decode_error);
-        printf("  RX Drop Unknown:   %10lu packets\n", interface->stats.unknown);
-        printf("  TX Send Failed:    %10lu\n", interface->stats.sendto_failed);
-        printf("  TX No Buffer:      %10lu\n", interface->stats.no_buffer);
-        printf("  TX Poll Kernel:    %10lu\n", interface->stats.poll_tx);
-        printf("  RX Poll Kernel:    %10lu\n\n", interface->stats.poll_rx);
+        printf("  RX:                %10lu packets (%lu loss)\n", 
+            interface->stats.packets_rx, interface->stats.loss);
 
         while(network_interface) {
             printf("\nNetwork Interface ( %s ):\n", network_interface->name);

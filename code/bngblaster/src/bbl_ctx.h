@@ -135,14 +135,18 @@ typedef struct bbl_ctx_
         bool interface_lock_force;
         uint8_t mac_modifier;
 
-        uint64_t tx_interval; /* TX interval in nsec */
-        uint64_t rx_interval; /* RX interval in nsec */
+        io_mode_t io_mode;
 
         uint16_t io_slots;
         uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
         bool qdisc_bypass;
-        io_mode_t io_mode;
+
+        uint64_t tx_interval; /* TX interval in nsec */
+        uint64_t rx_interval; /* RX interval in nsec */
+
+        uint8_t tx_threads;
+        uint8_t rx_threads;
 
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */
