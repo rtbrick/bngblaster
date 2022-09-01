@@ -363,7 +363,7 @@ ip6_select_source_address(struct netif *netif, const ip6_addr_t *dest)
  * @param inp the netif on which this packet was received
  */
 static void
-ip6_forward(struct pbuf *p, struct ip6_hdr *iphdr, struct netif *inp)
+ip6_forward(struct pbuf *p, struct lwip_ip6_hdr *iphdr, struct netif *inp)
 {
   struct netif *netif;
 
@@ -508,7 +508,7 @@ ip6_input_accept(struct netif *netif)
 err_t
 ip6_input(struct pbuf *p, struct netif *inp)
 {
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   struct netif *netif;
   const u8_t *nexth;
   u16_t hlen, hlen_tot; /* the current header length */
@@ -525,7 +525,7 @@ ip6_input(struct pbuf *p, struct netif *inp)
   IP6_STATS_INC(ip6.recv);
 
   /* identify the IP header */
-  ip6hdr = (struct ip6_hdr *)p->payload;
+  ip6hdr = (struct lwip_ip6_hdr *)p->payload;
   if (IP6H_V(ip6hdr) != 6) {
     LWIP_DEBUGF(IP6_DEBUG | LWIP_DBG_LEVEL_WARNING, ("IPv6 packet dropped due to bad version number %"U32_F"\n",
         IP6H_V(ip6hdr)));
@@ -1013,7 +1013,7 @@ netif_found:
 
         /* Returned p point to IPv6 header.
          * Update all our variables and pointers and continue. */
-        ip6hdr = (struct ip6_hdr *)p->payload;
+        ip6hdr = (struct lwip_ip6_hdr *)p->payload;
         nexth = &IP6H_NEXTH(ip6hdr);
         hlen = hlen_tot = IP6_HLEN;
         pbuf_remove_header(p, IP6_HLEN);
@@ -1174,7 +1174,7 @@ ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
              u8_t hl, u8_t tc,
              u8_t nexth, struct netif *netif)
 {
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   ip6_addr_t dest_addr;
 
   LWIP_ASSERT_CORE_LOCKED();
@@ -1203,9 +1203,9 @@ ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
       return ERR_BUF;
     }
 
-    ip6hdr = (struct ip6_hdr *)p->payload;
-    LWIP_ASSERT("check that first pbuf can hold struct ip6_hdr",
-               (p->len >= sizeof(struct ip6_hdr)));
+    ip6hdr = (struct lwip_ip6_hdr *)p->payload;
+    LWIP_ASSERT("check that first pbuf can hold struct lwip_ip6_hdr",
+               (p->len >= sizeof(struct lwip_ip6_hdr)));
 
     IP6H_HOPLIM_SET(ip6hdr, hl);
     IP6H_NEXTH_SET(ip6hdr, nexth);
@@ -1224,7 +1224,7 @@ ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
 
   } else {
     /* IP header already included in p */
-    ip6hdr = (struct ip6_hdr *)p->payload;
+    ip6hdr = (struct lwip_ip6_hdr *)p->payload;
     ip6_addr_copy_from_packed(dest_addr, ip6hdr->dest);
     ip6_addr_assign_zone(&dest_addr, IP6_UNKNOWN, netif);
     dest = &dest_addr;
@@ -1292,7 +1292,7 @@ ip6_output(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
           u8_t hl, u8_t tc, u8_t nexth)
 {
   struct netif *netif;
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   ip6_addr_t src_addr, dest_addr;
 
   LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX(p);
@@ -1301,7 +1301,7 @@ ip6_output(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
     netif = ip6_route(src, dest);
   } else {
     /* IP header included in p, read addresses. */
-    ip6hdr = (struct ip6_hdr *)p->payload;
+    ip6hdr = (struct lwip_ip6_hdr *)p->payload;
     ip6_addr_copy_from_packed(src_addr, ip6hdr->src);
     ip6_addr_copy_from_packed(dest_addr, ip6hdr->dest);
     netif = ip6_route(&src_addr, &dest_addr);
@@ -1351,7 +1351,7 @@ ip6_output_hinted(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
           u8_t hl, u8_t tc, u8_t nexth, struct netif_hint *netif_hint)
 {
   struct netif *netif;
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   ip6_addr_t src_addr, dest_addr;
   err_t err;
 
@@ -1361,7 +1361,7 @@ ip6_output_hinted(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
     netif = ip6_route(src, dest);
   } else {
     /* IP header included in p, read addresses. */
-    ip6hdr = (struct ip6_hdr *)p->payload;
+    ip6hdr = (struct lwip_ip6_hdr *)p->payload;
     ip6_addr_copy_from_packed(src_addr, ip6hdr->src);
     ip6_addr_copy_from_packed(dest_addr, ip6hdr->dest);
     netif = ip6_route(&src_addr, &dest_addr);
@@ -1452,7 +1452,7 @@ ip6_options_add_hbh_ra(struct pbuf *p, u8_t nexth, u8_t value)
 void
 ip6_debug_print(struct pbuf *p)
 {
-  struct ip6_hdr *ip6hdr = (struct ip6_hdr *)p->payload;
+  struct lwip_ip6_hdr *ip6hdr = (struct lwip_ip6_hdr *)p->payload;
 
   LWIP_DEBUGF(IP6_DEBUG, ("IPv6 header:\n"));
   LWIP_DEBUGF(IP6_DEBUG, ("+-------------------------------+\n"));

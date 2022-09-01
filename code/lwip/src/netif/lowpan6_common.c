@@ -137,7 +137,7 @@ lowpan6_compress_headers(struct netif *netif, u8_t *inbuf, size_t inbuf_size, u8
   u8_t lowpan6_header_len;
   u8_t hidden_header_len = 0;
   s8_t i;
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   ip_addr_t ip6src, ip6dst;
 
   LWIP_ASSERT("netif != NULL", netif != NULL);
@@ -160,7 +160,7 @@ lowpan6_compress_headers(struct netif *netif, u8_t *inbuf, size_t inbuf_size, u8
   }
 
   /* Point to ip6 header and align copies of src/dest addresses. */
-  ip6hdr = (struct ip6_hdr *)inptr;
+  ip6hdr = (struct lwip_ip6_hdr *)inptr;
   ip_addr_copy_from_ip6_packed(ip6dst, ip6hdr->dest);
   ip6_addr_assign_zone(ip_2_ip6(&ip6dst), IP6_UNKNOWN, netif);
   ip_addr_copy_from_ip6_packed(ip6src, ip6hdr->src);
@@ -396,7 +396,7 @@ lowpan6_decompress_hdr(u8_t *lowpan6_buffer, size_t lowpan6_bufsize,
                        struct lowpan6_link_addr *src, struct lowpan6_link_addr *dest)
 {
   u16_t lowpan6_offset;
-  struct ip6_hdr *ip6hdr;
+  struct lwip_ip6_hdr *ip6hdr;
   s8_t i;
   u32_t header_temp;
   u16_t ip6_offset = IP6_HLEN;
@@ -408,7 +408,7 @@ lowpan6_decompress_hdr(u8_t *lowpan6_buffer, size_t lowpan6_bufsize,
   LWIP_ASSERT("hdr_size_comp != NULL", hdr_size_comp != NULL);
   LWIP_ASSERT("dehdr_size_decompst != NULL", hdr_size_decomp != NULL);
 
-  ip6hdr = (struct ip6_hdr *)decomp_buffer;
+  ip6hdr = (struct lwip_ip6_hdr *)decomp_buffer;
   if (decomp_bufsize < IP6_HLEN) {
     return ERR_MEM;
   }
