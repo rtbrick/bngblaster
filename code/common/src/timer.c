@@ -76,7 +76,7 @@ timespec_format (struct timespec *x)
  * Enqueue a timer for change processing.
  */
 void
-timer_change (timer_s *timer)
+timer_change(timer_s *timer)
 {
     timer_root_s *timer_root;
 
@@ -91,7 +91,7 @@ timer_change (timer_s *timer)
 }
 
 static void
-timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
+timer_enqueue_bucket(timer_root_s *root, timer_s *timer, time_t sec, long nsec)
 {
     timer_bucket_s *timer_bucket;
 
@@ -131,7 +131,7 @@ timer_enqueue_bucket (timer_root_s *root, timer_s *timer, time_t sec, long nsec)
  * Dequeue a timer from its timer_bucket.
  */
 static void
-timer_dequeue_bucket (timer_s *timer)
+timer_dequeue_bucket(timer_s *timer)
 {
     timer_root_s *timer_root;
     timer_bucket_s *timer_bucket;
@@ -157,7 +157,7 @@ timer_dequeue_bucket (timer_s *timer)
 }
 
 static void
-timer_requeue (timer_s *timer, time_t sec, long nsec)
+timer_requeue(timer_s *timer, time_t sec, long nsec)
 {
     timer_root_s *timer_root;
     timer_bucket_s *timer_bucket;
@@ -187,7 +187,7 @@ timer_requeue (timer_s *timer, time_t sec, long nsec)
  * Call this function periodically to avoid clustering of timers.
  */
 void
-timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
+timer_smear_bucket(timer_root_s *root, time_t sec, long nsec)
 {
     timer_bucket_s *timer_bucket;
     timer_s *timer, *last_timer;
@@ -233,7 +233,7 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
  * Smear all the timer of all buckets to expire equi-distant.
  */
 void
-timer_smear_all_buckets (timer_root_s *root)
+timer_smear_all_buckets(timer_root_s *root)
 {
     timer_bucket_s *timer_bucket;
     timer_s *timer, *last_timer;
@@ -276,7 +276,7 @@ timer_smear_all_buckets (timer_root_s *root)
  * the garbage collection queue, where they may get recycled.
  */
 static void
-timer_del_internal (timer_s *timer)
+timer_del_internal(timer_s *timer)
 {
     timer_bucket_s *timer_bucket;
     timer_root_s *timer_root;
@@ -301,7 +301,7 @@ timer_del_internal (timer_s *timer)
  * Mark a timer for deletion.
  */
 void
-timer_del (timer_s *timer)
+timer_del(timer_s *timer)
 {
     if(timer) {
         timer->delete = true;
@@ -313,7 +313,7 @@ timer_del (timer_s *timer)
  * Set timer expiration.
  */
 void
-timer_set_expire (timer_s *timer, time_t sec, long nsec)
+timer_set_expire(timer_s *timer, time_t sec, long nsec)
 {
     clock_gettime(CLOCK_MONOTONIC, &timer->expire);
     timer->expire.tv_sec += sec;
@@ -332,7 +332,7 @@ timer_set_expire (timer_s *timer, time_t sec, long nsec)
  * Deferred processing of all timers.
  */
 static void
-timer_process_changes (timer_root_s *root)
+timer_process_changes(timer_root_s *root)
 {
     timer_s *timer;
     timer_bucket_s *timer_bucket;
@@ -582,7 +582,7 @@ timer_walk(timer_root_s *root)
  * Init a timer root.
  */
 void
-timer_init_root (timer_root_s *timer_root)
+timer_init_root(timer_root_s *timer_root)
 {
     CIRCLEQ_INIT(&timer_root->timer_bucket_qhead);
     CIRCLEQ_INIT(&timer_root->timer_gc_qhead);
@@ -593,7 +593,7 @@ timer_init_root (timer_root_s *timer_root)
  * Flush all timers hanging off a timer root.
  */
 void
-timer_flush_root (timer_root_s *timer_root)
+timer_flush_root(timer_root_s *timer_root)
 {
     timer_s *timer;
     timer_bucket_s *timer_bucket;
