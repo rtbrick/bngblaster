@@ -609,7 +609,7 @@ bbl_dhcpv6_timeout(timer_s *timer)
             bbl_session_tx_qnode_insert(session);
         } else {
             if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
-                session->dhcpv6_state = session->dhcpv6_state == BBL_DHCP_INIT;
+                session->dhcpv6_state = BBL_DHCP_INIT;
                 if(session->session_state == BBL_TERMINATING) {
                     bbl_session_clear(ctx, session);
                 }

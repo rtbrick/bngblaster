@@ -553,6 +553,11 @@ bbl_rx_icmpv6(bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6, bbl_interface_s *int
         return;
     }
 
+    if(session->access_type == ACCESS_TYPE_PPPOE && 
+       session->ip6cp_state != BBL_PPP_OPENED) {
+        return;
+    }
+
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
         if(!session->icmpv6_ra_received) {
             /* The first RA received ... */
@@ -878,11 +883,13 @@ bbl_rx_pap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s
                     session->ipcp_state = BBL_PPP_INIT;
                     session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
                 }
                 if(ctx->config.ip6cp_enable) {
                     session->ip6cp_state = BBL_PPP_INIT;
                     session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
                 }
                 bbl_session_tx_qnode_insert(session);
                 break;
@@ -975,11 +982,13 @@ bbl_rx_chap(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_
                     session->ipcp_state = BBL_PPP_INIT;
                     session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
                 }
                 if(ctx->config.ip6cp_enable) {
                     session->ip6cp_state = BBL_PPP_INIT;
                     session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+                    session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
                 }
                 bbl_session_tx_qnode_insert(session);
                 break;
