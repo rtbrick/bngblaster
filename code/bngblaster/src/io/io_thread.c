@@ -307,6 +307,7 @@ io_thread_start_all()
     io_thread_s *thread = g_ctx->io_threads;
     while(thread) {
         thread->active = true;
+        timer_smear_all_buckets(&thread->timer.root);
         pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
         thread = thread->next;
     }
