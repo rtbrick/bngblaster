@@ -484,7 +484,7 @@ encode_bbl(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
     *(uint32_t*)buf = bbl->session_id;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-    if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
+    if(bbl->type == BBL_TYPE_UNICAST) {
         *(uint32_t*)buf = bbl->ifindex;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint16_t*)buf = bbl->outer_vlan_id;
@@ -2497,7 +2497,7 @@ decode_bbl(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     bbl->session_id = *(uint32_t*)buf;
     BUMP_BUFFER(buf, len, sizeof(uint32_t));
-    if(bbl->type == BBL_TYPE_UNICAST_SESSION) {
+    if(bbl->type == BBL_TYPE_UNICAST) {
         bbl->ifindex = *(uint32_t*)buf;
         BUMP_BUFFER(buf, len, sizeof(uint32_t));
         bbl->outer_vlan_id = *(uint16_t*)buf;
@@ -2618,6 +2618,7 @@ decode_udp(uint8_t *buf, uint16_t len,
                  * is not found on the expected position. */
                 if(decode_bbl(buf, len, sp, sp_len, (bbl_bbl_t**)&udp->next) == PROTOCOL_SUCCESS) {
                     udp->protocol = UDP_PROTOCOL_BBL;
+                    eth->bbl = udp->next;
                 } else {
                     udp->protocol = 0;
                     udp->next = NULL;

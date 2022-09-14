@@ -125,6 +125,8 @@ typedef struct bbl_ctx_
         uint32_t session_traffic_flows_verified;
         uint32_t stream_traffic_flows;
         uint32_t stream_traffic_flows_verified;
+        uint32_t multicast_traffic_flows;
+        uint32_t multicast_traffic_flows_verified;
     } stats;
 
     bool multicast_traffic;
@@ -175,6 +177,7 @@ typedef struct bbl_ctx_
 
         /* Traffic Streams */
         bbl_stream_config_s *stream_config;
+        bbl_stream_config_s *stream_config_multicast;
         bbl_stream_config_s *stream_config_session_ipv4_up;
         bbl_stream_config_s *stream_config_session_ipv4_down;
         bbl_stream_config_s *stream_config_session_ipv6_up;

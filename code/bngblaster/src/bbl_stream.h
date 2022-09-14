@@ -69,6 +69,7 @@ typedef struct bbl_stream_
     bbl_stream_config_s *config;
 
     uint8_t type;
+    uint8_t sub_type;
     uint8_t direction;
 
     bbl_session_s *session;
@@ -161,5 +162,8 @@ bbl_stream_reset(bbl_stream_s *stream);
 
 json_t *
 bbl_stream_json(bbl_stream_s *stream);
+
+json_t *
+bbl_stream_summary_json();
 
 #endif

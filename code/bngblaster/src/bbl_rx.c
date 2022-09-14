@@ -35,7 +35,7 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
     bbl_session_s *session;
     uint32_t session_id = 0;
 
-    if(!(eth->bbl && eth->bbl->type == BBL_TYPE_UNICAST_SESSION)) {
+    if(!(eth->bbl && eth->bbl->type == BBL_TYPE_UNICAST)) {
         return false;
     }
 
