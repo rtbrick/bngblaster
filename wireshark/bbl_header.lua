@@ -3,7 +3,7 @@ bbl_proto = Proto("BNG-BLASTER", "BNG Blaster Header")
 
 local mn_f = ProtoField.uint64("bbl_proto.mn", "Magic Sequence", base.DEC, none, none)
 local ht_f = ProtoField.uint8("bbl_proto.ht", "Type", base.DEC,
-  {[0]="reserved", [1]="Unicast Session Traffic", [2]="Multicast"}, none)
+  {[0]="reserved", [1]="Unicast", [2]="Multicast"}, none)
 local st_f = ProtoField.uint8("bbl_proto.st", "Sub-Type", base.DEC,
   {[0]="reserved", [1]="IPv4", [2]="IPv6", [3]="IPv6PD"}, none)
 local hd_f = ProtoField.uint8("bbl_proto.hd", "Direction", base.DEC,

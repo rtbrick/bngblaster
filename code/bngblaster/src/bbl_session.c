@@ -988,40 +988,61 @@ bbl_session_json(bbl_session_s *session)
         session_traffic = json_pack("{si si}",
             "total-flows", session->session_traffic.flows,
             "verified-flows", session->session_traffic.flows_verified);
-        }
         if(session->session_traffic.ipv4_down) {
             stream = session->session_traffic.ipv4_down;
-            json_object_set(session_traffic, "first-seq-rx-access-ipv4", json_integer(stream->rx_first_seq));
-            json_object_set(session_traffic, "access-rx-session-packets-ipv4", json_integer(stream->packets_rx));
-            json_object_set(session_traffic, "access-rx-session-packets-ipv4-loss", json_integer(stream->loss));
-            json_object_set(session_traffic, "network-tx-session-packets-ipv4", json_integer(stream->packets_tx));
+            json_object_set(session_traffic, "downstream-ipv4-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "downstream-ipv4-tx-packets", json_integer(stream->packets_tx - stream->reset_packets_tx));
+            json_object_set(session_traffic, "downstream-ipv4-rx-packets", json_integer(stream->packets_rx - stream->reset_packets_rx));
+            json_object_set(session_traffic, "downstream-ipv4-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "downstream-ipv4-loss", json_integer(stream->loss - stream->reset_loss));
+            json_object_set(session_traffic, "downstream-ipv4-wrong-session", json_integer(stream->wrong_session - stream->reset_wrong_session));
         }
-#if 0
-            "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
-            "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
-            "first-seq-rx-network-ipv4", session->network_ipv4_rx_first_seq,
-            "first-seq-rx-network-ipv6", session->network_ipv6_rx_first_seq,
-            "first-seq-rx-network-ipv6pd", session->network_ipv6pd_rx_first_seq,
-            "access-tx-session-packets", session->stats.access_ipv4_tx,
-            "access-rx-session-packets", session->stats.access_ipv4_rx,
-            "access-rx-session-packets-loss", session->stats.access_ipv4_loss,
-            "network-tx-session-packets", session->stats.network_ipv4_tx,
-            "network-rx-session-packets", session->stats.network_ipv4_rx,
-            "network-rx-session-packets-loss", session->stats.network_ipv4_loss,
-            "access-tx-session-packets-ipv6", session->stats.access_ipv6_tx,
-            "access-rx-session-packets-ipv6", session->stats.access_ipv6_rx,
-            "access-rx-session-packets-ipv6-loss", session->stats.access_ipv6_loss,
-            "network-tx-session-packets-ipv6", session->stats.network_ipv6_tx,
-            "network-rx-session-packets-ipv6", session->stats.network_ipv6_rx,
-            "network-rx-session-packets-ipv6-loss", session->stats.network_ipv6_loss,
-            "access-tx-session-packets-ipv6pd", session->stats.access_ipv6pd_tx,
-            "access-rx-session-packets-ipv6pd", session->stats.access_ipv6pd_rx,
-            "access-rx-session-packets-ipv6pd-loss", session->stats.access_ipv6pd_loss,
-            "network-tx-session-packets-ipv6pd", session->stats.network_ipv6pd_tx,
-            "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
-            "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
-#endif
-
+        if(session->session_traffic.ipv4_up) {
+            stream = session->session_traffic.ipv4_up;
+            json_object_set(session_traffic, "upstream-ipv4-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "upstream-ipv4-tx-packets", json_integer(stream->packets_tx - stream->reset_packets_tx));
+            json_object_set(session_traffic, "upstream-ipv4-rx-packets", json_integer(stream->packets_rx - stream->reset_packets_rx));
+            json_object_set(session_traffic, "upstream-ipv4-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "upstream-ipv4-loss", json_integer(stream->loss - stream->reset_loss));
+            json_object_set(session_traffic, "upstream-ipv4-wrong-session", json_integer(stream->wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6_down) {
+            stream = session->session_traffic.ipv6_down;
+            json_object_set(session_traffic, "downstream-ipv6-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "downstream-ipv6-tx-packets", json_integer(stream->packets_tx - stream->reset_packets_tx));
+            json_object_set(session_traffic, "downstream-ipv6-rx-packets", json_integer(stream->packets_rx - stream->reset_packets_rx));
+            json_object_set(session_traffic, "downstream-ipv6-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "downstream-ipv6-loss", json_integer(stream->loss - stream->reset_loss));
+            json_object_set(session_traffic, "downstream-ipv6-wrong-session", json_integer(stream->wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6_up) {
+            stream = session->session_traffic.ipv6_up;
+            json_object_set(session_traffic, "upstream-ipv6-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "upstream-ipv6-tx-packets", json_integer(stream->packets_tx - stream->reset_packets_tx));
+            json_object_set(session_traffic, "upstream-ipv6-rx-packets", json_integer(stream->packets_rx - stream->reset_packets_rx));
+            json_object_set(session_traffic, "upstream-ipv6-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "upstream-ipv6-loss", json_integer(stream->loss - stream->reset_loss));
+            json_object_set(session_traffic, "upstream-ipv6-wrong-session", json_integer(stream->wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6pd_down) {
+            stream = session->session_traffic.ipv6pd_down;
+            json_object_set(session_traffic, "downstream-ipv6pd-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "downstream-ipv6pd-tx-packets", json_integer(stream->packets_tx - stream->reset_packets_tx));
+            json_object_set(session_traffic, "downstream-ipv6pd-rx-packets", json_integer(stream->packets_rx - stream->reset_packets_rx));
+            json_object_set(session_traffic, "downstream-ipv6pd-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "downstream-ipv6pd-loss", json_integer(stream->loss - stream->reset_loss));
+            json_object_set(session_traffic, "downstream-ipv6pd-wrong-session", json_integer(stream->wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6pd_up) {
+            stream = session->session_traffic.ipv6pd_up;
+            json_object_set(session_traffic, "upstream-ipv6pd-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "upstream-ipv6pd-tx-packets", json_integer(stream->packets_tx - stream->reset_packets_tx));
+            json_object_set(session_traffic, "upstream-ipv6pd-rx-packets", json_integer(stream->packets_rx - stream->reset_packets_rx));
+            json_object_set(session_traffic, "upstream-ipv6pd-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "upstream-ipv6pd-loss", json_integer(stream->loss - stream->reset_loss));
+            json_object_set(session_traffic, "upstream-ipv6pd-wrong-session", json_integer(stream->wrong_session - stream->reset_wrong_session));
+        }
+    }
     if(session->a10nsp_session) {
         a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* si si}",
             "interface", session->a10nsp_session->a10nsp_interface->interface->name,

@@ -1562,6 +1562,22 @@ bbl_ctrl_stream_info(int fd, uint32_t session_id __attribute__((unused)), json_t
 }
 
 int
+bbl_ctrl_stream_summary(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    int result = 0;
+
+    json_t *root = json_pack("{ss si so*}",
+        "status", "ok",
+        "code", 200,
+        "stream-summary", 
+        bbl_stream_summary_json());
+
+    result = json_dumpfd(root, fd, 0);
+    json_decref(root);
+    return result;
+}
+
+int
 bbl_ctrl_traffic_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
 {
     enable_disable_traffic(true);
@@ -1617,6 +1633,7 @@ struct action actions[] = {
     {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
     {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
     {"stream-info", bbl_ctrl_stream_info},
+    {"stream-summary", bbl_ctrl_stream_summary},
     {"stream-stats", bbl_ctrl_stream_stats},
     {"stream-reset", bbl_ctrl_stream_reset},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start},
