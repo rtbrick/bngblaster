@@ -417,7 +417,7 @@ bbl_stats_stdout(bbl_stats_t *stats) {
             printf("\nNetwork Interface: %s\n", network_interface->name);
             printf("  TX:                %10lu packets\n", network_interface->stats.packets_tx);
             printf("  RX:                %10lu packets\n", network_interface->stats.packets_rx);
-            printf("  TX Multicast:      %10lu packets\n\n", network_interface->stats.mc_tx);
+            printf("  TX Multicast:      %10lu packets\n", network_interface->stats.mc_tx);
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %10lu packets\n",
                     network_interface->stats.stream_tx);
@@ -1015,13 +1015,13 @@ bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value)
 
     sum = 0;
     div = 0;
-    for (idx = 0; idx < BBL_AVG_SAMPLES; idx++) {
-        if (rate->diff_value[idx]) {
+    for(idx = 0; idx < BBL_AVG_SAMPLES; idx++) {
+        if(rate->diff_value[idx]) {
             sum += rate->diff_value[idx];
             div++;
         }
     }
-    if (div) {
+    if(div) {
         rate->avg = sum / div;
     } else {
         rate->avg = 0;

@@ -19,7 +19,7 @@ const char g_multicast_traffic[] = "multicast";
 const char g_session_traffic_ipv4[] = "session-ipv4";
 const char g_session_traffic_ipv6[] = "session-ipv6";
 const char g_session_traffic_ipv6pd[] = "session-ipv6pd";
-const uint8_t g_endpoint = ENDPOINT_ACTIVE;
+endpoint_state_t g_endpoint = ENDPOINT_ACTIVE;
 
 static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
@@ -951,6 +951,9 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             interface = network_interface->interface;
             interface->stats.packets_tx += packets;
             interface->stats.bytes_tx += bytes;
+            if(stream->type == BBL_TYPE_MULTICAST) {
+                network_interface->stats.mc_tx += packets;
+            }
             if(session) {
                 if(session->l2tp_session) {
                     network_interface->stats.l2tp_data_tx += packets;
@@ -1157,7 +1160,7 @@ bbl_stream_rx_wrong_session(bbl_stream_s *stream)
     }
 }
 
-void
+static void
 bbl_stream_ctrl(bbl_stream_s *stream)
 {
     bbl_session_s *session = stream->session;
@@ -1166,6 +1169,18 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     uint64_t packets_delta;
     uint64_t bytes_delta;
     uint64_t loss_delta;
+
+    /* Calculate TX packets/bytes since last sync. */
+    packets = stream->packets_tx;
+    packets_delta = packets - stream->last_sync_packets_tx;
+    bytes_delta = packets_delta * stream->tx_len;
+    stream->last_sync_packets_tx = packets;
+    bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
+    bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
+
+    if(stream->type == BBL_TYPE_MULTICAST) {
+        return;
+    }
 
     if(unlikely(stream->wrong_session)) {
         bbl_stream_rx_wrong_session(stream);
@@ -1199,16 +1214,6 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         }
     }
 
-    /* Update rates. */
-    bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
-    bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
-
-    /* Calculate TX packets/bytes since last sync. */
-    packets = stream->packets_tx;
-    packets_delta = packets - stream->last_sync_packets_tx;
-    bytes_delta = packets_delta * stream->tx_len;
-    stream->last_sync_packets_tx = packets;
-    bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
     /* Calculate RX packets/bytes since last sync. */
     packets = stream->packets_rx;
     packets_delta = packets - stream->last_sync_packets_rx;
@@ -1219,6 +1224,7 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     loss_delta = packets - stream->last_sync_loss;
     stream->last_sync_loss = packets;
     bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
+    bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
 }
 
 void
@@ -1248,7 +1254,6 @@ bbl_stream_group_ctrl_job(timer_s *timer)
         stream = stream->group_next;
     }
 }
-
 
 bool
 bbl_stream_tx(bbl_stream_group_s *group, bbl_stream_s *stream)
@@ -1441,6 +1446,7 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
     tx_interval = tx_interval / g_ctx->config.stream_tx_precision;
     if(config->direction & BBL_DIRECTION_UP) {
         stream = calloc(1, sizeof(bbl_stream_s));
+        stream->endpoint = &g_endpoint;
         stream->flow_id = g_ctx->flow_id++;
         stream->flow_seq = 1;
         stream->config = config;
@@ -1490,6 +1496,7 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
         stream = calloc(1, sizeof(bbl_stream_s));
+        stream->endpoint = &g_endpoint;
         stream->flow_id = g_ctx->flow_id++;
         stream->flow_seq = 1;
         stream->config = config;
@@ -1631,6 +1638,7 @@ bbl_stream_init() {
 
             if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
+                stream->endpoint = &g_endpoint;
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
@@ -1654,11 +1662,11 @@ bbl_stream_init() {
                 }
                 *result.datum_ptr = stream;
                 bbl_stream_add_jobs(stream);
-                g_ctx->stats.stream_traffic_flows++;
                 if(stream->type == BBL_TYPE_MULTICAST) {
                     LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %lf PPS\n", 
                         config->name, network_interface->name, config->pps);
                 } else {
+                    g_ctx->stats.stream_traffic_flows++;
                     LOG(DEBUG, "RAW traffic stream %s added to %s with %lf PPS\n", 
                         config->name, network_interface->name, config->pps);
                 }
@@ -1704,6 +1712,7 @@ bbl_stream_init() {
             config->ipv4_network_address = source;
 
             stream = calloc(1, sizeof(bbl_stream_s));
+            stream->endpoint = &g_endpoint;
             stream->flow_id = g_ctx->flow_id++;
             stream->flow_seq = 1;
             stream->config = config;
@@ -1721,7 +1730,6 @@ bbl_stream_init() {
             }
             *result.datum_ptr = stream;
             bbl_stream_add_jobs(stream);
-            g_ctx->stats.stream_traffic_flows++;
             LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %lf PPS\n", 
                 network_interface->name, config->pps);
         }
@@ -1982,57 +1990,72 @@ bbl_stream_json(bbl_stream_s *stream)
         a10nsp_interface_name = stream->a10nsp_interface->interface->name;
     }
 
-    root = json_pack("{ss* ss ss ss ss* ss* ss* sb si si si si si si si si si si si si si si si si si si si sf sf sf}",
-        "name", stream->config->name,
-        "type", stream_type_string(stream),
-        "sub-type", stream_sub_type_string(stream),
-        "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
-        "access-interface", access_interface_name,
-        "network-interface", network_interface_name,
-        "a10nsp-interface", a10nsp_interface_name,
-        "verified", stream->verified,
-        "flow-id", stream->flow_id,
-        "rx-first-seq", stream->rx_first_seq,
-        "rx-last-seq", stream->rx_last_seq,
-        "rx-tos-tc", stream->rx_priority,
-        "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
-        "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
-        "rx-len", stream->rx_len,
-        "tx-len", stream->tx_len,
-        "tx-packets", stream->packets_tx - stream->reset_packets_tx,
-        "rx-packets", stream->packets_rx - stream->reset_packets_rx,
-        "rx-loss", stream->loss - stream->reset_loss,
-        "rx-wrong-session", stream->wrong_session - stream->reset_wrong_session,
-        "rx-delay-nsec-min", stream->min_delay_ns,
-        "rx-delay-nsec-max", stream->max_delay_ns,
-        "rx-pps", stream->rate_packets_rx.avg,
-        "tx-pps", stream->rate_packets_tx.avg,
-        "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
-        "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
-        "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
-        "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0,
-        "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
-        "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
+    if(stream->type == BBL_TYPE_UNICAST) {
+        root = json_pack("{ss* ss ss ss ss* ss* ss* sb si si si si si si si si si si si si si si si si si si si sf sf sf}",
+            "name", stream->config->name,
+            "type", stream_type_string(stream),
+            "sub-type", stream_sub_type_string(stream),
+            "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
+            "access-interface", access_interface_name,
+            "network-interface", network_interface_name,
+            "a10nsp-interface", a10nsp_interface_name,
+            "verified", stream->verified,
+            "flow-id", stream->flow_id,
+            "rx-first-seq", stream->rx_first_seq,
+            "rx-last-seq", stream->rx_last_seq,
+            "rx-tos-tc", stream->rx_priority,
+            "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
+            "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
+            "rx-len", stream->rx_len,
+            "tx-len", stream->tx_len,
+            "tx-packets", stream->packets_tx - stream->reset_packets_tx,
+            "rx-packets", stream->packets_rx - stream->reset_packets_rx,
+            "rx-loss", stream->loss - stream->reset_loss,
+            "rx-wrong-session", stream->wrong_session - stream->reset_wrong_session,
+            "rx-delay-nsec-min", stream->min_delay_ns,
+            "rx-delay-nsec-max", stream->max_delay_ns,
+            "rx-pps", stream->rate_packets_rx.avg,
+            "tx-pps", stream->rate_packets_tx.avg,
+            "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
+            "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
+            "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
+            "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0,
+            "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
+            "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
 
-    if(stream->config->rx_mpls1) { 
-        json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
-    }
-    if(stream->rx_mpls1) {
-        json_object_set(root, "rx-mpls1", json_integer(stream->rx_mpls1_label));
-        json_object_set(root, "rx-mpls1-exp", json_integer(stream->rx_mpls1_exp));
-        json_object_set(root, "rx-mpls1-ttl", json_integer(stream->rx_mpls1_ttl));
-    }
-    if(stream->config->rx_mpls2) { 
-        json_object_set(root, "rx-mpls2-expected", json_integer(stream->config->rx_mpls2_label));
-    }
-    if(stream->rx_mpls2) {
-        json_object_set(root, "rx-mpls2", json_integer(stream->rx_mpls2_label));
-        json_object_set(root, "rx-mpls2-exp", json_integer(stream->rx_mpls2_exp));
-        json_object_set(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
-    }
-    if(stream->session) {
-        json_object_set(root, "session-id", json_integer(stream->session->session_id));
-        json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
+        if(stream->config->rx_mpls1) { 
+            json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
+        }
+        if(stream->rx_mpls1) {
+            json_object_set(root, "rx-mpls1", json_integer(stream->rx_mpls1_label));
+            json_object_set(root, "rx-mpls1-exp", json_integer(stream->rx_mpls1_exp));
+            json_object_set(root, "rx-mpls1-ttl", json_integer(stream->rx_mpls1_ttl));
+        }
+        if(stream->config->rx_mpls2) { 
+            json_object_set(root, "rx-mpls2-expected", json_integer(stream->config->rx_mpls2_label));
+        }
+        if(stream->rx_mpls2) {
+            json_object_set(root, "rx-mpls2", json_integer(stream->rx_mpls2_label));
+            json_object_set(root, "rx-mpls2-exp", json_integer(stream->rx_mpls2_exp));
+            json_object_set(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
+        }
+        if(stream->session) {
+            json_object_set(root, "session-id", json_integer(stream->session->session_id));
+            json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
+        }
+    } else {
+        root = json_pack("{ss* ss ss ss ss* si si si si si sf}",
+            "name", stream->config->name,
+            "type", stream_type_string(stream),
+            "sub-type", stream_sub_type_string(stream),
+            "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
+            "network-interface", network_interface_name,
+            "flow-id", stream->flow_id,
+            "tx-len", stream->tx_len,
+            "tx-packets", stream->packets_tx - stream->reset_packets_tx,
+            "tx-pps", stream->rate_packets_tx.avg,
+            "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
+            "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0);
     }
     return root;
 }
