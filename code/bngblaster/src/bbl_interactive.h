@@ -12,9 +12,9 @@
 #define __BBL_INTERACTIVE_H__
 
 void
-bbl_init_curses_window();
+bbl_interactive_init();
 
 void
-bbl_init_curses();
+bbl_interactive_start();
 
 #endif

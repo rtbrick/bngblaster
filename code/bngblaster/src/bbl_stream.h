@@ -59,21 +59,40 @@ typedef struct bbl_stream_config_
     bbl_stream_config_s *next; /* Next stream config */
 } bbl_stream_config_s;
 
+typedef struct bbl_stream_group_
+{
+    bbl_stream_group_s *next;
+
+    io_handle_s *io;
+    bbl_stream_s *stream_head;
+    bbl_stream_s *stream_pos;
+    struct timer_ *timer_tx;
+    struct timespec tx_timestamp;
+    uint64_t tx_interval; /* TX interval in nsec */
+    uint32_t count; /* stream count */
+
+    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+
+    struct timer_ *timer_ctrl;
+} bbl_stream_group_s;
+
 typedef struct bbl_stream_
 {
     uint64_t flow_id;
     uint64_t flow_seq;
 
-    struct timer_ *timer_tx;
-
-    bbl_stream_config_s *config;
-
     uint8_t type;
     uint8_t sub_type;
     uint8_t direction;
 
+    bbl_stream_config_s *config;
+
+    bbl_stream_group_s *group;
+    bbl_stream_s *group_next; /* Next stream of same group */
+
     bbl_session_s *session;
     bbl_stream_s *session_next; /* Next stream of same session */
+    endpoint_state_t *endpoint;
 
     io_thread_s *thread;
 
@@ -126,7 +145,6 @@ typedef struct bbl_stream_
 
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
-    struct timer_ *timer_ctrl;
     uint64_t last_sync_packets_tx;
     uint64_t last_sync_packets_rx;
     uint64_t last_sync_loss;
@@ -152,7 +170,7 @@ bool
 bbl_stream_init();
 
 void
-bbl_stream_ctrl(bbl_stream_s *stream);
+bbl_stream_final();
 
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session);

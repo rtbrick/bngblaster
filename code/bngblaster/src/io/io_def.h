@@ -58,6 +58,7 @@ typedef struct io_handle_ {
     io_thread_s *thread;
     bbl_interface_s *interface;
     bbl_ethernet_header_t *eth;
+    bbl_stream_group_s *stream_group;
 
     uint8_t *buf;
     uint16_t buf_len;
@@ -100,16 +101,9 @@ typedef struct io_thread_ {
 
     io_handle_s *io;
     bbl_txq_s *txq;
- 
-    struct {
-        uint32_t count;
-        bbl_stream_s *head;
-        bbl_stream_s *tail;
-    } stream;
 
     struct {
         struct timer_root_ root;
-        struct timer_ *ctrl;
         struct timer_ *io;
     } timer;
 

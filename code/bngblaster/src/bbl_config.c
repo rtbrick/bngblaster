@@ -291,6 +291,8 @@ link_add(char *interface_name)
     link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
     link_config->tx_interval = g_ctx->config.tx_interval;
     link_config->rx_interval = g_ctx->config.rx_interval;
+    link_config->tx_threads = g_ctx->config.tx_threads;
+    link_config->rx_threads = g_ctx->config.rx_threads;
     link_config->next = g_ctx->config.link_config;
     g_ctx->config.link_config = link_config;
 }
@@ -2099,6 +2101,14 @@ json_parse_config(json_t *root)
         if (json_is_boolean(value)) {
             g_ctx->config.qdisc_bypass = json_boolean_value(value);
         }
+        value = json_object_get(section, "max-streams-per-group");
+        if(json_is_number(value)) {
+            g_ctx->config.max_streams_per_group = json_number_value(value);
+        }
+        value = json_object_get(section, "stream-precision");
+        if(json_is_number(value)) {
+            g_ctx->config.stream_tx_precision = json_number_value(value);
+        }
         value = json_object_get(section, "tx-interval");
         if (json_is_number(value)) {
             g_ctx->config.tx_interval = json_number_value(value) * MSEC;
@@ -2487,6 +2497,8 @@ bbl_config_init_defaults()
     g_ctx->config.io_slots = 4096;
     g_ctx->config.io_stream_max_ppi = 32;
     g_ctx->config.qdisc_bypass = true;
+    g_ctx->config.max_streams_per_group = 32;
+    g_ctx->config.stream_tx_precision = 1;
     g_ctx->config.sessions = 1;
     g_ctx->config.sessions_max_outstanding = 800;
     g_ctx->config.sessions_start_rate = 400;

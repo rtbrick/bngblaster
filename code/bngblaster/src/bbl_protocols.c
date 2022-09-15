@@ -2576,8 +2576,7 @@ decode_udp(uint8_t *buf, uint16_t len,
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
     udp->payload_len = be16toh(*(uint16_t*)buf);
     udp->payload_len -= 8;
-    BUMP_BUFFER(buf, len, sizeof(uint16_t));
-    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* len + checksum */
 
     if(udp->payload_len > len) {
         return DECODE_ERROR;
@@ -2647,7 +2646,7 @@ decode_tcp(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    /* Init UDP header */
+    /* Init TCP header */
     tcp = (bbl_tcp_t*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_tcp_t));
 
     tcp->src = be16toh(*(uint16_t*)buf);

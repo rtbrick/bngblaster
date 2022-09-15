@@ -505,7 +505,7 @@ main(int argc, char *argv[])
 
     /* Init curses. */
     if (interactive) {
-        bbl_init_curses_window();
+        bbl_interactive_init();
     }
 
     /* Init IS-IS instances. */
@@ -553,7 +553,7 @@ main(int argc, char *argv[])
 
     /* Start curses. */
     if(interactive) {
-        bbl_init_curses();
+        bbl_interactive_start();
     }
 
     /* Setup control job. */
@@ -618,6 +618,7 @@ main(int argc, char *argv[])
     }
 
     /* Generate reports. */
+    bbl_stream_final();
     bbl_stats_generate(&stats);
     bbl_stats_stdout(&stats);
     bbl_stats_json(&stats);

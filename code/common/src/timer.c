@@ -10,6 +10,53 @@
 #include "logging.h"
 
 /**
+ * Set timer expiration.
+ */
+static void
+timer_set_expire(timer_s *timer, time_t sec, long nsec)
+{
+    timer->expire.tv_sec += sec;
+    timer->expire.tv_nsec += nsec;
+
+    /* Handle nsec overflow. */
+    if (timer->expire.tv_nsec >= 1e9) {
+        timer->expire.tv_nsec -= 1e9;
+        timer->expire.tv_sec++;
+    }
+
+    timer->expired = false;
+}
+
+/**
+ * Compare two timespecs.
+ *
+ * return -1 if ts1 is older than ts2
+ * return +1 if ts1 is newer than ts2
+ * return  0 if ts1 is equal to ts2
+ */
+static int
+timespec_compare(struct timespec *ts1, struct timespec *ts2)
+{
+    if(ts1->tv_sec < ts2->tv_sec) {
+        return -1;
+    }
+
+    if(ts1->tv_sec > ts2->tv_sec) {
+        return +1;
+    }
+
+    if(ts1->tv_nsec < ts2->tv_nsec) {
+        return -1;
+    }
+
+    if(ts1->tv_nsec > ts2->tv_nsec) {
+        return +1;
+    }
+
+    return 0;
+}
+
+/**
  * Add two timestamps x and y, storing the result in result.
  */
 void
@@ -58,7 +105,7 @@ timespec_sub(struct timespec *result, struct timespec *x, struct timespec *y)
  * This way we can format upto 4 timespecs in one printf() call.
  */
 char *
-timespec_format (struct timespec *x)
+timespec_format(struct timespec *x)
 {
     static char buffer[4][32];
     static int idx = 0;
@@ -75,13 +122,13 @@ timespec_format (struct timespec *x)
 /**
  * Enqueue a timer for change processing.
  */
-void
+static void
 timer_change(timer_s *timer)
 {
     timer_root_s *timer_root;
 
-    /* Are we already on the timer change queue ? */
-    if (timer->on_change_list) {
+    /* Are we already on the timer change queue? */
+    if(timer->on_change_list) {
         return;
     }
 
@@ -290,10 +337,10 @@ timer_del_internal(timer_s *timer)
         /* Add to GC list */
         CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
         timer_root->gc++;
-	if (timer->ptimer) {
-	    *timer->ptimer = NULL; /* delete references to this timer */
-	    timer->ptimer= NULL;
-	}
+        if (timer->ptimer) {
+            *timer->ptimer = NULL; /* delete references to this timer */
+            timer->ptimer= NULL;
+        }
     }
 }
 
@@ -310,25 +357,6 @@ timer_del(timer_s *timer)
 }
 
 /**
- * Set timer expiration.
- */
-void
-timer_set_expire(timer_s *timer, time_t sec, long nsec)
-{
-    clock_gettime(CLOCK_MONOTONIC, &timer->expire);
-    timer->expire.tv_sec += sec;
-    timer->expire.tv_nsec += nsec;
-
-    /* Handle nsec overflow. */
-    if (timer->expire.tv_nsec >= 1e9) {
-        timer->expire.tv_nsec -= 1e9;
-        timer->expire.tv_sec++;
-    }
-
-    timer->expired = false;
-}
-
-/**
  * Deferred processing of all timers.
  */
 static void
@@ -337,7 +365,10 @@ timer_process_changes(timer_root_s *root)
     timer_s *timer;
     timer_bucket_s *timer_bucket;
 
-    while (!CIRCLEQ_EMPTY(&root->timer_change_qhead)) {
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    while(!CIRCLEQ_EMPTY(&root->timer_change_qhead)) {
         timer = CIRCLEQ_FIRST(&root->timer_change_qhead);
         timer_bucket = timer->timer_bucket;
 
@@ -346,14 +377,16 @@ timer_process_changes(timer_root_s *root)
         CIRCLEQ_REMOVE(&root->timer_change_qhead, timer, timer_change_qnode);
         timer->on_change_list = false;
 
-        /* Delete. */
-        if (timer->delete) {
+        if(timer->delete) {
+            /* Delete. */
             timer_del_internal(timer);
             continue;
         }
 
-        /* Requeue. */
-        if (timer->periodic) {
+        if(timer->periodic) {
+            /* Requeue. */
+            timer->expire.tv_sec = now.tv_sec;
+            timer->expire.tv_nsec = now.tv_nsec;
             timer_requeue(timer, timer_bucket->sec, timer_bucket->nsec);
             continue;
         }
@@ -365,19 +398,15 @@ timer_process_changes(timer_root_s *root)
  * the hierarchical timer list.
  */
 void
-timer_add(timer_root_s *root,
-           timer_s **ptimer,
-           char *name,
-           time_t sec,
-           long nsec,
-           void *data,
-           void (*cb)(timer_s *))
+timer_add(timer_root_s *root, timer_s **ptimer, char *name,
+          time_t sec, long nsec,
+          void *data, void (*cb)(timer_s *))
 {
-    timer_s *timer;
-    timer = *ptimer;
+    timer_s *timer = *ptimer;
 
     /* This timer already is enqueued. Requeue. */
-    if (timer) {
+    if(timer) {
+        clock_gettime(CLOCK_MONOTONIC, &timer->expire);
         timer_requeue(timer, sec, nsec);
         /* Update data and cb if there was a change.
          * Do the reformatting of name only during a change. */
@@ -389,7 +418,7 @@ timer_add(timer_root_s *root,
         return;
     }
 
-    if (CIRCLEQ_EMPTY(&root->timer_gc_qhead)) {
+    if(CIRCLEQ_EMPTY(&root->timer_gc_qhead)) {
         /* GC queue is empty, make a fresh allocation. */
         timer = calloc(1, sizeof(timer_s));
     } else {
@@ -408,6 +437,7 @@ timer_add(timer_root_s *root,
     strncpy(timer->name, name, sizeof(timer->name));
     timer->data = data;
     timer->cb = cb;
+    clock_gettime(CLOCK_MONOTONIC, &timer->expire);
     timer_set_expire(timer, sec, nsec);
     timer->ptimer = ptimer;
     *ptimer = timer;
@@ -420,46 +450,17 @@ timer_add(timer_root_s *root,
 
 void
 timer_add_periodic(timer_root_s *root, timer_s **ptimer, char *name,
-                   time_t sec, long nsec, void *data, 
-                   void (*cb)(timer_s *))
+                   time_t sec, long nsec, 
+                   void *data, void (*cb)(timer_s *))
 {
     timer_s *timer;
 
     timer_add(root, ptimer, name, sec, nsec, data, cb);
 
     timer = *ptimer;
-    if (timer) {
+    if(timer) {
         timer->periodic = true;
     }
-}
-
-/**
- * Compare two timespecs.
- *
- * return -1 if ts1 is older than ts2
- * return +1 if ts1 is newer than ts2
- * return  0 if ts1 is equal to ts2
- */
-int
-timespec_compare(struct timespec *ts1, struct timespec *ts2)
-{
-    if (ts1->tv_sec < ts2->tv_sec) {
-        return -1;
-    }
-
-    if (ts1->tv_sec > ts2->tv_sec) {
-        return +1;
-    }
-
-    if (ts1->tv_nsec < ts2->tv_nsec) {
-        return -1;
-    }
-
-    if (ts1->tv_nsec > ts2->tv_nsec) {
-        return +1;
-    }
-
-    return 0;
 }
 
 /**
@@ -497,7 +498,7 @@ timer_walk(timer_root_s *root)
 
             /* Hitting the first non-expired timer means
              * we're done processing this buckets queue. */
-            if (timespec_compare(&timer->expire, &now) == 1) {
+            if(timespec_compare(&timer->expire, &now) == 1) {
                 break;
             }
 
@@ -505,12 +506,12 @@ timer_walk(timer_root_s *root)
             timer->expired = true;
 
             /* Execute callback. */
-            if (timer->cb) {
+            if(timer->cb) {
                 LOG(TIMER_DETAIL, "  Firing %s timer\n", timer->name);
-                    (*timer->cb)(timer);
+                (*timer->cb)(timer);
             }
 
-            if (timer->periodic) {
+            if(timer->periodic) {
                 /* Periodic timers are simple de-queued and
                  * re-inserted at the tail of this buckets queue. */
                 timer_change(timer);
@@ -561,20 +562,20 @@ timer_walk(timer_root_s *root)
     LOG(TIMER_DETAIL, "  Min %lu.%06lus\n", min.tv_sec, min.tv_nsec / 1000);
 
     clock_gettime(CLOCK_MONOTONIC, &now);
-    if (timespec_compare(&now, &min) == -1) {
+    if(timespec_compare(&now, &min) == -1) {
         timespec_sub(&sleep, &min, &now);
 
         LOG(TIMER_DETAIL, "  Sleep %lu.%06lus\n", sleep.tv_sec, sleep.tv_nsec / 1000);
         res = nanosleep(&sleep, &rem);
-        if (res == -1) {
-	    switch (errno) {
-	    case EINTR: /* Ctrl-C */
-		break;
-	    default:
-		LOG(TIMER, "  nanosleep(): error %s (%d)\n", strerror(errno), errno);
-		break;
-	    }
-	}
+        if(res == -1) {
+            switch (errno) {
+                case EINTR: /* Ctrl-C */
+                    break;
+                default:
+                    LOG(TIMER, "  nanosleep(): error %s (%d)\n", strerror(errno), errno);
+                    break;
+            }
+        }
     }
 }
 
@@ -611,7 +612,7 @@ timer_flush_root(timer_root_s *timer_root)
     /*
      * Second step. Run the GC queue.
      */
-    while (!CIRCLEQ_EMPTY(&timer_root->timer_gc_qhead)) {
+    while(!CIRCLEQ_EMPTY(&timer_root->timer_gc_qhead)) {
         timer = CIRCLEQ_FIRST(&timer_root->timer_gc_qhead);
         CIRCLEQ_REMOVE(&timer_root->timer_gc_qhead, timer, timer_qnode);
         timer_root->gc--;
