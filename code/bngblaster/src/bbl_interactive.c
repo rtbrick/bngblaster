@@ -57,8 +57,37 @@ uint32_t g_session_selected   = 1;
 
 extern const char banner[];
 
-void
-bbl_init_stats_win()
+/*
+ * Format a progress bar.
+ */
+static char *
+bbl_interactive_format_progress(uint32_t complete, uint32_t current)
+{
+    static char buf[PROGRESS_BAR_SIZE+1];
+    float percentage;
+    uint16_t idx;
+
+    if (!complete || !current) {
+        memset(buf, ' ', sizeof(buf));
+        goto EXIT;
+    }
+
+    percentage = (float)current / (float)complete;
+    for(idx = 0; idx < sizeof(buf); idx++) {
+        if (idx <= (percentage * PROGRESS_BAR_SIZE)) {
+            buf[idx] = '#';
+            continue;
+        }
+        buf[idx] = ' ';
+    }
+
+ EXIT:
+    buf[PROGRESS_BAR_SIZE] = 0;
+    return buf;
+}
+
+static void
+bbl_interactive_init_window()
 {
     wclear(stats_win);
     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
@@ -87,7 +116,7 @@ bbl_init_stats_win()
  * Interactive keyboard reader
  */
 void
-bbl_read_key_job(timer_s *timer)
+bbl_interactive_read_key_job(timer_s *timer)
 {
     int ch;
 
@@ -113,20 +142,20 @@ bbl_read_key_job(timer_s *timer)
                         break;
                 }
             }
-            bbl_init_stats_win();
+            bbl_interactive_init_window();
             break;
         case KEY_F(2):
             if(g_network_if) {
                 g_network_if = CIRCLEQ_LOOP_NEXT(&g_ctx->network_interface_qhead, 
                     g_network_if, network_interface_qnode);
-                bbl_init_stats_win();
+                bbl_interactive_init_window();
             }
             break;
         case KEY_F(3):
             if(g_a10nsp_if) {
                 g_a10nsp_if = CIRCLEQ_LOOP_NEXT(&g_ctx->a10nsp_interface_qhead, 
                     g_a10nsp_if, a10nsp_interface_qnode);
-                bbl_init_stats_win();
+                bbl_interactive_init_window();
             }
             break;
         case KEY_LEFT:
@@ -140,10 +169,10 @@ bbl_read_key_job(timer_s *timer)
                 if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
                     g_access_if = CIRCLEQ_LOOP_PREV(&g_ctx->access_interface_qhead, 
                         g_access_if, access_interface_qnode);
-                    bbl_init_stats_win();
+                    bbl_interactive_init_window();
                 }
             }
-            bbl_init_stats_win();
+            bbl_interactive_init_window();
             break;
         case KEY_RIGHT:
             if(g_view_selected == UI_VIEW_SESSION) {
@@ -155,10 +184,10 @@ bbl_read_key_job(timer_s *timer)
                 if(g_access_if) {
                     g_access_if = CIRCLEQ_LOOP_NEXT(&g_ctx->access_interface_qhead, 
                         g_access_if, access_interface_qnode);
-                    bbl_init_stats_win();
+                    bbl_interactive_init_window();
                 }
             }
-            bbl_init_stats_win();
+            bbl_interactive_init_window();
             break;
         case KEY_F(7):
             enable_disable_traffic(true);
@@ -178,15 +207,15 @@ bbl_read_key_job(timer_s *timer)
                 if(stats_win_postion < 6) {
                     stats_win_postion++;
                 }
-                bbl_init_stats_win();
+                bbl_interactive_init_window();
             } else if(g_view_selected == UI_VIEW_SESSION) {
                 stats_win_postion++;
-                bbl_init_stats_win();
+                bbl_interactive_init_window();
             }
             break;
         case KEY_UP:
             if(stats_win_postion) stats_win_postion--;
-            bbl_init_stats_win();
+            bbl_interactive_init_window();
             break;
         default:
             break;
@@ -194,39 +223,10 @@ bbl_read_key_job(timer_s *timer)
 }
 
 /*
- * Format a progress bar.
- */
-static char *
-bbl_format_progress(uint32_t complete, uint32_t current)
-{
-    static char buf[PROGRESS_BAR_SIZE+1];
-    float percentage;
-    uint16_t idx;
-
-    if (!complete || !current) {
-        memset(buf, ' ', sizeof(buf));
-        goto EXIT;
-    }
-
-    percentage = (float)current / (float)complete;
-    for (idx = 0; idx < sizeof(buf); idx++) {
-        if (idx <= (percentage * PROGRESS_BAR_SIZE)) {
-            buf[idx] = '#';
-            continue;
-        }
-        buf[idx] = ' ';
-    }
-
- EXIT:
-    buf[PROGRESS_BAR_SIZE] = 0;
-    return buf;
-}
-
-/*
  * Display meaningful stats in a curses window.
  */
 void
-bbl_stats_job(timer_s *timer)
+bbl_interactive_window_job(timer_s *timer)
 {
     UNUSED(timer);
     bbl_access_interface_s *access_if;
@@ -255,11 +255,11 @@ bbl_stats_job(timer_s *timer)
             wprintw(stats_win, "  Established %10u [", g_ctx->sessions_established);
             if(g_ctx->sessions == g_ctx->sessions_established) {
                 wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                wprintw(stats_win, "%s", bbl_format_progress(g_ctx->sessions, g_ctx->sessions_established));
+                wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->sessions, g_ctx->sessions_established));
                 wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
             } else {
                 wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
-                wprintw(stats_win, "%s", bbl_format_progress(g_ctx->sessions, g_ctx->sessions_established));
+                wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->sessions, g_ctx->sessions_established));
                 wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
             }
             wprintw(stats_win, "]\n");
@@ -267,14 +267,14 @@ bbl_stats_job(timer_s *timer)
             /* Progress bar outstanding sessions */
             wprintw(stats_win, "  Outstanding %10u [", g_ctx->sessions_outstanding);
             wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
-            wprintw(stats_win, "%s", bbl_format_progress(g_ctx->config.sessions_max_outstanding, g_ctx->sessions_outstanding));
+            wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->config.sessions_max_outstanding, g_ctx->sessions_outstanding));
             wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
             wprintw(stats_win, "]\n");
 
             /* Progress bar terminated sessions */
             wprintw(stats_win, "  Terminated  %10u [", g_ctx->sessions_terminated);
             wattron(stats_win, COLOR_PAIR(COLOR_RED));
-            wprintw(stats_win, "%s", bbl_format_progress(g_ctx->sessions, g_ctx->sessions_terminated));
+            wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->sessions, g_ctx->sessions_terminated));
             wattroff(stats_win, COLOR_PAIR(COLOR_RED));
             wprintw(stats_win, "]\n");
 
@@ -285,11 +285,11 @@ bbl_stats_job(timer_s *timer)
                 wprintw(stats_win, "  DHCPv4 %15s [", strsp);
                 if(g_ctx->dhcp_requested == g_ctx->dhcp_established) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->dhcp_requested, g_ctx->dhcp_established));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->dhcp_requested, g_ctx->dhcp_established));
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
                     wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->dhcp_requested, g_ctx->dhcp_established));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->dhcp_requested, g_ctx->dhcp_established));
                     wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
                 }
                 wprintw(stats_win, "]\n");
@@ -300,11 +300,11 @@ bbl_stats_job(timer_s *timer)
                 wprintw(stats_win, "  DHCPv6 %15s [", strsp);
                 if(g_ctx->dhcpv6_requested == g_ctx->dhcpv6_established) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->dhcpv6_requested, g_ctx->dhcpv6_established));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->dhcpv6_requested, g_ctx->dhcpv6_established));
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
                     wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->dhcpv6_requested, g_ctx->dhcpv6_established));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->dhcpv6_requested, g_ctx->dhcpv6_established));
                     wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
                 }
                 wprintw(stats_win, "]\n");
@@ -349,11 +349,11 @@ bbl_stats_job(timer_s *timer)
                 wprintw(stats_win, "  Session %14s [", strsp);
                 if(g_ctx->stats.session_traffic_flows == g_ctx->stats.session_traffic_flows_verified) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->stats.session_traffic_flows, g_ctx->stats.session_traffic_flows_verified));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->stats.session_traffic_flows, g_ctx->stats.session_traffic_flows_verified));
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
                     wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->stats.session_traffic_flows, g_ctx->stats.session_traffic_flows_verified));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->stats.session_traffic_flows, g_ctx->stats.session_traffic_flows_verified));
                     wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
                 }
                 wprintw(stats_win, "]\n");
@@ -363,11 +363,11 @@ bbl_stats_job(timer_s *timer)
                 wprintw(stats_win, "  Stream %15s [", strsp);
                 if(g_ctx->stats.stream_traffic_flows == g_ctx->stats.stream_traffic_flows_verified) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->stats.stream_traffic_flows, g_ctx->stats.stream_traffic_flows_verified));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->stats.stream_traffic_flows, g_ctx->stats.stream_traffic_flows_verified));
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
                     wattron(stats_win, COLOR_PAIR(COLOR_BLACK));
-                    wprintw(stats_win, "%s", bbl_format_progress(g_ctx->stats.stream_traffic_flows, g_ctx->stats.stream_traffic_flows_verified));
+                    wprintw(stats_win, "%s", bbl_interactive_format_progress(g_ctx->stats.stream_traffic_flows, g_ctx->stats.stream_traffic_flows_verified));
                     wattroff(stats_win, COLOR_PAIR(COLOR_BLACK));
                 }
                 wprintw(stats_win, "]\n");
@@ -642,7 +642,7 @@ bbl_stats_job(timer_s *timer)
  * Curses init.
  */
 void
-bbl_init_curses_window()
+bbl_interactive_init()
 {
     initscr();
     cbreak();
@@ -667,14 +667,14 @@ bbl_init_curses_window()
     refresh();
 
     timeout(0);
-    bbl_init_stats_win();
+    bbl_interactive_init_window();
     wrefresh(stats_win);
 
     g_interactive = true;
 }
 
 void
-bbl_init_curses()
+bbl_interactive_start()
 {
     if(!CIRCLEQ_EMPTY(&g_ctx->access_interface_qhead)) {
         g_access_if = CIRCLEQ_FIRST(&g_ctx->access_interface_qhead);
@@ -686,9 +686,10 @@ bbl_init_curses()
         g_a10nsp_if = CIRCLEQ_FIRST(&g_ctx->a10nsp_interface_qhead);
     }
 
-    timer_add_periodic(&g_ctx->timer_root, &g_ctx->stats_timer, "Statistics Timer",
-                       0, 100 * MSEC, g_ctx, &bbl_stats_job);
+    timer_add_periodic(&g_ctx->timer_root, &g_ctx->stats_timer, "Window Timer",
+                       0, 500 * MSEC, g_ctx, &bbl_interactive_window_job);
+
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->keyboard_timer, "Keyboard Reader",
-                       0, 100 * MSEC, g_ctx, &bbl_read_key_job);
+                       0, 100 * MSEC, g_ctx, &bbl_interactive_read_key_job);
 
 }

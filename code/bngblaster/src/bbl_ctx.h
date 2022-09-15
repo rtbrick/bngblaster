@@ -150,6 +150,9 @@ typedef struct bbl_ctx_
         uint8_t tx_threads;
         uint8_t rx_threads;
 
+        uint32_t max_streams_per_group;
+        uint8_t stream_tx_precision;
+
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */
         bool json_report_streams; /* Include streams */

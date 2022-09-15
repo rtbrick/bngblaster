@@ -19,6 +19,7 @@ const char g_multicast_traffic[] = "multicast";
 const char g_session_traffic_ipv4[] = "session-ipv4";
 const char g_session_traffic_ipv6[] = "session-ipv6";
 const char g_session_traffic_ipv6pd[] = "session-ipv6pd";
+const uint8_t g_endpoint = ENDPOINT_ACTIVE;
 
 static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
@@ -42,8 +43,6 @@ bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct tim
 static bool
 bbl_stream_can_send(bbl_stream_s *stream)
 {
-    bbl_session_s *session = stream->session;
-
     if(g_init_phase) {
         return false;
     }
@@ -54,66 +53,12 @@ bbl_stream_can_send(bbl_stream_s *stream)
         goto FREE;
     }
 
-    if(stream->config->stream_group_id == 0) {
-        /* RAW stream */
+    if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
         return true;
     }
-    if(session && session->session_state == BBL_ESTABLISHED) {
-        if(session->access_type == ACCESS_TYPE_PPPOE) {
-            if(session->l2tp && session->l2tp_session == NULL) {
-                goto FREE;
-            }
-            switch(stream->sub_type) {
-                case BBL_SUB_TYPE_IPV4:
-                    if(session->ipcp_state == BBL_PPP_OPENED) {
-                        return true;
-                    }
-                    break;
-                case BBL_SUB_TYPE_IPV6:
-                    if(session->ip6cp_state == BBL_PPP_OPENED &&
-                       session->icmpv6_ra_received &&
-                       *(uint64_t*)session->ipv6_address) {
-                        return true;
-                    }
-                    break;
-                case BBL_SUB_TYPE_IPV6PD:
-                    if(session->ip6cp_state == BBL_PPP_OPENED &&
-                       session->icmpv6_ra_received &&
-                       *(uint64_t*)session->delegated_ipv6_address &&
-                       session->dhcpv6_state >= BBL_DHCP_BOUND) {
-                        return true;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        } else if(session->access_type == ACCESS_TYPE_IPOE) {
-            switch(stream->sub_type) {
-                case BBL_SUB_TYPE_IPV4:
-                    if(session->ip_address) {
-                        return true;
-                    }
-                    break;
-                case BBL_SUB_TYPE_IPV6:
-                    if(*(uint64_t*)session->ipv6_address &&
-                       session->icmpv6_ra_received) {
-                        return true;
-                    }
-                    break;
-                case BBL_SUB_TYPE_IPV6PD:
-                    if(*(uint64_t*)session->delegated_ipv6_address &&
-                       session->icmpv6_ra_received &&
-                       session->dhcpv6_state >= BBL_DHCP_BOUND) {
-                        return true;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
+
 FREE:
-    /* Free of packet if not ready to send */
+    /* Free packet if not ready to send */
     if(stream->buf) {
         free(stream->buf);
         stream->buf = NULL;
@@ -902,7 +847,7 @@ bbl_stream_build_packet(bbl_stream_s *stream)
 static uint64_t
 bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
 
-    uint64_t packets = 1;
+    uint64_t packets = 0;
     uint64_t packets_expected;
 
     struct timespec time_elapsed = {0};
@@ -929,6 +874,7 @@ bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
         /* Open new send window */
         stream->send_window_start.tv_sec = now->tv_sec;
         stream->send_window_start.tv_nsec = now->tv_nsec;
+        packets = 1;
     } else {
         timespec_sub(&time_elapsed, now, &stream->send_window_start);
         packets_expected = time_elapsed.tv_sec * stream->config->pps;
@@ -1276,67 +1222,79 @@ bbl_stream_ctrl(bbl_stream_s *stream)
 }
 
 void
-bbl_stream_ctrl_job(timer_s *timer) {
-    bbl_stream_s *stream = timer->data;
-    bbl_stream_ctrl(stream);
+bbl_stream_final()
+{
+    struct dict_itor *itor;
+    bbl_stream_s *stream;
+
+    itor = dict_itor_new(g_ctx->stream_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        stream = (bbl_stream_s*)*dict_itor_datum(itor);
+        if(stream) {
+            bbl_stream_ctrl(stream);
+        }
+    }
+    dict_itor_free(itor);
 }
 
 void
-bbl_stream_tx_job(timer_s *timer)
+bbl_stream_group_ctrl_job(timer_s *timer)
 {
-    bbl_stream_s *stream = timer->data;
-    bbl_session_s *session = stream->session;
-
-    io_handle_s *io;
-    io_thread_s *thread = stream->thread;
-    if(thread) {
-        io = thread->io;
-    } else {
-        io = stream->interface->io.tx;
+    bbl_stream_group_s *group = timer->data;
+    bbl_stream_s *stream = group->stream_head;
+    while(stream) {
+        bbl_stream_ctrl(stream);
+        stream = stream->group_next;
     }
+}
 
-    struct timespec now;
+
+bool
+bbl_stream_tx(bbl_stream_group_s *group, bbl_stream_s *stream)
+{
+    bbl_session_s *session = stream->session;
 
     uint64_t packets = 1;
     uint64_t send = 0;
 
     if(!bbl_stream_can_send(stream)) {
-        return;
+        return true;
     }
+
     if(!stream->buf) {
         if(!bbl_stream_build_packet(stream)) {
             LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
-            return;
+            return true;
         }
     }
 
     /* Close send window */
     if(!g_traffic || stream->stop) {
         stream->send_window_packets = 0;
-        return;
+        return true;
     }
     if(session) {
         if(stream->session_traffic) {
             if(!session->session_traffic.active) {
                 stream->send_window_packets = 0;
-                return;
+                return true;
             }
         } else if(!session->streams.active) {
             stream->send_window_packets = 0;
-            return;
+            return true;
         }
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    packets = bbl_stream_send_window(stream, &now);
+    packets = bbl_stream_send_window(stream, &group->tx_timestamp);
     /* Update BBL header fields */
-    *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = now.tv_sec;
-    *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = now.tv_nsec;
+    *(uint32_t*)(stream->buf + (stream->tx_len - 8)) = group->tx_timestamp.tv_sec;
+    *(uint32_t*)(stream->buf + (stream->tx_len - 4)) = group->tx_timestamp.tv_nsec;
     while(packets) {
         *(uint64_t*)(stream->buf + (stream->tx_len - 16)) = stream->flow_seq;
         /* Send packet */
-        if(!io_send(io, stream->buf, stream->tx_len)) {
-            return;
+        if(!io_send(group->io, stream->buf, stream->tx_len)) {
+            return false;
         }
         stream->send_window_packets++;
         stream->packets_tx++;
@@ -1344,16 +1302,86 @@ bbl_stream_tx_job(timer_s *timer)
         packets--;
         send++;
     }
+    return true;
+}
+
+void
+bbl_stream_group_tx_job(timer_s *timer)
+{
+    bbl_stream_group_s *group = timer->data;
+    bbl_stream_s *stream;
+
+    clock_gettime(CLOCK_MONOTONIC, &group->tx_timestamp);
+
+    stream = group->stream_pos;
+    while(stream) {
+        if(!bbl_stream_tx(group, stream)) {
+            group->stream_pos = stream;
+            return;
+        }
+        stream = stream->group_next;
+        if(!stream) {
+            stream = group->stream_head;
+        }
+        if(stream == group->stream_pos) {
+            break;
+        }
+    }
+}
+
+static void
+bbl_stream_group(io_handle_s *io, bbl_stream_s *stream)
+{
+    bbl_stream_group_s *group = io->stream_group;
+    io_thread_s *thread = io->thread;
+
+    time_t timer_sec;
+    long timer_nsec;
+
+    while(group) {
+        if((group->count < g_ctx->config.max_streams_per_group) &&
+           (group->tx_interval == stream->tx_interval)) {
+            break;
+        }
+        group = group->next;
+    }
+
+    if(!group) {
+        /* Create new group */
+        group = calloc(1, sizeof(bbl_stream_group_s));
+        group->next = io->stream_group;
+        io->stream_group = group;
+        group->io = io;
+        group->tx_interval = stream->tx_interval;
+
+        timer_sec = group->tx_interval / 1000000000;
+        timer_nsec = group->tx_interval % 1000000000;
+
+        if(thread) {
+            timer_add_periodic(&thread->timer.root, &group->timer_tx, "Stream Group TX",
+                               timer_sec, timer_nsec, group, &bbl_stream_group_tx_job);
+        } else {
+            timer_add_periodic(&g_ctx->timer_root, &group->timer_tx, "Stream Group TX",
+                               timer_sec, timer_nsec, group, &bbl_stream_group_tx_job);
+        }
+        timer_add_periodic(&g_ctx->timer_root, &group->timer_ctrl, "Stream Group CTRL", 
+                           1, 0, group, &bbl_stream_group_ctrl_job);
+    }
+
+    /* Add stream to group */
+    stream->group = group;
+    stream->group_next = group->stream_head;
+    group->stream_head = stream;
+    group->stream_pos = stream;
+    group->count++;
 }
 
 static bool
-bbl_stream_add_jobs(bbl_stream_s *stream, time_t timer_sec, long timer_nsec)
+bbl_stream_add_jobs(bbl_stream_s *stream)
 {    
-    bbl_interface_s *interface = stream->interface;
-    
-    io_handle_s *io = interface->io.tx;
+    io_handle_s *io = stream->interface->io.tx;
     io_thread_s *thread = io->thread;
-
+        
     if(thread) {
         while(io && io->thread) {
             if(io->thread->pps_reserved < thread->pps_reserved) {
@@ -1364,14 +1392,10 @@ bbl_stream_add_jobs(bbl_stream_s *stream, time_t timer_sec, long timer_nsec)
         thread->pps_reserved += stream->config->pps;
 
         stream->thread = thread;
-        timer_add_periodic(&thread->timer.root, &stream->timer_tx, stream->config->name, 
-                           timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-    } else {
-        timer_add_periodic(&g_ctx->timer_root, &stream->timer_tx, stream->config->name, 
-                           timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
+        io = thread->io;
     }
-    timer_add_periodic(&g_ctx->timer_root, &stream->timer_ctrl, "STREAM-CTRL", 
-                       1, 0, stream, &bbl_stream_ctrl_job);
+
+    bbl_stream_group(io, stream);
     return true;
 }
 
@@ -1385,8 +1409,7 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
 
     dict_insert_result result;
 
-    time_t timer_sec = 0;
-    long timer_nsec  = 0;
+    uint64_t tx_interval = 0;
 
     /* *
     * The corresponding network interfaces will be selected
@@ -1414,10 +1437,8 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         return false;
     }
 
-    timer_nsec = SEC / config->pps;
-    timer_sec = timer_nsec / 1000000000;
-    timer_nsec = timer_nsec % 1000000000;
-
+    tx_interval = SEC / config->pps;
+    tx_interval = tx_interval / g_ctx->config.stream_tx_precision;
     if(config->direction & BBL_DIRECTION_UP) {
         stream = calloc(1, sizeof(bbl_stream_s));
         stream->flow_id = g_ctx->flow_id++;
@@ -1426,10 +1447,25 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream->type = BBL_TYPE_UNICAST;
         stream->sub_type = config->type;
         stream->direction = BBL_DIRECTION_UP;
-        stream->interface = session->access_interface->interface;
-        stream->access_interface = session->access_interface;
-        stream->session = session;
-        stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+        if(session) {
+            stream->session = session;
+            stream->interface = session->access_interface->interface;
+            stream->access_interface = session->access_interface;
+            switch(stream->sub_type) {
+                case BBL_SUB_TYPE_IPV4:
+                    stream->endpoint = &(session->endpoint.ipv4);
+                    break;
+                case BBL_SUB_TYPE_IPV6:
+                    stream->endpoint = &(session->endpoint.ipv6);
+                    break;
+                case BBL_SUB_TYPE_IPV6PD:
+                    stream->endpoint = &(session->endpoint.ipv6pd);
+                    break;
+                default:
+                    break;
+            }
+        }
+        stream->tx_interval = tx_interval;
         stream->session_traffic = config->session_traffic;
         result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
         if(!result.inserted) {
@@ -1440,16 +1476,16 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         *result.datum_ptr = stream;
         stream->session_next = session->streams.head;
         session->streams.head = stream;
-        bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
+        bbl_stream_add_jobs(stream);
         if(stream->session_traffic) {
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
-            LOG(DEBUG, "Session traffic stream %s added to %s (upstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
-                interface->name, config->name, config->pps, timer_sec, timer_nsec);
+            LOG(DEBUG, "Session traffic stream %s added to %s (upstream) with %lf PPS\n", 
+                interface->name, config->name, config->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
-            LOG(DEBUG, "Traffic stream %s added to %s (upstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
-                interface->name, config->name, config->pps, timer_sec, timer_nsec);
+            LOG(DEBUG, "Traffic stream %s added to %s (upstream) with %lf PPS\n", 
+                interface->name, config->name, config->pps);
         }
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
@@ -1463,8 +1499,23 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream->interface = interface;
         stream->network_interface = network_interface;
         stream->a10nsp_interface = a10nsp_interface;
-        stream->session = session;
-        stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+        if(session) {
+            stream->session = session;
+            switch(stream->sub_type) {
+                case BBL_SUB_TYPE_IPV4:
+                    stream->endpoint = &session->endpoint.ipv4;
+                    break;
+                case BBL_SUB_TYPE_IPV6:
+                    stream->endpoint = &session->endpoint.ipv6;
+                    break;
+                case BBL_SUB_TYPE_IPV6PD:
+                    stream->endpoint = &session->endpoint.ipv6pd;
+                    break;
+                default:
+                    break;
+            }
+        }
+        stream->tx_interval = tx_interval;
         stream->session_traffic = config->session_traffic;
         result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
         if(!result.inserted) {
@@ -1475,16 +1526,16 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
         *result.datum_ptr = stream;
         stream->session_next = session->streams.head;
         session->streams.head = stream;
-        bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
+        bbl_stream_add_jobs(stream);
         if(stream->session_traffic) {
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
-            LOG(DEBUG, "Session traffic stream %s added to %s (downstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
-                interface->name, config->name, config->pps, timer_sec, timer_nsec);
+            LOG(DEBUG, "Session traffic stream %s added to %s (downstream) with %lf PPS\n", 
+                interface->name, config->name, config->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
-            LOG(DEBUG, "Traffic stream %s added to %s (downstream) with %lf PPS (timer %lu sec %lu nsec)\n", 
-                interface->name, config->name, config->pps, timer_sec, timer_nsec);
+            LOG(DEBUG, "Traffic stream %s added to %s (downstream) with %lf PPS\n", 
+                interface->name, config->name, config->pps);
         }
     }
     return true;
@@ -1559,8 +1610,7 @@ bbl_stream_init() {
 
     dict_insert_result result;
 
-    time_t timer_sec = 0;
-    long timer_nsec  = 0;
+    uint64_t tx_interval = 0;
     int i;
 
     uint32_t group;
@@ -1576,9 +1626,8 @@ bbl_stream_init() {
                 return false;
             }
 
-            timer_nsec = SEC / config->pps;
-            timer_sec = timer_nsec / 1000000000;
-            timer_nsec = timer_nsec % 1000000000;
+            tx_interval = SEC / config->pps;
+            tx_interval = tx_interval / g_ctx->config.stream_tx_precision;
 
             if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
@@ -1596,7 +1645,7 @@ bbl_stream_init() {
                 stream->direction = BBL_DIRECTION_DOWN;
                 stream->interface = network_interface->interface;
                 stream->network_interface = network_interface;
-                stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+                stream->tx_interval = tx_interval;
                 result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
                 if(!result.inserted) {
                     LOG(ERROR, "Failed to insert RAW stream %s\n", config->name);
@@ -1604,14 +1653,14 @@ bbl_stream_init() {
                     return false;
                 }
                 *result.datum_ptr = stream;
-                bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
+                bbl_stream_add_jobs(stream);
                 g_ctx->stats.stream_traffic_flows++;
                 if(stream->type == BBL_TYPE_MULTICAST) {
-                    LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %lf PPS (timer %lu sec %lu nsec)\n", 
-                        config->name, network_interface->name, config->pps, timer_sec, timer_nsec);
+                    LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %lf PPS\n", 
+                        config->name, network_interface->name, config->pps);
                 } else {
-                    LOG(DEBUG, "RAW traffic stream %s added to %s with %lf PPS (timer %lu sec %lu nsec)\n", 
-                        config->name, network_interface->name, config->pps, timer_sec, timer_nsec);
+                    LOG(DEBUG, "RAW traffic stream %s added to %s with %lf PPS\n", 
+                        config->name, network_interface->name, config->pps);
                 }
             }
         }
@@ -1626,9 +1675,8 @@ bbl_stream_init() {
             return false;
         }
 
-        timer_nsec = SEC / g_ctx->config.multicast_traffic_pps;
-        timer_sec = timer_nsec / 1000000000;
-        timer_nsec = timer_nsec % 1000000000;
+        tx_interval = SEC / g_ctx->config.multicast_traffic_pps;
+        tx_interval = tx_interval / g_ctx->config.stream_tx_precision;
 
         for(i = 0; i < g_ctx->config.igmp_group_count; i++) {
 
@@ -1664,7 +1712,7 @@ bbl_stream_init() {
             stream->direction = BBL_DIRECTION_DOWN;
             stream->interface = network_interface->interface;
             stream->network_interface = network_interface;
-            stream->tx_interval = timer_sec * 1e9 + timer_nsec;
+            stream->tx_interval = tx_interval;
             result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
             if(!result.inserted) {
                 LOG(ERROR, "Failed to insert multicast stream %s\n", config->name);
@@ -1672,10 +1720,10 @@ bbl_stream_init() {
                 return false;
             }
             *result.datum_ptr = stream;
-            bbl_stream_add_jobs(stream, timer_sec, timer_nsec);
+            bbl_stream_add_jobs(stream);
             g_ctx->stats.stream_traffic_flows++;
-            LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %lf PPS (timer %lu sec %lu nsec)\n", 
-                network_interface->name, config->pps, timer_sec, timer_nsec);
+            LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %lf PPS\n", 
+                network_interface->name, config->pps);
         }
     }
 
