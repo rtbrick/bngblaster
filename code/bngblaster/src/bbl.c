@@ -354,7 +354,7 @@ main(int argc, char *argv[])
     int long_index = 0;
     int ch = 0;
     uint32_t ipv4;
-    bbl_stats_t stats = {0};
+    bbl_stats_s stats = {0};
     int exit_status = 1;
 
     const char *config_file = NULL;

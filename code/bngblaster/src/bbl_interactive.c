@@ -443,11 +443,21 @@ bbl_interactive_window_job(timer_s *timer)
                     g_a10nsp_if->stats.stream_loss);
             }
             if(g_ctx->stats.session_traffic_flows) {
-                wprintw(stats_win, "  TX Session Packets        %10lu |%7lu PPS\n",
+                wprintw(stats_win, "  TX Session Packets IPv4   %10lu |%7lu PPS\n",
                     g_a10nsp_if->stats.session_ipv4_tx, g_a10nsp_if->stats.rate_session_ipv4_tx.avg);
-                wprintw(stats_win, "  RX Session Packets        %10lu |%7lu PPS %10lu Loss\n",
+                wprintw(stats_win, "  RX Session Packets IPv4   %10lu |%7lu PPS %10lu Loss\n",
                     g_a10nsp_if->stats.session_ipv4_rx, g_a10nsp_if->stats.rate_session_ipv4_rx.avg,
                     g_a10nsp_if->stats.session_ipv4_loss);
+                wprintw(stats_win, "  TX Session Packets IPv6   %10lu |%7lu PPS\n",
+                    g_a10nsp_if->stats.session_ipv6_tx, g_a10nsp_if->stats.rate_session_ipv6_tx.avg);
+                wprintw(stats_win, "  RX Session Packets IPv6   %10lu |%7lu PPS %10lu Loss\n",
+                    g_a10nsp_if->stats.session_ipv6_rx, g_a10nsp_if->stats.rate_session_ipv6_rx.avg,
+                    g_a10nsp_if->stats.session_ipv6_loss);
+                wprintw(stats_win, "  TX Session Packets IPv6PD %10lu |%7lu PPS\n",
+                    g_a10nsp_if->stats.session_ipv6pd_tx, g_a10nsp_if->stats.rate_session_ipv6pd_tx.avg);
+                wprintw(stats_win, "  RX Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss\n",
+                    g_a10nsp_if->stats.session_ipv6pd_rx, g_a10nsp_if->stats.rate_session_ipv6pd_rx.avg,
+                    g_a10nsp_if->stats.session_ipv6pd_loss);
             }
         }
         VISIBLE(g_access_if) {

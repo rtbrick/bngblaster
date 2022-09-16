@@ -1504,7 +1504,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             *len = bbl_txq_from_buffer(a10nsp_interface->txq, buf);
             if(*len) {
                 a10nsp_interface->stats.packets_tx++;
-                a10nsp_interface->stats.packets_tx += *len;
+                a10nsp_interface->stats.bytes_tx += *len;
                 return PROTOCOL_SUCCESS;
             } else {
                 return SEND_ERROR;

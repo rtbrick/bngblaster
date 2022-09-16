@@ -68,8 +68,8 @@ io_packet_mmap_rx_job(timer_s *timer)
     while(tphdr->tp_status & TP_STATUS_USER) {
         io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
         io->buf_len = tphdr->tp_len;
-        interface->stats.packets_rx++;
-        interface->stats.bytes_rx += io->buf_len;
+        io->stats.packets++;
+        io->stats.bytes += io->buf_len;
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
@@ -158,8 +158,8 @@ io_packet_mmap_tx_job(timer_s *timer)
                 io->queued++;
                 tphdr->tp_len = io->buf_len;
                 tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-                interface->stats.packets_tx++;
-                interface->stats.bytes_tx += io->buf_len;
+                io->stats.packets++;
+                io->stats.bytes += io->buf_len;
                 /* Dump the packet into pcap file. */
                 if(g_ctx->pcap.write_buf) {
                     pcap = true;
@@ -284,6 +284,8 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
             io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
             io->buf_len = slot->packet_len;
             io->queued++;
+            io->stats.packets++;
+            io->stats.bytes += slot->packet_len;
             memcpy(io->buf, slot->packet, slot->packet_len);
             tphdr->tp_len = io->buf_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;

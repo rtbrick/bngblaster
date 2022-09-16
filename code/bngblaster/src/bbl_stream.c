@@ -251,6 +251,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     udp.next = &bbl;
     bbl.type = stream->type;
     bbl.sub_type = stream->sub_type;
+    bbl.session_id = session->session_id;
     bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
@@ -870,12 +871,7 @@ bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
         }   
     }
 
-    if(stream->send_window_packets == 0) {
-        /* Open new send window */
-        stream->send_window_start.tv_sec = now->tv_sec;
-        stream->send_window_start.tv_nsec = now->tv_nsec;
-        packets = 1;
-    } else {
+    if(stream->send_window_packets) {
         timespec_sub(&time_elapsed, now, &stream->send_window_start);
         packets_expected = time_elapsed.tv_sec * stream->config->pps;
         packets_expected += stream->config->pps * ((double)time_elapsed.tv_nsec / 1000000000.0);
@@ -883,9 +879,14 @@ bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
         if(packets_expected > stream->send_window_packets) {
             packets = packets_expected - stream->send_window_packets;
         }
-        if(packets > g_ctx->config.io_stream_max_ppi) {
-            packets = g_ctx->config.io_stream_max_ppi;
+        if(packets > g_ctx->config.stream_max_ppi) {
+            packets = g_ctx->config.stream_max_ppi;
         }
+    } else {
+        /* Open new send window */
+        stream->send_window_start.tv_sec = now->tv_sec;
+        stream->send_window_start.tv_nsec = now->tv_nsec;
+        packets = 1;
     }
 
     /** Enforce optional stream packet limit ... */
@@ -905,7 +906,6 @@ static void
 bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
 {
     bbl_session_s *session = stream->session;
-    bbl_interface_s *interface;
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
@@ -917,9 +917,6 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             access_interface->stats.packets_tx += packets;
             access_interface->stats.bytes_tx += bytes;
             access_interface->stats.stream_tx += packets;
-            interface = access_interface->interface;
-            interface->stats.packets_tx += packets;
-            interface->stats.bytes_tx += bytes;
             if(session) {
                 session->stats.packets_tx += packets;
                 session->stats.bytes_tx += bytes;
@@ -948,9 +945,6 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             network_interface->stats.packets_tx += packets;
             network_interface->stats.bytes_tx += bytes;
             network_interface->stats.stream_tx += packets;
-            interface = network_interface->interface;
-            interface->stats.packets_tx += packets;
-            interface->stats.bytes_tx += bytes;
             if(stream->type == BBL_TYPE_MULTICAST) {
                 network_interface->stats.mc_tx += packets;
             }
@@ -984,9 +978,6 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
             a10nsp_interface->stats.packets_tx += packets;
             a10nsp_interface->stats.bytes_tx += bytes;
             a10nsp_interface->stats.stream_tx += packets;
-            interface = a10nsp_interface->interface;
-            interface->stats.packets_tx += packets;
-            interface->stats.bytes_tx += bytes;
             if(session) {
                 if(session->a10nsp_session) {
                     session->a10nsp_session->stats.packets_tx += packets;
@@ -1015,7 +1006,6 @@ static void
 bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint64_t loss)
 {
     bbl_session_s *session = stream->session;
-    bbl_interface_s *interface;
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
@@ -1028,10 +1018,6 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             access_interface->stats.bytes_rx += bytes;
             access_interface->stats.stream_rx += packets;
             access_interface->stats.stream_loss += loss;
-            interface = access_interface->interface;
-            interface->stats.packets_rx += packets;
-            interface->stats.bytes_rx += bytes;
-            interface->stats.loss += loss;
             if(session) {
                 session->stats.packets_rx += packets;
                 session->stats.bytes_rx += bytes;
@@ -1064,10 +1050,6 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             network_interface->stats.bytes_rx += bytes;
             network_interface->stats.stream_rx += packets;
             network_interface->stats.stream_loss += loss;
-            interface = network_interface->interface;
-            interface->stats.packets_rx += packets;
-            interface->stats.bytes_rx += bytes;
-            interface->stats.loss += loss;
             if(session) {
                 if(session->l2tp_session) {
                     network_interface->stats.l2tp_data_rx += packets;
@@ -1102,10 +1084,6 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
             a10nsp_interface->stats.bytes_rx += bytes;
             a10nsp_interface->stats.stream_rx += packets;
             a10nsp_interface->stats.stream_loss += loss;
-            interface = a10nsp_interface->interface;
-            interface->stats.packets_rx += packets;
-            interface->stats.bytes_rx += bytes;
-            interface->stats.loss += loss;
             if(session) {
                 if(session->a10nsp_session) {
                     session->a10nsp_session->stats.packets_rx += packets;
@@ -1176,17 +1154,16 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     bytes_delta = packets_delta * stream->tx_len;
     stream->last_sync_packets_tx = packets;
     bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
-    bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
-
+    if(g_ctx->config.stream_rate_calc) {
+        bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
+    }
     if(stream->type == BBL_TYPE_MULTICAST) {
         return;
     }
-
     if(unlikely(stream->wrong_session)) {
         bbl_stream_rx_wrong_session(stream);
     }
-
-    if(!stream->verified) {
+    if(unlikely(!stream->verified)) {
         if(stream->rx_first_seq) {
             if(stream->session_traffic) {
                 if(session) {
@@ -1224,7 +1201,9 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     loss_delta = packets - stream->last_sync_loss;
     stream->last_sync_loss = packets;
     bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
-    bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
+    if(g_ctx->config.stream_rate_calc) {
+        bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
+    }
 }
 
 void
@@ -1344,7 +1323,7 @@ bbl_stream_group(io_handle_s *io, bbl_stream_s *stream)
     long timer_nsec;
 
     while(group) {
-        if((group->count < g_ctx->config.max_streams_per_group) &&
+        if((group->count < g_ctx->config.stream_max_per_group) &&
            (group->tx_interval == stream->tx_interval)) {
             break;
         }
@@ -1417,26 +1396,31 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
     uint64_t tx_interval = 0;
 
     /* *
-    * The corresponding network interfaces will be selected
-    * in the following order:
-    * - "network-interface" from stream section
-    * - "network-interface" from access interface section
-    * - first network interface from network section (default)
-    */
+     * The corresponding network/a01nsp interfaces will be selected
+     * in the following order:
+     * - network/a01nsp interface from stream section
+     * - network/a01nsp interface from access interface section
+     * - first network/a01nsp interface from interface section (default)
+     */
     if(config->network_interface) {
         network_interface = bbl_network_interface_get(config->network_interface);
     } else if(config->a10nsp_interface) {
         a10nsp_interface = bbl_a10nsp_interface_get(config->a10nsp_interface);
-    } else if(session->network_interface) {
-        network_interface = session->network_interface;
-    } else if(session->a10nsp_interface) {
-        a10nsp_interface = session->a10nsp_interface;
+    } else if(session->access_config->network_interface) {
+        network_interface = bbl_network_interface_get(session->access_config->network_interface);
+    } else if(session->access_config->a10nsp_interface) {
+        a10nsp_interface = bbl_a10nsp_interface_get(session->access_config->a10nsp_interface);
+    } else {
+        network_interface = bbl_network_interface_get(NULL);
+        if(!network_interface) {
+            a10nsp_interface = bbl_a10nsp_interface_get(NULL);
+        }
     }
 
-    if(a10nsp_interface) {
-        interface = a10nsp_interface->interface;
-    } else if(network_interface) {
+    if(network_interface) {
         interface = network_interface->interface;
+    } else if(a10nsp_interface) {
+        interface = a10nsp_interface->interface;
     } else {
         LOG_NOARG(ERROR, "Failed to add stream because of missing network/a01nsp interface\n");
         return false;
@@ -1487,11 +1471,11 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
             LOG(DEBUG, "Session traffic stream %s added to %s (upstream) with %lf PPS\n", 
-                interface->name, config->name, config->pps);
+                stream->interface->name, config->name, config->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
             LOG(DEBUG, "Traffic stream %s added to %s (upstream) with %lf PPS\n", 
-                interface->name, config->name, config->pps);
+                stream->interface->name, config->name, config->pps);
         }
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
@@ -1538,11 +1522,11 @@ bbl_stream_add(bbl_stream_config_s *config, bbl_session_s *session)
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
             LOG(DEBUG, "Session traffic stream %s added to %s (downstream) with %lf PPS\n", 
-                interface->name, config->name, config->pps);
+                stream->interface->name, config->name, config->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
             LOG(DEBUG, "Traffic stream %s added to %s (downstream) with %lf PPS\n", 
-                interface->name, config->name, config->pps);
+                stream->interface->name, config->name, config->pps);
         }
     }
     return true;

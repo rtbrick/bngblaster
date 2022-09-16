@@ -35,11 +35,15 @@ io_send(io_handle_s *io, uint8_t *buf, uint16_t len)
             return false;
     }
 
-    if(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams && result && io->thread == NULL) {
-        /* Dump the packet into pcap file. */
-        pcapng_push_packet_header(&io->timestamp, buf, len,
-                                  io->interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-        pcapng_fflush();
+    if(result) {
+        io->stats.packets++;
+        io->stats.bytes += len;
+        if(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams && io->thread == NULL) {
+            /* Dump the packet into pcap file. */
+            pcapng_push_packet_header(&io->timestamp, buf, len,
+                                    io->interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+            pcapng_fflush();
+        }
     }
     return result;
 }

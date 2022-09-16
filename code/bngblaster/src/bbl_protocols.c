@@ -3731,7 +3731,6 @@ decode_ethernet(uint8_t *buf, uint16_t len,
 
     bbl_ethernet_header_t *eth;
     bbl_mpls_t *mpls;
-    const struct ether_header *header;
 
     if(len < 14 || sp_len < sizeof(bbl_ethernet_header_t)) {
         return DECODE_ERROR;
@@ -3745,14 +3744,14 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     eth->length = len;
 
     /* Decode ethernet header */
-    header = (struct ether_header*)buf;
-    BUMP_BUFFER(buf, len, sizeof(struct ether_header));
+    eth->dst = buf;
+    BUMP_BUFFER(buf, len, ETH_ADDR_LEN);
+    eth->src = buf;
+    BUMP_BUFFER(buf, len, ETH_ADDR_LEN);
+    eth->type = *(uint16_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
 
-    eth->dst = (uint8_t*)header->ether_dhost;
-    eth->src = (uint8_t*)header->ether_shost;
-    eth->type = be16toh(header->ether_type);
-
-    if(eth->type == ETH_TYPE_VLAN || eth->type == ETH_TYPE_QINQ) {
+    if(eth->type == NB_ETH_TYPE_VLAN || eth->type == NB_ETH_TYPE_QINQ) {
         if(len < 4) {
             return DECODE_ERROR;
         }
@@ -3764,9 +3763,9 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         eth->vlan_outer &= ETH_VLAN_ID_MAX;
 
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
-        eth->type = be16toh(*(uint16_t*)buf);
+        eth->type = *(uint16_t*)buf;
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
-        if(eth->type == ETH_TYPE_VLAN || eth->type == ETH_TYPE_QINQ) {
+        if(eth->type == NB_ETH_TYPE_VLAN || eth->type == NB_ETH_TYPE_QINQ) {
             if(len < 4) {
                 return DECODE_ERROR;
             }
@@ -3774,22 +3773,22 @@ decode_ethernet(uint8_t *buf, uint16_t len,
             eth->vlan_inner = be16toh(*(uint16_t*)buf);
             eth->vlan_inner &= ETH_VLAN_ID_MAX;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
-            eth->type = be16toh(*(uint16_t*)buf);
+            eth->type = *(uint16_t*)buf;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
-            if(eth->type == ETH_TYPE_VLAN || eth->type == ETH_TYPE_QINQ) {
+            if(eth->type == NB_ETH_TYPE_VLAN || eth->type == NB_ETH_TYPE_QINQ) {
                 if(len < 4) {
                     return DECODE_ERROR;
                 }
                 eth->vlan_three = be16toh(*(uint16_t*)buf);
                 eth->vlan_three &= ETH_VLAN_ID_MAX;
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
-                eth->type = be16toh(*(uint16_t*)buf);
+                eth->type = *(uint16_t*)buf;
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
             }
         }
     }
  
-    if(eth->type == ETH_TYPE_MPLS) {
+    if(eth->type == NB_ETH_TYPE_MPLS) {
         if(sp_len < sizeof(bbl_mpls_t)) {
             return DECODE_ERROR;
         }  
@@ -3819,17 +3818,18 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         /* Check next 4 bit to set type to IPv4 or IPv6 */
         switch((*buf >> 4) & 0xf) {
             case 4: 
-                eth->type = ETH_TYPE_IPV4; 
+                eth->type = NB_ETH_TYPE_IPV4; 
                 break;
             case 6:
-                eth->type = ETH_TYPE_IPV6; 
+                eth->type = NB_ETH_TYPE_IPV6; 
                 break;
             default: 
                 return UNKNOWN_PROTOCOL;
         }
     }
 
-    switch (eth->type) {
+    eth->type = be16toh(eth->type);
+    switch(eth->type) {
         case ETH_TYPE_PPPOE_SESSION:
             return decode_pppoe_session(buf, len, sp, sp_len, eth, (bbl_pppoe_session_t**)&eth->next);
         case ETH_TYPE_PPPOE_DISCOVERY:
