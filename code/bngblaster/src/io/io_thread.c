@@ -80,6 +80,8 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
 
     protocol_error_t decode_result;
 
+    io->stats.packets++;
+    io->stats.bytes += io->buf_len;
     if(likely(packet_is_bbl(io->buf, io->buf_len))) {
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
@@ -191,8 +193,6 @@ io_thread_main_tx_job(timer_s *timer)
     while((slot = bbl_txq_write_slot(txq))) {
         tx_result = bbl_tx(interface, slot->packet, &slot->packet_len);
         if(tx_result == PROTOCOL_SUCCESS) {
-            interface->stats.packets_tx++;
-            interface->stats.bytes_tx += slot->packet_len;
             /* Dump the packet into pcap file. */
             if(g_ctx->pcap.write_buf) {
                 pcap = true;

@@ -140,7 +140,6 @@ typedef struct bbl_ctx_
         io_mode_t io_mode;
 
         uint16_t io_slots;
-        uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
         bool qdisc_bypass;
 
@@ -149,9 +148,6 @@ typedef struct bbl_ctx_
 
         uint8_t tx_threads;
         uint8_t rx_threads;
-
-        uint32_t max_streams_per_group;
-        uint8_t stream_tx_precision;
 
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */
@@ -314,6 +310,10 @@ typedef struct bbl_ctx_
         /* Global Traffic */
         bool traffic_autostart;
         bool traffic_stop_verified;
+        bool stream_rate_calc; /* Enable/disable stream rate calculation */
+        uint8_t stream_max_ppi; /* Limit max packets per interval */
+        uint8_t stream_max_per_group; /* Limit max streams per group */
+        uint8_t stream_tx_precision; /* Set stream precision */
 
         /* Session Traffic */
         bool session_traffic_autostart;

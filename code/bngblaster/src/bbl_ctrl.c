@@ -507,7 +507,7 @@ bbl_ctrl_zapping_stats(int fd, uint32_t session_id __attribute__((unused)), json
     int result = 0;
     json_t *root;
 
-    bbl_stats_t stats = {0};
+    bbl_stats_s stats = {0};
     int reset = 0;
     
     json_unpack(arguments, "{s:b}", "reset", &reset);

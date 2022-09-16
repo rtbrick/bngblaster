@@ -789,13 +789,13 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
                     session->reply_message[pap->reply_message_len] = 0;
                 }
                 bbl_session_update_state(session, BBL_PPP_NETWORK);
-                if(session->endpoint.ipv4) {
+                if(session->access_config->ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
                     session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IPCP_REQUEST;
                     session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
                 }
-                if(session->endpoint.ipv6) {
+                if(session->access_config->ip6cp_enable) {
                     session->ip6cp_state = BBL_PPP_INIT;
                     session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IP6CP_REQUEST;
@@ -892,13 +892,13 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
                     session->reply_message[chap->reply_message_len] = 0;
                 }
                 bbl_session_update_state(session, BBL_PPP_NETWORK);
-                if(g_ctx->config.ipcp_enable) {
+                if(session->access_config->ipcp_enable) {
                     session->ipcp_state = BBL_PPP_INIT;
                     session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IPCP_REQUEST;
                     session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
                 }
-                if(g_ctx->config.ip6cp_enable) {
+                if(session->access_config->ip6cp_enable) {
                     session->ip6cp_state = BBL_PPP_INIT;
                     session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                     session->send_requests |= BBL_SEND_IP6CP_REQUEST;

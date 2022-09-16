@@ -129,14 +129,34 @@ typedef struct bbl_stats_
     /* LI */
     uint64_t li_rx;
 
-} bbl_stats_t;
+} bbl_stats_s;
 
-void bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value);
+typedef struct bbl_interface_stats_ {
+    uint64_t packets;
+    uint64_t bytes;
+    uint64_t unknown;
+    uint64_t protocol_errors;
+    uint64_t io_errors;
+    uint64_t no_buffer;
+    uint64_t polled;
+} bbl_interface_stats_s;
 
-void bbl_stats_update_cps();
-void bbl_stats_generate_multicast(bbl_stats_t *stats, bool reset);
-void bbl_stats_generate(bbl_stats_t *stats);
-void bbl_stats_stdout(bbl_stats_t *stats);
-void bbl_stats_json(bbl_stats_t *stats);
+void 
+bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value);
+
+void 
+bbl_stats_update_cps();
+
+void 
+bbl_stats_generate_multicast(bbl_stats_s *stats, bool reset);
+
+void
+bbl_stats_generate(bbl_stats_s *stats);
+
+void
+bbl_stats_stdout(bbl_stats_s *stats);
+
+void 
+bbl_stats_json(bbl_stats_s *stats);
 
 #endif

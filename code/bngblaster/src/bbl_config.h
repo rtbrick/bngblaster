@@ -16,6 +16,7 @@ typedef struct bbl_access_config_
 
     char *interface;
     char *network_interface;
+    char *a10nsp_interface;
 
     access_type_t access_type; /* pppoe or ipoe */
     vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
@@ -128,7 +129,6 @@ typedef struct bbl_link_config_
 
     uint16_t io_slots_tx;
     uint16_t io_slots_rx;
-    uint16_t io_stream_max_ppi; /* Traffic stream max packets per interval */
 
     bool qdisc_bypass;
 

@@ -35,24 +35,9 @@ typedef struct bbl_interface_
 
     uint32_t ifindex; /* interface index */
     uint32_t pcap_index; /* interface index for packet captures */
-    struct {
-        uint64_t packets_tx;
-        uint64_t packets_rx;
-        uint64_t bytes_tx;
-        uint64_t bytes_rx;
-        uint64_t loss;
-
-        /* Rate Stats */
-
-        bbl_rate_s rate_packets_tx;
-        bbl_rate_s rate_packets_rx;
-        bbl_rate_s rate_bytes_tx;
-        bbl_rate_s rate_bytes_rx;
-    } stats;
 
     struct timer_ *tx_job;
     struct timer_ *rx_job;
-    struct timer_ *rate_job;
 } bbl_interface_s;
 
 void

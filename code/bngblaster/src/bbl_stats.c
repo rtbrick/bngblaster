@@ -53,7 +53,23 @@ bbl_stats_update_cps()
 }
 
 void
-bbl_stats_generate_multicast(bbl_stats_t *stats, bool reset)
+bbl_stats_generate_interface(io_handle_s *io, bbl_interface_stats_s *stats)
+{
+    memset(stats, 0x0, sizeof(bbl_interface_stats_s));
+    while(io) {
+        stats->packets += io->stats.packets;
+        stats->bytes += io->stats.bytes;
+        stats->unknown += io->stats.unknown;
+        stats->protocol_errors += io->stats.protocol_errors;
+        stats->io_errors += io->stats.io_errors;
+        stats->no_buffer += io->stats.no_buffer;
+        stats->polled += io->stats.polled;
+        io = io->next;
+    }
+}
+
+void
+bbl_stats_generate_multicast(bbl_stats_s *stats, bool reset)
 {
     bbl_session_s *session;
     uint32_t i;
@@ -135,7 +151,7 @@ bbl_stats_generate_multicast(bbl_stats_t *stats, bool reset)
 }
 
 void
-bbl_stats_generate(bbl_stats_t * stats)
+bbl_stats_generate(bbl_stats_s * stats)
 {
     bbl_stream_s *stream;
     bbl_interface_s *interface;
@@ -362,11 +378,13 @@ bbl_stats_generate(bbl_stats_t * stats)
 }
 
 void
-bbl_stats_stdout(bbl_stats_t *stats) {
+bbl_stats_stdout(bbl_stats_s *stats) {
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
     bbl_access_interface_s *access_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
+    bbl_interface_stats_s interface_stats_tx;
+    bbl_interface_stats_s interface_stats_rx;
 
     printf("%s", banner);
     printf("Report:\n=======\n");
@@ -406,17 +424,29 @@ bbl_stats_stdout(bbl_stats_t *stats) {
         network_interface = interface->network;
         access_interface = interface->access;
         a10nsp_interface = interface->a10nsp;
+
+        bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
+        bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
+
         printf("\nInterface: %s", interface->name);
         printf("\n--------------------------------------------------------------\n");
-        printf("  TX:                %10lu packets\n", 
-            interface->stats.packets_tx);
-        printf("  RX:                %10lu packets (%lu loss)\n", 
-            interface->stats.packets_rx, interface->stats.loss);
+        printf("  TX:                %10lu packets %16lu bytes\n", 
+            interface_stats_tx.packets, interface_stats_tx.bytes);
+        printf("  TX Polled:         %10lu\n", interface_stats_tx.polled);
+        printf("  TX IO Error:       %10lu\n", interface_stats_tx.io_errors);
+        printf("  RX:                %10lu packets %16lu bytes\n",
+            interface_stats_rx.packets, interface_stats_rx.bytes);
+        printf("  RX Protocol Error: %10lu packets\n", interface_stats_rx.protocol_errors);
+        printf("  RX Unknown:        %10lu packets\n", interface_stats_rx.unknown);
+        printf("  RX Polled:         %10lu\n", interface_stats_rx.polled);
+        printf("  RX IO Error:       %10lu\n", interface_stats_rx.io_errors);
 
         while(network_interface) {
             printf("\nNetwork Interface: %s\n", network_interface->name);
-            printf("  TX:                %10lu packets\n", network_interface->stats.packets_tx);
-            printf("  RX:                %10lu packets\n", network_interface->stats.packets_rx);
+            printf("  TX:                %10lu packets %16lu bytes\n", 
+                network_interface->stats.packets_tx, network_interface->stats.bytes_tx);
+            printf("  RX:                %10lu packets %16lu bytes\n", 
+                network_interface->stats.packets_rx, network_interface->stats.bytes_rx);
             printf("  TX Multicast:      %10lu packets\n", network_interface->stats.mc_tx);
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %10lu packets\n",
@@ -447,35 +477,48 @@ bbl_stats_stdout(bbl_stats_t *stats) {
         }
         if(access_interface) {
             printf("\nAccess Interface: %s\n", interface->name);
-            printf("  TX:                %10lu packets\n", access_interface->stats.packets_tx);
-            printf("  RX:                %10lu packets\n", access_interface->stats.packets_rx);
-            printf("  RX Multicast:      %10lu packets (%lu loss)\n", access_interface->stats.mc_rx, access_interface->stats.mc_loss);
+            printf("  TX:                %10lu packets %16lu bytes\n", 
+                access_interface->stats.packets_tx, access_interface->stats.bytes_tx);
+            printf("  RX:                %10lu packets %16lu bytes\n", 
+                access_interface->stats.packets_rx, access_interface->stats.bytes_rx);
+            printf("  RX Multicast:      %10lu packets %16lu loss\n", 
+                access_interface->stats.mc_rx, access_interface->stats.mc_loss);
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %10lu packets\n",
                     access_interface->stats.stream_tx);
-                printf("  RX Stream:         %10lu packets (%lu loss)\n",
-                    access_interface->stats.stream_rx, access_interface->stats.stream_loss);
+                printf("  RX Stream:         %10lu packets %16lu loss\n",
+                    access_interface->stats.stream_rx, 
+                    access_interface->stats.stream_loss);
             }
             if(g_ctx->stats.session_traffic_flows) {
                 printf("  Session-Traffic:\n");
                 printf("    TX IPv4:         %10lu packets\n", 
                     access_interface->stats.session_ipv4_tx);
-                printf("    RX IPv4:         %10lu packets (%lu loss, %lu wrong session)\n", 
+                printf("    RX IPv4:         %10lu packets %16lu loss\n", 
                     access_interface->stats.session_ipv4_rx,
-                    access_interface->stats.session_ipv4_loss, 
-                    access_interface->stats.session_ipv4_wrong_session);
+                    access_interface->stats.session_ipv4_loss);
+                if(access_interface->stats.session_ipv4_wrong_session) {
+                    printf("    RX IPv4:         %10lu wrong session\n", 
+                        access_interface->stats.session_ipv4_wrong_session);
+                }
                 printf("    TX IPv6:         %10lu packets\n",
                     access_interface->stats.session_ipv6_tx);
-                printf("    RX IPv6:         %10lu packets (%lu loss, %lu wrong session)\n", 
+                printf("    RX IPv6:         %10lu packets %16lu loss\n", 
                 access_interface->stats.session_ipv6_rx,
-                    access_interface->stats.session_ipv6_loss, 
-                    access_interface->stats.session_ipv6_wrong_session);
-                printf("    TX IPv6PD:       %10lu packets\n", 
+                    access_interface->stats.session_ipv6_loss);
+                if(access_interface->stats.session_ipv6_wrong_session) {
+                    printf("    RX IPv6:         %10lu wrong session\n", 
+                        access_interface->stats.session_ipv6_wrong_session);
+                }
+                printf("    TX IPv6PD:       %10lu packets\n",
                     access_interface->stats.session_ipv6pd_tx);
-                printf("    RX IPv6PD:       %10lu packets (%lu loss, %lu wrong session)\n", 
+                printf("    RX IPv6PD:       %10lu packets %16lu loss\n", 
                     access_interface->stats.session_ipv6pd_rx,
-                    access_interface->stats.session_ipv6pd_loss, 
-                    access_interface->stats.session_ipv6pd_wrong_session);
+                    access_interface->stats.session_ipv6pd_loss);
+                if(access_interface->stats.session_ipv6pd_wrong_session) {
+                    printf("    RX IPv6PD:       %10lu wrong session\n", 
+                        access_interface->stats.session_ipv6pd_wrong_session);
+                }
             }
 
             printf("\nAccess Interface Protocol Packet Stats:\n");
@@ -509,8 +552,10 @@ bbl_stats_stdout(bbl_stats_t *stats) {
         }
         if(a10nsp_interface) {
             printf("\nA10NSP Interface: %s\n", interface->name);
-            printf("  TX:                %10lu packets\n", a10nsp_interface->stats.packets_tx);
-            printf("  RX:                %10lu packets\n", a10nsp_interface->stats.packets_rx);
+            printf("  TX:                %10lu packets %10lu bytes\n", 
+                a10nsp_interface->stats.packets_tx, a10nsp_interface->stats.bytes_tx);
+            printf("  RX:                %10lu packets %10lu bytes\n", 
+                a10nsp_interface->stats.packets_rx, a10nsp_interface->stats.bytes_rx);
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %10lu packets\n",
                     a10nsp_interface->stats.stream_tx);
@@ -644,12 +689,14 @@ bbl_stats_stdout(bbl_stats_t *stats) {
 }
 
 void
-bbl_stats_json(bbl_stats_t * stats)
+bbl_stats_json(bbl_stats_s * stats)
 {
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
     bbl_access_interface_s *access_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
+    bbl_interface_stats_s interface_stats_tx;
+    bbl_interface_stats_s interface_stats_rx;
     bbl_session_s *session;
     bbl_stream_s *stream;
 
@@ -704,10 +751,20 @@ bbl_stats_json(bbl_stats_t * stats)
 
     jobj_array = json_array();
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
+        bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
         jobj_sub = json_object();
         json_object_set(jobj_sub, "name", json_string(interface->name));
-        json_object_set(jobj_sub, "tx-packets", json_integer(interface->stats.packets_tx));
-        json_object_set(jobj_sub, "rx-packets", json_integer(interface->stats.packets_rx));
+        json_object_set(jobj_sub, "tx-packets", json_integer(interface_stats_tx.packets));
+        json_object_set(jobj_sub, "tx-bytes", json_integer(interface_stats_tx.bytes));
+        json_object_set(jobj_sub, "tx-polled", json_integer(interface_stats_tx.polled));
+        json_object_set(jobj_sub, "tx-io-error", json_integer(interface_stats_tx.io_errors));
+        json_object_set(jobj_sub, "rx-packets", json_integer(interface_stats_rx.packets));
+        json_object_set(jobj_sub, "rx-bytes", json_integer(interface_stats_rx.bytes));
+        json_object_set(jobj_sub, "rx-polled", json_integer(interface_stats_rx.bytes));
+        json_object_set(jobj_sub, "rx-io-error", json_integer(interface_stats_rx.io_errors));
+        json_object_set(jobj_sub, "rx-protocol-error", json_integer(interface_stats_rx.protocol_errors));
+        json_object_set(jobj_sub, "rx-unknown", json_integer(interface_stats_rx.unknown));
         json_array_append(jobj_array, jobj_sub);
     }
     json_object_set(jobj, "interfaces", jobj_array);

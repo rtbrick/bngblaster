@@ -9,15 +9,6 @@
 #include "bbl.h"
 #include <sys/stat.h>
 
-void
-bbl_interface_rate_job(timer_s *timer) {
-    bbl_interface_s *interface = timer->data;
-    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
-}
-
 /**
  * bbl_interface_lock
  *
@@ -116,10 +107,6 @@ bbl_interface_link_add(char *interface_name, bbl_link_config_s *link_config)
     if(!io_interface_init(interface)) {
         return NULL;
     }
-
-    /* Timer to compute periodic rates. */
-    timer_add_periodic(&g_ctx->timer_root, &interface->rate_job, "Rate Computation", 
-                       1, 0, interface, &bbl_interface_rate_job);
     return interface;
 }
 
