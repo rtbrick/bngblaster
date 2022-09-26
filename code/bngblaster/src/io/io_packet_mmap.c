@@ -20,16 +20,14 @@
 static void
 poll_kernel(io_handle_s *io, short events)
 {
-    struct pollfd fds[1] = {0};
-    fds[0].fd = io->fd;
-    fds[0].events = events;
-    fds[0].revents = 0;
+    struct pollfd pollset;
+    pollset.fd = io->fd;
+    pollset.events = events;
+    pollset.revents = 0;
     io->stats.polled++;
-    if(poll(fds, 1, 0) == -1) {
+    if(poll(&pollset, 1, 0) == -1) {
         LOG(IO, "Failed to poll interface %s", 
             io->interface->name);
-    } else {
-        io->polled = true;
     }
 }
 
@@ -132,20 +130,14 @@ io_packet_mmap_tx_job(timer_s *timer)
     assert(io->thread == NULL);
 
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
-    tphdr = (struct tpacket2_hdr *)frame_ptr;
-    if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
-        if(io->polled) {
-            /* We already polled kernel. */
-            return;
-        }
-        /* If no buffer is available poll kernel. */
-        poll_kernel(io, POLLOUT);
+    tphdr = (struct tpacket2_hdr*)frame_ptr;
+    if(!(tphdr->tp_status != TP_STATUS_AVAILABLE)) {
+        /* If no buffer is available poll kernel */
+        poll_kernel(io, POLLIN);
+        io->stats.no_buffer++;
     } else {
-        io->polled = false;
-
         /* Get TX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-
         while(tx_result != EMPTY) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
@@ -155,19 +147,18 @@ io_packet_mmap_tx_job(timer_s *timer)
             io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
             tx_result = bbl_tx(interface, io->buf, &io->buf_len);
             if(tx_result == PROTOCOL_SUCCESS) {
-                io->queued++;
-                tphdr->tp_len = io->buf_len;
-                tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-                io->stats.packets++;
-                io->stats.bytes += io->buf_len;
                 /* Dump the packet into pcap file. */
                 if(g_ctx->pcap.write_buf) {
                     pcap = true;
                     pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                               interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
                 }
-                /* Request send from kernel. */
+                tphdr->tp_len = io->buf_len;
                 tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+                io->queued++;
+                io->stats.packets++;
+                io->stats.bytes += io->buf_len;
+
                 /* Get next slot. */
                 io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
                 frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
@@ -181,7 +172,7 @@ io_packet_mmap_tx_job(timer_s *timer)
 
     if(io->queued) {
         /* Notify kernel. */
-        if(sendto(io->fd, NULL, 0, 0, NULL, 0) == -1) {
+        if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
             LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
                 interface->name, strerror(errno), errno);
             io->stats.io_errors++;
@@ -266,15 +257,10 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr *)frame_ptr;
     if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
-        if(io->polled) {
-            /* We already polled kernel. */
-            return;
-        }
         /* If no buffer is available poll kernel. */
         poll_kernel(io, POLLOUT);
+        io->stats.no_buffer++;
     } else {
-        io->polled = false;
-
         while((slot = bbl_txq_read_slot(txq))) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
@@ -283,14 +269,12 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
             }
             io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
             io->buf_len = slot->packet_len;
-            io->queued++;
-            io->stats.packets++;
-            io->stats.bytes += slot->packet_len;
             memcpy(io->buf, slot->packet, slot->packet_len);
             tphdr->tp_len = io->buf_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-            /* Request send from kernel. */
-            tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+            io->queued++;
+            io->stats.packets++;
+            io->stats.bytes += io->buf_len;
             /* Get next slot. */
             io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
             frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
@@ -301,7 +285,7 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
 
     if(io->queued) {
         /* Notify kernel. */
-        if(sendto(io->fd, NULL, 0, 0, NULL, 0) == -1) {
+        if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
             LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
                 interface->name, strerror(errno), errno);
             io->stats.io_errors++;
@@ -327,28 +311,26 @@ io_packet_mmap_send(io_handle_s *io, uint8_t *buf, uint16_t len)
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr *)frame_ptr;
     if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
-        if(!io->polled) {
-            /* If no buffer is available poll kernel. */
-            poll_kernel(io, POLLOUT);
-        }
+        /* If no buffer is available poll kernel. */
+        poll_kernel(io, POLLOUT);
         io->stats.no_buffer++;
         return false;
     }
-    io->polled = false;
-    io->queued++;
+
     tphdr_buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
     memcpy(tphdr_buf, buf, len);
     tphdr->tp_len = len;
     tphdr->tp_status = TP_STATUS_SEND_REQUEST;
-    /* Request send from kernel. */
-    tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+    io->queued++;
+    io->stats.packets++;
+    io->stats.bytes += len;
     /* Get next slot. */
     io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr *)frame_ptr;
     if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
         /* Notify kernel. */
-        if(sendto(io->fd, NULL, 0, 0, NULL, 0) == -1) {
+        if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
             LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
                 interface->name, strerror(errno), errno);
             io->stats.io_errors++;

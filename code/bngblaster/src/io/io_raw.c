@@ -118,6 +118,8 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
 
     struct timespec sleep, rem;
 
+    assert(io->direction == IO_INGRESS);
+
     sleep.tv_sec = 0;
     sleep.tv_nsec = 0;
 

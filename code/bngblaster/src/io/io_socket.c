@@ -35,7 +35,7 @@ set_qdisc_bypass(io_handle_s *io) {
 /* Set fanout group. */
 static bool
 set_fanout(io_handle_s *io) {     
-    if(io->direction == IO_INGRESS && io->fanout_id) {
+    if(io->fanout_id) {
         int fanout_arg = (io->fanout_id | (io->fanout_type << 16));
         if (setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
             LOG(ERROR, "Failed to set fanout group for interface %s - %s (%d)\n",
@@ -67,22 +67,21 @@ set_ring(io_handle_s *io, int slots) {
      * - tp_frame_nr   must be exactly frames_per_block*tp_block_nr
      * Note that tp_block_size should be chosen to be a power of two 
      * or there will be a waste of memory. */
-    size_t ring_size = 0;
+    unsigned int ring_size = 0;
     int flag = 0;
-
     if(io->direction == IO_INGRESS) {
         flag = PACKET_RX_RING;
     } else {
         flag = PACKET_TX_RING;
     }
-    io->req.tp_block_size = sysconf(_SC_PAGESIZE); /* 4096 */
-    io->req.tp_frame_size =io->req.tp_block_size/2; /* 2048 */
-    io->req.tp_block_nr = slots/2;
+    io->req.tp_block_size = getpagesize(); /* 4096 */
+    io->req.tp_frame_size = io->req.tp_block_size;
+    io->req.tp_block_nr = slots;
     io->req.tp_frame_nr = slots;
 
     ring_size = io->req.tp_block_nr * io->req.tp_block_size;
 
-    LOG(DEBUG, "Setup %lu byte packet_mmap ringbuffer (%d slots) for interface %s\n", 
+    LOG(DEBUG, "Setup %u byte packet_mmap ringbuffer (%d slots) for interface %s\n", 
         ring_size, slots, io->interface->name);
     if (setsockopt(io->fd, SOL_PACKET, flag, &io->req, sizeof(struct tpacket_req)) == -1) {
         LOG(ERROR, "Allocating ringbuffer error for interface %s - %s (%d)\n",
@@ -105,25 +104,23 @@ io_socket_open(io_handle_s *io) {
     assert(io->mode == IO_MODE_PACKET_MMAP || io->mode == IO_MODE_RAW);
 
     int protocol = 0;
+    int slots = config->io_slots_tx;
+
     if(io->direction == IO_INGRESS) {
         protocol = htobe16(ETH_P_ALL);
-    }
-
-    uint16_t slots = config->io_slots_tx;
-    if(io->direction == IO_INGRESS) {
         slots = config->io_slots_rx;
     }
 
     /* Open RAW socket for all ethertypes.
      * https://man7.org/linux/man-pages/man7/packet.7.html */
-    io->fd = socket(PF_PACKET, SOCK_RAW | SOCK_NONBLOCK, protocol);
+    io->fd = socket(AF_PACKET, SOCK_RAW|SOCK_NONBLOCK, protocol);
     if(io->fd == -1) {
         LOG(ERROR, "Failed to open socket for interface %s - %s (%d)\n", 
             io->interface->name, strerror(errno), errno);
         return false;
     }
     /* Limit socket to the given interface index. */
-    io->addr.sll_family = PF_PACKET;
+    io->addr.sll_family = AF_PACKET;
     io->addr.sll_ifindex = io->interface->ifindex;
     io->addr.sll_protocol = protocol;
     if (bind(io->fd, (struct sockaddr*)&io->addr, sizeof(io->addr)) == -1) {

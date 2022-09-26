@@ -50,10 +50,8 @@ typedef struct io_handle_ {
     struct sockaddr_ll addr;
 
     uint8_t *ring; /* ring buffer */
-    uint16_t cursor; /* ring buffer cursor */
-    uint16_t queued;
-    bool polled;
-    bool ctrl;
+    unsigned int cursor; /* ring buffer cursor */
+    unsigned int queued;
 
     io_thread_s *thread;
     bbl_interface_s *interface;
