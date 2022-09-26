@@ -33,6 +33,10 @@ io_dpdk_init()
 
     struct rte_eth_dev_info dev_info;    
     
+    if(!g_ctx->dpdk) {
+        return true;
+    }
+
     char *dpdk_args[2];
     char **argv=dpdk_args;
 

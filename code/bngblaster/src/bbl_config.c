@@ -2113,6 +2113,7 @@ json_parse_config(json_t *root)
 #if BNGBLASTER_DPDK
             } else if(strcmp(s, "dpdk") == 0) {
                 g_ctx->config.io_mode = IO_MODE_DPDK;
+                g_ctx->dpdk = true;
 #endif
             } else {
                 fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");

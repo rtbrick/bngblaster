@@ -90,6 +90,7 @@ typedef struct bbl_ctx_
     io_thread_s *io_threads; /* single linked list of threads */
 
     bool tcp;
+    bool dpdk;
 
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
