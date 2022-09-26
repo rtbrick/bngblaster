@@ -562,7 +562,7 @@ main(int argc, char *argv[])
 
     /* Setup control socket and job */
     if(g_ctx->ctrl_socket_path) {
-        if(!bbl_ctrl_socket_open()) {
+        if(!bbl_ctrl_socket_init()) {
             if(interactive) endwin();
             goto CLEANUP;
         }

@@ -31,7 +31,6 @@ typedef struct bbl_ctx_
     struct timer_ *smear_timer;
     struct timer_ *stats_timer;
     struct timer_ *keyboard_timer;
-    struct timer_ *ctrl_socket_timer;
 
     struct timer_ *tcp_timer;
 
@@ -83,8 +82,8 @@ typedef struct bbl_ctx_
 
     uint64_t flow_id;
 
-    int ctrl_socket;
     char *ctrl_socket_path;
+    bbl_ctrl_thread_s *ctrl_thread;
 
     void *stream_thread; /* single linked list of threads */
     io_thread_s *io_threads; /* single linked list of threads */
