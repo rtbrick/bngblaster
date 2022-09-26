@@ -131,9 +131,9 @@ io_packet_mmap_tx_job(timer_s *timer)
 
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
-    if(!(tphdr->tp_status != TP_STATUS_AVAILABLE)) {
+    if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
         /* If no buffer is available poll kernel */
-        poll_kernel(io, POLLIN);
+        poll_kernel(io, POLLOUT);
         io->stats.no_buffer++;
     } else {
         /* Get TX timestamp */

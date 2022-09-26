@@ -35,7 +35,7 @@ set_qdisc_bypass(io_handle_s *io) {
 /* Set fanout group. */
 static bool
 set_fanout(io_handle_s *io) {     
-    if(io->fanout_id) {
+    if(io->fanout_id && io->direction == IO_INGRESS) {
         int fanout_arg = (io->fanout_id | (io->fanout_type << 16));
         if (setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
             LOG(ERROR, "Failed to set fanout group for interface %s - %s (%d)\n",
