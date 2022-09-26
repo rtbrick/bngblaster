@@ -1602,7 +1602,8 @@ bgp_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_
 }
 
 int
-bgp_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) {
+bgp_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
     if(g_monkey) {
         LOG_NOARG(INFO, "Stop monkey\n");
     }
@@ -1613,72 +1614,96 @@ bgp_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t
 struct action {
     char *name;
     callback_function *fn;
+    bool thread_safe;
 };
 
 struct action actions[] = {
-    {"interfaces", bbl_ctrl_interfaces},
-    {"terminate", bbl_ctrl_session_terminate},
-    {"session-counters", bbl_ctrl_session_counters},
-    {"session-info", bbl_ctrl_session_info},
-    {"session-start", bbl_ctrl_session_start},
-    {"session-traffic", bbl_ctrl_session_traffic_stats},
-    {"session-traffic-enabled", bbl_ctrl_session_traffic_start},
-    {"session-traffic-start", bbl_ctrl_session_traffic_start},
-    {"session-traffic-disabled", bbl_ctrl_session_traffic_stop},
-    {"session-traffic-stop", bbl_ctrl_session_traffic_stop},
-    {"session-streams", bbl_ctrl_session_streams},
-    {"sessions-pending", bbl_ctrl_sessions_pending},
-    {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start},
-    {"stream-traffic-start", bbl_ctrl_stream_traffic_start},
-    {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop},
-    {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop},
-    {"stream-info", bbl_ctrl_stream_info},
-    {"stream-summary", bbl_ctrl_stream_summary},
-    {"stream-stats", bbl_ctrl_stream_stats},
-    {"stream-reset", bbl_ctrl_stream_reset},
-    {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start},
-    {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop},
-    {"igmp-join", bbl_ctrl_igmp_join},
-    {"igmp-join-iter", bbl_ctrl_igmp_join_iter},
-    {"igmp-leave", bbl_ctrl_igmp_leave},
-    {"igmp-leave-all", bbl_ctrl_igmp_leave_all},
-    {"igmp-info", bbl_ctrl_igmp_info},
-    {"zapping-start", bbl_ctrl_zapping_start},
-    {"zapping-stop", bbl_ctrl_zapping_stop},
-    {"zapping-stats", bbl_ctrl_zapping_stats},
-    {"li-flows", bbl_ctrl_li_flows},
-    {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels},
-    {"l2tp-sessions", bbl_ctrl_l2tp_sessions},
-    {"l2tp-csurq", bbl_ctrl_l2tp_csurq},
-    {"l2tp-tunnel-terminate", bbl_ctrl_l2tp_tunnel_terminate},
-    {"l2tp-session-terminate", bbl_ctrl_l2tp_session_terminate},
-    {"ipcp-open", bbl_ctrl_session_ipcp_open},
-    {"ipcp-close", bbl_ctrl_session_ipcp_close},
-    {"ip6cp-open", bbl_ctrl_session_ip6cp_open},
-    {"ip6cp-close", bbl_ctrl_session_ip6cp_close},
-    {"cfm-cc-start", bbl_ctrl_cfm_cc_start},
-    {"cfm-cc-stop", bbl_ctrl_cfm_cc_stop},
-    {"cfm-cc-rdi-on", bbl_ctrl_cfm_cc_rdi_on},
-    {"cfm-cc-rdi-off", bbl_ctrl_cfm_cc_rdi_off},
-    {"traffic-start", bbl_ctrl_traffic_start},
-    {"traffic-stop", bbl_ctrl_traffic_stop},
-    {"isis-adjacencies", isis_ctrl_adjacencies},
-    {"isis-database", isis_ctrl_database},
-    {"isis-load-mrt", isis_ctrl_load_mrt},
-    {"isis-lsp-update", isis_ctrl_lsp_update},
-    {"isis-teardown", isis_ctrl_teardown},
-    {"bgp-sessions", bgp_ctrl_sessions},
-    {"bgp-disconnect", bgp_ctrl_disconnect},
-    {"bgp-teardown", bgp_ctrl_teardown},
-    {"bgp-raw-update-list", bgp_ctrl_raw_update_list},
-    {"bgp-raw-update", bgp_ctrl_raw_update},
-    {"monkey-start", bgp_ctrl_monkey_start},
-    {"monkey-stop", bgp_ctrl_monkey_stop},
-    {NULL, NULL},
+    {"interfaces", bbl_ctrl_interfaces, true},
+    {"terminate", bbl_ctrl_session_terminate, false},
+    {"session-counters", bbl_ctrl_session_counters, true},
+    {"session-info", bbl_ctrl_session_info, true},
+    {"session-start", bbl_ctrl_session_start, true},
+    {"session-traffic", bbl_ctrl_session_traffic_stats, true},
+    {"session-traffic-enabled", bbl_ctrl_session_traffic_start, false},
+    {"session-traffic-start", bbl_ctrl_session_traffic_start, false},
+    {"session-traffic-disabled", bbl_ctrl_session_traffic_stop, false},
+    {"session-traffic-stop", bbl_ctrl_session_traffic_stop, false},
+    {"session-streams", bbl_ctrl_session_streams, true},
+    {"sessions-pending", bbl_ctrl_sessions_pending, true},
+    {"stream-traffic-enabled", bbl_ctrl_stream_traffic_start, false},
+    {"stream-traffic-start", bbl_ctrl_stream_traffic_start, false},
+    {"stream-traffic-disabled", bbl_ctrl_stream_traffic_stop, false},
+    {"stream-traffic-stop", bbl_ctrl_stream_traffic_stop, false},
+    {"stream-info", bbl_ctrl_stream_info, true},
+    {"stream-summary", bbl_ctrl_stream_summary, true},
+    {"stream-stats", bbl_ctrl_stream_stats, true},
+    {"stream-reset", bbl_ctrl_stream_reset, false},
+    {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start, false},
+    {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop, false},
+    {"igmp-join", bbl_ctrl_igmp_join, false},
+    {"igmp-join-iter", bbl_ctrl_igmp_join_iter, false},
+    {"igmp-leave", bbl_ctrl_igmp_leave, false},
+    {"igmp-leave-all", bbl_ctrl_igmp_leave_all, false},
+    {"igmp-info", bbl_ctrl_igmp_info, true},
+    {"zapping-start", bbl_ctrl_zapping_start, true},
+    {"zapping-stop", bbl_ctrl_zapping_stop, false},
+    {"zapping-stats", bbl_ctrl_zapping_stats, true},
+    {"li-flows", bbl_ctrl_li_flows, true},
+    {"l2tp-tunnels", bbl_ctrl_l2tp_tunnels, true},
+    {"l2tp-sessions", bbl_ctrl_l2tp_sessions, true},
+    {"l2tp-csurq", bbl_ctrl_l2tp_csurq, false},
+    {"l2tp-tunnel-terminate", bbl_ctrl_l2tp_tunnel_terminate, false},
+    {"l2tp-session-terminate", bbl_ctrl_l2tp_session_terminate, false},
+    {"ipcp-open", bbl_ctrl_session_ipcp_open, false},
+    {"ipcp-close", bbl_ctrl_session_ipcp_close, false},
+    {"ip6cp-open", bbl_ctrl_session_ip6cp_open, false},
+    {"ip6cp-close", bbl_ctrl_session_ip6cp_close, false},
+    {"cfm-cc-start", bbl_ctrl_cfm_cc_start, false},
+    {"cfm-cc-stop", bbl_ctrl_cfm_cc_stop, false},
+    {"cfm-cc-rdi-on", bbl_ctrl_cfm_cc_rdi_on, false},
+    {"cfm-cc-rdi-off", bbl_ctrl_cfm_cc_rdi_off, false},
+    {"traffic-start", bbl_ctrl_traffic_start, false},
+    {"traffic-stop", bbl_ctrl_traffic_stop, false},
+    {"isis-adjacencies", isis_ctrl_adjacencies, true},
+    {"isis-database", isis_ctrl_database, true},
+    {"isis-load-mrt", isis_ctrl_load_mrt, false},
+    {"isis-lsp-update", isis_ctrl_lsp_update, false},
+    {"isis-teardown", isis_ctrl_teardown, false},
+    {"bgp-sessions", bgp_ctrl_sessions, true},
+    {"bgp-disconnect", bgp_ctrl_disconnect, false},
+    {"bgp-teardown", bgp_ctrl_teardown, true},
+    {"bgp-raw-update-list", bgp_ctrl_raw_update_list, true},
+    {"bgp-raw-update", bgp_ctrl_raw_update, false},
+    {"monkey-start", bgp_ctrl_monkey_start, false},
+    {"monkey-stop", bgp_ctrl_monkey_stop, false},
+    {NULL, NULL, false},
 };
 
+static void
+bbl_ctrl_socket_main(bbl_ctrl_thread_s *ctrl)
+{
+    if(ctrl->main.fd) {
+        pthread_mutex_lock(&ctrl->mutex);
+        actions[ctrl->main.action].fn(ctrl->main.fd, ctrl->main.session_id, (json_t*)ctrl->main.arguments);
+        ctrl->main.action = 0;
+        ctrl->main.fd = 0;
+        ctrl->main.session_id = 0;
+        ctrl->main.arguments = NULL;
+        pthread_cond_signal(&ctrl->cond);
+        pthread_mutex_unlock(&ctrl->mutex);
+    }
+}
+
 void
-bbl_ctrl_socket_job(timer_s *timer) {
+bbl_ctrl_socket_main_job(timer_s *timer)
+{
+    bbl_ctrl_socket_main(timer->data);
+}
+
+void *
+bbl_ctrl_socket_thread(void *thread_data)
+{
+    bbl_ctrl_thread_s *ctrl = thread_data;
 
     size_t i;
     size_t flags = JSON_DISABLE_EOF_CHECK;
@@ -1695,151 +1720,217 @@ bbl_ctrl_socket_job(timer_s *timer) {
     bbl_session_s *session;
     void **search;
 
-    UNUSED(timer);
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 1 * MSEC;
 
     /* ToDo: Add connection manager!
      * This is just a temporary workaround! Finally we need
      * to create a connection manager. */
     static int fd = 0;
-    if(fd > 0) {
-        close(fd);
-    }
 
-    fd = accept(g_ctx->ctrl_socket, 0, 0);
-    if(fd > 0) {
-        /* New connection */
-        root = json_loadfd(fd, flags, &error);
-        if (!root) {
-            LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
-            bbl_ctrl_status(fd, "error", 400, "invalid json");
-        } else {
-                /* Each command request should be formatted as shown in the example below
-                 * with a mandatory command element and optional arguments.
-                 * {
-                 *    "command": "session-info",
-                 *    "arguments": {
-                 *        "outer-vlan": 1,
-                 *        "inner-vlan": 2
-                 *    }
-                 * }
-                 */
-            if(json_unpack(root, "{s:s, s?o}", "command", &command, "arguments", &arguments) != 0) {
-                LOG_NOARG(DEBUG, "Invalid command via ctrl socket\n");
-                bbl_ctrl_status(fd, "error", 400, "invalid request");
+    ctrl->active = true;
+    while(ctrl->active) {
+        fd = accept(ctrl->socket, 0, 0);
+        if(fd > 0) {
+            /* New connection */
+            root = json_loadfd(fd, flags, &error);
+            if (!root) {
+                LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
+                bbl_ctrl_status(fd, "error", 400, "invalid json");
             } else {
-                if(arguments) {
-                    value = json_object_get(arguments, "session-id");
-                    if (value) {
-                        if(json_is_number(value)) {
-                            session_id = json_number_value(value);
+                    /* Each command request should be formatted as shown in the example below
+                    * with a mandatory command element and optional arguments.
+                    * {
+                    *    "command": "session-info",
+                    *    "arguments": {
+                    *        "outer-vlan": 1,
+                    *        "inner-vlan": 2
+                    *    }
+                    * }
+                    */
+                command = NULL;
+                arguments = NULL;
+                session_id = 0;
+                key.ifindex = 0;
+                key.inner_vlan_id = 0;
+                key.outer_vlan_id = 0;
+                if(json_unpack(root, "{s:s, s?o}", "command", &command, "arguments", &arguments) != 0) {
+                    LOG_NOARG(DEBUG, "Invalid command via ctrl socket\n");
+                    bbl_ctrl_status(fd, "error", 400, "invalid request");
+                } else {
+                    if(arguments) {
+                        value = json_object_get(arguments, "session-id");
+                        if (value) {
+                            if(json_is_number(value)) {
+                                session_id = json_number_value(value);
+                            } else {
+                                bbl_ctrl_status(fd, "error", 400, "invalid session-id");
+                                goto CLOSE;
+                            }
                         } else {
-                            bbl_ctrl_status(fd, "error", 400, "invalid session-id");
-                            goto CLOSE;
-                        }
-                    } else {
-                            /* Deprecated!
-                             * For backward compatibility with version 0.4.X, we still
-                             * support per session commands using VLAN index instead of
-                             * new session-id. */
-                        value = json_object_get(arguments, "ifindex");
-                        if (value) {
-                            if(json_is_number(value)) {
-                                key.ifindex = json_number_value(value);
+                                /* Deprecated!
+                                * For backward compatibility with version 0.4.X, we still
+                                * support per session commands using VLAN index instead of
+                                * new session-id. */
+                            value = json_object_get(arguments, "ifindex");
+                            if (value) {
+                                if(json_is_number(value)) {
+                                    key.ifindex = json_number_value(value);
+                                } else {
+                                    bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
+                                    goto CLOSE;
+                                }
                             } else {
-                                bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
-                                goto CLOSE;
+                                /* Use first interface as default. */
+                                access_interface = bbl_access_interface_get(NULL);
+                                if(access_interface) {
+                                    key.ifindex = access_interface->interface->ifindex;
+                                }
                             }
-                        } else {
-                            /* Use first interface as default. */
-                            access_interface = bbl_access_interface_get(NULL);
-                            if(access_interface) {
-                                key.ifindex = access_interface->interface->ifindex;
+                            value = json_object_get(arguments, "outer-vlan");
+                            if (value) {
+                                if(json_is_number(value)) {
+                                    key.outer_vlan_id = json_number_value(value);
+                                } else {
+                                    bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
+                                    goto CLOSE;
+                                }
                             }
-                        }
-                        value = json_object_get(arguments, "outer-vlan");
-                        if (value) {
-                            if(json_is_number(value)) {
-                                key.outer_vlan_id = json_number_value(value);
-                            } else {
-                                bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
-                                goto CLOSE;
+                            value = json_object_get(arguments, "inner-vlan");
+                            if (value) {
+                                if(json_is_number(value)) {
+                                    key.inner_vlan_id = json_number_value(value);
+                                } else {
+                                    bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
+                                    goto CLOSE;
+                                }
                             }
-                        }
-                        value = json_object_get(arguments, "inner-vlan");
-                        if (value) {
-                            if(json_is_number(value)) {
-                                key.inner_vlan_id = json_number_value(value);
-                            } else {
-                                bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
-                                goto CLOSE;
-                            }
-                        }
-                        if(key.outer_vlan_id) {
-                            search = dict_search(g_ctx->vlan_session_dict, &key);
-                            if(search) {
-                                session = *search;
-                                session_id = session->session_id;
-                            } else {
-                                bbl_ctrl_status(fd, "warning", 404, "session not found");
-                                goto CLOSE;
+                            if(key.outer_vlan_id) {
+                                search = dict_search(g_ctx->vlan_session_dict, &key);
+                                if(search) {
+                                    session = *search;
+                                    session_id = session->session_id;
+                                } else {
+                                    bbl_ctrl_status(fd, "warning", 404, "session not found");
+                                    goto CLOSE;
+                                }
                             }
                         }
                     }
-                }
-                for(i = 0; true; i++) {
-                    if(actions[i].name == NULL) {
-                        bbl_ctrl_status(fd, "error", 400, "unknown command");
-                        break;
-                    } else if(strcmp(actions[i].name, command) == 0) {
-                        actions[i].fn(fd, session_id, arguments);
-                        break;
+                    for(i = 0; true; i++) {
+                        if(actions[i].name == NULL) {
+                            bbl_ctrl_status(fd, "error", 400, "unknown command");
+                            break;
+                        } else if(strcmp(actions[i].name, command) == 0) {
+                            if(actions[i].thread_safe) {
+                                actions[i].fn(fd, session_id, arguments);
+                            } else {
+                                pthread_mutex_lock(&ctrl->mutex);
+                                ctrl->main.fd = fd;
+                                ctrl->main.action = i;
+                                ctrl->main.session_id = session_id;
+                                ctrl->main.arguments = (void*)arguments;
+                                pthread_cond_wait(&ctrl->cond, &ctrl->mutex);
+                                pthread_mutex_unlock(&ctrl->mutex);
+                            }
+                            break;
+                        }
                     }
                 }
             }
-        }
 CLOSE:
-        if(root) json_decref(root);
-        shutdown(fd, SHUT_WR);
+            if(root) {
+                json_decref(root);
+                root = NULL;
+            }
+            shutdown(fd, SHUT_WR);
+        }
+        nanosleep(&sleep, &rem);
+        if(fd > 0) {
+            close(fd);
+        }
     }
+    return NULL;
 }
 
 bool
-bbl_ctrl_socket_open() {
+bbl_ctrl_socket_init()
+{
+    bbl_ctrl_thread_s *ctrl;
     struct sockaddr_un addr = {0};
-    g_ctx->ctrl_socket = socket(AF_UNIX, SOCK_STREAM, 0);
-    if(g_ctx->ctrl_socket < 0) {
+
+    if(!g_ctx->ctrl_socket_path) {
+        return true;
+    }
+
+    ctrl = calloc(1, sizeof(bbl_ctrl_thread_s));
+    if(!ctrl) {
+        fprintf(stderr, "Error: Failed to init ctrl socket memory\n");
+        return false;
+    }
+    g_ctx->ctrl_thread = ctrl;
+
+    ctrl->socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(ctrl->socket < 0) {
         fprintf(stderr, "Error: Failed to create ctrl socket\n");
         return false;
     }
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, g_ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
-
     unlink(g_ctx->ctrl_socket_path);
-    if (bind(g_ctx->ctrl_socket, (struct sockaddr *)&addr, SUN_LEN(&addr)) != 0) {
+    if(bind(ctrl->socket, (struct sockaddr *)&addr, SUN_LEN(&addr)) != 0) {
         fprintf(stderr, "Error: Failed to bind ctrl socket %s (error %d)\n", g_ctx->ctrl_socket_path, errno);
         return false;
     }
-
-    if (listen(g_ctx->ctrl_socket, BACKLOG) != 0) {
+    if(listen(ctrl->socket, BACKLOG) != 0) {
         fprintf(stderr, "Error: Failed to listen on ctrl socket %s (error %d)\n", g_ctx->ctrl_socket_path, errno);
         return false;
     }
 
     /* Change socket to non-blocking */
-    fcntl(g_ctx->ctrl_socket, F_SETFL, O_NONBLOCK);
+    fcntl(ctrl->socket, F_SETFL, O_NONBLOCK);
 
-    timer_add_periodic(&g_ctx->timer_root, &g_ctx->ctrl_socket_timer, "CTRL Socket Timer", 0, 100 * MSEC, g_ctx, &bbl_ctrl_socket_job);
+    /* Create ctrl thread */
+    if(pthread_mutex_init(&ctrl->mutex, NULL) != 0) {
+        LOG_NOARG(ERROR, "Failed to init ctrl mutex\n");
+        return false;
+    }
+    if(pthread_cond_init(&ctrl->cond, NULL) != 0) {
+        LOG_NOARG(ERROR, "Failed to init ctrl condition\n");
+        return false;
+    }
+    if(pthread_create(&ctrl->thread, NULL, bbl_ctrl_socket_thread, (void *)ctrl) != 0) {
+        LOG_NOARG(ERROR, "Failed to create ctrl thread\n");
+        return false;
+    }
+
+    /* Start ctrl main job */
+    timer_add_periodic(&g_ctx->timer_root, &ctrl->main.timer, "CTRL Socket Main Timer", 0, 1000 * MSEC, ctrl, &bbl_ctrl_socket_main_job);
 
     LOG(INFO, "Opened control socket %s\n", g_ctx->ctrl_socket_path);
     return true;
 }
 
 bool
-bbl_ctrl_socket_close() {
-    if(g_ctx->ctrl_socket) {
-        close(g_ctx->ctrl_socket);
-        g_ctx->ctrl_socket = 0;
+bbl_ctrl_socket_close()
+{
+    bbl_ctrl_thread_s *ctrl;
+    if(g_ctx->ctrl_thread) {
+        ctrl = g_ctx->ctrl_thread;
+        if(ctrl->active) {
+            ctrl->active = false;
+            bbl_ctrl_socket_main(ctrl);
+            pthread_join(ctrl->thread, NULL);
+            pthread_mutex_destroy(&ctrl->mutex);
+            pthread_cond_destroy(&ctrl->cond);
+        }
+        if(ctrl->socket) {
+            close(ctrl->socket);
+        }
         unlink(g_ctx->ctrl_socket_path);
+        free(g_ctx->ctrl_thread);
+        g_ctx->ctrl_thread = NULL;
     }
     return true;
 }

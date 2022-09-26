@@ -191,5 +191,6 @@ typedef struct bbl_stream_config_ bbl_stream_config_s;
 typedef struct bbl_stream_group_ bbl_stream_group_s;
 typedef struct bbl_stream_ bbl_stream_s;
 typedef struct bbl_tcp_ctx_ bbl_tcp_ctx_s;
+typedef struct bbl_ctrl_thread_ bbl_ctrl_thread_s;
 
 #endif
