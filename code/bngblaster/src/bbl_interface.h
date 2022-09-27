@@ -15,7 +15,7 @@ typedef struct bbl_interface_
     char *name; /* interface name */
 
     bbl_link_config_s *config;
-    bbl_lag_s *lag;
+    bbl_lag_member_s *lag;
 
     bbl_a10nsp_interface_s *a10nsp;
     bbl_access_interface_s *access;

@@ -101,11 +101,11 @@ isis_init() {
  * @param eth pointer to ethernet header structure of received packet
  */
 void
-isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth) {
+isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) {
     protocol_error_t result;
     isis_pdu_s pdu = {0};
 
-    bbl_isis_t *isis = eth->next;
+    bbl_isis_s *isis = eth->next;
 
     interface->stats.isis_rx++;
     result = isis_pdu_load(&pdu, isis->pdu, isis->pdu_len);

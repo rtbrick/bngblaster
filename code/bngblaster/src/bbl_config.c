@@ -241,21 +241,43 @@ static bool
 json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
 {
     json_t *value = NULL;
+    const char *s = NULL;
 
     value = json_object_get(lag, "lag-id");
     if(value) {
         lag_config->id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for lag->id\n");
     }
-
     value = json_object_get(lag, "lacp");
     if(json_is_boolean(value)) {
         lag_config->lacp_enable = json_boolean_value(value);
     }
-    value = json_object_get(lag, "lacp-priority");
+    value = json_object_get(lag, "lacp-timeout-short");
+    if(json_is_boolean(value)) {
+        lag_config->lacp_timeout_short = json_boolean_value(value);
+    }
+    value = json_object_get(lag, "lacp-system-priority");
     if(value) {
-        lag_config->lacp_priority = json_number_value(value);
+        lag_config->lacp_system_priority = json_number_value(value);
     } else {
-        lag_config->lacp_priority = 32768;
+        lag_config->lacp_system_priority = 32768;
+    }
+    if(json_unpack(lag, "{s:s}", "lacp-system-id", &s) == 0) {
+        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                &lag_config->lacp_system_id[0],
+                &lag_config->lacp_system_id[1],
+                &lag_config->lacp_system_id[2],
+                &lag_config->lacp_system_id[3],
+                &lag_config->lacp_system_id[4],
+                &lag_config->lacp_system_id[5]) < 6) {
+            fprintf(stderr, "JSON config error: Invalid value for lag->lacp-system-id\n");
+            return false;
+        }
+    } else {
+        lag_config->lacp_system_id[0] = 0x02;
+        lag_config->lacp_system_id[1] = 0xff;
+        lag_config->lacp_system_id[5] = lag_config->id;
     }
     return true;
 }
@@ -397,12 +419,6 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->lacp_priority = json_number_value(value);
     } else {
         link_config->lacp_priority = 32768;
-    }
-    value = json_object_get(link, "lacp-interval");
-    if(value) {
-        link_config->lacp_interval = json_number_value(value);
-    } else {
-        link_config->lacp_interval = 1000;
     }
     return true;
 }

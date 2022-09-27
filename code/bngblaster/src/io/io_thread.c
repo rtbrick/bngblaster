@@ -75,7 +75,7 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
     assert(io->direction == IO_INGRESS);
     assert(io->thread != NULL);
 
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
     uint16_t vlan;
 
     protocol_error_t decode_result;
@@ -123,7 +123,7 @@ io_thread_main_rx_job(timer_s *timer)
     io_thread_s *thread;
 
     bbl_txq_slot_t *slot;
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
     uint16_t vlan;
 
     protocol_error_t decode_result;

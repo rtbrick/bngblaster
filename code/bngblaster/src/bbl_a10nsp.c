@@ -139,10 +139,10 @@ bbl_a10nsp_session_free(bbl_session_s *session)
 static void
 bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
                           bbl_session_s *session,
-                          bbl_ethernet_header_t *eth)
+                          bbl_ethernet_header_s *eth)
 {
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
-    bbl_pppoe_discovery_t *pppoed = (bbl_pppoe_discovery_t*)eth->next;
+    bbl_pppoe_discovery_s *pppoed = (bbl_pppoe_discovery_s*)eth->next;
     uint8_t ac_cookie[16];
     uint8_t i;
 
@@ -191,12 +191,12 @@ bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_lcp_handler(bbl_a10nsp_interface_s *interface,
                        bbl_session_s *session,
-                       bbl_ethernet_header_t *eth)
+                       bbl_ethernet_header_s *eth)
 {
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
-    bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
-    bbl_lcp_t *lcp = (bbl_lcp_t*)pppoes->next;
-    bbl_lcp_t lcp_request = {0};
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
+    bbl_lcp_s *lcp = (bbl_lcp_s*)pppoes->next;
+    bbl_lcp_s lcp_request = {0};
 
     switch(lcp->code) {
         case PPP_CODE_CONF_REQUEST:
@@ -234,12 +234,12 @@ bbl_a10nsp_lcp_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_pap_handler(bbl_a10nsp_interface_s *interface,
                        bbl_session_s *session,
-                       bbl_ethernet_header_t *eth)
+                       bbl_ethernet_header_s *eth)
 {
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
-    bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
-    bbl_pap_t *pap = (bbl_pap_t*)pppoes->next;
-    bbl_pap_t pap_response = {0};
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
+    bbl_pap_s *pap = (bbl_pap_s*)pppoes->next;
+    bbl_pap_s pap_response = {0};
 
     pap_response.code = PAP_CODE_ACK;
     pap_response.identifier = pap->identifier;
@@ -254,12 +254,12 @@ bbl_a10nsp_pap_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
-                        bbl_ethernet_header_t *eth)
+                        bbl_ethernet_header_s *eth)
 {
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
-    bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
-    bbl_ipcp_t *ipcp = (bbl_ipcp_t*)pppoes->next;
-    bbl_ipcp_t ipcp_request = {0};
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
+    bbl_ipcp_s *ipcp = (bbl_ipcp_s*)pppoes->next;
+    bbl_ipcp_s ipcp_request = {0};
 
     UNUSED(session);
 
@@ -306,12 +306,12 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
                          bbl_session_s *session,
-                         bbl_ethernet_header_t *eth)
+                         bbl_ethernet_header_s *eth)
 {
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
-    bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
-    bbl_ip6cp_t *ip6cp = (bbl_ip6cp_t*)pppoes->next;
-    bbl_ip6cp_t ip6cp_request = {0};
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
+    bbl_ip6cp_s *ip6cp = (bbl_ip6cp_s*)pppoes->next;
+    bbl_ip6cp_s ip6cp_request = {0};
 
     UNUSED(session);
 
@@ -343,9 +343,9 @@ bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
                           bbl_session_s *session,
-                          bbl_ethernet_header_t *eth)
+                          bbl_ethernet_header_s *eth)
 {
-    bbl_pppoe_session_t *pppoes = (bbl_pppoe_session_t*)eth->next;
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
             bbl_a10nsp_lcp_handler(interface, session, eth);
@@ -367,9 +367,9 @@ bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_arp_handler(bbl_a10nsp_interface_s *interface,
                        bbl_session_s *session,
-                       bbl_ethernet_header_t *eth)
+                       bbl_ethernet_header_s *eth)
 {
-    bbl_arp_t *arp = (bbl_arp_t*)eth->next;
+    bbl_arp_s *arp = (bbl_arp_s*)eth->next;
     uint32_t target_ip = arp->target_ip;
 
     if(arp->code == ARP_REQUEST) {
@@ -387,12 +387,12 @@ bbl_a10nsp_arp_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_dhcp_handler(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
-                        bbl_ethernet_header_t *eth)
+                        bbl_ethernet_header_s *eth)
 {
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
-    bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
-    bbl_udp_t *udp = (bbl_udp_t*)ipv4->next;
-    bbl_dhcp_t *dhcp = (bbl_dhcp_t*)udp->next;
+    bbl_ipv4_s *ipv4 = (bbl_ipv4_s*)eth->next;
+    bbl_udp_s *udp = (bbl_udp_s*)ipv4->next;
+    bbl_dhcp_s *dhcp = (bbl_dhcp_s*)udp->next;
     switch(dhcp->type) {
         case DHCP_MESSAGE_DISCOVER:
             dhcp->type = DHCP_MESSAGE_OFFER;
@@ -446,14 +446,14 @@ bbl_a10nsp_dhcp_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
-                        bbl_ethernet_header_t *eth)
+                        bbl_ethernet_header_s *eth)
 {
-    bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
-    bbl_udp_t *udp;
+    bbl_ipv4_s *ipv4 = (bbl_ipv4_s*)eth->next;
+    bbl_udp_s *udp;
 
     switch(ipv4->protocol) {
         case PROTOCOL_IPV4_UDP:
-            udp = (bbl_udp_t*)ipv4->next;
+            udp = (bbl_udp_s*)ipv4->next;
             if(udp->protocol == UDP_PROTOCOL_DHCP) {
                 bbl_a10nsp_dhcp_handler(interface, session, eth);
             }
@@ -476,7 +476,7 @@ bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
 static void
 bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
               bbl_session_s *session,
-              bbl_ethernet_header_t *eth)
+              bbl_ethernet_header_s *eth)
 {
     /* Create A10NSP session if not already present */
     if(!session->a10nsp_session) {
@@ -524,7 +524,7 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
  */
 void
 bbl_a10nsp_rx_handler(bbl_a10nsp_interface_s *interface,
-                      bbl_ethernet_header_t *eth)
+                      bbl_ethernet_header_s *eth)
 {
     bbl_session_s *session;
     uint32_t session_id = 0;

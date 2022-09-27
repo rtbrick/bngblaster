@@ -43,7 +43,7 @@ io_packet_mmap_rx_job(timer_s *timer)
     uint8_t *frame_ptr;
     struct tpacket2_hdr *tphdr;
 
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
     uint16_t vlan;
 
     protocol_error_t decode_result;

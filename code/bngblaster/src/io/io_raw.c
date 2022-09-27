@@ -20,7 +20,7 @@ io_raw_rx_job(timer_s *timer)
     struct sockaddr saddr;
     int saddr_size = sizeof(saddr);
 
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
 
     protocol_error_t decode_result;
     bool pcap = false;

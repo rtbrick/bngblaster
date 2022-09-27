@@ -311,7 +311,7 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
  * @param interface receiving interface
  */
 void
-bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4) {
+bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4) {
     struct pbuf *pbuf;
     UNUSED(eth);
 
@@ -321,7 +321,7 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, 
     }
 
 #if BNGBLASTER_TCP_DEBUG
-    bbl_tcp_t *tcp = (bbl_tcp_t*)ipv4->next;
+    bbl_tcp_s *tcp = (bbl_tcp_s*)ipv4->next;
     LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
         interface->name,
         format_ipv4_address(&ipv4->dst), tcp->dst,
@@ -371,7 +371,7 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
  * @param interface receiving interface
  */
 void
-bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6) {
+bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6) {
     struct pbuf *pbuf;
     UNUSED(eth);
 
@@ -381,7 +381,7 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, 
     }
 
 #if BNGBLASTER_TCP_DEBUG
-    bbl_tcp_t *tcp = (bbl_tcp_t*)ipv6->next;
+    bbl_tcp_s *tcp = (bbl_tcp_s*)ipv6->next;
     LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
         interface->name,
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
@@ -423,7 +423,7 @@ bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len) {
 err_t 
 bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t *ipaddr) {
     bbl_network_interface_s *interface = netif->state;
-    bbl_ethernet_header_t eth = {0};
+    bbl_ethernet_header_s eth = {0};
     UNUSED(ipaddr);
 
     eth.dst = interface->gateway_mac;
@@ -446,7 +446,7 @@ err_t
 bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t *ipaddr) {
     bbl_tcp_ctx_s *tcpc = netif->state;
     bbl_network_interface_s *interface = tcpc->interface;
-    bbl_ethernet_header_t eth = {0};
+    bbl_ethernet_header_s eth = {0};
     UNUSED(ipaddr);
 
     eth.dst = interface->gateway_mac;
@@ -495,7 +495,7 @@ bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_c
 }
 
 void
-bbl_tcp_timer(timer_s *timer) {
+bbl_tcp_simer(timer_s *timer) {
     UNUSED(timer);
     sys_check_timeouts();
 }
@@ -516,5 +516,5 @@ bbl_tcp_init() {
 
     /* Start TCP timer */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->tcp_timer, "TCP",
-                       0, BBL_TCP_INTERVAL, g_ctx, &bbl_tcp_timer);
+                       0, BBL_TCP_INTERVAL, g_ctx, &bbl_tcp_simer);
 }

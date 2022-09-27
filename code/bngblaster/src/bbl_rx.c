@@ -11,7 +11,7 @@
 
 static bool
 bbl_rx_stream_network(bbl_network_interface_s *interface, 
-                      bbl_ethernet_header_t *eth) 
+                      bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
     if(!eth->bbl || memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
@@ -29,7 +29,7 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
 
 static bool
 bbl_rx_stream_access(bbl_access_interface_s *interface, 
-                     bbl_ethernet_header_t *eth) 
+                     bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
     bbl_session_s *session;
@@ -61,7 +61,7 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
 
 static bool
 bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface, 
-                     bbl_ethernet_header_t *eth) 
+                     bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
     if(!eth->bbl || memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
@@ -79,7 +79,7 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
 
 bool
 bbl_rx_thread(bbl_interface_s *interface, 
-              bbl_ethernet_header_t *eth)
+              bbl_ethernet_header_s *eth)
 {
     bbl_network_interface_s *network_interface = interface->network;
     while(network_interface) {
@@ -98,9 +98,19 @@ bbl_rx_thread(bbl_interface_s *interface,
 
 void
 bbl_rx_handler(bbl_interface_s *interface,
-               bbl_ethernet_header_t *eth)
+               bbl_ethernet_header_s *eth)
 {
     bbl_network_interface_s *network_interface = interface->network;
+
+    /* Check for link/port protocols like LACP or LLDP */
+    switch(eth->type) {
+        case ETH_TYPE_LACP:
+            bbl_lag_rx_lacp(interface, eth);
+            return;
+        default:
+            break;
+    }
+
     while(network_interface) {
         if(network_interface->vlan == eth->vlan_outer) {
             if(!bbl_rx_stream_network(network_interface, eth)) {

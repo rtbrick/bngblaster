@@ -78,7 +78,7 @@ bbl_txq_from_buffer(bbl_txq_s *txq, uint8_t *buf)
  * @return bbl_txq_result_t
  */
 bbl_txq_result_t
-bbl_txq_to_buffer(bbl_txq_s *txq, bbl_ethernet_header_t *eth)
+bbl_txq_to_buffer(bbl_txq_s *txq, bbl_ethernet_header_s *eth)
 {
     bbl_txq_slot_t *slot;
 

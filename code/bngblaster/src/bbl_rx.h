@@ -13,10 +13,10 @@
 
 bool
 bbl_rx_thread(bbl_interface_s *interface, 
-              bbl_ethernet_header_t *eth);
+              bbl_ethernet_header_s *eth);
 
 void
 bbl_rx_handler(bbl_interface_s *interface, 
-               bbl_ethernet_header_t *eth);
+               bbl_ethernet_header_s *eth);
 
 #endif

@@ -48,13 +48,13 @@ bbl_li_sub_packet_type_string(uint8_t sub_packet_type)
  * @param qmx_li received LI header
  */
 void
-bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li) {
-    bbl_ipv4_t *ipv4 = (bbl_ipv4_t*)eth->next;
-    bbl_udp_t *udp = (bbl_udp_t*)ipv4->next;
-    bbl_ethernet_header_t *inner_eth;
-    bbl_pppoe_session_t *inner_pppoe;
-    bbl_ipv4_t *inner_ipv4 = NULL;
-    bbl_ipv6_t *inner_ipv6 = NULL;
+bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_qmx_li_s *qmx_li) {
+    bbl_ipv4_s *ipv4 = (bbl_ipv4_s*)eth->next;
+    bbl_udp_s *udp = (bbl_udp_s*)ipv4->next;
+    bbl_ethernet_header_s *inner_eth;
+    bbl_pppoe_session_s *inner_pppoe;
+    bbl_ipv4_s *inner_ipv4 = NULL;
+    bbl_ipv6_s *inner_ipv6 = NULL;
     bbl_li_flow_t *li_flow;
 
     dict_insert_result result;
@@ -88,18 +88,18 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t 
     li_flow->packets_rx++;
     li_flow->bytes_rx += qmx_li->payload_len;
 
-    inner_eth = (bbl_ethernet_header_t*)qmx_li->next;
+    inner_eth = (bbl_ethernet_header_s*)qmx_li->next;
     if(inner_eth->type == ETH_TYPE_PPPOE_SESSION) {
-        inner_pppoe = (bbl_pppoe_session_t*)inner_eth->next;
+        inner_pppoe = (bbl_pppoe_session_s*)inner_eth->next;
         if(inner_pppoe->protocol == PROTOCOL_IPV4) {
-            inner_ipv4 = (bbl_ipv4_t*)inner_pppoe->next;
+            inner_ipv4 = (bbl_ipv4_s*)inner_pppoe->next;
         } else if(inner_pppoe->protocol == PROTOCOL_IPV6) {
-            inner_ipv6 = (bbl_ipv6_t*)inner_pppoe->next;
+            inner_ipv6 = (bbl_ipv6_s*)inner_pppoe->next;
         }
     } else if(inner_eth->type == ETH_TYPE_IPV4) {
-        inner_ipv4 = (bbl_ipv4_t*)eth->next;
+        inner_ipv4 = (bbl_ipv4_s*)eth->next;
     } else if(inner_eth->type == PROTOCOL_IPV6) {
-        inner_ipv6 = (bbl_ipv6_t*)eth->next;
+        inner_ipv6 = (bbl_ipv6_s*)eth->next;
     }
 
     if(inner_ipv4) {

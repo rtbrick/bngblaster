@@ -62,11 +62,11 @@ isis_p2p_restart_holding_timers(bbl_network_interface_s *interface)
 protocol_error_t
 isis_p2p_hello_encode(bbl_network_interface_s *interface, 
                       uint8_t *buf, uint16_t *len, 
-                      bbl_ethernet_header_t *eth)
+                      bbl_ethernet_header_s *eth)
 {
     protocol_error_t result;
     isis_pdu_s pdu = {0};
-    bbl_isis_t isis = {0};
+    bbl_isis_s isis = {0};
 
     isis_adjacency_p2p_s *adjacency = interface->isis_adjacency_p2p;
     isis_instance_s      *instance  = adjacency->instance;
