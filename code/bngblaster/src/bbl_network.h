@@ -18,7 +18,7 @@ typedef struct bbl_network_interface_
     bbl_txq_s *txq;
 
     uint16_t vlan;
-    bbl_mpls_t tx_label;
+    bbl_mpls_s tx_label;
     
     uint8_t mac[ETH_ADDR_LEN];
     uint8_t gateway_mac[ETH_ADDR_LEN];
@@ -137,6 +137,6 @@ bbl_network_interface_get(char *interface_name);
 
 void
 bbl_network_rx_handler(bbl_network_interface_s *interface, 
-                       bbl_ethernet_header_t *eth);
+                       bbl_ethernet_header_s *eth);
 
 #endif

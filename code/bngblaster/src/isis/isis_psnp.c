@@ -31,8 +31,8 @@ isis_psnp_job (timer_s *timer)
     isis_tlv_s *tlv;
     isis_lsp_entry_s *entry;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_isis_t isis = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_isis_s isis = {0};
 
     struct timespec now;
     struct timespec ago;

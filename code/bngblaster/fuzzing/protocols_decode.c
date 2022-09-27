@@ -28,7 +28,7 @@ static uint8_t buffer[BUFFER_SIZE];
 
 int main(int argc, char *argv[]) {
 
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
     protocol_error_t decode_result;
     uint8_t *sp = scratchpad;
     uint8_t *buf = buffer;

@@ -104,6 +104,6 @@ bbl_a10nsp_session_free(bbl_session_s *session);
 
 void
 bbl_a10nsp_rx_handler(bbl_a10nsp_interface_s *interface,
-                      bbl_ethernet_header_t *eth);
+                      bbl_ethernet_header_s *eth);
 
 #endif

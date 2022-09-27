@@ -8,15 +8,7 @@
  */
 #include "bbl.h"
 
-void
-bbl_lag_rate_job(timer_s *timer)
-{
-    bbl_lag_s *lag = timer->data;
-    bbl_compute_avg_rate(&lag->stats.rate_packets_tx, lag->stats.packets_tx);
-    bbl_compute_avg_rate(&lag->stats.rate_packets_rx, lag->stats.packets_rx);
-    bbl_compute_avg_rate(&lag->stats.rate_bytes_tx, lag->stats.bytes_tx);
-    bbl_compute_avg_rate(&lag->stats.rate_bytes_rx, lag->stats.bytes_rx);
-}
+uint16_t g_lag_port_id = 1;
 
 /**
  * bbl_lag_get
@@ -71,16 +63,32 @@ bbl_lag_add()
         CIRCLEQ_INIT(&lag->lag_interface_qhead);
         CIRCLEQ_INSERT_TAIL(&g_ctx->lag_qhead, lag, lag_qnode);
 
-        timer_add_periodic(&g_ctx->timer_root, &lag->rate_job, "Rate Computation", 1, 0, lag, &bbl_lag_rate_job);
         lag_config = lag_config->next;
     }
     return true;
+}
+
+
+void
+bbl_lag_lacp_tx_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
+    bbl_lag_member_s *member = interface->lag;
+
+    interface->send_requests |= BBL_SEND_LACP;
+    member->timeout++;
+    if(member->timeout > 3) {
+        member->state = INTERFACE_DOWN;
+        interface->state = INTERFACE_DOWN;
+    }
 }
 
 bool
 bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config)
 {
     bbl_lag_s *lag;
+    bbl_lag_member_s *member;
+    time_t timer_sec;
 
     if(link_config->lag_id) {
         lag = bbl_lag_get(link_config->lag_id);
@@ -89,8 +97,50 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
                 link_config->interface, link_config->lag_id);
             return false;
         }
-        interface->lag = lag;
+        member = calloc(1, sizeof(bbl_lag_member_s));
+        member->lag = lag;
+        if(lag->config->lacp_enable) {
+            member->state = INTERFACE_DOWN;
+            interface->state = INTERFACE_DOWN;
+            memcpy(member->actor_system_id, lag->config->lacp_system_id, ETH_ADDR_LEN);
+            member->actor_system_priority = lag->config->lacp_system_priority;
+            member->actor_key = lag->id;
+            member->actor_port_priority = interface->config->lacp_priority;
+            member->actor_port_id = g_lag_port_id++;
+            member->actor_state = LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_DEFAULTED;
+            if(lag->config->lacp_timeout_short) {
+                timer_sec = 1;
+                member->actor_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
+            } else {
+                timer_sec = 30;
+            }
+            timer_add_periodic(&g_ctx->timer_root, &member->lacp_timer, "LACP",
+                               timer_sec, 0, interface, &bbl_lag_lacp_tx_job);
+        } else {
+            member->state = INTERFACE_UP;
+        }
+
+        interface->lag = member;
         CIRCLEQ_INSERT_TAIL(&lag->lag_interface_qhead, interface, interface_lag_qnode);
     }
     return true;
+}
+
+void
+bbl_lag_rx_lacp(bbl_interface_s *interface,
+                bbl_ethernet_header_s *eth)
+{
+    bbl_lag_member_s *member = interface->lag;
+    bbl_lacp_s *lacp = (bbl_lacp_s*)eth->next; 
+
+    if(member) {
+        memcpy(member->partner_system_id, lacp->actor_system_id, ETH_ADDR_LEN);
+        member->partner_system_priority = lacp->actor_system_priority;
+        member->partner_key = lacp->actor_key;
+        member->partner_port_priority = lacp->actor_port_priority;
+        member->partner_port_id = lacp->actor_port_id;
+        member->partner_state = lacp->actor_state;
+        member->stats.lacp_rx++;
+    }
+    return;
 }

@@ -140,7 +140,6 @@ typedef struct bbl_link_config_
     uint8_t lag_id;
 
     uint32_t lacp_priority;
-    uint32_t lacp_interval;
 
     void *next; /* pointer to next link config element */
     bbl_interface_s *link;
@@ -149,10 +148,10 @@ typedef struct bbl_link_config_
 typedef struct bbl_lag_config_
 {
     uint8_t id;
-
     bool lacp_enable;
-    uint32_t lacp_priority;
-
+    bool lacp_timeout_short;
+    uint32_t lacp_system_priority;
+    uint8_t lacp_system_id[ETH_ADDR_LEN];
     void *next; /* pointer to next lag config element */
 } bbl_lag_config_s;
 

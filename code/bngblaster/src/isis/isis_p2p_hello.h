@@ -12,7 +12,7 @@
 protocol_error_t
 isis_p2p_hello_encode(bbl_network_interface_s *interface, 
                       uint8_t *buf, uint16_t *len, 
-                      bbl_ethernet_header_t *eth);
+                      bbl_ethernet_header_s *eth);
 
 void
 isis_p2p_hello_handler_rx(bbl_network_interface_s *interface,

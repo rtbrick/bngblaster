@@ -53,6 +53,10 @@ bbl_stream_can_send(bbl_stream_s *stream)
         goto FREE;
     }
 
+    if(stream->interface->state != INTERFACE_UP) {
+        goto FREE;
+    }
+
     if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
         return true;
     }
@@ -76,12 +80,12 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
 
     uint16_t buf_len;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_pppoe_session_t pppoe = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_ipv6_t ipv6 = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_session_s pppoe = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
 
     /* *
      * The corresponding network interfaces will be selected
@@ -213,12 +217,12 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
 
     uint16_t buf_len;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_pppoe_session_t pppoe = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_ipv6_t ipv6 = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_session_s pppoe = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
 
     a10nsp_interface = bbl_a10nsp_interface_get(config->a10nsp_interface);
     if(!(a10nsp_interface && a10nsp_session)) {
@@ -331,11 +335,11 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
 
     uint16_t buf_len;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_ipv6_t ipv6 = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
 
     a10nsp_interface = bbl_a10nsp_interface_get(config->a10nsp_interface);
     if(!(a10nsp_interface && a10nsp_session)) {
@@ -452,11 +456,11 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
 
     uint16_t buf_len;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_ipv6_t ipv6 = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
 
     /* *
      * The corresponding network interfaces will be selected
@@ -584,13 +588,13 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
 
     uint16_t buf_len;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_mpls_t mpls1 = {0};
-    bbl_mpls_t mpls2 = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_ipv6_t ipv6 = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_mpls_s mpls1 = {0};
+    bbl_mpls_s mpls2 = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
 
     uint8_t mac[ETH_ADDR_LEN] = {0};
 
@@ -725,19 +729,19 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     bbl_stream_config_s *config = stream->config;
 
     bbl_l2tp_session_s *l2tp_session = stream->session->l2tp_session;
-    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_sunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
     bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
 
     uint16_t buf_len;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_ipv4_t l2tp_ipv4 = {0};
-    bbl_udp_t l2tp_udp = {0};
-    bbl_l2tp_t l2tp = {0};
-    bbl_ipv4_t ipv4 = {0};
-    bbl_udp_t udp = {0};
-    bbl_bbl_t bbl = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv4_s l2tp_ipv4 = {0};
+    bbl_udp_s l2tp_udp = {0};
+    bbl_l2tp_s l2tp = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
 
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
@@ -1865,11 +1869,11 @@ stream_sub_type_string(bbl_stream_s *stream) {
 }
 
 bbl_stream_s *
-bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session)
+bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
 {
-    bbl_bbl_t *bbl = eth->bbl;
+    bbl_bbl_s *bbl = eth->bbl;
     bbl_stream_s *stream;
-    bbl_mpls_t *mpls;
+    bbl_mpls_s *mpls;
     void **search = NULL;
 
     uint64_t loss = 0;

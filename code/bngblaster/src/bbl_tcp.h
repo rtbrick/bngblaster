@@ -86,13 +86,13 @@ bbl_tcp_ctx_s *
 bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
 
 void
-bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4);
+bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
 
 bbl_tcp_ctx_s *
 bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
 
 void
-bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth, bbl_ipv6_t *ipv6);
+bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6);
 
 bool
 bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len);

@@ -173,7 +173,7 @@ void
 bbl_stream_final();
 
 bbl_stream_s *
-bbl_stream_rx(bbl_ethernet_header_t *eth, bbl_session_s *session);
+bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session);
 
 void
 bbl_stream_reset(bbl_stream_s *stream);

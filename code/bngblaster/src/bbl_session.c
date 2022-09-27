@@ -870,7 +870,7 @@ NEXT:
 }
 
 uint32_t
-bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
+bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
 {
     uint32_t session_id = 0;
     vlan_session_key_t key = {0};
@@ -890,19 +890,19 @@ bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
 }
 
 uint32_t
-bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_t *eth)
+bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
 {
     uint32_t session_id = 0;
-    bbl_ipv4_t *ipv4;
-    bbl_udp_t *udp;
-    bbl_dhcp_t *dhcp;
+    bbl_ipv4_s *ipv4;
+    bbl_udp_s *udp;
+    bbl_dhcp_s *dhcp;
 
     if(eth->type == ETH_TYPE_IPV4) {
-        ipv4 = (bbl_ipv4_t*)eth->next;
+        ipv4 = (bbl_ipv4_s*)eth->next;
         if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
-            udp = (bbl_udp_t*)ipv4->next;
+            udp = (bbl_udp_s*)ipv4->next;
             if (udp->protocol == UDP_PROTOCOL_DHCP) {
-                dhcp = (bbl_dhcp_t*)udp->next;
+                dhcp = (bbl_dhcp_s*)udp->next;
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[5];
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[4] << 8;
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[3] << 16;

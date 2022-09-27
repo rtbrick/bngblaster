@@ -962,7 +962,7 @@ bbl_ctrl_l2tp_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
     json_t *root, *tunnels, *tunnel;
 
     bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_sunnel_s *l2tp_tunnel;
 
     tunnels = json_array();
 
@@ -1047,7 +1047,7 @@ bbl_ctrl_l2tp_sessions(int fd, uint32_t session_id __attribute__((unused)), json
     json_t *root, *sessions;
 
     bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
-    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_sunnel_s *l2tp_tunnel;
     bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
@@ -1117,7 +1117,7 @@ bbl_ctrl_l2tp_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t*
 {
     json_t *sessions, *number;
 
-    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_sunnel_s *l2tp_tunnel;
     bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
@@ -1163,7 +1163,7 @@ bbl_ctrl_l2tp_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t*
 int
 bbl_ctrl_l2tp_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
 {
-    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_sunnel_s *l2tp_tunnel;
     bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
     void **search = NULL;
@@ -1185,7 +1185,7 @@ bbl_ctrl_l2tp_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused
         if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
             return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
         }
-        bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+        bbl_l2tp_sunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
         if (json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
             result_code = 1;
         }
@@ -1209,7 +1209,7 @@ int
 bbl_ctrl_l2tp_session_terminate(int fd, uint32_t session_id, json_t* arguments)
 {
     bbl_session_s *session;
-    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bbl_l2tp_sunnel_s *l2tp_tunnel;
     bbl_l2tp_session_s *l2tp_session;
 
     int result_code;

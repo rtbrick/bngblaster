@@ -69,7 +69,7 @@ main(int argc, char **argv) {
 
     struct timespec tstart={0,0}, tend={0,0};
     protocol_error_t decode_result;
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
 
     g_input_packets_head = calloc(1, sizeof(input_packets_t));
     g_input_packets_next = g_input_packets_head;

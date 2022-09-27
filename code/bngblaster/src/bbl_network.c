@@ -214,7 +214,7 @@ bbl_network_interface_get(char *interface_name)
 
 static void
 bbl_network_update_eth(bbl_network_interface_s *interface,
-                       bbl_ethernet_header_t *eth) {
+                       bbl_ethernet_header_s *eth) {
     eth->dst = eth->src;
     eth->src = interface->mac;
     eth->vlan_outer = interface->vlan;
@@ -229,8 +229,8 @@ bbl_network_update_eth(bbl_network_interface_s *interface,
 
 static bbl_txq_result_t
 bbl_network_arp_reply(bbl_network_interface_s *interface,
-                      bbl_ethernet_header_t *eth,
-                      bbl_arp_t *arp) {
+                      bbl_ethernet_header_s *eth,
+                      bbl_arp_s *arp) {
     bbl_network_update_eth(interface, eth);
     arp->code = ARP_REPLY;
     arp->sender = interface->mac;
@@ -242,9 +242,9 @@ bbl_network_arp_reply(bbl_network_interface_s *interface,
 
 static bbl_txq_result_t
 bbl_network_icmp_reply(bbl_network_interface_s *interface,
-                       bbl_ethernet_header_t *eth,
-                       bbl_ipv4_t *ipv4,
-                       bbl_icmp_t *icmp) {
+                       bbl_ethernet_header_s *eth,
+                       bbl_ipv4_s *ipv4,
+                       bbl_icmp_s *icmp) {
     uint32_t dst = ipv4->dst;
     bbl_network_update_eth(interface, eth);
     ipv4->dst = ipv4->src;
@@ -256,9 +256,9 @@ bbl_network_icmp_reply(bbl_network_interface_s *interface,
 
 static bbl_txq_result_t
 bbl_network_icmpv6_na(bbl_network_interface_s *interface,
-                      bbl_ethernet_header_t *eth,
-                      bbl_ipv6_t *ipv6,
-                      bbl_icmpv6_t *icmpv6) {
+                      bbl_ethernet_header_s *eth,
+                      bbl_ipv6_s *ipv6,
+                      bbl_icmpv6_s *icmpv6) {
     bbl_network_update_eth(interface, eth);
     ipv6->dst = ipv6->src;
     ipv6->src = icmpv6->prefix.address;
@@ -275,9 +275,9 @@ bbl_network_icmpv6_na(bbl_network_interface_s *interface,
 
 static bbl_txq_result_t
 bbl_network_icmpv6_echo_reply(bbl_network_interface_s *interface,
-                              bbl_ethernet_header_t *eth,
-                              bbl_ipv6_t *ipv6,
-                              bbl_icmpv6_t *icmpv6) {
+                              bbl_ethernet_header_s *eth,
+                              bbl_ipv6_s *ipv6,
+                              bbl_icmpv6_s *icmpv6) {
     uint8_t *dst = ipv6->dst;
     bbl_network_update_eth(interface, eth);
     ipv6->dst = ipv6->src;
@@ -288,10 +288,10 @@ bbl_network_icmpv6_echo_reply(bbl_network_interface_s *interface,
 }
 
 static void
-bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth) {
+bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) {
     bbl_secondary_ip_s *secondary_ip;
 
-    bbl_arp_t *arp = (bbl_arp_t*)eth->next;
+    bbl_arp_s *arp = (bbl_arp_s*)eth->next;
     if(arp->sender_ip == interface->gateway) {
         interface->arp_resolved = true;
         if(*(uint32_t*)interface->gateway_mac == 0) {
@@ -316,13 +316,13 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_t *et
 
 static void
 bbl_network_rx_icmpv6(bbl_network_interface_s *interface, 
-                      bbl_ethernet_header_t *eth) {
-    bbl_ipv6_t *ipv6;
-    bbl_icmpv6_t *icmpv6;
+                      bbl_ethernet_header_s *eth) {
+    bbl_ipv6_s *ipv6;
+    bbl_icmpv6_s *icmpv6;
     bbl_secondary_ip6_s *secondary_ip6;
 
-    ipv6 = (bbl_ipv6_t*)eth->next;
-    icmpv6 = (bbl_icmpv6_t*)ipv6->next;
+    ipv6 = (bbl_ipv6_s*)eth->next;
+    icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
     if(memcmp(ipv6->src, interface->gateway6, IPV6_ADDR_LEN) == 0) {
         interface->icmpv6_nd_resolved = true;
@@ -352,9 +352,9 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
 
 static void
 bbl_network_rx_icmp(bbl_network_interface_s *interface, 
-                    bbl_ethernet_header_t *eth, bbl_ipv4_t *ipv4)
+                    bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
-    bbl_icmp_t *icmp = (bbl_icmp_t*)ipv4->next;
+    bbl_icmp_s *icmp = (bbl_icmp_s*)ipv4->next;
     if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
         /* Send ICMP reply... */
         bbl_network_icmp_reply(interface, eth, ipv4, icmp);
@@ -371,11 +371,11 @@ bbl_network_rx_icmp(bbl_network_interface_s *interface,
  */
 void
 bbl_network_rx_handler(bbl_network_interface_s *interface, 
-                       bbl_ethernet_header_t *eth)
+                       bbl_ethernet_header_s *eth)
 {
-    bbl_ipv4_t *ipv4 = NULL;
-    bbl_ipv6_t *ipv6 = NULL;
-    bbl_udp_t *udp = NULL;
+    bbl_ipv4_s *ipv4 = NULL;
+    bbl_ipv6_s *ipv6 = NULL;
+    bbl_udp_s *udp = NULL;
 
     interface->stats.packets_rx++;
     interface->stats.bytes_rx += eth->length;
@@ -389,14 +389,14 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 /* Drop wrong MAC */
                 return;
             }
-            ipv4 = (bbl_ipv4_t*)eth->next;
+            ipv4 = (bbl_ipv4_s*)eth->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
-                udp = (bbl_udp_t*)ipv4->next;
+                udp = (bbl_udp_s*)ipv4->next;
                 if(udp->protocol == UDP_PROTOCOL_QMX_LI) {
-                    bbl_qmx_li_handler_rx(interface, eth, (bbl_qmx_li_t*)udp->next);
+                    bbl_qmx_li_handler_rx(interface, eth, (bbl_qmx_li_s*)udp->next);
                     return;
                 } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
-                    bbl_l2tp_handler_rx(interface, eth, (bbl_l2tp_t*)udp->next);
+                    bbl_l2tp_handler_rx(interface, eth, (bbl_l2tp_s*)udp->next);
                     return;
                 }
             } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
@@ -410,7 +410,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
             }
             break;
         case ETH_TYPE_IPV6:
-            ipv6 = (bbl_ipv6_t*)eth->next;
+            ipv6 = (bbl_ipv6_s*)eth->next;
             if(ipv6->protocol == IPV6_NEXT_HEADER_ICMPV6) {
                 bbl_network_rx_icmpv6(interface, eth);
                 return;

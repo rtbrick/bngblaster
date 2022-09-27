@@ -112,7 +112,7 @@ bbl_dhcpv6_restart(bbl_session_s *session)
 }
 
 void
-bbl_dhcpv6_t1(timer_s *timer)
+bbl_dhcpv6_s1(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->dhcpv6_state == BBL_DHCP_BOUND) {
@@ -127,7 +127,7 @@ bbl_dhcpv6_t1(timer_s *timer)
 }
 
 void
-bbl_dhcpv6_t2(timer_s *timer)
+bbl_dhcpv6_s2(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     LOG(DHCP, "DHCPv6 (ID: %u) Lease expired\n", session->session_id);
@@ -144,7 +144,7 @@ bbl_dhcpv6_t2(timer_s *timer)
  * @param dhcpv6 dhcpv6 header of received packet
  */
 void
-bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcpv6_t *dhcpv6)
+bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *dhcpv6)
 {
     bbl_access_interface_s *interface = session->access_interface;
 
@@ -226,11 +226,11 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcpv6_t *
         session->dhcpv6_state = BBL_DHCP_BOUND;
         if(session->dhcpv6_t1) {
             timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t1, "DHCPv6 T1", 
-                      session->dhcpv6_t1, 0, session, &bbl_dhcpv6_t1);
+                      session->dhcpv6_t1, 0, session, &bbl_dhcpv6_s1);
         }
         if(session->dhcpv6_t2) {
             timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", 
-                      session->dhcpv6_t2, 0, session, &bbl_dhcpv6_t2);
+                      session->dhcpv6_t2, 0, session, &bbl_dhcpv6_s2);
         }
         bbl_access_rx_established_ipoe(interface, session, eth);
         session->send_requests |= BBL_SEND_ICMPV6_RS;

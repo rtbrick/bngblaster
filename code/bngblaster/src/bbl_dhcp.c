@@ -112,7 +112,7 @@ bbl_dhcp_restart(bbl_session_s *session)
 }
 
 void
-bbl_dhcp_t1(timer_s *timer)
+bbl_dhcp_s1(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->dhcp_state == BBL_DHCP_BOUND) {
@@ -127,7 +127,7 @@ bbl_dhcp_t1(timer_s *timer)
 }
 
 void
-bbl_dhcp_t2(timer_s *timer)
+bbl_dhcp_s2(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     LOG(DHCP, "DHCP (ID: %u) Lease expired\n", session->session_id);
@@ -144,7 +144,7 @@ bbl_dhcp_t2(timer_s *timer)
  * @param session session
  */
 void
-bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp)
+bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp)
 {
     /* Ignore packets received in wrong state */
     if(session->dhcp_state == BBL_DHCP_INIT) {
@@ -190,7 +190,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp
                     bbl_dhcp_restart(session);
                     return;
                 }
-                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_t2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_s2);
                 session->dhcp_retry = 0;
                 session->send_requests |= BBL_SEND_DHCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
@@ -259,8 +259,8 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp
                     }
                 }
                 session->dhcp_state = BBL_DHCP_BOUND;
-                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
-                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_s1);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
             } else if (dhcp->type == DHCP_MESSAGE_NAK) {
@@ -283,8 +283,8 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp
                 }
                 session->dhcp_t1 = 0.5 * session->dhcp_lease_time; if(!session->dhcp_t1) session->dhcp_t1 = 1;
                 session->dhcp_t2 = 0.875 * session->dhcp_lease_time; if(!session->dhcp_t2) session->dhcp_t2 = 1;
-                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
-                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_s1);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
             } else if (dhcp->type == DHCP_MESSAGE_NAK) {

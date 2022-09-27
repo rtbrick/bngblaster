@@ -39,7 +39,7 @@ bool
 isis_init();
 
 void
-isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_t *eth);
+isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth);
 
 void
 isis_teardown();

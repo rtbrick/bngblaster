@@ -172,7 +172,7 @@ bbl_l2tp_avp_encode_disconnect_code(uint8_t **_buf, uint16_t *len,
 
 /* bbl_l2tp_avp_unhide */
 static bool
-bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
+bbl_l2tp_avp_unhide(bbl_l2tp_sunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
                     *random_vector, uint16_t random_vector_len)
 {
     MD5_CTX ctx;
@@ -236,7 +236,7 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
 }
 
 bool
-bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session)
+bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_sunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session)
 {
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
@@ -483,7 +483,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
 }
 
 bool
-bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
+bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_sunnel_s *l2tp_tunnel)
 {
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
@@ -639,7 +639,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
 }
 
 bool
-bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
+bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_sunnel_s *l2tp_tunnel)
 {
     uint8_t *buf = l2tp->payload;
     uint16_t len = l2tp->payload_len;
@@ -708,8 +708,8 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
 }
 
 void
-bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session,
-                               l2tp_message_type l2tp_type, uint8_t *buf, uint16_t *len)
+bbl_l2tp_avp_encode_attributes(bbl_l2tp_sunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session,
+                               l2tp_message_t l2tp_type, uint8_t *buf, uint16_t *len)
 {
     bbl_l2tp_avp_t avp = {0};
 
