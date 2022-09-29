@@ -303,21 +303,19 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
     bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
     bbl.flow_id = stream->flow_id;
     bbl.tos = config->priority;
-    switch (stream->config->type) {
+    switch(stream->config->type) {
         case STREAM_IPV4:
             pppoe.protocol = PROTOCOL_IPV4;
             pppoe.next = &ipv4;
-            /* Source address */
-            ipv4.src = session->ip_address;
-            /* Destination address */
+            if(stream->direction == STREAM_DIRECTION_UP) {
+                ipv4.src = session->ip_address;
+                ipv4.dst = A10NSP_IP_LOCAL;
+            } else {
+                ipv4.src = A10NSP_IP_LOCAL;
+                ipv4.dst = session->ip_address;
+            }
             if(stream->config->ipv4_destination_address) {
                 ipv4.dst = stream->config->ipv4_destination_address;
-            } else {
-                if(stream->config->ipv4_network_address) {
-                    ipv4.dst = stream->config->ipv4_network_address;
-                } else {
-                    ipv4.dst = A10NSP_IP_LOCAL;
-                }
             }
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
@@ -335,23 +333,17 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream *stream) {
         case STREAM_IPV6PD:
             pppoe.protocol = PROTOCOL_IPV6;
             pppoe.next = &ipv6;
-            /* Source address */
-            if(stream->config->type == STREAM_IPV6) {
-                ipv6.src = session->ipv6_address;
+            if(stream->direction == STREAM_DIRECTION_UP) {
+                ipv6.src = session->link_local_ipv6_address;
+                ipv6.dst = (void*)ipv6_link_local_address;
             } else {
-                ipv6.src = session->delegated_ipv6_address;
+                ipv6.src = (void*)ipv6_link_local_address;
+                ipv6.dst = session->link_local_ipv6_address;
             }
             /* Destination address */
             if(*(uint64_t*)stream->config->ipv6_destination_address) {
                 ipv6.dst = stream->config->ipv6_destination_address;
-            } else {
-                if(*(uint64_t*)stream->config->ipv6_network_address) {
-                    ipv6.dst = stream->config->ipv6_network_address;
-                } else {
-                    ipv6.dst = session->link_local_ipv6_address;
-                }
             }
-            ipv6.src = session->link_local_ipv6_address;
             ipv6.ttl = 64;
             ipv6.tos = config->priority;
             ipv6.protocol = IPV6_NEXT_HEADER_UDP;
