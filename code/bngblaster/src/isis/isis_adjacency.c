@@ -94,8 +94,10 @@ isis_adjacency_up(isis_adjacency_t *adjacency) {
         return;
     }
 
-    LOG(ISIS, "ISIS %s adjacency UP on interface %s \n", 
-        isis_level_string(adjacency->level), adjacency->interface->name);
+    LOG(ISIS, "ISIS %s adjacency UP to %s on interface %s \n", 
+        isis_level_string(adjacency->level), 
+        isis_system_id_to_str(adjacency->peer->system_id),
+        adjacency->interface->name);
 
     adjacency->state = ISIS_ADJACENCY_STATE_UP;
 
@@ -136,8 +138,10 @@ isis_adjacency_down(isis_adjacency_t *adjacency) {
         return;
     }
 
-    LOG(ISIS, "ISIS %s adjacency DOWN on interface %s \n", 
-        isis_level_string(adjacency->level), adjacency->interface->name);
+    LOG(ISIS, "ISIS %s adjacency DOWN to %s on interface %s \n", 
+        isis_level_string(adjacency->level), 
+        isis_system_id_to_str(adjacency->peer->system_id),
+        adjacency->interface->name);
 
     adjacency->state = ISIS_ADJACENCY_STATE_DOWN;
 
@@ -145,6 +149,7 @@ isis_adjacency_down(isis_adjacency_t *adjacency) {
     timer_del(adjacency->timer_retry);
     timer_del(adjacency->timer_csnp);
     timer_del(adjacency->timer_csnp_next);
+    timer_del(adjacency->timer_holding);
 
     if(ctx->routing_sessions) ctx->routing_sessions--;
 }

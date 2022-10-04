@@ -9,9 +9,42 @@
 #include "isis.h"
 
 void
-isis_hello_timeout (timer_s *timer) {
+isis_p2p_hello_timeout(timer_s *timer) {
     bbl_interface_s *interface = timer->data;
     interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
+}
+
+void
+isis_p2p_holding_timeout(timer_s *timer) {
+    isis_adjacency_t *adjacency = timer->data;
+
+    if(adjacency->state == ISIS_ADJACENCY_STATE_DOWN) {
+        return;
+    }
+
+    LOG(ISIS, "ISIS %s holding timeout to %s on interface %s\n",
+        isis_level_string(adjacency->level), 
+        isis_system_id_to_str(adjacency->peer->system_id),
+        adjacency->interface->name);
+
+    isis_adjacency_down(adjacency);
+    isis_lsp_self_update(adjacency->instance, adjacency->level);
+
+    adjacency->interface->isis_adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
+}
+
+static void
+isis_p2p_restart_holding_timers(bbl_interface_s *interface) {
+    isis_adjacency_t *adjacency;
+
+    for(int i=0; i<ISIS_LEVELS; i++) {
+        adjacency = interface->isis_adjacency[i];
+        if(adjacency) {
+            timer_add(&interface->ctx->timer_root, &adjacency->timer_holding, 
+                      "ISIS holding", adjacency->peer->holding_time, 0, adjacency, 
+                      &isis_p2p_holding_timeout);
+        }
+    }
 }
 
 /**
@@ -39,24 +72,10 @@ isis_p2p_hello_encode(bbl_interface_s *interface,
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
-    if(adjacency->timeout > 3 && adjacency->state != ISIS_P2P_ADJACENCY_STATE_DOWN) {
-        LOG(ISIS, "ISIS P2P-Hello timeout on interface %s\n",
-            interface->name);
-
-        adjacency->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
-
-        for(int i=0; i<ISIS_LEVELS; i++) {
-            if(interface->isis_adjacency[i]) {
-                isis_adjacency_down(interface->isis_adjacency[i]);
-                isis_lsp_self_update(adjacency->instance, i+1);
-            }
-        }
-    }
-
     /* Start next timer ... */
     timer_add(&interface->ctx->timer_root, &interface->timer_isis_hello, 
               "ISIS hello", config->hello_interval, 0, interface, 
-              &isis_hello_timeout);
+              &isis_p2p_hello_timeout);
 
     if(config->level1_auth && config->level1_key) {
         auth = config->level1_auth;
@@ -98,7 +117,6 @@ isis_p2p_hello_encode(bbl_interface_s *interface,
         LOG(DEBUG, "ISIS TX %s on interface %s\n",
             isis_pdu_type_string(isis.type), interface->name);
         adjacency->stats.hello_tx++;
-        adjacency->timeout++;
     }
     return result;
 }
@@ -145,13 +163,14 @@ isis_p2p_hello_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu) {
         LOG(ISIS, "ISIS RX P2P-Hello authentication failed on interface %s\n",
             adjacency->interface->name);
     }
-
-    adjacency->timeout = 0;
     
     peer = adjacency->peer;
     peer->level = *PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEVEL) & 0x03;
     memcpy(peer->system_id, PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN);
-    
+    peer->holding_time = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_HOLD_TIME));
+
+    isis_p2p_restart_holding_timers(interface);
+
     tlv = isis_pdu_first_tlv(pdu);
     while(tlv) {
         switch (tlv->type) {

@@ -103,6 +103,41 @@ to download logs and reports.</p>
 <p>The BNG Blaster controller should run on any modern linux distribution
 but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.</p>
 <p>Download and install debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster-controller/releases">https://github.com/rtbrick/bngblaster-controller/releases</a></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ wget https://github.com/rtbrick/bngblaster-controller/releases/download/&lt;version&gt;/bngblaster-controller_&lt;version&gt;_amd64.deb
+$ sudo dpkg -i bngblaster-controller_&lt;version&gt;_amd64.deb
+</pre></div>
+</div>
+<p>The corresponding service will be started automatically.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ systemctl status rtbrick-bngblasterctrl.service
+● rtbrick-bngblasterctrl.service - RtBrick BNG Blaster Controller
+    Loaded: loaded (/lib/systemd/system/rtbrick-bngblasterctrl.service; enabled; vendor preset: enabled)
+    Active: active (running) since Fri 2022-07-01 11:14:01 UTC; 7min ago
+Main PID: 682535 (bngblasterctrl)
+    Tasks: 8 (limit: 309235)
+    Memory: 2.6M
+    CGroup: /system.slice/rtbrick-bngblasterctrl.service
+            └─682535 /usr/local/bin/bngblasterctrl
+</pre></div>
+</div>
+<p>The BNG Blaster controller listens on port <cite>8001</cite> per default,
+which can be changed using the argument <cite>-addr</cite> in the systemd
+service unit <cite>/etc/systemd/system/bngblaster-controller.service</cite>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblasterctrl --help
+Usage of bngblasterctrl:
+-addr string
+        HTTP network address (default &quot;:8001&quot;)
+-color
+        turn on color of color output
+-console
+        turn on pretty console logging (default true)
+-d string
+        config folder (default &quot;/var/bngblaster&quot;)
+-debug
+        turn on debug logging
+-e string
+        bngblaster executable (default &quot;/usr/sbin/bngblaster&quot;)
+</pre></div>
+</div>
 </section>
 <section id="api">
 <h2>API<a class="headerlink" href="#api" title="Permalink to this headline"></a></h2>

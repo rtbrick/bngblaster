@@ -501,14 +501,20 @@ bbl_ctrl_zapping_stats(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__
     json_unpack(arguments, "{s:b}", "reset", &reset);
     bbl_stats_generate_multicast(ctx, &stats, reset);
 
-    root = json_pack("{ss si s{si si si si si si si si si si si}}",
+    root = json_pack("{ss si s{si si si si si si si si si si si si si si si si si}}",
                      "status", "ok",
                      "code", 200,
                      "zapping-stats",
                      "join-delay-ms-min", stats.min_join_delay,
                      "join-delay-ms-avg", stats.avg_join_delay,
                      "join-delay-ms-max", stats.max_join_delay,
-                     "join-delay-violations", stats.max_join_delay_violations,
+                     "join-delay-violations", stats.join_delay_violations,
+                     "join-delay-violations-threshold", ctx->config.igmp_max_join_delay,
+                     "join-delay-violations-125ms", stats.join_delay_violations_125ms,
+                     "join-delay-violations-250ms", stats.join_delay_violations_250ms,
+                     "join-delay-violations-500ms", stats.join_delay_violations_500ms,
+                     "join-delay-violations-1s", stats.join_delay_violations_1s,
+                     "join-delay-violations-2s", stats.join_delay_violations_2s,
                      "join-count", stats.zapping_join_count,
                      "leave-delay-ms-min", stats.min_leave_delay,
                      "leave-delay-ms-avg", stats.avg_leave_delay,

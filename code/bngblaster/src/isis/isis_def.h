@@ -24,6 +24,7 @@
 
 #define ISIS_OFFSET_P2P_HELLO_LEVEL     8
 #define ISIS_OFFSET_P2P_HELLO_SYSTEM_ID 9
+#define ISIS_OFFSET_P2P_HELLO_HOLD_TIME 15
 #define ISIS_OFFSET_P2P_HELLO_LEN       17
 
 #define ISIS_OFFSET_CSNP_LEN            8
@@ -237,6 +238,7 @@ typedef struct isis_config_ {
 typedef struct isis_peer_ {
     uint8_t  level;
     uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
+    uint16_t holding_time;
     char    *hostname;
 } isis_peer_t;
 
@@ -258,12 +260,12 @@ typedef struct isis_adjacency_ {
     struct timer_   *timer_csnp;
     struct timer_   *timer_csnp_next;
     struct timer_   *timer_psnp_next;
-    
+    struct timer_   *timer_holding;
+
     bool timer_psnp_started;
 
     uint8_t  level;
     uint8_t  state;
-    uint8_t  timeout;
     uint16_t window_size;
 
     uint32_t metric;
@@ -289,7 +291,6 @@ typedef struct isis_adjacency_p2p_ {
     
     uint8_t level;
     uint8_t state;
-    uint8_t timeout;
 
     struct {
         uint32_t hello_rx;
