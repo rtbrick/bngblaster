@@ -545,12 +545,6 @@ lsdb_add_link(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node, struct lsdb_link_ 
         CIRCLEQ_INSERT_TAIL(&node->link_qhead, link, link_qnode);
 
         /*
-         * Assign a monotonically index for mapping links IPs.
-         */
-        link->link_index = ctx->link_index;
-        ctx->link_index++;
-
-        /*
          * Book keeping.
          */
         ctx->linkcount++;
@@ -572,7 +566,23 @@ lsdb_add_link(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node, struct lsdb_link_ 
              */
             link->inverse_link = inverse_link;
             inverse_link->inverse_link = link;
-        }
+
+	    /*
+	     * Inherit the link index from the inverse link,
+	     * such that the same prefix is assigned to both links.
+	     */
+	    if (inverse_link->link_index) {
+		link->link_index = inverse_link->link_index;
+	    }
+
+	    return link;
+	}
+
+        /*
+         * Assign a monotonically index for mapping links IPs.
+         */
+        link->link_index = ctx->link_index;
+        ctx->link_index++;
 
         return link;
     }
