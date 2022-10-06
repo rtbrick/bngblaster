@@ -9,6 +9,29 @@
 #include "bbl.h"
 #include <sys/stat.h>
 
+const char *
+interface_type_string(interface_type_t type)
+{
+    switch(type) {
+        case DEFAULT_INTERFACE: return "Interface";
+        case LAG_INTERFACE: return "LAG-Interface";
+        case LAG_MEMBER_INTERFACE: return "LAG-Member-Interface";
+        default: return "N/A";
+    }
+}
+
+const char *
+interface_state_string(interface_state_t state)
+{
+    switch(state) {
+        case INTERFACE_DISABLED: return "Disabled";
+        case INTERFACE_UP: return "Up";
+        case INTERFACE_DOWN: return "Down";
+        case INTERFACE_STANDBY: return "Standby";
+        default: return "N/A";
+    }
+}
+
 /**
  * bbl_interface_lock
  *
@@ -101,10 +124,10 @@ bbl_interface_link_add(char *interface_name, bbl_link_config_s *link_config)
     CIRCLEQ_INSERT_TAIL(&g_ctx->interface_qhead, interface, interface_qnode);
 
     interface->config = link_config;
-    if(!bbl_lag_interface_add(interface, link_config)) {
+    if(!io_interface_init(interface)) {
         return NULL;
     }
-    if(!io_interface_init(interface)) {
+    if(!bbl_lag_interface_add(interface, link_config)) {
         return NULL;
     }
     return interface;
@@ -179,6 +202,11 @@ bbl_interface_s *
 bbl_interface_get(char *interface_name)
 {
     bbl_interface_s *interface;
+
+    if(!interface_name) {
+        return NULL;
+    }
+
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         if (strcmp(interface->name, interface_name) == 0) {
             return interface;

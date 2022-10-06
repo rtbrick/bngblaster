@@ -14,6 +14,7 @@ typedef struct bbl_access_config_
     bool exhausted;
     uint32_t sessions; /* per access config session counter */
 
+    uint8_t lag_id;
     char *interface;
     char *network_interface;
     char *a10nsp_interface;
@@ -86,7 +87,7 @@ typedef struct bbl_access_config_
 typedef struct bbl_network_config_
 {
     char *interface;
-    
+
     uint8_t mac[ETH_ADDR_LEN];
     uint8_t gateway_mac[ETH_ADDR_LEN];
     bool gateway_resolve_wait;
@@ -112,6 +113,7 @@ typedef struct bbl_network_config_
 typedef struct bbl_a10nsp_config_
 {
     char *interface;
+
     uint8_t mac[ETH_ADDR_LEN];
     bool qinq;
 
@@ -137,8 +139,8 @@ typedef struct bbl_link_config_
 
     uint8_t tx_threads;
     uint8_t rx_threads;
-    uint8_t lag_id;
 
+    char *lag_interface;
     uint32_t lacp_priority;
 
     void *next; /* pointer to next link config element */
@@ -148,10 +150,13 @@ typedef struct bbl_link_config_
 typedef struct bbl_lag_config_
 {
     uint8_t id;
+    char *interface;
     bool lacp_enable;
     bool lacp_timeout_short;
-    uint32_t lacp_system_priority;
+    uint16_t lacp_system_priority;
     uint8_t lacp_system_id[ETH_ADDR_LEN];
+    uint8_t mac[ETH_ADDR_LEN];
+
     void *next; /* pointer to next lag config element */
 } bbl_lag_config_s;
 

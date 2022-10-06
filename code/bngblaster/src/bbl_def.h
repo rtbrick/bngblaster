@@ -114,8 +114,16 @@ typedef enum {
 typedef enum {
     INTERFACE_DISABLED = 0,
     INTERFACE_UP,
-    INTERFACE_DOWN
+    INTERFACE_DOWN,
+    INTERFACE_STANDBY,
 } __attribute__ ((__packed__)) interface_state_t;
+
+typedef enum {
+    DEFAULT_INTERFACE = 0,
+    LAG_INTERFACE,
+    LAG_MEMBER_INTERFACE,
+} __attribute__ ((__packed__)) interface_type_t;
+
 
 typedef enum {
     IGMP_GROUP_IDLE = 0,
@@ -130,6 +138,13 @@ typedef enum {
     ENDPOINT_ENABLED,
     ENDPOINT_ACTIVE,
 } __attribute__ ((__packed__)) endpoint_state_t;
+
+typedef enum {
+    LACP_DISABLED = 0,
+    LACP_EXPIRED,
+    LACP_DEFAULTED,
+    LACP_CURRENT
+} __attribute__ ((__packed__)) lacp_state_t;
 
 /*
  * Session state

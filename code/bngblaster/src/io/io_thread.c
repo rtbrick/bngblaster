@@ -285,16 +285,16 @@ io_thread_init(io_handle_s *io)
     thread->run_fn = io_thread_timer_loop;
 
     /* Add thread main loop timers/jobs */
-    if(io->direction == IO_INGRESS && !interface->rx_job) {
+    if(io->direction == IO_INGRESS && !interface->io.rx_job) {
         /** Start job reading from RX thread TXQ */
-        timer_add_periodic(&g_ctx->timer_root, &interface->rx_job, "RX", 
+        timer_add_periodic(&g_ctx->timer_root, &interface->io.rx_job, "RX", 
                            0, config->rx_interval, 
                            interface, &io_thread_main_rx_job);
     }
 
-    if(io->direction == IO_EGRESS && !interface->tx_job) {
+    if(io->direction == IO_EGRESS && !interface->io.tx_job) {
         /** Start job writing to first TX thread TXQ */
-        timer_add_periodic(&g_ctx->timer_root, &interface->tx_job, "TX", 
+        timer_add_periodic(&g_ctx->timer_root, &interface->io.tx_job, "TX", 
                            0, config->tx_interval, 
                            interface, &io_thread_main_tx_job);
     }

@@ -53,6 +53,8 @@ bbl_access_interfaces_add()
     bbl_access_interface_s *access_interface;
     bbl_interface_s *interface;
 
+    char ifname[SUB_STR_LEN];
+
     while(access_config) {
         interface = bbl_interface_get(access_config->interface);
         if(!interface) {
@@ -60,12 +62,17 @@ bbl_access_interfaces_add()
             return false;
         }
         if(!interface->access) {
+            snprintf(ifname, sizeof(ifname), "%s", access_config->interface);
+
             access_interface = calloc(1, sizeof(bbl_access_interface_s));
             interface->access = access_interface;
-            access_interface->interface = interface;
 
             CIRCLEQ_INSERT_TAIL(&g_ctx->access_interface_qhead, access_interface, access_interface_qnode);
 
+            /* Init interface */
+            access_interface->name = access_config->interface;
+            access_interface->interface = interface;
+            
             /* Init TXQ */
             access_interface->txq = calloc(1, sizeof(bbl_txq_s));
             bbl_txq_init(access_interface->txq, BBL_TXQ_DEFAULT_SIZE);
@@ -114,7 +121,8 @@ bbl_access_interface_get(char *interface_name)
 
 static void
 bbl_access_update_eth(bbl_session_s *session,
-                      bbl_ethernet_header_s *eth) {
+                      bbl_ethernet_header_s *eth)
+{
     uint8_t *dst = eth->dst;
     eth->dst = eth->src;
     eth->src = dst;
@@ -130,7 +138,8 @@ static bbl_txq_result_t
 bbl_access_icmp_reply(bbl_session_s *session,
                       bbl_ethernet_header_s *eth,
                       bbl_ipv4_s *ipv4,
-                      bbl_icmp_s *icmp) {
+                      bbl_icmp_s *icmp)
+{
     uint32_t dst = ipv4->dst;
     bbl_access_update_eth(session, eth);
     ipv4->dst = ipv4->src;
@@ -144,7 +153,8 @@ static bbl_txq_result_t
 bbl_access_icmpv6_na(bbl_session_s *session,
                      bbl_ethernet_header_s *eth,
                      bbl_ipv6_s *ipv6,
-                     bbl_icmpv6_s *icmpv6) {
+                     bbl_icmpv6_s *icmpv6)
+{
     bbl_access_update_eth(session, eth);
     ipv6->dst = ipv6->src;
     ipv6->src = icmpv6->prefix.address;
@@ -1648,7 +1658,7 @@ bbl_access_session_id_from_vlan(bbl_access_interface_s *interface,
     bbl_session_s *session;
     void **search;
 
-    key.ifindex = interface->interface->ifindex;
+    key.ifindex = interface->ifindex;
     key.outer_vlan_id = eth->vlan_outer;
     key.inner_vlan_id = eth->vlan_inner;
 

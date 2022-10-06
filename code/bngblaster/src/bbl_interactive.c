@@ -423,10 +423,10 @@ bbl_interactive_window_job(timer_s *timer)
             CIRCLEQ_FOREACH(a10nsp_if, &g_ctx->a10nsp_interface_qhead, a10nsp_interface_qnode) {
                 if(a10nsp_if == g_a10nsp_if) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, " %s", a10nsp_if->interface->name);
+                    wprintw(stats_win, " %s", a10nsp_if->name);
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
-                    wprintw(stats_win, " %s", a10nsp_if->interface->name);
+                    wprintw(stats_win, " %s", a10nsp_if->name);
                 }
             }
             wprintw(stats_win, " )\n  TX Packets                %10lu |%7lu PPS %10lu Kbps\n",
@@ -465,10 +465,10 @@ bbl_interactive_window_job(timer_s *timer)
             CIRCLEQ_FOREACH(access_if, &g_ctx->access_interface_qhead, access_interface_qnode) {
                 if(access_if == g_access_if) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, " %s", access_if->interface->name);
+                    wprintw(stats_win, " %s", access_if->name);
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
-                    wprintw(stats_win, " %s", access_if->interface->name);
+                    wprintw(stats_win, " %s", access_if->name);
                 }
             }
             wprintw(stats_win, " )\n  TX Packets                %10lu |%7lu PPS %10lu Kbps\n",
@@ -511,10 +511,10 @@ bbl_interactive_window_job(timer_s *timer)
             CIRCLEQ_FOREACH(access_if, &g_ctx->access_interface_qhead, access_interface_qnode) {
                 if(access_if == g_access_if) {
                     wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
-                    wprintw(stats_win, " %s", access_if->interface->name);
+                    wprintw(stats_win, " %s", access_if->name);
                     wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
                 } else {
-                    wprintw(stats_win, " %s", access_if->interface->name);
+                    wprintw(stats_win, " %s", access_if->name);
                 }
             }
             wprintw(stats_win, " )\n");

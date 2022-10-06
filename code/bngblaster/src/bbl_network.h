@@ -12,9 +12,15 @@
 
 typedef struct bbl_network_interface_
 {
-    char *name;
-    bbl_interface_s *interface;
+    char *name; /* interface name */
+    uint32_t ifindex; /* interface index */
+
+    /* parent */
+    bbl_interface_s *interface; 
+
+    /* next network interface with same parent */
     struct bbl_network_interface_ *next;
+
     bbl_txq_s *txq;
 
     uint16_t vlan;

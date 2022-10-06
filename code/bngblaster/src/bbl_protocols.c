@@ -2050,23 +2050,23 @@ decode_lacp(uint8_t *buf, uint16_t len,
                 if(tlv_len != 20) {
                     return DECODE_ERROR;
                 }
-                lacp->actor_system_priority = be16toh(*(uint16_t*)buf+2);
+                lacp->actor_system_priority = be16toh(*(uint16_t*)(buf+2));
                 lacp->actor_system_id = buf+4;
-                lacp->actor_key = be16toh(*(uint16_t*)buf+10);
-                lacp->actor_port_priority = be16toh(*(uint16_t*)buf+12);
-                lacp->actor_port_id = be16toh(*(uint16_t*)buf+14);
-                lacp->actor_state = *buf+16;
+                lacp->actor_key = be16toh(*(uint16_t*)(buf+10));
+                lacp->actor_port_priority = be16toh(*(uint16_t*)(buf+12));
+                lacp->actor_port_id = be16toh(*(uint16_t*)(buf+14));
+                lacp->actor_state = *(buf+16);
                 break;
             case LACP_TLV_PARTNER_INFORMATION:
                 if(tlv_len != 20) {
                     return DECODE_ERROR;
                 }
-                lacp->partner_system_priority = be16toh(*(uint16_t*)buf+2);
+                lacp->partner_system_priority = be16toh(*(uint16_t*)(buf+2));
                 lacp->partner_system_id = buf+4;
-                lacp->partner_key = be16toh(*(uint16_t*)buf+10);
-                lacp->partner_port_priority = be16toh(*(uint16_t*)buf+12);
-                lacp->partner_port_id = be16toh(*(uint16_t*)buf+14);
-                lacp->partner_state = *buf+16;
+                lacp->partner_key = be16toh(*(uint16_t*)(buf+10));
+                lacp->partner_port_priority = be16toh(*(uint16_t*)(buf+12));
+                lacp->partner_port_id = be16toh(*(uint16_t*)(buf+14));
+                lacp->partner_state = *(buf+16);
                 break;
             default:
                 break;
