@@ -41,6 +41,7 @@ enum {
     TCP,
     LSDB,
     LSP,
+    LAG,
     LOG_ID_MAX
 };
 

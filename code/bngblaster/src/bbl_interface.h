@@ -13,32 +13,37 @@
 typedef struct bbl_interface_
 {
     char *name; /* interface name */
+    interface_type_t type; /* interface type */
+    interface_state_t state; /* interface state */
+    uint32_t ifindex; /* interface index */
+    uint32_t pcap_index; /* interface index for packet captures */
 
     bbl_link_config_s *config;
-    bbl_lag_member_s *lag;
 
-    bbl_a10nsp_interface_s *a10nsp;
+    bbl_lag_s *lag;
+    bbl_lag_member_s *lag_member;
+
     bbl_access_interface_s *access;
     bbl_network_interface_s *network;
+    bbl_a10nsp_interface_s *a10nsp;
 
-    interface_state_t state;
     uint8_t mac[ETH_ADDR_LEN];
     uint32_t send_requests;
     
     CIRCLEQ_ENTRY(bbl_interface_) interface_qnode;
-    CIRCLEQ_ENTRY(bbl_interface_) interface_lag_qnode;
-
     struct {
+        struct timer_ *rx_job;
+        struct timer_ *tx_job;
         io_handle_s *rx;
         io_handle_s *tx;
     } io;
-
-    uint32_t ifindex; /* interface index */
-    uint32_t pcap_index; /* interface index for packet captures */
-
-    struct timer_ *tx_job;
-    struct timer_ *rx_job;
 } bbl_interface_s;
+
+const char *
+interface_type_string(interface_type_t type);
+
+const char *
+interface_state_string(interface_state_t state);
 
 void
 bbl_interface_unlock_all();

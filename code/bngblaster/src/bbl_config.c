@@ -242,12 +242,15 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
 {
     json_t *value = NULL;
     const char *s = NULL;
+    
+    static uint8_t lag_id = 0;
 
-    value = json_object_get(lag, "lag-id");
-    if(value) {
-        lag_config->id = json_number_value(value);
+    lag_config->id = ++lag_id;
+    if(json_unpack(lag, "{s:s}", "interface", &s) == 0) {
+        lag_config->interface = strdup(s);
     } else {
-        fprintf(stderr, "JSON config error: Missing value for lag->id\n");
+        fprintf(stderr, "JSON config error: Missing value for lag->interface\n");
+        return false;
     }
     value = json_object_get(lag, "lacp");
     if(json_is_boolean(value)) {
@@ -277,20 +280,55 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     } else {
         lag_config->lacp_system_id[0] = 0x02;
         lag_config->lacp_system_id[1] = 0xff;
-        lag_config->lacp_system_id[5] = lag_config->id;
+        lag_config->lacp_system_id[2] = 0xff;
+        lag_config->lacp_system_id[3] = 0xff;
+        lag_config->lacp_system_id[4] = 0xff;
+    }
+
+    if(json_unpack(lag, "{s:s}", "mac", &s) == 0) {
+        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                &lag_config->mac[0],
+                &lag_config->mac[1],
+                &lag_config->mac[2],
+                &lag_config->mac[3],
+                &lag_config->mac[4],
+                &lag_config->mac[5]) < 6) {
+            fprintf(stderr, "JSON config error: Invalid value for lag->mac\n");
+            return false;
+        }
+    } else {
+        lag_config->mac[0] = 0x02;
+        lag_config->mac[1] = 0xff;
+        lag_config->mac[2] = 0xff;
+        lag_config->mac[3] = 0xff;
+        lag_config->mac[4] = 0xff;
+        lag_config->mac[5] = lag_config->id;
     }
     return true;
 }
 
 static bool
-link_present(char *interface_name)
+lag_present(char *interface)
 {
-    bbl_link_config_s *link_config = g_ctx->config.link_config;
-    while(link_config) {
-        if(strcmp(link_config->interface, interface_name) == 0) {
+    bbl_lag_config_s *config = g_ctx->config.lag_config;
+    while(config) {
+        if(strcmp(config->interface, interface) == 0) {
             return true;
         }
-        link_config = link_config->next;
+        config = config->next;
+    }
+    return false;
+}
+
+static bool
+link_present(char *interface)
+{
+    bbl_link_config_s *config = g_ctx->config.link_config;
+    while(config) {
+        if(config->interface && strcmp(config->interface, interface) == 0) {
+            return true;
+        }
+        config = config->next;
     }
     return false;
 }
@@ -299,8 +337,7 @@ static void
 link_add(char *interface_name)
 {
     bbl_link_config_s *link_config;
-
-    if(link_present(interface_name)) {
+    if(link_present(interface_name)|| lag_present(interface_name)) {
         return;
     }
 
@@ -322,14 +359,19 @@ static bool
 json_parse_link(json_t *link, bbl_link_config_s *link_config)
 {
     json_t *value = NULL;
-    const char *s = NULL;
+    char *s = NULL;
 
     if(json_unpack(link, "{s:s}", "interface", &s) == 0) {
+        if(link_present(s) || lag_present(s)) {
+            fprintf(stderr, "JSON config error: Duplicate link configuration for %s\n", s);
+            return false;
+        }
         link_config->interface = strdup(s);
     } else {
         fprintf(stderr, "JSON config error: Missing value for links->interface\n");
         return false;
     }
+    
     if(json_unpack(link, "{s:s}", "description", &s) == 0) {
         link_config->description = strdup(s);
     }
@@ -340,8 +382,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
                 &link_config->mac[2],
                 &link_config->mac[3],
                 &link_config->mac[4],
-                &link_config->mac[5]) < 6)
-        {
+                &link_config->mac[5]) < 6) {
             fprintf(stderr, "JSON config error: Invalid value for links->mac\n");
             return false;
         }
@@ -410,15 +451,20 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     } else {
         link_config->rx_threads = g_ctx->config.rx_threads;
     }
-    value = json_object_get(link, "lag-id");
-    if(value) {
-        link_config->lag_id = json_number_value(value);
-    }
-    value = json_object_get(link, "lacp-priority");
-    if(value) {
-        link_config->lacp_priority = json_number_value(value);
-    } else {
-        link_config->lacp_priority = 32768;
+
+    /* Link Aggregation Group (LAG) Configuration */
+    if(json_unpack(link, "{s:s}", "lag-interface", &s) == 0) {
+        if(!lag_present(s)) {
+            fprintf(stderr, "JSON config error: Missing configuration for lag-interface %s\n", s);
+            return false;
+        }
+        link_config->lag_interface = strdup(s);
+        value = json_object_get(link, "lacp-priority");
+        if(value) {
+            link_config->lacp_priority = json_number_value(value);
+        } else {
+            link_config->lacp_priority = 32768;
+        }
     }
     return true;
 }
@@ -542,6 +588,24 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     uint32_t ipv4;
     double number;
 
+    if(json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
+        access_config->interface = strdup(s);
+        link_add(access_config->interface);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for interface->interface\n");
+        return false;
+    }
+    if(json_unpack(access_interface, "{s:s}", "network-interface", &s) == 0) {
+        access_config->network_interface = strdup(s);
+    }
+    if(json_unpack(access_interface, "{s:s}", "a10nsp-interface", &s) == 0) {
+        if(access_config->network_interface) {
+            fprintf(stderr, "JSON config error: You can't define access->network-interface and access->a10nsp-interface\n");
+            return false;
+        }
+        access_config->a10nsp_interface = strdup(s);
+    }
+
     value = json_object_get(access_interface, "i1-start");
     if(value) {
         access_config->i1 = json_number_value(value);
@@ -586,24 +650,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             fprintf(stderr, "JSON config error: Invalid value for access->vlan-mode\n");
             return false;
         }
-    }
-    if(json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
-        access_config->interface = strdup(s);
-        link_add(access_config->interface);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for access->interface\n");
-        return false;
-    }
-
-    if(json_unpack(access_interface, "{s:s}", "network-interface", &s) == 0) {
-        access_config->network_interface = strdup(s);
-    }
-    if(json_unpack(access_interface, "{s:s}", "a10nsp-interface", &s) == 0) {
-        if(access_config->network_interface) {
-            fprintf(stderr, "JSON config error: You can't define access->network-interface and access->a10nsp-interface\n");
-            return false;
-        }
-        access_config->a10nsp_interface = strdup(s);
     }
 
     value = json_object_get(access_interface, "monkey");
@@ -651,7 +697,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     }
     if(access_config->access_outer_vlan_min > access_config->access_outer_vlan_max ||
        access_config->access_inner_vlan_min > access_config->access_inner_vlan_max) {
-        fprintf(stderr, "JSON config error: Invalid VLAN range (min > max)\n");
+        fprintf(stderr, "JSON config error: Invalid value for access VLAN range (min > max)\n");
         return false;
     }
     value = json_object_get(access_interface, "third-vlan");
@@ -1989,15 +2035,6 @@ json_parse_config(json_t *root)
             }
             g_ctx->config.stream_max_per_group = number;
         }
-        value = json_object_get(section, "stream-precision");
-        if(json_is_number(value)) {
-            number = json_number_value(value);
-            if(number < 1 || number > UINT8_MAX) {
-                fprintf(stderr, "JSON config error: Invalid value for traffic->stream-precision\n");
-                return false;
-            }
-            g_ctx->config.stream_tx_precision = number;
-        }
         value = json_object_get(section, "stream-rate-calculation");
         if(json_is_boolean(value)) {
             g_ctx->config.stream_rate_calc = json_boolean_value(value);
@@ -2605,6 +2642,5 @@ bbl_config_init_defaults()
     g_ctx->config.stream_rate_calc = true;
     g_ctx->config.stream_max_ppi = 16;
     g_ctx->config.stream_max_per_group = 64;
-    g_ctx->config.stream_tx_precision = 2;
     g_ctx->config.session_traffic_autostart = true;
 }

@@ -16,7 +16,8 @@ extern volatile bool g_teardown;
 extern volatile bool g_monkey;
 
 const char *
-session_state_string(uint32_t state) {
+session_state_string(uint32_t state)
+{
     switch(state) {
         case BBL_IDLE: return "Idle";
         case BBL_IPOE_SETUP: return "IPoE Setup";
@@ -34,7 +35,8 @@ session_state_string(uint32_t state) {
 }
 
 const char *
-ppp_state_string(uint32_t state) {
+ppp_state_string(uint32_t state)
+{
     switch(state) {
         case BBL_PPP_CLOSED: return "Closed";
         case BBL_PPP_INIT: return "Init";
@@ -47,7 +49,8 @@ ppp_state_string(uint32_t state) {
 }
 
 const char *
-dhcp_state_string(uint32_t state) {
+dhcp_state_string(uint32_t state)
+{
     switch(state) {
         case BBL_DHCP_INIT: return "Init";
         case BBL_DHCP_SELECTING: return "Selecting";
@@ -685,7 +688,7 @@ bbl_sessions_init()
         session->access_type = access_config->access_type;
         session->access_interface = access_config->access_interface;
         session->network_interface = bbl_network_interface_get(access_config->network_interface);
-        session->vlan_key.ifindex = access_config->access_interface->interface->ifindex;
+        session->vlan_key.ifindex = access_config->access_interface->ifindex;
         session->vlan_key.outer_vlan_id= access_config->access_outer_vlan;
         session->vlan_key.inner_vlan_id = access_config->access_inner_vlan;
         session->access_third_vlan = access_config->access_third_vlan;
@@ -847,7 +850,7 @@ bbl_sessions_init()
         }
 
         LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, 
-            access_config->access_interface->interface->name, 
+            access_config->access_interface->name, 
             access_config->access_outer_vlan, 
             access_config->access_inner_vlan);
 
@@ -1045,7 +1048,7 @@ bbl_session_json(bbl_session_s *session)
     }
     if(session->a10nsp_session) {
         a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* si si}",
-            "interface", session->a10nsp_session->a10nsp_interface->interface->name,
+            "interface", session->a10nsp_session->a10nsp_interface->name,
             "s-vlan", session->a10nsp_session->s_vlan,
             "qinq-send", session->a10nsp_session->a10nsp_interface->qinq,
             "qinq-received", session->a10nsp_session->qinq_received,
@@ -1064,7 +1067,7 @@ bbl_session_json(bbl_session_s *session)
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
-            "interface", session->access_interface->interface->name,
+            "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
@@ -1112,7 +1115,7 @@ bbl_session_json(bbl_session_s *session)
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
-            "interface", session->access_interface->interface->name,
+            "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),

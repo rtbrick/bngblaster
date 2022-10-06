@@ -12,7 +12,12 @@
 
 typedef struct bbl_access_interface_
 {
-    bbl_interface_s *interface;
+    char *name; /* interface name */
+    uint32_t ifindex; /* interface index */
+
+    /* parent */
+    bbl_interface_s *interface; 
+
     bbl_txq_s *txq;
 
     uint8_t mac[ETH_ADDR_LEN];

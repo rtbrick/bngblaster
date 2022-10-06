@@ -122,6 +122,7 @@ struct keyval_ log_names[] = {
     { ISIS,          "isis" },
     { BGP,           "bgp" },
     { TCP,           "tcp" },
+    { LAG,           "lag" },
     { 0, NULL}
 };
 
@@ -462,10 +463,8 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
-#if 0
-    timer_test(ctx);
-    exit(0);
-#endif
+    /* Open logfile. */
+    log_open();
 
     /* Init config. */
     bbl_config_init_defaults();
@@ -503,21 +502,14 @@ main(int argc, char *argv[])
     }
 #endif
 
-    /* Init curses. */
-    if (interactive) {
-        bbl_interactive_init();
-    }
-
     /* Init IS-IS instances. */
     if(!isis_init()) {
-        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to init IS-IS\n");
         goto CLEANUP;
     }
 
     /* Init interfaces. */
     if(!bbl_interface_init()) {
-        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to init interfaces\n");
         goto CLEANUP;
     }
@@ -527,14 +519,12 @@ main(int argc, char *argv[])
 
     /* Init BGP sessions. */
     if(!bgp_init()) {
-        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to init BGP\n");
         goto CLEANUP;
     }
 
     /* Init streams. */
     if(!bbl_stream_init()) {
-        if(interactive) endwin();
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
         goto CLEANUP;
     }
@@ -545,15 +535,9 @@ main(int argc, char *argv[])
     /* Setup test. */
     if(bbl_access_interface_get(NULL)) {
         if(!bbl_sessions_init()) {
-            if(interactive) endwin();
             fprintf(stderr, "Error: Failed to init sessions\n");
             goto CLEANUP;
         }
-    }
-
-    /* Start curses. */
-    if(interactive) {
-        bbl_interactive_start();
     }
 
     /* Setup control job. */
@@ -563,7 +547,6 @@ main(int argc, char *argv[])
     /* Setup control socket and job */
     if(g_ctx->ctrl_socket_path) {
         if(!bbl_ctrl_socket_init()) {
-            if(interactive) endwin();
             goto CLEANUP;
         }
     }
@@ -584,8 +567,13 @@ main(int argc, char *argv[])
     /* Start threads. */
     io_thread_start_all(g_ctx);
 
+    /* Start curses. */
+    if(interactive) {
+        bbl_interactive_init();
+        bbl_interactive_start();
+    }
+
     /* Start event loop. */
-    log_open();
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
     while(g_teardown_request_count < 10) {

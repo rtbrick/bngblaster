@@ -1416,7 +1416,10 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
     } else {
         interface->send_requests = 0;
     }
-
+    if(result == PROTOCOL_SUCCESS) {
+        interface->stats.packets_tx++;
+        interface->stats.bytes_tx += *len;
+    }
     return result;
 }
 
@@ -1432,11 +1435,12 @@ bbl_tx_encode_interface_packet(bbl_interface_s *interface,
 
     if(interface->send_requests & BBL_SEND_LACP) {
         interface->send_requests &= ~BBL_SEND_LACP;
+        member = interface->lag_member;
+        member->stats.lacp_tx++;
         eth.src = interface->mac;
         eth.dst = (uint8_t*)slow_mac;
         eth.type = ETH_TYPE_LACP;
         eth.next = &lacp;
-        member = interface->lag;
         lacp.actor_system_id = member->actor_system_id;
         lacp.actor_system_priority = member->actor_system_priority;
         lacp.actor_key = member->actor_key;
@@ -1484,6 +1488,14 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
 
     if(interface->state != INTERFACE_UP) {
         return EMPTY;
+    }
+
+    if(interface->type == LAG_MEMBER_INTERFACE) {
+        if(interface->lag_member->primary) {
+            return bbl_tx(interface->lag->interface, buf, len);
+        } else {
+            return EMPTY;
+        }
     }
 
     if(interface->access) {

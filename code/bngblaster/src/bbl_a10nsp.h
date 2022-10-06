@@ -21,8 +21,14 @@
 
 typedef struct bbl_a10nsp_interface_
 {
-    bbl_interface_s *interface;
+    char *name; /* interface name */
+    uint32_t ifindex; /* interface index */
+
+    /* parent */
+    bbl_interface_s *interface; 
+
     bbl_txq_s *txq;
+
     uint8_t mac[ETH_ADDR_LEN];
     bool qinq;
 
@@ -68,7 +74,6 @@ typedef struct bbl_a10nsp_interface_
 
     CIRCLEQ_ENTRY(bbl_a10nsp_interface_) a10nsp_interface_qnode;
     CIRCLEQ_HEAD(session_tx_a10nsp_, bbl_session_ ) session_tx_qhead; /* list of sessions that want to transmit */
-
 } bbl_a10nsp_interface_s;
 
 typedef struct bbl_a10nsp_session_

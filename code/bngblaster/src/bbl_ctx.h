@@ -78,14 +78,14 @@ typedef struct bbl_ctx_
     dict *li_flow_dict; /* hashtable for LI flows */
     dict *stream_flow_dict; /* hashtable for traffic stream flows */
 
+    bbl_stream_group_s *stream_groups;
+
     uint16_t next_tunnel_id;
 
     uint64_t flow_id;
 
     char *ctrl_socket_path;
     bbl_ctrl_thread_s *ctrl_thread;
-
-    void *stream_thread; /* single linked list of threads */
     io_thread_s *io_threads; /* single linked list of threads */
 
     bool tcp;
@@ -313,7 +313,6 @@ typedef struct bbl_ctx_
         bool stream_rate_calc; /* Enable/disable stream rate calculation */
         uint8_t stream_max_ppi; /* Limit max packets per interval */
         uint8_t stream_max_per_group; /* Limit max streams per group */
-        uint8_t stream_tx_precision; /* Set stream precision */
 
         /* Session Traffic */
         bool session_traffic_autostart;

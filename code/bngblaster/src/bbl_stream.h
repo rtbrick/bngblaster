@@ -61,19 +61,10 @@ typedef struct bbl_stream_config_
 
 typedef struct bbl_stream_group_
 {
+    uint32_t count;
+    bbl_stream_s *head;
+    struct timer_ *timer;
     bbl_stream_group_s *next;
-
-    io_handle_s *io;
-    bbl_stream_s *stream_head;
-    bbl_stream_s *stream_pos;
-    struct timer_ *timer_tx;
-    struct timespec tx_timestamp;
-    uint64_t tx_interval; /* TX interval in nsec */
-    uint32_t count; /* stream count */
-
-    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
-
-    struct timer_ *timer_ctrl;
 } bbl_stream_group_s;
 
 typedef struct bbl_stream_
@@ -94,17 +85,19 @@ typedef struct bbl_stream_
     bbl_stream_s *session_next; /* Next stream of same session */
     endpoint_state_t *endpoint;
 
-    io_thread_s *thread;
+    io_handle_s *io;
 
-    bbl_interface_s *interface;
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
 
-    uint8_t *buf;
-    uint16_t tx_len;
+    struct timer_ *tx_timer;
+    bbl_interface_s *tx_interface; /* TX interface */
+    uint8_t *tx_buf; /* TX buffer */
+    uint16_t tx_len; /* TX length */
     uint64_t tx_interval; /* TX interval in nsec */
 
+    bool threaded;
     bool session_traffic;
     bool verified;
     bool wait;
@@ -159,9 +152,6 @@ typedef struct bbl_stream_
     bbl_rate_s rate_packets_rx;
 
 } bbl_stream_s;
-
-void
-bbl_stream_tx_job(timer_s *timer);
 
 bool
 bbl_stream_session_init(bbl_session_s *session);

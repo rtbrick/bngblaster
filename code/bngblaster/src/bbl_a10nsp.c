@@ -54,10 +54,13 @@ bbl_a10nsp_interfaces_add()
 
         a10nsp_interface = calloc(1, sizeof(bbl_a10nsp_interface_s));
         interface->a10nsp = a10nsp_interface;
-        a10nsp_interface->interface = interface;
         a10nsp_config->a10nsp_interface = a10nsp_interface;
 
         CIRCLEQ_INSERT_TAIL(&g_ctx->a10nsp_interface_qhead, a10nsp_interface, a10nsp_interface_qnode);
+
+        /* Init interface */
+        a10nsp_interface->name = a10nsp_config->interface;
+        a10nsp_interface->interface = interface;
 
         /* Init TXQ */
         a10nsp_interface->txq = calloc(1, sizeof(bbl_txq_s));
@@ -481,7 +484,7 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
     /* Create A10NSP session if not already present */
     if(!session->a10nsp_session) {
         LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n",
-            session->session_id, interface->interface->name, eth->vlan_outer);
+            session->session_id, interface->name, eth->vlan_outer);
         session->a10nsp_session = calloc(1, sizeof(bbl_a10nsp_session_s));
         session->a10nsp_session->session = session;
         session->a10nsp_session->a10nsp_interface = interface;

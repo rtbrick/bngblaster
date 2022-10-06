@@ -663,7 +663,7 @@ bbl_ctrl_network_interface_json(bbl_network_interface_s *interface)
 {
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                      "name", interface->name,
-                     "ifindex", interface->interface->ifindex,
+                     "ifindex", interface->ifindex,
                      "type", "network",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
@@ -702,8 +702,8 @@ static json_t *
 bbl_ctrl_access_interface_json(bbl_access_interface_s *interface)
 {
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
-                     "name", interface->interface->name,
-                     "ifindex", interface->interface->ifindex,
+                     "name", interface->name,
+                     "ifindex", interface->ifindex,
                      "type", "access",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
@@ -743,8 +743,8 @@ static json_t *
 bbl_ctrl_a10nsp_interface_json(bbl_a10nsp_interface_s *interface)
 {
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
-                     "name", interface->interface->name,
-                     "ifindex", interface->interface->ifindex,
+                     "name", interface->name,
+                     "ifindex", interface->ifindex,
                      "type", "a10nsp",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
@@ -1785,7 +1785,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 /* Use first interface as default. */
                                 access_interface = bbl_access_interface_get(NULL);
                                 if(access_interface) {
-                                    key.ifindex = access_interface->interface->ifindex;
+                                    key.ifindex = access_interface->ifindex;
                                 }
                             }
                             value = json_object_get(arguments, "outer-vlan");

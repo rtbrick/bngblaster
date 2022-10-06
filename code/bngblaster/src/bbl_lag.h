@@ -10,23 +10,30 @@
 #ifndef __BBL_LAG_H__
 #define __BBL_LAG_H__
 
+#define LAG_MEMBER_ACTIVE_MAX 16
+
 typedef struct bbl_lag_
 {
-    interface_state_t state;
-
     uint8_t id;
-    char *interface;
-
+    bbl_interface_s *interface;
     bbl_lag_config_s *config;
-    CIRCLEQ_HEAD(lag_interface_, bbl_interface_ ) lag_interface_qhead; /* list of interfaces */
+
+    uint8_t active_max;
+    uint8_t active_count;
+    bbl_lag_member_s *active_list[LAG_MEMBER_ACTIVE_MAX];
+
     CIRCLEQ_ENTRY(bbl_lag_) lag_qnode;
+    CIRCLEQ_HEAD(lag_member_, bbl_lag_member_ ) lag_member_qhead; /* list of member interfaces */
 } bbl_lag_s;
 
 typedef struct bbl_lag_member_
 {
     bbl_lag_s *lag;
+    bbl_interface_s *interface;
+    lacp_state_t lacp_state;
 
-    interface_state_t state;
+    bool primary;
+    bool periodic_fast;
 
     struct timer_ *lacp_timer;
     uint8_t timeout;
@@ -45,6 +52,7 @@ typedef struct bbl_lag_member_
     uint16_t    partner_port_id;
     uint8_t     partner_state;
 
+    CIRCLEQ_ENTRY(bbl_lag_member_) lag_member_qnode;
     struct {
         uint32_t lacp_rx;
         uint32_t lacp_tx;

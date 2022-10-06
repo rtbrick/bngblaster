@@ -111,6 +111,11 @@ bbl_rx_handler(bbl_interface_s *interface,
             break;
     }
 
+    if(interface->type == LAG_MEMBER_INTERFACE) {
+        bbl_rx_handler(interface->lag->interface, eth);
+        return;
+    }
+
     while(network_interface) {
         if(network_interface->vlan == eth->vlan_outer) {
             if(!bbl_rx_stream_network(network_interface, eth)) {

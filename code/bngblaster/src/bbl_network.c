@@ -31,18 +31,6 @@ bbl_network_interface_rate_job(timer_s *timer) {
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
 }
 
-static bool
-bbl_network_interfaces_duplicate(bbl_interface_s *interface, uint16_t vlan) {
-    bbl_network_interface_s *network_interface = interface->network;
-    while(network_interface) {
-        if(network_interface->vlan == vlan) {
-            return true;
-        }
-        network_interface = network_interface->next;
-    }
-    return false;
-}
-
 /**
  * bbl_network_interfaces_add
  */
@@ -66,28 +54,31 @@ bbl_network_interfaces_add()
             snprintf(ifname, sizeof(ifname), "%s", 
                      network_config->interface);
         }
-        
+
         interface = bbl_interface_get(network_config->interface);
         if (!interface) {
             LOG(ERROR, "Failed to add network interface %s (interface not found)\n", ifname);
+            return false;
+        }
+        if(bbl_network_interface_get(ifname)) {
+            LOG(ERROR, "Failed to add network interface %s (duplicate)\n", ifname);
             return false;
         }
         if(interface->access && network_config->vlan == 0) {
             LOG(ERROR, "Failed to add network interface %s (untagged not allowed on access interfaces)\n", ifname);
             return false;
         }
-        if(bbl_network_interfaces_duplicate(interface, network_config->vlan)) {
-            LOG(ERROR, "Failed to add network interface %s (duplicate)\n", ifname);
-            return false;
-        }
+
         network_interface = calloc(1, sizeof(bbl_network_interface_s));
         network_interface->next = interface->network;
         interface->network = network_interface;
-        network_interface->interface = interface;
         network_config->network_interface = network_interface;
-        network_interface->name = strdup(ifname);
 
         CIRCLEQ_INSERT_TAIL(&g_ctx->network_interface_qhead, network_interface, network_interface_qnode);
+
+        /* Init interface */
+        network_interface->name = strdup(ifname);
+        network_interface->interface = interface;
 
         /* Init TXQ */
         network_interface->txq = calloc(1, sizeof(bbl_txq_s));

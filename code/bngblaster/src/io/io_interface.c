@@ -15,7 +15,7 @@ set_kernel_info(bbl_interface_s *interface)
 
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
+    if(ioctl(fd, SIOCGIFHWADDR, &ifr) == -1) {
         LOG(ERROR, "Getting MAC address error %s (%d) for interface %s\n",
             strerror(errno), errno, interface->name);
         close(fd);
@@ -25,7 +25,7 @@ set_kernel_info(bbl_interface_s *interface)
 
     memset(&ifr, 0, sizeof(ifr));
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
+    if(ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
         LOG(ERROR, "Get interface index error %s (%d) for interface %s\n",
             strerror(errno), errno, interface->name);
         close(fd);
@@ -175,8 +175,12 @@ io_interface_init(bbl_interface_s *interface)
     bbl_link_config_s *config = interface->config;
 
     if(config->io_mode != IO_MODE_DPDK) {
-        set_kernel_info(interface);
-        set_promisc(interface);
+        if(!set_kernel_info(interface)) {
+            return false;
+        }
+        if(!set_promisc(interface)) {
+            return false;
+        }
     }
     if(*(uint32_t*)config->mac) {
         memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
