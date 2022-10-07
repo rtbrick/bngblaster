@@ -111,4 +111,7 @@ void
 bbl_a10nsp_rx_handler(bbl_a10nsp_interface_s *interface,
                       bbl_ethernet_header_s *eth);
 
+int
+bbl_a10nsp_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
 #endif

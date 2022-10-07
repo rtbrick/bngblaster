@@ -67,7 +67,7 @@ isis_ctrl_adjacency_p2p(isis_adjacency_p2p_s *adjacency)
 }
 
 int
-isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
     int level;
@@ -167,7 +167,7 @@ isis_ctrl_database_entries(hb_tree *lsdb)
 }
 
 int
-isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
     json_t *root = NULL;
@@ -225,7 +225,7 @@ isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t* 
 }
 
 int
-isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     char *file_path;
     int instance_id = 0;
@@ -260,7 +260,7 @@ isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t* 
 }
 
 int
-isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     protocol_error_t result;
 
@@ -327,7 +327,7 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
 }
 
 int
-isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused))) 
+isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused))) 
 {
     isis_teardown();
     return bbl_ctrl_status(fd, "ok", 200, NULL);

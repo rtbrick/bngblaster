@@ -77,7 +77,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
 }
 
 int
-bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
     json_t *root, *sessions, *session;
@@ -133,14 +133,14 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t* a
 }
 
 int
-bgp_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+bgp_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     bgp_teardown();
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
-bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
     json_t *root;
@@ -223,7 +223,7 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t*
 }
 
 int
-bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
     bgp_raw_update_s *raw_update = g_ctx->bgp_raw_updates;
@@ -256,7 +256,7 @@ bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
 }
 
 int
-bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments)
+bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
     json_t *root;

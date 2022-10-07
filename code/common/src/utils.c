@@ -633,3 +633,13 @@ replace_substring(const char* source,
     *result_pos = '\0';
     return result;
 }
+
+char *
+string_or_na(char *string)
+{
+    if(string) {
+        return string;
+    } else {
+        return "N/A";
+    }
+}

@@ -7,7 +7,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
-#include "../bbl_ctrl.h"
 
 uint16_t g_lag_port_id = 1;
 
@@ -331,7 +330,7 @@ bbl_lag_json(bbl_lag_s *lag)
 }
 
 int
-bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
 

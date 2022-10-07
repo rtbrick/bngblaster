@@ -176,7 +176,25 @@ bbl_stream_reset(bbl_stream_s *stream);
 json_t *
 bbl_stream_json(bbl_stream_s *stream);
 
-json_t *
-bbl_stream_summary_json();
+int
+bbl_stream_ctrl_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+bbl_stream_ctrl_summary(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

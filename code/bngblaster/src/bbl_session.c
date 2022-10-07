@@ -13,6 +13,7 @@
 #include "bbl_dhcpv6.h"
 
 extern volatile bool g_teardown;
+extern volatile bool g_teardown_request;
 extern volatile bool g_monkey;
 
 const char *
@@ -1171,3 +1172,327 @@ bbl_session_json(bbl_session_s *session)
     }
     return root;
 }
+
+/* Control Socket Commands */
+
+int
+bbl_session_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root, *json_session, *json_sessions;
+
+    bbl_session_s *session;
+    uint32_t i;
+
+    json_sessions = json_array();
+
+    /* Iterate over all sessions */
+    for(i = 0; i < g_ctx->sessions; i++) {
+        session = &g_ctx->session_list[i];
+        if(!session) continue;
+        
+        if(session->session_state != BBL_ESTABLISHED || 
+           session->session_traffic.flows != session->session_traffic.flows_verified) {
+            json_session = json_pack("{si ss si si}",
+                                     "session-id", session->session_id,
+                                     "session-state", session_state_string(session->session_state),
+                                     "session-traffic-flows", session->session_traffic.flows,
+                                     "session-traffic-flows-verified", session->session_traffic.flows_verified);
+            json_array_append(json_sessions, json_session);
+        }
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "sessions-pending", json_sessions);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(json_sessions);
+    }
+    return result;
+}
+
+int
+bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
+                             "status", "ok",
+                             "code", 200,
+                             "session-counters",
+                             "sessions", g_ctx->config.sessions,
+                             "sessions-pppoe", g_ctx->sessions_pppoe,
+                             "sessions-ipoe", g_ctx->sessions_ipoe,
+                             "sessions-established", g_ctx->sessions_established,
+                             "sessions-established-max", g_ctx->sessions_established_max,
+                             "sessions-terminated", g_ctx->sessions_terminated,
+                             "sessions-flapped", g_ctx->sessions_flapped,
+                             "dhcp-sessions", g_ctx->dhcp_requested,
+                             "dhcp-sessions-established", g_ctx->dhcp_established,
+                             "dhcp-sessions-established-max", g_ctx->dhcp_established_max,
+                             "dhcpv6-sessions", g_ctx->dhcpv6_requested,
+                             "dhcpv6-sessions-established", g_ctx->dhcpv6_established,
+                             "dhcpv6-sessions-established-max", g_ctx->dhcpv6_established_max,
+                             "setup-time", g_ctx->stats.setup_time,
+                             "setup-rate", g_ctx->stats.cps,
+                             "setup-rate-min", g_ctx->stats.cps_min,
+                             "setup-rate-avg", g_ctx->stats.cps_avg,
+                             "setup-rate-max", g_ctx->stats.cps_max,
+                             "session-traffic-flows", g_ctx->stats.session_traffic_flows,
+                             "session-traffic-flows-verified", g_ctx->stats.session_traffic_flows_verified,
+                             "stream-traffic-flows", g_ctx->stats.stream_traffic_flows,
+                             "stream-traffic-flows-verified", g_ctx->stats.stream_traffic_flows_verified
+                            );
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+int
+bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root;
+    json_t *session_json;
+    bbl_session_s *session;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        session_json = bbl_session_json(session);
+        if(!session_json) {
+            return bbl_ctrl_status(fd, "error", 500, "internal error");
+        }
+
+        root = json_pack("{ss si so*}",
+                         "status", "ok",
+                         "code", 200,
+                         "session-info", session_json);
+
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(session_json);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
+int
+bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    bbl_session_s *session;
+
+    if(g_teardown) {
+        return bbl_ctrl_status(fd, "error", 405, "teardown");
+    }
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        if(session->session_state == BBL_TERMINATED && 
+           session->reconnect_delay == 0) {
+            g_ctx->sessions_flapped++;
+            session->stats.flapped++;
+            session->session_state = BBL_IDLE;
+            bbl_session_reset(session);
+            if(g_ctx->sessions_terminated) {
+                g_ctx->sessions_terminated--;
+            }
+        } else if(session->session_state != BBL_IDLE || 
+           CIRCLEQ_NEXT(session, session_idle_qnode) || 
+           CIRCLEQ_PREV(session, session_idle_qnode)) {
+           return bbl_ctrl_status(fd, "error", 405, "wrong session state");
+        }
+        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
+int
+bbl_session_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
+{
+    bbl_session_s *session;
+    int reconnect_delay = 0;
+
+    if(session_id) {
+        /* Terminate single matching session ... */
+        session = bbl_session_get(session_id);
+        if(session) {
+            json_unpack(arguments, "{s:i}", "reconnect-delay", &session->reconnect_delay);
+            if(reconnect_delay > 0) {
+                session->reconnect_delay = reconnect_delay;
+            }
+            bbl_session_clear(session);
+            return bbl_ctrl_status(fd, "ok", 200, "terminate session");
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Terminate all sessions ... */
+        g_teardown = true;
+        g_teardown_request = true;
+        LOG_NOARG(INFO, "Teardown request\n");
+        return bbl_ctrl_status(fd, "ok", 200, "terminate all sessions");
+    }
+}
+
+static int
+bbl_session_ctrl_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipcp)
+{
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                if(open) {
+                    bbl_session_ncp_open(session, ipcp);
+                } else {
+                    bbl_session_ncp_close(session, ipcp);
+                }
+            } else {
+                return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
+            }
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                if(session->access_type == ACCESS_TYPE_PPPOE) {
+                    if(open) {
+                        bbl_session_ncp_open(session, ipcp);
+                    } else {
+                        bbl_session_ncp_close(session, ipcp);
+                    }
+                }
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, true, true);
+}
+
+int
+bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, false, true);
+}
+
+int
+bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, true, false);
+}
+
+int
+bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, false, false);
+}
+
+static int
+bbl_session_ctrl_traffic(int fd, uint32_t session_id, bool status)
+{
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            session->session_traffic.active = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                session->session_traffic.active = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_traffic(fd, session_id, true);
+}
+
+int
+bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_traffic(fd, session_id, false);
+}
+
+
+int
+bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root = json_pack("{ss si s{si si}}",
+                             "status", "ok",
+                             "code", 200,
+                             "session-traffic",
+                             "total-flows", g_ctx->stats.session_traffic_flows,
+                             "verified-flows", g_ctx->stats.session_traffic_flows_verified);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+int
+bbl_session_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(!g_monkey) {
+        LOG_NOARG(INFO, "Start monkey\n");
+    }
+    g_monkey = true;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+bbl_session_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(g_monkey) {
+        LOG_NOARG(INFO, "Stop monkey\n");
+    }
+    g_monkey = false;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+

@@ -697,7 +697,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     bbl_stream_config_s *config = stream->config;
 
     bbl_l2tp_session_s *l2tp_session = stream->session->l2tp_session;
-    bbl_l2tp_sunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
     bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
 
@@ -1960,6 +1960,40 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
     }
 }
 
+static json_t *
+bbl_stream_summary_json()
+{
+    struct dict_itor *itor;
+    bbl_stream_s *stream;
+
+    json_t *jobj, *jobj_array;
+
+    jobj_array = json_array();
+
+    itor = dict_itor_new(g_ctx->stream_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        stream = (bbl_stream_s*)*dict_itor_datum(itor);
+        if(stream) {
+            jobj = json_pack("{si ss* ss ss ss}",
+                "flow-id", stream->flow_id,
+                "name", stream->config->name,
+                "type", stream_type_string(stream),
+                "sub-type", stream_sub_type_string(stream),
+                "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream");
+            if(jobj) {
+                if(stream->session) {
+                    json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
+                    json_object_set(jobj, "session-traffic", json_boolean(stream->session_traffic));
+                }
+                json_array_append(jobj_array, jobj);
+            }
+        }
+    }
+    dict_itor_free(itor);
+    return jobj_array;
+}
+
 json_t *
 bbl_stream_json(bbl_stream_s *stream)
 {
@@ -2052,36 +2086,193 @@ bbl_stream_json(bbl_stream_s *stream)
     return root;
 }
 
-json_t *
-bbl_stream_summary_json()
+/* Control Socket Commands */
+
+int
+bbl_stream_ctrl_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
-    struct dict_itor *itor;
+    int result = 0;
+    json_t *root = json_pack("{ss si s{si si}}",
+                             "status", "ok",
+                             "code", 200,
+                             "stream-stats",
+                             "total-flows", g_ctx->stats.stream_traffic_flows,
+                             "verified-flows", g_ctx->stats.stream_traffic_flows_verified);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+int
+bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+
+    json_t *root;
+    json_t *json_stream = NULL;
+
+    bbl_stream_s *stream;
+    void **search = NULL;
+
+    int number = 0;
+    uint64_t flow_id;
+
+    /* Unpack further arguments */
+    if (json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
+    }
+
+    flow_id = number;
+    search = dict_search(g_ctx->stream_flow_dict, &flow_id);
+    if(search) {
+        stream = *search;
+        json_stream = bbl_stream_json(stream);
+        root = json_pack("{ss si so*}",
+                         "status", "ok",
+                         "code", 200,
+                         "stream-info", json_stream);
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(json_stream);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "stream not found");
+    }
+}
+
+int
+bbl_stream_ctrl_summary(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+
+    json_t *root = json_pack("{ss si so*}",
+        "status", "ok",
+        "code", 200,
+        "stream-summary", bbl_stream_summary_json());
+
+    result = json_dumpfd(root, fd, 0);
+    json_decref(root);
+    return result;
+}
+
+int
+bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root;
+    json_t *json_streams = NULL;
+    json_t *json_stream = NULL;
+
+    bbl_session_s *session;
     bbl_stream_s *stream;
 
-    json_t *jobj, *jobj_array;
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
 
-    jobj_array = json_array();
+    session = bbl_session_get(session_id);
+    if(session) {
+        stream = session->streams.head;
 
+        json_streams = json_array();
+        while(stream) {
+            json_stream = bbl_stream_json(stream);
+            json_array_append(json_streams, json_stream);
+            stream = stream->session_next;
+        }
+        root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}",
+                         "status", "ok",
+                         "code", 200,
+                         "session-streams",
+                         "session-id", session->session_id,
+                         "rx-packets", session->stats.packets_rx,
+                         "tx-packets", session->stats.packets_tx,
+                         "rx-accounting-packets", session->stats.accounting_packets_rx,
+                         "tx-accounting-packets", session->stats.accounting_packets_tx,
+                         "rx-pps", session->stats.rate_packets_rx.avg,
+                         "tx-pps", session->stats.rate_packets_tx.avg,
+                         "rx-bps-l2", session->stats.rate_bytes_rx.avg * 8,
+                         "tx-bps-l2", session->stats.rate_bytes_tx.avg * 8,
+                         "rx-mbps-l2", (double)(session->stats.rate_bytes_rx.avg * 8) / 1000000.0,
+                         "tx-mbps-l2", (double)(session->stats.rate_bytes_tx.avg * 8) / 1000000.0,
+                         "streams", json_streams);
+
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(json_streams);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
+static int
+bbl_stream_ctrl_traffic_start_stop(int fd, uint32_t session_id, bool status)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            session->streams.active = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                session->streams.active = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_stream_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_stream_ctrl_traffic_start_stop(fd, session_id, true);
+}
+
+int
+bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_stream_ctrl_traffic_start_stop(fd, session_id, false);
+}
+
+int
+bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    bbl_stream_s *stream;
+    struct dict_itor *itor;
+    
+    g_ctx->stats.stream_traffic_flows_verified = 0;
+
+    /* Iterate over all traffic streams */
     itor = dict_itor_new(g_ctx->stream_flow_dict);
     dict_itor_first(itor);
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(stream) {
-            jobj = json_pack("{si ss* ss ss ss}",
-                "flow-id", stream->flow_id,
-                "name", stream->config->name,
-                "type", stream_type_string(stream),
-                "sub-type", stream_sub_type_string(stream),
-                "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream");
-            if(jobj) {
-                if(stream->session) {
-                    json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
-                    json_object_set(jobj, "session-traffic", json_boolean(stream->session_traffic));
-                }
-                json_array_append(jobj_array, jobj);
-            }
+        if(!stream) {
+            continue;
         }
+        bbl_stream_reset(stream);
     }
     dict_itor_free(itor);
-    return jobj_array;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);    
 }
