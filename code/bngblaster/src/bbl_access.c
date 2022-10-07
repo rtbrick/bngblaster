@@ -1847,3 +1847,73 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
         }
     }
 }
+
+static json_t *
+bbl_access_interface_json(bbl_access_interface_s *interface)
+{
+    return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+                     "name", interface->name,
+                     "ifindex", interface->ifindex,
+                     "type", "access",
+                     "tx-packets", interface->stats.packets_tx,
+                     "tx-bytes", interface->stats.bytes_tx, 
+                     "tx-pps", interface->stats.rate_packets_tx.avg,
+                     "tx-kbps", interface->stats.rate_bytes_tx.avg * 8 / 1000,
+                     "rx-packets", interface->stats.packets_rx, 
+                     "rx-bytes", interface->stats.bytes_rx,
+                     "rx-pps", interface->stats.rate_packets_rx.avg,
+                     "rx-kbps", interface->stats.rate_bytes_rx.avg * 8 / 1000,
+                     "rx-packets-multicast", interface->stats.mc_rx,
+                     "rx-pps-multicast", interface->stats.rate_mc_rx.avg,
+                     "rx-loss-packets-multicast", interface->stats.mc_loss,
+                     "tx-packets-session-ipv4", interface->stats.session_ipv4_tx,
+                     "tx-pps-session-ipv4", interface->stats.rate_session_ipv4_tx.avg,
+                     "rx-packets-session-ipv4", interface->stats.session_ipv4_rx,
+                     "rx-pps-session-ipv4", interface->stats.rate_session_ipv4_rx.avg,
+                     "rx-loss-packets-session-ipv4", interface->stats.session_ipv4_loss,
+                     "tx-packets-session-ipv6", interface->stats.session_ipv6_tx,
+                     "tx-pps-session-ipv6", interface->stats.rate_session_ipv6_tx.avg,
+                     "rx-packets-session-ipv6", interface->stats.session_ipv6_rx,
+                     "rx-pps-session-ipv6", interface->stats.rate_session_ipv6_rx.avg,
+                     "rx-loss-packets-session-ipv6", interface->stats.session_ipv6_loss,
+                     "tx-packets-session-ipv6pd", interface->stats.session_ipv6pd_tx,
+                     "tx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_tx.avg,
+                     "rx-packets-session-ipv6pd", interface->stats.session_ipv6pd_rx,
+                     "rx-pps-session-ipv6pd", interface->stats.rate_session_ipv6pd_rx.avg,
+                     "rx-loss-packets-session-ipv6pd", interface->stats.session_ipv6pd_loss,
+                     "tx-packets-streams", interface->stats.stream_tx,
+                     "tx-pps-streams", interface->stats.rate_stream_tx.avg,
+                     "rx-packets-streams", interface->stats.stream_rx,
+                     "rx-pps-streams", interface->stats.rate_stream_rx.avg,
+                     "rx-loss-packets-streams", interface->stats.stream_loss
+                    );
+}
+
+/* Control Socket Commands */
+
+int
+bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root, *interfaces;
+    bbl_interface_s *interface;
+
+    interfaces = json_array();
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if(interface->access) {
+            json_array_append(interfaces, bbl_access_interface_json(interface->access));
+        }
+    }
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "access-interfaces", interfaces);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(interfaces);
+    }
+    return result;
+}

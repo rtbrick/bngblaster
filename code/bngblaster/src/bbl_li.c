@@ -137,3 +137,57 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
         }
     }
 }
+
+/* Control Socket Commands */
+
+int
+bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root, *flows, *flow;
+    bbl_li_flow_t *li_flow;
+    struct dict_itor *itor;
+
+    flows = json_array();
+    itor = dict_itor_new(g_ctx->li_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
+        if(li_flow) {
+            flow = json_pack("{ss si ss si ss ss ss si si si si si si si si si si si si}",
+                                "source-address", format_ipv4_address(&li_flow->src_ipv4),
+                                "source-port", li_flow->src_port,
+                                "destination-address", format_ipv4_address(&li_flow->dst_ipv4),
+                                "destination-port", li_flow->dst_port,
+                                "direction", bbl_li_direction_string(li_flow->direction),
+                                "packet-type", bbl_li_packet_type_string(li_flow->packet_type),
+                                "sub-packet-type", bbl_li_sub_packet_type_string(li_flow->sub_packet_type),
+                                "liid", li_flow->liid,
+                                "bytes-rx", li_flow->bytes_rx,
+                                "packets-rx", li_flow->packets_rx,
+                                "packets-rx-ipv4", li_flow->packets_rx_ipv4,
+                                "packets-rx-ipv4-tcp", li_flow->packets_rx_ipv4_tcp,
+                                "packets-rx-ipv4-udp", li_flow->packets_rx_ipv4_udp,
+                                "packets-rx-ipv4-host-internal", li_flow->packets_rx_ipv4_internal,
+                                "packets-rx-ipv6", li_flow->packets_rx_ipv6,
+                                "packets-rx-ipv6-tcp", li_flow->packets_rx_ipv6_tcp,
+                                "packets-rx-ipv6-udp", li_flow->packets_rx_ipv6_udp,
+                                "packets-rx-ipv6-host-internal", li_flow->packets_rx_ipv6_internal,
+                                "packets-rx-ipv6-no-next-header", li_flow->packets_rx_ipv6_no_next_header);
+            json_array_append(flows, flow);
+        }
+    }
+    dict_itor_free(itor);
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "li-flows", flows);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(flows);
+    }
+    return result;
+}

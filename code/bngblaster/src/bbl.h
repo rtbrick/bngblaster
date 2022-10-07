@@ -26,6 +26,7 @@
 #include "bgp/bgp_def.h"
 #include "isis/isis_def.h"
 
+#include "bbl_ctrl.h"
 #include "bbl_stats.h"
 #include "bbl_access_line.h"
 #include "bbl_config.h"
@@ -39,6 +40,8 @@
 #include "bbl_network.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
+#include "bbl_igmp.h"
+#include "bbl_cfm.h"
 #include "bbl_tcp.h"
 
 #include "io/io.h"

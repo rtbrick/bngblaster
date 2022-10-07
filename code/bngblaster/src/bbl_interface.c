@@ -214,3 +214,39 @@ bbl_interface_get(char *interface_name)
     }
     return NULL;
 }
+
+int
+bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+
+    bbl_interface_s *interface;
+    json_t *root, *jobj, *jobj_array;
+
+    jobj_array = json_array();
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        jobj = json_pack("{ss si ss* ss* si }",
+            "name", interface->name,
+            "ifindex", interface->ifindex,
+            "type", interface_type_string(interface->type),
+            "state", interface_state_string(interface->state),
+            "state-transitions", interface->state_transitions);
+        if(jobj) {
+            json_array_append(jobj_array, jobj);
+        }
+    }
+
+    root = json_pack("{ss si so*}",
+        "status", "ok",
+        "code", 200,
+        "interfaces", jobj_array);
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+    return result;
+}

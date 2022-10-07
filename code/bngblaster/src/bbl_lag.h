@@ -76,6 +76,6 @@ bbl_lag_rx_lacp(bbl_interface_s *interface,
                 bbl_ethernet_header_s *eth);
 
 int
-bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments);
+bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 #endif

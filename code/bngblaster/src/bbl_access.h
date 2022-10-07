@@ -140,4 +140,7 @@ void
 bbl_access_rx_handler(bbl_access_interface_s *interface, 
                       bbl_ethernet_header_s *eth);
 
+int
+bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
 #endif

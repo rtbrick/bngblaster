@@ -401,4 +401,46 @@ bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s 
 json_t *
 bbl_session_json(bbl_session_s *session);
 
+int
+bbl_session_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments);
+
+int
+bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
 #endif
