@@ -28,15 +28,15 @@ bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct tim
     uint64_t delay_nsec;
     timespec_sub(&delay, rx_timestamp, bbl_timestamp);
     delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
-    if(delay_nsec > stream->max_delay_ns) {
-        stream->max_delay_ns = delay_nsec;
+    if(delay_nsec > stream->rx_max_delay_ns) {
+        stream->rx_max_delay_ns = delay_nsec;
     }
-    if(stream->min_delay_ns) {
-        if(delay_nsec < stream->min_delay_ns) {
-            stream->min_delay_ns = delay_nsec;
+    if(stream->rx_min_delay_ns) {
+        if(delay_nsec < stream->rx_min_delay_ns) {
+            stream->rx_min_delay_ns = delay_nsec;
         }
     } else {
-        stream->min_delay_ns = delay_nsec;
+        stream->rx_min_delay_ns = delay_nsec;
     }
 }
 
@@ -925,101 +925,97 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
 
-    if(stream->direction == BBL_DIRECTION_DOWN) {
-        access_interface = stream->access_interface;
+    if(stream->rx_access_interface) {
+        access_interface = stream->rx_access_interface;
+        access_interface->stats.packets_rx += packets;
+        access_interface->stats.bytes_rx += bytes;
+        access_interface->stats.stream_rx += packets;
+        access_interface->stats.stream_loss += loss;
         session = stream->session;
-        if(access_interface) {
-            access_interface->stats.packets_rx += packets;
-            access_interface->stats.bytes_rx += bytes;
-            access_interface->stats.stream_rx += packets;
-            access_interface->stats.stream_loss += loss;
-            if(session) {
-                session->stats.packets_rx += packets;
-                session->stats.bytes_rx += bytes;
-                session->stats.accounting_packets_rx += packets;
-                session->stats.accounting_bytes_rx += bytes;
-                if(stream->session_traffic) {
-                    switch(stream->sub_type) {
-                        case BBL_SUB_TYPE_IPV4:
-                            access_interface->stats.session_ipv4_rx += packets;
-                            access_interface->stats.session_ipv4_loss += loss;
-                            break;
-                        case BBL_SUB_TYPE_IPV6:
-                            access_interface->stats.session_ipv6_rx += packets;
-                            access_interface->stats.session_ipv6_loss += loss;
-                            break;
-                        case BBL_SUB_TYPE_IPV6PD:
-                            access_interface->stats.session_ipv6pd_rx += packets;
-                            access_interface->stats.session_ipv6pd_loss += loss;
-                            break;
-                        default:
-                            break;
-                    }
+        if(session) {
+            session->stats.packets_rx += packets;
+            session->stats.bytes_rx += bytes;
+            session->stats.accounting_packets_rx += packets;
+            session->stats.accounting_bytes_rx += bytes;
+            if(stream->session_traffic) {
+                switch(stream->sub_type) {
+                    case BBL_SUB_TYPE_IPV4:
+                        access_interface->stats.session_ipv4_rx += packets;
+                        access_interface->stats.session_ipv4_loss += loss;
+                        break;
+                    case BBL_SUB_TYPE_IPV6:
+                        access_interface->stats.session_ipv6_rx += packets;
+                        access_interface->stats.session_ipv6_loss += loss;
+                        break;
+                    case BBL_SUB_TYPE_IPV6PD:
+                        access_interface->stats.session_ipv6pd_rx += packets;
+                        access_interface->stats.session_ipv6pd_loss += loss;
+                        break;
+                    default:
+                        break;
                 }
             }
         }
-    } else {
-        if(stream->network_interface) {
-            network_interface = stream->network_interface;
-            network_interface->stats.packets_rx += packets;
-            network_interface->stats.bytes_rx += bytes;
-            network_interface->stats.stream_rx += packets;
-            network_interface->stats.stream_loss += loss;
-            if(session) {
-                if(session->l2tp_session) {
-                    network_interface->stats.l2tp_data_rx += packets;
-                    session->l2tp_session->tunnel->stats.data_rx += packets;
-                    session->l2tp_session->stats.data_rx += packets;
-                    if(stream->type == BBL_SUB_TYPE_IPV4) {
-                        session->l2tp_session->stats.data_ipv4_rx += packets;
-                    }
-                }
-                if(stream->session_traffic) {
-                    switch(stream->sub_type) {
-                        case BBL_SUB_TYPE_IPV4:
-                            network_interface->stats.session_ipv4_rx += packets;
-                            network_interface->stats.session_ipv4_loss += loss;
-                            break;
-                        case BBL_SUB_TYPE_IPV6:
-                            network_interface->stats.session_ipv6_rx += packets;
-                            network_interface->stats.session_ipv6_loss += loss;
-                            break;
-                        case BBL_SUB_TYPE_IPV6PD:
-                            network_interface->stats.session_ipv6pd_rx += packets;
-                            network_interface->stats.session_ipv6pd_loss += loss;
-                            break;
-                        default:
-                            break;
-                    }
+    } else if(stream->rx_network_interface) {
+        network_interface = stream->rx_network_interface;
+        network_interface->stats.packets_rx += packets;
+        network_interface->stats.bytes_rx += bytes;
+        network_interface->stats.stream_rx += packets;
+        network_interface->stats.stream_loss += loss;
+        if(session) {
+            if(session->l2tp_session) {
+                network_interface->stats.l2tp_data_rx += packets;
+                session->l2tp_session->tunnel->stats.data_rx += packets;
+                session->l2tp_session->stats.data_rx += packets;
+                if(stream->type == BBL_SUB_TYPE_IPV4) {
+                    session->l2tp_session->stats.data_ipv4_rx += packets;
                 }
             }
-        } else if(stream->a10nsp_interface) {
-            a10nsp_interface = stream->a10nsp_interface;
-            a10nsp_interface->stats.packets_rx += packets;
-            a10nsp_interface->stats.bytes_rx += bytes;
-            a10nsp_interface->stats.stream_rx += packets;
-            a10nsp_interface->stats.stream_loss += loss;
-            if(session) {
-                if(session->a10nsp_session) {
-                    session->a10nsp_session->stats.packets_rx += packets;
+            if(stream->session_traffic) {
+                switch(stream->sub_type) {
+                    case BBL_SUB_TYPE_IPV4:
+                        network_interface->stats.session_ipv4_rx += packets;
+                        network_interface->stats.session_ipv4_loss += loss;
+                        break;
+                    case BBL_SUB_TYPE_IPV6:
+                        network_interface->stats.session_ipv6_rx += packets;
+                        network_interface->stats.session_ipv6_loss += loss;
+                        break;
+                    case BBL_SUB_TYPE_IPV6PD:
+                        network_interface->stats.session_ipv6pd_rx += packets;
+                        network_interface->stats.session_ipv6pd_loss += loss;
+                        break;
+                    default:
+                        break;
                 }
-                if(stream->session_traffic) {
-                    switch(stream->sub_type) {
-                        case BBL_SUB_TYPE_IPV4:
-                            a10nsp_interface->stats.session_ipv4_rx += packets;
-                            a10nsp_interface->stats.session_ipv4_loss += loss;
-                            break;
-                        case BBL_SUB_TYPE_IPV6:
-                            a10nsp_interface->stats.session_ipv6_rx += packets;
-                            a10nsp_interface->stats.session_ipv6_loss += loss;
-                            break;
-                        case BBL_SUB_TYPE_IPV6PD:
-                            a10nsp_interface->stats.session_ipv6pd_rx += packets;
-                            a10nsp_interface->stats.session_ipv6pd_loss += loss;
-                            break;
-                        default:
-                            break;
-                    }
+            }
+        }
+    } else if(stream->rx_a10nsp_interface) {
+        a10nsp_interface = stream->rx_a10nsp_interface;
+        a10nsp_interface->stats.packets_rx += packets;
+        a10nsp_interface->stats.bytes_rx += bytes;
+        a10nsp_interface->stats.stream_rx += packets;
+        a10nsp_interface->stats.stream_loss += loss;
+        if(session) {
+            if(session->a10nsp_session) {
+                session->a10nsp_session->stats.packets_rx += packets;
+            }
+            if(stream->session_traffic) {
+                switch(stream->sub_type) {
+                    case BBL_SUB_TYPE_IPV4:
+                        a10nsp_interface->stats.session_ipv4_rx += packets;
+                        a10nsp_interface->stats.session_ipv4_loss += loss;
+                        break;
+                    case BBL_SUB_TYPE_IPV6:
+                        a10nsp_interface->stats.session_ipv6_rx += packets;
+                        a10nsp_interface->stats.session_ipv6_loss += loss;
+                        break;
+                    case BBL_SUB_TYPE_IPV6PD:
+                        a10nsp_interface->stats.session_ipv6pd_rx += packets;
+                        a10nsp_interface->stats.session_ipv6pd_loss += loss;
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -1032,7 +1028,7 @@ bbl_stream_rx_wrong_session(bbl_stream_s *stream)
     uint64_t packets;
     uint64_t packets_delta;
 
-    packets = stream->wrong_session;
+    packets = stream->rx_wrong_session;
     packets_delta = packets - stream->last_sync_wrong_session;
     stream->last_sync_wrong_session = packets;
 
@@ -1064,18 +1060,18 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     uint64_t loss_delta;
 
     /* Calculate TX packets/bytes since last sync. */
-    packets = stream->packets_tx;
+    packets = stream->tx_packets;
     packets_delta = packets - stream->last_sync_packets_tx;
     bytes_delta = packets_delta * stream->tx_len;
     stream->last_sync_packets_tx = packets;
     bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
     if(g_ctx->config.stream_rate_calc) {
-        bbl_compute_avg_rate(&stream->rate_packets_tx, stream->packets_tx);
+        bbl_compute_avg_rate(&stream->rate_packets_tx, stream->tx_packets);
     }
     if(stream->type == BBL_TYPE_MULTICAST) {
         return;
     }
-    if(unlikely(stream->wrong_session)) {
+    if(unlikely(stream->rx_wrong_session)) {
         bbl_stream_rx_wrong_session(stream);
     }
     if(unlikely(!stream->verified)) {
@@ -1107,17 +1103,17 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     }
 
     /* Calculate RX packets/bytes since last sync. */
-    packets = stream->packets_rx;
+    packets = stream->rx_packets;
     packets_delta = packets - stream->last_sync_packets_rx;
     bytes_delta = packets_delta * stream->rx_len;
     stream->last_sync_packets_rx = packets;
     /* Calculate RX loss since last sync. */
-    packets = stream->loss;
+    packets = stream->rx_loss;
     loss_delta = packets - stream->last_sync_loss;
     stream->last_sync_loss = packets;
     bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
     if(g_ctx->config.stream_rate_calc) {
-        bbl_compute_avg_rate(&stream->rate_packets_rx, stream->packets_rx);
+        bbl_compute_avg_rate(&stream->rate_packets_rx, stream->rx_packets);
     }
 }
 
@@ -1179,7 +1175,7 @@ bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
     struct timespec time_elapsed = {0};
 
     /** Enforce optional stream traffic start delay ... */
-    if(stream->config->start_delay && stream->packets_tx == 0) {
+    if(stream->config->start_delay && stream->tx_packets == 0) {
         if(stream->wait) {
             timespec_sub(&time_elapsed, now, &stream->wait_start);
             if(time_elapsed.tv_sec < stream->config->start_delay) {
@@ -1216,9 +1212,9 @@ bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
 
     /** Enforce optional stream packet limit ... */
     if(stream->config->max_packets &&
-       stream->packets_tx + packets > stream->config->max_packets) {
-       if(stream->packets_tx < stream->config->max_packets) {
-           packets = stream->config->max_packets - stream->packets_tx;
+       stream->tx_packets + packets > stream->config->max_packets) {
+       if(stream->tx_packets < stream->config->max_packets) {
+           packets = stream->config->max_packets - stream->tx_packets;
        } else {
            packets = 0;
        }
@@ -1278,8 +1274,8 @@ bbl_stream_tx(bbl_stream_s *stream)
             return false;
         }
         stream->send_window_packets++;
-        stream->packets_tx++;
         stream->flow_seq++;
+        stream->tx_packets++;
         packets--;
         send++;
     }
@@ -1297,9 +1293,12 @@ bbl_stream_lag_tx_job(timer_s *timer)
 {
     bbl_stream_s *stream = timer->data;
     bbl_lag_s *lag = stream->tx_interface->lag;
-    uint8_t key = stream->flow_id % lag->active_count;
-    stream->io = lag->active_list[key]->interface->io.tx;
-    bbl_stream_tx(stream);
+    uint8_t key = 0;
+    if(lag->active_count) {
+        key = stream->flow_id % lag->active_count;
+        stream->io = lag->active_list[key]->interface->io.tx;
+        bbl_stream_tx(stream);
+    }
 }
 
 void
@@ -1829,13 +1828,13 @@ bbl_stream_reset(bbl_stream_s *stream)
 
     stream->reset = true;
 
-    stream->reset_packets_tx = stream->packets_tx;
-    stream->reset_packets_rx = stream->packets_rx;
-    stream->reset_loss = stream->loss;
-    stream->reset_wrong_session = stream->wrong_session;
+    stream->reset_packets_tx = stream->tx_packets;
+    stream->reset_packets_rx = stream->rx_packets;
+    stream->reset_loss = stream->rx_loss;
+    stream->reset_wrong_session = stream->rx_wrong_session;
 
-    stream->min_delay_ns = 0;
-    stream->max_delay_ns = 0;
+    stream->rx_min_delay_ns = 0;
+    stream->rx_max_delay_ns = 0;
     stream->rx_len = 0;
     stream->rx_first_seq = 0;
     stream->rx_last_seq = 0;
@@ -1894,7 +1893,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
             /* Stream already verified */
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
                 loss = bbl->flow_seq - (stream->rx_last_seq +1);
-                stream->loss += loss;
+                stream->rx_loss += loss;
                 if(session) {
                     LOG(LOSS, "LOSS (ID: %u) Unicast flow: %lu seq: %lu last: %lu\n",
                         session->session_id, bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
@@ -1946,13 +1945,13 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
                 if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
                    bbl->inner_vlan_id != session->vlan_key.inner_vlan_id ||
                    bbl->session_id != session->session_id) {
-                    stream->wrong_session++;
+                    stream->rx_wrong_session++;
                     return NULL;
                 }
             }
             stream->rx_first_seq = bbl->flow_seq;
         }
-        stream->packets_rx++;
+        stream->rx_packets++;
         stream->rx_last_seq = bbl->flow_seq;
         bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
         return stream;
@@ -2001,12 +2000,12 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
             "rx-len", stream->rx_len,
             "tx-len", stream->tx_len,
-            "tx-packets", stream->packets_tx - stream->reset_packets_tx,
-            "rx-packets", stream->packets_rx - stream->reset_packets_rx,
-            "rx-loss", stream->loss - stream->reset_loss,
-            "rx-wrong-session", stream->wrong_session - stream->reset_wrong_session,
-            "rx-delay-nsec-min", stream->min_delay_ns,
-            "rx-delay-nsec-max", stream->max_delay_ns,
+            "tx-packets", stream->tx_packets - stream->reset_packets_tx,
+            "rx-packets", stream->rx_packets - stream->reset_packets_rx,
+            "rx-loss", stream->rx_loss - stream->reset_loss,
+            "rx-wrong-session", stream->rx_wrong_session - stream->reset_wrong_session,
+            "rx-delay-nsec-min", stream->rx_min_delay_ns,
+            "rx-delay-nsec-max", stream->rx_max_delay_ns,
             "rx-pps", stream->rate_packets_rx.avg,
             "tx-pps", stream->rate_packets_tx.avg,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
@@ -2045,7 +2044,7 @@ bbl_stream_json(bbl_stream_s *stream)
             "network-interface", network_interface_name,
             "flow-id", stream->flow_id,
             "tx-len", stream->tx_len,
-            "tx-packets", stream->packets_tx - stream->reset_packets_tx,
+            "tx-packets", stream->tx_packets - stream->reset_packets_tx,
             "tx-pps", stream->rate_packets_tx.avg,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
             "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0);

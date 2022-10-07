@@ -10,7 +10,7 @@
 #ifndef __BBL_LAG_H__
 #define __BBL_LAG_H__
 
-#define LAG_MEMBER_ACTIVE_MAX 16
+#define LAG_MEMBER_ACTIVE_MAX 64
 
 typedef struct bbl_lag_
 {
@@ -18,7 +18,6 @@ typedef struct bbl_lag_
     bbl_interface_s *interface;
     bbl_lag_config_s *config;
 
-    uint8_t active_max;
     uint8_t active_count;
     bbl_lag_member_s *active_list[LAG_MEMBER_ACTIVE_MAX];
 
@@ -32,7 +31,10 @@ typedef struct bbl_lag_member_
     bbl_interface_s *interface;
     lacp_state_t lacp_state;
 
+    /* The "primary" link is used for
+     * all control traffic. */
     bool primary;
+
     bool periodic_fast;
 
     struct timer_ *lacp_timer;
@@ -57,7 +59,6 @@ typedef struct bbl_lag_member_
         uint32_t lacp_rx;
         uint32_t lacp_tx;
         uint32_t lacp_dropped;
-        uint32_t lacp_transitions;
     } stats;
 } bbl_lag_member_s;
 
@@ -73,5 +74,8 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
 void
 bbl_lag_rx_lacp(bbl_interface_s *interface,
                 bbl_ethernet_header_s *eth);
+
+int
+bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments);
 
 #endif
