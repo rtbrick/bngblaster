@@ -7,8 +7,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
+#include "../bbl_ctrl.h"
 
 uint16_t g_lag_port_id = 1;
+
+const char *
+lacp_state_string(lacp_state_t type)
+{
+    switch(type) {
+        case LACP_EXPIRED: return "Expired";
+        case LACP_DEFAULTED: return "Defaulted";
+        case LACP_CURRENT: return "Current";
+        default: return "Disabled";
+    }
+}
 
 bbl_lag_s *
 bbl_lag_get_by_name(char *interface)
@@ -76,16 +88,35 @@ bbl_lag_lacp_job(timer_s *timer)
     if(member->timeout > 3) {
         interface->state = INTERFACE_DOWN;
         if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
+            member->lacp_state = LACP_EXPIRED;
             member->actor_state |= LACP_STATE_FLAG_EXPIRED;
             LOG(LAG, "LAG (%s) LACP expired on interface %s\n", 
                 member->lag->interface->name, interface->name);
         }
         if(member->timeout > 6) {
             if(!(member->actor_state & LACP_STATE_FLAG_DEFAULTED)) {
+                member->lacp_state = LACP_DEFAULTED;
                 member->actor_state |= LACP_STATE_FLAG_DEFAULTED;
+                LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
+                    member->lag->interface->name, interface->name);
             }
         }
     }
+}
+
+static void
+bbl_lag_member_insert(bbl_lag_s *lag, bbl_lag_member_s *member)
+{
+    /* Insert LAG member links by port priority 
+     * (lower value is higher priority). */
+    bbl_lag_member_s *member_iter;
+    CIRCLEQ_FOREACH(member_iter, &lag->lag_member_qhead, lag_member_qnode) {
+        if(member_iter->actor_port_priority > member->actor_port_priority) {
+            CIRCLEQ_INSERT_BEFORE(&lag->lag_member_qhead, member_iter, member, lag_member_qnode);
+            return;
+        }
+    }
+    CIRCLEQ_INSERT_TAIL(&lag->lag_member_qhead, member, lag_member_qnode);
 }
 
 bool
@@ -135,41 +166,92 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
         } else {
             member->lacp_state = LACP_DISABLED;
         }
-        CIRCLEQ_INSERT_TAIL(&lag->lag_member_qhead, member, lag_member_qnode);
+
+        bbl_lag_member_insert(lag, member);
         LOG(LAG, "LAG (%s) Interface %s added\n", lag->interface->name, interface->name);
     }
     return true;
 }
 
 static void
+bbl_lag_member_update_state(bbl_lag_member_s *member, interface_state_t state)
+{
+    bbl_interface_s *interface = member->interface;
+    if(interface->state == state) {
+        return;
+    }
+
+    LOG(LAG, "LAG (%s) Member interface %s state changed from %s to %s\n", 
+        member->lag->interface->name, 
+        interface->name,
+        interface_state_string(interface->state),
+        interface_state_string(state));
+
+    interface->state_transitions++;
+    interface->state = state;
+    switch(state) {
+        case INTERFACE_UP:
+            member->actor_state |= (LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
+            break;
+        case INTERFACE_STANDBY:
+            member->actor_state &= ~LACP_STATE_FLAG_DISTRIBUTING;
+            member->actor_state |= LACP_STATE_FLAG_COLLECTING;
+            break;
+        default:
+            member->actor_state &= ~(LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
+            break;
+    }
+}
+
+static void
+bbl_lag_update_state(bbl_lag_s *lag, interface_state_t state)
+{
+    bbl_interface_s *interface = lag->interface;
+    if(interface->state == state) {
+        return;
+    }
+
+    LOG(LAG, "LAG (%s) Interface state changed from %s to %s\n", 
+        interface->name, 
+        interface_state_string(interface->state),
+        interface_state_string(state));
+
+    interface->state_transitions++;
+    interface->state = state;
+}
+
+static void
 bbl_lag_select(bbl_lag_s *lag)
 {
     bbl_lag_member_s *member;
-    lag->active_count = 0;
+    uint8_t active_count = 0;
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         member->primary = false;
         if(member->partner_state & (LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING)) {
-            member->actor_state |= (LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
-            member->interface->state = INTERFACE_UP;
-            lag->active_list[lag->active_count++] = member;
-            if(lag->active_count == 1) {
-                member->primary = true;
-                LOG(LAG, "LAG (%s) Interface %s set to UP (primary)\n", member->lag->interface->name, member->interface->name);
-
+            if(active_count >= LAG_MEMBER_ACTIVE_MAX ||
+               active_count >= lag->config->lacp_max_active_links) {
+                bbl_lag_member_update_state(member, INTERFACE_STANDBY);
             } else {
-                LOG(LAG, "LAG (%s) Interface %s set to UP\n", member->lag->interface->name, member->interface->name);
-
+                lag->active_list[active_count++] = member;
+                if(active_count == 1) {
+                    member->primary = true;
+                }
+                bbl_lag_member_update_state(member, INTERFACE_UP);
             }
         } else {
-            member->interface->state = INTERFACE_DOWN;
+            bbl_lag_member_update_state(member, INTERFACE_DOWN);
         }
     }
-    if(lag->active_count) {
-        lag->interface->state = INTERFACE_UP;
+
+    /* Update LAG state */
+    if(active_count && 
+       active_count >= lag->config->lacp_min_active_links) {
+        bbl_lag_update_state(lag, INTERFACE_UP);
     } else {
-        lag->interface->state = INTERFACE_DOWN;
+        bbl_lag_update_state(lag, INTERFACE_DOWN);
     }
+    lag->active_count = active_count;
 }
 
 void
@@ -179,12 +261,14 @@ bbl_lag_rx_lacp(bbl_interface_s *interface,
     bbl_lag_member_s *member = interface->lag_member;
     bbl_lacp_s *lacp = (bbl_lacp_s*)eth->next; 
 
-    if(member) {
+    if(member && member->lacp_state) {
         member->timeout = 0;
+        member->lacp_state = LACP_CURRENT;
         member->actor_state &= ~(LACP_STATE_FLAG_DEFAULTED|LACP_STATE_FLAG_EXPIRED);
         member->stats.lacp_rx++;
         if(member->partner_state != lacp->actor_state ||
-           member->partner_system_priority != lacp->actor_system_priority) {
+           member->partner_system_priority != lacp->actor_system_priority ||
+           member->partner_port_priority != lacp->actor_port_priority) {
             memcpy(member->partner_system_id, lacp->actor_system_id, ETH_ADDR_LEN);
             member->partner_system_priority = lacp->actor_system_priority;
             member->partner_key = lacp->actor_key;
@@ -194,4 +278,94 @@ bbl_lag_rx_lacp(bbl_interface_s *interface,
             bbl_lag_select(member->lag);
         }
     }
+}
+
+static json_t *
+bbl_lag_json(bbl_lag_s *lag)
+{
+    bbl_lag_member_s *member;
+    json_t *jobj_lag, *jobj_member, *jobj_lacp, *jobj_array;
+
+    jobj_array = json_array();
+
+    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+        if(member->lacp_state) {
+            jobj_lacp = json_pack("{si si si ss* si si si si si ss* si si si si si}",
+                "bpdu-rx", member->stats.lacp_rx,
+                "bpdu-tx", member->stats.lacp_tx,
+                "bpdu-dropped", member->stats.lacp_dropped,
+                "actor-system-id", format_mac_address(member->actor_system_id),
+                "actor-system-priority", member->actor_system_priority,
+                "actor-key", member->actor_key,
+                "actor-port-priority", member->actor_port_priority,
+                "actor-port-id", member->actor_port_id,
+                "actor-state", member->actor_state,
+                "partner-system-id", format_mac_address(member->partner_system_id),
+                "partner-system-priority", member->partner_system_priority,
+                "partner-key", member->partner_key,
+                "partner-port-priority", member->partner_port_priority,
+                "partner-port-id", member->partner_port_id,
+                "partner-state", member->partner_state);
+        } else {
+            jobj_lacp = NULL;
+        }
+        jobj_member = json_pack("{ss* ss* si ss* so*}",
+            "interface", member->interface->name,
+            "state", interface_state_string(member->interface->state),
+            "state-transitions", member->interface->state_transitions,
+            "lacp-state", lacp_state_string(member->lacp_state),
+            "lacp", jobj_lacp);
+        if(jobj_member) {
+            json_array_append(jobj_array, jobj_member);
+        }
+    }
+
+    jobj_lag = json_pack("{si ss* ss* si so*}",
+        "id", lag->id,
+        "interface", lag->interface->name,
+        "state", interface_state_string(lag->interface->state),
+        "state-transitions", lag->interface->state_transitions,
+        "members", jobj_array);
+    
+    return jobj_lag;
+}
+
+int
+bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+{
+    int result = 0;
+
+    bbl_lag_s *lag;    
+    json_t *root, *jobj, *jobj_array;
+    const char *interface = NULL;
+
+    jobj_array = json_array();
+
+    /* Unpack further arguments */
+    json_unpack(arguments, "{s:s}", "interface", &interface);
+
+    CIRCLEQ_FOREACH(lag, &g_ctx->lag_qhead, lag_qnode) {
+        if(interface) {
+            if(strcmp(lag->interface->name, interface) != 0) {
+                continue;
+            }
+        }
+        jobj = bbl_lag_json(lag);
+        if(jobj) {
+            json_array_append(jobj_array, jobj);
+        }
+    }
+
+    root = json_pack("{ss si so*}",
+        "status", "ok",
+        "code", 200,
+        "lag-info", jobj_array);
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+    return result;
 }

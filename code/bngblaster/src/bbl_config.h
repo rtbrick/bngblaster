@@ -153,10 +153,11 @@ typedef struct bbl_lag_config_
     char *interface;
     bool lacp_enable;
     bool lacp_timeout_short;
+    uint8_t lacp_min_active_links;
+    uint8_t lacp_max_active_links;
     uint16_t lacp_system_priority;
     uint8_t lacp_system_id[ETH_ADDR_LEN];
     uint8_t mac[ETH_ADDR_LEN];
-
     void *next; /* pointer to next lag config element */
 } bbl_lag_config_s;
 

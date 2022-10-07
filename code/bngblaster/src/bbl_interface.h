@@ -15,6 +15,7 @@ typedef struct bbl_interface_
     char *name; /* interface name */
     interface_type_t type; /* interface type */
     interface_state_t state; /* interface state */
+    uint32_t state_transitions; /* interface state transitions */
     uint32_t ifindex; /* interface index */
     uint32_t pcap_index; /* interface index for packet captures */
 

@@ -1592,7 +1592,7 @@ bbl_ctrl_traffic_stop(int fd, uint32_t session_id __attribute__((unused)), json_
 }
 
 int
-bgp_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+bbl_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
 {
     if(!g_monkey) {
         LOG_NOARG(INFO, "Start monkey\n");
@@ -1602,7 +1602,7 @@ bgp_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_
 }
 
 int
-bgp_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
+bbl_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)))
 {
     if(g_monkey) {
         LOG_NOARG(INFO, "Stop monkey\n");
@@ -1674,8 +1674,9 @@ struct action actions[] = {
     {"bgp-teardown", bgp_ctrl_teardown, true},
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list, true},
     {"bgp-raw-update", bgp_ctrl_raw_update, false},
-    {"monkey-start", bgp_ctrl_monkey_start, false},
-    {"monkey-stop", bgp_ctrl_monkey_stop, false},
+    {"monkey-start", bbl_ctrl_monkey_start, false},
+    {"monkey-stop", bbl_ctrl_monkey_stop, false},
+    {"lag-info", bbl_lag_ctrl_info, true},
     {NULL, NULL, false},
 };
 

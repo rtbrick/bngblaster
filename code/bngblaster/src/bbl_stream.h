@@ -107,16 +107,17 @@ typedef struct bbl_stream_
     struct timespec wait_start;
     struct timespec send_window_start;
     uint64_t send_window_packets;
-    uint64_t packets_tx;
+
+    uint64_t tx_packets;
 
     char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
-    uint64_t packets_rx;
-    uint64_t loss;
-    uint64_t wrong_session;
+    uint64_t rx_packets;
+    uint64_t rx_loss;
+    uint64_t rx_wrong_session;
 
-    uint64_t min_delay_ns;
-    uint64_t max_delay_ns;
+    uint64_t rx_min_delay_ns;
+    uint64_t rx_max_delay_ns;
 
     uint16_t rx_len;
     uint64_t rx_first_seq;
@@ -135,6 +136,10 @@ typedef struct bbl_stream_
     uint8_t  rx_mpls2_exp;
     uint8_t  rx_mpls2_ttl;
     uint32_t rx_mpls2_label;
+
+    bbl_access_interface_s *rx_access_interface;
+    bbl_network_interface_s *rx_network_interface;
+    bbl_a10nsp_interface_s *rx_a10nsp_interface;
 
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 

@@ -284,6 +284,18 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
         lag_config->lacp_system_id[3] = 0xff;
         lag_config->lacp_system_id[4] = 0xff;
     }
+    value = json_object_get(lag, "lacp-min-active-links");
+    if(value) {
+        lag_config->lacp_min_active_links = json_number_value(value);
+    } else {
+        lag_config->lacp_min_active_links = 0;
+    }
+    value = json_object_get(lag, "lacp-max-active-links");
+    if(value) {
+        lag_config->lacp_min_active_links = json_number_value(value);
+    } else {
+        lag_config->lacp_max_active_links = UINT8_MAX;
+    }
 
     if(json_unpack(lag, "{s:s}", "mac", &s) == 0) {
         if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
@@ -1304,6 +1316,22 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     double bps;
     double number;
 
+    if(json_unpack(stream, "{s:s}", "name", &s) == 0) {
+        stream_config->name = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for stream->name\n");
+        return false;
+    }
+
+    value = json_object_get(stream, "stream-group-id");
+    if(value) {
+        number = json_number_value(value);
+        if(number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id\n");
+        }
+        stream_config->stream_group_id = number;
+    }
+
     if(json_unpack(stream, "{s:s}", "type", &s) == 0) {
         if(strcmp(s, "ipv4") == 0) {
             stream_config->type = BBL_SUB_TYPE_IPV4;
@@ -1332,24 +1360,17 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             return false;
         }
     } else {
-        stream_config->direction = BBL_DIRECTION_BOTH;
-        return false;
-    }
-
-    if(json_unpack(stream, "{s:s}", "name", &s) == 0) {
-        stream_config->name = strdup(s);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for stream->name\n");
-        return false;
-    }
-
-    value = json_object_get(stream, "stream-group-id");
-    if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id\n");
+        if(stream_config->stream_group_id) {
+            stream_config->direction = BBL_DIRECTION_BOTH;
+        } else {
+            stream_config->direction = BBL_DIRECTION_DOWN;
         }
-        stream_config->stream_group_id = number;
+    }
+
+    if(stream_config->stream_group_id == 0 && 
+       stream_config->direction != BBL_DIRECTION_DOWN) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->direction (must be downstream for RAW streams)\n");
+        return false;
     }
 
     if(json_unpack(stream, "{s:s}", "network-interface", &s) == 0) {

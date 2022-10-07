@@ -351,11 +351,11 @@ bbl_stats_generate(bbl_stats_s * stats)
         stream = (bbl_stream_s*)*dict_itor_datum(itor);
         if(stream) {
             if(stats->min_stream_loss) {
-                if(stream->loss < stats->min_stream_loss) stats->min_stream_loss = stream->loss;
+                if(stream->rx_loss < stats->min_stream_loss) stats->min_stream_loss = stream->rx_loss;
             } else {
-                stats->min_stream_loss = stream->loss;
+                stats->min_stream_loss = stream->rx_loss;
             }
-            if(stream->loss > stats->max_stream_loss) stats->max_stream_loss = stream->loss;
+            if(stream->rx_loss > stats->max_stream_loss) stats->max_stream_loss = stream->rx_loss;
 
             if(stream->rx_first_seq) {
                 if(stats->min_stream_rx_first_seq) {
@@ -366,11 +366,11 @@ bbl_stats_generate(bbl_stats_s * stats)
                 if(stream->rx_first_seq > stats->max_stream_rx_first_seq) stats->max_stream_rx_first_seq = stream->rx_first_seq;
 
                 if(stats->min_stream_delay_ns) {
-                    if(stream->min_delay_ns < stats->min_stream_delay_ns) stats->min_stream_delay_ns = stream->min_delay_ns;
+                    if(stream->rx_min_delay_ns < stats->min_stream_delay_ns) stats->min_stream_delay_ns = stream->rx_min_delay_ns;
                 } else {
-                    stats->min_stream_delay_ns = stream->min_delay_ns;
+                    stats->min_stream_delay_ns = stream->rx_min_delay_ns;
                 }
-                if(stream->max_delay_ns > stats->max_stream_delay_ns) stats->max_stream_delay_ns = stream->max_delay_ns;
+                if(stream->rx_max_delay_ns > stats->max_stream_delay_ns) stats->max_stream_delay_ns = stream->rx_max_delay_ns;
             }
         }
     }
@@ -425,21 +425,29 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         access_interface = interface->access;
         a10nsp_interface = interface->a10nsp;
 
-        bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
-        bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
-
         printf("\nInterface: %s", interface->name);
+        if(interface->type == LAG_INTERFACE) {
+            printf(" (LAG)");
+        } else if(interface->type == LAG_MEMBER_INTERFACE) {
+            printf(" (%s)", interface->lag->interface->name);
+        }
         printf("\n--------------------------------------------------------------\n");
-        printf("  TX:                %10lu packets %16lu bytes\n", 
-            interface_stats_tx.packets, interface_stats_tx.bytes);
-        printf("  TX Polled:         %10lu\n", interface_stats_tx.polled);
-        printf("  TX IO Error:       %10lu\n", interface_stats_tx.io_errors);
-        printf("  RX:                %10lu packets %16lu bytes\n",
-            interface_stats_rx.packets, interface_stats_rx.bytes);
-        printf("  RX Protocol Error: %10lu packets\n", interface_stats_rx.protocol_errors);
-        printf("  RX Unknown:        %10lu packets\n", interface_stats_rx.unknown);
-        printf("  RX Polled:         %10lu\n", interface_stats_rx.polled);
-        printf("  RX IO Error:       %10lu\n", interface_stats_rx.io_errors);
+
+        if(interface->type != LAG_INTERFACE) {
+            bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
+            bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
+
+            printf("  TX:                %10lu packets %16lu bytes\n", 
+                interface_stats_tx.packets, interface_stats_tx.bytes);
+            printf("  TX Polled:         %10lu\n", interface_stats_tx.polled);
+            printf("  TX IO Error:       %10lu\n", interface_stats_tx.io_errors);
+            printf("  RX:                %10lu packets %16lu bytes\n",
+                interface_stats_rx.packets, interface_stats_rx.bytes);
+            printf("  RX Protocol Error: %10lu packets\n", interface_stats_rx.protocol_errors);
+            printf("  RX Unknown:        %10lu packets\n", interface_stats_rx.unknown);
+            printf("  RX Polled:         %10lu\n", interface_stats_rx.polled);
+            printf("  RX IO Error:       %10lu\n", interface_stats_rx.io_errors);
+        }
 
         while(network_interface) {
             printf("\nNetwork Interface: %s\n", network_interface->name);

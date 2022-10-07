@@ -19,8 +19,8 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
     }
     stream = bbl_stream_rx(eth, NULL);
     if(stream) {
-        if(stream->network_interface == NULL) {
-            stream->network_interface = interface;
+        if(stream->rx_network_interface == NULL) {
+            stream->rx_network_interface = interface;
         }
         return true;
     }
@@ -49,8 +49,8 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
            session->session_state != BBL_IDLE) {
             stream = bbl_stream_rx(eth, session);
             if(stream) {
-                if(stream->access_interface == NULL) {
-                    stream->access_interface = interface;
+                if(stream->rx_access_interface == NULL) {
+                    stream->rx_access_interface = interface;
                 }
                 return true;
             }
@@ -69,8 +69,8 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
     }
     stream = bbl_stream_rx(eth, NULL);
     if(stream) {
-        if(stream->a10nsp_interface == NULL) {
-            stream->a10nsp_interface = interface;
+        if(stream->rx_a10nsp_interface == NULL) {
+            stream->rx_a10nsp_interface = interface;
         }
         return true;
     }
