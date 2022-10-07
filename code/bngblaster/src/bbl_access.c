@@ -15,15 +15,6 @@
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
-struct keyval_ igmp_msg_names[] = {
-    { IGMP_TYPE_QUERY,      "general-query" },
-    { IGMP_TYPE_REPORT_V1,  "v1-report" },
-    { IGMP_TYPE_REPORT_V2,  "v2-report" },
-    { IGMP_TYPE_LEAVE,      "v2-leave" },
-    { IGMP_TYPE_REPORT_V3,  "v3-report" },
-    { 0, NULL}
-};
-
 void
 bbl_access_interface_rate_job(timer_s *timer)
 {
@@ -446,16 +437,6 @@ bbl_access_rx_udp_ipv6(bbl_access_interface_s *interface,
     }
 }
 
-void
-bbl_access_cfm_cc(timer_s *timer)
-{
-    bbl_session_s *session = timer->data;
-    if(session->session_state == BBL_ESTABLISHED && session->cfm_cc) {
-        session->send_requests |= BBL_SEND_CFM_CC;
-        bbl_session_tx_qnode_insert(session);
-    }
-}
-
 /**
  * bbl_access_rx_established_ipoe
  * 
@@ -497,10 +478,6 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
                     /* Start IGMP */
                     timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
                 }
-            }
-            if(session->cfm_cc) {
-                /* Start CFM CC (currently fixed set to 1s) */
-                timer_add_periodic(&g_ctx->timer_root, &session->timer_cfm_cc, "CFM-CC", 1, 0, session, &bbl_access_cfm_cc);
             }
         }
     }
@@ -564,55 +541,6 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
         }
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         bbl_access_icmpv6_echo_reply(session, eth, ipv6, icmpv6);
-    }
-}
-
-static void
-bbl_access_rx_igmp(bbl_session_s *session, bbl_ipv4_s *ipv4)
-{
-    bbl_igmp_s *igmp = (bbl_igmp_s*)ipv4->next;
-    bbl_igmp_group_s *group = NULL;
-    int i;
-    bool send = false;
-
-#if 0
-    LOG(IGMP, "IGMPv%d (ID: %u) type %s received\n",
-        igmp->version,
-        session->session_id,
-        val2key(igmp_msg_names, igmp->type));
-#endif
-
-    if(igmp->type == IGMP_TYPE_QUERY) {
-
-        if(igmp->robustness) {
-            session->igmp_robustness = igmp->robustness;
-        }
-
-        if(igmp->group) {
-            /* Group Specific Query */
-            for(i=0; i < IGMP_MAX_GROUPS; i++) {
-                group = &session->igmp_groups[i];
-                if(group->group == igmp->group &&
-                   group->state == IGMP_GROUP_ACTIVE) {
-                    group->send = true;
-                    send = true;
-                }
-            }
-        } else {
-            /* General Query */
-            for(i=0; i < IGMP_MAX_GROUPS; i++) {
-                group = &session->igmp_groups[i];
-                if(group->state == IGMP_GROUP_ACTIVE) {
-                    group->send = true;
-                    send = true;
-                }
-            }
-        }
-
-        if(send) {
-            session->send_requests |= BBL_SEND_IGMP;
-            bbl_session_tx_qnode_insert(session);
-        }
     }
 }
 
@@ -693,7 +621,7 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
         case PROTOCOL_IPV4_IGMP:
             session->stats.igmp_rx++;
             interface->stats.igmp_rx++;
-            bbl_access_rx_igmp(session, ipv4);
+            bbl_igmp_rx(session, ipv4);
             return;
         case PROTOCOL_IPV4_ICMP:
             session->stats.icmp_rx++;

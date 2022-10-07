@@ -8,6 +8,66 @@
  */
 #include "bbl.h"
 
+struct keyval_ igmp_msg_names[] = {
+    { IGMP_TYPE_QUERY,      "general-query" },
+    { IGMP_TYPE_REPORT_V1,  "v1-report" },
+    { IGMP_TYPE_REPORT_V2,  "v2-report" },
+    { IGMP_TYPE_LEAVE,      "v2-leave" },
+    { IGMP_TYPE_REPORT_V3,  "v3-report" },
+    { 0, NULL}
+};
+
+void
+bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
+{
+    bbl_igmp_s *igmp = (bbl_igmp_s*)ipv4->next;
+    bbl_igmp_group_s *group = NULL;
+    int i;
+    bool send = false;
+
+#if 0
+    LOG(IGMP, "IGMPv%d (ID: %u) type %s received\n",
+        igmp->version,
+        session->session_id,
+        val2key(igmp_msg_names, igmp->type));
+#endif
+
+    if(igmp->type == IGMP_TYPE_QUERY) {
+
+        if(igmp->robustness) {
+            session->igmp_robustness = igmp->robustness;
+        }
+
+        if(igmp->group) {
+            /* Group Specific Query */
+            for(i=0; i < IGMP_MAX_GROUPS; i++) {
+                group = &session->igmp_groups[i];
+                if(group->group == igmp->group &&
+                   group->state == IGMP_GROUP_ACTIVE) {
+                    group->send = true;
+                    send = true;
+                }
+            }
+        } else {
+            /* General Query */
+            for(i=0; i < IGMP_MAX_GROUPS; i++) {
+                group = &session->igmp_groups[i];
+                if(group->state == IGMP_GROUP_ACTIVE) {
+                    group->send = true;
+                    send = true;
+                }
+            }
+        }
+
+        if(send) {
+            session->send_requests |= BBL_SEND_IGMP;
+            bbl_session_tx_qnode_insert(session);
+        }
+    }
+}
+
+/* Control Socket Commands */
+
 int
 bbl_igmp_ctrl_join(int fd, uint32_t session_id, json_t *arguments)
 {

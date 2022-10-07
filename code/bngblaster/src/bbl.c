@@ -290,13 +290,16 @@ bbl_ctrl_job(timer_s *timer)
          * from idle list. */
         bbl_stats_update_cps();
         rate = g_ctx->config.sessions_start_rate;
-        while (!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
+        while(!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
             session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
             if(rate > 0) {
                 if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
                     g_ctx->sessions_outstanding++;
                     /* Start session */
-                    switch (session->access_type) {
+                    if(session->cfm_cc) {
+                        bbl_cfm_cc_start(session);
+                    }
+                    switch(session->access_type) {
                         case ACCESS_TYPE_PPPOE:
                             /* PPP over Ethernet (PPPoE) */
                             session->session_state = BBL_PPPOE_INIT;
