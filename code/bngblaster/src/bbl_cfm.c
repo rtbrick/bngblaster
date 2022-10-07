@@ -8,6 +8,26 @@
  */
 #include "bbl.h"
 
+void
+bbl_cfm_cc_job(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    if(session->cfm_cc && (session->session_state != BBL_TERMINATED)) {
+        session->send_requests |= BBL_SEND_CFM_CC;
+        bbl_session_tx_qnode_insert(session);
+    }
+}
+
+void
+bbl_cfm_cc_start(bbl_session_s *session)
+{
+    /* Start CFM CC (currently fixed set to 1s) */
+    timer_add_periodic(&g_ctx->timer_root, &session->timer_cfm_cc, "CFM-CC", 
+                       1, 0, session, &bbl_cfm_cc_job);
+}
+
+/* Control Socket Commands */
+
 static int
 bbl_cfm_ctrl_cc_start_stop(int fd, uint32_t session_id, bool status)
 {

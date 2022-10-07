@@ -10,6 +10,9 @@
 #ifndef __BBL_IGMP_H__
 #define __BBL_IGMP_H__
 
+void
+bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4);
+
 int
 bbl_igmp_ctrl_join(int fd, uint32_t session_id, json_t *arguments);
 
