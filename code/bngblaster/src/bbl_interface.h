@@ -28,6 +28,9 @@ typedef struct bbl_interface_
     bbl_network_interface_s *network;
     bbl_a10nsp_interface_s *a10nsp;
 
+    /* Network interface VLAN lookup table. */
+    bbl_network_interface_s *network_vlan[4096];
+
     uint8_t mac[ETH_ADDR_LEN];
     uint32_t send_requests;
     

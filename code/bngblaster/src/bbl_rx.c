@@ -100,7 +100,7 @@ void
 bbl_rx_handler(bbl_interface_s *interface,
                bbl_ethernet_header_s *eth)
 {
-    bbl_network_interface_s *network_interface = interface->network;
+    bbl_network_interface_s *network_interface;
 
     /* Check for link/port protocols like LACP or LLDP */
     switch(eth->type) {
@@ -116,16 +116,12 @@ bbl_rx_handler(bbl_interface_s *interface,
         return;
     }
 
-    while(network_interface) {
-        if(network_interface->vlan == eth->vlan_outer) {
-            if(!bbl_rx_stream_network(network_interface, eth)) {
-                bbl_network_rx_handler(network_interface, eth);
-            }
-            return;
+    network_interface = interface->network_vlan[eth->vlan_outer];
+    if(network_interface) {
+        if(!bbl_rx_stream_network(network_interface, eth)) {
+            bbl_network_rx_handler(network_interface, eth);
         }
-        network_interface = network_interface->next;
-    }
-    if(interface->access) {
+     } else if(interface->access) {
         if(!bbl_rx_stream_access(interface->access, eth)) {
             bbl_access_rx_handler(interface->access, eth);
         }
