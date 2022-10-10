@@ -449,6 +449,14 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             printf("  RX IO Error:       %10lu\n", interface_stats_rx.io_errors);
         }
 
+        if(interface->type == LAG_MEMBER_INTERFACE && 
+           interface->lag_member->lacp_state) {
+            printf("\n  LACP:\n");
+            printf("    TX:              %10u packets\n", interface->lag_member->stats.lacp_tx);
+            printf("    RX:              %10u packets\n", interface->lag_member->stats.lacp_rx);
+            printf("    Dropped:         %10u packets\n", interface->lag_member->stats.lacp_dropped);
+        }
+
         while(network_interface) {
             printf("\nNetwork Interface: %s\n", network_interface->name);
             printf("  TX:                %10lu packets %16lu bytes\n", 
@@ -613,7 +621,7 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         printf("    Downstream IPv6:   %8lu\n", stats->violations_down_ipv6_1s);
         printf("    Downstream IPv6PD: %8lu\n", stats->violations_down_ipv6pd_1s);
         printf("    Upstream IPv4:     %8lu\n", stats->violations_up_ipv4_1s);
-        printf("    Upstream IPv6:     %8lu\n", stats->violations_up_ipv6_1s);
+        printf("    Upstream IPv6:     %8lu\n", stats->violations_up_ipv4_1s);
         printf("    Upstream IPv6PD:   %8lu\n", stats->violations_up_ipv6pd_1s);
         printf("  First Sequence Number Received:\n");
         printf("    Downstream IPv4    MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
@@ -717,6 +725,7 @@ bbl_stats_json(bbl_stats_s * stats)
     json_t *jobj_sub2   = NULL;
 
     uint32_t i;
+    uint32_t array_size;
 
     if(!g_ctx->config.json_report_filename) return;
 
@@ -758,32 +767,47 @@ bbl_stats_json(bbl_stats_s * stats)
     }
 
     jobj_array = json_array();
+    array_size = 0;
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
-        bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
         jobj_sub = json_object();
         json_object_set(jobj_sub, "name", json_string(interface->name));
-        json_object_set(jobj_sub, "tx-packets", json_integer(interface_stats_tx.packets));
-        json_object_set(jobj_sub, "tx-bytes", json_integer(interface_stats_tx.bytes));
-        json_object_set(jobj_sub, "tx-polled", json_integer(interface_stats_tx.polled));
-        json_object_set(jobj_sub, "tx-io-error", json_integer(interface_stats_tx.io_errors));
-        json_object_set(jobj_sub, "rx-packets", json_integer(interface_stats_rx.packets));
-        json_object_set(jobj_sub, "rx-bytes", json_integer(interface_stats_rx.bytes));
-        json_object_set(jobj_sub, "rx-polled", json_integer(interface_stats_rx.bytes));
-        json_object_set(jobj_sub, "rx-io-error", json_integer(interface_stats_rx.io_errors));
-        json_object_set(jobj_sub, "rx-protocol-error", json_integer(interface_stats_rx.protocol_errors));
-        json_object_set(jobj_sub, "rx-unknown", json_integer(interface_stats_rx.unknown));
+        json_object_set(jobj_sub, "type", json_string(interface_type_string(interface->type)));
+        if(interface->type != LAG_INTERFACE) {
+            bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
+            bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
+            json_object_set(jobj_sub, "tx-packets", json_integer(interface_stats_tx.packets));
+            json_object_set(jobj_sub, "tx-bytes", json_integer(interface_stats_tx.bytes));
+            json_object_set(jobj_sub, "tx-polled", json_integer(interface_stats_tx.polled));
+            json_object_set(jobj_sub, "tx-io-error", json_integer(interface_stats_tx.io_errors));
+            json_object_set(jobj_sub, "rx-packets", json_integer(interface_stats_rx.packets));
+            json_object_set(jobj_sub, "rx-bytes", json_integer(interface_stats_rx.bytes));
+            json_object_set(jobj_sub, "rx-protocol-error", json_integer(interface_stats_rx.protocol_errors));
+            json_object_set(jobj_sub, "rx-unknown", json_integer(interface_stats_rx.unknown));
+            json_object_set(jobj_sub, "rx-polled", json_integer(interface_stats_rx.bytes));
+            json_object_set(jobj_sub, "rx-io-error", json_integer(interface_stats_rx.io_errors));
+        }
+        if(interface->type == LAG_MEMBER_INTERFACE && 
+           interface->lag_member->lacp_state) {
+            jobj_sub2 = json_object();
+            json_object_set(jobj_sub2, "tx", json_integer(interface->lag_member->stats.lacp_tx));
+            json_object_set(jobj_sub2, "rx", json_integer(interface->lag_member->stats.lacp_rx));
+            json_object_set(jobj_sub2, "dropped", json_integer(interface->lag_member->stats.lacp_dropped));
+            json_object_set(jobj_sub, "lacp", jobj_sub2);
+        }
         json_array_append(jobj_array, jobj_sub);
+        array_size++;
     }
     json_object_set(jobj, "interfaces", jobj_array);
 
     jobj_array = json_array();
+    array_size = 0;
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         network_interface = interface->network;
         while(network_interface) {
             jobj_sub = json_object();
             json_object_set(jobj_sub, "name", json_string(network_interface->name));
             json_object_set(jobj_sub, "tx-packets", json_integer(network_interface->stats.packets_tx));
+            json_object_set(jobj_sub, "tx-multicast-packets", json_integer(network_interface->stats.mc_tx));
             json_object_set(jobj_sub, "rx-packets", json_integer(network_interface->stats.packets_rx));
             if(g_ctx->stats.session_traffic_flows) {
                 json_object_set(jobj_sub, "tx-stream-packets", json_integer(network_interface->stats.stream_tx));
@@ -791,30 +815,35 @@ bbl_stats_json(bbl_stats_s * stats)
                 json_object_set(jobj_sub, "rx-stream-packets-loss", json_integer(network_interface->stats.stream_loss));
             }
             if(g_ctx->stats.session_traffic_flows) {
-                json_object_set(jobj_sub, "tx-session-packets", json_integer(network_interface->stats.session_ipv4_tx));
-                json_object_set(jobj_sub, "rx-session-packets", json_integer(network_interface->stats.session_ipv4_rx));
-                json_object_set(jobj_sub, "rx-session-packets-loss", json_integer(network_interface->stats.session_ipv4_loss));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv4_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv4_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv4", json_integer(network_interface->stats.session_ipv4_tx));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4", json_integer(network_interface->stats.session_ipv4_rx));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-loss", json_integer(network_interface->stats.session_ipv4_loss));
+                json_object_set(jobj_sub, "tx-session-packets-ipv4-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv4_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv4_rx.avg_max));
                 json_object_set(jobj_sub, "tx-session-packets-ipv6", json_integer(network_interface->stats.session_ipv6_tx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6", json_integer(network_interface->stats.session_ipv6_rx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6-loss", json_integer(network_interface->stats.session_ipv6_loss));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max-ipv6", json_integer(network_interface->stats.rate_session_ipv6_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max-ipv6", json_integer(network_interface->stats.rate_session_ipv6_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv6-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv6_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv6-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv6_rx.avg_max));
                 json_object_set(jobj_sub, "tx-session-packets-ipv6pd", json_integer(network_interface->stats.session_ipv6pd_tx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd", json_integer(network_interface->stats.session_ipv6pd_rx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd-loss", json_integer(network_interface->stats.session_ipv6pd_loss));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(network_interface->stats.rate_session_ipv6pd_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(network_interface->stats.rate_session_ipv6pd_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv6pd-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv6pd_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv6pd-avg-pps-max", json_integer(network_interface->stats.rate_session_ipv6pd_rx.avg_max));
             }
-            json_object_set(jobj_sub, "tx-multicast-packets", json_integer(network_interface->stats.mc_tx));
             json_array_append(jobj_array, jobj_sub);
+            array_size++;
             network_interface = network_interface->next;
         }
     }
-    json_object_set(jobj, "network-interfaces", jobj_array);
+    if(array_size) {
+        json_object_set(jobj, "network-interfaces", jobj_array);
+    } else {
+        json_decref(jobj_array);
+    }
 
     jobj_array = json_array();
+    array_size = 0;
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         access_interface = interface->access;
         if(access_interface) {
@@ -822,63 +851,63 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set(jobj_sub, "name", json_string(interface->name));
             json_object_set(jobj_sub, "tx-packets", json_integer(access_interface->stats.packets_tx));
             json_object_set(jobj_sub, "rx-packets", json_integer(access_interface->stats.packets_rx));
+            json_object_set(jobj_sub, "rx-multicast-packets", json_integer(access_interface->stats.mc_rx));
+            json_object_set(jobj_sub, "rx-multicast-packets-loss", json_integer(access_interface->stats.mc_loss));
             if(g_ctx->stats.session_traffic_flows) {
                 json_object_set(jobj_sub, "tx-stream-packets", json_integer(access_interface->stats.stream_tx));
                 json_object_set(jobj_sub, "rx-stream-packets", json_integer(access_interface->stats.stream_rx));
                 json_object_set(jobj_sub, "rx-stream-packets-loss", json_integer(access_interface->stats.stream_loss));
             }
             if(g_ctx->stats.session_traffic_flows) {
-                json_object_set(jobj_sub, "tx-session-packets", json_integer(access_interface->stats.session_ipv4_tx));
-                json_object_set(jobj_sub, "rx-session-packets", json_integer(access_interface->stats.session_ipv4_rx));
-                json_object_set(jobj_sub, "rx-session-packets-loss", json_integer(access_interface->stats.session_ipv4_loss));
-                json_object_set(jobj_sub, "rx-session-packets-wrong-session", json_integer(access_interface->stats.session_ipv4_wrong_session));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv4_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv4_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv4", json_integer(access_interface->stats.session_ipv4_tx));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4", json_integer(access_interface->stats.session_ipv4_rx));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-loss", json_integer(access_interface->stats.session_ipv4_loss));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-wrong-session", json_integer(access_interface->stats.session_ipv4_wrong_session));
+                json_object_set(jobj_sub, "tx-session-packets-ipv4-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv4_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv4_rx.avg_max));
                 json_object_set(jobj_sub, "tx-session-packets-ipv6", json_integer(access_interface->stats.session_ipv6_tx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6", json_integer(access_interface->stats.session_ipv6_rx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6-loss", json_integer(access_interface->stats.session_ipv6_loss));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6-wrong-session", json_integer(access_interface->stats.session_ipv6_wrong_session));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max-ipv6", json_integer(access_interface->stats.rate_session_ipv6_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max-ipv6", json_integer(access_interface->stats.rate_session_ipv6_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv6-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv6avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6_rx.avg_max));
                 json_object_set(jobj_sub, "tx-session-packets-ipv6pd", json_integer(access_interface->stats.session_ipv6pd_tx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd", json_integer(access_interface->stats.session_ipv6pd_rx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd-loss", json_integer(access_interface->stats.session_ipv6pd_loss));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd-wrong-session", json_integer(access_interface->stats.session_ipv6pd_wrong_session));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(access_interface->stats.rate_session_ipv6pd_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(access_interface->stats.rate_session_ipv6pd_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv6pd-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6pd_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv6pd-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6pd_rx.avg_max));
             }
-            json_object_set(jobj_sub, "rx-multicast-packets", json_integer(access_interface->stats.mc_rx));
-            json_object_set(jobj_sub, "rx-multicast-packets-loss", json_integer(access_interface->stats.mc_loss));
             jobj_sub2 = json_object();
-            json_object_set(jobj_sub2, "arp-tx", json_integer(access_interface->stats.arp_tx));
-            json_object_set(jobj_sub2, "arp-rx", json_integer(access_interface->stats.arp_rx));
-            json_object_set(jobj_sub2, "padi-tx", json_integer(access_interface->stats.padi_tx));
-            json_object_set(jobj_sub2, "pado-rx", json_integer(access_interface->stats.pado_rx));
-            json_object_set(jobj_sub2, "padr-tx", json_integer(access_interface->stats.padr_tx));
-            json_object_set(jobj_sub2, "pads-rx", json_integer(access_interface->stats.pads_rx));
-            json_object_set(jobj_sub2, "padt-tx", json_integer(access_interface->stats.padt_tx));
-            json_object_set(jobj_sub2, "padt-rx", json_integer(access_interface->stats.padt_rx));
-            json_object_set(jobj_sub2, "lcp-tx", json_integer(access_interface->stats.lcp_tx));
-            json_object_set(jobj_sub2, "lcp-rx", json_integer(access_interface->stats.lcp_rx));
-            json_object_set(jobj_sub2, "pap-tx", json_integer(access_interface->stats.pap_tx));
-            json_object_set(jobj_sub2, "pap-rx", json_integer(access_interface->stats.pap_rx));
-            json_object_set(jobj_sub2, "chap-tx", json_integer(access_interface->stats.chap_tx));
-            json_object_set(jobj_sub2, "chap-rx", json_integer(access_interface->stats.chap_rx));
-            json_object_set(jobj_sub2, "ipcp-tx", json_integer(access_interface->stats.ipcp_tx));
-            json_object_set(jobj_sub2, "ipcp-rx", json_integer(access_interface->stats.ipcp_rx));
-            json_object_set(jobj_sub2, "ip6cp-tx", json_integer(access_interface->stats.ip6cp_tx));
-            json_object_set(jobj_sub2, "ip6cp-rx", json_integer(access_interface->stats.ip6cp_rx));
-            json_object_set(jobj_sub2, "igmp-tx", json_integer(access_interface->stats.igmp_tx));
-            json_object_set(jobj_sub2, "igmp-rx", json_integer(access_interface->stats.igmp_rx));
-            json_object_set(jobj_sub2, "icmp-tx", json_integer(access_interface->stats.icmp_tx));
-            json_object_set(jobj_sub2, "icmp-rx", json_integer(access_interface->stats.icmp_rx));
-            json_object_set(jobj_sub2, "dhcp-tx", json_integer(access_interface->stats.dhcp_tx));
-            json_object_set(jobj_sub2, "dhcp-rx", json_integer(access_interface->stats.dhcp_rx));
-            json_object_set(jobj_sub2, "dhcpv6-tx", json_integer(access_interface->stats.dhcpv6_tx));
-            json_object_set(jobj_sub2, "dhcpv6-rx", json_integer(access_interface->stats.dhcpv6_rx));
-            json_object_set(jobj_sub2, "icmpv6-tx", json_integer(access_interface->stats.icmpv6_tx));
-            json_object_set(jobj_sub2, "icmpv6-rx", json_integer(access_interface->stats.icmpv6_rx));
-            json_object_set(jobj_sub2, "ipv4-fragmented-rx", json_integer(access_interface->stats.ipv4_fragmented_rx));
+            json_object_set(jobj_sub2, "tx-arp", json_integer(access_interface->stats.arp_tx));
+            json_object_set(jobj_sub2, "rx-arp", json_integer(access_interface->stats.arp_rx));
+            json_object_set(jobj_sub2, "tx-padi", json_integer(access_interface->stats.padi_tx));
+            json_object_set(jobj_sub2, "rx-pado", json_integer(access_interface->stats.pado_rx));
+            json_object_set(jobj_sub2, "tx-padr", json_integer(access_interface->stats.padr_tx));
+            json_object_set(jobj_sub2, "rx-pads", json_integer(access_interface->stats.pads_rx));
+            json_object_set(jobj_sub2, "tx-padt", json_integer(access_interface->stats.padt_tx));
+            json_object_set(jobj_sub2, "rx-padt", json_integer(access_interface->stats.padt_rx));
+            json_object_set(jobj_sub2, "tx-lcp", json_integer(access_interface->stats.lcp_tx));
+            json_object_set(jobj_sub2, "rx-lcp", json_integer(access_interface->stats.lcp_rx));
+            json_object_set(jobj_sub2, "tx-pap", json_integer(access_interface->stats.pap_tx));
+            json_object_set(jobj_sub2, "rx-pap", json_integer(access_interface->stats.pap_rx));
+            json_object_set(jobj_sub2, "tx-chap", json_integer(access_interface->stats.chap_tx));
+            json_object_set(jobj_sub2, "rx-chap", json_integer(access_interface->stats.chap_rx));
+            json_object_set(jobj_sub2, "tx-ipcp", json_integer(access_interface->stats.ipcp_tx));
+            json_object_set(jobj_sub2, "rx-ipcp", json_integer(access_interface->stats.ipcp_rx));
+            json_object_set(jobj_sub2, "tx-ip6cp", json_integer(access_interface->stats.ip6cp_tx));
+            json_object_set(jobj_sub2, "rx-ip6cp", json_integer(access_interface->stats.ip6cp_rx));
+            json_object_set(jobj_sub2, "tx-igmp", json_integer(access_interface->stats.igmp_tx));
+            json_object_set(jobj_sub2, "rx-igmp", json_integer(access_interface->stats.igmp_rx));
+            json_object_set(jobj_sub2, "tx-icmp", json_integer(access_interface->stats.icmp_tx));
+            json_object_set(jobj_sub2, "rx-icmp", json_integer(access_interface->stats.icmp_rx));
+            json_object_set(jobj_sub2, "tx-dhcp", json_integer(access_interface->stats.dhcp_tx));
+            json_object_set(jobj_sub2, "rx-dhcp", json_integer(access_interface->stats.dhcp_rx));
+            json_object_set(jobj_sub2, "tx-dhcpv6", json_integer(access_interface->stats.dhcpv6_tx));
+            json_object_set(jobj_sub2, "rx-dhcpv6", json_integer(access_interface->stats.dhcpv6_rx));
+            json_object_set(jobj_sub2, "tx-icmpv6", json_integer(access_interface->stats.icmpv6_tx));
+            json_object_set(jobj_sub2, "rx-icmpv6", json_integer(access_interface->stats.icmpv6_rx));
+            json_object_set(jobj_sub2, "rx-ipv4-fragmented", json_integer(access_interface->stats.ipv4_fragmented_rx));
             json_object_set(jobj_sub2, "lcp-echo-timeout", json_integer(access_interface->stats.lcp_echo_timeout));
             json_object_set(jobj_sub2, "lcp-request-timeout", json_integer(access_interface->stats.lcp_timeout));
             json_object_set(jobj_sub2, "ipcp-request-timeout", json_integer(access_interface->stats.ipcp_timeout));
@@ -890,10 +919,17 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set(jobj_sub2, "icmpv6-rs-timeout", json_integer(access_interface->stats.dhcpv6_timeout));
             json_object_set(jobj_sub, "protocol-stats", jobj_sub2);
             json_array_append(jobj_array, jobj_sub);
+            array_size++;
         }
     }
-    json_object_set(jobj, "access-interfaces", jobj_array);
+    if(array_size) {
+        json_object_set(jobj, "access-interfaces", jobj_array);
+    } else {
+        json_decref(jobj_array);
+    }
 
+    jobj_array = json_array();
+    array_size = 0;
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         a10nsp_interface = interface->a10nsp;
         if(a10nsp_interface) {
@@ -907,26 +943,31 @@ bbl_stats_json(bbl_stats_s * stats)
                 json_object_set(jobj_sub, "rx-stream-packets-loss", json_integer(a10nsp_interface->stats.stream_loss));
             }
             if(g_ctx->stats.session_traffic_flows) {
-                json_object_set(jobj_sub, "tx-session-packets", json_integer(a10nsp_interface->stats.session_ipv4_tx));
-                json_object_set(jobj_sub, "rx-session-packets", json_integer(a10nsp_interface->stats.session_ipv4_rx));
-                json_object_set(jobj_sub, "rx-session-packets-loss", json_integer(a10nsp_interface->stats.session_ipv4_loss));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv4_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv4_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv4", json_integer(a10nsp_interface->stats.session_ipv4_tx));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4", json_integer(a10nsp_interface->stats.session_ipv4_rx));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-loss", json_integer(a10nsp_interface->stats.session_ipv4_loss));
+                json_object_set(jobj_sub, "tx-session-packets-ipv4-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv4_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv4-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv4_rx.avg_max));
                 json_object_set(jobj_sub, "tx-session-packets-ipv6", json_integer(a10nsp_interface->stats.session_ipv6_tx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6", json_integer(a10nsp_interface->stats.session_ipv6_rx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6-loss", json_integer(a10nsp_interface->stats.session_ipv6_loss));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max-ipv6", json_integer(a10nsp_interface->stats.rate_session_ipv6_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max-ipv6", json_integer(a10nsp_interface->stats.rate_session_ipv6_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv6-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv6_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv6-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv6_rx.avg_max));
                 json_object_set(jobj_sub, "tx-session-packets-ipv6pd", json_integer(a10nsp_interface->stats.session_ipv6pd_tx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd", json_integer(a10nsp_interface->stats.session_ipv6pd_rx));
                 json_object_set(jobj_sub, "rx-session-packets-ipv6pd-loss", json_integer(a10nsp_interface->stats.session_ipv6pd_loss));
-                json_object_set(jobj_sub, "tx-session-packets-avg-pps-max-ipv6pd", json_integer(a10nsp_interface->stats.rate_session_ipv6pd_tx.avg_max));
-                json_object_set(jobj_sub, "rx-session-packets-avg-pps-max-ipv6pd", json_integer(a10nsp_interface->stats.rate_session_ipv6pd_rx.avg_max));
+                json_object_set(jobj_sub, "tx-session-packets-ipv6pd-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv6pd_tx.avg_max));
+                json_object_set(jobj_sub, "rx-session-packets-ipv6pd-avg-pps-max", json_integer(a10nsp_interface->stats.rate_session_ipv6pd_rx.avg_max));
             }
             json_array_append(jobj_array, jobj_sub);
+            array_size++;
         }
     }
-    json_object_set(jobj, "a10nsp-interfaces", jobj_array);
+    if(array_size) {
+        json_object_set(jobj, "a10nsp-interfaces", jobj_array);
+    } else {
+        json_decref(jobj_array);
+    }
 
     if(g_ctx->stats.session_traffic_flows) {
         jobj_sub = json_object();
@@ -935,48 +976,54 @@ bbl_stats_json(bbl_stats_s * stats)
         json_object_set(jobj_sub, "config-ipv6pd-pps", json_integer(g_ctx->config.session_traffic_ipv6pd_pps));
         json_object_set(jobj_sub, "total-flows", json_integer(g_ctx->stats.session_traffic_flows));
         json_object_set(jobj_sub, "verified-flows", json_integer(g_ctx->stats.session_traffic_flows_verified));
-        json_object_set(jobj_sub, "verified-flows-access-ipv4", json_integer(stats->sessions_down_ipv4_rx));
-        json_object_set(jobj_sub, "verified-flows-access-ipv6", json_integer(stats->sessions_down_ipv6_rx));
-        json_object_set(jobj_sub, "verified-flows-access-ipv6pd", json_integer(stats->sessions_down_ipv6pd_rx));
-        json_object_set(jobj_sub, "verified-flows-network-ipv4", json_integer(stats->sessions_up_ipv4_rx));
-        json_object_set(jobj_sub, "verified-flows-network-ipv6", json_integer(stats->sessions_up_ipv6_rx));
-        json_object_set(jobj_sub, "verified-flows-network-ipv6pd", json_integer(stats->sessions_up_ipv6pd_rx));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv4-min", json_integer(stats->min_down_ipv4_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv4-avg", json_integer(stats->avg_down_ipv4_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv4-max", json_integer(stats->max_down_ipv4_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6-min", json_integer(stats->min_down_ipv6_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6-avg", json_integer(stats->avg_down_ipv6_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6-max", json_integer(stats->max_down_ipv6_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6pd-min", json_integer(stats->min_down_ipv6pd_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6pd-avg", json_integer(stats->avg_down_ipv6pd_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6pd-max", json_integer(stats->max_down_ipv6pd_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv4-min", json_integer(stats->min_up_ipv4_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv4-avg", json_integer(stats->avg_up_ipv4_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv4-max", json_integer(stats->max_up_ipv4_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6-min", json_integer(stats->min_up_ipv6_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6-avg", json_integer(stats->avg_up_ipv6_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6-max", json_integer(stats->max_up_ipv6_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6pd-min", json_integer(stats->min_up_ipv6pd_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6pd-avg", json_integer(stats->avg_up_ipv6pd_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6pd-max", json_integer(stats->max_up_ipv6pd_rx_first_seq));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv4-min-seconds", json_real(stats->min_down_ipv4_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv4-avg-seconds", json_real(stats->avg_down_ipv4_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv4-max-seconds", json_real(stats->max_down_ipv4_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6-min-seconds", json_real(stats->min_down_ipv6_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6-avg-seconds", json_real(stats->avg_down_ipv6_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6-max-seconds", json_real(stats->max_down_ipv6_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6pd-min-seconds", json_real(stats->min_down_ipv6pd_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6pd-avg-seconds", json_real(stats->avg_down_ipv6pd_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-access-ipv6pd-max-seconds", json_real(stats->max_down_ipv6pd_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv4-min-seconds", json_real(stats->min_up_ipv4_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv4-avg-seconds", json_real(stats->avg_up_ipv4_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv4-max-seconds", json_real(stats->max_up_ipv4_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6-min-seconds", json_real(stats->min_up_ipv6_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6-avg-seconds", json_real(stats->avg_up_ipv6_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6-max-seconds", json_real(stats->max_up_ipv6_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6pd-min-seconds", json_real(stats->min_up_ipv6pd_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6pd-avg-seconds", json_real(stats->avg_up_ipv6pd_rx_seconds));
-        json_object_set(jobj_sub, "first-seq-rx-network-ipv6pd-max-seconds", json_real(stats->max_up_ipv6pd_rx_seconds));
+        json_object_set(jobj_sub, "verified-flows-downstream-ipv4", json_integer(stats->sessions_down_ipv4_rx));
+        json_object_set(jobj_sub, "verified-flows-downstream-ipv6", json_integer(stats->sessions_down_ipv6_rx));
+        json_object_set(jobj_sub, "verified-flows-downstream-ipv6pd", json_integer(stats->sessions_down_ipv6pd_rx));
+        json_object_set(jobj_sub, "verified-flows-upstream-ipv4", json_integer(stats->sessions_up_ipv4_rx));
+        json_object_set(jobj_sub, "verified-flows-upstream-ipv6", json_integer(stats->sessions_up_ipv6_rx));
+        json_object_set(jobj_sub, "verified-flows-upstream-ipv6pd", json_integer(stats->sessions_up_ipv6pd_rx));
+        json_object_set(jobj_sub, "violated-flows-downstream-ipv4", json_integer(stats->violations_down_ipv4_1s));
+        json_object_set(jobj_sub, "violated-flows-downstream-ipv6", json_integer(stats->violations_down_ipv6_1s));
+        json_object_set(jobj_sub, "violated-flows-downstream-ipv6pd", json_integer(stats->violations_down_ipv6pd_1s));
+        json_object_set(jobj_sub, "violated-flows-upstream-ipv4", json_integer(stats->violations_up_ipv4_1s));
+        json_object_set(jobj_sub, "violated-flows-upstream-ipv6", json_integer(stats->violations_up_ipv4_1s));
+        json_object_set(jobj_sub, "violated-flows-upstream-ipv6pd", json_integer(stats->violations_up_ipv6pd_1s));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv4-min", json_integer(stats->min_down_ipv4_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv4-avg", json_integer(stats->avg_down_ipv4_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv4-max", json_integer(stats->max_down_ipv4_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6-min", json_integer(stats->min_down_ipv6_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6-avg", json_integer(stats->avg_down_ipv6_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6-max", json_integer(stats->max_down_ipv6_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6pd-min", json_integer(stats->min_down_ipv6pd_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6pd-avg", json_integer(stats->avg_down_ipv6pd_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6pd-max", json_integer(stats->max_down_ipv6pd_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv4-min", json_integer(stats->min_up_ipv4_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv4-avg", json_integer(stats->avg_up_ipv4_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv4-max", json_integer(stats->max_up_ipv4_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6-min", json_integer(stats->min_up_ipv6_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6-avg", json_integer(stats->avg_up_ipv6_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6-max", json_integer(stats->max_up_ipv6_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6pd-min", json_integer(stats->min_up_ipv6pd_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6pd-avg", json_integer(stats->avg_up_ipv6pd_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6pd-max", json_integer(stats->max_up_ipv6pd_rx_first_seq));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv4-min-seconds", json_real(stats->min_down_ipv4_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv4-avg-seconds", json_real(stats->avg_down_ipv4_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv4-max-seconds", json_real(stats->max_down_ipv4_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6-min-seconds", json_real(stats->min_down_ipv6_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6-avg-seconds", json_real(stats->avg_down_ipv6_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6-max-seconds", json_real(stats->max_down_ipv6_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6pd-min-seconds", json_real(stats->min_down_ipv6pd_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6pd-avg-seconds", json_real(stats->avg_down_ipv6pd_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-downstream-ipv6pd-max-seconds", json_real(stats->max_down_ipv6pd_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv4-min-seconds", json_real(stats->min_up_ipv4_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv4-avg-seconds", json_real(stats->avg_up_ipv4_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv4-max-seconds", json_real(stats->max_up_ipv4_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6-min-seconds", json_real(stats->min_up_ipv6_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6-avg-seconds", json_real(stats->avg_up_ipv6_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6-max-seconds", json_real(stats->max_up_ipv6_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6pd-min-seconds", json_real(stats->min_up_ipv6pd_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6pd-avg-seconds", json_real(stats->avg_up_ipv6pd_rx_seconds));
+        json_object_set(jobj_sub, "first-seq-rx-upstream-ipv6pd-max-seconds", json_real(stats->max_up_ipv6pd_rx_seconds));
         json_object_set(jobj, "session-traffic", jobj_sub);
     }
 
@@ -1021,8 +1068,8 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set(jobj_sub, "zapping-leave-count", json_integer(stats->zapping_leave_count));
             json_object_set(jobj_sub, "zapping-multicast-packets-overlap", json_integer(stats->mc_old_rx_after_first_new));
             json_object_set(jobj_sub, "zapping-multicast-not-received", json_integer(stats->mc_not_received));
-            json_object_set(jobj, "multicast", jobj_sub);
         }
+        json_object_set(jobj, "multicast", jobj_sub);
     }
 
     if(g_ctx->config.json_report_sessions) {
