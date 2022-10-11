@@ -1425,8 +1425,30 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         }
     }
 
+    if(config->session_traffic && !(network_interface || a10nsp_interface)) {
+        /* Skip session traffic if no network/a10nsp interface is found. */
+        return true;
+    }
+
     tx_interval = SEC / config->pps;
     if(config->direction & BBL_DIRECTION_UP) {
+        if(config->type == BBL_SUB_TYPE_IPV4) {
+            if(!((network_interface && network_interface->ip.address) ||
+                 config->ipv4_destination_address || 
+                 config->ipv4_network_address ||
+                 a10nsp_interface)) {
+                LOG(ERROR, "Failed to add stream %s (upstream) because of missing IPv4 destination address\n", config->name);
+                return false;
+            }
+        } else {
+            if(!((network_interface && *(uint64_t*)network_interface->ip6.address) ||
+                 *(uint64_t*)config->ipv6_destination_address || 
+                 *(uint64_t*)config->ipv6_network_address ||
+                 a10nsp_interface)) {
+                LOG(ERROR, "Failed to add stream %s (upstream) because of missing IPv6 destination address\n", config->name);
+                return false;
+            }
+        }
         stream = calloc(1, sizeof(bbl_stream_s));
         stream->endpoint = &g_endpoint;
         stream->flow_id = g_ctx->flow_id++;
@@ -1467,11 +1489,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
             LOG(DEBUG, "Session traffic stream %s (upstream) added to %s (access) with %lf PPS\n", 
-                access_interface->name, config->name, config->pps);
+                config->name, access_interface->name, config->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
             LOG(DEBUG, "Traffic stream %s (upstream) added to %s (access) with %lf PPS\n", 
-                access_interface->name, config->name, config->pps);
+                config->name, access_interface->name, config->pps);
         }
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
@@ -1516,11 +1538,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
                 LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (network) with %lf PPS\n", 
-                    network_interface->name, config->name, config->pps);
+                    config->name, network_interface->name, config->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s (downstream) added to %s (network) with %lf PPS\n", 
-                    network_interface->name, config->name, config->pps);
+                    config->name, network_interface->name, config->pps);
             }
         } else if(a10nsp_interface) {
             stream->a10nsp_interface = a10nsp_interface;
@@ -1530,11 +1552,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
                 LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (a10nsp) with %lf PPS\n", 
-                    network_interface->name, config->name, config->pps);
+                    config->name, network_interface->name, config->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s (downstream) added to %s (a10nsp) with %lf PPS\n", 
-                    network_interface->name, config->name, config->pps);
+                    config->name, network_interface->name, config->pps);
             }
         } else {
             LOG(ERROR, "Failed to add stream %s (downstream) because of missing interface\n", config->name);
