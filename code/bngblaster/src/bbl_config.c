@@ -1369,16 +1369,19 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 
     if(stream_config->stream_group_id == 0 && 
        stream_config->direction != BBL_DIRECTION_DOWN) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->direction (must be downstream for RAW streams)\n");
+        fprintf(stderr, "JSON config error: Invalid value for stream->direction (must be downstream for RAW streams)\n");
         return false;
     }
 
     if(json_unpack(stream, "{s:s}", "network-interface", &s) == 0) {
         stream_config->network_interface = strdup(s);
     }
-
     if(json_unpack(stream, "{s:s}", "a10nsp-interface", &s) == 0) {
         stream_config->a10nsp_interface = strdup(s);
+    }
+    if(stream_config->network_interface && stream_config->a10nsp_interface) {
+        fprintf(stderr, "JSON config error: Not allowed to set stream->network-interface and stream->a10nsp-interface\n");
+        return false;
     }
 
     value = json_object_get(stream, "source-port");
