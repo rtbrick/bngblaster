@@ -157,7 +157,6 @@ bbl_lag_select(bbl_lag_s *lag)
     lag->active_count = active_count;
 }
 
-
 void
 bbl_lag_lacp_job(timer_s *timer)
 {

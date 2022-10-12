@@ -82,6 +82,11 @@ bbl_rx_thread(bbl_interface_s *interface,
               bbl_ethernet_header_s *eth)
 {
     bbl_network_interface_s *network_interface = interface->network;
+
+    if(interface->state == INTERFACE_DISABLED) {
+        return true;
+    }
+
     while(network_interface) {
         if(network_interface->vlan == eth->vlan_outer) {
             return bbl_rx_stream_network(network_interface, eth);
@@ -101,6 +106,10 @@ bbl_rx_handler(bbl_interface_s *interface,
                bbl_ethernet_header_s *eth)
 {
     bbl_network_interface_s *network_interface;
+
+    if(interface->state == INTERFACE_DISABLED) {
+        return;
+    }
 
     /* Check for link/port protocols like LACP or LLDP */
     switch(eth->type) {
