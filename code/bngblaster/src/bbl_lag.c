@@ -76,102 +76,6 @@ bbl_lag_add()
     return true;
 }
 
-void
-bbl_lag_lacp_job(timer_s *timer)
-{
-    bbl_interface_s *interface = timer->data;
-    bbl_lag_member_s *member = interface->lag_member;
-
-    interface->send_requests |= BBL_SEND_LACP;
-    member->timeout++;
-    if(member->timeout > 3) {
-        interface->state = INTERFACE_DOWN;
-        if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
-            member->lacp_state = LACP_EXPIRED;
-            member->actor_state |= LACP_STATE_FLAG_EXPIRED;
-            LOG(LAG, "LAG (%s) LACP expired on interface %s\n", 
-                member->lag->interface->name, interface->name);
-        }
-        if(member->timeout > 6) {
-            if(!(member->actor_state & LACP_STATE_FLAG_DEFAULTED)) {
-                member->lacp_state = LACP_DEFAULTED;
-                member->actor_state |= LACP_STATE_FLAG_DEFAULTED;
-                LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
-                    member->lag->interface->name, interface->name);
-            }
-        }
-    }
-}
-
-static void
-bbl_lag_member_insert(bbl_lag_s *lag, bbl_lag_member_s *member)
-{
-    /* Insert LAG member links by port priority 
-     * (lower value is higher priority). */
-    bbl_lag_member_s *member_iter;
-    CIRCLEQ_FOREACH(member_iter, &lag->lag_member_qhead, lag_member_qnode) {
-        if(member_iter->actor_port_priority > member->actor_port_priority) {
-            CIRCLEQ_INSERT_BEFORE(&lag->lag_member_qhead, member_iter, member, lag_member_qnode);
-            return;
-        }
-    }
-    CIRCLEQ_INSERT_TAIL(&lag->lag_member_qhead, member, lag_member_qnode);
-}
-
-bool
-bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config)
-{
-    bbl_lag_s *lag;
-    bbl_lag_member_s *member;
-    time_t timer_sec;
-
-    if(link_config->lag_interface) {
-        lag = bbl_lag_get_by_name(link_config->lag_interface);
-        if(!lag) {
-            LOG(ERROR, "Failed to add link %s to lag-interface %s (not found)\n", 
-                link_config->interface, link_config->lag_interface);
-            return false;
-        }
-        if(link_config->tx_threads) {
-            LOG(ERROR, "Failed to add link %s to lag-interface %s (TX threads not allowed for LAG interfaces)\n", 
-                link_config->interface, link_config->lag_interface);
-            return false;
-        }
-        member = calloc(1, sizeof(bbl_lag_member_s));
-        member->lag = lag;
-        member->interface = interface;
-
-        interface->type = LAG_MEMBER_INTERFACE;
-        interface->lag = lag;
-        interface->lag_member = member;
-        memcpy(interface->mac, lag->interface->mac, ETH_ADDR_LEN);
-        if(lag->config->lacp_enable) {
-            member->lacp_state = LACP_DEFAULTED;
-            interface->state = INTERFACE_DOWN;
-            memcpy(member->actor_system_id, lag->config->lacp_system_id, ETH_ADDR_LEN);
-            member->actor_system_priority = lag->config->lacp_system_priority;
-            member->actor_key = lag->id;
-            member->actor_port_priority = interface->config->lacp_priority;
-            member->actor_port_id = g_lag_port_id++;
-            member->actor_state = LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_DEFAULTED;
-            if(lag->config->lacp_timeout_short) {
-                timer_sec = 1;
-                member->actor_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
-            } else {
-                timer_sec = 30;
-            }
-            timer_add_periodic(&g_ctx->timer_root, &member->lacp_timer, "LACP",
-                               timer_sec, 0, interface, &bbl_lag_lacp_job);
-        } else {
-            member->lacp_state = LACP_DISABLED;
-        }
-
-        bbl_lag_member_insert(lag, member);
-        LOG(LAG, "LAG (%s) Interface %s added\n", lag->interface->name, interface->name);
-    }
-    return true;
-}
-
 static void
 bbl_lag_member_update_state(bbl_lag_member_s *member, interface_state_t state)
 {
@@ -251,6 +155,104 @@ bbl_lag_select(bbl_lag_s *lag)
         bbl_lag_update_state(lag, INTERFACE_DOWN);
     }
     lag->active_count = active_count;
+}
+
+
+void
+bbl_lag_lacp_job(timer_s *timer)
+{
+    bbl_interface_s *interface = timer->data;
+    bbl_lag_member_s *member = interface->lag_member;
+
+    interface->send_requests |= BBL_SEND_LACP;
+    member->timeout++;
+    if(member->timeout > 3) {
+        interface->state = INTERFACE_DOWN;
+        if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
+            member->lacp_state = LACP_EXPIRED;
+            member->actor_state |= LACP_STATE_FLAG_EXPIRED;
+            LOG(LAG, "LAG (%s) LACP expired on interface %s\n",
+                member->lag->interface->name, interface->name);
+            bbl_lag_select(member->lag);
+        }
+        if(member->timeout > 6) {
+            if(!(member->actor_state & LACP_STATE_FLAG_DEFAULTED)) {
+                member->lacp_state = LACP_DEFAULTED;
+                member->actor_state |= LACP_STATE_FLAG_DEFAULTED;
+                LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
+                    member->lag->interface->name, interface->name);
+            }
+        }
+    }
+}
+
+static void
+bbl_lag_member_insert(bbl_lag_s *lag, bbl_lag_member_s *member)
+{
+    /* Insert LAG member links by port priority 
+     * (lower value is higher priority). */
+    bbl_lag_member_s *member_iter;
+    CIRCLEQ_FOREACH(member_iter, &lag->lag_member_qhead, lag_member_qnode) {
+        if(member_iter->actor_port_priority > member->actor_port_priority) {
+            CIRCLEQ_INSERT_BEFORE(&lag->lag_member_qhead, member_iter, member, lag_member_qnode);
+            return;
+        }
+    }
+    CIRCLEQ_INSERT_TAIL(&lag->lag_member_qhead, member, lag_member_qnode);
+}
+
+bool
+bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config)
+{
+    bbl_lag_s *lag;
+    bbl_lag_member_s *member;
+    time_t timer_sec;
+
+    if(link_config->lag_interface) {
+        lag = bbl_lag_get_by_name(link_config->lag_interface);
+        if(!lag) {
+            LOG(ERROR, "Failed to add link %s to lag-interface %s (not found)\n", 
+                link_config->interface, link_config->lag_interface);
+            return false;
+        }
+        if(link_config->tx_threads) {
+            LOG(ERROR, "Failed to add link %s to lag-interface %s (TX threads not allowed for LAG interfaces)\n", 
+                link_config->interface, link_config->lag_interface);
+            return false;
+        }
+        member = calloc(1, sizeof(bbl_lag_member_s));
+        member->lag = lag;
+        member->interface = interface;
+
+        interface->type = LAG_MEMBER_INTERFACE;
+        interface->lag = lag;
+        interface->lag_member = member;
+        memcpy(interface->mac, lag->interface->mac, ETH_ADDR_LEN);
+        if(lag->config->lacp_enable) {
+            member->lacp_state = LACP_DEFAULTED;
+            interface->state = INTERFACE_DOWN;
+            memcpy(member->actor_system_id, lag->config->lacp_system_id, ETH_ADDR_LEN);
+            member->actor_system_priority = lag->config->lacp_system_priority;
+            member->actor_key = lag->id;
+            member->actor_port_priority = interface->config->lacp_priority;
+            member->actor_port_id = g_lag_port_id++;
+            member->actor_state = LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_DEFAULTED;
+            if(lag->config->lacp_timeout_short) {
+                timer_sec = 1;
+                member->actor_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
+            } else {
+                timer_sec = 30;
+            }
+            timer_add_periodic(&g_ctx->timer_root, &member->lacp_timer, "LACP",
+                               timer_sec, 0, interface, &bbl_lag_lacp_job);
+        } else {
+            member->lacp_state = LACP_DISABLED;
+        }
+
+        bbl_lag_member_insert(lag, member);
+        LOG(LAG, "LAG (%s) Interface %s added\n", lag->interface->name, interface->name);
+    }
+    return true;
 }
 
 void
