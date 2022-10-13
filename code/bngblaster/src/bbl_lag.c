@@ -155,6 +155,7 @@ bbl_lag_select(bbl_lag_s *lag)
         bbl_lag_update_state(lag, INTERFACE_DOWN);
     }
     lag->active_count = active_count;
+    lag->select++;
 }
 
 void

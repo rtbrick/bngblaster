@@ -14,6 +14,27 @@
 static protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_ethernet_header_s *eth, bbl_l2tp_s **_l2tp);
 static protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_s *l2tp);
 
+/** 
+ * This function searches for the BNG Blaster data
+ * traffic signature and returns true if found.
+ * 
+ * @param buf start of packet
+ * @param len length of packet
+ * @return true for BNG Blaster stream traffic
+ */
+bool
+packet_is_bbl(uint8_t *buf, uint16_t len)
+{
+    if(len < BBL_MIN_LEN) {
+        return false;
+    }
+    buf += len - BBL_HEADER_LEN;
+    if(*(uint64_t*)buf == BBL_MAGIC_NUMBER) {
+        return true;
+    }
+    return false;
+}
+
 /*
  * CHECKSUM
  * ------------------------------------------------------------------------*/

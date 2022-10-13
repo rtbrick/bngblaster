@@ -554,6 +554,9 @@ main(int argc, char *argv[])
         }
     }
 
+    /* Init IO stream token buckets. */
+    io_init_stream_token_bucket();
+
     /* Start smear job. Use a crazy nsec bucket '12345678',
      * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->smear_timer, "Timer Smearing", 
@@ -568,7 +571,7 @@ main(int argc, char *argv[])
     }
 
     /* Start threads. */
-    io_thread_start_all(g_ctx);
+    io_thread_start_all();
 
     /* Start curses. */
     if(interactive) {

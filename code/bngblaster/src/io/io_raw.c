@@ -69,40 +69,68 @@ io_raw_tx_job(timer_s *timer)
 {
     io_handle_s *io = timer->data;
     bbl_interface_s *interface = io->interface;
-    protocol_error_t tx_result = PROTOCOL_SUCCESS;
 
+    uint32_t stream_packets = 0;
+    bool ctrl = true;
     bool pcap = false;
 
     assert(io->mode == IO_MODE_RAW);
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
+    io_update_stream_token_bucket(io);
+
     /* Get TX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-    while(tx_result != EMPTY) {
+    while(true) {
         /* If sendto fails, the failed packet remains in TX buffer to be retried
          * in the next interval. */
-        if(!io->buf_len) {
-            tx_result = bbl_tx(interface, io->buf, &io->buf_len);
-        }
-        if(tx_result == PROTOCOL_SUCCESS) {
-            if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                    interface->name, strerror(errno), errno);
-                io->stats.io_errors++;
-                return;
+        if(io->buf_len) {
+            if(packet_is_bbl(io->buf, io->buf_len)) {
+                /* Update timestamp if BBL traffic is retried. */
+                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
+                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
             }
-            io->stats.packets++;
-            io->stats.bytes += io->buf_len;
-            /* Dump the packet into pcap file. */
-            if(g_ctx->pcap.write_buf) {
-                pcap = true;
-                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                          interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+        } else if(ctrl) {
+            /* First send all control traffic which has higher priority. */
+            if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                io->buf_len = 0;
+                ctrl = false;
+                continue;
+            }
+        } else {
+            /* Send traffic streams up to allowed burst. */
+            if(++stream_packets > io->stream_burst) {
+                break;
+            }
+            if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                break;
             }
         }
+
+        if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
+            /* This packet will be retried next interval 
+             * because io->buf_len is not reset to zero. */
+            LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                interface->name, strerror(errno), errno);
+            io->stats.io_errors++;
+            if(pcap) {
+                pcapng_fflush();
+            }
+            return;
+        }
+        
+        /* Dump the packet into pcap file. */
+        if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
+            pcap = true;
+            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                        interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+        }
+        io->stats.packets++;
+        io->stats.bytes += io->buf_len;
         io->buf_len = 0;
     }
+    io->buf_len = 0;
     if(pcap) {
         pcapng_fflush();
     }
@@ -138,6 +166,9 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
     }
 }
 
+/**
+ * This job is for RAW TX in worker thread!
+ */
 void
 io_raw_thread_tx_job(timer_s *timer)
 {
@@ -147,11 +178,18 @@ io_raw_thread_tx_job(timer_s *timer)
     bbl_txq_s *txq = thread->txq;
     bbl_txq_slot_t *slot;
 
+    uint32_t stream_packets = 0;
+
     assert(io->mode == IO_MODE_RAW);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
+    io_update_stream_token_bucket(io);
+
+    /* First send all control traffic which has higher priority. */
     while((slot = bbl_txq_read_slot(txq))) {
+        /* This packet will be retried next interval 
+         * because slot is not marked as read. */
         if(sendto(io->fd, slot->packet, slot->packet_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
             LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
                 io->interface->name, strerror(errno), errno);
@@ -162,18 +200,38 @@ io_raw_thread_tx_job(timer_s *timer)
         io->stats.bytes += slot->packet_len;
         bbl_txq_read_next(txq);
     }
-}
 
-bool
-io_raw_send(io_handle_s *io, uint8_t *buf, uint16_t len)
-{
-    if(sendto(io->fd, buf, len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-        LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-            io->interface->name, strerror(errno), errno);
-        io->stats.io_errors++;
-        return false;
+    /* Get TX timestamp */
+    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+
+    /* Send traffic streams up to allowed burst. */
+    while(stream_packets++ < io->stream_burst) {
+        /* If sendto fails, the failed packet remains in TX buffer 
+         * to be retried in the next interval. */
+        if(io->buf_len) {
+            if(packet_is_bbl(io->buf, io->buf_len)) {
+                /* Update timestamp if BBL traffic is retried. */
+                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
+                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
+            }
+        } else {
+            if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                break;
+            }
+        }
+        if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
+            /* This packet will be retried next interval 
+             * because io->buf_len is not reset to zero. */
+            LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                io->interface->name, strerror(errno), errno);
+            io->stats.io_errors++;
+            return;
+        }
+        io->stats.packets++;
+        io->stats.bytes += io->buf_len;
+        io->buf_len = 0;
     }
-    return true;
+    io->buf_len = 0;
 }
 
 bool

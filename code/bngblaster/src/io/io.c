@@ -9,41 +9,34 @@
 
 #include "io.h"
 
-/**
- * bbl_io_send
- *
- * Send single packet trough given interface.
- *
- * @param io IO handle.
- */
-bool
-io_send(io_handle_s *io, uint8_t *buf, uint16_t len)
+void
+io_update_stream_token_bucket(io_handle_s *io)
 {
-    bool result = false;
-
-    assert(io->direction == IO_EGRESS);
-
-    switch(io->mode) {
-        case IO_MODE_PACKET_MMAP_RAW:
-        case IO_MODE_RAW:
-            result = io_raw_send(io, buf, len);
-            break;
-        case IO_MODE_PACKET_MMAP:
-            result = io_packet_mmap_send(io, buf, len);
-            break;
-        default:
-            return false;
+    io->stream_tokens += io->stream_rate;
+    if(io->stream_tokens > io->stream_burst) {
+        io->stream_tokens = io->stream_burst;
     }
+}
 
-    if(result) {
-        io->stats.packets++;
-        io->stats.bytes += len;
-        if(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams && io->thread == NULL) {
-            /* Dump the packet into pcap file. */
-            pcapng_push_packet_header(&io->timestamp, buf, len,
-                                    io->interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-            pcapng_fflush();
+void
+io_init_stream_token_bucket()
+{
+    bbl_interface_s *interface;
+    io_handle_s *io;
+    double rate;
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        io = interface->io.tx;
+        while(io) {
+            rate = io->stream_pps / io->interface->config->tx_interval * 1000;
+            io->stream_rate = rate * 1.2; /* +20% */
+            if(rate - io->stream_burst) {
+                /* Roundup. */
+                io->stream_rate++;
+            }
+            io->stream_tokens = 0;
+            io->stream_burst = io->stream_rate * 3;
+            io = io->next;
         }
     }
-    return result;
 }

@@ -103,10 +103,15 @@ typedef struct bbl_stream_
     bool wait;
     bool stop;
     bool reset;
+    bool lag;
 
     struct timespec wait_start;
-    struct timespec send_window_start;
-    uint64_t send_window_packets;
+
+    CIRCLEQ_ENTRY(bbl_stream_) tx_qnode;
+    uint32_t token_bucket;
+    uint32_t token_burst;
+
+    uint64_t lag_select;
 
     uint64_t tx_packets;
 
@@ -166,6 +171,9 @@ bbl_stream_init();
 
 void
 bbl_stream_final();
+
+protocol_error_t
+bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len);
 
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session);

@@ -30,7 +30,10 @@
 #include "io_dpdk.h"
 #endif
 
-bool
-io_send(io_handle_s *io, uint8_t *buf, uint16_t len);
+void
+io_update_stream_token_bucket(io_handle_s *io);
+
+void
+io_init_stream_token_bucket();
 
 #endif
