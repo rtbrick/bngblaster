@@ -10,9 +10,6 @@
 #define __BBL_IO_PACKET_MMAP_H__
 
 bool
-io_packet_mmap_send(io_handle_s *io, uint8_t *buf, uint16_t len);
-
-bool
 io_packet_mmap_init(io_handle_s *io);
 
 #endif

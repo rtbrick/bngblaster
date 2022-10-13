@@ -88,6 +88,7 @@ io_interface_init_rx(bbl_interface_s *interface)
         io->next = interface->io.rx;
         interface->io.rx = io;
         io->interface = interface;
+        CIRCLEQ_INIT(&io->stream_tx_qhead);
         if(config->rx_threads) {
             if(!io_thread_init(io)) {
                 return false;
@@ -134,6 +135,7 @@ io_interface_init_tx(bbl_interface_s *interface)
         io->next = interface->io.tx;
         interface->io.tx = io;
         io->interface = interface;
+        CIRCLEQ_INIT(&io->stream_tx_qhead);
         if(config->tx_threads) {
             if(!io_thread_init(io)) {
                 return false;
@@ -153,13 +155,6 @@ io_interface_init_tx(bbl_interface_s *interface)
             default:
                 return false;
         }
-
-    }
-    
-    if(config->tx_threads) {
-        /* TODO: Add config! */
-        /* Reserve N PPS for control traffic. */
-        interface->io.tx->thread->pps_reserved = 1000;
     }
     return true;
 }

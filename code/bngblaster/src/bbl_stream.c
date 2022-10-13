@@ -1137,168 +1137,189 @@ bbl_stream_final()
 static bool
 bbl_stream_can_send(bbl_stream_s *stream)
 {
-    if(g_init_phase) {
-        return false;
-    }
-
     if(stream->reset) {
         stream->reset = false;
         stream->flow_seq = 1;
-        goto FREE;
-    }
-
-    if(stream->tx_interface->state != INTERFACE_UP) {
-        goto FREE;
-    }
-
-    if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
+    } else if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
+        if(g_init_phase || !g_traffic || 
+           stream->tx_interface->state != INTERFACE_UP ||
+           stream->stop) {
+            return false;
+        }
         return true;
     }
 
-FREE:
     /* Free packet if not ready to send */
     if(stream->tx_buf) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         stream->tx_len = 0;
     }
-    stream->send_window_packets = 0;
     return false;
 }
 
-static uint64_t
-bbl_stream_send_window(bbl_stream_s *stream, struct timespec *now) {
+void
+bbl_stream_tx_qnode_insert(io_handle_s *io, bbl_stream_s *stream)
+{
+    if(CIRCLEQ_NEXT(stream, tx_qnode)) {
+        return;
+    }
+    CIRCLEQ_INSERT_TAIL(&io->stream_tx_qhead, stream, tx_qnode);
+}
 
-    uint64_t packets = 1;
-    uint64_t packets_expected;
+void
+bbl_stream_tx_qnode_remove(io_handle_s *io, bbl_stream_s *stream)
+{
+    if(CIRCLEQ_NEXT(stream, tx_qnode)) {
+        CIRCLEQ_REMOVE(&io->stream_tx_qhead, stream, tx_qnode);
+        CIRCLEQ_NEXT(stream, tx_qnode) = NULL;
+        CIRCLEQ_PREV(stream, tx_qnode) = NULL;
+    }
+}
 
-    struct timespec time_elapsed = {0};
+void
+bbl_stream_tx_qnode_tail(io_handle_s *io, bbl_stream_s *stream)
+{
+    if(CIRCLEQ_NEXT(stream, tx_qnode)) {
+        CIRCLEQ_REMOVE(&io->stream_tx_qhead, stream, tx_qnode);
+        CIRCLEQ_INSERT_TAIL(&io->stream_tx_qhead, stream, tx_qnode);
+    }
+}
 
-    /** Enforce optional stream traffic start delay ... */
-    if(stream->config->start_delay && stream->tx_packets == 0) {
-        if(stream->wait) {
-            timespec_sub(&time_elapsed, now, &stream->wait_start);
-            if(time_elapsed.tv_sec < stream->config->start_delay) {
-                /** Still waiting ... */
-                return 0;
+protocol_error_t
+bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len)
+{
+    bbl_stream_s *stream;
+    if(!CIRCLEQ_EMPTY(&io->stream_tx_qhead)) {
+        stream = CIRCLEQ_FIRST(&io->stream_tx_qhead);
+        if(stream->token_bucket && stream->tx_buf) {
+            /* Update BBL header fields */
+            *(uint32_t*)(stream->tx_buf + (stream->tx_len - 8)) = io->timestamp.tv_sec;
+            *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = io->timestamp.tv_nsec;
+            *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
+            *len = stream->tx_len;
+            memcpy(buf, stream->tx_buf, *len);
+            /* Remove only from TX queue if all tokens are consumed! */
+            if(stream->token_bucket == 0) {
+                bbl_stream_tx_qnode_remove(io, stream);
+            } else {
+                /* Move to the end. */
+                bbl_stream_tx_qnode_tail(io, stream);
             }
-            /** Stop wait window ... */
+            stream->token_bucket--;
+            stream->flow_seq++;
+            stream->tx_packets++;
+            return PROTOCOL_SUCCESS;
         } else {
-            /** Start wait window ... */
-            stream->wait = true;
-            stream->wait_start.tv_sec = now->tv_sec;
-            stream->wait_start.tv_nsec = now->tv_nsec;
-            return 0;
-        }   
-    }
-
-    if(stream->send_window_packets) {
-        timespec_sub(&time_elapsed, now, &stream->send_window_start);
-        packets_expected = time_elapsed.tv_sec * stream->config->pps;
-        packets_expected += stream->config->pps * ((double)time_elapsed.tv_nsec / 1000000000.0);
-
-        if(packets_expected > stream->send_window_packets) {
-            packets = packets_expected - stream->send_window_packets;
+            bbl_stream_tx_qnode_remove(io, stream);
         }
-        if(packets > g_ctx->config.stream_max_ppi) {
-            packets = g_ctx->config.stream_max_ppi;
-        }
-    } else {
-        /* Open new send window */
-        stream->send_window_start.tv_sec = now->tv_sec;
-        stream->send_window_start.tv_nsec = now->tv_nsec;
-        packets = 1;
     }
-
-    /** Enforce optional stream packet limit ... */
-    if(stream->config->max_packets &&
-       stream->tx_packets + packets > stream->config->max_packets) {
-       if(stream->tx_packets < stream->config->max_packets) {
-           packets = stream->config->max_packets - stream->tx_packets;
-       } else {
-           packets = 0;
-       }
-    }
-
-    return packets;
+    return EMPTY;
 }
 
 static bool
-bbl_stream_tx(bbl_stream_s *stream)
+bbl_stream_lag(bbl_stream_s *stream)
 {
-    bbl_session_s *session = stream->session;
-    io_handle_s *io = stream->io;
+    bbl_lag_s *lag = stream->tx_interface->lag;
+    uint8_t key;
 
-    struct timespec now;
-
-    uint64_t packets = 1;
-    uint64_t send = 0;
-
-    if(!bbl_stream_can_send(stream)) {
-        return true;
-    }
-
-    if(!stream->tx_buf) {
-        if(!bbl_stream_build_packet(stream)) {
-            LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
-            return true;
-        }
-    }
-
-    /* Close send window */
-    if(!g_traffic || stream->stop) {
-        stream->send_window_packets = 0;
-        return true;
-    }
-    if(session) {
-        if(stream->session_traffic) {
-            if(!session->session_traffic.active) {
-                stream->send_window_packets = 0;
-                return true;
-            }
-        } else if(!session->streams.active) {
-            stream->send_window_packets = 0;
-            return true;
-        }
-    }
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    packets = bbl_stream_send_window(stream, &now);
-    /* Update BBL header fields */
-    *(uint32_t*)(stream->tx_buf + (stream->tx_len - 8)) = now.tv_sec;
-    *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = now.tv_nsec;
-    while(packets) {
-        *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
-        /* Send packet */
-        if(!io_send(io, stream->tx_buf, stream->tx_len)) {
+    if(lag->select != stream->lag_select) {
+        stream->lag_select = lag->select;
+        bbl_stream_tx_qnode_remove(stream->io, stream);
+        if(lag->active_count) {
+            key = stream->flow_id % lag->active_count;
+            stream->io = lag->active_list[key]->interface->io.tx;
+        } else {
             return false;
         }
-        stream->send_window_packets++;
-        stream->flow_seq++;
-        stream->tx_packets++;
-        packets--;
-        send++;
+    }
+    return true;
+}
+
+static bool
+bbl_stream_wait(bbl_stream_s *stream)
+{
+    struct timespec time_elapsed = {0};
+    struct timespec now = {0};
+
+    if(stream->wait) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        timespec_sub(&time_elapsed, &now, &stream->wait_start);
+        if(time_elapsed.tv_sec > stream->config->start_delay) {
+            /** Stop wait window ... */
+            return false;
+        }
+    } else {
+        /** Start wait window ... */
+        clock_gettime(CLOCK_MONOTONIC, &stream->wait_start);
+        stream->wait = true;
     }
     return true;
 }
 
 void
-bbl_stream_tx_job(timer_s *timer)
-{
-    bbl_stream_tx(timer->data);
-}
-
-void
-bbl_stream_lag_tx_job(timer_s *timer)
+bbl_stream_token_job(timer_s *timer)
 {
     bbl_stream_s *stream = timer->data;
-    bbl_lag_s *lag = stream->tx_interface->lag;
-    uint8_t key = 0;
-    if(lag->active_count) {
-        key = stream->flow_id % lag->active_count;
-        stream->io = lag->active_list[key]->interface->io.tx;
-        bbl_stream_tx(stream);
+    bbl_session_s *session = stream->session;
+
+    if(!bbl_stream_can_send(stream)) {
+        stream->token_bucket = 0;
+        return;
     }
+
+    if(session) {
+        if(stream->session_traffic) {
+            if(!session->session_traffic.active) {
+                stream->token_bucket = 0;
+                return;
+            }
+        } else if(!session->streams.active) {
+            stream->token_bucket = 0;
+            return;
+        }
+    }
+
+    if(stream->lag) {
+        if(!bbl_stream_lag(stream)) {
+            stream->token_bucket = 0;
+            return;
+        }
+    }
+
+    stream->token_bucket++;
+
+    /** Enforce optional stream traffic start delay ... */
+    if(stream->config->start_delay && stream->tx_packets == 0) {
+        if(bbl_stream_wait(stream)) {
+            stream->token_bucket = 0;
+            return;
+        }
+    }
+
+    /** Enforce optional stream packet limit ... */
+    if(stream->config->max_packets &&
+       stream->tx_packets + stream->token_bucket > stream->config->max_packets) {
+       if(stream->tx_packets < stream->config->max_packets) {
+           stream->token_bucket = stream->config->max_packets - stream->tx_packets;
+       } else {
+           stream->token_bucket = 0;
+           return;
+       }
+    }
+    
+    if(stream->token_bucket > stream->token_burst) {
+        stream->token_bucket = stream->token_burst;
+    }
+
+    if(!stream->tx_buf) {
+        if(!bbl_stream_build_packet(stream)) {
+            LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
+            stream->token_bucket = 0;
+            return;
+        }
+    }
+    bbl_stream_tx_qnode_insert(stream->io, stream);
 }
 
 void
@@ -1342,23 +1363,42 @@ bbl_stream_add_group(bbl_stream_s *stream)
 }
 
 static void
+bbl_stream_select_io_lag(bbl_stream_s *stream)
+{
+    bbl_lag_s *lag = stream->tx_interface->lag;
+    bbl_lag_member_s *member;
+
+    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+        if(!stream->io) {
+            stream->io = member->interface->io.tx;
+        } else {
+            /* Select the interface with largest TC interval (slowest.) */
+            if(member->interface->io.tx->interface->config->tx_interval >
+               stream->io->interface->config->tx_interval) {
+                stream->io = member->interface->io.tx;
+            }
+        }
+        member->interface->io.tx->stream_pps += stream->config->pps;
+    }
+}
+
+static void
 bbl_stream_select_io(bbl_stream_s *stream)
 {
     io_handle_s *io = stream->tx_interface->io.tx;
-    io_thread_s *thread = io->thread;
-    if(thread) {
-        stream->threaded = true;
-        while(io && io->thread) {
-            if(io->thread->pps_reserved < thread->pps_reserved) {
-                thread = io->thread;
-            }
-            io = io->next;
+    io_handle_s *io_iter = io;
+
+    while(io_iter) {
+        if(io_iter->stream_pps < io->stream_pps) {
+            io = io_iter;
         }
-        
-        thread->pps_reserved += stream->config->pps;
-        io = thread->io;
+        io_iter = io_iter->next;
     }
+    io->stream_pps += stream->config->pps;
     stream->io = io;
+    if(io->thread) {
+        stream->threaded = true;
+    }
 }
 
 static void
@@ -1367,23 +1407,38 @@ bbl_stream_add(bbl_stream_s *stream)
     time_t timer_sec;
     long timer_nsec;
 
+    uint64_t io_tx_interval;
+    uint64_t burst;
+
     bbl_stream_add_group(stream);
-
-    timer_sec = stream->tx_interval / 1000000000;
-    timer_nsec = stream->tx_interval % 1000000000;
-
     if(stream->tx_interface->type == LAG_INTERFACE) {
-        timer_add_periodic(&g_ctx->timer_root, &stream->tx_timer, "Stream TX",
-                           timer_sec, timer_nsec, stream, &bbl_stream_lag_tx_job);
+        bbl_stream_select_io_lag(stream);
     } else {
         bbl_stream_select_io(stream);
-        if(stream->io->thread) {
-            timer_add_periodic(&stream->io->thread->timer.root, &stream->tx_timer, "Stream TX",
-                               timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-        } else {
-            timer_add_periodic(&g_ctx->timer_root, &stream->tx_timer, "Stream TX",
-                               timer_sec, timer_nsec, stream, &bbl_stream_tx_job);
-        }
+    }
+
+    io_tx_interval = stream->io->interface->config->tx_interval;
+    if(io_tx_interval > stream->tx_interval) {
+        burst = io_tx_interval / stream->tx_interval;
+    } else {
+        burst = 1;
+    }
+
+    stream->token_burst = burst * 1.2; /* +20% */
+    if(burst - stream->token_burst) {
+        /* Roundup. */
+        stream->token_burst++;
+    }
+
+    /* Calculate timer. */
+    timer_sec = stream->tx_interval / 1000000000;
+    timer_nsec = stream->tx_interval % 1000000000;
+    if(stream->io->thread) {
+        timer_add_periodic(&stream->io->thread->timer.root, &stream->tx_timer, "Stream Tokens",
+                            timer_sec, timer_nsec, stream, &bbl_stream_token_job);
+    } else {
+        timer_add_periodic(&g_ctx->timer_root, &stream->tx_timer, "Stream Tokens",
+                            timer_sec, timer_nsec, stream, &bbl_stream_token_job);
     }
 }
 

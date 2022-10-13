@@ -9,26 +9,6 @@
 #include "io.h"
 
 /** 
- * This function searches for the BNG Blaster data
- * traffic signature and returns true if found.
- * 
- * @param buf start of packet
- * @param len length of packet
- * @return true for BNG Blaster stream traffic
- */
-static bool
-packet_is_bbl(uint8_t *buf, uint16_t len) {
-    if(len < BBL_MIN_LEN) {
-        return false;
-    }
-    buf += len - BBL_HEADER_LEN;
-    if(*(uint64_t*)buf == BBL_MAGIC_NUMBER) {
-        return true;
-    }
-    return false;
-}
-
-/** 
  * This function redirects the packet in the
  * IO buffer to the main thread via the TXQ 
  * ring buffer. 

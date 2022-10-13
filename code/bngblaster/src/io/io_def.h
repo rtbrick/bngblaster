@@ -61,7 +61,13 @@ typedef struct io_handle_ {
     uint16_t buf_len;
     uint16_t vlan_tci;
     uint16_t vlan_tpid;
-    
+
+    double stream_pps;
+    uint32_t stream_tokens;
+    uint32_t stream_rate;
+    uint32_t stream_burst;
+    CIRCLEQ_HEAD(stream_tx_, bbl_stream_) stream_tx_qhead;
+
     struct timespec timestamp; /* user space timestamps */
 
     struct {
@@ -85,8 +91,6 @@ typedef struct io_thread_ {
     pthread_mutex_t mutex;
     volatile bool active;
     volatile bool stopped;
-
-    uint32_t pps_reserved;
 
     io_thread_cb_fn setup_fn;
     io_thread_cb_fn run_fn;

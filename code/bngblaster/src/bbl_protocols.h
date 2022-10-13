@@ -940,17 +940,14 @@ typedef struct bbl_lacp_ {
     uint8_t     partner_state;
 } bbl_lacp_s;
 
-/*
- * decode_ethernet
- */
+bool
+packet_is_bbl(uint8_t *buf, uint16_t len);
+
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,
                 bbl_ethernet_header_s **ethernet);
 
-/*
- * encode_ethernet
- */
 protocol_error_t
 encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_s *eth);
