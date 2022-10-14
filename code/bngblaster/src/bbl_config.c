@@ -2041,14 +2041,14 @@ json_parse_config(json_t *root)
         if(json_is_boolean(value)) {
             g_ctx->config.traffic_stop_verified = json_boolean_value(value);
         }
-        value = json_object_get(section, "max-ppi");
+        value = json_object_get(section, "max-burst");
         if(json_is_number(value)) {
             number = json_number_value(value);
             if(number < 1 || number > UINT8_MAX) {
-                fprintf(stderr, "JSON config error: Invalid value for traffic->max-ppi\n");
+                fprintf(stderr, "JSON config error: Invalid value for traffic->max-burst\n");
                 return false;
             }
-            g_ctx->config.stream_max_ppi = number;
+            g_ctx->config.stream_max_burst = number;
         }
         value = json_object_get(section, "max-streams-per-group");
         if(json_is_number(value)) {
@@ -2664,7 +2664,7 @@ bbl_config_init_defaults()
     g_ctx->config.multicast_traffic_pps = 1000;
     g_ctx->config.traffic_autostart = true;
     g_ctx->config.stream_rate_calc = true;
-    g_ctx->config.stream_max_ppi = 16;
+    g_ctx->config.stream_max_burst = 16;
     g_ctx->config.stream_max_per_group = 64;
     g_ctx->config.session_traffic_autostart = true;
 }

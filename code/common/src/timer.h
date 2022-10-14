@@ -55,6 +55,7 @@ typedef struct timer_
     void (*cb)(struct timer_ *); /* callback function. */
     bool expired;
     bool periodic; /* auto restart timer ? */
+    bool reset; /* reset reference/start time */
     bool delete; /* timer has been deleted */
     bool on_change_list; /* node is on change list */
     char name[32];

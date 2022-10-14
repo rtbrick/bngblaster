@@ -29,7 +29,7 @@ io_init_stream_token_bucket()
         io = interface->io.tx;
         while(io) {
             rate = io->stream_pps / io->interface->config->tx_interval * 1000;
-            io->stream_rate = rate * 1.2; /* +20% */
+            io->stream_rate = rate * 1.3; /* +30% */
             if(rate - io->stream_burst) {
                 /* Roundup. */
                 io->stream_rate++;
