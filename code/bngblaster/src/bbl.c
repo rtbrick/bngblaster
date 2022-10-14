@@ -584,11 +584,6 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
-    /* Start curses. */
-    if (interactive) {
-        bbl_init_curses(ctx);
-    }
-
     /* Add traffic. */
     if(!bbl_add_multicast_packets(ctx)) {
         if (interactive) endwin();
@@ -638,6 +633,11 @@ main(int argc, char *argv[])
 
     /* Start threads. */
     bbl_stream_start_threads(ctx);
+
+    /* Start curses. */
+    if (interactive) {
+        bbl_init_curses(ctx);
+    }
 
     /* Start event loop. */
     log_open();
