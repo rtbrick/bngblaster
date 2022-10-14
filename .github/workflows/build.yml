@@ -17,7 +17,7 @@ jobs:
         os: [ubuntu-18.04, ubuntu-20.04, ubuntu-22.04]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Download RtBrick libdict
       shell: bash
@@ -59,7 +59,7 @@ jobs:
       run: cpack -G DEB
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: bngblaster-${{matrix.os}}
         path: ${{ github.workspace }}/build/*.deb
