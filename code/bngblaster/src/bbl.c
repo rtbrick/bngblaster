@@ -570,19 +570,19 @@ main(int argc, char *argv[])
     /* Start threads. */
     io_thread_start_all();
 
+    /* Smear all buckets. */
+    timer_smear_all_buckets(&g_ctx->timer_root);
+
     /* Start curses. */
     if(interactive) {
         bbl_interactive_init();
         bbl_interactive_start();
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
 
-    /* Smear all buckets. */
-    timer_smear_all_buckets(&g_ctx->timer_root);
-
     /* Start event loop. */
+    clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     while(g_teardown_request_count < 10) {
         if(!(g_ctx->l2tp_tunnels || g_ctx->routing_sessions)) {
             if(g_ctx->sessions) {
