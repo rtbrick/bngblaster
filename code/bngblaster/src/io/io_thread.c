@@ -285,10 +285,14 @@ void
 io_thread_start_all()
 {
     io_thread_s *thread = g_ctx->io_threads;
+    struct timespec sleep, rem;
+
+    sleep.tv_nsec = 7800179; /* prime number betwen 7 and 8ms */
     while(thread) {
         thread->active = true;
         timer_smear_all_buckets(&thread->timer.root);
         pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
+        nanosleep(&sleep, &rem);
         thread = thread->next;
     }
 }
