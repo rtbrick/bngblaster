@@ -385,8 +385,11 @@ timer_process_changes(timer_root_s *root)
 
         if(timer->periodic) {
             /* Requeue. */
-            timer->expire.tv_sec = now.tv_sec;
-            timer->expire.tv_nsec = now.tv_nsec;
+            if(timer->reset) {
+                /* Reset timer start time. */
+                timer->expire.tv_sec = now.tv_sec;
+                timer->expire.tv_nsec = now.tv_nsec;
+            }
             timer_requeue(timer, timer_bucket->sec, timer_bucket->nsec);
             continue;
         }
@@ -460,6 +463,7 @@ timer_add_periodic(timer_root_s *root, timer_s **ptimer, char *name,
     timer = *ptimer;
     if(timer) {
         timer->periodic = true;
+        timer->reset = true;
     }
 }
 

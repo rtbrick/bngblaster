@@ -1170,20 +1170,9 @@ bbl_stream_tx_qnode_insert(io_handle_s *io, bbl_stream_s *stream)
 void
 bbl_stream_tx_qnode_remove(io_handle_s *io, bbl_stream_s *stream)
 {
-    if(CIRCLEQ_NEXT(stream, tx_qnode)) {
-        CIRCLEQ_REMOVE(&io->stream_tx_qhead, stream, tx_qnode);
-        CIRCLEQ_NEXT(stream, tx_qnode) = NULL;
-        CIRCLEQ_PREV(stream, tx_qnode) = NULL;
-    }
-}
-
-void
-bbl_stream_tx_qnode_tail(io_handle_s *io, bbl_stream_s *stream)
-{
-    if(CIRCLEQ_NEXT(stream, tx_qnode)) {
-        CIRCLEQ_REMOVE(&io->stream_tx_qhead, stream, tx_qnode);
-        CIRCLEQ_INSERT_TAIL(&io->stream_tx_qhead, stream, tx_qnode);
-    }
+    CIRCLEQ_REMOVE(&io->stream_tx_qhead, stream, tx_qnode);
+    CIRCLEQ_NEXT(stream, tx_qnode) = NULL;
+    CIRCLEQ_PREV(stream, tx_qnode) = NULL;
 }
 
 protocol_error_t
@@ -1199,20 +1188,19 @@ bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len)
             *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
             *len = stream->tx_len;
             memcpy(buf, stream->tx_buf, *len);
-            /* Remove only from TX queue if all tokens are consumed! */
-            if(stream->token_bucket == 0) {
-                bbl_stream_tx_qnode_remove(io, stream);
-            } else {
-                /* Move to the end. */
-                bbl_stream_tx_qnode_tail(io, stream);
-            }
             stream->token_bucket--;
             stream->flow_seq++;
             stream->tx_packets++;
-            return PROTOCOL_SUCCESS;
+            /* Remove only from TX queue if all tokens are consumed! */
+            bbl_stream_tx_qnode_remove(io, stream);
+            if(stream->token_bucket) {
+                /* Move to the end. */
+                bbl_stream_tx_qnode_insert(io, stream);
+            }
         } else {
             bbl_stream_tx_qnode_remove(io, stream);
         }
+        return PROTOCOL_SUCCESS;
     }
     return EMPTY;
 }
@@ -1407,9 +1395,6 @@ bbl_stream_add(bbl_stream_s *stream)
     time_t timer_sec;
     long timer_nsec;
 
-    uint64_t io_tx_interval;
-    uint64_t burst;
-
     bbl_stream_add_group(stream);
     if(stream->tx_interface->type == LAG_INTERFACE) {
         bbl_stream_select_io_lag(stream);
@@ -1417,18 +1402,7 @@ bbl_stream_add(bbl_stream_s *stream)
         bbl_stream_select_io(stream);
     }
 
-    io_tx_interval = stream->io->interface->config->tx_interval;
-    if(io_tx_interval > stream->tx_interval) {
-        burst = io_tx_interval / stream->tx_interval;
-    } else {
-        burst = 1;
-    }
-
-    stream->token_burst = burst * 1.2; /* +20% */
-    if(burst - stream->token_burst) {
-        /* Roundup. */
-        stream->token_burst++;
-    }
+    stream->token_burst = g_ctx->config.stream_max_burst;
 
     /* Calculate timer. */
     timer_sec = stream->tx_interval / 1000000000;
@@ -1440,6 +1414,7 @@ bbl_stream_add(bbl_stream_s *stream)
         timer_add_periodic(&g_ctx->timer_root, &stream->tx_timer, "Stream Tokens",
                             timer_sec, timer_nsec, stream, &bbl_stream_token_job);
     }
+    stream->tx_timer->reset = false;
 }
 
 static bool 

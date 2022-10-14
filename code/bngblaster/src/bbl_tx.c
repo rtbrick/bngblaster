@@ -1522,11 +1522,9 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                     session->stats.bytes_tx += *len;
                 }
                 /* Remove only from TX queue if all requests are processed! */
-                if(session->send_requests == 0) {
-                    bbl_session_tx_qnode_remove(session);
-                } else {
+                bbl_session_tx_qnode_remove(session);
+                if(session->send_requests) {
                     /* Move to the end. */
-                    bbl_session_tx_qnode_remove(session);
                     bbl_session_tx_qnode_insert(session);
                 }
             } else {

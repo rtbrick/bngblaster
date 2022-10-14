@@ -562,9 +562,6 @@ main(int argc, char *argv[])
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->smear_timer, "Timer Smearing", 
                        45, 12345678, g_ctx, &bbl_smear_job);
 
-    /* Smear all buckets. */
-    timer_smear_all_buckets(&g_ctx->timer_root);
-
     /* Prevent traffic from autostart. */
     if(g_ctx->config.traffic_autostart == false) {
         enable_disable_traffic(false);
@@ -579,9 +576,13 @@ main(int argc, char *argv[])
         bbl_interactive_start();
     }
 
-    /* Start event loop. */
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     signal(SIGINT, teardown_handler);
+
+    /* Smear all buckets. */
+    timer_smear_all_buckets(&g_ctx->timer_root);
+
+    /* Start event loop. */
     while(g_teardown_request_count < 10) {
         if(!(g_ctx->l2tp_tunnels || g_ctx->routing_sessions)) {
             if(g_ctx->sessions) {
