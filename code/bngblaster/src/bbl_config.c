@@ -1960,6 +1960,10 @@ json_parse_config(json_t *root)
         if(json_is_boolean(value)) {
             g_ctx->config.send_multicast_traffic = json_boolean_value(value);
         }
+        value = json_object_get(section, "multicast-traffic-autostart");
+        if (json_is_boolean(value)) {
+            g_ctx->config.multicast_traffic_autostart = json_boolean_value(value);
+        }
         value = json_object_get(section, "multicast-traffic-length");
         if(json_is_number(value)) {
             g_ctx->config.multicast_traffic_len = json_number_value(value);
@@ -2666,5 +2670,6 @@ bbl_config_init_defaults()
     g_ctx->config.stream_rate_calc = true;
     g_ctx->config.stream_max_burst = 16;
     g_ctx->config.stream_max_per_group = 64;
+    g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }

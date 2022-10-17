@@ -129,7 +129,7 @@ typedef struct bbl_ctx_
         uint32_t multicast_traffic_flows_verified;
     } stats;
 
-    bool multicast_traffic;
+    endpoint_state_t multicast_endpoint;
     bool zapping;
 
     /* Config options */
@@ -302,6 +302,7 @@ typedef struct bbl_ctx_
 
         /* Multicast Traffic */
         bool send_multicast_traffic;
+        bool multicast_traffic_autostart;
         uint8_t multicast_traffic_tos;
         uint16_t multicast_traffic_len;
         uint16_t multicast_traffic_pps;

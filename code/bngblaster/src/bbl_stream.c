@@ -1693,6 +1693,7 @@ bbl_stream_init() {
                 if(config->type == BBL_SUB_TYPE_IPV4) {
                     /* All IPv4 multicast addresses start with 1110 */
                     if((config->ipv4_destination_address & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
+                        stream->endpoint = &(g_ctx->multicast_endpoint);
                         stream->type = BBL_TYPE_MULTICAST;
                     }
                 }
@@ -1756,7 +1757,7 @@ bbl_stream_init() {
             config->ipv4_network_address = source;
 
             stream = calloc(1, sizeof(bbl_stream_s));
-            stream->endpoint = &g_endpoint;
+            stream->endpoint = &(g_ctx->multicast_endpoint);
             stream->flow_id = g_ctx->flow_id++;
             stream->flow_seq = 1;
             stream->config = config;

@@ -73,7 +73,7 @@ bbl_ctx_add()
     CIRCLEQ_INIT(&g_ctx->a10nsp_interface_qhead);
 
     g_ctx->flow_id = 1;
-    g_ctx->multicast_traffic = true;
+    g_ctx->multicast_endpoint = ENDPOINT_ACTIVE;
     g_ctx->zapping = true;
 
     /* Initialize hash table dictionaries. */

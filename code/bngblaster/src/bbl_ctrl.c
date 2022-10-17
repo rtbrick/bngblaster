@@ -42,14 +42,14 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
 int
 bbl_ctrl_multicast_traffic_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
-    g_ctx->multicast_traffic = true;
+    g_ctx->multicast_endpoint = ENDPOINT_ACTIVE;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
 bbl_ctrl_multicast_traffic_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
-    g_ctx->multicast_traffic = false;
+    g_ctx->multicast_endpoint = ENDPOINT_ENABLED;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 

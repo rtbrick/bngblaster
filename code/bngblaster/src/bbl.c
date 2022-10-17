@@ -65,7 +65,6 @@ enable_disable_traffic(bool status)
     uint32_t i;
 
     g_traffic = status;
-    g_ctx->multicast_traffic = status;
 
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
@@ -563,6 +562,9 @@ main(int argc, char *argv[])
                        45, 12345678, g_ctx, &bbl_smear_job);
 
     /* Prevent traffic from autostart. */
+    if(g_ctx->config.multicast_traffic_autostart == false) {
+        g_ctx->multicast_endpoint = ENDPOINT_ENABLED;
+    }
     if(g_ctx->config.traffic_autostart == false) {
         enable_disable_traffic(false);
     }
