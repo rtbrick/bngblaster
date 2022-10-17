@@ -58,7 +58,7 @@ bbl_interface_lock(char *interface_name)
         /* lock file exists */
         if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
             snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d", lock_pid);
-            if (!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
+            if(!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
                 LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
                 if(!g_ctx->config.interface_lock_force) return false;
             }
@@ -110,7 +110,7 @@ bbl_interface_link_add(char *interface_name, bbl_link_config_s *link_config)
     bbl_interface_s *interface;
 
     interface = calloc(1, sizeof(bbl_interface_s));
-    if (!interface) {
+    if(!interface) {
         LOG(ERROR, "No memory for interface %s\n", interface_name);
         return NULL;
     }
@@ -149,7 +149,7 @@ bbl_interface_links_add()
             return false;
         }
         interface = bbl_interface_link_add(link_config->interface, link_config);
-        if (!interface) {
+        if(!interface) {
             LOG(ERROR, "Failed to add link %s\n", link_config->interface);
             return false;
         }
@@ -208,7 +208,7 @@ bbl_interface_get(char *interface_name)
     }
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        if (strcmp(interface->name, interface_name) == 0) {
+        if(strcmp(interface->name, interface_name) == 0) {
             return interface;
         }
     }

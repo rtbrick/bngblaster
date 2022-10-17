@@ -2173,7 +2173,7 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     uint64_t flow_id;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
+    if(json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
     }
 

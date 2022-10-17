@@ -1611,7 +1611,7 @@ bbl_access_session_id_from_broadcast(bbl_access_interface_s *interface,
         ipv4 = (bbl_ipv4_s*)eth->next;
         if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
             udp = (bbl_udp_s*)ipv4->next;
-            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+            if(udp->protocol == UDP_PROTOCOL_DHCP) {
                 dhcp = (bbl_dhcp_s*)udp->next;
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[5];
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[4] << 8;

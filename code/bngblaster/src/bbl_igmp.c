@@ -85,24 +85,24 @@ bbl_igmp_ctrl_join(int fd, uint32_t session_id, json_t *arguments)
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group address");
         }
     } else {
         return bbl_ctrl_status(fd, "error", 400, "missing group address");
     }
-    if (json_unpack(arguments, "{s:s}", "source1", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "source1", &s) == 0) {
         if(!inet_pton(AF_INET, s, &source1)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid source1 address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "source2", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "source2", &s) == 0) {
         if(!inet_pton(AF_INET, s, &source2)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid source2 address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "source3", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "source3", &s) == 0) {
         if(!inet_pton(AF_INET, s, &source3)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid source3 address");
         }
@@ -114,7 +114,7 @@ bbl_igmp_ctrl_join(int fd, uint32_t session_id, json_t *arguments)
         /* Search for free slot ... */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
             if(!session->igmp_groups[i].zapping) {
-                if (session->igmp_groups[i].group == group_address) {
+                if(session->igmp_groups[i].group == group_address) {
                     group = &session->igmp_groups[i];
                     if(group->state == IGMP_GROUP_IDLE) {
                         break;
@@ -164,14 +164,14 @@ bbl_igmp_ctrl_join_iter(int fd, uint32_t session_id __attribute__((unused)), jso
     uint32_t join_count;
 
     /* Unpack group arguments */
-    if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group address");
         }
     } else {
         return bbl_ctrl_status(fd, "error", 400, "missing group address");
     }
-    if (json_unpack(arguments, "{s:d}", "group-iter", &s) == 0) {
+    if(json_unpack(arguments, "{s:d}", "group-iter", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_iter)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group-iter");
         }
@@ -181,17 +181,17 @@ bbl_igmp_ctrl_join_iter(int fd, uint32_t session_id __attribute__((unused)), jso
     if(group_count < 1) group_count = 1;
 
     /* Unpack source address arguments */
-    if (json_unpack(arguments, "{s:s}", "source1", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "source1", &s) == 0) {
         if(!inet_pton(AF_INET, s, &source1)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid source1 address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "source2", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "source2", &s) == 0) {
         if(!inet_pton(AF_INET, s, &source2)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid source2 address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "source3", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "source3", &s) == 0) {
         if(!inet_pton(AF_INET, s, &source3)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid source3 address");
         }
@@ -261,7 +261,7 @@ bbl_igmp_ctrl_leave(int fd, uint32_t session_id, json_t *arguments)
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:s}", "group", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "group", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group address");
         }
@@ -273,7 +273,7 @@ bbl_igmp_ctrl_leave(int fd, uint32_t session_id, json_t *arguments)
     if(session) {
         /* Search for group ... */
         for(i=0; i < IGMP_MAX_GROUPS; i++) {
-            if (session->igmp_groups[i].group == group_address) {
+            if(session->igmp_groups[i].group == group_address) {
                 group = &session->igmp_groups[i];
                 break;
             }

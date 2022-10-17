@@ -131,7 +131,7 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
         }
     }
 
-    if (result == ERR_MEM) {
+    if(result == ERR_MEM) {
         tcp_output(tpcb);
     }
     return result;

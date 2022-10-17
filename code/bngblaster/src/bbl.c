@@ -128,11 +128,11 @@ struct keyval_ log_names[] = {
 static char *
 bbl_print_usage_arg (struct option *option)
 {
-    if (option->has_arg == 1) {
-        if (strcmp(option->name, "logging") == 0) {
+    if(option->has_arg == 1) {
+        if(strcmp(option->name, "logging") == 0) {
             return log_usage();
         }
-        if (strcmp(option->name, "json-report-content") == 0) {
+        if(strcmp(option->name, "json-report-content") == 0) {
             return " sessions|streams";
         }
         return " <args>";
@@ -169,8 +169,8 @@ bbl_print_usage (void)
     int idx;
     printf("%s", banner);
     printf("Usage: bngblaster [OPTIONS]\n\n");
-    for (idx = 0; ; idx++) {
-        if (long_options[idx].name == NULL) {
+     for(idx = 0; ; idx++) {
+        if(long_options[idx].name == NULL) {
             break;
         }
         printf("  -%c --%s%s\n", long_options[idx].val, long_options[idx].name,
@@ -312,7 +312,7 @@ bbl_ctrl_job(timer_s *timer)
                                 if(session->access_config->dhcp_enable) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
                                     bbl_dhcp_start(session);
-                                } else if (session->ip_address && session->peer_ip_address) {
+                                } else if(session->ip_address && session->peer_ip_address) {
                                     /* Start IPoE session by sending ARP request if local and
                                      * remote IP addresses are already provided. */
                                     session->send_requests |= BBL_SEND_ARP_REQUEST;
@@ -386,7 +386,7 @@ main(int argc, char *argv[])
     /* Process config options. */
     while (true) {
         ch = getopt_long(argc, argv, optstring, long_options, &long_index);
-        if (ch == -1) {
+        if(ch == -1) {
             break;
         }
         switch (ch) {
@@ -400,9 +400,9 @@ main(int argc, char *argv[])
                 g_ctx->pcap.filename = optarg;
                 break;
             case 'j':
-                if (strcmp("sessions", optarg) == 0) {
+                if(strcmp("sessions", optarg) == 0) {
                     g_ctx->config.json_report_sessions = true;
-                } else if (strcmp("streams", optarg) == 0) {
+                } else if(strcmp("streams", optarg) == 0) {
                     g_ctx->config.json_report_streams = true;
                 }
                 break;

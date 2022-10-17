@@ -197,7 +197,7 @@ bbl_ctrl_socket_thread(void *thread_data)
         if(fd > 0) {
             /* New connection */
             root = json_loadfd(fd, flags, &error);
-            if (!root) {
+            if(!root) {
                 LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
                 bbl_ctrl_status(fd, "error", 400, "invalid json");
             } else {
@@ -223,7 +223,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                 } else {
                     if(arguments) {
                         value = json_object_get(arguments, "session-id");
-                        if (value) {
+                        if(value) {
                             if(json_is_number(value)) {
                                 session_id = json_number_value(value);
                             } else {
@@ -236,7 +236,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 * support per session commands using VLAN index instead of
                                 * new session-id. */
                             value = json_object_get(arguments, "ifindex");
-                            if (value) {
+                            if(value) {
                                 if(json_is_number(value)) {
                                     key.ifindex = json_number_value(value);
                                 } else {
@@ -251,7 +251,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 }
                             }
                             value = json_object_get(arguments, "outer-vlan");
-                            if (value) {
+                            if(value) {
                                 if(json_is_number(value)) {
                                     key.outer_vlan_id = json_number_value(value);
                                 } else {
@@ -260,7 +260,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 }
                             }
                             value = json_object_get(arguments, "inner-vlan");
-                            if (value) {
+                            if(value) {
                                 if(json_is_number(value)) {
                                     key.inner_vlan_id = json_number_value(value);
                                 } else {

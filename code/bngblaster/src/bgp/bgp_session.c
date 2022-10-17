@@ -203,7 +203,7 @@ bgp_session_state_established(bgp_session_s *session)
 void
 bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
 {
-    if (session->state == new_state) {
+    if(session->state == new_state) {
         return;
     }
 

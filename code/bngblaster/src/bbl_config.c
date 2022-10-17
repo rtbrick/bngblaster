@@ -1961,7 +1961,7 @@ json_parse_config(json_t *root)
             g_ctx->config.send_multicast_traffic = json_boolean_value(value);
         }
         value = json_object_get(section, "multicast-traffic-autostart");
-        if (json_is_boolean(value)) {
+        if(json_is_boolean(value)) {
             g_ctx->config.multicast_traffic_autostart = json_boolean_value(value);
         }
         value = json_object_get(section, "multicast-traffic-length");

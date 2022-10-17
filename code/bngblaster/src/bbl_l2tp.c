@@ -229,7 +229,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t
                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
                       l2tp_tunnel->peer_name,
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
-        } else if (l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
+        } else if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
             if(g_ctx->l2tp_tunnels_established) {
                 g_ctx->l2tp_tunnels_established--;
             }
@@ -268,7 +268,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
 
     q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
     while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
-        if (L2TP_SEQ_LT(q->ns, l2tp_tunnel->peer_nr)) {
+        if(L2TP_SEQ_LT(q->ns, l2tp_tunnel->peer_nr)) {
             /* Delete acknowledged messages from queue. */
             q_del = q;
             q = CIRCLEQ_NEXT(q, txq_qnode);
@@ -279,7 +279,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
             free(q_del);
             continue;
         }
-        if (L2TP_SEQ_LT(q->ns, max_ns)) {
+        if(L2TP_SEQ_LT(q->ns, max_ns)) {
             if(q->last_tx_time.tv_sec) {
                 timespec_sub(&time_diff, &timestamp, &q->last_tx_time);
                 time_diff_ms = round(time_diff.tv_nsec / 1.0e6) * (time_diff.tv_sec * 1000);
@@ -616,7 +616,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
             }
             l2tp_tunnel->tunnel_id = l2tp_session->key.tunnel_id;
             result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
-            if (!result.inserted) {
+            if(!result.inserted) {
                 LOG(ERROR, "L2TP Error (%s) Failed to add tunnel session\n",
                             l2tp_tunnel->server->host_name);
                 free(l2tp_session);
@@ -715,7 +715,7 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface,
                 MD5_Update(&md5_ctx, (unsigned char *) l2tp_tunnel->server->secret, strlen(l2tp_tunnel->server->secret));
                 MD5_Update(&md5_ctx, l2tp_tunnel->challenge, l2tp_tunnel->challenge_len);
                 MD5_Final(digest, &md5_ctx);
-                if (memcmp(digest, l2tp_tunnel->peer_challenge_response, L2TP_MD5_DIGEST_LEN) != 0) {
+                if(memcmp(digest, l2tp_tunnel->peer_challenge_response, L2TP_MD5_DIGEST_LEN) != 0) {
                     LOG(ERROR, "L2TP Error (%s) Wrong challenge response in SCCCN from %s\n",
                                l2tp_tunnel->server->host_name,
                                format_ipv4_address(&l2tp_tunnel->peer_ip));
@@ -805,7 +805,7 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
         }
     }
     result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
-    if (!result.inserted) {
+    if(!result.inserted) {
         LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
                     l2tp_tunnel->server->host_name);
         free(l2tp_session);
@@ -970,7 +970,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                     }
                 }
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPCP, ipcp_rx);
-            } else if (ipcp_rx->code == PPP_CODE_CONF_ACK) {
+            } else if(ipcp_rx->code == PPP_CODE_CONF_ACK) {
                 if(l2tp_session->ipcp_state == BBL_PPP_PEER_ACK) {
                     l2tp_session->ipcp_state = BBL_PPP_OPENED;
                 } else {
@@ -998,7 +998,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                     bbl_l2tp_send_data(l2tp_session, PROTOCOL_IP6CP, &ip6cp_tx);
                 }
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_IP6CP, ip6cp_rx);
-            } else if (ip6cp_rx->code == PPP_CODE_CONF_ACK) {
+            } else if(ip6cp_rx->code == PPP_CODE_CONF_ACK) {
                 if(l2tp_session->ip6cp_state == BBL_PPP_PEER_ACK) {
                     l2tp_session->ip6cp_state = BBL_PPP_OPENED;
                 } else {
@@ -1068,10 +1068,10 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
         /* L2TP Control Packet */
         l2tp_tunnel->stats.control_rx++;
         interface->stats.l2tp_control_rx++;
-        if (L2TP_SEQ_GT(l2tp->nr, l2tp_tunnel->peer_nr)) {
+        if(L2TP_SEQ_GT(l2tp->nr, l2tp_tunnel->peer_nr)) {
             l2tp_tunnel->peer_nr = l2tp->nr;
         }
-        if (l2tp_tunnel->nr == l2tp->ns) {
+        if(l2tp_tunnel->nr == l2tp->ns) {
             /* In-Order packet received */
             LOG(DEBUG, "L2TP Debug (%s) %s received from %s\n",
                        l2tp_tunnel->server->host_name,
@@ -1161,7 +1161,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
                 }
             }
         } else {
-            if (L2TP_SEQ_LT(l2tp->ns, l2tp_tunnel->nr)) {
+            if(L2TP_SEQ_LT(l2tp->ns, l2tp_tunnel->nr)) {
                 /* Duplicate packet received */
                 LOG(DEBUG, "L2TP Debug (%s) Duplicate %s received with Ns. %u (expected %u) from %s\n",
                            l2tp_tunnel->server->host_name,
@@ -1286,7 +1286,7 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
             json_decref(sessions);
             return result;
         }
-    } else if (l2tp_tunnel_id) {
+    } else if(l2tp_tunnel_id) {
         l2tp_key.tunnel_id = l2tp_tunnel_id;
         search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
         if(search) {
@@ -1341,7 +1341,7 @@ bbl_l2tp_ctrl_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t 
     int size, i;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
+    if(json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
     }
     l2tp_key.tunnel_id = l2tp_tunnel_id;
@@ -1353,7 +1353,7 @@ bbl_l2tp_ctrl_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t 
             return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
         }
         sessions = json_object_get(arguments, "sessions");
-        if (json_is_array(sessions)) {
+        if(json_is_array(sessions)) {
             size = json_array_size(sessions);
             l2tp_tunnel->csurq_requests_len = size;
             l2tp_tunnel->csurq_requests = malloc(size * sizeof(uint16_t));
@@ -1388,7 +1388,7 @@ bbl_l2tp_ctrl_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused
     char *error_message;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
+    if(json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
     }
     l2tp_key.tunnel_id = l2tp_tunnel_id;
@@ -1400,15 +1400,15 @@ bbl_l2tp_ctrl_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused
             return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
         }
         bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
-        if (json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
+        if(json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
             result_code = 1;
         }
         l2tp_tunnel->result_code = result_code;
-        if (json_unpack(arguments, "{s:i}", "error-code", &error_code) != 0) {
+        if(json_unpack(arguments, "{s:i}", "error-code", &error_code) != 0) {
             error_code = 0;
         }
         l2tp_tunnel->error_code = error_code;
-        if (json_unpack(arguments, "{s:s}", "error-message", &error_message) != 0) {
+        if(json_unpack(arguments, "{s:s}", "error-message", &error_message) != 0) {
             error_message = NULL;
         }
         l2tp_tunnel->error_message = error_message;
@@ -1452,31 +1452,31 @@ bbl_l2tp_ctrl_session_terminate(int fd, uint32_t session_id, json_t *arguments)
         if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
             return bbl_ctrl_status(fd, "warning", 400, "session not established");
         }
-        if (json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
+        if(json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
             result_code = 2;
         }
         l2tp_session->result_code = result_code;
-        if (json_unpack(arguments, "{s:i}", "error-code", &error_code) != 0) {
+        if(json_unpack(arguments, "{s:i}", "error-code", &error_code) != 0) {
             error_code = 0;
         }
         l2tp_session->error_code = error_code;
-        if (json_unpack(arguments, "{s:s}", "error-message", &error_message) != 0) {
+        if(json_unpack(arguments, "{s:s}", "error-message", &error_message) != 0) {
             error_message = NULL;
         }
         l2tp_session->error_message = error_message;
-        if (json_unpack(arguments, "{s:i}", "disconnect-code", &disconnect_code) != 0) {
+        if(json_unpack(arguments, "{s:i}", "disconnect-code", &disconnect_code) != 0) {
             disconnect_code = 0;
         }
         l2tp_session->disconnect_code = disconnect_code;
-        if (json_unpack(arguments, "{s:i}", "disconnect-protocol", &disconnect_protocol) != 0) {
+        if(json_unpack(arguments, "{s:i}", "disconnect-protocol", &disconnect_protocol) != 0) {
             disconnect_protocol = 0;
         }
         l2tp_session->disconnect_protocol = disconnect_protocol;
-        if (json_unpack(arguments, "{s:i}", "disconnect-direction", &disconnect_direction) != 0) {
+        if(json_unpack(arguments, "{s:i}", "disconnect-direction", &disconnect_direction) != 0) {
             disconnect_direction = 0;
         }
         l2tp_session->disconnect_direction = disconnect_direction;
-        if (json_unpack(arguments, "{s:s}", "disconnect-message", &disconnect_message) != 0) {
+        if(json_unpack(arguments, "{s:s}", "disconnect-message", &disconnect_message) != 0) {
             disconnect_message = NULL;
         }
         l2tp_session->disconnect_message = disconnect_message;

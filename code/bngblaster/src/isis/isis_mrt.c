@@ -95,7 +95,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path)
             /* Create new LSP. */
             lsp = isis_lsp_new(lsp_id, level, instance);
             result = hb_tree_insert(lsdb,  &lsp->id);
-            if (result.inserted) {
+            if(result.inserted) {
                 *result.datum_ptr = lsp;
             } else {
                 LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");

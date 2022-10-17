@@ -44,7 +44,7 @@ io_raw_rx_job(timer_s *timer)
             eth->timestamp.tv_sec = io->timestamp.tv_sec;
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
             bbl_rx_handler(interface, eth);
-        } else if (decode_result == UNKNOWN_PROTOCOL) {
+        } else if(decode_result == UNKNOWN_PROTOCOL) {
             io->stats.unknown++;
         } else {
             io->stats.protocol_errors++;

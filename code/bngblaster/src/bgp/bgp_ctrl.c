@@ -89,12 +89,12 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     uint32_t ipv4_peer_address = 0;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_local_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv4-address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
         }
@@ -159,15 +159,15 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
     uint32_t ipv4_peer_address = 0;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
+    if(json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing argument file");
     }
-    if (json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_local_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv4-address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
         }
@@ -273,12 +273,12 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
     uint32_t ipv4_peer_address = 0;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_local_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv4-address");
         }
     }
-    if (json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
         }

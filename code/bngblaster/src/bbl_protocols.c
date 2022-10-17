@@ -49,7 +49,7 @@ _checksum(void *buf, ssize_t len)
         len -= 2;
     }
     /*  Add left-over byte, if any */
-    if (len) {
+    if(len) {
         result += *(uint8_t*)cur;
     }
     return result;
@@ -1971,7 +1971,7 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             }
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         }
-    } else if (eth->type == ISIS_PROTOCOL_IDENTIFIER) {
+    } else if(eth->type == ISIS_PROTOCOL_IDENTIFIER) {
         /* Remember ethernet length field position */
         eth_len_ptr = (uint16_t*)buf;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));

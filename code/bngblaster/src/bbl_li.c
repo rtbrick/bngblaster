@@ -77,7 +77,7 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
         li_flow->sub_packet_type = qmx_li->sub_packet_type;
         li_flow->liid = qmx_li->liid;
         result = dict_insert(g_ctx->li_flow_dict, &qmx_li->header);
-        if (!result.inserted) {
+        if(!result.inserted) {
             free(li_flow);
             return;
         }
@@ -117,7 +117,7 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
             default:
                 break;
         }
-    } else if (inner_ipv6) {
+    } else if(inner_ipv6) {
         li_flow->packets_rx_ipv6++;
         switch(inner_ipv6->protocol) {
             case IPV6_NEXT_HEADER_TCP:
