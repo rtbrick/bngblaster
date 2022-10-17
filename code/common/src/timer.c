@@ -200,10 +200,10 @@ timer_smear_bucket (timer_root_s *root, time_t sec, long nsec)
             continue;
         }
 
-        /* Found the bucket. Next compute the timespan 
+        /* Found the bucket. Next compute the time span 
          * between now and last timer. */
         last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
-        if (last_timer) {
+        if (timer_bucket->timers > 1 && last_timer) {
             clock_gettime(CLOCK_MONOTONIC, &now);
             timespec_sub(&diff, &last_timer->expire, &now);
             step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
@@ -239,13 +239,12 @@ timer_smear_all_buckets (timer_root_s *root)
     struct timespec now, diff, step;
     long step_nsec;
 
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
     /* Iterate over all buckets for smearing. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-        /* Compute the timespan between now and last timer. */
+        /* Compute the time span between now and last timer. */
         last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
-        if (last_timer) {
+        if (timer_bucket->timers > 1 && last_timer) {
+            clock_gettime(CLOCK_MONOTONIC, &now);
             timespec_sub(&diff, &last_timer->expire, &now);
             step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
             step.tv_sec = step_nsec / 1e9;
@@ -472,7 +471,7 @@ timer_walk(timer_root_s *root)
     struct timespec now, min, sleep, rem;
     int res;
 
-    /*No buckets filled and we're done. */
+    /* No buckets filled and we're done. */
     if (CIRCLEQ_EMPTY(&root->timer_bucket_qhead)) {
         return;
     }
