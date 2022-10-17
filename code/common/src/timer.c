@@ -19,7 +19,7 @@ timer_set_expire(timer_s *timer, time_t sec, long nsec)
     timer->expire.tv_nsec += nsec;
 
     /* Handle nsec overflow. */
-    if (timer->expire.tv_nsec >= 1e9) {
+    if(timer->expire.tv_nsec >= 1e9) {
         timer->expire.tv_nsec -= 1e9;
         timer->expire.tv_sec++;
     }
@@ -66,7 +66,7 @@ timespec_add(struct timespec *result, struct timespec *x, struct timespec *y)
     result->tv_nsec = x->tv_nsec + y->tv_nsec;
 
     /* Avoid overflow of result->tv_nsec */
-    if (result->tv_nsec >= 1e9) {
+    if(result->tv_nsec >= 1e9) {
         result->tv_nsec -= 1e9;
         result->tv_sec += 1;
     }
@@ -144,7 +144,7 @@ timer_enqueue_bucket(timer_root_s *root, timer_s *timer, time_t sec, long nsec)
 
     /* Find the bucket for insertion. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-        if (timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
+        if(timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
             continue;
         }
         /* Found it! */
@@ -154,7 +154,7 @@ timer_enqueue_bucket(timer_root_s *root, timer_s *timer, time_t sec, long nsec)
     /* No bucket found that matches the timer values. 
      * Create a fresh bucket. */
     timer_bucket = calloc(1, sizeof(timer_bucket_s));
-    if (!timer_bucket) {
+    if(!timer_bucket) {
         return;
     }
 
@@ -192,7 +192,7 @@ timer_dequeue_bucket(timer_s *timer)
 
     /* If the last timer of a bucket is gone, 
      * remove the bucket as well. */
-    if (!timer_bucket->timers) {
+    if(!timer_bucket->timers) {
         CIRCLEQ_REMOVE(&timer_root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
 
         LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
@@ -218,7 +218,7 @@ timer_requeue(timer_s *timer, time_t sec, long nsec)
      * timer dequeue and enqueue to keep correct temporal ordering.
      * If there is no match, do a slightly more expensive
      * bucket dequeue and enqueue. */
-    if (timer_bucket->sec == sec && timer_bucket->nsec == nsec) {
+    if(timer_bucket->sec == sec && timer_bucket->nsec == nsec) {
         CIRCLEQ_REMOVE(&timer_bucket->timer_qhead, timer, timer_qnode);
         CIRCLEQ_INSERT_TAIL(&timer_bucket->timer_qhead, timer, timer_qnode);
     } else {
@@ -243,14 +243,14 @@ timer_smear_bucket(timer_root_s *root, time_t sec, long nsec)
 
     /* Find the bucket for smearing. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-        if (timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
+        if(timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
             continue;
         }
 
         /* Found the bucket. Next compute the timespan 
          * between now and last timer. */
         last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
-        if (last_timer) {
+        if(timer_bucket->timers > 1 && last_timer) {
             clock_gettime(CLOCK_MONOTONIC, &now);
             timespec_sub(&diff, &last_timer->expire, &now);
             step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
@@ -286,13 +286,12 @@ timer_smear_all_buckets(timer_root_s *root)
     struct timespec now, diff, step;
     long step_nsec;
 
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
     /* Iterate over all buckets for smearing. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-        /* Compute the timespan between now and last timer. */
+        /* Compute the time span between now and last timer. */
         last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
-        if (last_timer) {
+        if(timer_bucket->timers > 1 && last_timer) {
+            clock_gettime(CLOCK_MONOTONIC, &now);
             timespec_sub(&diff, &last_timer->expire, &now);
             step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
             step.tv_sec = step_nsec / 1e9;
@@ -334,7 +333,7 @@ timer_del_internal(timer_s *timer)
         /* Add to GC list */
         CIRCLEQ_INSERT_TAIL(&timer_root->timer_gc_qhead, timer, timer_qnode);
         timer_root->gc++;
-        if (timer->ptimer) {
+        if(timer->ptimer) {
             *timer->ptimer = NULL; /* delete references to this timer */
             timer->ptimer= NULL;
         }
@@ -410,7 +409,7 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
         timer_requeue(timer, sec, nsec);
         /* Update data and cb if there was a change.
          * Do the reformatting of name only during a change. */
-        if (timer->data != data || timer->cb != cb) {
+        if(timer->data != data || timer->cb != cb) {
             strncpy(timer->name, name, sizeof(timer->name));
             timer->data = data;
             timer->cb = cb;
@@ -429,7 +428,7 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
         memset(timer, 0, sizeof(timer_s));
     }
 
-    if (!timer) {
+    if(!timer) {
         return;
     }
 
@@ -478,7 +477,7 @@ timer_walk(timer_root_s *root)
     int res;
 
     /*No buckets filled and we're done. */
-    if (CIRCLEQ_EMPTY(&root->timer_bucket_qhead)) {
+    if(CIRCLEQ_EMPTY(&root->timer_bucket_qhead)) {
         return;
     }
 
@@ -531,18 +530,18 @@ timer_walk(timer_root_s *root)
         CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
 
             /* Ignore deleted timers that wait for change processing. */
-            if (timer->delete) {
+            if(timer->delete) {
                 continue;
             }
 
             /* First timer in the queue becomes the actual minimum. */
-            if (min.tv_sec == 0 && min.tv_nsec == 0) {
+            if(min.tv_sec == 0 && min.tv_nsec == 0) {
                 min.tv_sec = timer->expire.tv_sec;
                 min.tv_nsec = timer->expire.tv_nsec;
             }
 
             /* Find the min timer. */
-            if (timespec_compare(&timer->expire, &min) == -1) {
+            if(timespec_compare(&timer->expire, &min) == -1) {
                 min.tv_sec = timer->expire.tv_sec;
                 min.tv_nsec = timer->expire.tv_nsec;
                 LOG(TIMER_DETAIL, "New minimum sleep (%s) timer, found %lu.%06lus\n",
@@ -552,7 +551,7 @@ timer_walk(timer_root_s *root)
 
             /* Hitting the first non-expired timer means
              * we're done processing this buckets queue. */
-            if (timespec_compare(&timer->expire, &now) == 1) {
+            if(timespec_compare(&timer->expire, &now) == 1) {
                 break;
             }
         }
