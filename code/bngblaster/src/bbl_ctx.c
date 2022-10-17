@@ -77,7 +77,6 @@ bbl_ctx_add (void)
     CIRCLEQ_INIT(&ctx->interface_qhead);
 
     ctx->flow_id = 1;
-    ctx->multicast_traffic = true;
     ctx->zapping = true;
 
     /* Initialize hash table dictionaries. */

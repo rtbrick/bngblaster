@@ -162,10 +162,12 @@ bbl_read_key_job (timer_s *timer)
             break;
         case KEY_F(7):
             enable_disable_traffic(ctx, true);
+            ctx->multicast_traffic = true;
             LOG_NOARG(INFO, "Start traffic\n");
             break;
         case KEY_F(8):
             enable_disable_traffic(ctx, false);
+            ctx->multicast_traffic = false;
             LOG_NOARG(INFO, "Stop traffic\n");
             break;
         case KEY_F(9):

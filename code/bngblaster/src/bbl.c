@@ -62,7 +62,6 @@ enable_disable_traffic(bbl_ctx_s *ctx, bool status)
     uint32_t i;
 
     g_traffic = status;
-    ctx->multicast_traffic = status;
 
     /* Iterate over all sessions */
     for(i = 0; i < ctx->sessions; i++) {
@@ -627,6 +626,7 @@ main(int argc, char *argv[])
     timer_smear_all_buckets(&ctx->timer_root);
 
     /* Prevent traffic from autostart. */
+    ctx->multicast_traffic = ctx->config.multicast_traffic_autostart;
     if(ctx->config.traffic_autostart == false) {
         enable_disable_traffic(ctx, false);
     }
