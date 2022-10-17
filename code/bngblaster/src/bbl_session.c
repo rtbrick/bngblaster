@@ -829,7 +829,7 @@ bbl_sessions_init()
         if(access_config->vlan_mode == VLAN_MODE_11) {
             /* Add 1:1 sessions to VLAN/session dictionary */
             result = dict_insert(g_ctx->vlan_session_dict, &session->vlan_key);
-            if (result.inserted) {
+            if(result.inserted) {
                 *result.datum_ptr = session;
             }
         }
@@ -860,7 +860,7 @@ NEXT:
         if(access_config->next) {
             access_config = access_config->next;
         } else {
-            if (t) {
+            if(t) {
                 t = 0;
                 access_config = g_ctx->config.access_config;
             } else {
@@ -905,7 +905,7 @@ bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s 
         ipv4 = (bbl_ipv4_s*)eth->next;
         if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
             udp = (bbl_udp_s*)ipv4->next;
-            if (udp->protocol == UDP_PROTOCOL_DHCP) {
+            if(udp->protocol == UDP_PROTOCOL_DHCP) {
                 dhcp = (bbl_dhcp_s*)udp->next;
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[5];
                 session_id |= ((uint8_t*)(dhcp->header->chaddr))[4] << 8;

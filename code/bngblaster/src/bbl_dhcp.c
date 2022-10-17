@@ -263,7 +263,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
-            } else if (dhcp->type == DHCP_MESSAGE_NAK) {
+            } else if(dhcp->type == DHCP_MESSAGE_NAK) {
                 bbl_dhcp_restart(session);
             }
             break;
@@ -287,7 +287,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
-            } else if (dhcp->type == DHCP_MESSAGE_NAK) {
+            } else if(dhcp->type == DHCP_MESSAGE_NAK) {
                 bbl_dhcp_restart(session);
             }
             break;

@@ -176,7 +176,7 @@ bgp_rebase_read_buffer(bgp_session_s *session)
     io_buffer_t *buffer = &session->read_buf;
 
     size = buffer->idx - buffer->start_idx;
-    if (size) {
+    if(size) {
         /* Copy what is left to the buffer start. */
         memcpy(buffer->data, buffer->data+buffer->start_idx, size);
     }
@@ -198,19 +198,19 @@ bpg_read(bgp_session_s *session)
         size = buffer->idx - buffer->start_idx;
 
         /* Minimum message size */
-        if (size < BGP_MIN_MESSAGE_SIZE) {
+        if(size < BGP_MIN_MESSAGE_SIZE) {
             break;
         }
 
         length = read_be_uint(start+16, 2);
-        if (length < BGP_MIN_MESSAGE_SIZE ||
+        if(length < BGP_MIN_MESSAGE_SIZE ||
             length > BGP_MAX_MESSAGE_SIZE) {
             bgp_decode_error(session);
             break;
         }
 
         /* Full message on the wire to consume? */
-        if (length > size) {
+        if(length > size) {
             break;
         }
 

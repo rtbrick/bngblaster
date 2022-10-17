@@ -54,7 +54,7 @@ bool
 bbl_ctx_add()
 {
     g_ctx = calloc(1, sizeof(bbl_ctx_s));
-    if (!g_ctx) {
+    if(!g_ctx) {
         return false;
     }
 

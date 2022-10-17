@@ -22,7 +22,7 @@ bgp_raw_update_load_file(const char *file, bool decode_file)
 
     /* Open file */
     FILE *f = fopen(file, "rb");
-    if (f == NULL) {
+    if(f == NULL) {
         LOG(ERROR, "Failed to open BGP RAW update file %s\n", file);
         return NULL;
     } 
@@ -101,7 +101,7 @@ bgp_raw_update_load(const char *file, bool decode_file)
 
     /* Check if file is already loaded */
     while(raw_update){
-        if (strcmp(file, raw_update->file) == 0) {
+        if(strcmp(file, raw_update->file) == 0) {
             return raw_update;
         }
         raw_update = raw_update->next;

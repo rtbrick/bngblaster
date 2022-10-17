@@ -67,14 +67,14 @@ bbl_interactive_format_progress(uint32_t complete, uint32_t current)
     float percentage;
     uint16_t idx;
 
-    if (!complete || !current) {
+    if(!complete || !current) {
         memset(buf, ' ', sizeof(buf));
         goto EXIT;
     }
 
     percentage = (float)current / (float)complete;
     for(idx = 0; idx < sizeof(buf); idx++) {
-        if (idx <= (percentage * PROGRESS_BAR_SIZE)) {
+        if(idx <= (percentage * PROGRESS_BAR_SIZE)) {
             buf[idx] = '#';
             continue;
         }
@@ -617,7 +617,7 @@ bbl_interactive_window_job(timer_s *timer)
                         wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name,
                                 stream->direction == BBL_DIRECTION_UP ? "up" : "down",
                                 stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, stream->rx_loss);
-                    } else if (i == 16+stats_win_postion) {   
+                    } else if(i == 16+stats_win_postion) {   
                         wprintw(stats_win, "  ...\n");
                     }
                     i++;

@@ -178,13 +178,13 @@ isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
     int level = 0;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+    if(json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
     }
-    if (json_unpack(arguments, "{s:i}", "level", &level) != 0) {
+    if(json_unpack(arguments, "{s:i}", "level", &level) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing ISIS level");
     }
-    if (!(level == ISIS_LEVEL_1 || level == ISIS_LEVEL_2)) {
+    if(!(level == ISIS_LEVEL_1 || level == ISIS_LEVEL_2)) {
         return bbl_ctrl_status(fd, "error", 400, "invalid ISIS level");
     }
 
@@ -197,7 +197,7 @@ isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
         instance = instance->next;
     }
 
-    if (!instance) {
+    if(!instance) {
         return bbl_ctrl_status(fd, "error", 400, "ISIS instance not found");
     }
 
@@ -233,10 +233,10 @@ isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *
     isis_instance_s *instance = NULL;
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
+    if(json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing MRT file");
     }
-    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+    if(json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
     }
 
@@ -249,7 +249,7 @@ isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *
         instance = instance->next;
     }
 
-    if (!instance) {
+    if(!instance) {
         return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
     }
 
@@ -280,7 +280,7 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
 
 
     /* Unpack further arguments */
-    if (json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+    if(json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing ISIS instance");
     }
 
@@ -293,13 +293,13 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
         instance = instance->next;
     }
 
-    if (!instance) {
+    if(!instance) {
         return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
     }
 
     /* Process PDU array */
     value = json_object_get(arguments, "pdu");
-    if (json_is_array(value)) {
+    if(json_is_array(value)) {
         pdu_count = json_array_size(value);
         for (size_t i = 0; i < pdu_count; i++) {
             pdu_string = json_string_value(json_array_get(value, i));

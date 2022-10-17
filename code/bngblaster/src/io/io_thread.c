@@ -129,13 +129,13 @@ io_thread_main_rx_job(timer_s *timer)
                     eth->timestamp.tv_sec = slot->timestamp.tv_sec;
                     eth->timestamp.tv_nsec = slot->timestamp.tv_nsec;
                     bbl_rx_handler(interface, eth);
-                } else if (decode_result == UNKNOWN_PROTOCOL) {
+                } else if(decode_result == UNKNOWN_PROTOCOL) {
                     io->stats.unknown++;
                 } else {
                     io->stats.protocol_errors++;
                 }
                 /* Dump the packet into pcap file. */
-                if (g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
+                if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                     pcap = true;
                     pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                               interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);

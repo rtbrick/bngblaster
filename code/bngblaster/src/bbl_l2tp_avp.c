@@ -209,7 +209,7 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
     len |= digest[idx++] ^ *value;
     value++;
 
-    if (len + 2 > avp->len) {
+    if(len + 2 > avp->len) {
         LOG(DEBUG, "L2TP Error (%s) Decrypted length %u > AVP length %u\n",
             l2tp_tunnel->server->host_name, len, avp->len);
         return false;

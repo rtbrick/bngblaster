@@ -54,7 +54,7 @@ bgp_push_open_message(bgp_session_s *session)
     uint32_t open_start_idx, length, opt_parms_idx, opt_parms_length;
     io_buffer_t *buffer = &session->write_buf;
 
-    if (buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
+    if(buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
 	    return;
     }
 
@@ -97,7 +97,7 @@ bgp_push_keepalive_message(bgp_session_s *session)
     uint32_t keepalive_start_idx, length;
     io_buffer_t *buffer = &session->write_buf;
 
-    if (buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
+    if(buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
 	    return;
     }
 
@@ -118,7 +118,7 @@ bgp_push_notification_message(bgp_session_s *session)
     uint32_t notification_start_idx, length;
     io_buffer_t *buffer = &session->write_buf;
 
-    if (buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
+    if(buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
 	    return;
     }
 

@@ -757,7 +757,7 @@ bbl_lcp_simeout(timer_s *timer)
             session->send_requests |= BBL_SEND_LCP_REQUEST;
             bbl_session_tx_qnode_insert(session);
         }
-    } else if (session->session_state == BBL_PPP_TERMINATING) {
+    } else if(session->session_state == BBL_PPP_TERMINATING) {
         if(session->lcp_retries > 3) {
             /* Send max 3 terminate requests. */
             bbl_session_update_state(session, BBL_TERMINATING);
@@ -1287,53 +1287,53 @@ bbl_tx_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len)
     if(session->send_requests & BBL_SEND_DISCOVERY) {
         result = bbl_tx_encode_packet_discovery(session);
         session->send_requests &= ~BBL_SEND_DISCOVERY;
-    } else if (session->send_requests & BBL_SEND_LCP_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_LCP_REQUEST) {
         result = bbl_tx_encode_packet_lcp_request(session);
         session->send_requests &= ~BBL_SEND_LCP_REQUEST;
         session->lcp_retries++;
-    } else if (session->send_requests & BBL_SEND_LCP_RESPONSE) {
+    } else if(session->send_requests & BBL_SEND_LCP_RESPONSE) {
         result = bbl_tx_encode_packet_lcp_response(session);
         session->send_requests &= ~BBL_SEND_LCP_RESPONSE;
-    } else if (session->send_requests & BBL_SEND_PAP_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_PAP_REQUEST) {
         result = bbl_tx_encode_packet_pap_request(session);
         session->send_requests &= ~BBL_SEND_PAP_REQUEST;
         session->auth_retries++;
-    } else if (session->send_requests & BBL_SEND_CHAP_RESPONSE) {
+    } else if(session->send_requests & BBL_SEND_CHAP_RESPONSE) {
         result = bbl_tx_encode_packet_chap_response(session);
         session->send_requests &= ~BBL_SEND_CHAP_RESPONSE;
         session->auth_retries++;
-    } else if (session->send_requests & BBL_SEND_IPCP_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_IPCP_REQUEST) {
         result = bbl_tx_encode_packet_ipcp_request(session);
         session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
         session->ipcp_retries++;
-    } else if (session->send_requests & BBL_SEND_IPCP_RESPONSE) {
+    } else if(session->send_requests & BBL_SEND_IPCP_RESPONSE) {
         result = bbl_tx_encode_packet_ipcp_response(session);
         session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
-    } else if (session->send_requests & BBL_SEND_IP6CP_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_IP6CP_REQUEST) {
         result = bbl_tx_encode_packet_ip6cp_request(session);
         session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
         session->ip6cp_retries++;
-    } else if (session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
+    } else if(session->send_requests & BBL_SEND_IP6CP_RESPONSE) {
         result = bbl_tx_encode_packet_ip6cp_response(session);
         session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
-    } else if (session->send_requests & BBL_SEND_ICMPV6_RS) {
+    } else if(session->send_requests & BBL_SEND_ICMPV6_RS) {
         result = bbl_tx_encode_packet_icmpv6_rs(session);
         session->send_requests &= ~BBL_SEND_ICMPV6_RS;
-    } else if (session->send_requests & BBL_SEND_DHCPV6_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_DHCPV6_REQUEST) {
         result = bbl_tx_encode_packet_dhcpv6_request(session);
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
-    } else if (session->send_requests & BBL_SEND_IGMP) {
+    } else if(session->send_requests & BBL_SEND_IGMP) {
         result = bbl_tx_encode_packet_igmp(session);
-    } else if (session->send_requests & BBL_SEND_ARP_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_ARP_REQUEST) {
         result = bbl_tx_encode_packet_arp_request(session);
         session->send_requests &= ~BBL_SEND_ARP_REQUEST;
-    } else if (session->send_requests & BBL_SEND_ARP_REPLY) {
+    } else if(session->send_requests & BBL_SEND_ARP_REPLY) {
         result = bbl_tx_encode_packet_arp_reply(session);
         session->send_requests &= ~BBL_SEND_ARP_REPLY;
-    } else if (session->send_requests & BBL_SEND_DHCP_REQUEST) {
+    } else if(session->send_requests & BBL_SEND_DHCP_REQUEST) {
         result = bbl_tx_encode_packet_dhcp(session);
         session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
-    } else if (session->send_requests & BBL_SEND_CFM_CC) {
+    } else if(session->send_requests & BBL_SEND_CFM_CC) {
         result = bbl_tx_encode_packet_cfm_cc(session);
         session->send_requests &= ~BBL_SEND_CFM_CC;
     } else {
@@ -1532,7 +1532,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             }
             return result;
         }
-    } else if (interface->a10nsp) {
+    } else if(interface->a10nsp) {
         a10nsp_interface = interface->a10nsp;
         if(!bbl_txq_is_empty(a10nsp_interface->txq)) {
             *len = bbl_txq_from_buffer(a10nsp_interface->txq, buf);
@@ -1563,7 +1563,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
             }
         }
         /* L2TP packets. */
-        if (!CIRCLEQ_EMPTY(&network_interface->l2tp_tx_qhead)) {
+        if(!CIRCLEQ_EMPTY(&network_interface->l2tp_tx_qhead)) {
             /* Pop element from queue. */
             l2tpq = CIRCLEQ_FIRST(&network_interface->l2tp_tx_qhead);
             CIRCLEQ_REMOVE(&network_interface->l2tp_tx_qhead, l2tpq, tx_qnode);

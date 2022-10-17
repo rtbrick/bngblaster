@@ -32,7 +32,7 @@ isis_lsp_flood_adjacency(isis_lsp_s *lsp, isis_adjacency_s *adjacency)
         flood->tx_count = 0;
     } else {
         result = hb_tree_insert(adjacency->flood_tree,  &lsp->id);
-        if (result.inserted) {
+        if(result.inserted) {
             flood = calloc(1, sizeof(isis_flood_entry_s));
             flood->lsp = lsp;
             *result.datum_ptr = flood;
@@ -350,7 +350,7 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
         /* Create new LSP. */
         lsp = isis_lsp_new(lsp_id, level, instance);
         result = hb_tree_insert(lsdb,  &lsp->id);
-        if (result.inserted) {
+        if(result.inserted) {
             *result.datum_ptr = lsp;
         } else {
             LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
@@ -549,7 +549,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
         /* Create new LSP. */
         lsp = isis_lsp_new(lsp_id, level, adjacency->instance);
         result = hb_tree_insert(lsdb,  &lsp->id);
-        if (result.inserted) {
+        if(result.inserted) {
             *result.datum_ptr = lsp;
         } else {
             LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
@@ -579,7 +579,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
 ACK:
     /* Add LSP to adjacency PSNP tree for acknowledgement. */
     result = hb_tree_insert(adjacency->psnp_tree,  &lsp->id);
-    if (result.inserted) {
+    if(result.inserted) {
         *result.datum_ptr = lsp;
         lsp->refcount++;
         if(!adjacency->timer_psnp_started) {
@@ -708,7 +708,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
         /* Create new LSP. */
         lsp = isis_lsp_new(lsp_id, level, instance);
         result = hb_tree_insert(lsdb,  &lsp->id);
-        if (result.inserted) {
+        if(result.inserted) {
             *result.datum_ptr = lsp;
         } else {
             LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");

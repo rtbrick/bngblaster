@@ -56,7 +56,7 @@ bbl_network_interfaces_add()
         }
 
         interface = bbl_interface_get(network_config->interface);
-        if (!interface) {
+        if(!interface) {
             LOG(ERROR, "Failed to add network interface %s (interface not found)\n", ifname);
             return false;
         }

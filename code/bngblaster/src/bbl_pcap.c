@@ -31,7 +31,7 @@ pcapng_open()
      * Open the file.
      */
     g_ctx->pcap.fd = open(g_ctx->pcap.filename, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, PCAPNG_PERMS);
-    if (g_ctx->pcap.fd == -1) {
+    if(g_ctx->pcap.fd == -1) {
         switch (errno) {
             default:
                 LOG(ERROR, "failed to open pcap file %s with error %s (%d)\n", 
@@ -56,7 +56,7 @@ pcapng_init()
     /*
      * Write buffer for I/O.
      */
-    if (!g_ctx->pcap.write_buf) {
+    if(!g_ctx->pcap.write_buf) {
         g_ctx->pcap.write_buf = calloc(1, PCAPNG_WRITEBUFSIZE);
     } else {
         g_ctx->pcap.write_idx = 0;
@@ -85,7 +85,7 @@ pcapng_fflush()
          * File is not yet opened, try to open it.
          */
         pcapng_open();
-        if (g_ctx->pcap.fd == -1) {
+        if(g_ctx->pcap.fd == -1) {
             /*
              * Darn, still closed.
              */
@@ -94,7 +94,7 @@ pcapng_fflush()
              * We may have buffered for too long.
              * Reset the buffer before it is running full.
              */
-            if (g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
+            if(g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
                 g_ctx->pcap.write_idx = 0;
                 g_ctx->pcap.wrote_header = false;
             }
@@ -122,7 +122,7 @@ pcapng_fflush()
     }
 
     /* Full write? */
-    if (res == (int)g_ctx->pcap.write_idx) {
+    if(res == (int)g_ctx->pcap.write_idx) {
         LOG(PCAP, "drained %u bytes buffer to pcap file %s\n",
             g_ctx->pcap.write_idx, g_ctx->pcap.filename);
         g_ctx->pcap.write_idx = 0;
@@ -130,7 +130,7 @@ pcapng_fflush()
     }
 
     /* Partial write? */
-    if (res && res < (int)g_ctx->pcap.write_idx) {
+    if(res && res < (int)g_ctx->pcap.write_idx) {
         /* Rebase the buffer.*/
         memmove(g_ctx->pcap.write_buf, g_ctx->pcap.write_buf+res, g_ctx->pcap.write_idx - res);
         g_ctx->pcap.write_idx -= res;
@@ -144,19 +144,19 @@ pcapng_fflush()
 void
 pcapng_free()
 {
-    if (!g_ctx) {
+    if(!g_ctx) {
         return;
     }
 
     pcapng_fflush();
 
-    if (g_ctx->pcap.fd != -1) {
+    if(g_ctx->pcap.fd != -1) {
         close(g_ctx->pcap.fd);
         g_ctx->pcap.fd = -1;
         return;
     }
 
-    if (g_ctx->pcap.write_buf) {
+    if(g_ctx->pcap.write_buf) {
         free(g_ctx->pcap.write_buf);
         g_ctx->pcap.write_buf = NULL;
     }
@@ -169,7 +169,7 @@ static void
 bbl_pcap_push_le_uint(uint32_t length, uint64_t value)
 {
     /* Buffer overrun protection. */
-    if ((g_ctx->pcap.write_idx + length) >= PCAPNG_WRITEBUFSIZE) {
+    if((g_ctx->pcap.write_idx + length) >= PCAPNG_WRITEBUFSIZE) {
         return;
     }
 
@@ -277,7 +277,7 @@ pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_le
     uint32_t start_idx, total_length;
     uint64_t ts_usec;
 
-    if (!g_ctx->pcap.wrote_header) {
+    if(!g_ctx->pcap.wrote_header) {
         pcapng_push_section_header();
 
         /* Push a list of interfaces. */
@@ -319,7 +319,7 @@ pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_le
         packet_length, g_ctx->pcap.write_idx, PCAPNG_WRITEBUFSIZE);
 
     /* Buffer about to be overrun? */
-    if (g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
+    if(g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
         pcapng_fflush();
     }
 }

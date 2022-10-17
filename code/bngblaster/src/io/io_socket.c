@@ -24,7 +24,7 @@ set_qdisc_bypass(io_handle_s *io) {
      * increased drops when network device transmit queues are busy;
      * therefore, use at your own risk. */
     int qdisc_bypass = 1;
-    if (setsockopt(io->fd, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
+    if(setsockopt(io->fd, SOL_PACKET, PACKET_QDISC_BYPASS, &qdisc_bypass, sizeof(qdisc_bypass)) == -1) {
         LOG(ERROR, "Failed to set qdisc bypass for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
         return false;
@@ -37,7 +37,7 @@ static bool
 set_fanout(io_handle_s *io) {     
     if(io->fanout_id && io->direction == IO_INGRESS) {
         int fanout_arg = (io->fanout_id | (io->fanout_type << 16));
-        if (setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
+        if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
             LOG(ERROR, "Failed to set fanout group for interface %s - %s (%d)\n",
                 io->interface->name, strerror(errno), errno);
             return false;    
@@ -49,7 +49,7 @@ set_fanout(io_handle_s *io) {
 /* Set packet version (TPACKET_V1, TPACKET_V2 or TPACKET_V3). */
 static bool
 set_packet_version(io_handle_s *io, int version) {
-    if ((setsockopt(io->fd, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
+    if((setsockopt(io->fd, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
         LOG(ERROR, "Failed to set packet version error for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
         return false;    
@@ -83,7 +83,7 @@ set_ring(io_handle_s *io, int slots) {
 
     LOG(DEBUG, "Setup %u byte packet_mmap ringbuffer (%d slots) for interface %s\n", 
         ring_size, slots, io->interface->name);
-    if (setsockopt(io->fd, SOL_PACKET, flag, &io->req, sizeof(struct tpacket_req)) == -1) {
+    if(setsockopt(io->fd, SOL_PACKET, flag, &io->req, sizeof(struct tpacket_req)) == -1) {
         LOG(ERROR, "Allocating ringbuffer error for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
         return false;
@@ -123,7 +123,7 @@ io_socket_open(io_handle_s *io) {
     io->addr.sll_family = AF_PACKET;
     io->addr.sll_ifindex = io->interface->ifindex;
     io->addr.sll_protocol = protocol;
-    if (bind(io->fd, (struct sockaddr*)&io->addr, sizeof(io->addr)) == -1) {
+    if(bind(io->fd, (struct sockaddr*)&io->addr, sizeof(io->addr)) == -1) {
         LOG(ERROR, "Failed to bind socket for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
         return false;

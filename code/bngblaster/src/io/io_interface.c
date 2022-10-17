@@ -51,7 +51,7 @@ set_promisc(bbl_interface_s *interface) {
     /* This socket is only opened, but not closed. Closing the socket would reset
      * its flags - effectively removing the just added promisc mode.
      * We want to keep the interface in promisc mode until the end of the program. */
-    if ((sfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
+    if((sfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
         LOG_NOARG(ERROR, "Unable to open control socket for promiscuous mode activation\n");
         return false;
     }
