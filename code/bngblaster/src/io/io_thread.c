@@ -285,9 +285,9 @@ void
 io_thread_start_all()
 {
     io_thread_s *thread = g_ctx->io_threads;
-    struct timespec sleep, rem;
+    struct timespec sleep = {0};
+    struct timespec rem = {0};
 
-    sleep.tv_sec = 0;
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
     while(thread) {
         thread->active = true;
