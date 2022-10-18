@@ -347,11 +347,6 @@ bbl_session_reset(bbl_session_s *session) {
     session->l2tp_session = NULL;
 
     /* Session traffic */
-    if(g_ctx->stats.session_traffic_flows >= session->session_traffic.flows) {
-        g_ctx->stats.session_traffic_flows -= session->session_traffic.flows;
-    }
-    session->session_traffic.flows = 0;
-
     if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
         g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
     }
