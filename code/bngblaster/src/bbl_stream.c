@@ -110,7 +110,9 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
             if(stream->config->ipv4_destination_address) {
                 ipv4.dst = stream->config->ipv4_destination_address;
             } else {
-                if(stream->config->ipv4_network_address) {
+                if(session->l2tp_session) {
+                    ipv4.dst = MOCK_IP_LOCAL;
+                } else if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
                     ipv4.dst = network_interface->ip.address;
@@ -711,6 +713,10 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     bbl_udp_s udp = {0};
     bbl_bbl_s bbl = {0};
 
+    if(stream->sub_type != BBL_SUB_TYPE_IPV4) {
+        return false;
+    }
+
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
@@ -735,7 +741,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     l2tp.with_offset = l2tp_tunnel->server->data_offset;
     l2tp.next = &ipv4;
     ipv4.dst = session->ip_address;
-    ipv4.src = l2tp_tunnel->server->ip;
+    ipv4.src = MOCK_IP_LOCAL;
     if(config->ipv4_df) {
         ipv4.offset = IPV4_DF;
     }
