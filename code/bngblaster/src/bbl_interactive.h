@@ -12,6 +12,9 @@
 #define __BBL_INTERACTIVE_H__
 
 void
+bbl_interactive_log_buf_init();
+
+void
 bbl_interactive_init();
 
 void

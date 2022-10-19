@@ -13,6 +13,7 @@
 #include "common.h"
 
 extern char *g_log_file;
+
 extern FILE *g_log_fp;
 extern keyval_t log_names[];
 
@@ -55,6 +56,12 @@ struct __attribute__((__packed__)) log_id_
 #ifdef NCURSES_ENABLED
 extern bool g_interactive; /* interactive mode using ncurses */
 
+#define LOG_BUF_STR_LEN 256
+#define LOG_BUF_LINES 128
+
+extern char *g_log_buf;
+extern uint8_t g_log_buf_cur;
+
 #define LOG(log_id_, fmt_, ...) \
     do { \
         if(g_log_fp) { \
@@ -65,11 +72,17 @@ extern bool g_interactive; /* interactive mode using ncurses */
         if(g_interactive) { \
             if (log_id[log_id_].enable) { \
                 wprintw(log_win, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
-                wrefresh(log_win);  \
+                wrefresh(log_win); \
             } \
         } else { \
             if (log_id[log_id_].enable) { \
                 fprintf(stdout, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                if(g_log_buf) { \
+                    snprintf(g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN), LOG_BUF_STR_LEN, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                    if(g_log_buf_cur >= LOG_BUF_LINES) { \
+                        g_log_buf_cur = 0; \
+                    } \
+                } \
             } \
         } \
      } while(0)
@@ -89,9 +102,16 @@ extern bool g_interactive; /* interactive mode using ncurses */
         } else { \
             if (log_id[log_id_].enable) { \
                 fprintf(stdout, "%s "fmt_, log_format_timestamp()); \
+                if(g_log_buf) { \
+                    snprintf(g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN), LOG_BUF_STR_LEN, "%s "fmt_, log_format_timestamp()); \
+                    if(g_log_buf_cur >= LOG_BUF_LINES) { \
+                        g_log_buf_cur = 0; \
+                    } \
+                } \
             } \
         } \
      } while(0)
+
 #else 
 #define LOG(log_id_, fmt_, ...) \
     do { \

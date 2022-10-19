@@ -23,7 +23,11 @@
 bbl_ctx_s *g_ctx = NULL;
 
 /* Global Variables */
-bool g_interactive = false; /* interactive mode using ncurses */
+bool    g_interactive = false; /* interactive mode using ncurses */
+
+uint8_t g_log_buf_cur = 0;
+char   *g_log_buf = NULL;
+
 bool g_init_phase = true;
 bool g_traffic = true;
 bool g_banner = true;
@@ -444,6 +448,7 @@ main(int argc, char *argv[])
                 break;
             case 'I':
                 interactive = true;
+                bbl_interactive_log_buf_init();
                 break;
             case 'S':
                 g_ctx->ctrl_socket_path = optarg;

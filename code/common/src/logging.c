@@ -20,7 +20,8 @@ char *g_log_file = NULL;
  * Format the logging timestamp.
  */
 char *
-log_format_timestamp(void) {
+log_format_timestamp(void)
+{
     static char ts_str[sizeof("Jun 19 08:07:13.711541")];
     struct timespec now;
     struct tm tm;
@@ -39,7 +40,8 @@ log_format_timestamp(void) {
  * Enable logging.
  */
 void
-log_enable(char *log_name) {
+log_enable(char *log_name)
+{
     int idx;
     if(!log_name) {
         return;
@@ -57,7 +59,8 @@ log_enable(char *log_name) {
  * Open log file.
  */
 void
-log_open() {
+log_open()
+{
     if(!g_log_file) {
         return;
     }
@@ -68,7 +71,8 @@ log_open() {
  * Close log file.
  */
 void
-log_close() {
+log_close()
+{
     if(g_log_fp) {
         fclose(g_log_fp);
         g_log_fp = NULL;
@@ -79,7 +83,8 @@ log_close() {
  * Return log usage string.
  */
 char *
-log_usage() {
+log_usage()
+{
     static char buf[128];
     struct keyval_ *ptr;
     int len = 0;

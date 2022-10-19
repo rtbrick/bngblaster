@@ -58,6 +58,51 @@ uint32_t g_session_selected   = 1;
 extern const char banner[];
 
 /*
+ * The log message buffer is used to display in the ncurses log window
+ * even those messages logged  before ncurses has started.
+ */
+
+extern char *g_log_buf;
+extern uint8_t g_log_buf_cur;
+
+void
+bbl_interactive_log_buf_init()
+{
+    if(g_log_buf) {
+        free(g_log_buf);
+    }
+    g_log_buf = calloc(LOG_BUF_LINES, LOG_BUF_STR_LEN);
+    g_log_buf_cur = 0;
+}
+
+static void
+bbl_interactive_log_buf_free()
+{
+    int i = 0;
+    char *line = NULL;
+    if(!g_log_buf) {
+        return;
+    }
+    for(i = g_log_buf_cur; i < LOG_BUF_LINES; i++) {
+        line = g_log_buf+(i*LOG_BUF_STR_LEN);
+        if(!strnlen(line, LOG_BUF_STR_LEN)) {
+            break;
+        }
+        wprintw(log_win, "%s", line);
+    }
+    for(i = 0; i < g_log_buf_cur; i++) {
+        line = g_log_buf+(i*LOG_BUF_STR_LEN);
+        if(!strnlen(line, LOG_BUF_STR_LEN)) {
+            break;
+        }
+        wprintw(log_win, "%s", line);
+    }
+    wrefresh(log_win);
+    free(g_log_buf);
+    g_log_buf = NULL;
+}
+
+/*
  * Format a progress bar.
  */
 static char *
@@ -680,6 +725,7 @@ bbl_interactive_init()
     bbl_interactive_init_window();
     wrefresh(stats_win);
 
+    bbl_interactive_log_buf_free();
     g_interactive = true;
 }
 
