@@ -37,10 +37,10 @@ typedef struct bbl_li_flow_
     uint64_t     packets_rx_ipv6_no_next_header;
 } bbl_li_flow_t;
 
-const char* bbl_li_direction_string(uint8_t direction);
-const char* bbl_li_packet_type_string(uint8_t packet_type);
-const char* bbl_li_sub_packet_type_string(uint8_t sub_packet_type);
+void 
+bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_qmx_li_s *qmx_li);
 
-void bbl_qmx_li_handler_rx(bbl_ethernet_header_t *eth, bbl_qmx_li_t *qmx_li, bbl_interface_s *interface);
+int
+bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

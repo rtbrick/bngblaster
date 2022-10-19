@@ -571,12 +571,12 @@ lowpan6_output(struct netif *netif, struct pbuf *q, const ip6_addr_t *ip6addr)
   struct lowpan6_link_addr src, dest;
 #if LWIP_6LOWPAN_INFER_SHORT_ADDRESS
   ip6_addr_t ip6_src;
-  struct ip6_hdr *ip6_hdr;
+  struct lwip_ip6_hdr *ip6_hdr;
 #endif /* LWIP_6LOWPAN_INFER_SHORT_ADDRESS */
 
 #if LWIP_6LOWPAN_INFER_SHORT_ADDRESS
   /* Check if we can compress source address (use aligned copy) */
-  ip6_hdr = (struct ip6_hdr *)q->payload;
+  ip6_hdr = (struct lwip_ip6_hdr *)q->payload;
   ip6_addr_copy_from_packed(ip6_src, ip6_hdr->src);
   ip6_addr_assign_zone(&ip6_src, IP6_UNICAST, netif);
   if (lowpan6_get_address_mode(&ip6_src, &short_mac_addr) == 3) {

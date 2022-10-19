@@ -42,16 +42,17 @@ typedef struct bbl_session_
 
     session_state_t session_state;
     uint32_t send_requests;
-    uint32_t network_send_requests;
 
-    CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
-    CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
 
-    struct bbl_interface_ *interface; /* where this session is attached to */
-    struct bbl_interface_ *network_interface; /* selected network interface */
-    struct bbl_access_config_ *access_config;
+    CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_a10nsp_tx_qnode;
+
+    bbl_access_config_s *access_config;
+    bbl_access_interface_s *access_interface; /* where this session is attached to */
+    bbl_network_interface_s *network_interface; /* selected network interface */
 
     uint8_t *write_buf; /* pointer to the slot in the tx_ring */
     uint16_t write_idx;
@@ -75,19 +76,18 @@ typedef struct bbl_session_
     struct timer_ *timer_zapping;
     struct timer_ *timer_icmpv6;
     struct timer_ *timer_session;
-    struct timer_ *timer_session_traffic_ipv4;
-    struct timer_ *timer_session_traffic_ipv6;
-    struct timer_ *timer_session_traffic_ipv6pd;
     struct timer_ *timer_rate;
     struct timer_ *timer_cfm_cc;
     struct timer_ *timer_reconnect;
     struct timer_ *timer_monkey;
 
-    bbl_access_type_t access_type;
+    access_type_t access_type;
 
-    uint16_t stream_group_id;
-    void *stream;
-    bool stream_traffic;
+    struct {
+        endpoint_state_t ipv4;
+        endpoint_state_t ipv6;
+        endpoint_state_t ipv6pd;
+    } endpoint;
 
     struct {
         uint32_t ifindex;
@@ -99,11 +99,12 @@ typedef struct bbl_session_
 
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
-    bbl_l2tp_session_t *l2tp_session;
+    bbl_l2tp_session_s *l2tp_session;
 
     /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */
-    bbl_a10nsp_session_t *a10nsp_session;
+    bbl_a10nsp_session_s *a10nsp_session;
+    bbl_a10nsp_interface_s *a10nsp_interface; /* a10nsp interface */
 
     /* Authentication */
     char *username;
@@ -266,53 +267,25 @@ typedef struct bbl_session_
     /* Multicast Traffic */
     uint64_t mc_rx_last_seq;
 
-    /* Session Traffic */
-    bool session_traffic;
+    struct {
+        bool enabled;
+        bool active;
+        uint16_t group_id;
+        bbl_stream_s *head;
+    } streams;
 
-    uint8_t session_traffic_flows;
-    uint8_t session_traffic_flows_verified;
-
-    uint64_t access_ipv4_tx_flow_id;
-    uint64_t access_ipv4_tx_seq;
-    uint8_t *access_ipv4_tx_packet_template;
-    uint8_t  access_ipv4_tx_packet_len;
-    uint64_t access_ipv4_rx_first_seq;
-    uint64_t access_ipv4_rx_last_seq;
-
-    uint64_t network_ipv4_tx_flow_id;
-    uint64_t network_ipv4_tx_seq;
-    uint8_t *network_ipv4_tx_packet_template;
-    uint8_t  network_ipv4_tx_packet_len;
-    uint64_t network_ipv4_rx_first_seq;
-    uint64_t network_ipv4_rx_last_seq;
-
-    uint64_t access_ipv6_tx_flow_id;
-    uint64_t access_ipv6_tx_seq;
-    uint8_t *access_ipv6_tx_packet_template;
-    uint8_t  access_ipv6_tx_packet_len;
-    uint64_t access_ipv6_rx_first_seq;
-    uint64_t access_ipv6_rx_last_seq;
-
-    uint64_t network_ipv6_tx_flow_id;
-    uint64_t network_ipv6_tx_seq;
-    uint8_t *network_ipv6_tx_packet_template;
-    uint8_t  network_ipv6_tx_packet_len;
-    uint64_t network_ipv6_rx_first_seq;
-    uint64_t network_ipv6_rx_last_seq;
-
-    uint64_t access_ipv6pd_tx_flow_id;
-    uint64_t access_ipv6pd_tx_seq;
-    uint8_t *access_ipv6pd_tx_packet_template;
-    uint8_t  access_ipv6pd_tx_packet_len;
-    uint64_t access_ipv6pd_rx_first_seq;
-    uint64_t access_ipv6pd_rx_last_seq;
-
-    uint64_t network_ipv6pd_tx_flow_id;
-    uint64_t network_ipv6pd_tx_seq;
-    uint8_t *network_ipv6pd_tx_packet_template;
-    uint8_t  network_ipv6pd_tx_packet_len;
-    uint64_t network_ipv6pd_rx_first_seq;
-    uint64_t network_ipv6pd_rx_last_seq;
+    struct {
+        bool enabled;
+        bool active;
+        uint8_t flows;
+        uint8_t flows_verified;
+        bbl_stream_s *ipv4_up;
+        bbl_stream_s *ipv4_down;
+        bbl_stream_s *ipv6_up;
+        bbl_stream_s *ipv6_down;
+        bbl_stream_s *ipv6pd_up;
+        bbl_stream_s *ipv6pd_down;
+    } session_traffic;
 
     struct {
         uint64_t packets_tx;
@@ -354,6 +327,7 @@ typedef struct bbl_session_
         uint32_t mc_rx;
         uint32_t mc_loss; /* packet loss */
         uint32_t mc_not_received;
+
         uint32_t arp_rx;
         uint32_t arp_tx;
         uint32_t icmp_rx;
@@ -380,27 +354,6 @@ typedef struct bbl_session_
         uint32_t dhcpv6_tx_renew;
         uint32_t dhcpv6_tx_release;
 
-        uint64_t access_ipv4_rx;
-        uint64_t access_ipv4_tx;
-        uint64_t access_ipv4_loss;
-        uint64_t network_ipv4_rx;
-        uint64_t network_ipv4_tx;
-        uint64_t network_ipv4_loss;
-
-        uint64_t access_ipv6_rx;
-        uint64_t access_ipv6_tx;
-        uint64_t access_ipv6_loss;
-        uint64_t network_ipv6_rx;
-        uint64_t network_ipv6_tx;
-        uint64_t network_ipv6_loss;
-
-        uint64_t access_ipv6pd_rx;
-        uint64_t access_ipv6pd_tx;
-        uint64_t access_ipv6pd_loss;
-        uint64_t network_ipv6pd_rx;
-        uint64_t network_ipv6pd_tx;
-        uint64_t network_ipv6pd_loss;
-
         uint32_t flapped; /* flap counter */
     } stats;
 
@@ -416,19 +369,13 @@ void
 bbl_session_tx_qnode_remove(struct bbl_session_ *session);
 
 void
-bbl_session_network_tx_qnode_insert(struct bbl_session_ *session);
-
-void
-bbl_session_network_tx_qnode_remove(struct bbl_session_ *session);
-
-void
 bbl_session_ncp_open(bbl_session_s *session, bool ipcp);
 
 void
 bbl_session_ncp_close(bbl_session_s *session, bool ipcp);
 
 bbl_session_s *
-bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id);
+bbl_session_get(uint32_t session_id);
 
 void
 bbl_session_free(bbl_session_s *session);
@@ -437,15 +384,63 @@ void
 bbl_session_reset(bbl_session_s *session);
 
 void
-bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t state);
+bbl_session_update_state(bbl_session_s *session, session_state_t state);
 
 void
-bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session);
+bbl_session_clear(bbl_session_s *session);
 
 bool
-bbl_sessions_init(bbl_ctx_s *ctx);
+bbl_sessions_init();
+
+uint32_t
+bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_s *eth);
+
+uint32_t
+bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s *eth);
 
 json_t *
 bbl_session_json(bbl_session_s *session);
+
+int
+bbl_session_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments);
+
+int
+bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

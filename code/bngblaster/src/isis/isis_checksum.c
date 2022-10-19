@@ -21,7 +21,8 @@
  * index required in the specification ISO 8473, Annex C.1.
  */
 uint16_t 
-isis_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset) {
+isis_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset)
+{
     uint8_t *p;
     uint16_t *csum;
     int32_t x, y, c0, c1;
@@ -54,11 +55,11 @@ isis_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset) {
      * is taken as a signed value. */
     x = (int)((len - offset - 1) * c0 - c1) % 255;
 
-    if (x <= 0) {
+    if(x <= 0) {
         x += 255;
     }
     y = 510 - c0 - x;
-    if (y > 255) {
+    if(y > 255) {
         y -= 255;
     }
 

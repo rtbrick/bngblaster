@@ -24,13 +24,15 @@
 #define BBL_MAGIC_NUMBER                0x5274427269636b21
 #define BBL_UDP_PORT                    65056
 #define BBL_HEADER_LEN                  48
-#define BBL_TYPE_UNICAST_SESSION        1
+#define BBL_MIN_LEN                     90
+#define BBL_TYPE_UNICAST        1
 #define BBL_TYPE_MULTICAST              2
 #define BBL_SUB_TYPE_IPV4               1
 #define BBL_SUB_TYPE_IPV6               2
 #define BBL_SUB_TYPE_IPV6PD             3
 #define BBL_DIRECTION_UP                1
 #define BBL_DIRECTION_DOWN              2
+#define BBL_DIRECTION_BOTH              3
 
 #define BROADBAND_FORUM_VENDOR_ID       3561
 
@@ -43,7 +45,47 @@
 #define ETH_TYPE_IPV6                   0x86dd
 #define ETH_TYPE_CFM                    0x8902
 #define ETH_TYPE_MPLS                   0x8847
+#define ETH_TYPE_LACP                   0x8809
 #define ETH_TYPE_RAW                    0xffff
+
+#define SLOW_PROTOCOLS_LACP             0x01
+#define LACP_TLV_TERMINATOR             0x00
+#define LACP_TLV_ACTOR_INFORMATION      0x01
+#define LACP_TLV_PARTNER_INFORMATION    0x02
+#define LACP_TLV_COLLECTOR_INFORMATION  0x03
+
+#define LACP_STATE_FLAG_ACTIVE          0x01
+#define LACP_STATE_FLAG_SHORT_TIMEOUT   0x02
+#define LACP_STATE_FLAG_AGGREGATION     0x04
+#define LACP_STATE_FLAG_IN_SYNC         0x08
+#define LACP_STATE_FLAG_COLLECTING      0x10
+#define LACP_STATE_FLAG_DISTRIBUTING    0x20
+#define LACP_STATE_FLAG_DEFAULTED       0x40
+#define LACP_STATE_FLAG_EXPIRED         0x80
+
+
+/* Ethernet types in network byte order */
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define NB_ETH_TYPE_VLAN                   0x0081
+#define NB_ETH_TYPE_QINQ                   0xA888
+#define NB_ETH_TYPE_PPPOE_DISCOVERY        0x6388
+#define NB_ETH_TYPE_PPPOE_SESSION          0x6488
+#define NB_ETH_TYPE_ARP                    0x0608
+#define NB_ETH_TYPE_IPV4                   0x0008
+#define NB_ETH_TYPE_IPV6                   0xdd86
+#define NB_ETH_TYPE_CFM                    0x0289
+#define NB_ETH_TYPE_MPLS                   0x4788
+#else
+#define NB_ETH_TYPE_VLAN                   0x8100
+#define NB_ETH_TYPE_QINQ                   0x88A8
+#define NB_ETH_TYPE_PPPOE_DISCOVERY        0x8863
+#define NB_ETH_TYPE_PPPOE_SESSION          0x8864
+#define NB_ETH_TYPE_ARP                    0x0806
+#define NB_ETH_TYPE_IPV4                   0x0800
+#define NB_ETH_TYPE_IPV6                   0x86dd
+#define NB_ETH_TYPE_CFM                    0x8902
+#define NB_ETH_TYPE_MPLS                   0x8847
+#endif
 
 #define ETH_VLAN_ID_MAX                 4095
 #define ETH_VLAN_PBIT_MAX               7
@@ -233,6 +275,7 @@
 
 /* IPv6 Addresses */
 static const ipv6addr_t ipv6_link_local_prefix = {0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const ipv6addr_t ipv6_link_local_address = {0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 static const ipv6addr_t ipv6_multicast_all_nodes = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
 static const ipv6addr_t ipv6_multicast_all_routers = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
 static const ipv6addr_t ipv6_multicast_all_dhcp = {0xFF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02};
@@ -240,6 +283,7 @@ static const ipv6addr_t ipv6_solicited_node_multicast = {0xFF, 0x02, 0x00, 0x00,
 
 /* MAC Addresses */
 static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static const uint8_t slow_mac[ETH_ADDR_LEN] =  { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x02};
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
@@ -253,16 +297,16 @@ typedef enum protocol_error_ {
     FULL,
 } protocol_error_t;
 
-typedef enum icmpv6_message_type_ {
+typedef enum icmpv6_message_ {
     IPV6_ICMPV6_ECHO_REQUEST           = 128,
     IPV6_ICMPV6_ECHO_REPLY             = 129,
     IPV6_ICMPV6_ROUTER_SOLICITATION    = 133,
     IPV6_ICMPV6_ROUTER_ADVERTISEMENT   = 134,
     IPV6_ICMPV6_NEIGHBOR_SOLICITATION  = 135,
     IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT = 136
-} icmpv6_message_type;
+} icmpv6_message_t;
 
-typedef enum dhcpv6_message_type_ {
+typedef enum dhcpv6_message_ {
     DHCPV6_MESSAGE_SOLICIT              = 1,
     DHCPV6_MESSAGE_ADVERTISE            = 2,
     DHCPV6_MESSAGE_REQUEST              = 3,
@@ -277,9 +321,9 @@ typedef enum dhcpv6_message_type_ {
     DHCPV6_MESSAGE_RELAY_FORW           = 12,
     DHCPV6_MESSAGE_RELAY_REPL           = 13,
     DHCPV6_MESSAGE_MAX,
-} dhcpv6_message_type;
+} dhcpv6_message_t;
 
-typedef enum l2tp_message_type_ {
+typedef enum l2tp_message_ {
     L2TP_MESSAGE_DATA                   = 0,
     L2TP_MESSAGE_SCCRQ                  = 1,
     L2TP_MESSAGE_SCCRP                  = 2,
@@ -298,9 +342,9 @@ typedef enum l2tp_message_type_ {
     L2TP_MESSAGE_CSURQ                  = 29,
     L2TP_MESSAGE_ZLB                    = 32767,
     L2TP_MESSAGE_MAX,
-} l2tp_message_type;
+} l2tp_message_t;
 
-typedef enum dhcpv6_option_code_ {
+typedef enum dhcpv6_option_ {
     DHCPV6_OPTION_CLIENTID              = 1,
     DHCPV6_OPTION_SERVERID              = 2,
     DHCPV6_OPTION_IA_NA                 = 3,
@@ -324,9 +368,9 @@ typedef enum dhcpv6_option_code_ {
     DHCPV6_OPTION_IAPREFIX              = 26,
     DHCPV6_OPTION_REMOTE_ID             = 37,
     DHCPV6_OPTION_MAX,
-} dhcpv6_option_code;
+} dhcpv6_option_t;
 
-typedef enum dhcp_message_type_ {
+typedef enum dhcp_message_ {
     DHCP_MESSAGE_DISCOVER              = 1,
     DHCP_MESSAGE_OFFER                 = 2,
     DHCP_MESSAGE_REQUEST               = 3,
@@ -336,9 +380,9 @@ typedef enum dhcp_message_type_ {
     DHCP_MESSAGE_RELEASE               = 7,
     DHCP_MESSAGE_INFORM                = 8,
     DHCP_MESSAGE_MAX
-} dhcp_message_type;
+} dhcp_message_t;
 
-typedef enum dhcp_option_code_ {
+typedef enum dhcp_option_ {
     DHCP_OPTION_PAD                          = 0,
     DHCP_OPTION_SUBNET_MASK                  = 1,
     DHCP_OPTION_TIME_OFFSET                  = 2,
@@ -418,9 +462,9 @@ typedef enum dhcp_option_code_ {
     DHCP_OPTION_RELAY_AGENT_INFORMATION      = 82,
     DHCP_OPTION_CAPTIVE_PORTAL               = 160,
     DHCP_OPTION_END                          = 255
-} dhcp_option_code;
+} dhcp_option_t;
 
-typedef enum access_line_codes_ {
+typedef enum access_line_attr_ {
     /* broadband forum tr101 */
 
     ACCESS_LINE_ACI                      = 0x01,  /* Agent Circuit ID */
@@ -461,7 +505,7 @@ typedef enum access_line_codes_ {
     ACCESS_LINE_ONT_ONU_ASS_UP           = 0xb3,  /* ONT/ONU-Assured-Data-Rate-Upstream */
     ACCESS_LINE_PON_MAX_UP               = 0xb4,  /* PON-Tree-Maximum-Data-Rate-Upstream */
     ACCESS_LINE_PON_MAX_DOWN             = 0xb5,  /* PON-Tree-Maximum-Data-Rate-Downstream */
-} access_line_codes;
+} access_line_attr_t;
 
 typedef struct access_line_ {
     char    *aci;       /* Agent Circuit ID */
@@ -470,7 +514,7 @@ typedef struct access_line_ {
     uint32_t down;      /* Actual Data Rate Downstream */
     uint32_t dsl_type;  /* DSL Type */
     void    *profile;
-} access_line_t;
+} access_line_s;
 
 /*
  * MPLS Label
@@ -480,39 +524,58 @@ typedef struct bbl_mpls_ {
     uint8_t  exp;
     uint8_t  ttl;
     void    *next; /* next label */
-} bbl_mpls_t;
+} bbl_mpls_s;
 
 /*
  * ISIS PDU
  */
-typedef struct bbl_isis_t {
+typedef struct bbl_isis_s {
     uint8_t  type;
     uint8_t *pdu;
     uint16_t pdu_len;
-} bbl_isis_t;
+} bbl_isis_s;
+
+typedef struct bbl_bbl_ {
+    uint16_t     padding;
+    uint8_t      type;
+    uint8_t      sub_type;
+    uint8_t      direction;
+    uint8_t      tos;
+    uint32_t     session_id;
+    uint32_t     ifindex;
+    uint16_t     outer_vlan_id;
+    uint16_t     inner_vlan_id;
+    uint32_t     mc_source;
+    uint32_t     mc_group;
+    uint64_t     flow_id;
+    uint64_t     flow_seq;
+    struct timespec timestamp;
+} bbl_bbl_s;
 
 /*
  * Ethernet Header Structure
  */
 typedef struct bbl_ethernet_header_ {
-    uint8_t  *dst; /* destination MAC address */
-    uint8_t  *src; /* source MAC address */
-
-    bool      lwip;
-    bool      qinq; /* ethertype 0x88a8 */
+    uint16_t  length; /* frame length */
+    uint16_t  type; /* ethertype */
     uint16_t  vlan_outer; /* outer VLAN identifier */
     uint16_t  vlan_inner; /* inner VLAN identifier */
     uint16_t  vlan_three; /* third VLAN */
-    uint16_t  type; /* ethertype */
-    uint16_t  length; /* frame length */
     uint8_t   vlan_outer_priority;
     uint8_t   vlan_inner_priority;
 
-    bbl_mpls_t *mpls; /* MPLS */
+    uint8_t   tos;    
+    bool      lwip;
+    bool      qinq; /* ethertype 0x88a8 */
+
+    uint8_t    *dst; /* destination MAC address */
+    uint8_t    *src; /* source MAC address */
+    bbl_bbl_s  *bbl;  /* BBL stream header */
+    bbl_mpls_s *mpls; /* MPLS */
     void       *next; /* next header */
 
     struct timespec timestamp; /* receive timestamp */
-} bbl_ethernet_header_t;
+} bbl_ethernet_header_s;
 
 /*
  * PPPoE Discovery Structure
@@ -528,8 +591,8 @@ typedef struct bbl_pppoe_discovery_ {
     uint16_t       ac_cookie_len;
     uint8_t       *host_uniq;
     uint16_t       host_uniq_len;
-    access_line_t *access_line;
-} bbl_pppoe_discovery_t;
+    access_line_s *access_line;
+} bbl_pppoe_discovery_s;
 
 /*
  * PPPoE Session Structure
@@ -543,7 +606,7 @@ typedef struct bbl_pppoe_session_ {
     void     *next; /* next header */
     void     *payload; /* PPP payload */
     uint16_t  payload_len; /* PPP payload length */
-} bbl_pppoe_session_t;
+} bbl_pppoe_session_s;
 
 
 struct pppoe_ppp_session_header {
@@ -573,7 +636,7 @@ typedef struct bbl_lcp_ {
     uint16_t    len;
     uint8_t    *option[PPP_MAX_OPTIONS];
     bool        unknown_options;
-} bbl_lcp_t;
+} bbl_lcp_s;
 
 /*
  * PPP IPCP Structure
@@ -591,7 +654,7 @@ typedef struct bbl_ipcp_ {
     bool        option_dns2;
     uint8_t    *option[PPP_MAX_OPTIONS];
     bool        unknown_options;
-} bbl_ipcp_t;
+} bbl_ipcp_s;
 
 /*
  * PPP IP6CP Structure
@@ -604,7 +667,7 @@ typedef struct bbl_ip6cp_ {
     uint64_t    ipv6_identifier;
     uint8_t    *option[PPP_MAX_OPTIONS];
     bool        unknown_options;
-} bbl_ip6cp_t;
+} bbl_ip6cp_s;
 
 /*
  * PPP PAP Structure
@@ -618,7 +681,7 @@ typedef struct bbl_ppp_pap_ {
     uint8_t     password_len;
     char       *reply_message;
     uint8_t     reply_message_len;
-} bbl_pap_t;
+} bbl_pap_s;
 
 /*
  * PPP CHAP Structure
@@ -632,7 +695,7 @@ typedef struct bbl_ppp_chap_ {
     uint8_t     challenge_len;
     char       *reply_message;
     uint8_t     reply_message_len;
-} bbl_chap_t;
+} bbl_chap_s;
 
 /*
  * IPv4 Structure
@@ -650,7 +713,7 @@ typedef struct bbl_ipv4_ {
     void       *next; /* next header */
     void       *payload; /* IPv4 payload */
     uint16_t    payload_len; /* IPv4 payload length */
-} bbl_ipv4_t;
+} bbl_ipv4_s;
 
 /*
  * IPv6 Structure
@@ -666,7 +729,7 @@ typedef struct bbl_ipv6_ {
     void       *next; /* next header */
     void       *payload; /* IPv6 payload */
     uint16_t    payload_len; /* IPv6 payload length */
-} bbl_ipv6_t;
+} bbl_ipv6_s;
 
 /*
  * UDP Structure
@@ -678,7 +741,7 @@ typedef struct bbl_udp_ {
     void       *next; /* next header */
     void       *payload; /* UDP payload */
     uint16_t    payload_len; /* UDP payload length */
-} bbl_udp_t;
+} bbl_udp_s;
 
 /*
  * TCP Structure
@@ -688,7 +751,7 @@ typedef struct bbl_tcp_ {
     uint16_t    dst;
     uint16_t    len; /* TCP total length */
     uint8_t    *hdr; /* TCP header start */
-} bbl_tcp_t;
+} bbl_tcp_s;
 
 /*
  * IGMP Structure
@@ -698,7 +761,7 @@ typedef struct bbl_igmp_group_record_ {
     uint32_t    group;
     uint8_t     sources;
     uint32_t    source[IGMP_MAX_SOURCES];
-} bbl_igmp_group_record_t;
+} bbl_igmp_group_record_s;
 
 typedef struct bbl_igmp_ {
     uint8_t     version;
@@ -707,15 +770,15 @@ typedef struct bbl_igmp_ {
     uint32_t    group;
     uint32_t    source;
     uint8_t     group_records;
-    bbl_igmp_group_record_t group_record[IGMP_MAX_GROUPS];
-} bbl_igmp_t;
+    bbl_igmp_group_record_s group_record[IGMP_MAX_GROUPS];
+} bbl_igmp_s;
 
 typedef struct bbl_icmp_ {
     uint8_t     type;
     uint8_t     code;
     uint8_t    *data;
     uint16_t    data_len;
-} bbl_icmp_t;
+} bbl_icmp_s;
 
 typedef struct bbl_arp_ {
     uint16_t    code;
@@ -723,7 +786,7 @@ typedef struct bbl_arp_ {
     uint32_t    sender_ip;
     uint8_t    *target;
     uint32_t    target_ip;
-} bbl_arp_t;
+} bbl_arp_s;
 
 typedef struct bbl_icmpv6_ {
     uint8_t      type;
@@ -735,7 +798,7 @@ typedef struct bbl_icmpv6_ {
     uint16_t     data_len;
     ipv6addr_t  *dns1;
     ipv6addr_t  *dns2;
-} bbl_icmpv6_t;
+} bbl_icmpv6_s;
 
 typedef struct bbl_dhcpv6_ {
     uint8_t        type;
@@ -764,8 +827,8 @@ typedef struct bbl_dhcpv6_ {
     uint32_t       ia_pd_t2;
     uint32_t       ia_pd_preferred_lifetime;
     uint32_t       ia_pd_valid_lifetime;
-    access_line_t *access_line;
-} bbl_dhcpv6_t;
+    access_line_s *access_line;
+} bbl_dhcpv6_s;
 
 struct dhcp_header {
     uint8_t     op;
@@ -813,10 +876,10 @@ typedef struct bbl_dhcp_ {
     bool         option_host_name;
     bool         option_domain_name;
 
-    access_line_t *access_line;
+    access_line_s *access_line;
     uint8_t *client_identifier;
     uint8_t client_identifier_len;
-} bbl_dhcp_t;
+} bbl_dhcp_s;
 
 typedef struct bbl_l2tp_ {
     bool        with_length;     /* L Bit */
@@ -834,24 +897,7 @@ typedef struct bbl_l2tp_ {
     void       *next; /* next header */
     void       *payload; /* l2tp payload */
     uint16_t    payload_len; /* l2tp payload length */
-} bbl_l2tp_t;
-
-typedef struct bbl_bbl_ {
-    uint16_t     padding;
-    uint8_t      type;
-    uint8_t      sub_type;
-    uint8_t      direction;
-    uint8_t      tos;
-    uint32_t     session_id;
-    uint32_t     ifindex;
-    uint16_t     outer_vlan_id;
-    uint16_t     inner_vlan_id;
-    uint32_t     mc_source;
-    uint32_t     mc_group;
-    uint64_t     flow_id;
-    uint64_t     flow_seq;
-    struct timespec timestamp;
-} bbl_bbl_t;
+} bbl_l2tp_s;
 
 typedef struct bbl_qmx_li_ {
     uint32_t     header;
@@ -862,7 +908,7 @@ typedef struct bbl_qmx_li_ {
     void        *next; /* next header */
     void        *payload; /* LI payload */
     uint16_t     payload_len; /* LI payload length */
-} bbl_qmx_li_t;
+} bbl_qmx_li_s;
 
 typedef struct bbl_cfm_ {
     uint8_t     type;
@@ -876,21 +922,34 @@ typedef struct bbl_cfm_ {
     uint8_t     ma_name_format;
     uint8_t     ma_name_len;
     uint8_t    *ma_name;
-} bbl_cfm_t;
+} bbl_cfm_s;
 
-/*
- * decode_ethernet
- */
+typedef struct bbl_lacp_ {
+    uint8_t    *actor_system_id;
+    uint16_t    actor_system_priority;
+    uint16_t    actor_key;
+    uint16_t    actor_port_priority;
+    uint16_t    actor_port_id;
+    uint8_t     actor_state;
+
+    uint8_t    *partner_system_id;
+    uint16_t    partner_system_priority;
+    uint16_t    partner_key;
+    uint16_t    partner_port_priority;
+    uint16_t    partner_port_id;
+    uint8_t     partner_state;
+} bbl_lacp_s;
+
+bool
+packet_is_bbl(uint8_t *buf, uint16_t len);
+
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,
-                bbl_ethernet_header_t **ethernet);
+                bbl_ethernet_header_s **ethernet);
 
-/*
- * encode_ethernet
- */
 protocol_error_t
 encode_ethernet(uint8_t *buf, uint16_t *len,
-                bbl_ethernet_header_t *eth);
+                bbl_ethernet_header_s *eth);
 
 #endif

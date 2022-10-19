@@ -9,14 +9,16 @@
 #include "isis.h"
 
 void
-isis_p2p_hello_timeout(timer_s *timer) {
-    bbl_interface_s *interface = timer->data;
+isis_p2p_hello_timeout(timer_s *timer)
+{
+    bbl_network_interface_s *interface = timer->data;
     interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
 }
 
 void
-isis_p2p_holding_timeout(timer_s *timer) {
-    isis_adjacency_t *adjacency = timer->data;
+isis_p2p_holding_timeout(timer_s *timer)
+{
+    isis_adjacency_s *adjacency = timer->data;
 
     if(adjacency->state == ISIS_ADJACENCY_STATE_DOWN) {
         return;
@@ -34,13 +36,14 @@ isis_p2p_holding_timeout(timer_s *timer) {
 }
 
 static void
-isis_p2p_restart_holding_timers(bbl_interface_s *interface) {
-    isis_adjacency_t *adjacency;
+isis_p2p_restart_holding_timers(bbl_network_interface_s *interface)
+{
+    isis_adjacency_s *adjacency;
 
     for(int i=0; i<ISIS_LEVELS; i++) {
         adjacency = interface->isis_adjacency[i];
         if(adjacency) {
-            timer_add(&interface->ctx->timer_root, &adjacency->timer_holding, 
+            timer_add(&g_ctx->timer_root, &adjacency->timer_holding, 
                       "ISIS holding", adjacency->peer->holding_time, 0, adjacency, 
                       &isis_p2p_holding_timeout);
         }
@@ -57,23 +60,23 @@ isis_p2p_restart_holding_timers(bbl_interface_s *interface) {
  * @return PROTOCOL_SUCCESS on success
  */
 protocol_error_t
-isis_p2p_hello_encode(bbl_interface_s *interface, 
+isis_p2p_hello_encode(bbl_network_interface_s *interface, 
                       uint8_t *buf, uint16_t *len, 
-                      bbl_ethernet_header_t *eth) {
-
+                      bbl_ethernet_header_s *eth)
+{
     protocol_error_t result;
-    isis_pdu_t pdu = {0};
-    bbl_isis_t isis = {0};
+    isis_pdu_s pdu = {0};
+    bbl_isis_s isis = {0};
 
-    isis_adjacency_p2p_t *adjacency = interface->isis_adjacency_p2p;
-    isis_instance_t      *instance  = adjacency->instance;
-    isis_config_t        *config    = instance->config;
+    isis_adjacency_p2p_s *adjacency = interface->isis_adjacency_p2p;
+    isis_instance_s      *instance  = adjacency->instance;
+    isis_config_s        *config    = instance->config;
 
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
     /* Start next timer ... */
-    timer_add(&interface->ctx->timer_root, &interface->timer_isis_hello, 
+    timer_add(&g_ctx->timer_root, &interface->timer_isis_hello, 
               "ISIS hello", config->hello_interval, 0, interface, 
               &isis_p2p_hello_timeout);
 
@@ -115,7 +118,7 @@ isis_p2p_hello_encode(bbl_interface_s *interface,
     result = encode_ethernet(buf, len, eth);
     if(result == PROTOCOL_SUCCESS) {
         LOG(DEBUG, "ISIS TX %s on interface %s\n",
-            isis_pdu_type_string(isis.type), interface->name);
+            isis_pdu_sype_string(isis.type), interface->name);
         adjacency->stats.hello_tx++;
     }
     return result;
@@ -128,14 +131,14 @@ isis_p2p_hello_encode(bbl_interface_s *interface,
  * @param pdu received ISIS PDU
  */
 void
-isis_p2p_hello_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu) {
+isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
+{
+    isis_adjacency_p2p_s *adjacency = interface->isis_adjacency_p2p;
+    isis_instance_s *instance  = NULL;
+    isis_config_s *config    = NULL;
 
-    isis_adjacency_p2p_t *adjacency = interface->isis_adjacency_p2p;
-    isis_instance_t      *instance  = NULL;
-    isis_config_t        *config    = NULL;
-
-    isis_peer_t *peer;
-    isis_tlv_t *tlv;
+    isis_peer_s *peer;
+    isis_tlv_s *tlv;
 
     uint8_t *state = NULL;
     uint8_t new_state = ISIS_P2P_ADJACENCY_STATE_UP;

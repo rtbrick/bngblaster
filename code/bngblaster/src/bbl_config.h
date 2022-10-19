@@ -13,13 +13,14 @@ typedef struct bbl_access_config_
 {
     bool exhausted;
     uint32_t sessions; /* per access config session counter */
-    struct bbl_interface_ *access_if;
 
+    uint8_t lag_id;
     char *interface;
     char *network_interface;
+    char *a10nsp_interface;
 
-    bbl_access_type_t access_type; /* pppoe or ipoe */
-    bbl_vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
+    access_type_t access_type; /* pppoe or ipoe */
+    vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
 
     uint16_t stream_group_id;
 
@@ -80,13 +81,14 @@ typedef struct bbl_access_config_
     uint16_t ppp_mru;
 
     void *next; /* pointer to next access config element */
+    bbl_access_interface_s *access_interface;
 } bbl_access_config_s;
 
 typedef struct bbl_network_config_
 {
-    struct bbl_interface_ *network_if;
     char *interface;
-    
+
+    uint8_t mac[ETH_ADDR_LEN];
     uint8_t gateway_mac[ETH_ADDR_LEN];
     bool gateway_resolve_wait;
     uint16_t vlan;
@@ -105,25 +107,67 @@ typedef struct bbl_network_config_
     uint32_t isis_l2_metric;
 
     void *next; /* pointer to next network config element */
+    bbl_network_interface_s *network_interface;
 } bbl_network_config_s;
 
 typedef struct bbl_a10nsp_config_
 {
-    struct bbl_interface_ *a10nsp_if;
     char *interface;
+
     uint8_t mac[ETH_ADDR_LEN];
     bool qinq;
 
     void *next; /* pointer to next a10nsp config element */
+    bbl_a10nsp_interface_s *a10nsp_interface;
 } bbl_a10nsp_config_s;
 
-bool
-bbl_config_load_json(const char *filename, bbl_ctx_s *ctx);
+typedef struct bbl_link_config_
+{
+    char *interface;
+    char *description;
+    uint8_t mac[ETH_ADDR_LEN];
+
+    io_mode_t io_mode;
+
+    uint16_t io_slots_tx;
+    uint16_t io_slots_rx;
+
+    bool qdisc_bypass;
+
+    uint64_t tx_interval; /* TX interval in nsec */
+    uint64_t rx_interval; /* RX interval in nsec */
+
+    uint8_t tx_threads;
+    uint8_t rx_threads;
+
+    char *lag_interface;
+    uint32_t lacp_priority;
+
+    void *next; /* pointer to next link config element */
+    bbl_interface_s *link;
+} bbl_link_config_s;
+
+typedef struct bbl_lag_config_
+{
+    uint8_t id;
+    char *interface;
+    bool lacp_enable;
+    bool lacp_timeout_short;
+    uint8_t lacp_min_active_links;
+    uint8_t lacp_max_active_links;
+    uint16_t lacp_system_priority;
+    uint8_t lacp_system_id[ETH_ADDR_LEN];
+    uint8_t mac[ETH_ADDR_LEN];
+    void *next; /* pointer to next lag config element */
+} bbl_lag_config_s;
 
 bool
-bbl_config_streams_load_json(const char *filename, bbl_ctx_s *ctx);
+bbl_config_load_json(const char *filename);
+
+bool
+bbl_config_streams_load_json(const char *filename);
 
 void
-bbl_config_init_defaults(bbl_ctx_s *ctx);
+bbl_config_init_defaults();
 
 #endif

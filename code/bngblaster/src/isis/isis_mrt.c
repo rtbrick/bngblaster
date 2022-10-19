@@ -9,18 +9,18 @@
 #include "isis.h"
 
 bool
-isis_mrt_load(isis_instance_t  *instance, char *file_path) {
-
+isis_mrt_load(isis_instance_s *instance, char *file_path)
+{
     FILE *mrt_file;
 
     isis_mrt_hdr_t mrt = {0};
-    isis_pdu_t pdu = {0};
+    isis_pdu_s pdu = {0};
     uint8_t level;
     uint8_t pdu_buf[ISIS_MAX_PDU_LEN];
 
-    isis_lsp_t *lsp = NULL;
-    uint64_t    lsp_id;
-    uint32_t    seq;
+    isis_lsp_s *lsp = NULL;
+    uint64_t lsp_id;
+    uint32_t seq;
 
     hb_tree *lsdb;
     void **search = NULL;
@@ -95,7 +95,7 @@ isis_mrt_load(isis_instance_t  *instance, char *file_path) {
             /* Create new LSP. */
             lsp = isis_lsp_new(lsp_id, level, instance);
             result = hb_tree_insert(lsdb,  &lsp->id);
-            if (result.inserted) {
+            if(result.inserted) {
                 *result.datum_ptr = lsp;
             } else {
                 LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
@@ -115,9 +115,9 @@ isis_mrt_load(isis_instance_t  *instance, char *file_path) {
         lsp->timestamp.tv_nsec = now.tv_nsec;
 
         PDU_CURSOR_RST(&pdu);
-        memcpy(&lsp->pdu, &pdu, sizeof(isis_pdu_t));
+        memcpy(&lsp->pdu, &pdu, sizeof(isis_pdu_s));
 
-        timer_add(&instance->ctx->timer_root, 
+        timer_add(&g_ctx->timer_root, 
                   &lsp->timer_lifetime, 
                   "ISIS LIFETIME", lsp->lifetime, 0, lsp,
                   &isis_lsp_lifetime_job);

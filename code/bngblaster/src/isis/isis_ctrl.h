@@ -10,18 +10,18 @@
 #define __BBL_ISIS_CTRL_H__
 
 int
-isis_ctrl_adjacencies(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
+isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 int
-isis_ctrl_database(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int
-isis_ctrl_load_mrt(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int
-isis_ctrl_lsp_update(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments);
+isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int
-isis_ctrl_teardown(int fd, bbl_ctx_s *ctx, uint32_t session_id __attribute__((unused)), json_t* arguments __attribute__((unused)));
+isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

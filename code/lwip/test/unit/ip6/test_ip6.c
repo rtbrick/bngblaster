@@ -319,7 +319,7 @@ START_TEST(test_ip6_dest_unreachable_chained_pbuf)
   u8_t udp_payload[] = "abcdefghijklmnopqrstuvwxyz0123456789";
   struct pbuf *data = pbuf_alloc(PBUF_RAW, sizeof(udp_payload), PBUF_ROM);
   u8_t *icmpptr;
-  struct ip6_hdr *outhdr;
+  struct lwip_ip6_hdr *outhdr;
   struct icmp6_hdr *icmp6hdr;
   LWIP_UNUSED_ARG(_i);
 
@@ -343,7 +343,7 @@ START_TEST(test_ip6_dest_unreachable_chained_pbuf)
   /* Verify ICMP reply packet contents */
   fail_unless(cloned_pbuf);
   fail_unless(cloned_pbuf->len == IP6_HLEN + ICMP6_HLEN + sizeof(udp_hdr) + sizeof(udp_payload));
-  outhdr = (struct ip6_hdr*) cloned_pbuf->payload;
+  outhdr = (struct lwip_ip6_hdr*) cloned_pbuf->payload;
   fail_unless(ip6_addr_packed_eq(ip_2_ip6(&my_addr), &outhdr->src, IP6_NO_ZONE));
   fail_unless(ip6_addr_packed_eq(ip_2_ip6(&peer_addr), &outhdr->dest, IP6_NO_ZONE));
   icmpptr = &((u8_t*)cloned_pbuf->payload)[IP6_HLEN];

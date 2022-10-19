@@ -70,7 +70,8 @@ struct keyval_ bgp_notification_cease_error_values[] = {
 };
 
 static void 
-bgp_decode_error(bgp_session_t *session) {
+bgp_decode_error(bgp_session_s *session)
+{
     LOG(BGP, "BGP (%s %s - %s) invalid message received\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_local_address),
@@ -84,7 +85,8 @@ bgp_decode_error(bgp_session_t *session) {
 }
 
 static void
-bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
+bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
+{
     if(length < 28) {
         bgp_decode_error(session);
         return;
@@ -104,7 +106,8 @@ bgp_open(bgp_session_t *session, uint8_t *start, uint16_t length) {
 }
 
 static void
-bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
+bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
+{
     uint8_t error_code, error_subcode;
 
     if(length < 21) {
@@ -167,12 +170,13 @@ bgp_notification(bgp_session_t *session, uint8_t *start, uint16_t length) {
  * the tail data to the buffer head.
  */
 static void
-bgp_rebase_read_buffer(bgp_session_t *session) {
+bgp_rebase_read_buffer(bgp_session_s *session)
+{
     uint32_t size;
     io_buffer_t *buffer = &session->read_buf;
 
     size = buffer->idx - buffer->start_idx;
-    if (size) {
+    if(size) {
         /* Copy what is left to the buffer start. */
         memcpy(buffer->data, buffer->data+buffer->start_idx, size);
     }
@@ -181,8 +185,8 @@ bgp_rebase_read_buffer(bgp_session_t *session) {
 }
 
 static void
-bpg_read(bgp_session_t *session) {
-
+bpg_read(bgp_session_s *session)
+{
     uint32_t size;
     uint16_t length;
     uint8_t type;
@@ -194,19 +198,19 @@ bpg_read(bgp_session_t *session) {
         size = buffer->idx - buffer->start_idx;
 
         /* Minimum message size */
-        if (size < BGP_MIN_MESSAGE_SIZE) {
+        if(size < BGP_MIN_MESSAGE_SIZE) {
             break;
         }
 
         length = read_be_uint(start+16, 2);
-        if (length < BGP_MIN_MESSAGE_SIZE ||
+        if(length < BGP_MIN_MESSAGE_SIZE ||
             length > BGP_MAX_MESSAGE_SIZE) {
             bgp_decode_error(session);
             break;
         }
 
         /* Full message on the wire to consume? */
-        if (length > size) {
+        if(length > size) {
             break;
         }
 
@@ -249,8 +253,9 @@ bpg_read(bgp_session_t *session) {
 }
 
 void 
-bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len) {
-    bgp_session_t *session = (bgp_session_t*)arg;
+bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
+{
+    bgp_session_s *session = (bgp_session_s*)arg;
     io_buffer_t *buffer = &session->read_buf;
     if(buf) {
         if(buffer->idx+len > buffer->size) {
@@ -261,7 +266,7 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len) {
 
             if(!session->error_code) {
                 session->error_code = 6; /* Cease */
-                session->error_subcode = 8; /* Out of ressources */
+                session->error_subcode = 8; /* Out of resources */
             }
             bgp_session_close(session);
             return;

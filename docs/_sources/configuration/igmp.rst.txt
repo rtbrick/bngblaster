@@ -46,6 +46,9 @@
    * - `send-multicast-traffic`
      - Generate multicast traffic
      - false
+   * - `multicast-traffic-autostart`
+     - Automatically start multicast traffic
+     - true
    * - `multicast-traffic-length`
      - Multicast traffic IP length
      - 76

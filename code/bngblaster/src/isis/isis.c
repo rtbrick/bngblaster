@@ -21,8 +21,9 @@ isis_lsp_id_compare(void *id1, void *id2)
 }
 
 void
-isis_flood_entry_free(void *key, void *ptr) {
-    isis_flood_entry_t *entry = ptr;
+isis_flood_entry_free(void *key, void *ptr)
+{
+    isis_flood_entry_s *entry = ptr;
 
     UNUSED(key);
     if(entry->lsp->refcount) {
@@ -32,8 +33,9 @@ isis_flood_entry_free(void *key, void *ptr) {
 }
 
 void
-isis_psnp_free(void *key, void *ptr) {
-    isis_lsp_t *lsp = ptr;
+isis_psnp_free(void *key, void *ptr)
+{
+    isis_lsp_s *lsp = ptr;
 
     UNUSED(key);
     if(lsp->refcount) {
@@ -45,26 +47,22 @@ isis_psnp_free(void *key, void *ptr) {
  * isis_init
  * 
  * This function inits all IS-IS instances. 
- * 
- * @param ctx global context
  */
 bool
-isis_init(bbl_ctx_s *ctx) {
-
-    isis_config_t *config = ctx->config.isis_config;
-    isis_instance_t *instance = NULL;
+isis_init() {
+    isis_config_s *config = g_ctx->config.isis_config;
+    isis_instance_s *instance = NULL;
     uint8_t level;
 
     while(config) {
         LOG(ISIS, "Init IS-IS instance %u\n", config->id);
         if(instance) {
-            instance->next = calloc(1, sizeof(isis_instance_t));
+            instance->next = calloc(1, sizeof(isis_instance_s));
             instance = instance->next;
         } else {
-            instance = calloc(1, sizeof(isis_instance_t));
-            ctx->isis_instances = instance;
+            instance = calloc(1, sizeof(isis_instance_s));
+            g_ctx->isis_instances = instance;
         }
-        instance->ctx = ctx;
         instance->config = config;
         for(int i=0; i<ISIS_LEVELS; i++) {
             level = i+1;
@@ -85,7 +83,7 @@ isis_init(bbl_ctx_s *ctx) {
         }
 
         /* Start LSP garbage collection job. */
-        timer_add_periodic(&ctx->timer_root, &instance->timer_lsp_gc, 
+        timer_add_periodic(&g_ctx->timer_root, &instance->timer_lsp_gc, 
                            "ISIS LSP GC", ISIS_LSP_GC_INTERVAL, 0, instance,
                            &isis_lsp_gc_job);
 
@@ -99,33 +97,34 @@ isis_init(bbl_ctx_s *ctx) {
  *
  * This function handles IS-IS packets received on network interfaces.
  *
- * @param eth pointer to ethernet header structure of received packet
  * @param interface pointer to interface on which packet was received
+ * @param eth pointer to ethernet header structure of received packet
  */
 void
-isis_handler_rx(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
+isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) {
     protocol_error_t result;
-    isis_pdu_t pdu = {0};
+    isis_pdu_s pdu = {0};
 
-    bbl_isis_t *isis = eth->next;
+    bbl_isis_s *isis = eth->next;
 
     interface->stats.isis_rx++;
     result = isis_pdu_load(&pdu, isis->pdu, isis->pdu_len);
     if(result != PROTOCOL_SUCCESS) {
         LOG(ISIS, "ISIS RX %s PDU decode error on interface %s\n", 
-            isis_pdu_type_string(pdu.pdu_type), interface->name);
-        interface->stats.packets_rx_drop_decode_error++;
+            isis_pdu_sype_string(pdu.pdu_type), interface->name);
+        interface->stats.isis_rx_error++;
         return;
     }
 
     if(!isis_pdu_validate_checksum(&pdu)) {
         LOG(ISIS, "ISIS RX %s PDU checksum error on interface %s\n", 
-            isis_pdu_type_string(pdu.pdu_type), interface->name);
+            isis_pdu_sype_string(pdu.pdu_type), interface->name);
+        interface->stats.isis_rx_error++;
         return;
     }
 
     LOG(DEBUG, "ISIS RX %s on interface %s\n",
-        isis_pdu_type_string(pdu.pdu_type), interface->name);
+        isis_pdu_sype_string(pdu.pdu_type), interface->name);
 
     switch (pdu.pdu_type) {
         case ISIS_PDU_P2P_HELLO:
@@ -157,8 +156,8 @@ isis_handler_rx(bbl_ethernet_header_t *eth, bbl_interface_s *interface) {
 
 void
 isis_teardown_job(timer_s *timer) {
-    isis_instance_t *instance = timer->data;
-    isis_adjacency_t *adjacency;
+    isis_instance_s *instance = timer->data;
+    isis_adjacency_s *adjacency;
     for(int i=0; i<ISIS_LEVELS; i++) {
         adjacency = instance->level[i].adjacency;
         while(adjacency) {
@@ -172,12 +171,11 @@ isis_teardown_job(timer_s *timer) {
  * isis_teardown
  * 
  * This function stops all IS-IS instances. 
- * 
- * @param ctx global context
  */
 void
-isis_teardown(bbl_ctx_s *ctx) {
-    isis_instance_t *instance = ctx->isis_instances;
+isis_teardown()
+{
+    isis_instance_s *instance = g_ctx->isis_instances;
     while(instance) {
         if(!instance->teardown) {
             LOG(ISIS, "Teardown IS-IS instance %u\n", instance->config->id);
@@ -189,7 +187,7 @@ isis_teardown(bbl_ctx_s *ctx) {
                 }
             }
 
-            timer_add(&ctx->timer_root, &instance->timer_teardown, 
+            timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
                       "ISIS TEARDOWN", instance->config->teardown_time, 0, instance,
                       &isis_teardown_job);
         }

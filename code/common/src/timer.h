@@ -48,32 +48,56 @@ typedef struct timer_
 {
     CIRCLEQ_ENTRY(timer_) timer_qnode;
     CIRCLEQ_ENTRY(timer_) timer_change_qnode;
-    struct timespec expire; /* rxpiration interval */
+    struct timespec expire; /* expiration interval */
+    struct timer_bucket_ *timer_bucket; /* back pointer */
+    struct timer_ **ptimer; /* where this timer pointer gets stored */
     void *data; /* misc. data */
     void (*cb)(struct timer_ *); /* callback function. */
     bool expired;
     bool periodic; /* auto restart timer ? */
+    bool reset; /* reset reference/start time */
     bool delete; /* timer has been deleted */
     bool on_change_list; /* node is on change list */
-    char name[16];
-    struct timer_bucket_ *timer_bucket; /* back pointer */
-    struct timer_ **ptimer; /* where this timer pointer gets stored */
- } timer_s;
-
-/* Prototypes */
-
-void timer_set_expire(timer_s *, time_t, long);
+    char name[32];
+} timer_s;
 
 /* Public API */
 
-void timer_init_root(timer_root_s *);
-void timer_flush_root(timer_root_s *);
-void timer_add(timer_root_s *, timer_s **, char *, time_t , long , void *, void (*)(timer_s *));
-void timer_add_periodic(timer_root_s *, timer_s **, char *, time_t , long , void *, void (*)(timer_s *));void timer_del(timer_s *);
-void timer_smear_bucket(timer_root_s *, time_t, long);
-void timer_smear_all_buckets (timer_root_s *root);
-void timer_walk(struct timer_root_ *);
-void timespec_add(struct timespec *, struct timespec *, struct timespec *);
-void timespec_sub(struct timespec *, struct timespec *, struct timespec *);
+void 
+timespec_add(struct timespec *, struct timespec *, struct timespec *);
+
+void 
+timespec_sub(struct timespec *, struct timespec *, struct timespec *);
+
+char *
+timespec_format(struct timespec *x);
+
+void 
+timer_smear_bucket(timer_root_s *, time_t, long);
+
+void 
+timer_smear_all_buckets(timer_root_s *root);
+
+void 
+timer_del(timer_s *);
+
+void
+timer_add(timer_root_s *root, timer_s **ptimer, char *name,
+          time_t sec, long nsec,
+          void *data, void (*cb)(timer_s *));
+
+void
+timer_add_periodic(timer_root_s *root, timer_s **ptimer, char *name,
+                   time_t sec, long nsec, 
+                   void *data, void (*cb)(timer_s *));
+
+void
+timer_walk(timer_root_s *root);
+
+void
+timer_init_root(timer_root_s *timer_root);
+
+void
+timer_flush_root(timer_root_s *timer_root);
 
 #endif /* __TIMER_H__ */

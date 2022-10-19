@@ -21,10 +21,10 @@ test_protocols_decode_pppoe_ipcp_conf_request(void **unused) {
     (void) unused;
 
     uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
     protocol_error_t decode_result;
-    bbl_pppoe_session_t *pppoes;
-    bbl_ipcp_t *ipcp;
+    bbl_pppoe_session_s *pppoes;
+    bbl_ipcp_s *ipcp;
 
     uint32_t ip;
     uint32_t dns1;
@@ -36,8 +36,8 @@ test_protocols_decode_pppoe_ipcp_conf_request(void **unused) {
     decode_result = decode_ethernet(pppoe_ipcp_conf_request, sizeof(pppoe_ipcp_conf_request), sp, SCRATCHPAD_LEN, &eth);
     assert_int_equal(decode_result, PROTOCOL_SUCCESS);
 
-    pppoes = (bbl_pppoe_session_t*)eth->next;
-    ipcp = (bbl_ipcp_t*)pppoes->next;
+    pppoes = (bbl_pppoe_session_s*)eth->next;
+    ipcp = (bbl_ipcp_s*)pppoes->next;
 
     assert_int_equal(ipcp->code, PPP_CODE_CONF_REQUEST);
     assert_int_equal(ipcp->address, ip);

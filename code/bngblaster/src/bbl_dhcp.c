@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_dhcp.h"
 #include "bbl_session.h"
@@ -19,10 +18,8 @@
  * @param session session
  */
 void
-bbl_dhcp_stop(bbl_session_s *session) {
-    bbl_interface_s *interface = session->interface;
-    bbl_ctx_s *ctx = interface->ctx;
-
+bbl_dhcp_stop(bbl_session_s *session)
+{
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     /* Reset session IP configuration */
@@ -31,9 +28,6 @@ bbl_dhcp_stop(bbl_session_s *session) {
     session->peer_ip_address = 0;
     session->dns1 = 0;
     session->dns2 = 0;
-
-    /* Stop session traffic */
-    timer_del(session->timer_session_traffic_ipv4);
 
     /* Stop multicast ... */
     timer_del(session->timer_igmp);
@@ -68,12 +62,12 @@ bbl_dhcp_stop(bbl_session_s *session) {
         session->dhcp_domain_name = NULL;
     }
 
-    if(session->dhcp_established && ctx->dhcp_established) {
-        ctx->dhcp_established--;
+    if(session->dhcp_established && g_ctx->dhcp_established) {
+        g_ctx->dhcp_established--;
     }
     session->dhcp_established = false;
-    if(session->dhcp_requested && ctx->dhcp_requested) {
-        ctx->dhcp_requested--;
+    if(session->dhcp_requested && g_ctx->dhcp_requested) {
+        g_ctx->dhcp_requested--;
     }
     session->dhcp_requested = false;
 }
@@ -86,11 +80,11 @@ bbl_dhcp_stop(bbl_session_s *session) {
  * @param session session
  */
 void
-bbl_dhcp_start(bbl_session_s *session) {
-
+bbl_dhcp_start(bbl_session_s *session)
+{
     if(!session->dhcp_requested) {
         session->dhcp_requested = true;
-        session->interface->ctx->dhcp_requested++;
+        g_ctx->dhcp_requested++;
 
         /* Init DHCP */
         session->dhcp_state = BBL_DHCP_SELECTING;
@@ -110,14 +104,16 @@ bbl_dhcp_start(bbl_session_s *session) {
  * @param session session
  */
 void
-bbl_dhcp_restart(bbl_session_s *session) {
+bbl_dhcp_restart(bbl_session_s *session)
+{
     bbl_dhcp_stop(session);
     bbl_dhcp_start(session);
     bbl_session_tx_qnode_insert(session);
 }
 
 void
-bbl_dhcp_t1(timer_s *timer) {
+bbl_dhcp_s1(timer_s *timer)
+{
     bbl_session_s *session = timer->data;
     if(session->dhcp_state == BBL_DHCP_BOUND) {
         session->dhcp_xid = rand();
@@ -131,7 +127,8 @@ bbl_dhcp_t1(timer_s *timer) {
 }
 
 void
-bbl_dhcp_t2(timer_s *timer) {
+bbl_dhcp_s2(timer_s *timer)
+{
     bbl_session_s *session = timer->data;
     LOG(DHCP, "DHCP (ID: %u) Lease expired\n", session->session_id);
     bbl_dhcp_restart(session);
@@ -147,11 +144,8 @@ bbl_dhcp_t2(timer_s *timer) {
  * @param session session
  */
 void
-bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session) {
-
-    bbl_interface_s *interface = session->interface;
-    bbl_ctx_s *ctx = interface->ctx;
-
+bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp)
+{
     /* Ignore packets received in wrong state */
     if(session->dhcp_state == BBL_DHCP_INIT) {
         return;
@@ -196,7 +190,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                     bbl_dhcp_restart(session);
                     return;
                 }
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_t2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_s2);
                 session->dhcp_retry = 0;
                 session->send_requests |= BBL_SEND_DHCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
@@ -217,6 +211,7 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 }
                 /* Update session ... */
                 if(session->dhcp_address != session->ip_address) {
+                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->dhcp_address));
                 }
@@ -258,17 +253,17 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
                 if(!session->dhcp_established) {
                     session->dhcp_established = true;
-                    ctx->dhcp_established++;
-                    if(ctx->dhcp_established > ctx->dhcp_established_max) {
-                        ctx->dhcp_established_max = ctx->dhcp_established;
+                    g_ctx->dhcp_established++;
+                    if(g_ctx->dhcp_established > g_ctx->dhcp_established_max) {
+                        g_ctx->dhcp_established_max = g_ctx->dhcp_established;
                     }
                 }
                 session->dhcp_state = BBL_DHCP_BOUND;
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_s1);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
-            } else if (dhcp->type == DHCP_MESSAGE_NAK) {
+            } else if(dhcp->type == DHCP_MESSAGE_NAK) {
                 bbl_dhcp_restart(session);
             }
             break;
@@ -288,11 +283,11 @@ bbl_dhcp_rx(bbl_ethernet_header_t *eth, bbl_dhcp_t *dhcp, bbl_session_s *session
                 }
                 session->dhcp_t1 = 0.5 * session->dhcp_lease_time; if(!session->dhcp_t1) session->dhcp_t1 = 1;
                 session->dhcp_t2 = 0.875 * session->dhcp_lease_time; if(!session->dhcp_t2) session->dhcp_t2 = 1;
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_t1);
-                timer_add(&ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_t2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_s1);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
-            } else if (dhcp->type == DHCP_MESSAGE_NAK) {
+            } else if(dhcp->type == DHCP_MESSAGE_NAK) {
                 bbl_dhcp_restart(session);
             }
             break;

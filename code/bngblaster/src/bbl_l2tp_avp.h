@@ -53,14 +53,14 @@ typedef enum l2tp_avp_type_ {
     L2TP_AVP_CONNECT_SPEED_UPDATE        = 97,
     L2TP_AVP_CONNECT_SPEED_UPDATE_ENABLE = 98,
     L2TP_AVP_MAX
-} l2tp_avp_type;
+} l2tp_avp_type_t;
 
 typedef enum l2tp_avp_value_type_ {
     L2TP_AVP_VALUE_BYTES = 0,
     L2TP_AVP_VALUE_UINT16,
     L2TP_AVP_VALUE_UINT32,
     L2TP_AVP_VALUE_UINT64
-} l2tp_avp_value_type;
+} l2tp_avp_value_type_t;
 
 typedef struct bbl_l2tp_avp_
 {
@@ -74,16 +74,16 @@ typedef struct bbl_l2tp_avp_
 } bbl_l2tp_avp_t;
 
 bool
-bbl_l2tp_avp_decode_session(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session);
+bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session);
 
 bool
-bbl_l2tp_avp_decode_tunnel(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel);
+bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel);
 
 bool
-bbl_l2tp_avp_decode_csun(bbl_l2tp_t *l2tp, bbl_l2tp_tunnel_t *l2tp_tunnel);
+bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel);
 
 void
-bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_t *l2tp_tunnel, bbl_l2tp_session_t *l2tp_session,
-                               l2tp_message_type l2tp_type, uint8_t *buf, uint16_t *len);
+bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session,
+                               l2tp_message_t l2tp_type, uint8_t *buf, uint16_t *len);
 
 #endif

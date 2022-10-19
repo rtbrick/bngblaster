@@ -1,5 +1,5 @@
 /*
- * BNG Blaster (BBL) - RX Job
+ * BNG Blaster (BBL) - RX
  *
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
@@ -11,16 +11,12 @@
 #ifndef __BBL_RX_H__
 #define __BBL_RX_H__
 
-void
-bbl_rx_established_ipoe(bbl_ethernet_header_t *eth, bbl_interface_s *interface, bbl_session_s *session);
+bool
+bbl_rx_thread(bbl_interface_s *interface, 
+              bbl_ethernet_header_s *eth);
 
 void
-bbl_rx_handler_access(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
-
-void
-bbl_rx_handler_network(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
-
-void
-bbl_rx_handler_a10nsp(bbl_ethernet_header_t *eth, bbl_interface_s *interface);
+bbl_rx_handler(bbl_interface_s *interface, 
+               bbl_ethernet_header_s *eth);
 
 #endif

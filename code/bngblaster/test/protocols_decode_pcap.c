@@ -69,7 +69,7 @@ main(int argc, char **argv) {
 
     struct timespec tstart={0,0}, tend={0,0};
     protocol_error_t decode_result;
-    bbl_ethernet_header_t *eth;
+    bbl_ethernet_header_s *eth;
 
     g_input_packets_head = calloc(1, sizeof(input_packets_t));
     g_input_packets_next = g_input_packets_head;
@@ -84,13 +84,13 @@ main(int argc, char **argv) {
     }
 
     fp = pcap_open_offline(argv[1], errbuf);
-    if (fp == NULL) {
+    if(fp == NULL) {
         fprintf(stderr, "\nFailed to open PCAP: %s\n", errbuf);
         exit(1);
     }
 
     /* Load PCAP to memory... */
-    if (pcap_loop(fp, 0, packet_handler, NULL) < 0) {
+    if(pcap_loop(fp, 0, packet_handler, NULL) < 0) {
         fprintf(stderr, "\nReading PCAP failed: %s\n", pcap_geterr(fp));
         exit(1);
     }

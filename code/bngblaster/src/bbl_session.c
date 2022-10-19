@@ -6,7 +6,6 @@
  * Copyright (C) 2020-2022, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-
 #include "bbl.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
@@ -14,10 +13,12 @@
 #include "bbl_dhcpv6.h"
 
 extern volatile bool g_teardown;
+extern volatile bool g_teardown_request;
 extern volatile bool g_monkey;
 
 const char *
-session_state_string(uint32_t state) {
+session_state_string(uint32_t state)
+{
     switch(state) {
         case BBL_IDLE: return "Idle";
         case BBL_IPOE_SETUP: return "IPoE Setup";
@@ -35,7 +36,8 @@ session_state_string(uint32_t state) {
 }
 
 const char *
-ppp_state_string(uint32_t state) {
+ppp_state_string(uint32_t state)
+{
     switch(state) {
         case BBL_PPP_CLOSED: return "Closed";
         case BBL_PPP_INIT: return "Init";
@@ -48,7 +50,8 @@ ppp_state_string(uint32_t state) {
 }
 
 const char *
-dhcp_state_string(uint32_t state) {
+dhcp_state_string(uint32_t state)
+{
     switch(state) {
         case BBL_DHCP_INIT: return "Init";
         case BBL_DHCP_SELECTING: return "Selecting";
@@ -63,7 +66,7 @@ dhcp_state_string(uint32_t state) {
 void
 bbl_session_tx_qnode_insert(bbl_session_s *session)
 {
-    bbl_interface_s *interface = session->interface;
+    bbl_access_interface_s *interface = session->access_interface;
     if(CIRCLEQ_NEXT(session, session_tx_qnode)) {
         return;
     }
@@ -73,33 +76,10 @@ bbl_session_tx_qnode_insert(bbl_session_s *session)
 void
 bbl_session_tx_qnode_remove(bbl_session_s *session)
 {
-    bbl_interface_s *interface = session->interface;
+    bbl_access_interface_s *interface = session->access_interface;
     CIRCLEQ_REMOVE(&interface->session_tx_qhead, session, session_tx_qnode);
     CIRCLEQ_NEXT(session, session_tx_qnode) = NULL;
     CIRCLEQ_PREV(session, session_tx_qnode) = NULL;
-}
-
-void
-bbl_session_network_tx_qnode_insert(bbl_session_s *session)
-{
-    bbl_interface_s *interface = session->network_interface;
-    if(CIRCLEQ_NEXT(session, session_network_tx_qnode)) {
-        return;
-    }
-    if(interface) {
-        CIRCLEQ_INSERT_TAIL(&interface->session_tx_qhead, session, session_network_tx_qnode);
-    }
-}
-
-void
-bbl_session_network_tx_qnode_remove(bbl_session_s *session)
-{
-    bbl_interface_s *interface = session->network_interface;
-    if(interface) {
-        CIRCLEQ_REMOVE(&interface->session_tx_qhead, session, session_network_tx_qnode);
-        CIRCLEQ_NEXT(session, session_network_tx_qnode) = NULL;
-        CIRCLEQ_PREV(session, session_network_tx_qnode) = NULL;
-    }
 }
 
 void
@@ -168,11 +148,11 @@ bbl_session_rate_job(timer_s *timer) {
 }
 
 static void
-bbl_session_monkey_pppoe(bbl_ctx_s *ctx, bbl_session_s *session) {
+bbl_session_monkey_pppoe(bbl_session_s *session) {
     switch(rand() % 256) {
         case 10:
             /* Clear session. */ 
-            bbl_session_clear(ctx, session);
+            bbl_session_clear(session);
             break;
         case 20:
             /* Toggle IPCP */
@@ -199,11 +179,11 @@ bbl_session_monkey_pppoe(bbl_ctx_s *ctx, bbl_session_s *session) {
             break;
         case 50:
             /* Terminate session without PADT */
-            bbl_session_update_state(ctx, session, BBL_TERMINATED);
+            bbl_session_update_state(session, BBL_TERMINATED);
             break;
         case 60:
             /* Terminate session with PADT */
-            bbl_session_update_state(ctx, session, BBL_TERMINATING);
+            bbl_session_update_state(session, BBL_TERMINATING);
             session->lcp_state = BBL_PPP_CLOSED;
             session->ipcp_state = BBL_PPP_CLOSED;
             session->ip6cp_state = BBL_PPP_CLOSED;
@@ -231,7 +211,7 @@ bbl_session_monkey_job(timer_s *timer) {
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        bbl_session_monkey_pppoe(session->interface->ctx, session);
+        bbl_session_monkey_pppoe(session);
     }
 }
 
@@ -246,12 +226,12 @@ bbl_session_monkey_job(timer_s *timer) {
  * @return session or NULL if session not found
  */
 bbl_session_s *
-bbl_session_get(bbl_ctx_s *ctx, uint32_t session_id)
+bbl_session_get(uint32_t session_id)
 {
-    if(session_id > ctx->sessions || session_id < 1) {
+    if(session_id > g_ctx->sessions || session_id < 1) {
         return NULL;
     }
-    return ctx->session_list[session_id-1];
+    return &g_ctx->session_list[session_id-1];
 }
 
 void
@@ -284,7 +264,7 @@ bbl_session_free(bbl_session_s *session)
     }
     session->pppoe_ac_cookie_len = 0;
     
-    if(!session->interface->ctx->config.pppoe_service_name) {
+    if(!g_ctx->config.pppoe_service_name) {
         if(session->pppoe_service_name) {
             free(session->pppoe_service_name);
             session->pppoe_service_name = NULL;
@@ -301,31 +281,6 @@ bbl_session_free(bbl_session_s *session)
         free(session->connections_status_message);
         session->connections_status_message = NULL;
     }
-    
-    if(session->access_ipv4_tx_packet_template) {
-        free(session->access_ipv4_tx_packet_template);
-        session->access_ipv4_tx_packet_template = NULL;
-    }
-    if(session->network_ipv4_tx_packet_template) {
-        free(session->network_ipv4_tx_packet_template);
-        session->network_ipv4_tx_packet_template = NULL;
-    }
-    if(session->access_ipv6_tx_packet_template) {
-        free(session->access_ipv6_tx_packet_template);
-        session->access_ipv6_tx_packet_template = NULL;
-    }
-    if(session->network_ipv6_tx_packet_template) {
-        free(session->network_ipv6_tx_packet_template);
-        session->network_ipv6_tx_packet_template = NULL;
-    }
-    if(session->access_ipv6pd_tx_packet_template) {
-        free(session->access_ipv6pd_tx_packet_template);
-        session->access_ipv6pd_tx_packet_template = NULL;
-    }
-    if(session->network_ipv6pd_tx_packet_template) {
-        free(session->network_ipv6pd_tx_packet_template);
-        session->network_ipv6pd_tx_packet_template = NULL;
-    }
 }
 
 /**
@@ -337,8 +292,6 @@ bbl_session_free(bbl_session_s *session)
  */
 void
 bbl_session_reset(bbl_session_s *session) {    
-    bbl_ctx_s *ctx = session->interface->ctx;
-
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
     session->pppoe_session_id = 0;
     if(session->pppoe_ac_cookie) {
@@ -346,7 +299,7 @@ bbl_session_reset(bbl_session_s *session) {
         session->pppoe_ac_cookie = NULL;
     }
     session->pppoe_ac_cookie_len = 0;
-    if(!session->interface->ctx->config.pppoe_service_name) {
+    if(!g_ctx->config.pppoe_service_name) {
         if(session->pppoe_service_name) {
             free(session->pppoe_service_name);
             session->pppoe_service_name = NULL;
@@ -394,46 +347,21 @@ bbl_session_reset(bbl_session_s *session) {
     session->l2tp_session = NULL;
 
     /* Session traffic */
-    if(ctx->stats.session_traffic_flows >= session->session_traffic_flows) {
-        ctx->stats.session_traffic_flows -= session->session_traffic_flows;
+    if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
+        g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
     }
-    session->session_traffic_flows = 0;
+    session->session_traffic.flows_verified = 0;
 
-    if(ctx->stats.session_traffic_flows_verified >= session->session_traffic_flows_verified) {
-        ctx->stats.session_traffic_flows_verified -= session->session_traffic_flows_verified;
-    }
-    session->session_traffic_flows_verified = 0;
+    if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
+    if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
+    if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
 
-    session->access_ipv4_tx_flow_id = 0;
-    session->access_ipv4_tx_seq = 0;
-    session->access_ipv4_tx_packet_len = 0;
-    session->access_ipv4_rx_first_seq = 0;
-    session->access_ipv4_rx_last_seq = 0;
-    session->network_ipv4_tx_flow_id = 0;
-    session->network_ipv4_tx_seq = 0;
-    session->network_ipv4_tx_packet_len = 0;
-    session->network_ipv4_rx_first_seq = 0;
-    session->network_ipv4_rx_last_seq = 0;
-    session->access_ipv6_tx_flow_id = 0;
-    session->access_ipv6_tx_seq = 0;
-    session->access_ipv6_tx_packet_len = 0;
-    session->access_ipv6_rx_first_seq = 0;
-    session->access_ipv6_rx_last_seq = 0;
-    session->network_ipv6_tx_flow_id = 0;
-    session->network_ipv6_tx_seq = 0;
-    session->network_ipv6_tx_packet_len = 0;
-    session->network_ipv6_rx_first_seq = 0;
-    session->network_ipv6_rx_last_seq = 0;
-    session->access_ipv6pd_tx_flow_id = 0;
-    session->access_ipv6pd_tx_seq = 0;
-    session->access_ipv6pd_tx_packet_len = 0;
-    session->access_ipv6pd_rx_first_seq = 0;
-    session->access_ipv6pd_rx_last_seq = 0;
-    session->network_ipv6pd_tx_flow_id = 0;
-    session->network_ipv6pd_tx_seq = 0;
-    session->network_ipv6pd_tx_packet_len = 0;
-    session->network_ipv6pd_rx_first_seq = 0;
-    session->network_ipv6pd_rx_last_seq = 0;
+    bbl_stream_reset(session->session_traffic.ipv4_up);
+    bbl_stream_reset(session->session_traffic.ipv4_down);
+    bbl_stream_reset(session->session_traffic.ipv6_up);
+    bbl_stream_reset(session->session_traffic.ipv6_down);
+    bbl_stream_reset(session->session_traffic.ipv6pd_up);
+    bbl_stream_reset(session->session_traffic.ipv6pd_down);
 
     /* Reset session stats */
     session->stats.igmp_rx = 0;
@@ -452,34 +380,15 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.icmp_tx = 0;
     session->stats.icmpv6_rx = 0;
     session->stats.icmpv6_tx = 0;
-    session->stats.access_ipv4_rx = 0;
-    session->stats.access_ipv4_tx = 0;
-    session->stats.access_ipv4_loss = 0;
-    session->stats.network_ipv4_rx = 0;
-    session->stats.network_ipv4_tx = 0;
-    session->stats.network_ipv4_loss = 0;
-    session->stats.access_ipv6_rx = 0;
-    session->stats.access_ipv6_tx = 0;
-    session->stats.access_ipv6_loss = 0;
-    session->stats.network_ipv6_rx = 0;
-    session->stats.network_ipv6_tx = 0;
-    session->stats.network_ipv6_loss = 0;
-    session->stats.access_ipv6pd_rx = 0;
-    session->stats.access_ipv6pd_tx = 0;
-    session->stats.access_ipv6pd_loss = 0;
-    session->stats.network_ipv6pd_rx = 0;
-    session->stats.network_ipv6pd_tx = 0;
-    session->stats.network_ipv6pd_loss = 0;
 }
 
 void
 bbl_session_reconnect_job(timer_s *timer) {
     bbl_session_s *session = timer->data;
-    bbl_ctx_s *ctx = session->interface->ctx;
     session->session_state = BBL_IDLE;
     session->reconnect_delay = 0;
     bbl_session_reset(session);
-    CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+    CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
 }
 
 /**
@@ -493,46 +402,52 @@ bbl_session_reconnect_job(timer_s *timer) {
  * @param state new session state
  */
 void
-bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t state)
+bbl_session_update_state(bbl_session_s *session, session_state_t state)
 {
     if(session->session_state != state) {
         /* State has changed ... */
         if(session->session_state == BBL_ESTABLISHED) {
             /* Decrement sessions established if old state is established. */
-            if(ctx->sessions_established) {
-                ctx->sessions_established--;
+            if(g_ctx->sessions_established) {
+                g_ctx->sessions_established--;
             }
+            if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
+            if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
+            if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
         }
         if(state == BBL_ESTABLISHED) {
             /* Increment sessions established and decrement outstanding
              * if new state is established. */
-            ctx->sessions_established++;
-            if(ctx->sessions_established > ctx->sessions_established_max) ctx->sessions_established_max = ctx->sessions_established;
-            if(ctx->sessions_outstanding) ctx->sessions_outstanding--;
-            if(ctx->sessions_established == ctx->sessions) {
+            g_ctx->sessions_established++;
+            if(g_ctx->sessions_established > g_ctx->sessions_established_max) g_ctx->sessions_established_max = g_ctx->sessions_established;
+            if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
+            if(g_ctx->sessions_established == g_ctx->sessions) {
                 LOG_NOARG(INFO, "ALL SESSIONS ESTABLISHED\n");
             }
         } else if(state == BBL_PPP_TERMINATING) {
             session->ipcp_state = BBL_PPP_CLOSED;
             session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
+            if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
+            if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
         } else if(state == BBL_TERMINATED) {
             if(session->dhcp_established) {
                 session->dhcp_established = false;
-                ctx->dhcp_established--;
+                g_ctx->dhcp_established--;
             }
             if(session->dhcp_requested) {
                 session->dhcp_requested = false;
-                ctx->dhcp_requested--;
+                g_ctx->dhcp_requested--;
             }
             if(session->dhcpv6_established) {
                 session->dhcpv6_established = false;
-                ctx->dhcpv6_established--;
+                g_ctx->dhcpv6_established--;
             }
             if(session->dhcpv6_requested) {
                 session->dhcpv6_requested = false;
-                ctx->dhcpv6_requested--;
+                g_ctx->dhcpv6_requested--;
             }
-            /* Stop all session tiemrs */
+            /* Stop all session timers */
             timer_del(session->timer_arp);
             timer_del(session->timer_padi);
             timer_del(session->timer_padr);
@@ -551,41 +466,41 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
             timer_del(session->timer_zapping);
             timer_del(session->timer_icmpv6);
             timer_del(session->timer_session);
-            timer_del(session->timer_session_traffic_ipv4);
-            timer_del(session->timer_session_traffic_ipv6);
-            timer_del(session->timer_session_traffic_ipv6pd);
 
             /* Reset all states */
             session->lcp_state = BBL_PPP_CLOSED;
             session->ipcp_state = BBL_PPP_CLOSED;
             session->ip6cp_state = BBL_PPP_CLOSED;
-
+            if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
+            if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
+            if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+            
             /* Cleanup A10NSP session */
             bbl_a10nsp_session_free(session);
 
             /* Increment sessions terminated if new state is terminated. */
             if(g_teardown) {
-                ctx->sessions_terminated++;
+                g_ctx->sessions_terminated++;
             } else {
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
-                    if(ctx->config.pppoe_reconnect) {
+                    if(g_ctx->config.pppoe_reconnect) {
                         /* Increment flap counter */
                         session->stats.flapped++;
-                        ctx->sessions_flapped++;
+                        g_ctx->sessions_flapped++;
                         if(session->reconnect_delay) {
-                            timer_add(&ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
+                            timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
                                       session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
                         } else {
                             state = BBL_IDLE;
                             bbl_session_reset(session);
-                            CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+                            CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
                         }
                     } else {
-                        ctx->sessions_terminated++;
+                        g_ctx->sessions_terminated++;
                     }
                 } else {
                     /* IPoE */
-                    ctx->sessions_terminated++;
+                    g_ctx->sessions_terminated++;
                 }
             }
         }
@@ -598,23 +513,22 @@ bbl_session_update_state(bbl_ctx_s *ctx, bbl_session_s *session, session_state_t
  *
  * This function terminates a session gracefully.
  *
- * @param ctx global context
  * @param session session
  */
 void
-bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
+bbl_session_clear(bbl_session_s *session)
 {
     session_state_t new_state = BBL_TERMINATED;
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         switch(session->session_state) {
             case BBL_IDLE:
-                bbl_session_update_state(ctx, session, BBL_TERMINATED);
+                bbl_session_update_state(session, BBL_TERMINATED);
                 break;
             case BBL_PPPOE_INIT:
             case BBL_PPPOE_REQUEST:
             case BBL_PPP_LINK:
-                bbl_session_update_state(ctx, session, BBL_TERMINATING);
+                bbl_session_update_state(session, BBL_TERMINATING);
                 session->lcp_state = BBL_PPP_CLOSED;
                 session->ipcp_state = BBL_PPP_CLOSED;
                 session->ip6cp_state = BBL_PPP_CLOSED;
@@ -625,7 +539,7 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
             case BBL_PPP_NETWORK:
             case BBL_ESTABLISHED:
             case BBL_PPP_TERMINATING:
-                bbl_session_update_state(ctx, session, BBL_PPP_TERMINATING);
+                bbl_session_update_state(session, BBL_PPP_TERMINATING);
                 session->lcp_request_code = PPP_CODE_TERM_REQUEST;
                 session->lcp_options_len = 0;
                 session->lcp_state = BBL_PPP_TERMINATE;
@@ -660,7 +574,7 @@ bbl_session_clear(bbl_ctx_s *ctx, bbl_session_s *session)
                 bbl_session_tx_qnode_insert(session);
             }
         }
-        bbl_session_update_state(ctx, session, new_state);
+        bbl_session_update_state(session, new_state);
     }
 }
 
@@ -692,7 +606,7 @@ update_strings(char **target, const char *source, uint32_t *i, bbl_access_config
 }
 
 bool
-bbl_sessions_init(bbl_ctx_s *ctx)
+bbl_sessions_init()
 {
     bbl_session_s *session;
     bbl_access_config_s *access_config;
@@ -708,15 +622,14 @@ bbl_sessions_init(bbl_ctx_s *ctx)
      * that all VLAN ranges are exhausted. */
     int t = 0;
 
-
     /* Init list of sessions */
-    ctx->session_list = calloc(ctx->config.sessions, sizeof(session));
-    access_config = ctx->config.access_config;
+    g_ctx->session_list = calloc(g_ctx->config.sessions, sizeof(bbl_session_s));
+    access_config = g_ctx->config.access_config;
 
     /* For equal distribution of sessions over access configurations
      * and outer VLAN's, we loop first over all configurations and
      * second over VLAN ranges as per configuration. */
-    while(i <= ctx->config.sessions) {
+    while(i <= g_ctx->config.sessions) {
         if(access_config->vlan_mode == VLAN_MODE_N1) {
             if(access_config->access_outer_vlan_min) {
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
@@ -735,7 +648,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
                 access_config->access_inner_vlan = access_config->access_inner_vlan_min;
             } else {
-                if(ctx->config.iterate_outer_vlan) {
+                if(g_ctx->config.iterate_outer_vlan) {
                     /* Iterate over outer VLAN first and inner VLAN second */
                     access_config->access_outer_vlan++;
                     if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
@@ -752,7 +665,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 }
             }
             if(access_config->access_outer_vlan == 0) {
-                /* This is required to handle untagged interafaces */
+                /* This is required to handle untagged interfaces */
                 access_config->exhausted = true;
             }
             if(access_config->access_outer_vlan > access_config->access_outer_vlan_max ||
@@ -764,25 +677,33 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         }
         t++;
         access_config->sessions++;
-        session = calloc(1, sizeof(bbl_session_s));
-        if (!session) {
-            LOG(ERROR, "Failed to allocate memory for session %u!\n", i);
-            return false;
-        }
+        session = &g_ctx->session_list[i-1];
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         session->session_id = i; /* BNG Blaster internal session identifier */
         session->access_type = access_config->access_type;
-        session->vlan_key.ifindex = access_config->access_if->ifindex;
+        session->access_interface = access_config->access_interface;
+        session->network_interface = bbl_network_interface_get(access_config->network_interface);
+        session->vlan_key.ifindex = access_config->access_interface->ifindex;
         session->vlan_key.outer_vlan_id= access_config->access_outer_vlan;
         session->vlan_key.inner_vlan_id = access_config->access_inner_vlan;
         session->access_third_vlan = access_config->access_third_vlan;
         session->access_config = access_config;
 
+        if(access_config->ipv4_enable) {
+            session->endpoint.ipv4 = ENDPOINT_ENABLED;
+        }
+        if(access_config->ipv6_enable) {
+            session->endpoint.ipv6 = ENDPOINT_ENABLED;
+        }
+        if(access_config->dhcpv6_enable) {
+            session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+        }
+
         /* Set client OUI to locally administered */
         session->client_mac[0] = 0x02;
         session->client_mac[1] = 0x00;
-        session->client_mac[2] = ctx->config.mac_modifier;
+        session->client_mac[2] = g_ctx->config.mac_modifier;
         /* Use session identifier for remaining bytes */
         session->client_mac[3] = i>>16;
         session->client_mac[4] = i>>8;
@@ -843,7 +764,7 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->rate_down = access_config->rate_down;
         session->dsl_type = access_config->dsl_type;
         if(access_config->access_line_profile_id) {
-            access_line_profile = ctx->config.access_line_profile;
+            access_line_profile = g_ctx->config.access_line_profile;
             while(access_line_profile) {
                 if(access_line_profile->access_line_profile_id == access_config->access_line_profile_id) {
                     session->access_line_profile = access_line_profile;
@@ -866,21 +787,17 @@ bbl_sessions_init(bbl_ctx_s *ctx)
         session->igmp_autostart = access_config->igmp_autostart;
         session->igmp_version = access_config->igmp_version;
         session->igmp_robustness = 2; /* init robustness with 2 */
-        session->zapping_group_max = be32toh(ctx->config.igmp_group) + ((ctx->config.igmp_group_count - 1) * be32toh(ctx->config.igmp_group_iter));
+        session->zapping_group_max = be32toh(g_ctx->config.igmp_group) + ((g_ctx->config.igmp_group_count - 1) * be32toh(g_ctx->config.igmp_group_iter));
 
-        /* Session traffic */
-        session->session_traffic = access_config->session_traffic_autostart;
-        session->stream_traffic = true;
-
-        /* Set access type specifc values */
+        /* Set access type specific values */
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             session->mru = access_config->ppp_mru;
             session->magic_number = htobe32(i);
-            if(ctx->config.pppoe_service_name) {
-                session->pppoe_service_name = (uint8_t*)ctx->config.pppoe_service_name;
-                session->pppoe_service_name_len = strlen(ctx->config.pppoe_service_name);
+            if(g_ctx->config.pppoe_service_name) {
+                session->pppoe_service_name = (uint8_t*)g_ctx->config.pppoe_service_name;
+                session->pppoe_service_name_len = strlen(g_ctx->config.pppoe_service_name);
             }
-            if(ctx->config.pppoe_host_uniq) {
+            if(g_ctx->config.pppoe_host_uniq) {
                 session->pppoe_host_uniq = htobe64(i);
             }
         } else if(session->access_type == ACCESS_TYPE_IPOE) {
@@ -891,49 +808,56 @@ bbl_sessions_init(bbl_ctx_s *ctx)
                 access_config->static_gateway = htobe32(be32toh(access_config->static_gateway) + be32toh(access_config->static_gateway_iter));
             }
         }
-        session->interface = access_config->access_if;
-        session->network_interface = bbl_get_network_interface(ctx, access_config->network_interface);
+        session->access_interface = access_config->access_interface;
+        session->network_interface = bbl_network_interface_get(access_config->network_interface);
         session->session_state = BBL_IDLE;
-        if(ctx->config.sessions_autostart) {
-            CIRCLEQ_INSERT_TAIL(&ctx->sessions_idle_qhead, session, session_idle_qnode);
+        if(g_ctx->config.sessions_autostart) {
+            CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
         }
-        ctx->sessions++;
+        g_ctx->sessions++;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
-            ctx->sessions_pppoe++;
+            g_ctx->sessions_pppoe++;
         } else {
-            ctx->sessions_ipoe++;
+            g_ctx->sessions_ipoe++;
         }
-        /* Add session to list */
-        ctx->session_list[i-1] = session;
 
         if(access_config->vlan_mode == VLAN_MODE_11) {
             /* Add 1:1 sessions to VLAN/session dictionary */
-            result = dict_insert(ctx->vlan_session_dict, &session->vlan_key);
-            if (result.inserted) {
+            result = dict_insert(g_ctx->vlan_session_dict, &session->vlan_key);
+            if(result.inserted) {
                 *result.datum_ptr = session;
             }
         }
-        if(access_config->stream_group_id) {
-            if(!bbl_stream_add(ctx, access_config, session)) {
-                LOG_NOARG(ERROR, "Failed to create session traffic stream!\n");
-                return false;
-            }
-            timer_add_periodic(&ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
+
+        /* Streams */
+        session->session_traffic.active = access_config->session_traffic_autostart;
+        session->streams.group_id = access_config->stream_group_id;
+        session->streams.active = true;
+
+        if(!bbl_stream_session_init(session)) {
+            LOG_NOARG(ERROR, "Failed to create session traffic stream!\n");
+            return false;
         }
+
+        timer_add_periodic(&g_ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
 
         if(access_config->monkey) {
-            timer_add_periodic(&ctx->timer_root, &session->timer_monkey, "MONKEY", 1, 1337, session, &bbl_session_monkey_job);
+            timer_add_periodic(&g_ctx->timer_root, &session->timer_monkey, "MONKEY", 1, 1337, session, &bbl_session_monkey_job);
         }
 
-        LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, access_config->interface, access_config->access_outer_vlan, access_config->access_inner_vlan);
+        LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, 
+            access_config->access_interface->name, 
+            access_config->access_outer_vlan, 
+            access_config->access_inner_vlan);
+
         i++;
 NEXT:
         if(access_config->next) {
             access_config = access_config->next;
         } else {
-            if (t) {
+            if(t) {
                 t = 0;
-                access_config = ctx->config.access_config;
+                access_config = g_ctx->config.access_config;
             } else {
                 LOG_NOARG(ERROR, "Failed to create sessions because VLAN ranges exhausted!\n");
                 return false;
@@ -944,12 +868,60 @@ NEXT:
     return true;
 }
 
+uint32_t
+bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
+{
+    uint32_t session_id = 0;
+    vlan_session_key_t key = {0};
+    bbl_session_s *session;
+    void **search;
+
+    key.ifindex = interface->ifindex;
+    key.outer_vlan_id = eth->vlan_outer;
+    key.inner_vlan_id = eth->vlan_inner;
+
+    search = dict_search(g_ctx->vlan_session_dict, &key);
+    if(search) {
+        session = *search;
+        session_id = session->session_id;
+    }
+    return session_id;
+}
+
+uint32_t
+bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
+{
+    uint32_t session_id = 0;
+    bbl_ipv4_s *ipv4;
+    bbl_udp_s *udp;
+    bbl_dhcp_s *dhcp;
+
+    if(eth->type == ETH_TYPE_IPV4) {
+        ipv4 = (bbl_ipv4_s*)eth->next;
+        if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
+            udp = (bbl_udp_s*)ipv4->next;
+            if(udp->protocol == UDP_PROTOCOL_DHCP) {
+                dhcp = (bbl_dhcp_s*)udp->next;
+                session_id |= ((uint8_t*)(dhcp->header->chaddr))[5];
+                session_id |= ((uint8_t*)(dhcp->header->chaddr))[4] << 8;
+                session_id |= ((uint8_t*)(dhcp->header->chaddr))[3] << 16;
+            }
+        }
+    }
+    if(!session_id) {
+        return(bbl_session_id_from_vlan(interface, eth));
+    }
+    return session_id;
+}
+
 json_t *
 bbl_session_json(bbl_session_s *session)
 {
     json_t *root = NULL;
     json_t *session_traffic = NULL;
     json_t *a10nsp_session = NULL;
+
+    bbl_stream_s *stream;
 
     struct timespec now;
 
@@ -1011,41 +983,70 @@ bbl_session_json(bbl_session_s *session)
         dhcpv6_dns2 = format_ipv6_address(&session->dhcpv6_dns2);
     }
 
-    if(session->session_traffic_flows) {
-        session_traffic = json_pack("{si si si si si si si si si si si si si si si si si si si si si si si si si si}",
-            "total-flows", session->session_traffic_flows,
-            "verified-flows", session->session_traffic_flows_verified,
-            "first-seq-rx-access-ipv4", session->access_ipv4_rx_first_seq,
-            "first-seq-rx-access-ipv6", session->access_ipv6_rx_first_seq,
-            "first-seq-rx-access-ipv6pd", session->access_ipv6pd_rx_first_seq,
-            "first-seq-rx-network-ipv4", session->network_ipv4_rx_first_seq,
-            "first-seq-rx-network-ipv6", session->network_ipv6_rx_first_seq,
-            "first-seq-rx-network-ipv6pd", session->network_ipv6pd_rx_first_seq,
-            "access-tx-session-packets", session->stats.access_ipv4_tx,
-            "access-rx-session-packets", session->stats.access_ipv4_rx,
-            "access-rx-session-packets-loss", session->stats.access_ipv4_loss,
-            "network-tx-session-packets", session->stats.network_ipv4_tx,
-            "network-rx-session-packets", session->stats.network_ipv4_rx,
-            "network-rx-session-packets-loss", session->stats.network_ipv4_loss,
-            "access-tx-session-packets-ipv6", session->stats.access_ipv6_tx,
-            "access-rx-session-packets-ipv6", session->stats.access_ipv6_rx,
-            "access-rx-session-packets-ipv6-loss", session->stats.access_ipv6_loss,
-            "network-tx-session-packets-ipv6", session->stats.network_ipv6_tx,
-            "network-rx-session-packets-ipv6", session->stats.network_ipv6_rx,
-            "network-rx-session-packets-ipv6-loss", session->stats.network_ipv6_loss,
-            "access-tx-session-packets-ipv6pd", session->stats.access_ipv6pd_tx,
-            "access-rx-session-packets-ipv6pd", session->stats.access_ipv6pd_rx,
-            "access-rx-session-packets-ipv6pd-loss", session->stats.access_ipv6pd_loss,
-            "network-tx-session-packets-ipv6pd", session->stats.network_ipv6pd_tx,
-            "network-rx-session-packets-ipv6pd", session->stats.network_ipv6pd_rx,
-            "network-rx-session-packets-ipv6pd-loss", session->stats.network_ipv6pd_loss);
+    if(session->session_traffic.flows) {
+        session_traffic = json_pack("{si si}",
+            "total-flows", session->session_traffic.flows,
+            "verified-flows", session->session_traffic.flows_verified);
+        if(session->session_traffic.ipv4_down) {
+            stream = session->session_traffic.ipv4_down;
+            json_object_set(session_traffic, "downstream-ipv4-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "downstream-ipv4-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
+            json_object_set(session_traffic, "downstream-ipv4-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
+            json_object_set(session_traffic, "downstream-ipv4-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "downstream-ipv4-loss", json_integer(stream->rx_loss - stream->reset_loss));
+            json_object_set(session_traffic, "downstream-ipv4-wrong-session", json_integer(stream->rx_wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv4_up) {
+            stream = session->session_traffic.ipv4_up;
+            json_object_set(session_traffic, "upstream-ipv4-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "upstream-ipv4-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
+            json_object_set(session_traffic, "upstream-ipv4-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
+            json_object_set(session_traffic, "upstream-ipv4-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "upstream-ipv4-loss", json_integer(stream->rx_loss - stream->reset_loss));
+            json_object_set(session_traffic, "upstream-ipv4-wrong-session", json_integer(stream->rx_wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6_down) {
+            stream = session->session_traffic.ipv6_down;
+            json_object_set(session_traffic, "downstream-ipv6-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "downstream-ipv6-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
+            json_object_set(session_traffic, "downstream-ipv6-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
+            json_object_set(session_traffic, "downstream-ipv6-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "downstream-ipv6-loss", json_integer(stream->rx_loss - stream->reset_loss));
+            json_object_set(session_traffic, "downstream-ipv6-wrong-session", json_integer(stream->rx_wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6_up) {
+            stream = session->session_traffic.ipv6_up;
+            json_object_set(session_traffic, "upstream-ipv6-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "upstream-ipv6-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
+            json_object_set(session_traffic, "upstream-ipv6-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
+            json_object_set(session_traffic, "upstream-ipv6-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "upstream-ipv6-loss", json_integer(stream->rx_loss - stream->reset_loss));
+            json_object_set(session_traffic, "upstream-ipv6-wrong-session", json_integer(stream->rx_wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6pd_down) {
+            stream = session->session_traffic.ipv6pd_down;
+            json_object_set(session_traffic, "downstream-ipv6pd-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "downstream-ipv6pd-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
+            json_object_set(session_traffic, "downstream-ipv6pd-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
+            json_object_set(session_traffic, "downstream-ipv6pd-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "downstream-ipv6pd-loss", json_integer(stream->rx_loss - stream->reset_loss));
+            json_object_set(session_traffic, "downstream-ipv6pd-wrong-session", json_integer(stream->rx_wrong_session - stream->reset_wrong_session));
+        }
+        if(session->session_traffic.ipv6pd_up) {
+            stream = session->session_traffic.ipv6pd_up;
+            json_object_set(session_traffic, "upstream-ipv6pd-flow-id", json_integer(stream->flow_id));
+            json_object_set(session_traffic, "upstream-ipv6pd-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
+            json_object_set(session_traffic, "upstream-ipv6pd-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
+            json_object_set(session_traffic, "upstream-ipv6pd-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set(session_traffic, "upstream-ipv6pd-loss", json_integer(stream->rx_loss - stream->reset_loss));
+            json_object_set(session_traffic, "upstream-ipv6pd-wrong-session", json_integer(stream->rx_wrong_session - stream->reset_wrong_session));
+        }
     }
-
     if(session->a10nsp_session) {
         a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* si si}",
-            "interface", session->a10nsp_session->a10nsp_if->name,
+            "interface", session->a10nsp_session->a10nsp_interface->name,
             "s-vlan", session->a10nsp_session->s_vlan,
-            "qinq-send", session->a10nsp_session->a10nsp_if->qinq,
+            "qinq-send", session->a10nsp_session->a10nsp_interface->qinq,
             "qinq-received", session->a10nsp_session->qinq_received,
             "pppoe-aci", session->a10nsp_session->pppoe_aci,
             "pppoe-ari", session->a10nsp_session->pppoe_ari,
@@ -1062,7 +1063,7 @@ bbl_session_json(bbl_session_s *session)
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
-            "interface", session->interface->name,
+            "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
@@ -1110,7 +1111,7 @@ bbl_session_json(bbl_session_s *session)
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
-            "interface", session->interface->name,
+            "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
@@ -1166,3 +1167,327 @@ bbl_session_json(bbl_session_s *session)
     }
     return root;
 }
+
+/* Control Socket Commands */
+
+int
+bbl_session_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root, *json_session, *json_sessions;
+
+    bbl_session_s *session;
+    uint32_t i;
+
+    json_sessions = json_array();
+
+    /* Iterate over all sessions */
+    for(i = 0; i < g_ctx->sessions; i++) {
+        session = &g_ctx->session_list[i];
+        if(!session) continue;
+        
+        if(session->session_state != BBL_ESTABLISHED || 
+           session->session_traffic.flows != session->session_traffic.flows_verified) {
+            json_session = json_pack("{si ss si si}",
+                                     "session-id", session->session_id,
+                                     "session-state", session_state_string(session->session_state),
+                                     "session-traffic-flows", session->session_traffic.flows,
+                                     "session-traffic-flows-verified", session->session_traffic.flows_verified);
+            json_array_append(json_sessions, json_session);
+        }
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "sessions-pending", json_sessions);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(json_sessions);
+    }
+    return result;
+}
+
+int
+bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
+                             "status", "ok",
+                             "code", 200,
+                             "session-counters",
+                             "sessions", g_ctx->config.sessions,
+                             "sessions-pppoe", g_ctx->sessions_pppoe,
+                             "sessions-ipoe", g_ctx->sessions_ipoe,
+                             "sessions-established", g_ctx->sessions_established,
+                             "sessions-established-max", g_ctx->sessions_established_max,
+                             "sessions-terminated", g_ctx->sessions_terminated,
+                             "sessions-flapped", g_ctx->sessions_flapped,
+                             "dhcp-sessions", g_ctx->dhcp_requested,
+                             "dhcp-sessions-established", g_ctx->dhcp_established,
+                             "dhcp-sessions-established-max", g_ctx->dhcp_established_max,
+                             "dhcpv6-sessions", g_ctx->dhcpv6_requested,
+                             "dhcpv6-sessions-established", g_ctx->dhcpv6_established,
+                             "dhcpv6-sessions-established-max", g_ctx->dhcpv6_established_max,
+                             "setup-time", g_ctx->stats.setup_time,
+                             "setup-rate", g_ctx->stats.cps,
+                             "setup-rate-min", g_ctx->stats.cps_min,
+                             "setup-rate-avg", g_ctx->stats.cps_avg,
+                             "setup-rate-max", g_ctx->stats.cps_max,
+                             "session-traffic-flows", g_ctx->stats.session_traffic_flows,
+                             "session-traffic-flows-verified", g_ctx->stats.session_traffic_flows_verified,
+                             "stream-traffic-flows", g_ctx->stats.stream_traffic_flows,
+                             "stream-traffic-flows-verified", g_ctx->stats.stream_traffic_flows_verified
+                            );
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+int
+bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root;
+    json_t *session_json;
+    bbl_session_s *session;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        session_json = bbl_session_json(session);
+        if(!session_json) {
+            return bbl_ctrl_status(fd, "error", 500, "internal error");
+        }
+
+        root = json_pack("{ss si so*}",
+                         "status", "ok",
+                         "code", 200,
+                         "session-info", session_json);
+
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(session_json);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
+int
+bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    bbl_session_s *session;
+
+    if(g_teardown) {
+        return bbl_ctrl_status(fd, "error", 405, "teardown");
+    }
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        if(session->session_state == BBL_TERMINATED && 
+           session->reconnect_delay == 0) {
+            g_ctx->sessions_flapped++;
+            session->stats.flapped++;
+            session->session_state = BBL_IDLE;
+            bbl_session_reset(session);
+            if(g_ctx->sessions_terminated) {
+                g_ctx->sessions_terminated--;
+            }
+        } else if(session->session_state != BBL_IDLE || 
+           CIRCLEQ_NEXT(session, session_idle_qnode) || 
+           CIRCLEQ_PREV(session, session_idle_qnode)) {
+           return bbl_ctrl_status(fd, "error", 405, "wrong session state");
+        }
+        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}
+
+int
+bbl_session_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
+{
+    bbl_session_s *session;
+    int reconnect_delay = 0;
+
+    if(session_id) {
+        /* Terminate single matching session ... */
+        session = bbl_session_get(session_id);
+        if(session) {
+            json_unpack(arguments, "{s:i}", "reconnect-delay", &session->reconnect_delay);
+            if(reconnect_delay > 0) {
+                session->reconnect_delay = reconnect_delay;
+            }
+            bbl_session_clear(session);
+            return bbl_ctrl_status(fd, "ok", 200, "terminate session");
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Terminate all sessions ... */
+        g_teardown = true;
+        g_teardown_request = true;
+        LOG_NOARG(INFO, "Teardown request\n");
+        return bbl_ctrl_status(fd, "ok", 200, "terminate all sessions");
+    }
+}
+
+static int
+bbl_session_ctrl_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipcp)
+{
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                if(open) {
+                    bbl_session_ncp_open(session, ipcp);
+                } else {
+                    bbl_session_ncp_close(session, ipcp);
+                }
+            } else {
+                return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
+            }
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                if(session->access_type == ACCESS_TYPE_PPPOE) {
+                    if(open) {
+                        bbl_session_ncp_open(session, ipcp);
+                    } else {
+                        bbl_session_ncp_close(session, ipcp);
+                    }
+                }
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, true, true);
+}
+
+int
+bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, false, true);
+}
+
+int
+bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, true, false);
+}
+
+int
+bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, false, false);
+}
+
+static int
+bbl_session_ctrl_traffic(int fd, uint32_t session_id, bool status)
+{
+    bbl_session_s *session;
+    uint32_t i;
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            session->session_traffic.active = status;
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                session->session_traffic.active = status;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_traffic(fd, session_id, true);
+}
+
+int
+bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    return bbl_session_ctrl_traffic(fd, session_id, false);
+}
+
+
+int
+bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root = json_pack("{ss si s{si si}}",
+                             "status", "ok",
+                             "code", 200,
+                             "session-traffic",
+                             "total-flows", g_ctx->stats.session_traffic_flows,
+                             "verified-flows", g_ctx->stats.session_traffic_flows_verified);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    }
+    return result;
+}
+
+int
+bbl_session_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(!g_monkey) {
+        LOG_NOARG(INFO, "Start monkey\n");
+    }
+    g_monkey = true;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+bbl_session_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(g_monkey) {
+        LOG_NOARG(INFO, "Stop monkey\n");
+    }
+    g_monkey = false;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+

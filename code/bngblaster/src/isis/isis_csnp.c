@@ -11,30 +11,31 @@
 uint64_t g_csnp_scan = 0;
 
 void
-isis_csnp_job(timer_s *timer) {
-    isis_adjacency_t *adjacency = timer->data;
-    isis_instance_t *instance = adjacency->instance;
-    isis_config_t *config = instance->config;
+isis_csnp_job(timer_s *timer)
+{
+    isis_adjacency_s *adjacency = timer->data;
+    isis_instance_s *instance = adjacency->instance;
+    isis_config_s *config = instance->config;
 
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
-    isis_lsp_t *lsp;
+    isis_lsp_s *lsp;
     hb_tree *lsdb;
     hb_itor *itor;
     bool next;
 
     int entries = 0;
 
-    isis_pdu_t pdu = {0};
+    isis_pdu_s pdu = {0};
     uint8_t level = adjacency->level;
     uint16_t remaining_lifetime;
 
-    isis_tlv_t *tlv;
-    isis_lsp_entry_t *entry;
+    isis_tlv_s *tlv;
+    isis_lsp_entry_s *entry;
 
-    bbl_ethernet_header_t eth = {0};
-    bbl_isis_t isis = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_isis_s isis = {0};
 
     struct timespec now;
     struct timespec ago;
@@ -70,10 +71,10 @@ isis_csnp_job(timer_s *timer) {
         next = hb_itor_first(itor);
     }
     adjacency->csnp_start = 0;
-    tlv = (isis_tlv_t *)PDU_CURSOR(&pdu);
+    tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
     tlv->type = ISIS_TLV_LSP_ENTRIES;
     tlv->len = 0;
-    PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_t));
+    PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
     while(next) {
         lsp = *hb_itor_datum(itor);
 
@@ -84,14 +85,14 @@ isis_csnp_job(timer_s *timer) {
 
             if(tlv->len > UINT8_MAX-ISIS_LSP_ENTRY_LEN) {
                 /* Open next LSP entry TLV */
-                if(pdu.pdu_len+sizeof(isis_tlv_t)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
+                if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
                     adjacency->csnp_start = lsp->id;
                     break;
                 }
-                tlv = (isis_tlv_t *)PDU_CURSOR(&pdu);
+                tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
                 tlv->type = ISIS_TLV_LSP_ENTRIES;
                 tlv->len = 0;
-                PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_t));
+                PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
             } else {
                 if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
                     /* All entries do not fit into single CSNP. */
@@ -99,13 +100,13 @@ isis_csnp_job(timer_s *timer) {
                     break;
                 }
             }
-            tlv->len+=sizeof(isis_lsp_entry_t);
-            entry = (isis_lsp_entry_t *)PDU_CURSOR(&pdu);
+            tlv->len+=sizeof(isis_lsp_entry_s);
+            entry = (isis_lsp_entry_s *)PDU_CURSOR(&pdu);
             entry->lifetime = htobe16(remaining_lifetime);
             entry->lsp_id = htobe64(lsp->id);
             entry->seq = htobe32(lsp->seq);
             entry->checksum = *(uint16_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
-            PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_t));
+            PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
             entries++;
         }
         next = hb_itor_next(itor);
@@ -119,8 +120,7 @@ isis_csnp_job(timer_s *timer) {
          * therefore remember where we stopped and send next CSNP 
          * fragment in 10ms ... */
         *(uint64_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_CSNP_LSP_END) = htobe64(adjacency->csnp_start++);
-        timer_add(&adjacency->interface->ctx->timer_root, 
-                  &adjacency->timer_csnp_next, 
+        timer_add(&g_ctx->timer_root, &adjacency->timer_csnp_next, 
                   "ISIS CSNP", 
                    0, 10 * MSEC, adjacency,
                    &isis_csnp_job);
@@ -145,9 +145,9 @@ isis_csnp_job(timer_s *timer) {
     }
     isis.pdu = pdu.pdu;
     isis.pdu_len = pdu.pdu_len;
-    if(bbl_send_to_buffer(adjacency->interface, &eth) == BBL_SEND_OK) {
+    if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) == BBL_TXQ_OK) {
         LOG(DEBUG, "ISIS TX %s on interface %s\n",
-            isis_pdu_type_string(isis.type), adjacency->interface->name);
+            isis_pdu_sype_string(isis.type), adjacency->interface->name);
         adjacency->stats.csnp_tx++;
         /* Clear PSNP tree after CSNP was send */
         hb_tree_clear(adjacency->psnp_tree, isis_psnp_free);
@@ -165,18 +165,18 @@ isis_csnp_job(timer_s *timer) {
  * @param level ISIS level
  */
 void
-isis_csnp_handler_rx(bbl_interface_s *interface, isis_pdu_t *pdu, uint8_t level) {
-
-    isis_adjacency_t *adjacency = interface->isis_adjacency[level-1];
-    isis_instance_t  *instance  = NULL;
-    isis_config_t    *config    = NULL;
+isis_csnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level)
+{
+    isis_adjacency_s *adjacency = interface->isis_adjacency[level-1];
+    isis_instance_s *instance = NULL;
+    isis_config_s *config = NULL;
 
     uint64_t csnp_scan = ++g_csnp_scan;
 
     uint64_t lsp_start;
     uint64_t lsp_end;
 
-    isis_lsp_t *lsp;
+    isis_lsp_s *lsp;
     hb_tree *lsdb;
     hb_itor *itor;
     bool next;

@@ -11,9 +11,9 @@
 #define __BBL_TX_H__
 
 void
-bbl_arp_timeout (timer_s *timer);
+bbl_arp_simeout(timer_s *timer);
 
 protocol_error_t
-bbl_tx (bbl_ctx_s *ctx, bbl_interface_s *interface, uint8_t *buf, uint16_t *len);
+bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len);
 
 #endif

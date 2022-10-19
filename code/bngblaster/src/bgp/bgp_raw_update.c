@@ -8,9 +8,10 @@
  */
 #include "bgp.h"
 
-static bgp_raw_update_t *
-bgp_raw_update_load_file(const char *file, bool decode_file) {
-    bgp_raw_update_t *raw_update = NULL;
+static bgp_raw_update_s *
+bgp_raw_update_load_file(const char *file, bool decode_file)
+{
+    bgp_raw_update_s *raw_update = NULL;
     long fsize;
     double fsize_kb;
 
@@ -21,7 +22,7 @@ bgp_raw_update_load_file(const char *file, bool decode_file) {
 
     /* Open file */
     FILE *f = fopen(file, "rb");
-    if (f == NULL) {
+    if(f == NULL) {
         LOG(ERROR, "Failed to open BGP RAW update file %s\n", file);
         return NULL;
     } 
@@ -33,7 +34,7 @@ bgp_raw_update_load_file(const char *file, bool decode_file) {
     fseek(f, 0, SEEK_SET);
 
     /* Load file into memory */
-    raw_update = calloc(1, sizeof(bgp_raw_update_t));
+    raw_update = calloc(1, sizeof(bgp_raw_update_s));
     raw_update->file = strdup(file);
     raw_update->buf = malloc(fsize);
     raw_update->len = fsize;
@@ -89,26 +90,26 @@ ERROR:
 /**
  * bgp_raw_update_load 
  * 
- * @param ctx global context
  * @param file update file
  * @param decode_file decode/parse file content if true
  * @return BGP RAW update structure
  */
-bgp_raw_update_t *
-bgp_raw_update_load(bbl_ctx_s *ctx, const char *file, bool decode_file) {
-    bgp_raw_update_t *raw_update = ctx->bgp_raw_updates;
+bgp_raw_update_s *
+bgp_raw_update_load(const char *file, bool decode_file)
+{
+    bgp_raw_update_s *raw_update = g_ctx->bgp_raw_updates;
 
     /* Check if file is already loaded */
     while(raw_update){
-        if (strcmp(file, raw_update->file) == 0) {
+        if(strcmp(file, raw_update->file) == 0) {
             return raw_update;
         }
         raw_update = raw_update->next;
     }
     raw_update = bgp_raw_update_load_file(file, decode_file);
     if(raw_update) {
-        raw_update->next = ctx->bgp_raw_updates;
-        ctx->bgp_raw_updates = raw_update;
+        raw_update->next = g_ctx->bgp_raw_updates;
+        g_ctx->bgp_raw_updates = raw_update;
         return raw_update;
     } else {
         return NULL;

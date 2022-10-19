@@ -9,25 +9,15 @@
 #ifndef __BBL_STREAM_H__
 #define __BBL_STREAM_H__
 
-typedef enum {
-    STREAM_IPV4,    /* From/to framed IPv4 address */
-    STREAM_IPV6,    /* From/to framed IPv6 address */
-    STREAM_IPV6PD,  /* From/to delegated IPv6 address */
-} __attribute__ ((__packed__)) bbl_stream_type_t;
-
-typedef enum {
-    STREAM_DIRECTION_UP     = 1,
-    STREAM_DIRECTION_DOWN   = 2,
-    STREAM_DIRECTION_BOTH   = 3
-} __attribute__ ((__packed__)) bbl_stream_direction_t;
-
 typedef struct bbl_stream_config_
 {
     char *name;
     uint16_t stream_group_id;
 
-    bbl_stream_type_t type;
-    bbl_stream_direction_t direction;
+    uint8_t type;
+    uint8_t direction;
+
+    bool session_traffic;
 
     double pps;
     uint32_t max_packets;
@@ -66,145 +56,153 @@ typedef struct bbl_stream_config_
     bool     rx_mpls2;
     uint32_t rx_mpls2_label;
 
-    bool threaded;
-    uint8_t thread_group;
+    bbl_stream_config_s *next; /* Next stream config */
+} bbl_stream_config_s;
 
-    bbl_stream_config *next; /* Next stream config */
-} bbl_stream_config;
+typedef struct bbl_stream_group_
+{
+    uint32_t count;
+    bbl_stream_s *head;
+    struct timer_ *timer;
+    bbl_stream_group_s *next;
+} bbl_stream_group_s;
 
 typedef struct bbl_stream_
 {
     uint64_t flow_id;
     uint64_t flow_seq;
 
-    struct timer_ *timer;
-    struct timer_ *timer_rate;
+    uint8_t type;
+    uint8_t sub_type;
+    uint8_t direction;
 
-    bbl_stream_config *config;
-    bbl_stream_direction_t direction;
+    bbl_stream_config_s *config;
 
-    bbl_interface_s *interface;
+    bbl_stream_group_s *group;
+    bbl_stream_s *group_next; /* Next stream of same group */
+
     bbl_session_s *session;
+    bbl_stream_s *session_next; /* Next stream of same session */
+    endpoint_state_t *endpoint;
 
-    uint8_t *buf;
-    uint16_t tx_len;
+    io_handle_s *io;
+
+    bbl_access_interface_s *access_interface;
+    bbl_network_interface_s *network_interface;
+    bbl_a10nsp_interface_s *a10nsp_interface;
+
+    struct timer_ *tx_timer;
+    bbl_interface_s *tx_interface; /* TX interface */
+    uint8_t *tx_buf; /* TX buffer */
+    uint16_t tx_len; /* TX length */
+    uint64_t tx_interval; /* TX interval in nsec */
+
+    bool threaded;
+    bool session_traffic;
+    bool verified;
+    bool wait;
+    bool stop;
+    bool reset;
+    bool lag;
+
+    struct timespec wait_start;
+
+    CIRCLEQ_ENTRY(bbl_stream_) tx_qnode;
+    uint32_t token_bucket;
+    uint32_t token_burst;
+
+    uint64_t lag_select;
+
+    uint64_t tx_packets;
+
+    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+
+    uint64_t rx_packets;
+    uint64_t rx_loss;
+    uint64_t rx_wrong_session;
+
+    uint64_t rx_min_delay_ns;
+    uint64_t rx_max_delay_ns;
+
     uint16_t rx_len;
     uint64_t rx_first_seq;
     uint64_t rx_last_seq;
 
-    uint64_t tx_interval; /* TX interval in nsec */
-    uint64_t send_window_packets;
-    struct timespec send_window_start;
-
-    struct timespec wait_start;
-    bool wait;
-    bool stop;
-
-    uint8_t rx_priority; /* IPv4 TOS or IPv6 TC */
-    uint8_t rx_outer_vlan_pbit;
-    uint8_t rx_inner_vlan_pbit;
-
-    uint64_t packets_tx;
-    uint64_t packets_rx;
-    uint64_t packets_tx_last_sync;
-    uint64_t packets_rx_last_sync;
-
-    uint64_t loss;
-
-    uint64_t min_delay_ns;
-    uint64_t max_delay_ns;
+    uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
+    uint8_t  rx_outer_vlan_pbit;
+    uint8_t  rx_inner_vlan_pbit;
 
     bool     rx_mpls1;
-    uint32_t rx_mpls1_label;
     uint8_t  rx_mpls1_exp;
     uint8_t  rx_mpls1_ttl;
+    uint32_t rx_mpls1_label;
 
     bool     rx_mpls2;
-    uint32_t rx_mpls2_label;
     uint8_t  rx_mpls2_exp;
     uint8_t  rx_mpls2_ttl;
+    uint32_t rx_mpls2_label;
+
+    bbl_access_interface_s *rx_access_interface;
+    bbl_network_interface_s *rx_network_interface;
+    bbl_a10nsp_interface_s *rx_a10nsp_interface;
+
+    char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+
+    uint64_t last_sync_packets_tx;
+    uint64_t last_sync_packets_rx;
+    uint64_t last_sync_loss;
+    uint64_t last_sync_wrong_session;
+
+    uint64_t reset_packets_tx;
+    uint64_t reset_packets_rx;
+    uint64_t reset_loss;
+    uint64_t reset_wrong_session;
 
     bbl_rate_s rate_packets_tx;
     bbl_rate_s rate_packets_rx;
 
-    bbl_stream *next; /* Next stream of same session */
-
-    /* Attributes used for threaded streams only! */
-    struct {
-        bbl_stream_thread *thread;
-        bbl_stream *next; /* Next stream in same thread */
-        pthread_mutex_t mutex;
-        bool can_send;
-    } thread;
-} bbl_stream;
-
-/* Structure for traffic stream threads
- * with one or more streams. */
-typedef struct bbl_stream_thread_
-{
-    /* The thread-group allows to assign
-     * multiple streams to one thread. The
-     * group zero has the special meaning of
-     * one thread per stream. */
-    uint8_t thread_group;
-    pthread_t thread_id;
-    pthread_mutex_t mutex;
-
-    /* True if thread is active! */
-    bool active;
-
-    /* Root for thread local timers */
-    struct timer_root_ timer_root;
-
-    /* Timer for synchronice job of thread
-     * counters with main counters. */
-    struct timer_ *sync_timer;
-
-    /* TX interface */
-    bbl_interface_s *interface;
-
-    /* TX interface file RAW socket */
-    struct {
-        int fd_tx;
-        struct sockaddr_ll addr;
-    } socket;
-
-    uint32_t stream_count; /* Number of streams in group */
-    bbl_stream *stream; /* First stream in group */
-    bbl_stream *stream_tail; /* Last stream in group */
-
-    /* Thread counters ... */
-
-    uint64_t packets_tx;
-    uint64_t packets_tx_last_sync;
-    uint64_t bytes_tx;
-    uint64_t bytes_tx_last_sync;
-
-    uint64_t sendto_failed;
-    uint64_t sendto_failed_last_sync;
-
-    void *next; /* Next stream thread */
-} bbl_stream_thread;
-
-void
-bbl_stream_delay(bbl_stream *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp);
+} bbl_stream_s;
 
 bool
-bbl_stream_add(bbl_ctx_s *ctx, bbl_access_config_s *access_config, bbl_session_s *session);
+bbl_stream_session_init(bbl_session_s *session);
 
 bool
-bbl_stream_raw_add(bbl_ctx_s *ctx);
-
-bool
-bbl_stream_start_threads(bbl_ctx_s *ctx);
+bbl_stream_init();
 
 void
-bbl_stream_stop_threads(bbl_ctx_s *ctx);
+bbl_stream_final();
+
+protocol_error_t
+bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len);
+
+bbl_stream_s *
+bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session);
 
 void
-bbl_stream_tx_job(timer_s *timer);
+bbl_stream_reset(bbl_stream_s *stream);
 
 json_t *
-bbl_stream_json(bbl_stream *stream);
+bbl_stream_json(bbl_stream_s *stream);
+
+int
+bbl_stream_ctrl_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+bbl_stream_ctrl_summary(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

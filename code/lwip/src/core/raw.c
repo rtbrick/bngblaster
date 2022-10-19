@@ -146,7 +146,7 @@ raw_input(struct pbuf *p, struct netif *inp)
   if (IP_HDR_GET_VERSION(p->payload) == 6)
 #endif /* LWIP_IPV4 */
   {
-    struct ip6_hdr *ip6hdr = (struct ip6_hdr *)p->payload;
+    struct lwip_ip6_hdr *ip6hdr = (struct lwip_ip6_hdr *)p->payload;
     proto = IP6H_NEXTH(ip6hdr);
   }
 #if LWIP_IPV4
