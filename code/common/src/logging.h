@@ -25,8 +25,6 @@ enum {
     NORMAL,
     DEBUG,
     IGMP,
-    TIMER,
-    TIMER_DETAIL,
     IO,
     CTRL,
     PPPOE,
@@ -43,6 +41,9 @@ enum {
     LSDB,
     LSP,
     LAG,
+    DPDK,
+    TIMER,
+    TIMER_DETAIL,
     LOG_ID_MAX
 };
 

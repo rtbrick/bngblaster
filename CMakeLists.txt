@@ -13,6 +13,7 @@ message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
 option(BNGBLASTER_DPDK "Build with dpdk support" OFF)
+option(BNGBLASTER_TIMER_LOGGING "Build with timer logging support" OFF)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
@@ -23,6 +24,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 else()
     message("Release Build")
     set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if (BNGBLASTER_TIMER_LOGGING)
+    add_definitions(-DBNGBLASTER_TIMER_LOGGING)
 endif()
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
