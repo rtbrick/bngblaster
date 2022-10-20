@@ -409,6 +409,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 #if BNGBLASTER_DPDK
         } else if(strcmp(s, "dpdk") == 0) {
             link_config->io_mode = IO_MODE_DPDK;
+            g_ctx->dpdk = true;
 #endif
         } else {
             fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
