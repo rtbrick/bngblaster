@@ -56,7 +56,7 @@ struct __attribute__((__packed__)) log_id_
 #ifdef NCURSES_ENABLED
 extern bool g_interactive; /* interactive mode using ncurses */
 
-#define LOG_BUF_STR_LEN 256
+#define LOG_BUF_STR_LEN 1024
 #define LOG_BUF_LINES 128
 
 extern char *g_log_buf;
@@ -78,7 +78,7 @@ extern uint8_t g_log_buf_cur;
             if (log_id[log_id_].enable) { \
                 fprintf(stdout, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
                 if(g_log_buf) { \
-                    snprintf(g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN), LOG_BUF_STR_LEN, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                    snprintf((g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN)), (LOG_BUF_STR_LEN-1), "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
                     if(g_log_buf_cur >= LOG_BUF_LINES) { \
                         g_log_buf_cur = 0; \
                     } \
@@ -103,7 +103,7 @@ extern uint8_t g_log_buf_cur;
             if (log_id[log_id_].enable) { \
                 fprintf(stdout, "%s "fmt_, log_format_timestamp()); \
                 if(g_log_buf) { \
-                    snprintf(g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN), LOG_BUF_STR_LEN, "%s "fmt_, log_format_timestamp()); \
+                    snprintf((g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN)), (LOG_BUF_STR_LEN-1), "%s "fmt_, log_format_timestamp()); \
                     if(g_log_buf_cur >= LOG_BUF_LINES) { \
                         g_log_buf_cur = 0; \
                     } \
