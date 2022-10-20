@@ -18,6 +18,8 @@ typedef struct bbl_interface_
     uint32_t state_transitions; /* interface state transitions */
     uint32_t ifindex; /* interface index */
     uint32_t pcap_index; /* interface index for packet captures */
+    uint16_t portid; /* DPDK port identifier */
+
 
     bbl_link_config_s *config;
 
