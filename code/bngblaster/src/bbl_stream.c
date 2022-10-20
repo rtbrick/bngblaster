@@ -1588,11 +1588,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
                 LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (a10nsp) with %lf PPS\n", 
-                    config->name, network_interface->name, config->pps);
+                    config->name, a10nsp_interface->name, config->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s (downstream) added to %s (a10nsp) with %lf PPS\n", 
-                    config->name, network_interface->name, config->pps);
+                    config->name, a10nsp_interface->name, config->pps);
             }
         } else {
             LOG(ERROR, "Failed to add stream %s (downstream) because of missing interface\n", config->name);
