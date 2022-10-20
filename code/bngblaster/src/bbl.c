@@ -116,8 +116,6 @@ struct keyval_ log_names[] = {
     { PPPOE,         "pppoe" },
     { INFO,          "info" },
     { PCAP,          "pcap" },
-    { TIMER,         "timer" },
-    { TIMER_DETAIL,  "timer-detail" },
     { IP,            "ip" },
     { LOSS,          "loss" },
     { L2TP,          "l2tp" },
@@ -126,6 +124,11 @@ struct keyval_ log_names[] = {
     { BGP,           "bgp" },
     { TCP,           "tcp" },
     { LAG,           "lag" },
+    { DPDK,          "dpdk" },
+#ifdef BNGBLASTER_TIMER_LOGGING
+    { TIMER,         "timer" },
+    { TIMER_DETAIL,  "timer-detail" },
+#endif
     { 0, NULL}
 };
 
