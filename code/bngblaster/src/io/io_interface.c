@@ -169,6 +169,14 @@ io_interface_init(bbl_interface_s *interface)
 {
     bbl_link_config_s *config = interface->config;
 
+#ifdef BNGBLASTER_DPDK
+    if(config->io_mode == IO_MODE_DPDK) {
+        if(!io_dpdk_interface_init(interface)) {
+            return false;
+        }
+    }
+#endif
+
     if(config->io_mode != IO_MODE_DPDK) {
         if(!set_kernel_info(interface)) {
             return false;
@@ -176,19 +184,15 @@ io_interface_init(bbl_interface_s *interface)
         if(!set_promisc(interface)) {
             return false;
         }
-    }
-    if(*(uint32_t*)config->mac) {
-        memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
-    }
-
-    /* RX */
-    if(!io_interface_init_rx(interface)) {
-        return false;
-    }
-
-    /* TX */
-    if(!io_interface_init_tx(interface)) {
-        return false;
+        if(*(uint32_t*)config->mac) {
+            memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
+        }
+        if(!io_interface_init_rx(interface)) {
+            return false;
+        }
+        if(!io_interface_init_tx(interface)) {
+            return false;
+        }
     }
     return true;
 }
