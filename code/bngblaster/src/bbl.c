@@ -632,10 +632,13 @@ main(int argc, char *argv[])
     /* Cleanup resources. */
 CLEANUP:
     bbl_interface_unlock_all();
-    log_close();
     if(g_ctx->ctrl_socket_path) {
         bbl_ctrl_socket_close();
     }
+#ifdef BNGBLASTER_DPDK
+    io_dpdk_close();
+#endif
+    log_close();
     bbl_ctx_del();
     return exit_status;
 }
