@@ -31,7 +31,7 @@
 
 static struct rte_eth_conf port_conf = {
     .rxmode = {
-          .split_hdr_size = 0,
+        .split_hdr_size = 0,
     },
     .txmode = {
         .mq_mode = RTE_ETH_MQ_TX_NONE,
@@ -265,15 +265,15 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
     assert(io->direction == IO_INGRESS);
     assert(io->thread);
 
-    //struct timespec sleep, rem;
-    //sleep.tv_sec = 0;
-    //sleep.tv_nsec = 0;
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 0;
 
     while(thread->active) {
         nb_rx = rte_eth_rx_burst(portid, io->queue, pkts_burst, BURST_SIZE);
         if(nb_rx == 0) {
-            //sleep.tv_nsec = 10; /* 0.00001ms */
-            //nanosleep(&sleep, &rem);
+            sleep.tv_nsec = 10;
+            nanosleep(&sleep, &rem);
             continue;
         }
         /* Get RX timestamp */
@@ -441,6 +441,12 @@ io_dpdk_interface_init(bbl_interface_s *interface)
     if(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
         local_port_conf.txmode.offloads |= RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
     }
+
+    local_port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_RSS;
+    local_port_conf.rx_adv_conf.rss_conf.rss_hf =
+        (RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP) &
+        dev_info.flow_type_rss_offloads;
+
     ret = rte_eth_dev_configure(portid, nb_rx_queue, nb_tx_queue, &local_port_conf);
     if(ret < 0) {
         LOG(ERROR, "DPDK: failed to configure interface %s (error %d)\n",
