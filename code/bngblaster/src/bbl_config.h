@@ -140,6 +140,13 @@ typedef struct bbl_link_config_
     uint8_t tx_threads;
     uint8_t rx_threads;
 
+    uint16_t *tx_cpuset;
+    uint16_t  tx_cpuset_count;
+    uint16_t  tx_cpuset_cur;
+    uint16_t *rx_cpuset;
+    uint16_t  rx_cpuset_count;
+    uint16_t  rx_cpuset_cur;
+
     char *lag_interface;
     uint32_t lacp_priority;
 
