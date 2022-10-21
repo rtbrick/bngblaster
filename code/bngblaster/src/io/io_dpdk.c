@@ -10,9 +10,9 @@
  */
 #include "io.h"
 
-#ifndef BNGBLASTER_DPDK
-#define BNGBLASTER_DPDK 1
-#endif
+//#ifndef BNGBLASTER_DPDK
+//#define BNGBLASTER_DPDK 1
+//#endif
 
 #ifdef BNGBLASTER_DPDK
 
