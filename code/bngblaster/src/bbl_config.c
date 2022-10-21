@@ -1685,6 +1685,10 @@ json_parse_config(json_t *root, bbl_ctx_s *ctx) {
         if (json_is_boolean(value)) {
             ctx->config.send_multicast_traffic = json_boolean_value(value);
         }
+        value = json_object_get(section, "multicast-traffic-autostart");
+        if (json_is_boolean(value)) {
+            ctx->config.multicast_traffic_autostart = json_boolean_value(value);
+        }
         value = json_object_get(section, "multicast-traffic-length");
         if (json_is_number(value)) {
             ctx->config.multicast_traffic_len = json_number_value(value);
@@ -2280,5 +2284,6 @@ bbl_config_init_defaults (bbl_ctx_s *ctx) {
     ctx->config.igmp_zap_wait = true;
     ctx->config.igmp_robustness_interval = 1000;
     ctx->config.traffic_autostart = true;
+    ctx->config.multicast_traffic_autostart = true;
     ctx->config.session_traffic_autostart = true;
 }

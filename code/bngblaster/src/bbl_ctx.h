@@ -295,6 +295,7 @@ typedef struct bbl_ctx_
 
         /* Multicast Traffic */
         bool send_multicast_traffic;
+        bool multicast_traffic_autostart;
         uint8_t multicast_traffic_tos;
         uint16_t multicast_traffic_len;
         char *multicast_traffic_network_interface;
@@ -319,7 +320,7 @@ typedef struct bbl_ctx_
 } bbl_ctx_s;
 
 int
-bbl_compare_key32 (void *key1, void *key2);
+bbl_compare_key32(void *key1, void *key2);
 
 uint32_t
 bbl_key32_hash(const void* k);
