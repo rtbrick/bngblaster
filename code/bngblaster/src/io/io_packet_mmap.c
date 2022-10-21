@@ -303,6 +303,7 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
                 if(slot) {
                     io->buf_len = slot->packet_len;
                     memcpy(io->buf, slot->packet, slot->packet_len);
+                    bbl_txq_read_next(txq);
                 } else {
                     ctrl = false;
                     continue;
@@ -328,10 +329,6 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
             io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
             frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
-
-            if(slot) {
-                bbl_txq_read_next(txq);
-            }
         }
     }
 
