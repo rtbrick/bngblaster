@@ -52,6 +52,7 @@ typedef struct io_handle_ {
 #ifdef BNGBLASTER_DPDK
     struct rte_eth_dev_tx_buffer *tx_buffer;
     struct rte_mempool *mbuf_pool;
+    struct rte_mbuf *mbuf;
     uint16_t queue;
 #endif
 

@@ -10,9 +10,9 @@
  */
 #include "io.h"
 
-//#ifndef BNGBLASTER_DPDK
-//#define BNGBLASTER_DPDK 1
-//#endif
+#ifndef BNGBLASTER_DPDK
+#define BNGBLASTER_DPDK 1
+#endif
 
 #ifdef BNGBLASTER_DPDK
 
@@ -30,15 +30,13 @@
 #define BURST_SIZE 128
 
 static struct rte_eth_conf port_conf = {
-	.rxmode = {
-		.split_hdr_size = 0,
-	},
-	.txmode = {
-		.mq_mode = RTE_ETH_MQ_TX_NONE,
-	},
+    .rxmode = {
+          .split_hdr_size = 0,
+    },
+    .txmode = {
+        .mq_mode = RTE_ETH_MQ_TX_NONE,
+    },
 };
-
-struct rte_mempool *mbuf_pool;
 
 static bool
 io_dpdk_dev_info(uint16_t portid, struct rte_eth_dev_info *dev_info)
@@ -84,14 +82,6 @@ io_dpdk_init()
             dev_info.device->name, portid);
     }
 
-    mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL",
-        NUM_MBUFS * dpdk_ports, MBUF_CACHE_SIZE, 0,
-        RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-    if(!mbuf_pool) {
-        LOG(ERROR, "DPDK: failed to create mbuf pool\n");
-        return false;
-    }
-
     return true;
 }
 
@@ -99,7 +89,6 @@ void
 io_dpdk_close()
 {
     if(g_ctx->dpdk) {
-        LOG_NOARG(DPDK, "DPDK: clean up the EAL\n");
         rte_eal_cleanup();
     }
 }
@@ -115,7 +104,7 @@ io_dpdk_rx_job(timer_s *timer)
 
     bbl_ethernet_header_s *eth;
 
-    struct rte_mbuf *pkts_burst[BURST_SIZE];
+    struct rte_mbuf *packet_burst[BURST_SIZE];
 	struct rte_mbuf *packet;
     uint16_t nb_rx;
     uint16_t i;
@@ -129,34 +118,62 @@ io_dpdk_rx_job(timer_s *timer)
 
     /* Get RX timestamp */
     clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-    nb_rx = rte_eth_rx_burst(interface->portid, io->queue, pkts_burst, BURST_SIZE);
-    for(i = 0; i < nb_rx; i++) {
-        packet = pkts_burst[i];
-        io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
-        io->buf_len = packet->pkt_len;
-        io->stats.packets++;
-        io->stats.bytes += io->buf_len;
-        decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
-        if(decode_result == PROTOCOL_SUCCESS) {
-            /* Copy RX timestamp */
-            eth->timestamp.tv_sec = io->timestamp.tv_sec;
-            eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
-            bbl_rx_handler(interface, eth);
-        } else if(decode_result == UNKNOWN_PROTOCOL) {
-            io->stats.unknown++;
-        } else {
-            io->stats.protocol_errors++;
+    while(true) {
+        nb_rx = rte_eth_rx_burst(interface->portid, io->queue, packet_burst, BURST_SIZE);
+        if(nb_rx == 0) {
+            break;
         }
-        /* Dump the packet into pcap file */
-        if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
-            pcap = true;
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+        for(i = 0; i < nb_rx; i++) {
+            packet = packet_burst[i];
+            io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
+            io->buf_len = packet->pkt_len;
+            io->stats.packets++;
+            io->stats.bytes += io->buf_len;
+            decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
+            if(decode_result == PROTOCOL_SUCCESS) {
+                /* Copy RX timestamp */
+                eth->timestamp.tv_sec = io->timestamp.tv_sec;
+                eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
+                bbl_rx_handler(interface, eth);
+            } else if(decode_result == UNKNOWN_PROTOCOL) {
+                io->stats.unknown++;
+            } else {
+                io->stats.protocol_errors++;
+            }
+            /* Dump the packet into pcap file */
+            if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                        interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+            }
+            rte_pktmbuf_free(packet);
         }
     }
     if(pcap) {
         pcapng_fflush();
     }
+}
+
+static bool
+io_dpdk_mbuf_alloc(io_handle_s *io)
+{
+    struct rte_mbuf *mbuf = rte_pktmbuf_alloc(io->mbuf_pool);
+    if(!mbuf) {
+        io->stats.no_buffer++;
+        return false;
+    }
+    if (rte_pktmbuf_append(mbuf, 2048) == NULL) {
+        rte_pktmbuf_free(mbuf);
+        io->stats.no_buffer++;
+        return false;
+    }
+    mbuf->data_len = 0;
+    mbuf->next = NULL;
+    
+    io->mbuf = mbuf;
+    io->buf = rte_pktmbuf_mtod(mbuf, uint8_t *);
+    io->buf_len = 0;
+    return true;
 }
 
 /*
@@ -166,12 +183,77 @@ void
 io_dpdk_tx_job(timer_s *timer)
 {
     io_handle_s *io = timer->data;
+    bbl_interface_s *interface = io->interface;
+
+    uint32_t stream_packets = 0;
+    bool ctrl = true;
+    bool pcap = false;
 
     assert(io->mode == IO_MODE_DPDK);
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
     io_update_stream_token_bucket(io);
+
+    /* Get TX timestamp */
+    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    while(true) {
+        /* If sendto fails, the failed packet remains in TX buffer to be retried
+         * in the next interval. */
+        if(io->buf_len) {
+            if(packet_is_bbl(io->buf, io->buf_len)) {
+                /* Update timestamp if BBL traffic is retried. */
+                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
+                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
+            }
+        } else {
+            if(!io->mbuf) {
+                if(!io_dpdk_mbuf_alloc(io)) {
+                    break;
+                }
+            }
+            if(ctrl) {
+                /* First send all control traffic which has higher priority. */
+                if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                    io->buf_len = 0;
+                    ctrl = false;
+                    continue;
+                }
+            } else {
+                /* Send traffic streams up to allowed burst. */
+                if(++stream_packets > io->stream_burst) {
+                    break;
+                }
+                if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                    break;
+                }
+            }
+        }
+        io->mbuf->data_len = io->buf_len;
+        /* Transmit the packet. */
+        if(rte_eth_tx_burst(interface->portid, io->queue, &io->mbuf, 1) == 0) {
+            /* This packet will be retried next interval 
+             * because io->buf_len is not reset to zero. */
+            if(pcap) {
+                pcapng_fflush();
+            }
+            return;
+        }
+        /* Dump the packet into pcap file. */
+        if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
+            pcap = true;
+            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+        }
+        io->stats.packets++;
+        io->stats.bytes += io->buf_len;
+        io->mbuf = NULL;
+        io->buf = 0;
+        io->buf_len = 0;
+    }
+    if(pcap) {
+        pcapng_fflush();
+    }
 }
 
 void
@@ -210,6 +292,7 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
             io->buf_len = packet->pkt_len;
             /* Process packet */
             io_thread_rx_handler(thread, io);
+            rte_pktmbuf_free(packet);
         }
     }
 }
@@ -222,12 +305,92 @@ io_dpdk_thread_tx_job(timer_s *timer)
 {
     io_thread_s *thread = timer->data;
     io_handle_s *io = thread->io;
+    bbl_interface_s *interface = io->interface;
+
+    bbl_txq_s *txq = thread->txq;
+    bbl_txq_slot_t *slot;
+
+    uint32_t stream_packets = 0;
+    bool ctrl = true;
 
     assert(io->mode == IO_MODE_DPDK);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
     io_update_stream_token_bucket(io);
+
+    while(true) {
+        /* If sendto fails, the failed packet remains in TX buffer to be retried
+         * in the next interval. */
+        if(io->buf_len) {
+            if(packet_is_bbl(io->buf, io->buf_len)) {
+                /* Update timestamp if BBL traffic is retried. */
+                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
+                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
+            }
+        } else {
+            if(!io->mbuf) {
+                if(!io_dpdk_mbuf_alloc(io)) {
+                    break;
+                }
+            }
+            if(ctrl) {
+                /* First send all control traffic which has higher priority. */
+                slot = bbl_txq_read_slot(txq);
+                if(slot) {
+                    io->buf_len = slot->packet_len;
+                    memcpy(io->buf, slot->packet, slot->packet_len);
+                    bbl_txq_read_next(txq);
+                } else {
+                    ctrl = false;
+                    continue;
+                }
+            } else {
+                /* Send traffic streams up to allowed burst. */
+                if(++stream_packets > io->stream_burst) {
+                    break;
+                }
+                if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                    break;
+                }
+            }
+        }
+        io->mbuf->data_len = io->buf_len;
+        /* Transmit the packet. */
+        if(rte_eth_tx_burst(interface->portid, io->queue, &io->mbuf, 1) == 0) {
+            /* This packet will be retried next interval 
+             * because io->buf_len is not reset to zero. */
+            return;
+        }
+        io->stats.packets++;
+        io->stats.bytes += io->buf_len;
+        io->mbuf = NULL;
+        io->buf = 0;
+        io->buf_len = 0;
+    }
+}
+
+struct rte_mempool *
+io_dpdk_create_mbuf_pool()
+{
+    struct rte_mempool *mbuf_pool;
+    char buf[16] = {0};
+    char *name;
+    static uint16_t id = 0;
+
+    snprintf(buf, sizeof(buf), "MBUF_POOL_%u", ++id);
+    name = strdup(buf);
+    if(!name) return NULL; /* very unlikely... */
+
+    mbuf_pool = rte_pktmbuf_pool_create(name,
+            NUM_MBUFS, MBUF_CACHE_SIZE, 0,
+            RTE_MBUF_DEFAULT_BUF_SIZE, 
+            rte_socket_id());
+    if(!mbuf_pool) {
+        free(name);
+        return NULL;
+    }
+    return mbuf_pool;
 }
 
 bool
@@ -319,21 +482,18 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                 config->rx_interval, io, &io_dpdk_rx_job);
         }
         io->queue = queue;
-#if 0
-        io->mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL",
-            NUM_MBUFS, MBUF_CACHE_SIZE, 0,
-            RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+        io->mbuf_pool = io_dpdk_create_mbuf_pool();
         if(!io->mbuf_pool) {
-            LOG(ERROR, "DPDK: failed to create mbuf pool for interface %s queue %u (error %d)\n",
-                interface->name, queue, ret);
+            LOG(ERROR, "DPDK: failed to create mbuf pool for interface %s queue %u\n",
+                interface->name, queue);
             return false;
         }
-#endif
+
         rx_conf = dev_info.default_rxconf;
         rx_conf.offloads = local_port_conf.rxmode.offloads;
         ret = rte_eth_rx_queue_setup(portid, queue, config->io_slots_rx,
                                      rte_eth_dev_socket_id(portid), 
-                                     &rx_conf, mbuf_pool);
+                                     &rx_conf, io->mbuf_pool);
         if(ret < 0) {
             LOG(ERROR, "DPDK: failed to setup RX queue %u for interface %s (error %d)\n",
                 queue, interface->name, ret);
@@ -365,12 +525,19 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                 config->tx_interval, io, &io_dpdk_tx_job);
             interface->io.tx_job->reset = false;
         }
+        io->queue = queue;
+        io->mbuf_pool = io_dpdk_create_mbuf_pool();
+        if(!io->mbuf_pool) {
+            LOG(ERROR, "DPDK: failed to create mbuf pool for interface %s queue %u\n",
+                interface->name, queue);
+            return false;
+        }
 
         tx_conf = dev_info.default_txconf;
         tx_conf.offloads = local_port_conf.txmode.offloads;
         ret = rte_eth_tx_queue_setup(portid, queue, config->io_slots_tx,
-                                    rte_eth_dev_socket_id(portid),
-                                    &tx_conf);
+                                     rte_eth_dev_socket_id(portid),
+                                     &tx_conf);
         if(ret < 0) {
             LOG(ERROR, "DPDK: failed to setup TX queue %u for interface %s (error %d)\n",
                 queue, interface->name, ret);
