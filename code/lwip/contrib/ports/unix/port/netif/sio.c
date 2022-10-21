@@ -2,8 +2,9 @@
 
 /* to get rid of implicit function declarations */
 #define _XOPEN_SOURCE 600
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-
+#endif
 /* build with Darwin C extensions not part of POSIX, i.e. FASYNC, SIGIO.
    we can't use LWIP_UNIX_MACH because extensions need to be turned
    on before any system headers (which are pulled in through cc.h)

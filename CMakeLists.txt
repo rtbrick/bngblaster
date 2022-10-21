@@ -17,6 +17,8 @@ option(BNGBLASTER_TIMER_LOGGING "Build with timer logging support" OFF)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
+add_definitions(-D_GNU_SOURCE)
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message("Debug Build")
     set(CMAKE_BUILD_TYPE Debug)
