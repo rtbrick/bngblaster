@@ -278,6 +278,24 @@ io_thread_init(io_handle_s *io)
                            0, config->tx_interval, 
                            interface, &io_thread_main_tx_job);
     }
+
+    /* Set CPU affinity */
+    if(io->direction == IO_INGRESS && config->rx_cpuset_count) {
+        thread->set_cpu_affinity = true;
+        CPU_ZERO(&thread->cpuset);
+        CPU_SET(config->rx_cpuset[config->rx_cpuset_cur++], &thread->cpuset);
+        if(config->rx_cpuset_cur >= config->rx_cpuset_count) {
+            config->rx_cpuset_cur = 0;
+        }
+    }
+    if(io->direction == IO_EGRESS && config->tx_cpuset_count) {
+        thread->set_cpu_affinity = true;
+        CPU_ZERO(&thread->cpuset);
+        CPU_SET(config->tx_cpuset[config->tx_cpuset_cur++], &thread->cpuset);
+        if(config->tx_cpuset_cur >= config->tx_cpuset_count) {
+            config->tx_cpuset_cur = 0;
+        }
+    }
     return true;
 }
 
@@ -293,6 +311,13 @@ io_thread_start_all()
         thread->active = true;
         timer_smear_all_buckets(&thread->timer.root);
         pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
+        if(thread->set_cpu_affinity) {
+            if(pthread_setaffinity_np(thread->thread, sizeof(cpu_set_t), &thread->cpuset)) {
+                LOG_NOARG(ERROR, "Failed to set thread CPU affinity\n");
+                return;
+            }
+        }
+
         nanosleep(&sleep, &rem);
         thread = thread->next;
     }

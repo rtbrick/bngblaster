@@ -15,7 +15,9 @@
 #define NCURSES_NOMACROS    1
 #include <curses.h>
 #include <jansson.h>
+#include <sched.h>
 #include <pthread.h>
+
 #include <stdatomic.h>
 #include <common_include.h>
 

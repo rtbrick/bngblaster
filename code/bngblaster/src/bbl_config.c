@@ -370,8 +370,9 @@ link_add(char *interface_name)
 static bool
 json_parse_link(json_t *link, bbl_link_config_s *link_config)
 {
-    json_t *value = NULL;
+    json_t *value, *sub = NULL;
     char *s = NULL;
+    int i, size;
 
     if(json_unpack(link, "{s:s}", "interface", &s) == 0) {
         if(link_present(s) || lag_present(s)) {
@@ -463,6 +464,50 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->rx_threads = json_number_value(value);
     } else {
         link_config->rx_threads = g_ctx->config.rx_threads;
+    }
+
+    value = json_object_get(link, "rx-cpuset");
+    if(json_is_array(value)) {
+        size = json_array_size(value);
+        link_config->rx_cpuset_cur = 0;
+        link_config->rx_cpuset_count = size;
+        link_config->rx_cpuset = calloc(size, sizeof(uint16_t));
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(value, i);
+            if(json_is_number(sub)) {
+                link_config->rx_cpuset[i] = json_number_value(sub);
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
+                return false;
+            }
+        }
+    } else if(json_is_number(value)) {
+        link_config->rx_cpuset = calloc(1, sizeof(uint16_t));
+        link_config->rx_cpuset[0] = json_number_value(value);
+        link_config->rx_cpuset_count = 1;
+        link_config->rx_cpuset_cur = 0;
+    }
+
+    value = json_object_get(link, "tx-cpuset");
+    if(json_is_array(value)) {
+        size = json_array_size(value);
+        link_config->tx_cpuset_cur = 0;
+        link_config->tx_cpuset_count = size;
+        link_config->tx_cpuset = calloc(size, sizeof(uint16_t));
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(value, i);
+            if(json_is_number(sub)) {
+                link_config->tx_cpuset[i] = json_number_value(sub);
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for links->tx-cpuset\n");
+                return false;
+            }
+        }
+    } else if(json_is_number(value)) {
+        link_config->tx_cpuset = calloc(1, sizeof(uint16_t));
+        link_config->tx_cpuset[0] = json_number_value(value);
+        link_config->tx_cpuset_count = 1;
+        link_config->tx_cpuset_cur = 0;
     }
 
     /* Link Aggregation Group (LAG) Configuration */

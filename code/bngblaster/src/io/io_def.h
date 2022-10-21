@@ -99,6 +99,9 @@ typedef struct io_thread_ {
     pthread_mutex_t mutex;
     volatile bool active;
     volatile bool stopped;
+    
+    bool set_cpu_affinity;
+    cpu_set_t cpuset;
 
     io_thread_cb_fn setup_fn;
     io_thread_cb_fn run_fn;

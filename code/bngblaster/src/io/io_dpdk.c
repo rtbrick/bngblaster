@@ -25,9 +25,9 @@
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 
-#define NUM_MBUFS 8191
+#define NUM_MBUFS 4096
 #define MBUF_CACHE_SIZE 250
-#define BURST_SIZE 128
+#define BURST_SIZE 32
 
 static struct rte_eth_conf port_conf = {
     .rxmode = {
@@ -83,14 +83,6 @@ io_dpdk_init()
     }
 
     return true;
-}
-
-void
-io_dpdk_close()
-{
-    if(g_ctx->dpdk) {
-        rte_eal_cleanup();
-    }
 }
 
 /**
@@ -162,7 +154,7 @@ io_dpdk_mbuf_alloc(io_handle_s *io)
         io->stats.no_buffer++;
         return false;
     }
-    if (rte_pktmbuf_append(mbuf, 2048) == NULL) {
+    if(rte_pktmbuf_append(mbuf, 2048) == NULL) {
         rte_pktmbuf_free(mbuf);
         io->stats.no_buffer++;
         return false;
@@ -273,15 +265,15 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
     assert(io->direction == IO_INGRESS);
     assert(io->thread);
 
-    struct timespec sleep, rem;
-    sleep.tv_sec = 0;
-    sleep.tv_nsec = 0;
+    //struct timespec sleep, rem;
+    //sleep.tv_sec = 0;
+    //sleep.tv_nsec = 0;
 
     while(thread->active) {
         nb_rx = rte_eth_rx_burst(portid, io->queue, pkts_burst, BURST_SIZE);
         if(nb_rx == 0) {
-            sleep.tv_nsec = 1000; /* 0.001ms */
-            nanosleep(&sleep, &rem);
+            //sleep.tv_nsec = 10; /* 0.00001ms */
+            //nanosleep(&sleep, &rem);
             continue;
         }
         /* Get RX timestamp */
@@ -370,8 +362,8 @@ io_dpdk_thread_tx_job(timer_s *timer)
     }
 }
 
-struct rte_mempool *
-io_dpdk_create_mbuf_pool()
+bool
+io_dpdk_add_mbuf_pool(io_handle_s *io)
 {
     struct rte_mempool *mbuf_pool;
     char buf[16] = {0};
@@ -380,17 +372,18 @@ io_dpdk_create_mbuf_pool()
 
     snprintf(buf, sizeof(buf), "MBUF_POOL_%u", ++id);
     name = strdup(buf);
-    if(!name) return NULL; /* very unlikely... */
+    if(!name) return false; /* very unlikely... */
 
     mbuf_pool = rte_pktmbuf_pool_create(name,
             NUM_MBUFS, MBUF_CACHE_SIZE, 0,
             RTE_MBUF_DEFAULT_BUF_SIZE, 
-            rte_socket_id());
+            rte_eth_dev_socket_id(io->interface->portid));
     if(!mbuf_pool) {
         free(name);
-        return NULL;
+        return false;
     }
-    return mbuf_pool;
+    io->mbuf_pool = mbuf_pool;
+    return true;
 }
 
 bool
@@ -482,9 +475,8 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                 config->rx_interval, io, &io_dpdk_rx_job);
         }
         io->queue = queue;
-        io->mbuf_pool = io_dpdk_create_mbuf_pool();
-        if(!io->mbuf_pool) {
-            LOG(ERROR, "DPDK: failed to create mbuf pool for interface %s queue %u\n",
+        if(!io_dpdk_add_mbuf_pool(io)) {
+            LOG(ERROR, "DPDK: failed to create RX mbuf pool for interface %s queue %u\n",
                 interface->name, queue);
             return false;
         }
@@ -520,15 +512,15 @@ io_dpdk_interface_init(bbl_interface_s *interface)
             timer_add_periodic(&io->thread->timer.root, &io->thread->timer.io, "TX (threaded)", 0, 
                 config->tx_interval, io->thread, &io_dpdk_thread_tx_job);
             io->thread->timer.io->reset = false;
+            io->thread->set_cpu_affinity = true;
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->io.tx_job, "TX", 0, 
                 config->tx_interval, io, &io_dpdk_tx_job);
             interface->io.tx_job->reset = false;
         }
         io->queue = queue;
-        io->mbuf_pool = io_dpdk_create_mbuf_pool();
-        if(!io->mbuf_pool) {
-            LOG(ERROR, "DPDK: failed to create mbuf pool for interface %s queue %u\n",
+        if(!io_dpdk_add_mbuf_pool(io)) {
+            LOG(ERROR, "DPDK: failed to create TX mbuf pool for interface %s queue %u\n",
                 interface->name, queue);
             return false;
         }
