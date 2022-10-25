@@ -7,55 +7,18 @@ The BNG Blaster distinguishes between interface links and interface functions.
 An interface link can be considered as the actual interface with all the 
 corresponding IO settings. This is similar but not the same as physical interfaces
 in typical router implementations. One or more interface functions can be attached
-to those links, similar to logical interfaces. The BNG Blaster supports three types 
-of interface functions, ``network``, ``access``, and ``a10nsp``.
+to those links, similar to logical interfaces.
 
-All interfaces are optional but at least one interface is required to start 
-the BNG Blaster.
+At least one interface function is required to start the BNG Blaster.
 
-Interface Settings
-------------------
-
-The following configuration allows to overwrite the global default interface settings. 
-
-.. code-block:: json
-
-    {
-        "interfaces": {
-            "tx-interval": 0.1,
-            "rx-interval": 0.1,
-            "io-slots": 2048,
-        }
-    }
-
-
-.. include:: configuration/interfaces.rst
-
-The supported IO modes are listed with ``bngblaster -v`` but except
-``packet_mmap_raw`` all other modes are currently considered as experimental. In
-the default mode (``packet_mmap_raw``) all packets are received in a Packet MMAP
-ring buffer and send directly trough RAW packet sockets.
-
-The default ``tx-interval`` and ``rx-interval`` of ``1.0`` (1ms) allows precise timestamps 
-and high throughput. Those values can be further increased (e.g. ``0.1``) for higher throughput 
-or decreased (e.g. ``5.0``) for lower system load.
-
-It might be also needed to increase the ``io-slots`` from the default value of ``4096`` to 
-reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode. 
-For Packet MMAP it defines the maximum number of packets in the ring buffer.
-
-Links
------
-
-.. _links:
-
-.. include:: configuration/interfaces_links.rst
+Operating System Settings
+-------------------------
 
 The BNG Blaster implements all protocols in userspace. Therefore the user interfaces 
-must not have an IP address configured in the host operating system, to prevent the received 
-packets are handled by Kernel. 
+must not have an IP address configured in the host operating system, to prevent that 
+the received packets are handled or even responded by Linux kernel as well.
 
-All used interfaces must be in an operational state up.
+All used interface links must be in an operational state up.
 
 .. code-block:: none
 
@@ -69,9 +32,8 @@ Therefore the interface MTU should be increased using the following commands.
     
     sudo ip link set mtu 9000 dev <interface>
 
-
 This can be also archived via netplan using the following configuration for each BNG Blaster
-interface.
+interface link.
 
 .. code-block:: yaml
 
@@ -91,7 +53,7 @@ interface.
         mtu: 9000
 
 It might be also needed to increase the hardware and software queue size of your
-network interfaces for higher throughput. 
+network interface links for higher throughput. 
 
 The command ``ethtool -g <interface>`` shows the currently applied and maximum 
 hardware queue size.
@@ -111,7 +73,7 @@ hardware queue size.
     RX Jumbo:       0
     TX:             512
 
-The currently applied settings can be change with the following command: 
+The currently applied settings can be changed with the following command: 
 
 .. code-block:: none
 
@@ -123,17 +85,75 @@ You can even change the software queue size:
 
     sudo ip link set txqueuelen 4096 dev ens5f1
 
+Interface Settings
+------------------
+
+The following configuration allows to overwrite the global default interface link settings. 
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "tx-interval": 0.1,
+            "rx-interval": 0.1,
+            "io-slots": 2048,
+        }
+    }
+
+.. include:: configuration/interfaces.rst
+
+The supported IO modes are listed with ``bngblaster -v`` but except
+``packet_mmap_raw`` all other modes are currently considered as experimental. In
+the default mode (``packet_mmap_raw``) all packets are received in a Packet MMAP
+ring buffer and send directly trough RAW packet sockets.
+
+The default ``tx-interval`` and ``rx-interval`` of ``1.0`` (1ms) allows precise timestamps 
+and high throughput. Those values can be further increased (e.g. ``0.1``) for higher throughput 
+or decreased (e.g. ``5.0``) for lower system load.
+
+It might be also needed to increase the ``io-slots`` from the default value of ``4096`` to 
+reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode. 
+For Packet MMAP it defines the maximum number of packets in the ring buffer.
+
+Links
+~~~~~
+
+.. _links:
+
+The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions. 
+
+.. include:: configuration/interfaces_links.rst
+
+.. _lag-interface:
+
 Link Aggregation (LAG)
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. _lag:
 
+The BNG Blaster supports link aggregation (LAG) with and without 
+LACP. The created LAG interface can be used as link for all kinds
+of interface functions. 
+
 .. include:: configuration/interfaces_lag.rst
 
-Network Interfaces
-------------------
+.. note::
+
+    Multithreaded IO is not supported for LAG member interfaces!
+
+
+Interface Functions
+-------------------
+
+The BNG Blaster supports three types of interface functions, 
+``network``, ``access``, and ``a10nsp``.
 
 .. _network-interface:
+
+Network Interfaces
+~~~~~~~~~~~~~~~~~~
 
 The network interfaces are used for traffic and routing protocols. 
 
@@ -163,16 +183,16 @@ as shown in the example below.
             "network": [
                 {
                     "interface": "eth2",
-                    "address": "10.0.0.1",
+                    "address": "10.0.0.1/24",
                     "gateway": "10.0.0.2",
-                    "address-ipv6": "fc66:1337:7331::1",
+                    "address-ipv6": "fc66:1337:7331::1/64",
                     "gateway-ipv6": "fc66:1337:7331::2"
                 },
                 {
                     "interface": "eth3",
-                    "address": "10.0.1.1",
+                    "address": "10.0.1.1/24",
                     "gateway": "10.0.1.2",
-                    "address-ipv6": "fc66:1337:7331:1::1",
+                    "address-ipv6": "fc66:1337:7331:1::1/64",
                     "gateway-ipv6": "fc66:1337:7331:1::2"
                 }
             ],
@@ -184,10 +204,12 @@ to be used. If not explicitly configured one of the interface is selected
 automatically. Therefore, the configuration option ``network-interface`` 
 is supported in different sections.
 
-Access Interfaces
------------------
+It is also supported to have multiple VLAN tagged network interfaces on the same link.
 
 .. _access-interface:
+
+Access Interfaces
+~~~~~~~~~~~~~~~~~
 
 The access interfaces are used to emulate PPPoE and IPoE clients.
 
@@ -203,7 +225,7 @@ corresponding VLAN header.
 
 
 Untagged
-~~~~~~~~
+""""""""
 .. code-block:: json
 
     {
@@ -217,7 +239,7 @@ Untagged
     }
 
 Single Tagged
-~~~~~~~~~~~~~
+"""""""""""""
 .. code-block:: json
 
     {
@@ -232,7 +254,7 @@ Single Tagged
 
 
 Double Tagged
-~~~~~~~~~~~~~
+"""""""""""""
 .. code-block:: json
 
     {
@@ -246,7 +268,7 @@ Double Tagged
     }
 
 Triple Tagged
-~~~~~~~~~~~~~
+"""""""""""""
 .. code-block:: json
 
     {
@@ -338,15 +360,17 @@ This means that only VLAN min or max is considered as VLAN identifier.
         ]
     }
 
-A10NSP Interfaces
------------------
+The BNG Blaster supports access and network interface functions on the same
+interface link if both are tagged with disjoint VLAN ranges. 
 
 .. _a10nsp-interface:
 
-The A10NSP interface emulates an layer two provider interface. The term A10
-refers to the end-to-end ADSL network reference model from TR-025.
+A10NSP Interfaces
+~~~~~~~~~~~~~~~~~
 
-The A10NSP interface is required for :ref:`L2BSA <l2bsa>` tests.  
+The A10NSP interface function is required for :ref:`L2BSA <l2bsa>` tests and
+emulates an layer two provider interface. The term A10 refers to the end-to-end 
+ADSL network reference model from TR-025. 
 
 .. include:: configuration/interfaces_a10nsp.rst
 
@@ -374,5 +398,23 @@ as shown in the example below.
         }
     }
 
-You can define multiple interfaces with the same MAC
-address to emulate some static link aggregation (without LACP).
+.. note::
+
+    The A10NSP interface function can't reside on the same link with
+    with network or access interface functions!
+
+
+.. _dpdk-interface:
+
+DPDK
+----
+
+Using the experimental `DPDK <https://www.dpdk.org/>`_ support requires to build 
+the BNG Blaster from sources with `DPDK <https://www.dpdk.org/>`_ enabled as explained 
+in the corresponding :ref:`installation <install-dpdk>` section. 
+
+.. note::
+
+    The officially BNG Blaster debian release packages do not support 
+    `DPDK <https://www.dpdk.org/>`_!
+

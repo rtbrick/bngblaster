@@ -46,6 +46,12 @@
    * - `rx-threads`
      - Overwrite the number of RX threads per interface link
      - 
+   * - `tx-cpuset`
+     - Optionally pin TX threads to CPU cores (cpuset)
+     - 
+   * - `rx-cpuset`
+     - Optionally pin RX threads to CPU cores (cpuset)
+     - 
    * - `lag-interface`
      - Add interface link to LAG group
      - 

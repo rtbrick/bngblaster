@@ -140,6 +140,67 @@ The option `BNGBLASTER_TESTS` enables to build unit tests.
 
     Total Test time (real) =   0.00 sec
 
+.. _install-dpdk:
+
+Build with DPDK Support
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The following steps are required to build the BNG Blaster with experimental
+`DPDK <https://www.dpdk.org/>`_ support. 
+
+.. note::
+
+    Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!
+
+Download and Install DPDK:
+https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
+
+.. code-block:: none
+
+    # install meson 
+    sudo apt install meson ninja-build
+
+    # download DPDK
+    wget https://fast.dpdk.org/rel/dpdk-21.11.2.tar.xz
+    tar xJf dpdk-21.11.2.tar.xz
+    cd dpdk-stable-21.11.2
+
+    # build 
+    meson build 
+    cd build
+    ninja
+
+    # install 
+    sudo ninja install
+    sudo ldconfig
+
+Building BNG Blaster with DPDK support works as explained before but with 
+the additional cmake argument ``-DBNGBLASTER_DPDK=on``
+
+.. code-block:: none
+
+    cmake -DBNGBLASTER_DPDK=on ..
+
+If DPDK is installed correctly, cmake should show the following output: 
+
+.. code-block:: none
+
+    -- Build bngblaster with DPDK support
+    -- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2")
+    -- Checking for module 'libdpdk'
+    --   Found libdpdk, version 21.11.2
+    -- Found DPDK via pkg-config
+
+The installed version should now show `dpdk` as new IO mode. 
+
+.. code-block:: none
+
+    sudo bngblaster -v
+    Version: DEV
+    Compiler: GNU (11.2.0)
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
+
+
 Running BNG Blaster
 -------------------
 
