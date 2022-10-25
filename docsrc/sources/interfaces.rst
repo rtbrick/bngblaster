@@ -3,15 +3,20 @@
 Interfaces
 ==========
 
-The BNG Blaster supports three types of interfaces. 
+The BNG Blaster distinguishes between interface links and interface functions.
+An interface link can be considered as the actual interface with all the 
+corresponding IO settings. This is similar but not the same as physical interfaces
+in typical router implementations. One or more interface functions can be attached
+to those links, similar to logical interfaces. The BNG Blaster supports three types 
+of interface functions, ``network``, ``access``, and ``a10nsp``.
 
-All interfaces are optional but obviously at least
-one interface is required to start the BNG Blaster.
+All interfaces are optional but at least one interface is required to start 
+the BNG Blaster.
 
 Interface Settings
 ------------------
 
-The following settings are applied to all interfaces. 
+The following configuration allows to overwrite the global default interface settings. 
 
 .. code-block:: json
 
@@ -26,15 +31,25 @@ The following settings are applied to all interfaces.
 
 .. include:: configuration/interfaces.rst
 
-The ``tx-interval`` and ``rx-interval`` should be set to at to at least ``1.0`` (1ms)
-if more precise timestamps or high throughput is needed. This is recommended for IGMP 
-join/leave or QoS delay measurements. For higher packet rates (>1g) it might be needed to
-increase the ``io-slots`` from the default value of ``4096``.
-
 The supported IO modes are listed with ``bngblaster -v`` but except
 ``packet_mmap_raw`` all other modes are currently considered as experimental. In
 the default mode (``packet_mmap_raw``) all packets are received in a Packet MMAP
 ring buffer and send directly trough RAW packet sockets.
+
+The default ``tx-interval`` and ``rx-interval`` of ``1.0`` (1ms) allows precise timestamps 
+and high throughput. Those values can be further increased (e.g. ``0.1``) for higher throughput 
+or decreased (e.g. ``5.0``) for lower system load.
+
+It might be also needed to increase the ``io-slots`` from the default value of ``4096`` to 
+reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode. 
+For Packet MMAP it defines the maximum number of packets in the ring buffer.
+
+Links
+-----
+
+.. _links:
+
+.. include:: configuration/interfaces_links.rst
 
 The BNG Blaster implements all protocols in userspace. Therefore the user interfaces 
 must not have an IP address configured in the host operating system, to prevent the received 
@@ -75,9 +90,6 @@ interface.
         link-local: []
         mtu: 9000
 
-
-.. note:: The number of interfaces is currently limited to 32!
-
 It might be also needed to increase the hardware and software queue size of your
 network interfaces for higher throughput. 
 
@@ -111,13 +123,12 @@ You can even change the software queue size:
 
     sudo ip link set txqueuelen 4096 dev ens5f1
 
+Link Aggregation (LAG)
+----------------------
 
-.. note::
-    
-    Today all traffic is received in main thread, therefore 
-    the single thread performance of your CPU is the most 
-    significant performance factor. 
+.. _lag:
 
+.. include:: configuration/interfaces_lag.rst
 
 Network Interfaces
 ------------------

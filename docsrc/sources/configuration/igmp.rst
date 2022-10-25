@@ -46,12 +46,18 @@
    * - `send-multicast-traffic`
      - Generate multicast traffic
      - false
+   * - `multicast-traffic-autostart`
+     - Automatically start multicast traffic
+     - true
    * - `multicast-traffic-length`
      - Multicast traffic IP length
      - 76
    * - `multicast-traffic-tos`
      - Multicast traffic TOS priority
      - 0
+   * - `multicast-traffic-pps`
+     - Multicast traffic PPS per group
+     - 1000
    * - `network-interface`
      - Multicast traffic source interface
      - 
@@ -67,7 +73,10 @@ This option is applicable to IGMP version 3 only!
 If ``send-multicast-traffic`` is true, the BNG Blaster generates multicast 
 traffic on the network interface based on the specified group and source 
 attributes mentioned before. This traffic includes some special signatures 
-for faster processing and more detailed analysis.
+for faster processing and more detailed analysis. This traffic starts 
+automatically, which can be suppressed by setting ``multicast-traffic-autostart``
+to false. The length, TOS and packets per seconds (PPS) can be controlled
+with the corresponding options. 
 
 If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1 
 and group-count 3 the result are the following three groups (S.G) 

@@ -10,24 +10,27 @@
    * - Attribute
      - Description
      - Default
-   * - `tx-interval`
-     - TX ring polling interval in milliseconds
-     - 1.0
-   * - `rx-interval`
-     - RX ring polling interval in milliseconds
-     - 1.0
-   * - `qdisc-bypass`
-     - Bypass the kernel's qdisc layer
-     - true
    * - `io-mode`
      - IO mode
      - packet_mmap_raw
    * - `io-slots`
      - IO slots (ring size)
      - 4096
-   * - `io-stream-max-ppi`
-     - IO traffic stream max packets per interval
-     - 32
+   * - `qdisc-bypass`
+     - Bypass the kernel's qdisc layer
+     - true
+   * - `tx-interval`
+     - TX polling interval in milliseconds
+     - 1.0
+   * - `rx-interval`
+     - RX polling interval in milliseconds
+     - 1.0
+   * - `tx-threads`
+     - Number of TX threads per interface link
+     - 0 (main thread)
+   * - `rx-threads`
+     - Number of RX threads per interface link
+     - 0 (main thread)
    * - `capture-include-streams`
      - Include traffic streams in capture
      - true
