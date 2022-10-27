@@ -11,7 +11,7 @@
      - Description
      - Default
    * - `interface`
-     - Access interface name (e.g. eth0, ...)
+     - Parent interface link name (e.g. eth0, ...)
      - 
    * - `network-interface`
      - Select the corresponding network interface for this session
@@ -62,28 +62,28 @@
      - Static IPv4 gateway address iterator (IPoE only)
      - 
    * - `username`
-     - Overwrite the username from authentication section
+     - Overwrite the username from the authentication section
      - 
    * - `password`
-     - Overwrite the password from authentication section
+     - Overwrite the password from the authentication section
      - 
    * - `authentication-protocol`
-     - Overwrite the username from authentication section
+     - Overwrite the username from the authentication section
      - 
    * - `agent-circuit-id`
-     - Overwrite the agent-circuit-id from access-line section
+     - Overwrite the agent-circuit-id from the access-line section
      - 
    * - `agent-remote-id`
-     - Overwrite the agent-remote-id from access-line section
+     - Overwrite the agent-remote-id from the access-line section
      - 
    * - `rate-up`
-     - Overwrite the rate-up from access-line section
+     - Overwrite the rate-up from the access-line section
      - 
    * - `rate-down`
-     - Overwrite the rate-down from access-line section
+     - Overwrite the rate-down from the access-line section
      - 
    * - `dsl-type`
-     - Overwrite the dsl-type from access-line section
+     - Overwrite the dsl-type from the access-line section
      - 
    * - `ipcp`
      - De-/activate PPP IPCP

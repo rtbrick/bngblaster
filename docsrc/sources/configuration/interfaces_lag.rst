@@ -31,3 +31,7 @@
    * - `mac`
      - LAG interface MAC address
      - 02:ff:ff:ff:ff:<id>
+
+.. note::
+
+    Multithreaded IO is not supported for LAG member interfaces!

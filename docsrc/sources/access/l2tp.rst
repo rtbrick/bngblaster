@@ -3,7 +3,7 @@
 L2TP
 ----
 
-The BNG Blaster is able to emulate L2TPv2 (RFC2661) LNS servers to
+The BNG Blaster can emulate L2TPv2 (RFC2661) LNS servers to
 be able to test the L2TPv2 LAC functionality of the BNG device under
 test.
 
@@ -319,8 +319,8 @@ RFC5515
 
 The Agent-Circuit-Id and Agent-Remote-Id AVP defined in RFC5515
 is supported and stored for each session if received. Received
-CSUN messages are processed correctly and via control socket it
-is possible to send also CSURQ requests to the LAC.
+CSUN messages are processed correctly and via the control socket,
+it is possible to send also CSURQ requests to the LAC.
 
 L2TP Commands
 ~~~~~~~~~~~~~

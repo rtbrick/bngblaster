@@ -313,7 +313,6 @@ typedef struct bbl_ctx_
         bool traffic_stop_verified;
         bool stream_rate_calc; /* Enable/disable stream rate calculation */
         uint8_t stream_max_burst; /* Limit the max packets per TX interval */
-        uint8_t stream_max_per_group; /* Limit max streams per group */
 
         /* Session Traffic */
         bool session_traffic_autostart;
