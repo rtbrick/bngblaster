@@ -1,0 +1,60 @@
+{
+    "interfaces": {
+        "lag": [
+            {
+                "interface": "lag1",
+                "lacp": true,
+                "lacp-timeout-short": true
+            }
+        ],
+        "links": [
+            {
+                "interface": "eth1",
+                "lag-interface": "lag1"
+            },
+            {
+                "interface": "eth2",
+                "lag-interface": "lag1"
+            }
+        ],
+        "network": [
+            {
+                "interface": "lag1", 
+                "address": "10.100.0.2/24",
+                "gateway": "10.100.0.1",
+                "vlan": 100
+            },
+            {
+                "interface": "lag1",
+                "address": "10.200.0.2/24",
+                "gateway": "10.200.0.1",
+                "vlan": 200
+            }
+        ],
+        "access": [
+            {
+                "interface": "lag1",
+                "outer-vlan-min": 1000,
+                "outer-vlan-max": 1999,
+                "inner-vlan-min": 1,
+                "inner-vlan-max": 4094
+            }
+        ]
+    },
+    "streams": [
+        {
+            "name": "S100",
+            "type": "ipv4",
+            "pps": 10,
+            "network-interface": "lag1:100",
+            "destination-ipv4-address": "10.200.0.2"
+        },
+        {
+            "name": "S200",
+            "type": "ipv4",
+            "pps": 20,
+            "network-interface": "lag1:200",
+            "destination-ipv4-address": "10.100.0.2"
+        }
+    ]
+}

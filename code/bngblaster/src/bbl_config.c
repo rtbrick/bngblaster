@@ -2100,15 +2100,6 @@ json_parse_config(json_t *root)
             }
             g_ctx->config.stream_max_burst = number;
         }
-        value = json_object_get(section, "max-streams-per-group");
-        if(json_is_number(value)) {
-            number = json_number_value(value);
-            if(number < 1 || number > UINT8_MAX) {
-                fprintf(stderr, "JSON config error: Invalid value for traffic->max-streams-per-group\n");
-                return false;
-            }
-            g_ctx->config.stream_max_per_group = number;
-        }
         value = json_object_get(section, "stream-rate-calculation");
         if(json_is_boolean(value)) {
             g_ctx->config.stream_rate_calc = json_boolean_value(value);
@@ -2715,7 +2706,6 @@ bbl_config_init_defaults()
     g_ctx->config.traffic_autostart = true;
     g_ctx->config.stream_rate_calc = true;
     g_ctx->config.stream_max_burst = 16;
-    g_ctx->config.stream_max_per_group = 64;
     g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }

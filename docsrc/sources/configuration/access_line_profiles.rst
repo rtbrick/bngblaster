@@ -107,7 +107,7 @@
      - PON Tree Maximum Data Rate Downstream
      - 0
 
-Attributes with value set to 0 will not be send.
+Attributes with values set to 0 will not be sent.
 
 The values for ``rate-up``, ``rate-down`` and ``dsl-type`` defined in the
-access-line or interface section have priority over those defined here.
+access-line or interface section has priority over those defined here.

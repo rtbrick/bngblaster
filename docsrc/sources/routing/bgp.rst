@@ -6,13 +6,13 @@ BGP
 The Border Gateway Protocol (BGP) is a standardized exterior gateway protocol
 designed to exchange routing and reachability information among autonomous systems
 (AS) on the internet. BGP is classified as a path-vector routing protocol, and it 
-makes routing decisions based on paths, network policies, or rule-sets configured 
+makes routing decisions based on paths, network policies, or rule sets configured 
 by a network operator.
 
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example BGP configuration with one session.
+Following is an example of a BGP configuration with one session.
 
 .. code-block:: json
 
@@ -47,20 +47,20 @@ Every BGP session is opened with the capabilities for the following
 address families:
 
 + IPv4 unicast
-+ IPv4 labelled unicast
++ IPv4 labeled unicast
 + IPv6 unicast
-+ IPv6 labelled unicast
++ IPv6 labeled unicast
 
 Limitations
 ~~~~~~~~~~~
 
 BGP authentication is currently not supported but already 
-planned as enhancement in one of the next releases. 
+planned as an enhancement in one of the next releases. 
 
 RAW Update Files
 ~~~~~~~~~~~~~~~~
 
-The BNG Blaster is able to inject BGP messages from a pre-compiled 
+The BNG Blaster can inject BGP messages from a pre-compiled 
 RAW update file into the defined sessions. A RAW update file is not
 more than a pre-compiled binary stream of BGP messages, typically
 but not limited to update messages.
@@ -100,7 +100,7 @@ script ``bgpupdate`` or manually using libraries like scapy or converters
 from PCAP or MRT files. 
 
 The configured ``raw-update-file`` under the BGP session is loaded 
-during Blaster startup phase and send as soon as the session is 
+during BNG Blaster startup phase and send it as soon as the session is 
 established. 
 
 The ``bgp-raw-update`` :ref:`command <api>` allows to send further updates during
@@ -108,16 +108,16 @@ the session lifetime.
 
 ``$ sudo bngblaster-cli run.sock bgp-raw-update file update1.bgp``
 
-This allows in example to load a full table after session has
+This allows loading a full table after the BGP session has
 started and manually trigger a series of changes using incremental
 updates files.
 
-All BGP RAW update files are loaded once and can than be used by 
+All BGP RAW update files are loaded once and can then be used for 
 multiple sessions. Meaning if two or more sessions reference the 
 same file identified by file name, this file is loaded once into 
 memory and used by multiple sessions. 
 
-Therefore for incremental updates, it may makes sense to pre-load
+Therefore for incremental updates, it may make sense to pre-load
 via ``bgp-raw-update-files`` configuration. 
 
 .. code-block:: json
@@ -139,7 +139,7 @@ via ``bgp-raw-update-files`` configuration.
     }
 
 Incremental updates not listed here will be loaded dynamically as soon
-as referenced by first session.
+as referenced by the first session.
 
 BGP RAW Update Generator
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -201,13 +201,13 @@ streams for use with the BNG Blaster.
 
 
 
-The python BGP RAW update generator is a python script which uses
+The python BGP RAW update generator is a python script that uses
 scapy to build BGP messages. Therefore this tool can be easily 
-modified, extend or used as blueprint for your own tools to generate
+modified, extend or used as a blueprint for your own tools to generate
 valid BGP update streams. 
 
 The following example shows how to generate a BGP update stream 
-with IPv4 and labelled IPv6 prefixes (6PE).
+with IPv4 and labeled IPv6 prefixes (6PE).
 
 * 100000 x IPv4 prefixes over 1000 next-hops
 * 50000 x IPv6 prefixes over 1000 next-hops with 1000 different labels (label per next-hop)
@@ -219,12 +219,12 @@ with IPv4 and labelled IPv6 prefixes (6PE).
     bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append
     bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib
 
-Per default the file is replaced but the option `--append` allows to append to an existing file. 
-The last update to an file should include the option `--end-of-rib` (optional). 
+Per default, the file is replaced but the option `--append` allows it to append to an existing file. 
+The last update to a file should include the option `--end-of-rib` (optional). 
 
 The option `--streams <file>` (`-s`) automatically generates corresponding traffic streams
-for all prefixes. Per default this file is replaced but the option `--stream-append` allows
-to append to an existing file. 
+for all prefixes. Per default, this file is replaced but the option `--stream-append` allows
+appending to an existing file. 
 
 .. code-block:: none
 

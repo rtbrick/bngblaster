@@ -1,3 +1,7 @@
+The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions. 
+
 .. code-block:: json
 
     { "interfaces": { "links": [] } }

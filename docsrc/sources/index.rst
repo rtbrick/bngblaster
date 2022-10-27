@@ -10,7 +10,7 @@ So you can use it for end-to-end BNG and non-BNG router testing.
 You can use the included traffic generator for forwarding verification,
 QoS testing or to measure convergence times. The traffic generator supports 
 millions of separate tracked flows. This allows you to verify every single 
-forwarding state of a full feed internet routing table. You can also send 
+forwarding state of a full-feed internet routing table. You can also send 
 traffic to every single QoS queue of your service edge router.
 
 The BNG Blaster is used by leading network operators, network hard- and software vendors.
@@ -20,9 +20,9 @@ The BNG Blaster is used by leading network operators, network hard- and software
    .. tab:: Modern Software
 
         * Emulate massive nodes and sessions with low CPU and memory footprint
-        * Runs on every modern linux, virtual machines and containers
-        * All protocols implemented in user-space and optimized for performance
-        * Automation friendly API
+        * Runs on every modern Linux, virtual machine and containers
+        * All protocols implemented in user space and optimized for performance
+        * Automation-friendly API
         * ...
 
    .. tab:: Access Protocols

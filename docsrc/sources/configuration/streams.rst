@@ -80,25 +80,25 @@
      - Send a burst of N packets and stop
      - 0 (infinity)
    * - `start-delay`
-     - Wait N seconds after session is established before start
+     - Wait N seconds after the session is established before starting
      - 0
    * - `tx-label1`
      - MPLS send (TX) label (outer label)
      - 
    * - `tx-label1-exp`
-     - EXP bits of first label (outer label)
+     - EXP bits of the first label (outer label)
      - 0
    * - `tx-label1-ttl`
-     - TTL of first label (outer label)
+     - TTL of the first label (outer label)
      - 255
    * - `tx-label2`
      - MPLS send (TX) label (inner label)
      - 
    * - `tx-label2-exp`
-     - EXP bits of first label (inner label)
+     - EXP bits of the first label (inner label)
      - 0
    * - `tx-label2-ttl`
-     - TTL of first label (inner label)
+     - TTL of the first label (inner label)
      - 255
    * - `rx-label1`
      - Expected receive MPLS label (outer label)
@@ -107,13 +107,13 @@
      - Expected receive MPLS label (inner label)
      - 
 
-For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4 
+For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4 
 and inner IPv4 header.
 
 The ``pps`` option supports also float numbers like 0.1, or 2.5 PPS and has 
-priority over ``bps`` where second is only a helper to calculate the ``pps`` 
+priority over ``bps`` where the second is only a helper to calculate the ``pps`` 
 based on given ``bps`` and ``length``.
 
 The options ``access-ipv4-source-address`` and ``access-ipv6-source-address`` 
-are used to test the BNG RPF functionality with traffic send from source addresses 
-different to those assigned to the client. 
+can be used to test the BNG RPF functionality with traffic sent from source addresses 
+different then those assigned to the client. 

@@ -10,12 +10,13 @@ the Federal Network Agency (German: Bundesnetzagentur or BNetzA). This is the re
 office for electricity, gas, telecommunications, post, and railway markets. It is a federal 
 agency of the Federal Ministry for Economic Affairs and Energy located in Bonn, Germany.
 
-The definition of L2BSA service was defined by the so-called `NGA Forum <https://www.bundesnetzagentur.de/EN/Areas/Telecommunications/Companies/MarketRegulation/NGAForum/NGAForum_node.html>`_. 
+The definition of L2BSA service was defined by the so-called 
+`NGA Forum <https://www.bundesnetzagentur.de/EN/Areas/Telecommunications/Companies/MarketRegulation/NGAForum/NGAForum_node.html>`_. 
 This is an advisory board founded in May 2010 by the Bundesnetzagentur for promoting dialogue 
 between the Bundesnetzagentur, network operators, manufacturers, states, and local authorities 
 on NGA rollout.
 
-The L2BSA specification defines two interfaces. The so called U interface (User Interface) 
+The L2BSA specification defines two interfaces. The so-called U interface (User Interface) 
 at the customer location and the A10-NSP interface (A10 Network Service Provider) between 
 the service provider networks. Those interface types were introduced in the Broadband Forum 
 TR-101 (Migration to Ethernet-Based Broadband Aggregation).
@@ -29,7 +30,7 @@ untagged while another CPE is configured for tagged traffic. All those traffic n
 between the U interface and the A10-NSP interface.
 
 The A10-NSP interface is defined as a link aggregation bundle interface with one or more interfaces 
-and LACP enabled or disabled. All traffic on this interface is at least single tagged with the so-called 
+and LACP enabled or disabled. All traffic on this interface is at least single-tagged with the so-called 
 S-VLAN tag which identifies the U interface. This limits the amount of L2BSA services to 4094 per A10-NSP 
 interface caused by the usable VLAN range. So some providers need many A10-NSP interfaces if they need to 
 address more than the 4094 services.
@@ -52,7 +53,7 @@ the actual U interface for traffic received on the A10-NSP interface. This funct
 as the intermediate agent functionality.
 
 The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts 
-all DHCPv4 and PPPoE sessions received to verify forwarding and header enrichment.
+all DHCPv4 and PPPoE sessions were received to verify forwarding and header enrichment.
 
 .. note:: 
     It is also planned to emulate a lightweight DHCPv6 server
@@ -129,3 +130,6 @@ detailed explained in the configuration section.
 
 You can define multiple interfaces with the same MAC
 address to emulate some static link aggregation (without LACP).
+
+It is also possible to use :ref:`Link Aggregation (LAG) <lag-interface>` 
+interfaces for the A10-NSP!

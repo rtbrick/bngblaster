@@ -3,8 +3,8 @@
 Installation
 ============
 
-The BNG Blaster should run on any modern linux distribution
-but is primary tested on Ubuntu 18.04, 20.04 and 22.04 LTS.
+The BNG Blaster should run on any modern Linux distribution
+but is primarily tested on Ubuntu 18.04, 20.04 and 22.04 LTS.
 
 Install Ubuntu
 --------------
@@ -19,7 +19,7 @@ Install dependencies:
     sudo apt install -y libssl1.1 libncurses5 libjansson4
 
 
-Download and install debian package: https://github.com/rtbrick/bngblaster/releases
+Download and install Debian package: https://github.com/rtbrick/bngblaster/releases
 
 .. code-block:: none
 
@@ -33,7 +33,7 @@ Build from Sources
 Dependencies
 ^^^^^^^^^^^^
 
-The BNG Blaster has dependencies to the RtBrick
+The BNG Blaster has dependencies on the RtBrick
 `libdict fork <https://github.com/rtbrick/libdict>`_
 and the following standard dependencies:
 
@@ -55,8 +55,8 @@ and the following standard dependencies:
 Build
 ^^^^^
 
-Per default cmake (`cmake .`) will build the BNG Blaster as release
-version with optimization and without debug symbols.
+Per default cmake (`cmake .`) will build the BNG Blaster as a release
+version with optimization and without debugging symbols.
 
 .. code-block:: none
 
@@ -78,11 +78,11 @@ version for detailed troubleshooting using gdb.
     make all
 
 
-There are also CPack files generated which allows to easily generate a debian
-package by just executing `cpack` from build directory.
+There are also CPack files generated which allow to easily generate a Debian
+package by just executing `cpack` from the build directory.
 
 It is also recommended to provide the GIT commit details to be included in the
-manually build version as shown below:
+manually build the version as shown below:
 
 .. code-block:: none
 
@@ -101,7 +101,7 @@ manually build version as shown below:
 Install
 ^^^^^^^
 
-Then BNG Blaster can be installed using make install target.
+Then BNG Blaster can be installed using the make install target.
 
 .. code-block:: none
 
@@ -204,7 +204,7 @@ The installed version should now show `dpdk` as new IO mode.
 Running BNG Blaster
 -------------------
 
-The BNG Blaster needs permissions to send raw packets and change network interface
+The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or with
 sudo:
 
@@ -217,7 +217,7 @@ sudo:
     sudo bngblaster -C config.json -I
 
 
-A third option is to set capabilities on the binary with in example `setcap`
+A third option is to set capabilities on the binary with for example `setcap`
 as shown below:
 
 .. code-block:: none

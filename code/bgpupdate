@@ -51,8 +51,8 @@ BGP_MP_REACH_IPV6_FIXED_HDR_LEN = 26
 # SCAPY EXTENSIONS
 # ==============================================================
 
-class BGPFieldLabelledIPv4(Field):
-    """Labelled IPv4 Field (CIDR)."""
+class BGPFieldLabeledIPv4(Field):
+    """Labeled IPv4 Field (CIDR)."""
 
     def mask2iplen(self, mask):
         """Get the IP field mask length (in bytes)."""
@@ -86,14 +86,14 @@ class BGPFieldLabelledIPv4(Field):
         return s + self.i2m(pkt, val)
 
 
-class BGPNLRI_LabelledIPv4(Packet):
-    """Packet handling labelled IPv4 NLRI fields."""
-    name = "Labelled IPv4 NLRI"
-    fields_desc = [BGPFieldLabelledIPv4("prefix", "0.0.0.0/0/0")]
+class BGPNLRI_LabeledIPv4(Packet):
+    """Packet handling labeled IPv4 NLRI fields."""
+    name = "Labeled IPv4 NLRI"
+    fields_desc = [BGPFieldLabeledIPv4("prefix", "0.0.0.0/0/0")]
 
 
-class BGPFieldLabelledIPv6(Field):
-    """Labelled IPv6 Field (CIDR)."""
+class BGPFieldLabeledIPv6(Field):
+    """Labeled IPv6 Field (CIDR)."""
 
     def mask2iplen(self, mask):
         """Get the IP field mask length (in bytes)."""
@@ -127,10 +127,10 @@ class BGPFieldLabelledIPv6(Field):
         return s + self.i2m(pkt, val)
 
 
-class BGPNLRI_LabelledIPv6(Packet):
-    """Packet handling labelled IPv6 NLRI fields."""
-    name = "Labelled IPv6 NLRI"
-    fields_desc = [BGPFieldLabelledIPv6("prefix", "::/0/0")]
+class BGPNLRI_LabeledIPv6(Packet):
+    """Packet handling labeled IPv6 NLRI fields."""
+    name = "Labeled IPv6 NLRI"
+    fields_desc = [BGPFieldLabeledIPv6("prefix", "::/0/0")]
 
 
 # ==============================================================
@@ -197,11 +197,11 @@ def main():
     log = init_logging(args.log_level)
 
     if args.label_base:
-        log.info("init %s labelled IPv%s prefixes" % (args.prefix_num, args.prefix_base.version))
-        labelled = True
+        log.info("init %s labeled IPv%s prefixes" % (args.prefix_num, args.prefix_base.version))
+        labeled = True
     else:
         log.info("init %s IPv%s prefixes" % (args.prefix_num, args.prefix_base.version))
-        labelled = False
+        labeled = False
 
     if args.prefix_base.version == 6 and args.next_hop_base.version == 4:
         log.warning("next-hop converted tp IPv6 compatible IPv4 address ::FFFF:%s" % args.next_hop_base)
@@ -273,7 +273,7 @@ def main():
             
             if stream_label: 
                 stream["rx-label1"] = stream_label
-                if labelled:
+                if labeled:
                     stream["rx-label2"] = label
                 stream_label_index += 1
                 if stream_label_index < args.stream_rx_label_num:
@@ -285,7 +285,7 @@ def main():
                     stream_label_index = 0
                     stream_label = args.stream_rx_label
             else:
-                if labelled: 
+                if labeled: 
                     stream["rx-label1"] = label
 
             if args.stream_tx_label:
@@ -303,7 +303,7 @@ def main():
         if nh_index >= args.next_hop_num:
             nh_index = 0
 
-        if labelled: 
+        if labeled: 
             label_index += 1
             if label_index < args.label_num:
                 label = args.label_base + label_index
@@ -322,7 +322,7 @@ def main():
             json.dump({ "streams": streams}, f, indent=4)
 
     prefix_bytes = (args.prefix_base.prefixlen + 7) // 8 
-    if labelled:
+    if labeled:
         prefix_attr_len = prefix_bytes + 4 # N prefix bytes + 1 byte prefix len + 3 byte label
     else:
         prefix_attr_len = prefix_bytes + 1 # N prefix bytes + 1 byte prefix len
@@ -357,7 +357,7 @@ def main():
                     path_attr.append(local_pref_attr)
 
                 if ip_version == 4:
-                    if labelled:
+                    if labeled:
                         remaining -= BGP_MP_REACH_IPV4_FIXED_HDR_LEN
                     else:
                         remaining -= 5 # BGP IPv4 next-hop path attribute 
@@ -377,14 +377,14 @@ def main():
                     # get next prefix and label
                     prefix, label = prefix_list.pop(0)
                     prefix_count += 1
-                    if labelled:
-                        labelled_prefix = "%s/%s" % (prefix, label)
+                    if labeled:
+                        labeled_prefix = "%s/%s" % (prefix, label)
                         if prefix.version == 4:
-                            nlri.append(BGPNLRI_LabelledIPv4(prefix=labelled_prefix))
+                            nlri.append(BGPNLRI_LabeledIPv4(prefix=labeled_prefix))
                         else:
-                            nlri.append(BGPNLRI_LabelledIPv6(prefix=labelled_prefix))
+                            nlri.append(BGPNLRI_LabeledIPv6(prefix=labeled_prefix))
                         # There is a limitation which allows to withdraw only one prefix
-                        # per update message for SAFI labelled-unicast. 
+                        # per update message for SAFI labeled-unicast. 
                         if args.withdraw:
                             break
                     else:
@@ -400,15 +400,15 @@ def main():
                     # skip empty updates
                     continue
 
-                if labelled or ip_version == 6:
+                if labeled or ip_version == 6:
                     if ip_version == 4:
-                        # labelled IPv4 unicast
+                        # labeled IPv4 unicast
                         if args.withdraw:
                             mp_reach_attr = BGPPAMPUnreachNLRI(afi=1, safi=4, afi_safi_specific=nlri)
                         else:
                             mp_reach_attr = BGPPAMPReachNLRI(afi=1, safi=4, nh_v4_addr=next_hops[nh_index], nh_addr_len=4, nlri=nlri)
-                    elif labelled and ip_version == 6:
-                        # labelled IPv6 unicast
+                    elif labeled and ip_version == 6:
+                        # labeled IPv6 unicast
                         if args.withdraw:
                             mp_reach_attr = BGPPAMPUnreachNLRI(afi=2, safi=4, afi_safi_specific=nlri)
                         else:

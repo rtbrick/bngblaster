@@ -14,7 +14,7 @@
      - Enable/disable IPv4
      - true (enabled)
    * - `arp-timeout`
-     - Initial ARP resolve timeout/retry interval in seconds
+     - Initial ARP timeout/retry interval in seconds
      - 1
    * - `arp-interval`
      - Periodic ARP interval in seconds (0 means disabled)
