@@ -278,6 +278,10 @@ bbl_interactive_window_job(timer_s *timer)
     bbl_network_interface_s *network_if;
     bbl_a10nsp_interface_s *a10nsp_if;
 
+    struct timespec now;
+    struct timespec time_duration = {0};
+    struct timespec time_established = {0};
+
     char strsp[STRING_SP_SIZE];
 
     bbl_session_s *session;
@@ -290,6 +294,17 @@ bbl_interactive_window_job(timer_s *timer)
         wmove(stats_win, 14, 0);
     } else {
         wmove(stats_win, 2, 0);
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    timespec_sub(&time_duration, &now, &g_ctx->timestamp_start);
+    if(g_ctx->timestamp_established.tv_sec) {
+        timespec_sub(&time_established, &now, &g_ctx->timestamp_established);
+        wprintw(stats_win, "Test Duration: %lus All Sessions Established: %lus\n", 
+            time_duration.tv_sec, time_established.tv_sec);
+    } else {
+        wprintw(stats_win, "Test Duration: %lus\n", 
+            time_duration.tv_sec);
     }
 
     if(g_view_selected == UI_VIEW_DEFAULT) {

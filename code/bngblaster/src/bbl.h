@@ -54,6 +54,12 @@ extern bbl_ctx_s *g_ctx;
 extern WINDOW *log_win;
 extern WINDOW *stats_win;
 
+const char*
+test_state();
+
+time_t
+test_duration();
+
 void
 enable_disable_traffic(bool status);
 

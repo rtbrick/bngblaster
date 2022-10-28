@@ -62,6 +62,37 @@ teardown_handler(int sig)
     g_teardown_request_count++;
 }
 
+const char*
+test_state()
+{
+    if(g_teardown) {
+        return "teardown";
+    } else if(g_init_phase) {
+        return "init";
+    } else {
+        return "active";
+    }
+}
+
+time_t
+test_duration()
+{
+    struct timespec now;
+    struct timespec time_diff = {0};
+    if(g_ctx) {
+        if(g_ctx->timestamp_stop.tv_sec) {
+            timespec_sub(&time_diff, 
+                         &g_ctx->timestamp_stop, 
+                         &g_ctx->timestamp_start);
+        } else {
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            timespec_sub(&time_diff, &now, 
+                         &g_ctx->timestamp_start);
+        }
+    }
+    return time_diff.tv_sec;
+}
+
 void
 enable_disable_traffic(bool status)
 {
@@ -133,7 +164,7 @@ struct keyval_ log_names[] = {
 };
 
 static char *
-bbl_print_usage_arg (struct option *option)
+bbl_print_usage_arg(struct option *option)
 {
     if(option->has_arg == 1) {
         if(strcmp(option->name, "logging") == 0) {
@@ -171,7 +202,7 @@ bbl_print_version (void)
 }
 
 static void
-bbl_print_usage (void)
+bbl_print_usage(void)
 {
     int idx;
     printf("%s", banner);
