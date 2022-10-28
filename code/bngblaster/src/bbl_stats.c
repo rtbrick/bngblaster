@@ -388,7 +388,7 @@ bbl_stats_stdout(bbl_stats_s *stats) {
 
     printf("%s", banner);
     printf("Report:\n=======\n");
-
+    printf("Test Duration: %lus\n", test_duration());
     if(g_ctx->sessions) {
         printf("Sessions PPPoE: %u IPoE: %u\n", g_ctx->sessions_pppoe, g_ctx->sessions_ipoe);
         printf("Sessions established: %u/%u\n", g_ctx->sessions_established_max, g_ctx->sessions);

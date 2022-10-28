@@ -410,6 +410,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             /* Decrement sessions established if old state is established. */
             if(g_ctx->sessions_established) {
                 g_ctx->sessions_established--;
+                g_ctx->timestamp_established.tv_sec = 0;
             }
             if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
             if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
@@ -423,6 +424,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
             if(g_ctx->sessions_established == g_ctx->sessions) {
                 LOG_NOARG(INFO, "ALL SESSIONS ESTABLISHED\n");
+                clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_established);
             }
         } else if(state == BBL_PPP_TERMINATING) {
             session->ipcp_state = BBL_PPP_CLOSED;

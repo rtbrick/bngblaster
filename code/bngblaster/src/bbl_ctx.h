@@ -37,6 +37,7 @@ typedef struct bbl_ctx_
     struct timespec timestamp_start;
     struct timespec timestamp_stop;
     struct timespec timestamp_resolved;
+    struct timespec timestamp_established;
 
     uint32_t sessions;
     uint32_t sessions_pppoe;
