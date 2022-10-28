@@ -21,13 +21,16 @@
      - 
    * - `receive-window-size`
      - Control messages receive window size
-     - 4
+     - 16
    * - `max-retry`
      - Control messages max retry
-     - 30
+     - 5
    * - `congestion-mode`
      - Control messages congestion mode
      - default
+   * - `hello-interval`
+     - Set hello interval
+     - 30
    * - `data-control-priority`
      - Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, ...)
      - false

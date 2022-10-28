@@ -2468,7 +2468,7 @@ json_parse_config(json_t *root)
                 }
                 l2tp_server->receive_window = number;
             } else {
-                l2tp_server->receive_window = 4;
+                l2tp_server->receive_window = 16;
             }
             value = json_object_get(sub, "max-retry");
             if(json_is_number(value)) {
@@ -2479,7 +2479,7 @@ json_parse_config(json_t *root)
                 }
                 l2tp_server->max_retry = number;
             } else {
-                l2tp_server->max_retry = 30;
+                l2tp_server->max_retry = 5;
             }
             if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
                 if(strcmp(s, "default") == 0) {
@@ -2524,6 +2524,17 @@ json_parse_config(json_t *root)
                     return false;
                 }
                 l2tp_server->data_control_tos = number;
+            }
+            value = json_object_get(sub, "hello-interval");
+            if(json_is_number(value)) {
+                number = json_number_value(value);
+                if(number < 0 || number > UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->hello-interval\n");
+                    return false;
+                }
+                l2tp_server->hello_interval = number;
+            } else {
+                l2tp_server->hello_interval = 30;
             }
         }
     } else if(json_is_object(section)) {

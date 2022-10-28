@@ -63,7 +63,6 @@ typedef struct bbl_l2tp_server_
 {
     /* Filled by configuration ...*/
     uint32_t ip;
-    uint16_t idle_timeout;
     uint16_t hello_interval;
     uint16_t session_limit;
     uint16_t receive_window;
