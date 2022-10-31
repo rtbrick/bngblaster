@@ -13,10 +13,10 @@ The Internet Engineering Task Force (IETF) republished ISIS in RFC 1142,
 but that RFC was later marked as historic by RFC 7142 because it republished 
 a draft rather than a final version of the ISO standard, causing confusion.
 
-ISIS has been called the de facto standard for large service provider 
+ISIS has been called the de facto standard for a large service provider 
 network backbones.
 
-The BNG Blaster is able to emulate multiple ISIS instances. An ISIS instance
+The BNG Blaster can emulate multiple ISIS instances. An ISIS instance
 is a virtual ISIS node with one or more network interfaces attached. Such a
 node behaves like a "real router" including database synchronization and 
 flooding. Every instance generates a ``self`` originated LSP describing the
@@ -77,11 +77,11 @@ attached to two network interfaces.
 
 The support for multiple instances allows different use cases. One example might 
 be to create two instances connected to the device or network under test. Now 
-inject a LSP on one instance and check if learned over the tested network on 
+inject an LSP on one instance and check if learned over the tested network on 
 the other instance. 
 
 Every ISIS instance can be also connected to an emulated link state graph loaded 
-by MRT files  as shown in the example below. 
+by MRT files as shown in the example below. 
 
 .. image:: ../images/bbl_isis.png
     :alt: ISIS
@@ -117,8 +117,8 @@ by MRT files  as shown in the example below.
 
 .. include:: ../configuration/isis_external.rst
 
-The The node ``N1`` in this example also needs to advertise the 
-reachability to the node ``B1``.
+The node ``N1`` in this example also needs to advertise the 
+reachability to node ``B1``.
 
 .. include:: ../configuration/isis_external_connections.rst
 
@@ -165,7 +165,7 @@ Database
 The BNG Blaster distinguishes between three different source types of 
 LSP entries in the ISIS database. 
 
-The type ``self`` is used for the self originated LSP describing the own 
+The type ``self`` is used for the self-originated LSP describing the own 
 BNG Blaster ISIS instance. LSP entries of type ``adjacency`` are learned
 via ISIS adjacencies. The type ``external`` is used for those LSP entries 
 learned via MRT files or injected via ``isis-lsp-update`` :ref:`command <api>`.
@@ -211,29 +211,29 @@ learned via MRT files or injected via ``isis-lsp-update`` :ref:`command <api>`.
         ]
     }
 
-The BNG Blaster automatically purges all LSP's of type
+The BNG Blaster automatically purges all LSPs of type
 ``self`` and ``external`` during teardown. This is done by
-generating LSP's with a newer sequence numbers and lifetime
+generating LSPs with newer sequence numbers and a lifetime
 of 30 seconds only. This lifetime is enough to flood the purge
-LSP over te whole network under test. 
+LSP over the whole network under test. 
 
 Flooding
 ~~~~~~~~
 
-The BNG Blaster floods LSP's received to all other active
+The BNG Blaster floods LSPs received to all other active
 adjacencies of the ISIS instance except to those with peer
 system-id equal to the source system-id of the LSP.
 
 Limitations
 ~~~~~~~~~~~
 
-Currently only ISIS P2P links are supported. There is also
+Currently, only ISIS P2P links are supported. There is also
 no support for route leaking between levels. 
 
 MRT Files
 ~~~~~~~~~
 
-The BNG Blaster is able to load LSP's from a MRT file as defined in 
+The BNG Blaster can load LSPs from an MRT file as defined in 
 [RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
 
 .. code-block:: none
@@ -253,7 +253,7 @@ The BNG Blaster is able to load LSP's from a MRT file as defined in
 The message field contains the complete ISIS LSP PDU including 
 the ISIS common header starting with ``0x83``. 
 
-Those files can be loaded at startup via configuration option 
+Those files can be loaded at startup via the configuration option 
 ``"isis": { "external": { "mrt-file": "<file>" } }`` or alternative
 via ``isis-load-mrt`` :ref:`command <api>`. 
 
@@ -262,7 +262,7 @@ via ``isis-load-mrt`` :ref:`command <api>`.
 LSP Update Command
 ~~~~~~~~~~~~~~~~~~
 
-It is also possible to inject external LSP's using the ``isis-lsp-update``
+It is also possible to inject external LSPs using the ``isis-lsp-update``
 :ref:`command <api>`. 
 
 The :ref:`command <api>` expects a list of hex encoded PDU's including 
@@ -287,7 +287,7 @@ the ISIS common header starting with ``0x83``,
 LSP Update via Scapy 
 ~~~~~~~~~~~~~~~~~~~~
 
-The following example shows how to generate LSP's via Scapy 
+The following example shows how to generate LSPs via Scapy 
 and inject them using the ``isis-lsp-update`` :ref:`command <api>`.
 
 .. code-block:: python
@@ -358,7 +358,7 @@ LSPGEN
 
 The BNG Blaster includes a tool called ``lspgen`` which is able to generate
 topologies and link state packets for export as MRT and PCAP files. This tool
-is also able to inject LSP's directly using the ``isis-lsp-update``
+is also able to inject LSPs directly using the ``isis-lsp-update``
 :ref:`command <api>`.
 
 .. code-block:: none
@@ -421,11 +421,11 @@ The following example generates a random topology with 1000 nodes.
     lspgen -m isis.mrt -c 1000 -K <secret> -T md5
 
 The arguments ``-K`` and ``-T`` add a valid authentication TLV
-to the generated LSP's in the MRT file. 
+to the generated LSPs in the MRT file. 
 
 Those topologies could be even exported as configuration file 
 with the argument ``-w`` and later imported with the argument ``-r``.
-This allows to generate a large random topology which can be modified
+This allows the generation of a large random topology that can be modified
 manually. 
 
 Topology from Configuration File

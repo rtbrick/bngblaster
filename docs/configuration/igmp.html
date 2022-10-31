@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 0.7 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -94,7 +94,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>autostart</cite></p></td>
-<td><p>Automatically join after session is established</p></td>
+<td><p>Automatically join after the session is established</p></td>
 <td><p>true</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>version</cite></p></td>
@@ -130,7 +130,7 @@
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>zapping-count</cite></p></td>
-<td><p>Define the amount of channel changes before starting view duration</p></td>
+<td><p>Define the number of channel changes before starting the view duration</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>view-duration</cite></p></td>
@@ -141,13 +141,21 @@
 <td><p>Generate multicast traffic</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>multicast-traffic-length</cite></p></td>
+<tr class="row-even"><td><p><cite>multicast-traffic-autostart</cite></p></td>
+<td><p>Automatically start multicast traffic</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>multicast-traffic-length</cite></p></td>
 <td><p>Multicast traffic IP length</p></td>
 <td><p>76</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>multicast-traffic-tos</cite></p></td>
+<tr class="row-even"><td><p><cite>multicast-traffic-tos</cite></p></td>
 <td><p>Multicast traffic TOS priority</p></td>
 <td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>multicast-traffic-pps</cite></p></td>
+<td><p>Multicast traffic PPS per group</p></td>
+<td><p>1000</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>network-interface</cite></p></td>
 <td><p>Multicast traffic source interface</p></td>
@@ -159,19 +167,22 @@
 </tr>
 </tbody>
 </table>
-<p>Per default join and leave requests are send using dedicated reports.
+<p>Per default, join and leave requests are sent using dedicated reports.
 The option <code class="docutils literal notranslate"><span class="pre">combined-leave-join</span></code> allows the combination of leave and
 join records within a single IGMPv3 report using multiple group records.
-This option is applicable to IGMP version 3 only!</p>
+This option applies to the IGMP version 3 only!</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">send-multicast-traffic</span></code> is true, the BNG Blaster generates multicast
 traffic on the network interface based on the specified group and source
 attributes mentioned before. This traffic includes some special signatures
-for faster processing and more detailed analysis.</p>
+for faster processing and more detailed analysis. This traffic starts
+automatically, which can be suppressed by setting <code class="docutils literal notranslate"><span class="pre">multicast-traffic-autostart</span></code>
+to false. The length, TOS and packets per second (PPS) can be controlled
+with the corresponding options.</p>
 <p>If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1
-and group-count 3 the result are the following three groups (S.G)
+and group-count 3, the result are the following three groups (S.G)
 1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">max-join-delay</span></code> is configured, the final report includes how often
-the measured join delay is above the configured threshold here.</p>
+the measured join delay is above this threshold.</p>
 
 
            </div>

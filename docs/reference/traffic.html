@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BNG Blaster Traffic &mdash; BNG Blaster 0.7 documentation</title>
+  <title>BNG Blaster Traffic &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -108,7 +108,7 @@ IPv4 multicast traffic.</p>
 <h3>Unicast Session Traffic<a class="headerlink" href="#unicast-session-traffic" title="Permalink to this headline"></a></h3>
 <p>The 64 bit session key is used for all traffic from access (upstream)
 and to access (downstream) interfaces to identify the corresponding
-session which has send or should receive the packet.</p>
+session which has sent or should receive the packet.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | BNG Blaster Magic Sequence                                    |
@@ -174,19 +174,18 @@ stored in host byte order for faster processing
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0x5274427269636b21
 </pre></div>
 </div>
-<p>The magic number allows to check for it on a given offset and process
-only blaster header instead of decoding the whole packet for faster
-packet processing.</p>
+<p>Storing the magic number on a fixed offset allows fast identification
+of blaster traffic.</p>
 </section>
 <section id="flow-identifier">
 <h3>Flow Identifier<a class="headerlink" href="#flow-identifier" title="Permalink to this headline"></a></h3>
-<p>The 64 bit flow identifier is a global unique number which identifies
+<p>The 64 bit flow identifier is a globally unique number that identifies
 the flow.</p>
 </section>
 <section id="flow-sequence-number">
 <h3>Flow Sequence Number<a class="headerlink" href="#flow-sequence-number" title="Permalink to this headline"></a></h3>
-<p>The 64 bit flow sequence number is sequential number starting with 1
-and incremented per packet primary used to identity packet loss.</p>
+<p>The 64 bit flow sequence number is a sequential number starting with 1
+and incremented per packet primary used to identify packet loss.</p>
 <p>This number 0 means that sequencing is disabled.</p>
 </section>
 <section id="nanosecond-send-timestamps">

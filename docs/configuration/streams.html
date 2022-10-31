@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 0.7 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -186,7 +186,7 @@
 <td><p>0 (infinity)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
-<td><p>Wait N seconds after session is established before start</p></td>
+<td><p>Wait N seconds after the session is established before starting</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label1</cite></p></td>
@@ -194,11 +194,11 @@
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label1-exp</cite></p></td>
-<td><p>EXP bits of first label (outer label)</p></td>
+<td><p>EXP bits of the first label (outer label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label1-ttl</cite></p></td>
-<td><p>TTL of first label (outer label)</p></td>
+<td><p>TTL of the first label (outer label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2</cite></p></td>
@@ -206,11 +206,11 @@
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label2-exp</cite></p></td>
-<td><p>EXP bits of first label (inner label)</p></td>
+<td><p>EXP bits of the first label (inner label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2-ttl</cite></p></td>
-<td><p>TTL of first label (inner label)</p></td>
+<td><p>TTL of the first label (inner label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>rx-label1</cite></p></td>
@@ -223,14 +223,14 @@
 </tr>
 </tbody>
 </table>
-<p>For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4
+<p>For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4
 and inner IPv4 header.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pps</span></code> option supports also float numbers like 0.1, or 2.5 PPS and has
-priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
+priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where the second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
 based on given <code class="docutils literal notranslate"><span class="pre">bps</span></code> and <code class="docutils literal notranslate"><span class="pre">length</span></code>.</p>
 <p>The options <code class="docutils literal notranslate"><span class="pre">access-ipv4-source-address</span></code> and <code class="docutils literal notranslate"><span class="pre">access-ipv6-source-address</span></code>
-are used to test the BNG RPF functionality with traffic send from source addresses
-different to those assigned to the client.</p>
+can be used to test the BNG RPF functionality with traffic sent from source addresses
+different than those assigned to the client.</p>
 
 
            </div>

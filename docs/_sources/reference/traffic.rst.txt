@@ -18,7 +18,7 @@ Unicast Session Traffic
 
 The 64 bit session key is used for all traffic from access (upstream)
 and to access (downstream) interfaces to identify the corresponding
-session which has send or should receive the packet.
+session which has sent or should receive the packet.
 
 .. code-block:: none
 
@@ -90,21 +90,20 @@ The 64 bit magic sequence is the word ``RtBrick!`` decoded as ASCII:
 
     0x5274427269636b21
 
-The magic number allows to check for it on a given offset and process
-only blaster header instead of decoding the whole packet for faster
-packet processing.
+Storing the magic number on a fixed offset allows fast identification 
+of blaster traffic. 
 
 Flow Identifier
 ^^^^^^^^^^^^^^^
 
-The 64 bit flow identifier is a global unique number which identifies
+The 64 bit flow identifier is a globally unique number that identifies
 the flow.
 
 Flow Sequence Number
 ^^^^^^^^^^^^^^^^^^^^
 
-The 64 bit flow sequence number is sequential number starting with 1
-and incremented per packet primary used to identity packet loss.
+The 64 bit flow sequence number is a sequential number starting with 1
+and incremented per packet primary used to identify packet loss.
 
 This number 0 means that sequencing is disabled.
 

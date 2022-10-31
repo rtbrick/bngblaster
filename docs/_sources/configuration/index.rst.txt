@@ -11,6 +11,14 @@ The BNG Blaster interfaces are explained detailed in the
 
 .. include:: interfaces.rst
 
+Links
+~~~~~
+.. include:: interfaces_links.rst
+
+Link Aggregation (LAG)
+~~~~~~~~~~~~~~~~~~~~~~
+.. include:: interfaces_lag.rst
+
 Network Interfaces
 ~~~~~~~~~~~~~~~~~~
 .. include:: interfaces_network.rst

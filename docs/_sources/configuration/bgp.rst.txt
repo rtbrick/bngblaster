@@ -11,10 +11,10 @@
      - Description
      - Default
    * - `network-interface`
-     - BGP local interface (source-interface)
+     - BGP local interface (source interface)
      - first network interface
    * - `local-ipv4-address`
-     - BGP local IPv4 address (source-address)
+     - BGP local IPv4 address (source address)
      - network interface address
    * - `local-as`
      - BGP local AS
@@ -35,7 +35,7 @@
      - BGP reconnect
      - true
    * - `start-traffic`
-     - BGP start global traffic after RAW update
+     - BGP starts global traffic after RAW update
      - false
    * - `teardown-time`
      - BGP teardown time in seconds

@@ -26,7 +26,7 @@
      - PPP LCP initial request delay in milliseconds
      - 0
    * - `ignore-vendor-specific`
-     - Ignore LCP vendor specific requests
+     - Ignore LCP vendor-specific requests
      - false
    * - `connection-status-message`
      - Accept LCP connection status messages
