@@ -455,13 +455,13 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
 
     if(session->access_config->ipv4_enable) {
         if(!session->arp_resolved ||
-           (session->access_config->dhcp_enable && session->dhcp_state < BBL_DHCP_BOUND)) {
+           (session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND)) {
             ipv4 = false;
         }
     }
     if(session->access_config->ipv6_enable) {
         if(!session->icmpv6_ra_received ||
-           (session->access_config->dhcpv6_enable && session->dhcpv6_state < BBL_DHCP_BOUND)) {
+           (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND)) {
             ipv6 = false;
         }
     }
@@ -526,7 +526,7 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_access_rx_established_ipoe(interface, session, eth);
-            } else if(g_ctx->config.dhcpv6_enable && 
+            } else if(session->dhcpv6_state > BBL_DHCP_DISABLED && 
                       (icmpv6->flags & ICMPV6_FLAGS_MANAGED ||
                        icmpv6->flags & ICMPV6_FLAGS_OTHER_CONFIG)) {
                 bbl_dhcpv6_start(session);
@@ -879,8 +879,12 @@ bbl_access_lcp_echo(timer_s *timer)
             LOG(PPPOE, "LCP ECHO TIMEOUT (ID: %u)\n", session->session_id);
             /* Force terminate session after timeout. */
             session->lcp_state = BBL_PPP_CLOSED;
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state > BBL_PPP_DISABLED) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
+            if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_update_state(session, BBL_TERMINATING);
             bbl_session_tx_qnode_insert(session);
@@ -911,8 +915,8 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
 
     UNUSED(interface);
 
-    if(g_ctx->config.ipcp_enable == false || session->ipcp_state == BBL_PPP_OPENED) ipcp = true;
-    if(g_ctx->config.ip6cp_enable == false || session->ip6cp_state == BBL_PPP_OPENED) ip6cp = true;
+    if(session->ipcp_state == BBL_PPP_DISABLED || session->ipcp_state == BBL_PPP_OPENED) ipcp = true;
+    if(session->ip6cp_state == BBL_PPP_DISABLED || session->ip6cp_state == BBL_PPP_OPENED) ip6cp = true;
 
     if(ipcp && ip6cp) {
         if(session->session_state != BBL_ESTABLISHED) {
@@ -929,9 +933,11 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
                 /* Start Session Timer */
                 timer_add(&g_ctx->timer_root, &session->timer_session, "Session", g_ctx->config.pppoe_session_time, 0, session, &bbl_access_session_timeout);
             }
-            if(session->access_config->ipv4_enable) {
+            if(session->ipcp_state == BBL_PPP_OPENED) {
                 if(session->l2tp == false && !session->a10nsp_session &&
-                   g_ctx->config.igmp_group && g_ctx->config.igmp_autostart && g_ctx->config.igmp_start_delay) {
+                   g_ctx->config.igmp_group && 
+                   g_ctx->config.igmp_autostart && 
+                   g_ctx->config.igmp_start_delay) {
                     /* Start IGMP */
                     timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
                 }
@@ -1369,8 +1375,12 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
         case PPP_CODE_TERM_ACK:
             session->lcp_retries = 0;
             session->lcp_state = BBL_PPP_CLOSED;
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state > BBL_PPP_DISABLED) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
+            if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_update_state(session, BBL_TERMINATING);
             bbl_session_tx_qnode_insert(session);

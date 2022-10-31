@@ -347,7 +347,7 @@ bbl_ctrl_job(timer_s *timer)
                             session->session_state = BBL_IPOE_SETUP;
                             session->send_requests = 0;
                             if(session->access_config->ipv4_enable) {
-                                if(session->access_config->dhcp_enable) {
+                                if(session->dhcp_state > BBL_DHCP_DISABLED) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
                                     bbl_dhcp_start(session);
                                 } else if(session->ip_address && session->peer_ip_address) {
@@ -357,7 +357,7 @@ bbl_ctrl_job(timer_s *timer)
                                 }
                             }
                             if(session->access_config->ipv6_enable) {
-                                if(session->access_config->dhcpv6_enable) {
+                                if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
                                     /* Start IPoE session by sending DHCPv6 request if enabled. */
                                     bbl_dhcpv6_start(session);
                                 } else {

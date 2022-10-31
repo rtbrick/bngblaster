@@ -171,12 +171,13 @@ typedef enum {
  * of the PPP FSM.
  */
 typedef enum {
-    BBL_PPP_CLOSED      = 0,
-    BBL_PPP_INIT        = 1,
-    BBL_PPP_LOCAL_ACK   = 2,
-    BBL_PPP_PEER_ACK    = 3,
-    BBL_PPP_OPENED      = 4,
-    BBL_PPP_TERMINATE   = 5,
+    BBL_PPP_DISABLED    = 0,
+    BBL_PPP_CLOSED      = 1,
+    BBL_PPP_INIT        = 2,
+    BBL_PPP_LOCAL_ACK   = 3,
+    BBL_PPP_PEER_ACK    = 4,
+    BBL_PPP_OPENED      = 5,
+    BBL_PPP_TERMINATE   = 6,
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
 
@@ -187,12 +188,13 @@ typedef enum {
  * of the DHCP FSM.
  */
 typedef enum {
-    BBL_DHCP_INIT           = 0,
-    BBL_DHCP_SELECTING      = 1,
-    BBL_DHCP_REQUESTING     = 2,
-    BBL_DHCP_BOUND          = 3,
-    BBL_DHCP_RENEWING       = 4,
-    BBL_DHCP_RELEASE        = 5,
+    BBL_DHCP_DISABLED       = 0,
+    BBL_DHCP_INIT           = 1,
+    BBL_DHCP_SELECTING      = 2,
+    BBL_DHCP_REQUESTING     = 3,
+    BBL_DHCP_BOUND          = 4,
+    BBL_DHCP_RENEWING       = 5,
+    BBL_DHCP_RELEASE        = 6,
     BBL_DHCP_MAX
 } __attribute__ ((__packed__)) dhcp_state_t;
 
