@@ -21,6 +21,10 @@
 void
 bbl_dhcpv6_stop(bbl_session_s *session)
 {
+    if(session->dhcpv6_state == BBL_DHCP_DISABLED) {
+        return;
+    }
+
     LOG(DHCP, "DHCP (ID: %u) Stop DHCPv6\n", session->session_id);
 
     /* Reset session IP configuration */

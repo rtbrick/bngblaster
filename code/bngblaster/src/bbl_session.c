@@ -39,6 +39,7 @@ const char *
 ppp_state_string(uint32_t state)
 {
     switch(state) {
+        case BBL_PPP_DISABLED: return "Disabled";
         case BBL_PPP_CLOSED: return "Closed";
         case BBL_PPP_INIT: return "Init";
         case BBL_PPP_LOCAL_ACK: return "Local-Ack";
@@ -53,6 +54,7 @@ const char *
 dhcp_state_string(uint32_t state)
 {
     switch(state) {
+        case BBL_DHCP_DISABLED: return "Disabled";
         case BBL_DHCP_INIT: return "Init";
         case BBL_DHCP_SELECTING: return "Selecting";
         case BBL_DHCP_REQUESTING: return "Requesting";
@@ -185,8 +187,12 @@ bbl_session_monkey_pppoe(bbl_session_s *session) {
             /* Terminate session with PADT */
             bbl_session_update_state(session, BBL_TERMINATING);
             session->lcp_state = BBL_PPP_CLOSED;
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state > BBL_PPP_DISABLED) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
+            if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_tx_qnode_insert(session);
         default:
@@ -316,9 +322,11 @@ bbl_session_reset(bbl_session_s *session) {
     session->ipv6_prefix.len = 0;
     session->delegated_ipv6_prefix.len = 0;
     session->icmpv6_ra_received = false;
+    if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
+        session->dhcpv6_state = BBL_DHCP_INIT;
+    }
     session->dhcpv6_requested = false;
     session->dhcpv6_established = false;
-    session->dhcpv6_state = BBL_DHCP_INIT;
     session->dhcpv6_ia_na_option_len = 0;
     session->dhcpv6_ia_pd_option_len = 0;
     memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
@@ -427,8 +435,12 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
                 clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_established);
             }
         } else if(state == BBL_PPP_TERMINATING) {
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state > BBL_PPP_DISABLED) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
+            if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
             if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
             if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
             if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
@@ -470,9 +482,15 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             timer_del(session->timer_session);
 
             /* Reset all states */
-            session->lcp_state = BBL_PPP_CLOSED;
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                session->lcp_state = BBL_PPP_CLOSED;
+                if(session->ipcp_state > BBL_PPP_DISABLED) {
+                    session->ipcp_state = BBL_PPP_CLOSED;
+                }
+                if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                    session->ip6cp_state = BBL_PPP_CLOSED;
+                }
+            }
             if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
             if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
             if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
@@ -532,8 +550,12 @@ bbl_session_clear(bbl_session_s *session)
             case BBL_PPP_LINK:
                 bbl_session_update_state(session, BBL_TERMINATING);
                 session->lcp_state = BBL_PPP_CLOSED;
-                session->ipcp_state = BBL_PPP_CLOSED;
-                session->ip6cp_state = BBL_PPP_CLOSED;
+                if(session->ipcp_state > BBL_PPP_DISABLED) {
+                    session->ipcp_state = BBL_PPP_CLOSED;
+                }
+                if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                    session->ip6cp_state = BBL_PPP_CLOSED;
+                }
                 session->send_requests = BBL_SEND_DISCOVERY;
                 bbl_session_tx_qnode_insert(session);
                 break;
@@ -692,16 +714,6 @@ bbl_sessions_init()
         session->access_third_vlan = access_config->access_third_vlan;
         session->access_config = access_config;
 
-        if(access_config->ipv4_enable) {
-            session->endpoint.ipv4 = ENDPOINT_ENABLED;
-        }
-        if(access_config->ipv6_enable) {
-            session->endpoint.ipv6 = ENDPOINT_ENABLED;
-        }
-        if(access_config->dhcpv6_enable) {
-            session->endpoint.ipv6pd = ENDPOINT_ENABLED;
-        }
-
         /* Set client OUI to locally administered */
         session->client_mac[0] = 0x02;
         session->client_mac[1] = 0x00;
@@ -795,6 +807,19 @@ bbl_sessions_init()
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             session->mru = access_config->ppp_mru;
             session->magic_number = htobe32(i);
+            session->lcp_state = BBL_PPP_CLOSED;
+            if(access_config->ipv4_enable && access_config->ipcp_enable) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+                session->endpoint.ipv4 = ENDPOINT_ENABLED;
+            }
+            if(access_config->ipv6_enable && access_config->ip6cp_enable) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+                session->endpoint.ipv6 = ENDPOINT_ENABLED;
+                if(access_config->dhcpv6_enable) {
+                    session->dhcpv6_state = BBL_DHCP_INIT;
+                    session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+                }
+            }
             if(g_ctx->config.pppoe_service_name) {
                 session->pppoe_service_name = (uint8_t*)g_ctx->config.pppoe_service_name;
                 session->pppoe_service_name_len = strlen(g_ctx->config.pppoe_service_name);
@@ -803,11 +828,25 @@ bbl_sessions_init()
                 session->pppoe_host_uniq = htobe64(i);
             }
         } else if(session->access_type == ACCESS_TYPE_IPOE) {
-            if(access_config->static_ip && access_config->static_gateway) {
-                session->ip_address = access_config->static_ip;
-                session->peer_ip_address = access_config->static_gateway;
-                access_config->static_ip = htobe32(be32toh(access_config->static_ip) + be32toh(access_config->static_ip_iter));
-                access_config->static_gateway = htobe32(be32toh(access_config->static_gateway) + be32toh(access_config->static_gateway_iter));
+            if(access_config->ipv4_enable) {
+                session->endpoint.ipv4 = ENDPOINT_ENABLED;
+                if(access_config->static_ip && access_config->static_gateway) {
+                    session->ip_address = access_config->static_ip;
+                    session->peer_ip_address = access_config->static_gateway;
+                    access_config->static_ip = htobe32(be32toh(access_config->static_ip) + be32toh(access_config->static_ip_iter));
+                    access_config->static_gateway = htobe32(be32toh(access_config->static_gateway) + be32toh(access_config->static_gateway_iter));
+                } else if(access_config->dhcp_enable) {
+                    session->dhcp_state = BBL_DHCP_INIT;
+                } else {
+                    session->endpoint.ipv4 = ENDPOINT_DISABLED;
+                }
+            }
+            if(access_config->ipv6_enable) {
+                session->endpoint.ipv6 = ENDPOINT_ENABLED;
+                if(access_config->dhcpv6_enable) {
+                    session->dhcpv6_state = BBL_DHCP_INIT;
+                    session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+                }
             }
         }
         session->access_interface = access_config->access_interface;

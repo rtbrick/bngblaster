@@ -646,6 +646,9 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     uint32_t ipv4;
     double number;
 
+    access_config->ipv4_enable = true;
+    access_config->ipv6_enable = true;
+
     if(json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
         access_config->interface = strdup(s);
         link_add(access_config->interface);
@@ -694,11 +697,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             access_config->access_type = ACCESS_TYPE_PPPOE;
         } else if(strcmp(s, "ipoe") == 0) {
             access_config->access_type = ACCESS_TYPE_IPOE;
+            access_config->ipv4_enable = g_ctx->config.ipoe_ipv4_enable;
+            access_config->ipv6_enable = g_ctx->config.ipoe_ipv6_enable;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for access->type\n");
             return false;
         }
     }
+
     if(json_unpack(access_interface, "{s:s}", "vlan-mode", &s) == 0) {
         if(strcmp(s, "1:1") == 0) {
             access_config->vlan_mode = VLAN_MODE_11;
@@ -885,20 +891,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     value = json_object_get(access_interface, "ipv4");
     if(json_is_boolean(value)) {
         access_config->ipv4_enable = json_boolean_value(value);
-    } else {
-        access_config->ipv4_enable = g_ctx->config.ipv4_enable;
-    }
-    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
-        /* Disable IPv4 on PPPoE if IPCP is disabled. */
-        if(!access_config->ipcp_enable) {
-            access_config->ipv4_enable = false;
-        }
-    } else {
-        /* Disable IPv4 on IPoE if neither DHCP is enabled or
-         * a static IPv4 address is configured. */
-        if(!(access_config->dhcp_enable || access_config->static_ip)) {
-            access_config->ipv4_enable = false;
-        }
     }
 
     /* IPv6 settings */
@@ -917,14 +909,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     value = json_object_get(access_interface, "ipv6");
     if(json_is_boolean(value)) {
         access_config->ipv6_enable = json_boolean_value(value);
-    } else {
-        access_config->ipv6_enable = g_ctx->config.ipv6_enable;
-    }
-    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
-        /* Disable IPv6 on PPPoE if IP6CP is disabled. */
-        if(!access_config->ip6cp_enable) {
-            access_config->ipv6_enable = false;
-        }
     }
 
     value = json_object_get(access_interface, "igmp-autostart");
@@ -981,6 +965,26 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
+
+    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
+        /* Disable IPv4 on PPPoE if IPCP is disabled. */
+        if(!access_config->ipcp_enable) {
+            access_config->ipv4_enable = false;
+        }
+        /* Disable IPv6 on PPPoE if IP6CP is disabled. */
+        if(!access_config->ip6cp_enable) {
+            access_config->ipv6_enable = false;
+            access_config->dhcpv6_enable = false;
+        }
+    } else {
+        /* Disable IPv4 on IPoE if neither DHCP is enabled or
+         * a static IPv4 address is configured. */
+        if(!(access_config->dhcp_enable ||
+            (access_config->static_ip && access_config->static_gateway))) {
+            access_config->ipv4_enable = false;
+        }
+    }
+
     return true;
 }
 
@@ -1684,9 +1688,13 @@ json_parse_config(json_t *root)
     /* IPoE Configuration */
     section = json_object_get(root, "ipoe");
     if(json_is_object(section)) {
+        value = json_object_get(section, "ipv6");
+        if(json_is_boolean(value)) {
+            g_ctx->config.ipoe_ipv6_enable = json_boolean_value(value);
+        }
         value = json_object_get(section, "ipv4");
         if(json_is_boolean(value)) {
-            g_ctx->config.ipv4_enable = json_boolean_value(value);
+            g_ctx->config.ipoe_ipv4_enable = json_boolean_value(value);
         }
         value = json_object_get(section, "arp-timeout");
         if(json_is_number(value)) {
@@ -1695,10 +1703,6 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "arp-interval");
         if(json_is_number(value)) {
             g_ctx->config.arp_interval = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv6");
-        if(json_is_boolean(value)) {
-            g_ctx->config.ipv6_enable = json_boolean_value(value);
         }
     }
 
@@ -1957,8 +1961,12 @@ json_parse_config(json_t *root)
             g_ctx->config.igmp_autostart = json_boolean_value(value);
         }
         value = json_object_get(section, "start-delay");
-        if(json_is_number(value) && json_number_value(value)) {
-            /* Min 1 second */
+        if(json_is_number(value)) {
+            number = json_number_value(value);
+            if(number < 1 || number > UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for igmp->start-delay\n");
+                return false;
+            }
             g_ctx->config.igmp_start_delay = json_number_value(value);
         }
         if(json_unpack(section, "{s:s}", "group", &s) == 0) {
@@ -2682,10 +2690,10 @@ bbl_config_init_defaults()
     g_ctx->config.lcp_keepalive_retry = 3;
     g_ctx->config.authentication_timeout = 5;
     g_ctx->config.authentication_retry = 30;
-    g_ctx->config.ipv4_enable = true;
+    g_ctx->config.ipoe_ipv6_enable = true;
+    g_ctx->config.ipoe_ipv4_enable = true;
     g_ctx->config.arp_timeout = 1;
     g_ctx->config.arp_interval = 300;
-    g_ctx->config.ipv6_enable = true;
     g_ctx->config.ipcp_enable = true;
     g_ctx->config.ipcp_request_ip = true;
     g_ctx->config.ipcp_request_dns1 = true;

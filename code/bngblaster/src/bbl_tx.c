@@ -762,8 +762,12 @@ bbl_lcp_simeout(timer_s *timer)
             /* Send max 3 terminate requests. */
             bbl_session_update_state(session, BBL_TERMINATING);
             session->lcp_state = BBL_PPP_CLOSED;
-            session->ipcp_state = BBL_PPP_CLOSED;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state > BBL_PPP_DISABLED) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
+            if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_tx_qnode_insert(session);
         } else {
