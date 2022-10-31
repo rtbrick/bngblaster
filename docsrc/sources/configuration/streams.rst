@@ -116,4 +116,4 @@ based on given ``bps`` and ``length``.
 
 The options ``access-ipv4-source-address`` and ``access-ipv6-source-address`` 
 can be used to test the BNG RPF functionality with traffic sent from source addresses 
-different then those assigned to the client. 
+different than those assigned to the client. 

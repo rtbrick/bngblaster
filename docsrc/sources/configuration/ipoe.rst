@@ -10,6 +10,9 @@
    * - Attribute
      - Description
      - Default
+   * - `ipv6`
+     - Enable/disable IPv6
+     - true (enabled)
    * - `ipv4`
      - Enable/disable IPv4
      - true (enabled)
@@ -19,6 +22,3 @@
    * - `arp-interval`
      - Periodic ARP interval in seconds (0 means disabled)
      - 300
-   * - `ipv6`
-     - Enable/disable IPv6
-     - true (enabled)

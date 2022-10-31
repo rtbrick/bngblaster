@@ -92,10 +92,10 @@
      - De-/activate PPP IP6CP
      - 
    * - `ipv4`
-     - De-/activate IPoE IPv4
+     - De-/activate IPv4
      - 
    * - `ipv6`
-     - De-/activate IPoE IPv6
+     - De-/activate IPv6
      - 
    * - `dhcp`
      - De-/activate DHCP
