@@ -45,7 +45,7 @@ The following example shows how to enable session traffic.
 This traffic is generated between the session and a network 
 interface. In case of multiple network interfaces, the preferred
 network interfaces can be selected using the ``network-interface`` 
-option in the corresponding access configuration.
+option in the corresponding access configuration. 
 
 Verification
 ~~~~~~~~~~~~
