@@ -69,7 +69,7 @@
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
       <li>&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/configuration/bgp.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/configuration/interfaces_links.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -77,7 +77,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+  <p>The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -93,49 +96,69 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
-<td><p>BGP local interface (source interface)</p></td>
-<td><p>first network interface</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>local-ipv4-address</cite></p></td>
-<td><p>BGP local IPv4 address (source address)</p></td>
-<td><p>network interface address</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>local-as</cite></p></td>
-<td><p>BGP local AS</p></td>
-<td><p>65000</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>peer-ipv4-address</cite></p></td>
-<td><p>BGP peer address</p></td>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Interface name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>peer-as</cite></p></td>
-<td><p>BGP peer AS</p></td>
-<td><p>local AS</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>holdtime</cite></p></td>
-<td><p>BGP holdtime in seconds</p></td>
-<td><p>90</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>id</cite></p></td>
-<td><p>BGP identifier</p></td>
-<td><p>1.2.3.4</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>reconnect</cite></p></td>
-<td><p>BGP reconnect</p></td>
-<td><p>true</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>start-traffic</cite></p></td>
-<td><p>BGP starts global traffic after RAW update</p></td>
-<td><p>false</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
-<td><p>BGP teardown time in seconds</p></td>
-<td><p>5</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
-<td><p>BGP RAW update file</p></td>
+<tr class="row-odd"><td><p><cite>description</cite></p></td>
+<td><p>Interface description</p></td>
 <td></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac</cite></p></td>
+<td><p>Overwrite the MAC address</p></td>
+<td><p>Interface MAC address</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
+<td><p>Overwrite the IO mode</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
+<td><p>Overwrite the IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-slots-tx</cite></p></td>
+<td><p>Overwrite the TX IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots-rx</cite></p></td>
+<td><p>Overwrite the RX IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>qdisc-bypass</cite></p></td>
+<td><p>Overwrite the kernel’s qdisc layer configuration</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
+<td><p>Overwrite the TX polling interval in milliseconds</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
+<td><p>Overwrite the RX polling interval in milliseconds</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-threads</cite></p></td>
+<td><p>Overwrite the number of TX threads per interface link</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-threads</cite></p></td>
+<td><p>Overwrite the number of RX threads per interface link</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-cpuset</cite></p></td>
+<td><p>Optionally pin TX threads to CPU cores (cpuset)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-cpuset</cite></p></td>
+<td><p>Optionally pin RX threads to CPU cores (cpuset)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>lag-interface</cite></p></td>
+<td><p>Add interface link to LAG group</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-priority</cite></p></td>
+<td><p>LACP interface priority</p></td>
+<td><p>32768</p></td>
 </tr>
 </tbody>
 </table>

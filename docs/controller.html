@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controller &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Controller &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -100,9 +100,9 @@ to download logs and reports.</p>
 <p><a class="reference external" href="https://github.com/rtbrick/bngblaster-controller">https://github.com/rtbrick/bngblaster-controller</a></p>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster controller should run on any modern linux distribution
-but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.</p>
-<p>Download and install debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster-controller/releases">https://github.com/rtbrick/bngblaster-controller/releases</a></p>
+<p>The BNG Blaster controller should run on any modern Linux distribution
+but is primarily tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.</p>
+<p>Download and install Debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster-controller/releases">https://github.com/rtbrick/bngblaster-controller/releases</a></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ wget https://github.com/rtbrick/bngblaster-controller/releases/download/&lt;version&gt;/bngblaster-controller_&lt;version&gt;_amd64.deb
 $ sudo dpkg -i bngblaster-controller_&lt;version&gt;_amd64.deb
 </pre></div>
@@ -232,7 +232,7 @@ test run is forcefully terminated (<cite>kill -9 &lt;pid&gt;</cite>) if running.
 <section id="metrics">
 <h3>Metrics<a class="headerlink" href="#metrics" title="Permalink to this headline"></a></h3>
 <p><cite>GET /metrics</cite></p>
-<p>This endpoint returns metrics for all instances in prometheus text format.</p>
+<p>This endpoint returns metrics for all instances in Prometheus text format.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP instances_running The number of running instances
 # TYPE instances_running gauge
 instances_running{hostname=&quot;blaster&quot;} 0
@@ -243,8 +243,8 @@ instances_total{hostname=&quot;blaster&quot;} 4
 </div>
 <p>The metric <cite>instances_total</cite> counts the number of test instance directories
 present and <cite>instances_running</cite> shows how many of them are running.</p>
-<p>Every metric is labelled with the hostname where the controller is running.</p>
-<p>Per default there are no metrics per instance. This has to be explicitly
+<p>Every metric is labeled with the hostname where the controller is running.</p>
+<p>Per default, there are no metrics per instance. This has to be explicitly
 enabled during instance start (<cite>/api/v1/instances/&lt;instance-name&gt;/_start</cite>)
 using the new  <cite>metric_flags</cite> option.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
@@ -260,7 +260,7 @@ using the new  <cite>metric_flags</cite> option.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>Currently the following metrics are supported:</p>
+<p>Currently, the following metrics are supported:</p>
 <ul class="simple">
 <li><p><cite>session_counters</cite> session statistics</p></li>
 <li><p><cite>interfaces</cite> interface counters</p></li>
@@ -274,8 +274,8 @@ sessions_established{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;
 ...
 </pre></div>
 </div>
-<p>Instance metrics are labelled with the instance name. All interface specific metrics
-are also labelled with the corresponding interface name.</p>
+<p>Instance metrics are labeled with the instance name. All interface-specific metrics
+are also labeled with the corresponding interface name.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP interfaces_rx_bytes Interface RX bytes
 # TYPE interfaces_rx_bytes counter
 interfaces_rx_bytes{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth1&quot;,interface_type=&quot;access&quot;} 36270

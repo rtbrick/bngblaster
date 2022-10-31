@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Troubleshooting &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Troubleshooting &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -90,11 +90,11 @@
 <h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline"></a></h1>
 <section id="logging">
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster is able to log events to the standard output
-or logging window of the interactive courses interface. Those
-events could be also logged to files using the argument
+<p>The BNG Blaster can log events to the standard output
+or the logging window of the interactive courses interface.
+Those events could be also logged to files using the argument
 <code class="docutils literal notranslate"><span class="pre">-L</span> <span class="pre">&lt;file&gt;</span></code>.</p>
-<p>Per default only events classified as <cite>info</cite> or <cite>error</cite> are logged.
+<p>Per default, only events classified as <cite>info</cite> or <cite>error</cite> are logged.
 The following list shows all supported logging options.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code>: debug events</p></li>
@@ -104,8 +104,6 @@ The following list shows all supported logging options.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">pppoe</span></code>: pppoe events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">info</span></code>: informational events (enabled per default)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pcap</span></code>: PCAP related events</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">timer</span></code>: timer events</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">timer-detail</span></code>: detailed timer events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ip</span></code>: log learned IP addresses</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">loss</span></code>: log traffic loss with sequence number</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">l2tp</span></code>: log L2TP (LNS) events</p></li>
@@ -121,11 +119,11 @@ The following list shows all supported logging options.</p>
 <section id="pcap">
 <h2>PCAP<a class="headerlink" href="#pcap" title="Permalink to this headline"></a></h2>
 <p>You can start the BNG Blaster with the argument <code class="docutils literal notranslate"><span class="pre">-P</span> <span class="pre">&lt;file&gt;</span></code>
-to capture all traffic send and received by the BNG Blaster
+to capture all traffic sent and received by the BNG Blaster
 into a single PCAP file. This file includes all traffic from all
 interfaces in use with proper meta header to filter by interface
 names.</p>
-<p>This helps to verify if traffic is received or how it has received.
+<p>This helps to verify if traffic is received or how it has been received.
 Some network interfaces drop the most outer VLAN which can be easily
 verified using the capture file.</p>
 <p>The configuration option <code class="docutils literal notranslate"><span class="pre">capture-include-streams</span></code> allows to
@@ -140,11 +138,11 @@ include (default behavior) or exclude traffic streams from capture.</p>
 <section id="wireshark-plugin">
 <h3>Wireshark Plugin<a class="headerlink" href="#wireshark-plugin" title="Permalink to this headline"></a></h3>
 <p>Traffic streams generated with the BNG Blaster include the
-<a class="reference internal" href="reference/traffic.html#bbl-header"><span class="std std-ref">BNG Blaster Header</span></a> which can analyzed
+<a class="reference internal" href="reference/traffic.html#bbl-header"><span class="std std-ref">BNG Blaster Header</span></a> which can be analyzed
 with the Wireshark BNG Blaster Header Dissector.</p>
 <p>Download the LUA dissector script
 <a class="reference external" href="https://github.com/rtbrick/bngblaster/tree/main/wireshark">bbl_header.lua</a>
-and start wireshark as shown below from the directory where the script is placed.</p>
+and start Wireshark as shown below from the directory where the script is placed.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ wireshark -X lua_script:bbl_header.lua
 </pre></div>
 </div>

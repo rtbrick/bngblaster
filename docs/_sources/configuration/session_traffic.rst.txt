@@ -11,26 +11,26 @@
      - Description
      - Default
    * - `autostart`
-     - Automatically start session traffic after session is established
+     - Automatically start session traffic after the session is established
      - true
    * - `ipv4-pps`
-     - Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses
+     - Autogenerate bidirectional IPv4 traffic between a network interface and all sessions
      - 0 (disabled)
    * - `ipv4-label`
-     - Send traffic from network interface with the specified MPLS label
-     - 0 (unlabelled)
+     - Send downstream IPv4 traffic with the specified MPLS label
+     - 0 (unlabeled)
    * - `ipv4-address`
-     - Send traffic from network interface with the specified address
+     - Overwrite network interface IPv4 address
      - network interface address
    * - `ipv6-pps`
-     - Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses
+     - Generate bidirectional IPv6 traffic between a network interface and all sessions
      - 0 (disabled)
    * - `ipv6-label`
-     - Send traffic from network interface with the specified MPLS label
-     - 0 (unlabelled)
+     - Send downstream IPv6 traffic with the specified MPLS label
+     - 0 (unlabeled)
    * - `ipv6-address`
-     - Send traffic from network interface with the specified address
+     - Overwrite network interface IPv6 address
      - network interface address
    * - `ipv6pd-pps`
-     - Generate bidirectional IPv6 traffic between network interface and all session delegated IPv6 addresses
+     - Generate bidirectional IPv6PD (delegated prefix) traffic between a network interface and all sessions
      - 0 (disabled)

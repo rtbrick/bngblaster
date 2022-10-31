@@ -69,7 +69,7 @@
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
       <li>&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/configuration/bgp.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/configuration/interfaces_lag.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -77,7 +77,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -93,52 +93,40 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
-<td><p>BGP local interface (source interface)</p></td>
-<td><p>first network interface</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>local-ipv4-address</cite></p></td>
-<td><p>BGP local IPv4 address (source address)</p></td>
-<td><p>network interface address</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>local-as</cite></p></td>
-<td><p>BGP local AS</p></td>
-<td><p>65000</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>peer-ipv4-address</cite></p></td>
-<td><p>BGP peer address</p></td>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Interface name (e.g. lag0, …)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>peer-as</cite></p></td>
-<td><p>BGP peer AS</p></td>
-<td><p>local AS</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>holdtime</cite></p></td>
-<td><p>BGP holdtime in seconds</p></td>
-<td><p>90</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>id</cite></p></td>
-<td><p>BGP identifier</p></td>
-<td><p>1.2.3.4</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>reconnect</cite></p></td>
-<td><p>BGP reconnect</p></td>
-<td><p>true</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>start-traffic</cite></p></td>
-<td><p>BGP starts global traffic after RAW update</p></td>
+<tr class="row-odd"><td><p><cite>lacp</cite></p></td>
+<td><p>De-/activate LACP</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
-<td><p>BGP teardown time in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><cite>lacp-timeout-short</cite></p></td>
+<td><p>De-/activate LACP short timeout (3x1s)</p></td>
+<td><p>false (3x30s)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
-<td><p>BGP RAW update file</p></td>
-<td></td>
+<tr class="row-odd"><td><p><cite>lacp-system-priority</cite></p></td>
+<td><p>LACP system priority</p></td>
+<td><p>32768</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-system-id</cite></p></td>
+<td><p>LACP system identifier</p></td>
+<td><p>02:ff:ff:ff:ff:00</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-max-active-links</cite></p></td>
+<td><p>Limit the maximum number of active links</p></td>
+<td><p>255</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac</cite></p></td>
+<td><p>LAG interface MAC address</p></td>
+<td><p>02:ff:ff:ff:ff:&lt;id&gt;</p></td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Multithreaded IO is not supported for LAG member interfaces!</p>
+</div>
 
 
            </div>

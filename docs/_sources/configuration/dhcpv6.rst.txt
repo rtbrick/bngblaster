@@ -14,7 +14,7 @@
      - This option allows to enable or disable DHCPv6
      - true
    * - `rapid-commit`
-     - DHCPv6 rapid commit (2 way handshake)
+     - DHCPv6 rapid commit (2-way handshake)
      - true
    * - `timeout`
      - DHCPv6 timeout in seconds

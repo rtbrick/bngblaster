@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ISIS &mdash; BNG Blaster 0.7 documentation</title>
+  <title>ISIS &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -110,9 +110,9 @@ standard within the Open Systems Interconnection (OSI) reference design.
 The Internet Engineering Task Force (IETF) republished ISIS in RFC 1142,
 but that RFC was later marked as historic by RFC 7142 because it republished
 a draft rather than a final version of the ISO standard, causing confusion.</p>
-<p>ISIS has been called the de facto standard for large service provider
+<p>ISIS has been called the de facto standard for a large service provider
 network backbones.</p>
-<p>The BNG Blaster is able to emulate multiple ISIS instances. An ISIS instance
+<p>The BNG Blaster can emulate multiple ISIS instances. An ISIS instance
 is a virtual ISIS node with one or more network interfaces attached. Such a
 node behaves like a “real router” including database synchronization and
 flooding. Every instance generates a <code class="docutils literal notranslate"><span class="pre">self</span></code> originated LSP describing the
@@ -289,10 +289,10 @@ attached to two network interfaces.</p>
 </table>
 <p>The support for multiple instances allows different use cases. One example might
 be to create two instances connected to the device or network under test. Now
-inject a LSP on one instance and check if learned over the tested network on
+inject an LSP on one instance and check if learned over the tested network on
 the other instance.</p>
 <p>Every ISIS instance can be also connected to an emulated link state graph loaded
-by MRT files  as shown in the example below.</p>
+by MRT files as shown in the example below.</p>
 <img alt="ISIS" src="../_images/bbl_isis.png" />
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
@@ -344,8 +344,8 @@ by MRT files  as shown in the example below.</p>
 </tr>
 </tbody>
 </table>
-<p>The The node <code class="docutils literal notranslate"><span class="pre">N1</span></code> in this example also needs to advertise the
-reachability to the node <code class="docutils literal notranslate"><span class="pre">B1</span></code>.</p>
+<p>The node <code class="docutils literal notranslate"><span class="pre">N1</span></code> in this example also needs to advertise the
+reachability to node <code class="docutils literal notranslate"><span class="pre">B1</span></code>.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -414,7 +414,7 @@ reachability to the node <code class="docutils literal notranslate"><span class=
 <h2>Database<a class="headerlink" href="#database" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster distinguishes between three different source types of
 LSP entries in the ISIS database.</p>
-<p>The type <code class="docutils literal notranslate"><span class="pre">self</span></code> is used for the self originated LSP describing the own
+<p>The type <code class="docutils literal notranslate"><span class="pre">self</span></code> is used for the self-originated LSP describing the own
 BNG Blaster ISIS instance. LSP entries of type <code class="docutils literal notranslate"><span class="pre">adjacency</span></code> are learned
 via ISIS adjacencies. The type <code class="docutils literal notranslate"><span class="pre">external</span></code> is used for those LSP entries
 learned via MRT files or injected via <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
@@ -457,26 +457,26 @@ learned via MRT files or injected via <code class="docutils literal notranslate"
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>The BNG Blaster automatically purges all LSP’s of type
+<p>The BNG Blaster automatically purges all LSPs of type
 <code class="docutils literal notranslate"><span class="pre">self</span></code> and <code class="docutils literal notranslate"><span class="pre">external</span></code> during teardown. This is done by
-generating LSP’s with a newer sequence numbers and lifetime
+generating LSPs with newer sequence numbers and a lifetime
 of 30 seconds only. This lifetime is enough to flood the purge
-LSP over te whole network under test.</p>
+LSP over the whole network under test.</p>
 </section>
 <section id="flooding">
 <h2>Flooding<a class="headerlink" href="#flooding" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster floods LSP’s received to all other active
+<p>The BNG Blaster floods LSPs received to all other active
 adjacencies of the ISIS instance except to those with peer
 system-id equal to the source system-id of the LSP.</p>
 </section>
 <section id="limitations">
 <h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline"></a></h2>
-<p>Currently only ISIS P2P links are supported. There is also
+<p>Currently, only ISIS P2P links are supported. There is also
 no support for route leaking between levels.</p>
 </section>
 <section id="mrt-files">
 <h2>MRT Files<a class="headerlink" href="#mrt-files" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster is able to load LSP’s from a MRT file as defined in
+<p>The BNG Blaster can load LSPs from an MRT file as defined in
 [RFC6396](<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6396">https://datatracker.ietf.org/doc/html/rfc6396</a>).</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0                   1                   2                   3
 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -493,14 +493,14 @@ no support for route leaking between levels.</p>
 </div>
 <p>The message field contains the complete ISIS LSP PDU including
 the ISIS common header starting with <code class="docutils literal notranslate"><span class="pre">0x83</span></code>.</p>
-<p>Those files can be loaded at startup via configuration option
+<p>Those files can be loaded at startup via the configuration option
 <code class="docutils literal notranslate"><span class="pre">&quot;isis&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;external&quot;:</span> <span class="pre">{</span> <span class="pre">&quot;mrt-file&quot;:</span> <span class="pre">&quot;&lt;file&gt;&quot;</span> <span class="pre">}</span> <span class="pre">}</span></code> or alternative
 via <code class="docutils literal notranslate"><span class="pre">isis-load-mrt</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">isis-load-mrt</span> <span class="pre">file</span> <span class="pre">test.mrt</span> <span class="pre">instance</span> <span class="pre">1</span></code></p>
 </section>
 <section id="lsp-update-command">
 <h2>LSP Update Command<a class="headerlink" href="#lsp-update-command" title="Permalink to this headline"></a></h2>
-<p>It is also possible to inject external LSP’s using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
+<p>It is also possible to inject external LSPs using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
 <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <p>The <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> expects a list of hex encoded PDU’s including
 the ISIS common header starting with <code class="docutils literal notranslate"><span class="pre">0x83</span></code>,</p>
@@ -520,7 +520,7 @@ the ISIS common header starting with <code class="docutils literal notranslate">
 </section>
 <section id="lsp-update-via-scapy">
 <h2>LSP Update via Scapy<a class="headerlink" href="#lsp-update-via-scapy" title="Permalink to this headline"></a></h2>
-<p>The following example shows how to generate LSP’s via Scapy
+<p>The following example shows how to generate LSPs via Scapy
 and inject them using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">socket</span>
@@ -588,7 +588,7 @@ and inject them using the <code class="docutils literal notranslate"><span class
 <h2>LSPGEN<a class="headerlink" href="#lspgen" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster includes a tool called <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> which is able to generate
 topologies and link state packets for export as MRT and PCAP files. This tool
-is also able to inject LSP’s directly using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
+is also able to inject LSPs directly using the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
 <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ lspgen --help
 
@@ -644,10 +644,10 @@ using configuration files.</p>
 </pre></div>
 </div>
 <p>The arguments <code class="docutils literal notranslate"><span class="pre">-K</span></code> and <code class="docutils literal notranslate"><span class="pre">-T</span></code> add a valid authentication TLV
-to the generated LSP’s in the MRT file.</p>
+to the generated LSPs in the MRT file.</p>
 <p>Those topologies could be even exported as configuration file
 with the argument <code class="docutils literal notranslate"><span class="pre">-w</span></code> and later imported with the argument <code class="docutils literal notranslate"><span class="pre">-r</span></code>.
-This allows to generate a large random topology which can be modified
+This allows the generation of a large random topology that can be modified
 manually.</p>
 </section>
 <section id="topology-from-configuration-file">

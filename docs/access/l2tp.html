@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>L2TP &mdash; BNG Blaster 0.7 documentation</title>
+  <title>L2TP &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -97,7 +97,7 @@
              
   <section id="l2tp">
 <span id="id1"></span><h1>L2TP<a class="headerlink" href="#l2tp" title="Permalink to this headline"></a></h1>
-<p>The BNG Blaster is able to emulate L2TPv2 (RFC2661) LNS servers to
+<p>The BNG Blaster can emulate L2TPv2 (RFC2661) LNS servers to
 be able to test the L2TPv2 LAC functionality of the BNG device under
 test.</p>
 <section id="configuration">
@@ -382,33 +382,37 @@ test.</p>
 </tr>
 <tr class="row-odd"><td><p><cite>receive-window-size</cite></p></td>
 <td><p>Control messages receive window size</p></td>
-<td><p>4</p></td>
+<td><p>16</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>max-retry</cite></p></td>
 <td><p>Control messages max retry</p></td>
-<td><p>30</p></td>
+<td><p>5</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>congestion-mode</cite></p></td>
 <td><p>Control messages congestion mode</p></td>
 <td><p>default</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>data-control-priority</cite></p></td>
+<tr class="row-even"><td><p><cite>hello-interval</cite></p></td>
+<td><p>Set hello interval</p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>data-control-priority</cite></p></td>
 <td><p>Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, …)</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>data-length</cite></p></td>
+<tr class="row-even"><td><p><cite>data-length</cite></p></td>
 <td><p>Set length bit for all data packets</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>data-offset</cite></p></td>
+<tr class="row-odd"><td><p><cite>data-offset</cite></p></td>
 <td><p>Set offset bit with offset zero for all data packets</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>control-tos</cite></p></td>
+<tr class="row-even"><td><p><cite>control-tos</cite></p></td>
 <td><p>L2TP control traffic (SCCRQ, ICRQ, …) TOS priority</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>data-control-tos</cite></p></td>
+<tr class="row-odd"><td><p><cite>data-control-tos</cite></p></td>
 <td><p>Set the L2TP tunnel TOS priority (outer IPv4 header) for all non-IP data packets (LCP, IPCP, …)</p></td>
 <td><p>0</p></td>
 </tr>
@@ -473,8 +477,8 @@ four servers as shown in the example below.</p>
 <h2>RFC5515<a class="headerlink" href="#rfc5515" title="Permalink to this headline"></a></h2>
 <p>The Agent-Circuit-Id and Agent-Remote-Id AVP defined in RFC5515
 is supported and stored for each session if received. Received
-CSUN messages are processed correctly and via control socket it
-is possible to send also CSURQ requests to the LAC.</p>
+CSUN messages are processed correctly and via the control socket,
+it is possible to send also CSURQ requests to the LAC.</p>
 </section>
 <section id="l2tp-commands">
 <h2>L2TP Commands<a class="headerlink" href="#l2tp-commands" title="Permalink to this headline"></a></h2>
