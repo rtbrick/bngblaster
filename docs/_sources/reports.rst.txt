@@ -70,139 +70,174 @@ Standard Output Reports
 
 .. code-block:: none
 
-        ____   __   ____         _        __                                  ,/
-        / __ \ / /_ / __ ) _____ (_)_____ / /__                              ,'/
-        / /_/ // __// __  |/ ___// // ___// //_/                            ,' /
-    / _, _// /_ / /_/ // /   / // /__ / ,<                             ,'  /_____,
-    /_/ |_| \__//_____//_/   /_/ \___//_/|_|                          .'____    ,'
-        ____   _   _  ______   ____   _               _                    /  ,'
-        / __ ) / | / // ____/  / __ ) / /____ _ _____ / /_ ___   ____      / ,'
-        / __  |/  |/ // / __   / __  |/ // __ `// ___// __// _ \ / ___/    /,'
-    / /_/ // /|  // /_/ /  / /_/ // // /_/ /(__  )/ /_ /  __// /       /
-    /_____//_/ |_/ \____/  /_____//_/ \__,_//____/ \__/ \___//_/
-
     Report:
-    =======
-    Sessions PPPoE: 4000 IPoE: 0
-    Sessions established: 4000/4000
-    DHCPv6 sessions established: 0
-    Setup Time: 4048 ms
-    Setup Rate: 988.14 CPS (MIN: 988.14 AVG: 4352.28 MAX: 17021.28)
+    ==============================================================================
+    Test Duration: 139s
+    Sessions PPPoE: 1000 IPoE: 0
+    Sessions established: 1000/1000
+    DHCPv6 sessions established: 1000
+    Setup Time: 55661 ms
+    Setup Rate: 17.97 CPS (MIN: 15.01 AVG: 18.03 MAX: 19.36)
     Flapped: 0
 
     Interface: eth1
-    --------------------------------------------------------------
-    TX:                    163654 packets         24936136 bytes
-    TX Polled:                  0
-    TX IO Error:                0
-    RX:                    180455 packets         25267731 bytes
-    RX Protocol Error:          0 packets
-    RX Unknown:                 0 packets
-    RX Polled:               6661
-    RX IO Error:                0
+    ------------------------------------------------------------------------------
+      TX:                    111410 packets         12654727 bytes
+      TX Polled:                  0
+      TX IO Error:                0
+      RX:                    110161 packets         12300031 bytes
+      RX Protocol Error:          0 packets
+      RX Unknown:                 5 packets
+      RX Polled:              93709
+      RX IO Error:                0
 
-    A10NSP Interface: eth1
-    TX:                    163654 packets   24936136 bytes
-    RX:                    180455 packets   25267731 bytes
-    TX Stream:             115654 packets
-    RX Stream:             115654 packets (0 loss)
-    Session-Traffic:
-        TX IPv4:              57827 packets
-        RX IPv4:              57827 packets (0 loss)
-        TX IPv6:                  0 packets
-        RX IPv6:                  0 packets (0 loss)
-        TX IPv6PD:                0 packets
-        RX IPv6PD:                0 packets (0 loss)
-
-    Interface: eth2
-    --------------------------------------------------------------
-    TX:                    180854 packets         26000677 bytes
-    TX Polled:                  0
-    TX IO Error:                0
-    RX:                    163655 packets         24281590 bytes
-    RX Protocol Error:          0 packets
-    RX Unknown:                 0 packets
-    RX Polled:               6704
-    RX IO Error:                0
-
-    Access Interface: eth2
-    TX:                    180854 packets         26000677 bytes
-    RX:                    163655 packets         24281590 bytes
-    RX Multicast:               0 packets                0 loss
-    TX Stream:             115654 packets
-    RX Stream:             115654 packets                0 loss
-    Session-Traffic:
-        TX IPv4:              57827 packets
-        RX IPv4:              57827 packets                0 loss
-        TX IPv6:                  0 packets
-        RX IPv6:                  0 packets                0 loss
-        TX IPv6PD:                0 packets
-        RX IPv6PD:                0 packets                0 loss
+    Access Interface: eth1
+      TX:                    111410 packets         12654727 bytes
+      RX:                    110156 packets         12299556 bytes
+      RX Multicast:               0 packets                0 loss
+      Session-Traffic:
+        TX IPv4:              33319 packets
+        RX IPv4:              32641 packets                0 loss
+        TX IPv6:              33319 packets
+        RX IPv6:              32635 packets                0 loss
+        TX IPv6PD:            33311 packets
+        RX IPv6PD:            32633 packets                0 loss
 
     Access Interface Protocol Packet Stats:
-    ARP    TX:          0 RX:          0
-    PADI   TX:       4000 RX:          0
-    PADO   TX:          0 RX:       4000
-    PADR   TX:       4000 RX:          0
-    PADS   TX:          0 RX:       4000
-    PADT   TX:       4000 RX:          0
-    LCP    TX:      12000 RX:      12000
-    PAP    TX:       4000 RX:       4000
-    CHAP   TX:          0 RX:          0
-    IPCP   TX:      16000 RX:      16000
-    IP6CP  TX:       8000 RX:       8000
-    IGMP   TX:          0 RX:          0
-    ICMP   TX:          0 RX:          0
-    DHCP   TX:          0 RX:          0
-    DHCPv6 TX:          0 RX:          0
-    ICMPv6 TX:      13200 RX:          0
-    IPv4 Fragmented       RX:          0
+      ARP    TX:          0 RX:          0
+      PADI   TX:       1104 RX:          0
+      PADO   TX:          0 RX:        500
+      PADR   TX:        500 RX:          0
+      PADS   TX:          0 RX:        500
+      PADT   TX:        127 RX:        373
+      LCP    TX:       4880 RX:       4880
+      PAP    TX:          0 RX:          0
+      CHAP   TX:       1700 RX:       1000
+      IPCP   TX:       1500 RX:       1500
+      IP6CP  TX:       1000 RX:       1000
+      IGMP   TX:          0 RX:          0
+      ICMP   TX:          0 RX:          0
+      DHCP   TX:          0 RX:          0
+      DHCPv6 TX:        500 RX:        500
+      ICMPv6 TX:       1000 RX:       1840
+      IPv4 Fragmented       RX:          0
 
     Access Interface Protocol Timeout Stats:
-    LCP Echo Request:          0
-    LCP Request:               0
-    IPCP Request:              0
-    IP6CP Request:             0
-    PAP:                       0
-    CHAP:                      0
-    DHCP Request:              0
-    DHCPv6 Request:            0
-    ICMPv6 RS:              9200
+      LCP Echo Request:          0
+      LCP Request:               0
+      IPCP Request:              0
+      IP6CP Request:             0
+      PAP:                       0
+      CHAP:                    350
+      DHCP Request:              0
+      DHCPv6 Request:            0
+      ICMPv6 RS:                 0
+
+    Interface: eth2
+    ------------------------------------------------------------------------------
+      TX:                    108580 packets         12360218 bytes
+      TX Polled:                  0
+      TX IO Error:                0
+      RX:                    106881 packets         11982029 bytes
+      RX Protocol Error:          0 packets
+      RX Unknown:                 5 packets
+      RX Polled:              95265
+      RX IO Error:                0
+
+    Access Interface: eth2
+      TX:                    108580 packets         12360218 bytes
+      RX:                    106876 packets         11981554 bytes
+      RX Multicast:               0 packets                0 loss
+      Session-Traffic:
+        TX IPv4:              32465 packets
+        RX IPv4:              31896 packets                0 loss
+        TX IPv6:              32465 packets
+        RX IPv6:              31895 packets                0 loss
+        TX IPv6PD:            32461 packets
+        RX IPv6PD:            31894 packets                0 loss
+
+    Access Interface Protocol Packet Stats:
+      ARP    TX:          0 RX:          0
+      PADI   TX:       1102 RX:          0
+      PADO   TX:          0 RX:        500
+      PADR   TX:        844 RX:          0
+      PADS   TX:          0 RX:        500
+      PADT   TX:         78 RX:        422
+      LCP    TX:       4343 RX:       4343
+      PAP    TX:        822 RX:        500
+      CHAP   TX:          0 RX:          0
+      IPCP   TX:       1500 RX:       1500
+      IP6CP  TX:       1000 RX:       1000
+      IGMP   TX:          0 RX:          0
+      ICMP   TX:          0 RX:          0
+      DHCP   TX:          0 RX:          0
+      DHCPv6 TX:        500 RX:        500
+      ICMPv6 TX:       1000 RX:       1816
+      IPv4 Fragmented       RX:          0
+
+    Access Interface Protocol Timeout Stats:
+      LCP Echo Request:          0
+      LCP Request:               0
+      IPCP Request:              0
+      IP6CP Request:             0
+      PAP:                     322
+      CHAP:                      0
+      DHCP Request:              0
+      DHCPv6 Request:            0
+      ICMPv6 RS:                 0
+
+    Interface: eth3
+    ------------------------------------------------------------------------------
+      TX:                    197523 packets         21009053 bytes
+      TX Polled:                  0
+      TX IO Error:                0
+      RX:                    188259 packets         20425245 bytes
+      RX Protocol Error:          0 packets
+      RX Unknown:                 0 packets
+      RX Polled:              74810
+      RX IO Error:                0
+
+    Network Interface: eth3
+      TX:                    197523 packets         21009053 bytes
+      RX:                    188259 packets         20425245 bytes
+      TX Multicast:               0 packets
+      Session-Traffic:
+        TX IPv4:              65784 packets
+        RX IPv4:              64537 packets                0 loss
+        TX IPv6:              65784 packets
+        RX IPv6:              61793 packets                0 loss
+        TX IPv6PD:            65772 packets
+        RX IPv6PD:            61790 packets                0 loss
 
     Session Traffic (Global):
-    --------------------------------------------------------------
-    Config:
-        IPv4    PPS:           1
-        IPv6    PPS:           0
-        IPv6PD  PPS:           0
-    Verified Traffic Flows: 8000/8000
-        Downstream IPv4:       4000
-        Downstream IPv6:          0
-        Downstream IPv6PD:        0
-        Upstream IPv4:         4000
-        Upstream IPv6:            0
-        Upstream IPv6PD:          0
-    Violations (>1s): 0
-        Downstream IPv4:          0
-        Downstream IPv6:          0
-        Downstream IPv6PD:        0
-        Upstream IPv4:            0
-        Upstream IPv6:            0
-        Upstream IPv6PD:          0
-    First Sequence Number Received:
-        Downstream IPv4    MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Downstream IPv6    MIN:      0 ( 0.00s) AVG:      0 ( 0.00s) MAX:      0 ( 0.00s)
-        Downstream IPv6PD  MIN:      0 ( 0.00s) AVG:      0 ( 0.00s) MAX:      0 ( 0.00s)
-        Upstream IPv4      MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Upstream IPv6      MIN:      0 ( 0.00s) AVG:      0 ( 0.00s) MAX:      0 ( 0.00s)
-        Upstream IPv6PD    MIN:      0 ( 0.00s) AVG:      0 ( 0.00s) MAX:      0 ( 0.00s)
+    ------------------------------------------------------------------------------
+      Config:
+        PPS IPv4:                    1
+        PPS IPv6:                    1
+        PPS IPv6PD:                  1
+      Verified Traffic Flows:     6000/6000 (100.00%)
+        Downstream IPv4:          1000
+        Downstream IPv6:          1000
+        Downstream IPv6PD:        1000
+        Upstream IPv4:            1000
+        Upstream IPv6:            1000
+        Upstream IPv6PD:          1000
+      Violations:               >1s             >1s-2s   >2s-3s      >3s
+        Downstream IPv4:        623 ( 10.38%)      199      224      200
+        Downstream IPv6:        624 ( 10.40%)      200      218      206
+        Downstream IPv6PD:      624 ( 10.40%)      200      227      197
+        Upstream IPv4:          623 ( 10.38%)      199      224      200
+        Upstream IPv6:          624 ( 10.40%)      200      218      206
+        Upstream IPv6PD:        624 ( 10.40%)      200      227      197
+        Total:                 3742 ( 62.37%)     1198     1338     1206
+      First Sequence Received:  MIN                AVG               MAX
+        Downstream IPv4           1 ( 1.00s)         2 ( 2.00s)        4 ( 4.00s)
+        Downstream IPv6           1 ( 1.00s)         2 ( 2.00s)        4 ( 4.00s)
+        Downstream IPv6PD         1 ( 1.00s)         2 ( 2.00s)        4 ( 4.00s)
+        Upstream IPv4             1 ( 1.00s)         2 ( 2.00s)        4 ( 4.00s)
+        Upstream IPv6             1 ( 1.00s)         2 ( 2.00s)        4 ( 4.00s)
+        Upstream IPv6PD           1 ( 1.00s)         2 ( 2.00s)        4 ( 4.00s)
 
-    Traffic Streams:
-    --------------------------------------------------------------
-    Verified Traffic Flows: 8000/8000
-    First Sequence Number Received  MIN:        1 MAX:        1
-    Flow Receive Packet Loss        MIN:        0 MAX:        0
-    Flow Receive Delay (msec)       MIN:    0.009 MAX:    7.249
 
 
 JSON Reports
@@ -214,211 +249,297 @@ argument ``-J <filename>``.
 .. code-block:: json
         
     {
-        "report": {
-            "sessions": 4000,
-            "sessions-pppoe": 4000,
-            "sessions-ipoe": 0,
-            "sessions-established": 4000,
-            "sessions-flapped": 0,
-            "setup-time-ms": 4046,
-            "setup-rate-cps": 988.6,
-            "setup-rate-cps-min": 988.6,
-            "setup-rate-cps-avg": 4214,
-            "setup-rate-cps-max": 16330,
-            "dhcp-sessions-established": 0,
-            "dhcpv6-sessions-established": 0,
-            "interfaces": [
-                {
-                    "name": "eth1",
-                    "type": "Interface",
-                    "tx-packets": 139642,
-                    "tx-bytes": 20229784,
-                    "tx-polled": 0,
-                    "tx-io-error": 0,
-                    "rx-packets": 154042,
-                    "rx-bytes": 20479757,
-                    "rx-protocol-error": 0,
-                    "rx-unknown": 0,
-                    "rx-polled": 20479757,
-                    "rx-io-error": 0
-                },
-                {
-                    "name": "eth2",
-                    "type": "Interface",
-                    "tx-packets": 154442,
-                    "tx-bytes": 21107125,
-                    "tx-polled": 0,
-                    "tx-io-error": 0,
-                    "rx-packets": 139642,
-                    "rx-bytes": 19671216,
-                    "rx-protocol-error": 0,
-                    "rx-unknown": 0,
-                    "rx-polled": 19671216,
-                    "rx-io-error": 0
-                }
-            ],
-            "access-interfaces": [
-                {
-                    "name": "eth2",
-                    "tx-packets": 154442,
-                    "rx-packets": 139642,
-                    "rx-multicast-packets": 0,
-                    "rx-multicast-packets-loss": 0,
-                    "tx-stream-packets": 91642,
-                    "rx-stream-packets": 91642,
-                    "rx-stream-packets-loss": 0,
-                    "tx-session-packets-ipv4": 45821,
-                    "rx-session-packets-ipv4": 45821,
-                    "rx-session-packets-ipv4-loss": 0,
-                    "rx-session-packets-ipv4-wrong-session": 0,
-                    "tx-session-packets-ipv4-avg-pps-max": 4000,
-                    "rx-session-packets-ipv4-avg-pps-max": 4000,
-                    "tx-session-packets-ipv6": 0,
-                    "rx-session-packets-ipv6": 0,
-                    "rx-session-packets-ipv6-loss": 0,
-                    "rx-session-packets-ipv6-wrong-session": 0,
-                    "tx-session-packets-ipv6-avg-pps-max": 0,
-                    "rx-session-packets-ipv6avg-pps-max": 0,
-                    "tx-session-packets-ipv6pd": 0,
-                    "rx-session-packets-ipv6pd": 0,
-                    "rx-session-packets-ipv6pd-loss": 0,
-                    "rx-session-packets-ipv6pd-wrong-session": 0,
-                    "tx-session-packets-ipv6pd-avg-pps-max": 0,
-                    "rx-session-packets-ipv6pd-avg-pps-max": 0,
-                    "protocol-stats": {
-                        "tx-arp": 0,
-                        "rx-arp": 0,
-                        "tx-padi": 4000,
-                        "rx-pado": 4000,
-                        "tx-padr": 4000,
-                        "rx-pads": 4000,
-                        "tx-padt": 4000,
-                        "rx-padt": 0,
-                        "tx-lcp": 12000,
-                        "rx-lcp": 12000,
-                        "tx-pap": 4000,
-                        "rx-pap": 4000,
-                        "tx-chap": 0,
-                        "rx-chap": 0,
-                        "tx-ipcp": 16000,
-                        "rx-ipcp": 16000,
-                        "tx-ip6cp": 8000,
-                        "rx-ip6cp": 8000,
-                        "tx-igmp": 0,
-                        "rx-igmp": 0,
-                        "tx-icmp": 0,
-                        "rx-icmp": 0,
-                        "tx-dhcp": 0,
-                        "rx-dhcp": 0,
-                        "tx-dhcpv6": 0,
-                        "rx-dhcpv6": 0,
-                        "tx-icmpv6": 10800,
-                        "rx-icmpv6": 0,
-                        "rx-ipv4-fragmented": 0,
-                        "lcp-echo-timeout": 0,
-                        "lcp-request-timeout": 0,
-                        "ipcp-request-timeout": 0,
-                        "ip6cp-request-timeout": 0,
-                        "pap-timeout": 0,
-                        "chap-timeout": 0,
-                        "dhcp-timeout": 0,
-                        "dhcpv6-timeout": 0,
-                        "icmpv6-rs-timeout": 0
-                    }
-                }
-            ],
-            "a10nsp-interfaces": [
-                {
-                    "name": "eth1",
-                    "tx-packets": 139642,
-                    "rx-packets": 154042,
-                    "tx-stream-packets": 91642,
-                    "rx-stream-packets": 91642,
-                    "rx-stream-packets-loss": 0,
-                    "tx-session-packets-ipv4": 45821,
-                    "rx-session-packets-ipv4": 45821,
-                    "rx-session-packets-ipv4-loss": 0,
-                    "tx-session-packets-ipv4-avg-pps-max": 4000,
-                    "rx-session-packets-ipv4-avg-pps-max": 4000,
-                    "tx-session-packets-ipv6": 0,
-                    "rx-session-packets-ipv6": 0,
-                    "rx-session-packets-ipv6-loss": 0,
-                    "tx-session-packets-ipv6-avg-pps-max": 0,
-                    "rx-session-packets-ipv6-avg-pps-max": 0,
-                    "tx-session-packets-ipv6pd": 0,
-                    "rx-session-packets-ipv6pd": 0,
-                    "rx-session-packets-ipv6pd-loss": 0,
-                    "tx-session-packets-ipv6pd-avg-pps-max": 0,
-                    "rx-session-packets-ipv6pd-avg-pps-max": 0
-                }
-            ],
-            "session-traffic": {
-                "config-ipv4-pps": 1,
-                "config-ipv6-pps": 0,
-                "config-ipv6pd-pps": 0,
-                "total-flows": 8000,
-                "verified-flows": 8000,
-                "verified-flows-downstream-ipv4": 4000,
-                "verified-flows-downstream-ipv6": 0,
-                "verified-flows-downstream-ipv6pd": 0,
-                "verified-flows-upstream-ipv4": 4000,
-                "verified-flows-upstream-ipv6": 0,
-                "verified-flows-upstream-ipv6pd": 0,
-                "violated-flows-downstream-ipv4": 0,
-                "violated-flows-downstream-ipv6": 0,
-                "violated-flows-downstream-ipv6pd": 0,
-                "violated-flows-upstream-ipv4": 0,
-                "violated-flows-upstream-ipv6": 0,
-                "violated-flows-upstream-ipv6pd": 0,
-                "first-seq-rx-downstream-ipv4-min": 1,
-                "first-seq-rx-downstream-ipv4-avg": 1,
-                "first-seq-rx-downstream-ipv4-max": 1,
-                "first-seq-rx-downstream-ipv6-min": 0,
-                "first-seq-rx-downstream-ipv6-avg": 0,
-                "first-seq-rx-downstream-ipv6-max": 0,
-                "first-seq-rx-downstream-ipv6pd-min": 0,
-                "first-seq-rx-downstream-ipv6pd-avg": 0,
-                "first-seq-rx-downstream-ipv6pd-max": 0,
-                "first-seq-rx-upstream-ipv4-min": 1,
-                "first-seq-rx-upstream-ipv4-avg": 1,
-                "first-seq-rx-upstream-ipv4-max": 1,
-                "first-seq-rx-upstream-ipv6-min": 0,
-                "first-seq-rx-upstream-ipv6-avg": 0,
-                "first-seq-rx-upstream-ipv6-max": 0,
-                "first-seq-rx-upstream-ipv6pd-min": 0,
-                "first-seq-rx-upstream-ipv6pd-avg": 0,
-                "first-seq-rx-upstream-ipv6pd-max": 0,
-                "first-seq-rx-downstream-ipv4-min-seconds": 1,
-                "first-seq-rx-downstream-ipv4-avg-seconds": 1,
-                "first-seq-rx-downstream-ipv4-max-seconds": 1,
-                "first-seq-rx-downstream-ipv6-min-seconds": 0,
-                "first-seq-rx-downstream-ipv6-avg-seconds": 0,
-                "first-seq-rx-downstream-ipv6-max-seconds": 0,
-                "first-seq-rx-downstream-ipv6pd-min-seconds": 0,
-                "first-seq-rx-downstream-ipv6pd-avg-seconds": 0,
-                "first-seq-rx-downstream-ipv6pd-max-seconds": 0,
-                "first-seq-rx-upstream-ipv4-min-seconds": 1,
-                "first-seq-rx-upstream-ipv4-avg-seconds": 1,
-                "first-seq-rx-upstream-ipv4-max-seconds": 1,
-                "first-seq-rx-upstream-ipv6-min-seconds": 0,
-                "first-seq-rx-upstream-ipv6-avg-seconds": 0,
-                "first-seq-rx-upstream-ipv6-max-seconds": 0,
-                "first-seq-rx-upstream-ipv6pd-min-seconds": 0,
-                "first-seq-rx-upstream-ipv6pd-avg-seconds": 0,
-                "first-seq-rx-upstream-ipv6pd-max-seconds": 0
-            },
-            "traffic-streams": {
-                "total-flows": 8000,
-                "verified-flows": 8000,
-                "first-seq-rx-min": 1,
-                "first-seq-rx-max": 1,
-                "flow-rx-packet-loss-min": 0,
-                "flow-rx-packet-loss-max": 0,
-                "flow-rx-delay-min": 6779,
-                "flow-rx-delay-max": 6940868
+      "report": {
+        "sessions": 1000,
+        "sessions-pppoe": 1000,
+        "sessions-ipoe": 0,
+        "sessions-established": 1000,
+        "sessions-flapped": 0,
+        "setup-time-ms": 55661,
+        "setup-rate-cps": 17.97,
+        "setup-rate-cps-min": 15.01,
+        "setup-rate-cps-avg": 18.03,
+        "setup-rate-cps-max": 19.36,
+        "dhcp-sessions-established": 0,
+        "dhcpv6-sessions-established": 1000,
+        "interfaces": [
+          {
+            "name": "SN-6-L1",
+            "type": "Interface",
+            "tx-packets": 111410,
+            "tx-bytes": 12654727,
+            "tx-polled": 0,
+            "tx-io-error": 0,
+            "rx-packets": 110161,
+            "rx-bytes": 12300031,
+            "rx-protocol-error": 0,
+            "rx-unknown": 5,
+            "rx-polled": 12300031,
+            "rx-io-error": 0
+          },
+          {
+            "name": "SN-5-L1",
+            "type": "Interface",
+            "tx-packets": 108580,
+            "tx-bytes": 12360218,
+            "tx-polled": 0,
+            "tx-io-error": 0,
+            "rx-packets": 106881,
+            "rx-bytes": 11982029,
+            "rx-protocol-error": 0,
+            "rx-unknown": 5,
+            "rx-polled": 11982029,
+            "rx-io-error": 0
+          },
+          {
+            "name": "SN-2-S1",
+            "type": "Interface",
+            "tx-packets": 197523,
+            "tx-bytes": 21009053,
+            "tx-polled": 0,
+            "tx-io-error": 0,
+            "rx-packets": 188259,
+            "rx-bytes": 20425245,
+            "rx-protocol-error": 0,
+            "rx-unknown": 0,
+            "rx-polled": 20425245,
+            "rx-io-error": 0
+          }
+        ],
+        "network-interfaces": [
+          {
+            "name": "SN-2-S1",
+            "tx-packets": 197523,
+            "tx-multicast-packets": 0,
+            "rx-packets": 188259,
+            "tx-stream-packets": 197340,
+            "rx-stream-packets": 188120,
+            "rx-stream-packets-loss": 0,
+            "tx-session-packets-ipv4": 65784,
+            "rx-session-packets-ipv4": 64537,
+            "rx-session-packets-ipv4-loss": 0,
+            "tx-session-packets-ipv4-avg-pps-max": 1000,
+            "rx-session-packets-ipv4-avg-pps-max": 1000,
+            "tx-session-packets-ipv6": 65784,
+            "rx-session-packets-ipv6": 61793,
+            "rx-session-packets-ipv6-loss": 0,
+            "tx-session-packets-ipv6-avg-pps-max": 1000,
+            "rx-session-packets-ipv6-avg-pps-max": 1000,
+            "tx-session-packets-ipv6pd": 65772,
+            "rx-session-packets-ipv6pd": 61790,
+            "rx-session-packets-ipv6pd-loss": 0,
+            "tx-session-packets-ipv6pd-avg-pps-max": 1000,
+            "rx-session-packets-ipv6pd-avg-pps-max": 1000
+          }
+        ],
+        "access-interfaces": [
+          {
+            "name": "SN-6-L1",
+            "tx-packets": 111410,
+            "rx-packets": 110156,
+            "rx-multicast-packets": 0,
+            "rx-multicast-packets-loss": 0,
+            "tx-stream-packets": 99949,
+            "rx-stream-packets": 97909,
+            "rx-stream-packets-loss": 0,
+            "tx-session-packets-ipv4": 33319,
+            "rx-session-packets-ipv4": 32641,
+            "rx-session-packets-ipv4-loss": 0,
+            "rx-session-packets-ipv4-wrong-session": 0,
+            "tx-session-packets-ipv4-avg-pps-max": 500,
+            "rx-session-packets-ipv4-avg-pps-max": 500,
+            "tx-session-packets-ipv6": 33319,
+            "rx-session-packets-ipv6": 32635,
+            "rx-session-packets-ipv6-loss": 0,
+            "rx-session-packets-ipv6-wrong-session": 0,
+            "tx-session-packets-ipv6-avg-pps-max": 500,
+            "rx-session-packets-ipv6avg-pps-max": 500,
+            "tx-session-packets-ipv6pd": 33311,
+            "rx-session-packets-ipv6pd": 32633,
+            "rx-session-packets-ipv6pd-loss": 0,
+            "rx-session-packets-ipv6pd-wrong-session": 0,
+            "tx-session-packets-ipv6pd-avg-pps-max": 500,
+            "rx-session-packets-ipv6pd-avg-pps-max": 500,
+            "protocol-stats": {
+              "tx-arp": 0,
+              "rx-arp": 0,
+              "tx-padi": 1104,
+              "rx-pado": 500,
+              "tx-padr": 500,
+              "rx-pads": 500,
+              "tx-padt": 127,
+              "rx-padt": 373,
+              "tx-lcp": 4880,
+              "rx-lcp": 4880,
+              "tx-pap": 0,
+              "rx-pap": 0,
+              "tx-chap": 1700,
+              "rx-chap": 1000,
+              "tx-ipcp": 1500,
+              "rx-ipcp": 1500,
+              "tx-ip6cp": 1000,
+              "rx-ip6cp": 1000,
+              "tx-igmp": 0,
+              "rx-igmp": 0,
+              "tx-icmp": 0,
+              "rx-icmp": 0,
+              "tx-dhcp": 0,
+              "rx-dhcp": 0,
+              "tx-dhcpv6": 500,
+              "rx-dhcpv6": 500,
+              "tx-icmpv6": 1000,
+              "rx-icmpv6": 1840,
+              "rx-ipv4-fragmented": 0,
+              "lcp-echo-timeout": 0,
+              "lcp-request-timeout": 0,
+              "ipcp-request-timeout": 0,
+              "ip6cp-request-timeout": 0,
+              "pap-timeout": 0,
+              "chap-timeout": 350,
+              "dhcp-timeout": 0,
+              "dhcpv6-timeout": 0,
+              "icmpv6-rs-timeout": 0
             }
+          },
+          {
+            "name": "SN-5-L1",
+            "tx-packets": 108580,
+            "rx-packets": 106876,
+            "rx-multicast-packets": 0,
+            "rx-multicast-packets-loss": 0,
+            "tx-stream-packets": 97391,
+            "rx-stream-packets": 95685,
+            "rx-stream-packets-loss": 0,
+            "tx-session-packets-ipv4": 32465,
+            "rx-session-packets-ipv4": 31896,
+            "rx-session-packets-ipv4-loss": 0,
+            "rx-session-packets-ipv4-wrong-session": 0,
+            "tx-session-packets-ipv4-avg-pps-max": 500,
+            "rx-session-packets-ipv4-avg-pps-max": 500,
+            "tx-session-packets-ipv6": 32465,
+            "rx-session-packets-ipv6": 31895,
+            "rx-session-packets-ipv6-loss": 0,
+            "rx-session-packets-ipv6-wrong-session": 0,
+            "tx-session-packets-ipv6-avg-pps-max": 500,
+            "rx-session-packets-ipv6avg-pps-max": 500,
+            "tx-session-packets-ipv6pd": 32461,
+            "rx-session-packets-ipv6pd": 31894,
+            "rx-session-packets-ipv6pd-loss": 0,
+            "rx-session-packets-ipv6pd-wrong-session": 0,
+            "tx-session-packets-ipv6pd-avg-pps-max": 500,
+            "rx-session-packets-ipv6pd-avg-pps-max": 500,
+            "protocol-stats": {
+              "tx-arp": 0,
+              "rx-arp": 0,
+              "tx-padi": 1102,
+              "rx-pado": 500,
+              "tx-padr": 844,
+              "rx-pads": 500,
+              "tx-padt": 78,
+              "rx-padt": 422,
+              "tx-lcp": 4343,
+              "rx-lcp": 4343,
+              "tx-pap": 822,
+              "rx-pap": 500,
+              "tx-chap": 0,
+              "rx-chap": 0,
+              "tx-ipcp": 1500,
+              "rx-ipcp": 1500,
+              "tx-ip6cp": 1000,
+              "rx-ip6cp": 1000,
+              "tx-igmp": 0,
+              "rx-igmp": 0,
+              "tx-icmp": 0,
+              "rx-icmp": 0,
+              "tx-dhcp": 0,
+              "rx-dhcp": 0,
+              "tx-dhcpv6": 500,
+              "rx-dhcpv6": 500,
+              "tx-icmpv6": 1000,
+              "rx-icmpv6": 1816,
+              "rx-ipv4-fragmented": 0,
+              "lcp-echo-timeout": 0,
+              "lcp-request-timeout": 0,
+              "ipcp-request-timeout": 0,
+              "ip6cp-request-timeout": 0,
+              "pap-timeout": 322,
+              "chap-timeout": 0,
+              "dhcp-timeout": 0,
+              "dhcpv6-timeout": 0,
+              "icmpv6-rs-timeout": 0
+            }
+          }
+        ],
+        "session-traffic": {
+          "config-ipv4-pps": 1,
+          "config-ipv6-pps": 1,
+          "config-ipv6pd-pps": 1,
+          "total-flows": 6000,
+          "verified-flows": 6000,
+          "verified-flows-downstream-ipv4": 1000,
+          "verified-flows-downstream-ipv6": 1000,
+          "verified-flows-downstream-ipv6pd": 1000,
+          "verified-flows-upstream-ipv4": 1000,
+          "verified-flows-upstream-ipv6": 1000,
+          "verified-flows-upstream-ipv6pd": 1000,
+          "violated-flows-downstream-ipv4-3s": 200,
+          "violated-flows-downstream-ipv6-3s": 206,
+          "violated-flows-downstream-ipv6pd-3s": 197,
+          "violated-flows-upstream-ipv4-3s": 200,
+          "violated-flows-upstream-ipv6-3s": 206,
+          "violated-flows-upstream-ipv6pd-3s": 197,
+          "violated-flows-downstream-ipv4-2s": 224,
+          "violated-flows-downstream-ipv6-2s": 218,
+          "violated-flows-downstream-ipv6pd-2s": 227,
+          "violated-flows-upstream-ipv4-2s": 224,
+          "violated-flows-upstream-ipv6-2s": 218,
+          "violated-flows-upstream-ipv6pd-2s": 227,
+          "violated-flows-downstream-ipv4-1s": 199,
+          "violated-flows-downstream-ipv6-1s": 200,
+          "violated-flows-downstream-ipv6pd-1s": 200,
+          "violated-flows-upstream-ipv4-1s": 199,
+          "violated-flows-upstream-ipv6-1s": 200,
+          "violated-flows-upstream-ipv6pd-1s": 200,
+          "first-seq-rx-downstream-ipv4-min": 1,
+          "first-seq-rx-downstream-ipv4-avg": 2,
+          "first-seq-rx-downstream-ipv4-max": 4,
+          "first-seq-rx-downstream-ipv6-min": 1,
+          "first-seq-rx-downstream-ipv6-avg": 2,
+          "first-seq-rx-downstream-ipv6-max": 4,
+          "first-seq-rx-downstream-ipv6pd-min": 1,
+          "first-seq-rx-downstream-ipv6pd-avg": 2,
+          "first-seq-rx-downstream-ipv6pd-max": 4,
+          "first-seq-rx-upstream-ipv4-min": 1,
+          "first-seq-rx-upstream-ipv4-avg": 2,
+          "first-seq-rx-upstream-ipv4-max": 4,
+          "first-seq-rx-upstream-ipv6-min": 1,
+          "first-seq-rx-upstream-ipv6-avg": 2,
+          "first-seq-rx-upstream-ipv6-max": 4,
+          "first-seq-rx-upstream-ipv6pd-min": 1,
+          "first-seq-rx-upstream-ipv6pd-avg": 2,
+          "first-seq-rx-upstream-ipv6pd-max": 4,
+          "first-seq-rx-downstream-ipv4-min-seconds": 1,
+          "first-seq-rx-downstream-ipv4-avg-seconds": 2,
+          "first-seq-rx-downstream-ipv4-max-seconds": 4,
+          "first-seq-rx-downstream-ipv6-min-seconds": 1,
+          "first-seq-rx-downstream-ipv6-avg-seconds": 2,
+          "first-seq-rx-downstream-ipv6-max-seconds": 4,
+          "first-seq-rx-downstream-ipv6pd-min-seconds": 1,
+          "first-seq-rx-downstream-ipv6pd-avg-seconds": 2,
+          "first-seq-rx-downstream-ipv6pd-max-seconds": 4,
+          "first-seq-rx-upstream-ipv4-min-seconds": 1,
+          "first-seq-rx-upstream-ipv4-avg-seconds": 2,
+          "first-seq-rx-upstream-ipv4-max-seconds": 4,
+          "first-seq-rx-upstream-ipv6-min-seconds": 1,
+          "first-seq-rx-upstream-ipv6-avg-seconds": 2,
+          "first-seq-rx-upstream-ipv6-max-seconds": 4,
+          "first-seq-rx-upstream-ipv6pd-min-seconds": 1,
+          "first-seq-rx-upstream-ipv6pd-avg-seconds": 2,
+          "first-seq-rx-upstream-ipv6pd-max-seconds": 4
         }
+      }
     }
+
 
 The optional argument ``-j sessions`` allows to include per session statistics
 in the report file. Similar to ``-j streams`` which allows for including per stream
