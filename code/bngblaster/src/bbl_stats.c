@@ -389,12 +389,12 @@ bbl_stats_generate(bbl_stats_s * stats)
                 }
                 if(stream->rx_first_seq > stats->max_stream_rx_first_seq) stats->max_stream_rx_first_seq = stream->rx_first_seq;
 
-                if(stats->min_stream_delay_ns) {
-                    if(stream->rx_min_delay_ns < stats->min_stream_delay_ns) stats->min_stream_delay_ns = stream->rx_min_delay_ns;
+                if(stats->min_stream_delay_us) {
+                    if(stream->rx_min_delay_us < stats->min_stream_delay_us) stats->min_stream_delay_us = stream->rx_min_delay_us;
                 } else {
-                    stats->min_stream_delay_ns = stream->rx_min_delay_ns;
+                    stats->min_stream_delay_us = stream->rx_min_delay_us;
                 }
-                if(stream->rx_max_delay_ns > stats->max_stream_delay_ns) stats->max_stream_delay_ns = stream->rx_max_delay_ns;
+                if(stream->rx_max_delay_us > stats->max_stream_delay_us) stats->max_stream_delay_us = stream->rx_max_delay_us;
             }
         }
     }
@@ -734,14 +734,11 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         printf("  Verified Traffic Flows: %u/%u\n",
             g_ctx->stats.stream_traffic_flows_verified, g_ctx->stats.stream_traffic_flows);
         printf("  First Sequence Number Received  MIN: %8lu MAX: %8lu\n",
-            stats->min_stream_rx_first_seq,
-            stats->max_stream_rx_first_seq);
+            stats->min_stream_rx_first_seq, stats->max_stream_rx_first_seq);
         printf("  Flow Receive Packet Loss        MIN: %8lu MAX: %8lu\n",
-            stats->min_stream_loss,
-            stats->max_stream_loss);
-        printf("  Flow Receive Delay (msec)       MIN: %8.3f MAX: %8.3f\n",
-               (double)stats->min_stream_delay_ns / (double)MSEC,
-               (double)stats->max_stream_delay_ns / (double)MSEC);
+            stats->min_stream_loss, stats->max_stream_loss);
+        printf("  Flow Receive Delay (usec)       MIN: %8lu MAX: %8lu\n",
+            stats->min_stream_delay_us, stats->max_stream_delay_us);
     }
 
     if(g_ctx->config.igmp_group_count > 1) {
@@ -1134,8 +1131,8 @@ bbl_stats_json(bbl_stats_s * stats)
         json_object_set(jobj_sub, "first-seq-rx-max", json_integer(stats->max_stream_rx_first_seq));
         json_object_set(jobj_sub, "flow-rx-packet-loss-min", json_integer(stats->min_stream_loss));
         json_object_set(jobj_sub, "flow-rx-packet-loss-max", json_integer(stats->max_stream_loss));
-        json_object_set(jobj_sub, "flow-rx-delay-min", json_integer(stats->min_stream_delay_ns));
-        json_object_set(jobj_sub, "flow-rx-delay-max", json_integer(stats->max_stream_delay_ns));
+        json_object_set(jobj_sub, "flow-rx-delay-us-min", json_integer(stats->min_stream_delay_us));
+        json_object_set(jobj_sub, "flow-rx-delay-us-max", json_integer(stats->max_stream_delay_us));
         json_object_set(jobj, "traffic-streams", jobj_sub);
     }
 

@@ -125,8 +125,8 @@ typedef struct bbl_stream_
     uint64_t rx_loss;
     uint64_t rx_wrong_session;
 
-    uint64_t rx_min_delay_ns;
-    uint64_t rx_max_delay_ns;
+    uint64_t rx_min_delay_us;
+    uint64_t rx_max_delay_us;
 
     uint16_t rx_len;
     uint64_t rx_first_seq;

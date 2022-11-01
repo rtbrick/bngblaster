@@ -25,18 +25,21 @@ static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
 {
     struct timespec delay;
-    uint64_t delay_nsec;
+    uint64_t delay_us;
     timespec_sub(&delay, rx_timestamp, bbl_timestamp);
-    delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
-    if(delay_nsec > stream->rx_max_delay_ns) {
-        stream->rx_max_delay_ns = delay_nsec;
+    
+    delay_us = (delay.tv_sec * 1000000) + (delay.tv_nsec / 1000);
+    if(delay_us == 0) delay_us = 1;
+
+    if(delay_us > stream->rx_max_delay_us) {
+        stream->rx_max_delay_us = delay_us;
     }
-    if(stream->rx_min_delay_ns) {
-        if(delay_nsec < stream->rx_min_delay_ns) {
-            stream->rx_min_delay_ns = delay_nsec;
+    if(stream->rx_min_delay_us) {
+        if(delay_us < stream->rx_min_delay_us) {
+            stream->rx_min_delay_us = delay_us;
         }
     } else {
-        stream->rx_min_delay_ns = delay_nsec;
+        stream->rx_min_delay_us = delay_us;
     }
 }
 
@@ -1189,9 +1192,9 @@ bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len)
         stream = CIRCLEQ_FIRST(&io->stream_tx_qhead);
         if(stream->token_bucket && stream->tx_buf) {
             /* Update BBL header fields */
+            *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
             *(uint32_t*)(stream->tx_buf + (stream->tx_len - 8)) = io->timestamp.tv_sec;
             *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = io->timestamp.tv_nsec;
-            *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
             *len = stream->tx_len;
             memcpy(buf, stream->tx_buf, *len);
             stream->token_bucket--;
@@ -1905,8 +1908,8 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->reset_loss = stream->rx_loss;
     stream->reset_wrong_session = stream->rx_wrong_session;
 
-    stream->rx_min_delay_ns = 0;
-    stream->rx_max_delay_ns = 0;
+    stream->rx_min_delay_us = 0;
+    stream->rx_max_delay_us = 0;
     stream->rx_len = 0;
     stream->rx_first_seq = 0;
     stream->rx_last_seq = 0;
@@ -2110,8 +2113,8 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-packets", stream->rx_packets - stream->reset_packets_rx,
             "rx-loss", stream->rx_loss - stream->reset_loss,
             "rx-wrong-session", stream->rx_wrong_session - stream->reset_wrong_session,
-            "rx-delay-nsec-min", stream->rx_min_delay_ns,
-            "rx-delay-nsec-max", stream->rx_max_delay_ns,
+            "rx-delay-us-min", stream->rx_min_delay_us,
+            "rx-delay-us-max", stream->rx_max_delay_us,
             "rx-pps", stream->rate_packets_rx.avg,
             "tx-pps", stream->rate_packets_tx.avg,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
@@ -2343,7 +2346,9 @@ bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_
         if(!stream) {
             continue;
         }
-        bbl_stream_reset(stream);
+        if(!stream->session_traffic) {
+            bbl_stream_reset(stream);
+        }
     }
     dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    

@@ -125,8 +125,8 @@ typedef struct bbl_stats_
     uint64_t max_stream_loss;
     uint64_t min_stream_rx_first_seq;
     uint64_t max_stream_rx_first_seq;
-    uint64_t min_stream_delay_ns;
-    uint64_t max_stream_delay_ns;
+    uint64_t min_stream_delay_us;
+    uint64_t max_stream_delay_us;
 
     /* L2TP */
 
