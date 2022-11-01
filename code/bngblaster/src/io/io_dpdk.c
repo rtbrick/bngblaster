@@ -109,7 +109,9 @@ io_dpdk_rx_job(timer_s *timer)
     assert(io->thread == NULL);
 
     /* Get RX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_sec;
     while(true) {
         nb_rx = rte_eth_rx_burst(interface->portid, io->queue, packet_burst, BURST_SIZE);
         if(nb_rx == 0) {
@@ -188,7 +190,9 @@ io_dpdk_tx_job(timer_s *timer)
     io_update_stream_token_bucket(io);
 
     /* Get TX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_sec;
     while(true) {
         /* If sendto fails, the failed packet remains in TX buffer to be retried
          * in the next interval. */
@@ -310,6 +314,11 @@ io_dpdk_thread_tx_job(timer_s *timer)
     assert(io->thread);
 
     io_update_stream_token_bucket(io);
+
+    /* Get TX timestamp */
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_sec;
 
     while(true) {
         /* If sendto fails, the failed packet remains in TX buffer to be retried
