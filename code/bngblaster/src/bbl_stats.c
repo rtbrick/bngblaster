@@ -413,7 +413,8 @@ bbl_stats_stdout(bbl_stats_s *stats) {
     float percent;
 
     printf("%s", banner);
-    printf("Report:\n=======\n");
+    printf("Report:");
+    printf("\n==============================================================================\n");
     printf("Test Duration: %lus\n", test_duration());
     if(g_ctx->sessions) {
         printf("Sessions PPPoE: %u IPoE: %u\n", g_ctx->sessions_pppoe, g_ctx->sessions_ipoe);
@@ -427,13 +428,13 @@ bbl_stats_stdout(bbl_stats_s *stats) {
 
     if(dict_count(g_ctx->li_flow_dict)) {
         printf("\nLI Statistics:");
-        printf("\n--------------------------------------------------------------\n");
+        printf("\n------------------------------------------------------------------------------\n");
         printf("  Flows:        %10lu\n", dict_count(g_ctx->li_flow_dict));
         printf("  RX Packets:   %10lu\n", stats->li_rx);
     }
     if(g_ctx->config.l2tp_server) {
         printf("\nL2TP LNS Statistics:");
-        printf("\n--------------------------------------------------------------\n");
+        printf("\n------------------------------------------------------------------------------\n");
         printf("  Tunnels:      %10u\n", g_ctx->l2tp_tunnels_max);
         printf("  Established:  %10u\n", g_ctx->l2tp_tunnels_established_max);
         printf("  Sessions:     %10u\n", g_ctx->l2tp_sessions_max);
@@ -457,7 +458,7 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         } else if(interface->type == LAG_MEMBER_INTERFACE) {
             printf(" (%s)", interface->lag->interface->name);
         }
-        printf("\n--------------------------------------------------------------\n");
+        printf("\n------------------------------------------------------------------------------\n");
 
         if(interface->type != LAG_INTERFACE) {
             bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
@@ -627,12 +628,11 @@ bbl_stats_stdout(bbl_stats_s *stats) {
 
     if(g_ctx->stats.session_traffic_flows) {
         printf("\nSession Traffic (Global):");
-        printf("\n--------------------------------------------------------------\n");
+        printf("\n------------------------------------------------------------------------------\n");
         printf("  Config:\n");
-        printf("    IPv4    PPS: %8u\n", g_ctx->config.session_traffic_ipv4_pps);
-        printf("    IPv6    PPS: %8u\n", g_ctx->config.session_traffic_ipv6_pps);
-        printf("    IPv6PD  PPS: %8u\n", g_ctx->config.session_traffic_ipv6pd_pps);
-
+        printf("    PPS IPv4:             %8u\n", g_ctx->config.session_traffic_ipv4_pps);
+        printf("    PPS IPv6:             %8u\n", g_ctx->config.session_traffic_ipv6_pps);
+        printf("    PPS IPv6PD:           %8u\n", g_ctx->config.session_traffic_ipv6pd_pps);
         percent = (float)((float)g_ctx->stats.session_traffic_flows_verified/(float)g_ctx->stats.session_traffic_flows) * 100.0;
         printf("  Verified Traffic Flows: %8u/%u (%.2f%%)\n",
             g_ctx->stats.session_traffic_flows_verified, g_ctx->stats.session_traffic_flows, percent);
@@ -643,73 +643,86 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         printf("    Upstream IPv6:        %8u\n", stats->sessions_up_ipv6_rx);
         printf("    Upstream IPv6PD:      %8u\n", stats->sessions_up_ipv6pd_rx);
 
+        printf("  Violations:               >1s             >1s-2s   >2s-3s      >3s\n");
+
+        violations = stats->violations_down_ipv4_1s+stats->violations_down_ipv4_2s+stats->violations_down_ipv4_3s;
+        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        printf("    Downstream IPv4:   %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_down_ipv4_1s, stats->violations_down_ipv4_2s, stats->violations_down_ipv4_3s);
+
+        violations = stats->violations_down_ipv6_1s+stats->violations_down_ipv6_2s+stats->violations_down_ipv6_3s;
+        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        printf("    Downstream IPv6:   %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_down_ipv6_1s, stats->violations_down_ipv6_2s, stats->violations_down_ipv6_3s);
+
+        violations = stats->violations_down_ipv6pd_1s+stats->violations_down_ipv6pd_2s+stats->violations_down_ipv6pd_3s;
+        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        printf("    Downstream IPv6PD: %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_down_ipv6pd_1s, stats->violations_down_ipv6pd_2s, stats->violations_down_ipv6pd_3s);
+
+        violations = stats->violations_up_ipv4_1s+stats->violations_up_ipv4_2s+stats->violations_up_ipv4_3s;
+        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        printf("    Upstream IPv4:     %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_up_ipv4_1s, stats->violations_up_ipv4_2s, stats->violations_up_ipv4_3s);
+
+        violations = stats->violations_up_ipv6_1s+stats->violations_up_ipv6_2s+stats->violations_up_ipv6_3s;
+        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        printf("    Upstream IPv6:     %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_up_ipv6_1s, stats->violations_up_ipv6_2s, stats->violations_up_ipv6_3s);
+
+        violations = stats->violations_up_ipv6pd_1s+stats->violations_up_ipv6pd_2s+stats->violations_up_ipv6pd_3s;
+        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        printf("    Upstream IPv6PD:   %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_up_ipv6pd_1s, stats->violations_up_ipv6pd_2s, stats->violations_up_ipv6pd_3s);
+
         violations = (stats->violations_down_ipv4_3s + stats->violations_down_ipv6_3s + stats->violations_down_ipv6pd_3s + \
                       stats->violations_up_ipv4_3s + stats->violations_up_ipv6_3s + stats->violations_up_ipv6pd_3s + \
                       stats->violations_down_ipv4_2s + stats->violations_down_ipv6_2s + stats->violations_down_ipv6pd_2s + \
                       stats->violations_up_ipv4_2s + stats->violations_up_ipv6_2s + stats->violations_up_ipv6pd_2s + \
                       stats->violations_down_ipv4_1s + stats->violations_down_ipv6_1s + stats->violations_down_ipv6pd_1s + \
                       stats->violations_up_ipv4_1s + stats->violations_up_ipv6_1s + stats->violations_up_ipv6pd_1s);
-
         percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
-        printf("  Violations (> 1s):      %8lu (%.2f%%)\n", violations, percent);
 
-        if(violations) {
-            violations = (stats->violations_down_ipv4_1s + stats->violations_down_ipv6_1s + stats->violations_down_ipv6pd_1s + \
-                        stats->violations_up_ipv4_1s + stats->violations_up_ipv6_1s + stats->violations_up_ipv6pd_1s);
-            percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
-            printf("    > 1s - 2s:            %8lu (%.2f%%)\n", violations, percent);
-            printf("      Downstream IPv4:    %8lu\n", stats->violations_down_ipv4_1s);
-            printf("      Downstream IPv6:    %8lu\n", stats->violations_down_ipv6_1s);
-            printf("      Downstream IPv6PD:  %8lu\n", stats->violations_down_ipv6pd_1s);
-            printf("      Upstream IPv4:      %8lu\n", stats->violations_up_ipv4_1s);
-            printf("      Upstream IPv6:      %8lu\n", stats->violations_up_ipv6_1s);
-            printf("      Upstream IPv6PD:    %8lu\n", stats->violations_up_ipv6pd_1s);
+        printf("    Total:             %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
+            violations, percent, \
+            stats->violations_down_ipv4_1s+stats->violations_up_ipv4_1s+ \
+            stats->violations_down_ipv6_1s+stats->violations_up_ipv6_1s+ \
+            stats->violations_down_ipv6pd_1s+stats->violations_up_ipv6pd_1s, \
+            stats->violations_down_ipv4_2s+stats->violations_up_ipv4_2s+ \
+            stats->violations_down_ipv6_2s+stats->violations_up_ipv6_2s+ \
+            stats->violations_down_ipv6pd_2s+stats->violations_up_ipv6pd_2s, \
+            stats->violations_down_ipv4_3s+stats->violations_up_ipv4_3s+ \
+            stats->violations_down_ipv6_3s+stats->violations_up_ipv6_3s+ \
+            stats->violations_down_ipv6pd_3s+stats->violations_up_ipv6pd_3s);
 
-            violations = (stats->violations_down_ipv4_2s + stats->violations_down_ipv6_2s + stats->violations_down_ipv6pd_2s + \
-                        stats->violations_up_ipv4_2s + stats->violations_up_ipv6_2s + stats->violations_up_ipv6pd_2s);
-            percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
-            printf("    > 2s - 3s:            %8lu (%.2f%%)\n", violations, percent);
-            printf("      Downstream IPv4:    %8lu\n", stats->violations_down_ipv4_2s);
-            printf("      Downstream IPv6:    %8lu\n", stats->violations_down_ipv6_2s);
-            printf("      Downstream IPv6PD:  %8lu\n", stats->violations_down_ipv6pd_2s);
-            printf("      Upstream IPv4:      %8lu\n", stats->violations_up_ipv4_2s);
-            printf("      Upstream IPv6:      %8lu\n", stats->violations_up_ipv6_2s);
-            printf("      Upstream IPv6PD:    %8lu\n", stats->violations_up_ipv6pd_2s);
-
-            violations = (stats->violations_down_ipv4_3s + stats->violations_down_ipv6_3s + stats->violations_down_ipv6pd_3s + \
-                        stats->violations_up_ipv4_3s + stats->violations_up_ipv6_3s + stats->violations_up_ipv6pd_3s);
-            percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
-            printf("    > 3s:                 %8lu (%.2f%%)\n", violations, percent);
-            printf("      Downstream IPv4:    %8lu\n", stats->violations_down_ipv4_3s);
-            printf("      Downstream IPv6:    %8lu\n", stats->violations_down_ipv6_3s);
-            printf("      Downstream IPv6PD:  %8lu\n", stats->violations_down_ipv6pd_3s);
-            printf("      Upstream IPv4:      %8lu\n", stats->violations_up_ipv4_3s);
-            printf("      Upstream IPv6:      %8lu\n", stats->violations_up_ipv6_3s);
-            printf("      Upstream IPv6PD:    %8lu\n", stats->violations_up_ipv6pd_3s);
-        }
-
-        printf("  First Sequence Number Received:\n");
-        printf("    Downstream IPv4    MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
+        printf("  First Sequence Received:  MIN                AVG               MAX\n");
+        printf("    Downstream IPv4    %8lu (%5.2fs)  %8lu (%5.2fs) %8lu (%5.2fs)\n",
             stats->min_down_ipv4_rx_first_seq, stats->min_down_ipv4_rx_seconds,
             stats->avg_down_ipv4_rx_first_seq, stats->avg_down_ipv4_rx_seconds,
             stats->max_down_ipv4_rx_first_seq, stats->max_down_ipv4_rx_seconds);
-        printf("    Downstream IPv6    MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
+        printf("    Downstream IPv6    %8lu (%5.2fs)  %8lu (%5.2fs) %8lu (%5.2fs)\n",
             stats->min_down_ipv6_rx_first_seq, stats->min_down_ipv6_rx_seconds,
             stats->avg_down_ipv6_rx_first_seq, stats->avg_down_ipv6_rx_seconds,
             stats->max_down_ipv6_rx_first_seq, stats->max_down_ipv6_rx_seconds);
-        printf("    Downstream IPv6PD  MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
+        printf("    Downstream IPv6PD  %8lu (%5.2fs)  %8lu (%5.2fs) %8lu (%5.2fs)\n",
             stats->min_down_ipv6pd_rx_first_seq, stats->min_down_ipv6pd_rx_seconds,
             stats->avg_down_ipv6pd_rx_first_seq, stats->avg_down_ipv6pd_rx_seconds,
             stats->max_down_ipv6pd_rx_first_seq, stats->max_down_ipv6pd_rx_seconds);
-        printf("    Upstream IPv4      MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
+        printf("    Upstream IPv4      %8lu (%5.2fs)  %8lu (%5.2fs) %8lu (%5.2fs)\n",
             stats->min_up_ipv4_rx_first_seq, stats->min_up_ipv4_rx_seconds,
             stats->avg_up_ipv4_rx_first_seq, stats->avg_up_ipv4_rx_seconds,
             stats->max_up_ipv4_rx_first_seq, stats->max_up_ipv4_rx_seconds);
-        printf("    Upstream IPv6      MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
+        printf("    Upstream IPv6      %8lu (%5.2fs)  %8lu (%5.2fs) %8lu (%5.2fs)\n",
             stats->min_up_ipv6_rx_first_seq, stats->min_up_ipv6_rx_seconds,
             stats->avg_up_ipv6_rx_first_seq, stats->avg_up_ipv6_rx_seconds,
             stats->max_up_ipv6_rx_first_seq, stats->max_up_ipv6_rx_seconds);
-        printf("    Upstream IPv6PD    MIN: %6lu (%5.2fs) AVG: %6lu (%5.2fs) MAX: %6lu (%5.2fs)\n",
+        printf("    Upstream IPv6PD    %8lu (%5.2fs)  %8lu (%5.2fs) %8lu (%5.2fs)\n",
             stats->min_up_ipv6pd_rx_first_seq, stats->min_up_ipv6pd_rx_seconds,
             stats->avg_up_ipv6pd_rx_first_seq, stats->avg_up_ipv6pd_rx_seconds,
             stats->max_up_ipv6pd_rx_first_seq, stats->max_up_ipv6pd_rx_seconds);
@@ -717,7 +730,7 @@ bbl_stats_stdout(bbl_stats_s *stats) {
 
     if(g_ctx->stats.stream_traffic_flows) {
         printf("\nTraffic Streams:");
-        printf("\n--------------------------------------------------------------\n");
+        printf("\n------------------------------------------------------------------------------\n");
         printf("  Verified Traffic Flows: %u/%u\n",
             g_ctx->stats.stream_traffic_flows_verified, g_ctx->stats.stream_traffic_flows);
         printf("  First Sequence Number Received  MIN: %8lu MAX: %8lu\n",
@@ -733,7 +746,7 @@ bbl_stats_stdout(bbl_stats_s *stats) {
 
     if(g_ctx->config.igmp_group_count > 1) {
         printf("\nMulticast:");
-        printf("\n--------------------------------------------------------------\n");
+        printf("\n------------------------------------------------------------------------------\n");
         printf("\nIGMP Config:\n");
         printf("  Version: %d\n", g_ctx->config.igmp_version);
         printf("  Start Delay: %us\n", g_ctx->config.igmp_start_delay);
