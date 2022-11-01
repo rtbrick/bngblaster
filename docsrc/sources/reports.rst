@@ -248,7 +248,7 @@ argument ``-J <filename>``.
 
 .. code-block:: json
         
-{
+    {
       "report": {
         "sessions": 1000,
         "sessions-pppoe": 1000,
@@ -539,6 +539,7 @@ argument ``-J <filename>``.
         }
       }
     }
+
 
 The optional argument ``-j sessions`` allows to include per session statistics
 in the report file. Similar to ``-j streams`` which allows for including per stream
