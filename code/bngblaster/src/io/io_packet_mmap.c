@@ -62,7 +62,9 @@ io_packet_mmap_rx_job(timer_s *timer)
     }
 
     /* Get RX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_sec;
     while(tphdr->tp_status & TP_STATUS_USER) {
         io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
         io->buf_len = tphdr->tp_len;
@@ -140,7 +142,9 @@ io_packet_mmap_tx_job(timer_s *timer)
         io->stats.no_buffer++;
     } else {
         /* Get TX timestamp */
-        clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+        //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+        io->timestamp.tv_sec = timer->timestamp->tv_sec;
+        io->timestamp.tv_nsec = timer->timestamp->tv_sec;
         while(true) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
@@ -288,7 +292,9 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
         io->stats.no_buffer++;
     } else {
         /* Get TX timestamp */
-        clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+        //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+        io->timestamp.tv_sec = timer->timestamp->tv_sec;
+        io->timestamp.tv_nsec = timer->timestamp->tv_sec;
         while(true) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {

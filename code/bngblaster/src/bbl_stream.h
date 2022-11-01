@@ -105,6 +105,10 @@ typedef struct bbl_stream_
     bool reset;
     bool lag;
 
+    bool send_window_active;
+    uint64_t send_window_start_packets;
+    struct timespec send_window_start;
+    
     struct timespec wait_start;
 
     CIRCLEQ_ENTRY(bbl_stream_) tx_qnode;

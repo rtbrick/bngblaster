@@ -533,6 +533,7 @@ timer_walk(timer_root_s *root)
 
             /* Execute callback. */
             if(timer->cb) {
+                timer->timestamp = &now;
                 (*timer->cb)(timer);
 #ifdef BNGBLASTER_TIMER_LOGGING
                 LOG(TIMER_DETAIL, "  Firing %s timer\n", timer->name);
