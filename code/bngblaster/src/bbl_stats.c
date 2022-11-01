@@ -494,24 +494,24 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %10lu packets\n",
                     network_interface->stats.stream_tx);
-                printf("  RX Stream:         %10lu packets (%lu loss)\n",
+                printf("  RX Stream:         %10lu packets %16lu loss\n",
                     network_interface->stats.stream_rx, network_interface->stats.stream_loss);
             }
             if(g_ctx->stats.session_traffic_flows) {
                 printf("  Session-Traffic:\n");
                 printf("    TX IPv4:         %10lu packets\n",
                     network_interface->stats.session_ipv4_tx);
-                printf("    RX IPv4:         %10lu packets (%lu loss)\n",
+                printf("    RX IPv4:         %10lu packets %16lu loss\n",
                     network_interface->stats.session_ipv4_rx, 
                     network_interface->stats.session_ipv4_loss);
                 printf("    TX IPv6:         %10lu packets\n",
                     network_interface->stats.session_ipv6_tx);
-                printf("    RX IPv6:         %10lu packets (%lu loss)\n",
+                printf("    RX IPv6:         %10lu packets %16lu loss\n",
                     network_interface->stats.session_ipv6_rx,
                     network_interface->stats.session_ipv6_loss);
                 printf("    TX IPv6PD:       %10lu packets\n",
                     network_interface->stats.session_ipv6pd_tx);
-                printf("    RX IPv6PD:       %10lu packets (%lu loss)\n",
+                printf("    RX IPv6PD:       %10lu packets %16lu loss\n",
                     network_interface->stats.session_ipv6pd_rx,
                     network_interface->stats.session_ipv6pd_loss);
             }
@@ -595,31 +595,31 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         }
         if(a10nsp_interface) {
             printf("\nA10NSP Interface: %s\n", interface->name);
-            printf("  TX:                %10lu packets %10lu bytes\n", 
+            printf("  TX:                %10lu packets %16lu bytes\n", 
                 a10nsp_interface->stats.packets_tx, a10nsp_interface->stats.bytes_tx);
-            printf("  RX:                %10lu packets %10lu bytes\n", 
+            printf("  RX:                %10lu packets %16lu bytes\n", 
                 a10nsp_interface->stats.packets_rx, a10nsp_interface->stats.bytes_rx);
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %10lu packets\n",
                     a10nsp_interface->stats.stream_tx);
-                printf("  RX Stream:         %10lu packets (%lu loss)\n",
+                printf("  RX Stream:         %10lu packets %16lu loss\n",
                     a10nsp_interface->stats.stream_rx, a10nsp_interface->stats.stream_loss);
             }
             if(g_ctx->stats.session_traffic_flows) {
                 printf("  Session-Traffic:\n");
                 printf("    TX IPv4:         %10lu packets\n",
                     a10nsp_interface->stats.session_ipv4_tx);
-                printf("    RX IPv4:         %10lu packets (%lu loss)\n",
+                printf("    RX IPv4:         %10lu packets %16lu loss\n",
                     a10nsp_interface->stats.session_ipv4_rx, 
                     a10nsp_interface->stats.session_ipv4_loss);
                 printf("    TX IPv6:         %10lu packets\n",
                     a10nsp_interface->stats.session_ipv6_tx);
-                printf("    RX IPv6:         %10lu packets (%lu loss)\n",
+                printf("    RX IPv6:         %10lu packets %16lu loss\n",
                     a10nsp_interface->stats.session_ipv6_rx, 
                     a10nsp_interface->stats.session_ipv6_loss);
                 printf("    TX IPv6PD:       %10lu packets\n",
                     a10nsp_interface->stats.session_ipv6pd_tx);
-                printf("    RX IPv6PD:       %10lu packets (%lu loss)\n",
+                printf("    RX IPv6PD:       %10lu packets %16lu loss\n",
                     a10nsp_interface->stats.session_ipv6pd_rx, 
                     a10nsp_interface->stats.session_ipv6pd_loss);
             }
