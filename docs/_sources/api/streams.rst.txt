@@ -18,7 +18,7 @@
      - 
      - `session-id`
    * - `stream-traffic-stop`
-     - Disable stop traffic streams
+     - Disable/stop traffic streams
      - 
      - `session-id`
    * - `stream-reset`

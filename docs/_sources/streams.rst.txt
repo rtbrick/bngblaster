@@ -135,8 +135,8 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-packets": 54232,
                     "tx-packets": 54594,
                     "rx-loss": 0,
-                    "rx-delay-nsec-min": 37650,
-                    "rx-delay-nsec-max": 98595049,
+                    "rx-delay-us-min": 37,
+                    "rx-delay-us-max": 98595,
                     "rx-pps": 1000,
                     "tx-pps": 1000,
                     "tx-bps-l2": 8240000,
@@ -160,8 +160,8 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-packets": 54232,
                     "tx-packets": 54594,
                     "rx-loss": 0,
-                    "rx-delay-nsec-min": 43550,
-                    "rx-delay-nsec-max": 98903960,
+                    "rx-delay-us-min": 43,
+                    "rx-delay-us-max": 98903,
                     "rx-pps": 1000,
                     "tx-pps": 1000,
                     "tx-bps-l2": 8112000,
@@ -185,8 +185,8 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-packets": 5422,
                     "tx-packets": 5458,
                     "rx-loss": 0,
-                    "rx-delay-nsec-min": 41700,
-                    "rx-delay-nsec-max": 96548542,
+                    "rx-delay-us-min": 41,
+                    "rx-delay-us-max": 96548,
                     "rx-pps": 100,
                     "tx-pps": 100,
                     "tx-bps-l2": 811200,
@@ -200,11 +200,11 @@ The ``session-streams`` command returns detailed stream statistics per session.
         }
     }
 
-The ``rx-outer-vlan-pbit`` might be wrong depending on network interface driver and
+The ``rx-outer-vlan-pbit`` might be wrong depending on the network interface driver and
 optional VLAN offloading.
 
-The measured ``rx-delay-nsec-min/max`` shows the minimum and maximum calculated delay
-in nanoseconds. The delay is calculated by subtracting the send and receive timestamp.
+The measured ``rx-delay-us-min/max`` shows the minimum and maximum calculated delay
+in microseconds. The delay is calculated by subtracting the send and receive timestamp.
 The send timestamp is stored in the BBL header (see section Traffic). This calculated
 result depends also on the actual test environment, configured rx-interval and host IO
 delay.
@@ -241,8 +241,8 @@ Each flow can be queried separately using jsonpath expression with name and dire
         "rx-packets": 27008,
         "tx-packets": 27040,
         "rx-loss": 0,
-        "rx-delay-nsec-min": 50450,
-        "rx-delay-nsec-max": 10561572,
+        "rx-delay-us-min": 50,
+        "rx-delay-us-max": 10561,
         "rx-pps": 99,
         "tx-pps": 99,
         "tx-bps-l2": 90288,
