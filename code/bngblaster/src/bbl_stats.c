@@ -196,15 +196,15 @@ bbl_stats_generate(bbl_stats_s * stats)
             stream = session->session_traffic.ipv4_up;
             if(stream && stream->rx_first_seq) {
                 stats->sessions_up_ipv4_rx++;
-                stats->avg_up_ipv4_rx_first_seq += stream && stream->rx_first_seq;
+                stats->avg_up_ipv4_rx_first_seq += stream->rx_first_seq;
                 if(stats->min_up_ipv4_rx_first_seq) {
-                    if(stream && stream->rx_first_seq < stats->min_up_ipv4_rx_first_seq) {
+                    if(stream->rx_first_seq < stats->min_up_ipv4_rx_first_seq) {
                         stats->min_up_ipv4_rx_first_seq = stream->rx_first_seq;
                     }
                 } else {
                     stats->min_up_ipv4_rx_first_seq = stream->rx_first_seq;
                 }
-                if(stream && stream->rx_first_seq > stats->max_up_ipv4_rx_first_seq) {
+                if(stream->rx_first_seq > stats->max_up_ipv4_rx_first_seq) {
                     stats->max_up_ipv4_rx_first_seq = stream->rx_first_seq;
                 }
                 if(stream->rx_first_seq > g_ctx->config.session_traffic_ipv4_pps*3) {
