@@ -166,6 +166,8 @@ of interface functions.
         }
     }
 
+.. _io-modes:
+
 Multithreaded Interfaces 
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -223,20 +225,24 @@ interfaces.
 
     The BNG Blaster is currently tested for up to 1 million PPS with 1 million flows, which is not a 
     hard limitation but everything above should be considered experimental. It is also possible to 
-    scale beyond using DPDK enabled interfaces. 
+    scale beyond using DPDK-enabled interfaces. 
 
 Interface Functions
 -------------------
 
 The BNG Blaster supports three types of interface functions, 
-``network``, ``access``, and ``a10nsp``.
+``network``, ``access``, and ``a10nsp``. 
+
+.. image:: images/bbl_interfaces.png
+    :alt: BNG Blaster Interfaces
 
 .. _network-interface:
 
 Network Interfaces
 ~~~~~~~~~~~~~~~~~~
 
-The network interfaces are used for traffic and routing protocols. 
+The network interfaces are used to emulate the core-facing side of the internet 
+with optional routing protocols and traffic. 
 
 Those interfaces can communicate with the configured gateway only.
 Meaning that all traffic sent from the network interface will be sent 
@@ -246,6 +252,10 @@ The network interface behaves like a router. It accepts all traffic sent
 to its own MAC address. This allows sending and receiving traffic for prefixes 
 advertised via routing protocols or configured via static routes on the 
 connected device under test.
+
+The network interfaces are also used to inject downstream multicast test traffic 
+for IPTV tests. It is also possible to send RAW traffic streams between network
+interfaces without any access interface defined for non-BNG testing.
 
 The BNG Blaster responds to all ICMP echo requests sent to its own MAC address. 
 
@@ -527,18 +537,50 @@ as shown in the example below.
     with network or access interface functions!
 
 
+I/O Modes
+---------
+
+The BNG Blaster supports many configurable I/O modes listed with ``bngblaster -v``. 
+In the default mode ``packet_mmap_raw``, all packets are received in a Packet MMAP
+ring buffer and sent through RAW packet sockets.
+
+.. code-block:: none
+
+    $ bngblaster -v
+    Version: 0.8.1
+    Compiler: GNU (7.5.0)
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw
+
+Packet MMAP
+~~~~~~~~~~~
+
+`Packet MMAP <https://www.kernel.org/doc/html/latest/networking/packet_mmap.html>`_ 
+is a so-called PACKET_RX_RING/PACKET_TX_RING abstraction where a user-space 
+program gets a fast lane into reading and writing to kernel interfaces using a shared 
+ring buffer. The shared ring buffer is a memory-mapped window shared between the kernel 
+and the user space. This low overhead abstraction allows us to transmit and receive 
+traffic without doing expensive system calls. Sending and transmitting traffic via 
+Packet MMAP is as easy as copying a packet into a buffer and setting a flag.
+
+RAW
+~~~
+
+`RAW Packet Sockets <https://man7.org/linux/man-pages/man7/packet.7.html>`_. 
+are used to receive or send raw packets at the device driver (OSI Layer 2) level.
+
+
 .. _dpdk-interface:
 
 DPDK
-----
+~~~~
 
-Using the experimental `DPDK <https://www.dpdk.org/>`_ support requires to build 
-the BNG Blaster from sources with `DPDK <https://www.dpdk.org/>`_ enabled as explained 
+Using the experimental `DPDK <https://www.dpdk.org/>`_ support requires building 
+the BNG Blaster from sources with DPDK enabled as explained 
 in the corresponding :ref:`installation <install-dpdk>` section. 
 
 .. note::
 
-    The officially BNG Blaster Debian release packages do not support 
+    The official BNG Blaster Debian release packages do not support 
     `DPDK <https://www.dpdk.org/>`_!
 
 .. code-block:: json
