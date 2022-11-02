@@ -446,7 +446,7 @@ combined with a rate of 1000 PPS would mean that it took around 1 second until f
 working. After the first packet is received for a given flow, for every further packet it checks
 if there is a gap between the last and new sequence number which is then reported as a loss.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">rx/tx-accounting-packets</span></code> are all packets that should be counted in the session volume
-accounting of the BNG, meaning session rx/tx packets excluding control traffic.</p>
+accounting of the BNG, meaning session RX/TX packets excluding control traffic.</p>
 <p>Each flow can be queried separately using jsonpath expression with name and direction or flow-id.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock session-streams session-id 1 | jq &#39;.&quot;session-streams&quot;.streams[] | select(.name == &quot;BE&quot; and .direction == &quot;downstream&quot; )&#39;
 </pre></div>
@@ -519,8 +519,8 @@ can be started or stopped globally using the <code class="docutils literal notra
 <code class="docutils literal notranslate"><span class="pre">traffic-stop</span></code> commands.</p>
 </section>
 <section id="bng-blaster-traffic">
-<h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Permalink to this headline"></a></h2>
-<p id="bbl-header"><em>Blaster Header and Fast Decode Signature</em></p>
+<span id="bbl-header"></span><h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Permalink to this headline"></a></h2>
+<p><em>Blaster Header and Fast Decode Signature</em></p>
 <p>The 48 Byte fixed size BNG Blaster Header is added to all data packets
 for traffic validation and fast decoding. The header is expected on the
 last 48 bytes of the packet.</p>
@@ -528,7 +528,7 @@ last 48 bytes of the packet.</p>
 IPv4 multicast traffic.</p>
 <section id="unicast-session-traffic">
 <h3>Unicast Session Traffic<a class="headerlink" href="#unicast-session-traffic" title="Permalink to this headline"></a></h3>
-<p>The 64 bit session key is used for all traffic from access (upstream)
+<p>The 64-bit session key is used for all traffic from access (upstream)
 and to access (downstream) interfaces to identify the corresponding
 session which has sent or should receive the packet.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -592,7 +592,7 @@ stored in host byte order for faster processing
 </section>
 <section id="bng-blaster-magic-sequence">
 <h3>BNG Blaster Magic Sequence<a class="headerlink" href="#bng-blaster-magic-sequence" title="Permalink to this headline"></a></h3>
-<p>The 64 bit magic sequence is the word <code class="docutils literal notranslate"><span class="pre">RtBrick!</span></code> decoded as ASCII:</p>
+<p>The 64-bit magic sequence is the word <code class="docutils literal notranslate"><span class="pre">RtBrick!</span></code> decoded as ASCII:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0x5274427269636b21
 </pre></div>
 </div>
@@ -601,18 +601,18 @@ of blaster traffic.</p>
 </section>
 <section id="flow-identifier">
 <h3>Flow Identifier<a class="headerlink" href="#flow-identifier" title="Permalink to this headline"></a></h3>
-<p>The 64 bit flow identifier is a globally unique number that identifies
+<p>The 64-bit flow identifier is a globally unique number that identifies
 the flow.</p>
 </section>
 <section id="flow-sequence-number">
 <h3>Flow Sequence Number<a class="headerlink" href="#flow-sequence-number" title="Permalink to this headline"></a></h3>
-<p>The 64 bit flow sequence number is a sequential number starting with 1
+<p>The 64-bit flow sequence number is a sequential number starting with 1
 and incremented per packet primary used to identify packet loss.</p>
 <p>This number 0 means that sequencing is disabled.</p>
 </section>
 <section id="nanosecond-send-timestamps">
 <h3>Nanosecond Send Timestamps<a class="headerlink" href="#nanosecond-send-timestamps" title="Permalink to this headline"></a></h3>
-<p>The 64 bit nanoseconds send timestamp is used for optional latency and
+<p>The 64-bit nanoseconds send timestamp is used for optional latency and
 jitter calculations.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

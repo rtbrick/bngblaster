@@ -91,17 +91,17 @@
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster can log events to the standard output
 or the logging window of the interactive courses interface.
-Those events could be also logged to files using the argument
+Those events could be also logged into files using the argument
 <code class="docutils literal notranslate"><span class="pre">-L</span> <span class="pre">&lt;file&gt;</span></code>.</p>
 <p>Per default, only events classified as <cite>info</cite> or <cite>error</cite> are logged.
 The following list shows all supported logging options.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code>: debug events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">info</span></code>: informational events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">error</span></code>: error events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">igmp</span></code>: igmp events with join and leave time</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">io</span></code>: interface input/output events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pppoe</span></code>: pppoe events</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">info</span></code>: informational events (enabled per default)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pcap</span></code>: PCAP related events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ip</span></code>: log learned IP addresses</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">loss</span></code>: log traffic loss with sequence number</p></li>
@@ -110,6 +110,8 @@ The following list shows all supported logging options.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">isis</span></code>: log ISIS events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">bgp</span></code>: log BGP events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tcp</span></code>: log TCP events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lag</span></code>: log link aggregation (LAG) events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dpdk</span></code>: log DPDK events</p></li>
 </ul>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C test.json -L test.log -l ip -l isis -l bgp
 </pre></div>
@@ -134,6 +136,8 @@ include (default behavior) or exclude traffic streams from capture.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>Traffic streams send or received on threaded interfaces will be also not captured.
+All other traffic is still captured on threaded interfaces.</p>
 <section id="wireshark-plugin">
 <h3>Wireshark Plugin<a class="headerlink" href="#wireshark-plugin" title="Permalink to this headline"></a></h3>
 <p>Traffic streams generated with the BNG Blaster include the
