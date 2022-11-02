@@ -66,7 +66,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -167,7 +166,7 @@ with more options to modify the traffic.</p>
 to generate proper multicast streams. All headers including the BNG Blaster header will be
 automatically set for multicast. Therefore such streams can be also used to measure the IGMP
 join and leave delay.</p>
-<p>The BNG Blaster is recognizing loss using the <a class="reference internal" href="../reference/traffic.html#bbl-header"><span class="std std-ref">BNG Blaster header</span></a>
+<p>The BNG Blaster is recognizing loss using the <a class="reference internal" href="../streams.html#bbl-header"><span class="std std-ref">BNG Blaster header</span></a>
 sequence numbers. After the first multicast traffic is received for a particular group,
 for every further packet it checks if there is a gap between the last and new sequence number
 which would be reported as a loss. The argument option <code class="docutils literal notranslate"><span class="pre">-l</span> <span class="pre">loss</span></code> enables loss logging which

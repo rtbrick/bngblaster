@@ -62,7 +62,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#a10nsp-interfaces">A10NSP Interfaces</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#dpdk">DPDK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#i-o-modes">I/O Modes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#packet-mmap">Packet MMAP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#raw">RAW</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpdk">DPDK</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="access/index.html">Access Protocols</a></li>
@@ -73,7 +78,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -434,7 +438,7 @@ of interface functions.</p>
 </div>
 </section>
 <section id="multithreaded-interfaces">
-<h3>Multithreaded Interfaces<a class="headerlink" href="#multithreaded-interfaces" title="Permalink to this headline"></a></h3>
+<span id="io-modes"></span><h3>Multithreaded Interfaces<a class="headerlink" href="#multithreaded-interfaces" title="Permalink to this headline"></a></h3>
 <p>The BNG Blaster handles all traffic sent and received (IO) in the main thread per default.
 With this default behavior, you can achieve between 100.000 and 200.000 PPS bidirectional
 traffic in most environments. Depending on the actual setup, this can be even less or much
@@ -480,7 +484,7 @@ interfaces.</p>
 <p class="admonition-title">Note</p>
 <p>The BNG Blaster is currently tested for up to 1 million PPS with 1 million flows, which is not a
 hard limitation but everything above should be considered experimental. It is also possible to
-scale beyond using DPDK enabled interfaces.</p>
+scale beyond using DPDK-enabled interfaces.</p>
 </div>
 </section>
 </section>
@@ -488,9 +492,11 @@ scale beyond using DPDK enabled interfaces.</p>
 <h2>Interface Functions<a class="headerlink" href="#interface-functions" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster supports three types of interface functions,
 <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">access</span></code>, and <code class="docutils literal notranslate"><span class="pre">a10nsp</span></code>.</p>
+<img alt="BNG Blaster Interfaces" src="_images/bbl_interfaces.png" />
 <section id="network-interfaces">
 <span id="network-interface"></span><h3>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Permalink to this headline"></a></h3>
-<p>The network interfaces are used for traffic and routing protocols.</p>
+<p>The network interfaces are used to emulate the core-facing side of the internet
+with optional routing protocols and traffic.</p>
 <p>Those interfaces can communicate with the configured gateway only.
 Meaning that all traffic sent from the network interface will be sent
 to the learned MAC address of the configured gateway.</p>
@@ -498,6 +504,9 @@ to the learned MAC address of the configured gateway.</p>
 to its own MAC address. This allows sending and receiving traffic for prefixes
 advertised via routing protocols or configured via static routes on the
 connected device under test.</p>
+<p>The network interfaces are also used to inject downstream multicast test traffic
+for IPTV tests. It is also possible to send RAW traffic streams between network
+interfaces without any access interface defined for non-BNG testing.</p>
 <p>The BNG Blaster responds to all ICMP echo requests sent to its own MAC address.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
@@ -1040,14 +1049,40 @@ with network or access interface functions!</p>
 </div>
 </section>
 </section>
+<section id="i-o-modes">
+<h2>I/O Modes<a class="headerlink" href="#i-o-modes" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster supports many configurable I/O modes listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code>.
+In the default mode <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>, all packets are received in a Packet MMAP
+ring buffer and sent through RAW packet sockets.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ bngblaster -v
+Version: 0.8.1
+Compiler: GNU (7.5.0)
+IO Modes: packet_mmap_raw (default), packet_mmap, raw
+</pre></div>
+</div>
+<section id="packet-mmap">
+<h3>Packet MMAP<a class="headerlink" href="#packet-mmap" title="Permalink to this headline"></a></h3>
+<p><a class="reference external" href="https://www.kernel.org/doc/html/latest/networking/packet_mmap.html">Packet MMAP</a>
+is a so-called PACKET_RX_RING/PACKET_TX_RING abstraction where a user-space
+program gets a fast lane into reading and writing to kernel interfaces using a shared
+ring buffer. The shared ring buffer is a memory-mapped window shared between the kernel
+and the user space. This low overhead abstraction allows us to transmit and receive
+traffic without doing expensive system calls. Sending and transmitting traffic via
+Packet MMAP is as easy as copying a packet into a buffer and setting a flag.</p>
+</section>
+<section id="raw">
+<h3>RAW<a class="headerlink" href="#raw" title="Permalink to this headline"></a></h3>
+<p><a class="reference external" href="https://man7.org/linux/man-pages/man7/packet.7.html">RAW Packet Sockets</a>.
+are used to receive or send raw packets at the device driver (OSI Layer 2) level.</p>
+</section>
 <section id="dpdk">
-<span id="dpdk-interface"></span><h2>DPDK<a class="headerlink" href="#dpdk" title="Permalink to this headline"></a></h2>
-<p>Using the experimental <a class="reference external" href="https://www.dpdk.org/">DPDK</a> support requires to build
-the BNG Blaster from sources with <a class="reference external" href="https://www.dpdk.org/">DPDK</a> enabled as explained
+<span id="dpdk-interface"></span><h3>DPDK<a class="headerlink" href="#dpdk" title="Permalink to this headline"></a></h3>
+<p>Using the experimental <a class="reference external" href="https://www.dpdk.org/">DPDK</a> support requires building
+the BNG Blaster from sources with DPDK enabled as explained
 in the corresponding <a class="reference internal" href="install.html#install-dpdk"><span class="std std-ref">installation</span></a> section.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The officially BNG Blaster Debian release packages do not support
+<p>The official BNG Blaster Debian release packages do not support
 <a class="reference external" href="https://www.dpdk.org/">DPDK</a>!</p>
 </div>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
@@ -1109,6 +1144,7 @@ in the corresponding <a class="reference internal" href="install.html#install-dp
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+</section>
 </section>
 </section>
 
