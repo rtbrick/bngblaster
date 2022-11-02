@@ -354,8 +354,8 @@ for interface links referenced by interface functions.</p>
 <section id="link-aggregation-lag">
 <span id="lag-interface"></span><h3>Link Aggregation (LAG)<a class="headerlink" href="#link-aggregation-lag" title="Permalink to this headline"></a></h3>
 <p>The BNG Blaster supports link aggregation (LAG) with and without
-LACP. The created LAG interface can be used as link for all kinds
-of interface functions.</p>
+LACP. The created LAG interface can be used as the parent interface link
+for all kinds of interface functions.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -392,11 +392,15 @@ of interface functions.</p>
 <td><p>LACP system identifier</p></td>
 <td><p>02:ff:ff:ff:ff:00</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>lacp-max-active-links</cite></p></td>
+<tr class="row-odd"><td><p><cite>lacp-min-active-links</cite></p></td>
+<td><p>Define the minimum number of active links</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-max-active-links</cite></p></td>
 <td><p>Limit the maximum number of active links</p></td>
 <td><p>255</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>mac</cite></p></td>
+<tr class="row-odd"><td><p><cite>mac</cite></p></td>
 <td><p>LAG interface MAC address</p></td>
 <td><p>02:ff:ff:ff:ff:&lt;id&gt;</p></td>
 </tr>
@@ -439,14 +443,14 @@ of interface functions.</p>
 </section>
 <section id="multithreaded-interfaces">
 <span id="io-modes"></span><h3>Multithreaded Interfaces<a class="headerlink" href="#multithreaded-interfaces" title="Permalink to this headline"></a></h3>
-<p>The BNG Blaster handles all traffic sent and received (IO) in the main thread per default.
+<p>The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
 With this default behavior, you can achieve between 100.000 and 200.000 PPS bidirectional
 traffic in most environments. Depending on the actual setup, this can be even less or much
 more, which is primarily driven by the single-thread performance of the given CPU.</p>
-<p>Those numbers can be increased by splitting the workload over multiple IO worker threads.
-Every IO thread will handle only one interface and direction. It is also possible to start
+<p>Those numbers can be increased by splitting the workload over multiple I/O worker threads.
+Every I/O thread will handle only one interface and direction. It is also possible to start
 multiple threads for the same interface and direction.</p>
-<p>The number of IO threads can be configured globally for all interfaces or per interface link.</p>
+<p>The number of I/O threads can be configured globally for all interfaces or per interface link.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
@@ -475,10 +479,10 @@ the actual configuration and setup. This allows starting 1 million flows with 1 
 at least 4 TX threads to verify all prefixes of a BGP full table for example.</p>
 <p>The configured traffic streams are automatically balanced over all TX threads of the corresponding
 interfaces but a single stream can’t be split over multiple threads to prevent re-ordering issues.</p>
-<p>Enabling multithreaded IO causes some limitations. First of all, it works only on systems with
+<p>Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with
 CPU cache coherence, which should apply to all modern CPU architectures. It is also not possible
 to bundle (Link Aggregation) multithreaded interfaces. It is also not possible to capture traffic
-streams send or received on threaded interfaces. All other traffic is still captured even on threaded
+streams send or received on threaded interfaces. All other traffic is still captured on threaded
 interfaces.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

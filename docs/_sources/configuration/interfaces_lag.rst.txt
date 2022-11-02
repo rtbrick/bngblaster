@@ -25,6 +25,9 @@
    * - `lacp-system-id`
      - LACP system identifier
      - 02:ff:ff:ff:ff:00
+   * - `lacp-min-active-links`
+     - Define the minimum number of active links
+     - 0
    * - `lacp-max-active-links`
      - Limit the maximum number of active links
      - 255
