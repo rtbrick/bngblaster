@@ -14,17 +14,26 @@ So you can use it for end-to-end BNG and non-BNG router testing.
 You can use the included traffic generator for forwarding verification,
 QoS testing or to measure convergence times. The traffic generator supports 
 millions of separate tracked flows. This allows you to verify every single 
-forwarding state of a full feed internet routing table. You can also send 
+forwarding state of a full-feed internet routing table. You can also send 
 traffic to every single QoS queue of your service edge router.
 
-The BNG Blaster is used by leading network operators, network hard- and software vendors.
+The BNG Blaster is used by leading network operators like Deutsche Telekom AG
+with their famous Access 4.0 project, network hard- and software vendors like
+RtBrick and many more.
 
-A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster") and good presentation
+A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster and a good presentation 
 from [DENOG13](https://youtu.be/LVg6rlVEfNU "DENOG13") can be found on YouTube. 
 
-Please checkout the [documentation](https://rtbrick.github.io/bngblaster/) for details.
+Please check out the [documentation](https://rtbrick.github.io/bngblaster/) for details.
 
 ![BBL Interactive](docsrc/sources/images/bbl_interactive.png "BNG Blaster (Interactive Mode)")
+
+This project will be actively maintained and further evolved by RtBrick. We are fully committed to 
+building a project for the community and take issue and enhancement requests seriously. We are 
+looking forward to any kind of contributions, new features, bug fixes, or tools. Even contributions 
+to the documentation are more than welcome.
+
+Our mission is to build better networks with open test suites.
 
 ## License
 
