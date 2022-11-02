@@ -21,7 +21,7 @@ The BNG Blaster is used by leading network operators like Deutsche Telekom AG
 with their famous Access 4.0 project, network hard- and software vendors like
 RtBrick and many more.
 
-A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster and a good presentation 
+A short [introduction](https://youtu.be/EHJ70p0_Sw0 "BNG Blaster") and a good presentation 
 from [DENOG13](https://youtu.be/LVg6rlVEfNU "DENOG13") can be found on YouTube. 
 
 Please check out the [documentation](https://rtbrick.github.io/bngblaster/) for details.
