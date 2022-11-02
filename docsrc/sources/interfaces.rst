@@ -130,8 +130,8 @@ Link Aggregation (LAG)
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The BNG Blaster supports link aggregation (LAG) with and without 
-LACP. The created LAG interface can be used as link for all kinds
-of interface functions. 
+LACP. The created LAG interface can be used as the parent interface link 
+for all kinds of interface functions. 
 
 .. include:: configuration/interfaces_lag.rst
 
@@ -171,16 +171,16 @@ of interface functions.
 Multithreaded Interfaces 
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The BNG Blaster handles all traffic sent and received (IO) in the main thread per default. 
+The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default. 
 With this default behavior, you can achieve between 100.000 and 200.000 PPS bidirectional 
 traffic in most environments. Depending on the actual setup, this can be even less or much 
 more, which is primarily driven by the single-thread performance of the given CPU. 
 
-Those numbers can be increased by splitting the workload over multiple IO worker threads. 
-Every IO thread will handle only one interface and direction. It is also possible to start 
+Those numbers can be increased by splitting the workload over multiple I/O worker threads. 
+Every I/O thread will handle only one interface and direction. It is also possible to start 
 multiple threads for the same interface and direction. 
 
-The number of IO threads can be configured globally for all interfaces or per interface link.
+The number of I/O threads can be configured globally for all interfaces or per interface link.
 
 .. code-block:: json
 
@@ -215,10 +215,10 @@ at least 4 TX threads to verify all prefixes of a BGP full table for example.
 The configured traffic streams are automatically balanced over all TX threads of the corresponding
 interfaces but a single stream can't be split over multiple threads to prevent re-ordering issues.
 
-Enabling multithreaded IO causes some limitations. First of all, it works only on systems with 
+Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with 
 CPU cache coherence, which should apply to all modern CPU architectures. It is also not possible 
 to bundle (Link Aggregation) multithreaded interfaces. It is also not possible to capture traffic 
-streams send or received on threaded interfaces. All other traffic is still captured even on threaded 
+streams send or received on threaded interfaces. All other traffic is still captured on threaded 
 interfaces. 
 
 .. note::

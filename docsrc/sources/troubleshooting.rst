@@ -6,18 +6,18 @@ Logging
 
 The BNG Blaster can log events to the standard output
 or the logging window of the interactive courses interface. 
-Those events could be also logged to files using the argument 
+Those events could be also logged into files using the argument 
 ``-L <file>``.
 
 Per default, only events classified as `info` or `error` are logged. 
 The following list shows all supported logging options. 
 
 * ``debug``: debug events
+* ``info``: informational events
 * ``error``: error events
 * ``igmp``: igmp events with join and leave time
 * ``io``: interface input/output events
 * ``pppoe``: pppoe events
-* ``info``: informational events (enabled per default)
 * ``pcap``: PCAP related events
 * ``ip``: log learned IP addresses
 * ``loss``: log traffic loss with sequence number
@@ -26,6 +26,8 @@ The following list shows all supported logging options.
 * ``isis``: log ISIS events
 * ``bgp``: log BGP events 
 * ``tcp``: log TCP events
+* ``lag``: log link aggregation (LAG) events
+* ``dpdk``: log DPDK events
 
 .. code-block:: none
     
@@ -55,6 +57,10 @@ include (default behavior) or exclude traffic streams from capture.
             "capture-include-streams": false
         }
     }
+
+
+Traffic streams send or received on threaded interfaces will be also not captured.
+All other traffic is still captured on threaded interfaces. 
 
 Wireshark Plugin
 ~~~~~~~~~~~~~~~~

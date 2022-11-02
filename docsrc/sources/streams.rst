@@ -217,7 +217,7 @@ working. After the first packet is received for a given flow, for every further 
 if there is a gap between the last and new sequence number which is then reported as a loss.
 
 The ``rx/tx-accounting-packets`` are all packets that should be counted in the session volume
-accounting of the BNG, meaning session rx/tx packets excluding control traffic.
+accounting of the BNG, meaning session RX/TX packets excluding control traffic.
 
 Each flow can be queried separately using jsonpath expression with name and direction or flow-id.
 
@@ -302,10 +302,10 @@ Alternatively, all the session and stream traffic (including RAW streams)
 can be started or stopped globally using the ``traffic-start`` and
 ``traffic-stop`` commands.
 
+.. _bbl_header:
+
 BNG Blaster Traffic
 ~~~~~~~~~~~~~~~~~~~
-
-.. _bbl_header:
 
 *Blaster Header and Fast Decode Signature*
 
@@ -319,7 +319,7 @@ IPv4 multicast traffic.
 Unicast Session Traffic
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-The 64 bit session key is used for all traffic from access (upstream)
+The 64-bit session key is used for all traffic from access (upstream)
 and to access (downstream) interfaces to identify the corresponding
 session which has sent or should receive the packet.
 
@@ -387,7 +387,7 @@ Multicast Traffic
 BNG Blaster Magic Sequence
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The 64 bit magic sequence is the word ``RtBrick!`` decoded as ASCII:
+The 64-bit magic sequence is the word ``RtBrick!`` decoded as ASCII:
 
 .. code-block:: none
 
@@ -399,13 +399,13 @@ of blaster traffic.
 Flow Identifier
 ^^^^^^^^^^^^^^^
 
-The 64 bit flow identifier is a globally unique number that identifies
+The 64-bit flow identifier is a globally unique number that identifies
 the flow.
 
 Flow Sequence Number
 ^^^^^^^^^^^^^^^^^^^^
 
-The 64 bit flow sequence number is a sequential number starting with 1
+The 64-bit flow sequence number is a sequential number starting with 1
 and incremented per packet primary used to identify packet loss.
 
 This number 0 means that sequencing is disabled.
@@ -413,7 +413,7 @@ This number 0 means that sequencing is disabled.
 Nanosecond Send Timestamps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The 64 bit nanoseconds send timestamp is used for optional latency and
+The 64-bit nanoseconds send timestamp is used for optional latency and
 jitter calculations.
 
 .. code-block:: none
