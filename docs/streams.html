@@ -51,6 +51,15 @@
 <li class="toctree-l2"><a class="reference internal" href="#stream-commands">Stream Commands</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#raw-streams">RAW Streams</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#start-stop-session-stream-traffic">Start/Stop Session Stream Traffic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bng-blaster-traffic">BNG Blaster Traffic</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#unicast-session-traffic">Unicast Session Traffic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multicast-traffic">Multicast Traffic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bng-blaster-magic-sequence">BNG Blaster Magic Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flow-identifier">Flow Identifier</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flow-sequence-number">Flow Sequence Number</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nanosecond-send-timestamps">Nanosecond Send Timestamps</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
@@ -58,7 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -91,10 +99,10 @@
 <p>Traffic streams allow doing various forwarding verification
 and QoS tests using BNG Blaster.</p>
 <img alt="Interactive Streams" src="_images/bbl_streams.png" />
-<p>Traffic streams are divided into bounded and raw streams.
+<p>Traffic streams are divided into bounded and RAW streams.
 The first one is bound to an access configuration and derives
 addresses dynamically from the sessions.</p>
-<p>A raw stream is supported on <a class="reference internal" href="interfaces.html#interfaces"><span class="std std-ref">network interfaces</span></a> only.</p>
+<p>RAW streams are supported from <a class="reference internal" href="interfaces.html#network-interface"><span class="std std-ref">network interfaces</span></a> only.</p>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
 <p>Following a simple PPPoE example with streams.</p>
@@ -509,6 +517,113 @@ session identifier.</p>
 <p>Alternatively, all the session and stream traffic (including RAW streams)
 can be started or stopped globally using the <code class="docutils literal notranslate"><span class="pre">traffic-start</span></code> and
 <code class="docutils literal notranslate"><span class="pre">traffic-stop</span></code> commands.</p>
+</section>
+<section id="bng-blaster-traffic">
+<h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Permalink to this headline"></a></h2>
+<p id="bbl-header"><em>Blaster Header and Fast Decode Signature</em></p>
+<p>The 48 Byte fixed size BNG Blaster Header is added to all data packets
+for traffic validation and fast decoding. The header is expected on the
+last 48 bytes of the packet.</p>
+<p>The type is set to 1 for all unicast session traffic and 2 for
+IPv4 multicast traffic.</p>
+<section id="unicast-session-traffic">
+<h3>Unicast Session Traffic<a class="headerlink" href="#unicast-session-traffic" title="Permalink to this headline"></a></h3>
+<p>The 64 bit session key is used for all traffic from access (upstream)
+and to access (downstream) interfaces to identify the corresponding
+session which has sent or should receive the packet.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| BNG Blaster Magic Sequence                                    |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Type          | Sub-Type      | Direction     | TX TOS        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Session Identifier                                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Session Access Interface Index                                |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Session Outer VLAN            | Session Inner VLAN            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Identifier                                               |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Sequence Number                                          |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Nanosecond Send Timestamp                                     |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<img alt="BNG Blaster Header" src="_images/bbl_header.png" />
+</section>
+<section id="multicast-traffic">
+<h3>Multicast Traffic<a class="headerlink" href="#multicast-traffic" title="Permalink to this headline"></a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| BNG Blaster Magic Sequence                                    |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Type          | Sub-Type      | Direction     | TX TOS        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Reserved                                                      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Source                                                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Group                                                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Identifier                                               |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Sequence Number                                          |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Nanosecond Send Timestamp                                     |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All attributes except IP addresses in the Blaster Header are
+stored in host byte order for faster processing
+(LE or BE depending on the test system).</p>
+</div>
+</section>
+<section id="bng-blaster-magic-sequence">
+<h3>BNG Blaster Magic Sequence<a class="headerlink" href="#bng-blaster-magic-sequence" title="Permalink to this headline"></a></h3>
+<p>The 64 bit magic sequence is the word <code class="docutils literal notranslate"><span class="pre">RtBrick!</span></code> decoded as ASCII:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0x5274427269636b21
+</pre></div>
+</div>
+<p>Storing the magic number on a fixed offset allows fast identification
+of blaster traffic.</p>
+</section>
+<section id="flow-identifier">
+<h3>Flow Identifier<a class="headerlink" href="#flow-identifier" title="Permalink to this headline"></a></h3>
+<p>The 64 bit flow identifier is a globally unique number that identifies
+the flow.</p>
+</section>
+<section id="flow-sequence-number">
+<h3>Flow Sequence Number<a class="headerlink" href="#flow-sequence-number" title="Permalink to this headline"></a></h3>
+<p>The 64 bit flow sequence number is a sequential number starting with 1
+and incremented per packet primary used to identify packet loss.</p>
+<p>This number 0 means that sequencing is disabled.</p>
+</section>
+<section id="nanosecond-send-timestamps">
+<h3>Nanosecond Send Timestamps<a class="headerlink" href="#nanosecond-send-timestamps" title="Permalink to this headline"></a></h3>
+<p>The 64 bit nanoseconds send timestamp is used for optional latency and
+jitter calculations.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Seconds                                                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Nano Seconds                                                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<p>The timestamp 0 means that timestamps are disabled.</p>
+</section>
 </section>
 </section>
 

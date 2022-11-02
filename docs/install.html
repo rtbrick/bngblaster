@@ -63,7 +63,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -101,10 +100,10 @@ but is primarily tested on Ubuntu 18.04, 20.04 and 22.04 LTS.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Ubuntu 18.04 and 20.04
 sudo apt install -y libssl1.1 libncurses5 libjansson4
 # Ubuntu 22.04
-sudo apt install -y libssl1.1 libncurses5 libjansson4
+sudo apt install -y libssl3 libncurses6 libjansson4
 </pre></div>
 </div>
-<p>Download and install Debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster/releases">https://github.com/rtbrick/bngblaster/releases</a></p>
+<p>Download and install the Debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster/releases">https://github.com/rtbrick/bngblaster/releases</a></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo dpkg -i &lt;package&gt;
 </pre></div>
 </div>
@@ -204,7 +203,7 @@ Total Test time (real) =   0.00 sec
 <section id="build-with-dpdk-support">
 <span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Permalink to this headline"></a></h3>
 <p>The following steps are required to build the BNG Blaster with experimental
-<a class="reference external" href="https://www.dpdk.org/">DPDK</a> support.</p>
+<a class="reference internal" href="interfaces.html#dpdk-interface"><span class="std std-ref">DPDK</span></a> support.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!</p>
