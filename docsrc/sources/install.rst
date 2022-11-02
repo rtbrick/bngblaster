@@ -16,10 +16,10 @@ Install dependencies:
     # Ubuntu 18.04 and 20.04
     sudo apt install -y libssl1.1 libncurses5 libjansson4
     # Ubuntu 22.04
-    sudo apt install -y libssl1.1 libncurses5 libjansson4
+    sudo apt install -y libssl3 libncurses6 libjansson4
 
 
-Download and install Debian package: https://github.com/rtbrick/bngblaster/releases
+Download and install the Debian package: https://github.com/rtbrick/bngblaster/releases
 
 .. code-block:: none
 
@@ -146,7 +146,7 @@ Build with DPDK Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 The following steps are required to build the BNG Blaster with experimental
-`DPDK <https://www.dpdk.org/>`_ support. 
+:ref:`DPDK <dpdk-interface>` support. 
 
 .. note::
 

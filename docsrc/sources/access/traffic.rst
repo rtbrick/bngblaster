@@ -5,7 +5,8 @@ Session Traffic
 
 The BNG Blaster can autogenerate bidirectional unicast
 session traffic for all addresses assigned to a session
-(IPv4, IPv6 and IPv6PD). 
+(IPv4, IPv6 and IPv6PD) and the corresponding network 
+interface function. 
 
 .. image:: ../images/bbl_session_traffic.png
     :alt: Session Traffic
