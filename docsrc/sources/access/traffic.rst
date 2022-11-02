@@ -57,32 +57,33 @@ for session traffic.
 .. code-block:: none 
 
     Session Traffic (Global):
-    --------------------------------------------------------------
-    Config:
-        IPv4    PPS:           1
-        IPv6    PPS:           1
-        IPv6PD  PPS:           1
-    Verified Traffic Flows: 6/6
-        Downstream IPv4:          1
-        Downstream IPv6:          1
-        Downstream IPv6PD:        1
-        Upstream IPv4:            1
-        Upstream IPv6:            1
-        Upstream IPv6PD:          1
-    Violations (>1s): 0
-        Downstream IPv4:          0
-        Downstream IPv6:          0
-        Downstream IPv6PD:        0
-        Upstream IPv4:            0
-        Upstream IPv6:            0
-        Upstream IPv6PD:          0
-    First Sequence Number Received:
-        Downstream IPv4    MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Downstream IPv6    MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Downstream IPv6PD  MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Upstream IPv4      MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Upstream IPv6      MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
-        Upstream IPv6PD    MIN:      1 ( 1.00s) AVG:      1 ( 1.00s) MAX:      1 ( 1.00s)
+    ------------------------------------------------------------------------------
+      Config:
+        PPS IPv4:                    1
+        PPS IPv6:                    1
+        PPS IPv6PD:                  1
+      Verified Traffic Flows:    96000/96000 (100.00%)
+        Downstream IPv4:         16000
+        Downstream IPv6:         16000
+        Downstream IPv6PD:       16000
+        Upstream IPv4:           16000
+        Upstream IPv6:           16000
+        Upstream IPv6PD:         16000
+      Violations:               >1s             >1s-2s   >2s-3s      >3s
+        Downstream IPv4:      12278 ( 12.79%)     3071     3040     6167
+        Downstream IPv6:      12252 ( 12.76%)     3185     2900     6167
+        Downstream IPv6PD:    12306 ( 12.82%)     3123     2978     6205
+        Upstream IPv4:        12314 ( 12.83%)     3104     3033     6177
+        Upstream IPv6:        12252 ( 12.76%)     3184     2891     6177
+        Upstream IPv6PD:      12361 ( 12.88%)     3178     2957     6226
+        Total:                73763 ( 76.84%)    18845    17799    37119
+      First Sequence Received:  MIN                AVG               MAX
+        Downstream IPv4           1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
+        Downstream IPv6           1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
+        Downstream IPv6PD         1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
+        Upstream IPv4             1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
+        Upstream IPv6             1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
+        Upstream IPv6PD           1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
 
 
 The ``First Sequence Number Received`` is used to measure the forwarding 
