@@ -360,9 +360,9 @@ bbl_session_reset(bbl_session_s *session) {
     }
     session->session_traffic.flows_verified = 0;
 
-    if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
-    if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
-    if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+    ENABLE_ENDPOINT(session->endpoint.ipv4);
+    ENABLE_ENDPOINT(session->endpoint.ipv6);
+    ENABLE_ENDPOINT(session->endpoint.ipv6pd);
 
     bbl_stream_reset(session->session_traffic.ipv4_up);
     bbl_stream_reset(session->session_traffic.ipv4_down);
@@ -420,9 +420,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
                 g_ctx->sessions_established--;
                 g_ctx->timestamp_established.tv_sec = 0;
             }
-            if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
-            if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
-            if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+            ENABLE_ENDPOINT(session->endpoint.ipv4);
+            ENABLE_ENDPOINT(session->endpoint.ipv6);
+            ENABLE_ENDPOINT(session->endpoint.ipv6pd);
         }
         if(state == BBL_ESTABLISHED) {
             /* Increment sessions established and decrement outstanding
@@ -441,9 +441,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             if(session->ip6cp_state > BBL_PPP_DISABLED) {
                 session->ip6cp_state = BBL_PPP_CLOSED;
             }
-            if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
-            if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
-            if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+            ENABLE_ENDPOINT(session->endpoint.ipv4);
+            ENABLE_ENDPOINT(session->endpoint.ipv6);
+            ENABLE_ENDPOINT(session->endpoint.ipv6pd);
         } else if(state == BBL_TERMINATED) {
             if(session->dhcp_established) {
                 session->dhcp_established = false;
@@ -491,9 +491,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
                     session->ip6cp_state = BBL_PPP_CLOSED;
                 }
             }
-            if(session->endpoint.ipv4) session->endpoint.ipv4 = ENDPOINT_ENABLED;
-            if(session->endpoint.ipv6) session->endpoint.ipv6 = ENDPOINT_ENABLED;
-            if(session->endpoint.ipv6pd) session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+            ENABLE_ENDPOINT(session->endpoint.ipv4);
+            ENABLE_ENDPOINT(session->endpoint.ipv6);
+            ENABLE_ENDPOINT(session->endpoint.ipv6pd);
             
             /* Cleanup A10NSP session */
             bbl_a10nsp_session_free(session);

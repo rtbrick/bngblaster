@@ -100,6 +100,11 @@
 #define BBL_AVG_SAMPLES             5
 #define DATA_TRAFFIC_MAX_LEN        1920
 
+#define ENABLE_ENDPOINT(_endpoint) \
+    if(_endpoint != ENDPOINT_DISABLED) _endpoint = ENDPOINT_ENABLED
+
+#define ACTIVATE_ENDPOINT(_endpoint) \
+    if(_endpoint != ENDPOINT_DISABLED) _endpoint = ENDPOINT_ACTIVE
 
 typedef enum {
     ACCESS_TYPE_PPPOE = 0,
