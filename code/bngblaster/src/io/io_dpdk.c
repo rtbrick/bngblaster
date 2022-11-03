@@ -437,6 +437,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
             LOG(ERROR, "DPDK: failed to get MAC from interface %s\n", interface->name);
             return false;
         }
+        LOG(DPDK, "DPDK: Set MAC %s for interface %s\n", format_mac_address(mac.addr_bytes), interface->name);
         memcpy(interface->mac, mac.addr_bytes, ETH_ADDR_LEN);
     }
 
