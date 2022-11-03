@@ -35,7 +35,7 @@ The following configuration allows to overwrite the global default interface lin
      - 0 (main thread)
    * - `capture-include-streams`
      - Include traffic streams in the capture
-     - true
+     - false
    * - `mac-modifier`
      - Third byte of access session MAC address (0-255)
      - 0
