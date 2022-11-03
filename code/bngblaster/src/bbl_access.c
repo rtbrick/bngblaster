@@ -68,6 +68,9 @@ bbl_access_interfaces_add()
             access_interface->txq = calloc(1, sizeof(bbl_txq_s));
             bbl_txq_init(access_interface->txq, BBL_TXQ_DEFAULT_SIZE);
 
+            /* Init ethernet */
+            memcpy(access_interface->mac, interface->mac, ETH_ADDR_LEN);
+
             /* TX list init */
             CIRCLEQ_INIT(&access_interface->session_tx_qhead);
             
