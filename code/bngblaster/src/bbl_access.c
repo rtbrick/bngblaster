@@ -460,12 +460,23 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
         if(!session->arp_resolved ||
            (session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND)) {
             ipv4 = false;
+        } else {
+            if(session->ip_address) {
+                ACTIVATE_ENDPOINT(session->endpoint.ipv4);
+            }
         }
     }
     if(session->access_config->ipv6_enable) {
         if(!session->icmpv6_ra_received ||
            (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND)) {
             ipv6 = false;
+        } else {
+            if(*(uint64_t*)&session->ipv6_address) {
+                ACTIVATE_ENDPOINT(session->endpoint.ipv6);
+            }
+            if(*(uint64_t*)&session->delegated_ipv6_address) {
+                ACTIVATE_ENDPOINT(session->endpoint.ipv6pd);
+            }
         }
     }
 
@@ -514,7 +525,9 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                 memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
                 *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                session->endpoint.ipv6 = ENDPOINT_ACTIVE;
+                if(session->access_type == ACCESS_TYPE_PPPOE) {
+                    ACTIVATE_ENDPOINT(session->endpoint.ipv6);
+                }
                 LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d\n",
                     session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
                 if(icmpv6->dns1) {
@@ -1098,9 +1111,9 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                 case BBL_PPP_LOCAL_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_access_rx_established_pppoe(interface, session, eth);
-                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
-                    LOG(IP, "IPv4 (ID: %u) address %s\n",
-                        session->session_id, format_ipv4_address(&session->ip_address));
+                    ACTIVATE_ENDPOINT(session->endpoint.ipv4);
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
+                        format_ipv4_address(&session->ip_address));
                     break;
                 default:
                     break;
@@ -1134,7 +1147,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_access_rx_established_pppoe(interface, session, eth);
-                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
+                    ACTIVATE_ENDPOINT(session->endpoint.ipv4);
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->ip_address));
                     break;
