@@ -81,6 +81,7 @@ typedef struct bbl_stream_
     bbl_stream_group_s *group;
     bbl_stream_s *group_next; /* Next stream of same group */
 
+    uint32_t session_version;
     bbl_session_s *session;
     bbl_stream_s *session_next; /* Next stream of same session */
     endpoint_state_t *endpoint;

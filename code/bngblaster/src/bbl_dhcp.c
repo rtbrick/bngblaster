@@ -23,6 +23,9 @@ bbl_dhcp_stop(bbl_session_s *session)
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     /* Reset session IP configuration */
+    ENABLE_ENDPOINT(session->endpoint.ipv4);
+    session->version++;
+    session->arp_resolved = false;
     session->ip_address = 0;
     session->ip_netmask = 0;
     session->peer_ip_address = 0;
