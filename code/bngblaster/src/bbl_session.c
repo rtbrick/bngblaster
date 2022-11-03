@@ -299,6 +299,7 @@ bbl_session_free(bbl_session_s *session)
 void
 bbl_session_reset(bbl_session_s *session) {    
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
+    session->version++;
     session->pppoe_session_id = 0;
     if(session->pppoe_ac_cookie) {
         free(session->pppoe_ac_cookie);

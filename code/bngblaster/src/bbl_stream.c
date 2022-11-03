@@ -1261,6 +1261,14 @@ bbl_stream_token_job(timer_s *timer)
             stream->send_window_active = false;
             return;
         }
+        if(stream->session_version != session->version) {
+            if(stream->tx_buf) {
+                free(stream->tx_buf);
+                stream->tx_buf = NULL;
+                stream->tx_len = 0;
+            }
+            stream->session_version = session->version;
+        }
     }
 
     if(stream->lag) {

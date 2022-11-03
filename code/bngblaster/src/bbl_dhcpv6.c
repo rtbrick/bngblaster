@@ -40,6 +40,7 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     timer_del(session->timer_dhcpv6);
     timer_del(session->timer_dhcpv6_t1);
     timer_del(session->timer_dhcpv6_t2);
+    session->version++;
     session->dhcpv6_state = BBL_DHCP_INIT;
     session->dhcpv6_ia_na_option_len = 0;
     session->dhcpv6_ia_pd_option_len = 0;
@@ -223,12 +224,6 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
             }
-
-            if(session->access_type == ACCESS_TYPE_IPOE) {
-                bbl_access_rx_established_ipoe(interface, session, eth);
-                session->send_requests |= BBL_SEND_ICMPV6_RS;
-                bbl_session_tx_qnode_insert(session);
-            }
         }
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
         session->dhcpv6_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
@@ -241,6 +236,11 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         if(session->dhcpv6_t2) {
             timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", 
                       session->dhcpv6_t2, 0, session, &bbl_dhcpv6_s2);
+        }
+        if(session->access_type == ACCESS_TYPE_IPOE) {
+            bbl_access_rx_established_ipoe(interface, session, eth);
+            session->send_requests |= BBL_SEND_ICMPV6_RS;
+            bbl_session_tx_qnode_insert(session);
         }
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Advertise received\n", session->session_id);

@@ -42,6 +42,7 @@ typedef struct bbl_session_
 
     session_state_t session_state;
     uint32_t send_requests;
+    uint32_t version;
 
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
