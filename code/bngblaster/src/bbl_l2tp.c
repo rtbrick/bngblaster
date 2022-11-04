@@ -904,21 +904,20 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
     }
 
     l2tp_session->stats.data_rx++;
-    switch (l2tp->protocol) {
+    switch(l2tp->protocol) {
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_s*)l2tp->next;
-            if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
+            lcp_rx->padding = l2tp_session->tunnel->server->lcp_padding;
+            if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
+                lcp_rx->code = PPP_CODE_ECHO_REPLY;
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+            } else if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
                 l2tp_session->disconnect_code = 3;
                 l2tp_session->disconnect_protocol = 0;
                 l2tp_session->disconnect_direction = 1;
                 bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
                 bbl_l2tp_session_delete(l2tp_session);
-                return;
-            }
-            if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
-                lcp_rx->code = PPP_CODE_ECHO_REPLY;
-                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
-            }
+            } 
             break;
         case PROTOCOL_PAP:
             memset(&pap_tx, 0x0, sizeof(bbl_pap_s));

@@ -634,6 +634,7 @@ typedef struct bbl_lcp_ {
     uint16_t    vendor_value_len;
     uint8_t    *start;
     uint16_t    len;
+    uint16_t    padding;
     uint8_t    *option[PPP_MAX_OPTIONS];
     bool        unknown_options;
 } bbl_lcp_s;

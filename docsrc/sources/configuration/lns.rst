@@ -46,6 +46,9 @@
    * - `data-control-tos`
      - Set the L2TP tunnel TOS priority (outer IPv4 header) for all non-IP data packets (LCP, IPCP, ...)
      - 0
+   * - `lcp-padding`
+     - Add fixed padding to LCP packets send from LNS
+     - 0 
 
 The BNG Blaster supports different congestion modes for the
 reliable delivery of control messages. The ``default`` mode

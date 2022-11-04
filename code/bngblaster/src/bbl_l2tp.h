@@ -67,6 +67,7 @@ typedef struct bbl_l2tp_server_
     uint16_t session_limit;
     uint16_t receive_window;
     uint16_t max_retry;
+    uint16_t lcp_padding;
 
     bool data_control_priority;
     bool data_length;

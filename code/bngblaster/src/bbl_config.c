@@ -2544,6 +2544,10 @@ json_parse_config(json_t *root)
             } else {
                 l2tp_server->hello_interval = 30;
             }
+            value = json_object_get(sub, "lcp-padding");
+            if(json_is_number(value)) {
+                l2tp_server->lcp_padding = json_number_value(value);;
+            }
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
