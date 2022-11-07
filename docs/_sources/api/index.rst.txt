@@ -129,6 +129,30 @@ for interactive communication with the BNG Blaster.
     }
 
 
+Test
+----
+
+.. list-table::
+   :header-rows: 1
+
+   * - Attribute
+     - Description
+     - Mandatory Arguments
+     - Optional Arguments
+   * - `test-info`
+     - Display information about the running test instance
+     - 
+     - 
+   * - `monkey-start`
+     - Start monkey test
+     - 
+     - 
+   * - `monkey-stop`
+     - Stop monkey test
+     - 
+     - 
+
+
 Interfaces
 ----------
 .. include:: interfaces.rst
