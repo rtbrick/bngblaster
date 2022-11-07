@@ -131,7 +131,8 @@ bbl_lag_select(bbl_lag_s *lag)
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         member->primary = false;
-        if(member->partner_state & (LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING)) {
+        if(member->lacp_state == LACP_CURRENT && 
+           member->partner_state & LACP_STATE_FLAG_COLLECTING) {
             if(active_count >= LAG_MEMBER_ACTIVE_MAX ||
                active_count >= lag->config->lacp_max_active_links) {
                 bbl_lag_member_update_state(member, INTERFACE_STANDBY);
@@ -167,7 +168,6 @@ bbl_lag_lacp_job(timer_s *timer)
     interface->send_requests |= BBL_SEND_LACP;
     member->timeout++;
     if(member->timeout > 3) {
-        interface->state = INTERFACE_DOWN;
         if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
             member->lacp_state = LACP_EXPIRED;
             member->actor_state |= LACP_STATE_FLAG_EXPIRED;
