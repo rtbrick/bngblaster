@@ -204,7 +204,7 @@ bbl_ctrl_socket_thread(void *thread_data)
 
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 1 * MSEC;
+    sleep.tv_nsec = 10 * MSEC;
 
     /* ToDo: Add connection manager!
      * This is just a temporary workaround! Finally we need
