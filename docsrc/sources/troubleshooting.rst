@@ -48,13 +48,13 @@ Some network interfaces drop the most outer VLAN which can be easily
 verified using the capture file. 
 
 The configuration option ``capture-include-streams`` allows to 
-include (default behavior) or exclude traffic streams from capture. 
+include or exclude (default behavior) traffic streams from capture. 
 
 .. code-block:: json
 
     {
         "interfaces": {
-            "capture-include-streams": false
+            "capture-include-streams": true
         }
     }
 
