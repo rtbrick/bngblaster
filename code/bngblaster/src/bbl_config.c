@@ -1918,6 +1918,10 @@ json_parse_config(json_t *root)
                 return false;
             }
         }
+        value = json_object_get(section, "access-line");
+        if(json_is_boolean(value)) {
+            g_ctx->config.dhcp_access_line = json_boolean_value(value);
+        }
     }
 
     /* DHCPv6 Configuration */
@@ -1938,6 +1942,10 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "retry");
         if(json_is_number(value)) {
             g_ctx->config.dhcpv6_retry = json_number_value(value);
+        }
+        value = json_object_get(section, "access-line");
+        if(json_is_boolean(value)) {
+            g_ctx->config.dhcpv6_access_line = json_boolean_value(value);
         }
     }
 
@@ -2708,12 +2716,14 @@ bbl_config_init_defaults()
     g_ctx->config.ip6cp_conf_request_timeout = 5;
     g_ctx->config.ip6cp_conf_request_retry = 10;
     g_ctx->config.dhcp_enable = false;
+    g_ctx->config.dhcp_access_line = true;
     g_ctx->config.dhcp_timeout = 5;
     g_ctx->config.dhcp_retry = 10;
     g_ctx->config.dhcp_release_interval = 1;
     g_ctx->config.dhcp_release_retry = 3;
     g_ctx->config.dhcpv6_enable = true;
     g_ctx->config.dhcpv6_rapid_commit = true;
+    g_ctx->config.dhcpv6_access_line = true;
     g_ctx->config.dhcpv6_timeout = 5;
     g_ctx->config.dhcpv6_retry = 10;
     g_ctx->config.igmp_autostart = true;
