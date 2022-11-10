@@ -34,3 +34,6 @@
    * - `vlan-priority`
      - VLAN PBIT for all DHCP control traffic
      - 0
+   * - `access-line`
+     - Add access-line attributes like Agent-Remote/Circuit-Id
+     - true

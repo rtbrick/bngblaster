@@ -22,3 +22,6 @@
    * - `retry`
      - DHCPv6 retry
      - 10
+   * - `access-line`
+     - Add access-line attributes like Agent-Remote/Circuit-Id
+     - true
