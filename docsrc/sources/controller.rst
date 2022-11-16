@@ -12,10 +12,10 @@ https://github.com/rtbrick/bngblaster-controller
 Installation
 ------------
 
-The BNG Blaster controller should run on any modern linux distribution
-but is primary tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.
+The BNG Blaster controller should run on any modern Linux distribution
+but is primarily tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.
 
-Download and install debian package: https://github.com/rtbrick/bngblaster-controller/releases
+Download and install Debian package: https://github.com/rtbrick/bngblaster-controller/releases
 
 .. code-block:: none
 
@@ -178,7 +178,7 @@ Metrics
 
 `GET /metrics`
 
-This endpoint returns metrics for all instances in prometheus text format. 
+This endpoint returns metrics for all instances in Prometheus text format. 
 
 .. code-block:: none
 
@@ -192,9 +192,9 @@ This endpoint returns metrics for all instances in prometheus text format.
 The metric `instances_total` counts the number of test instance directories 
 present and `instances_running` shows how many of them are running. 
 
-Every metric is labelled with the hostname where the controller is running.
+Every metric is labeled with the hostname where the controller is running.
 
-Per default there are no metrics per instance. This has to be explicitly 
+Per default, there are no metrics per instance. This has to be explicitly 
 enabled during instance start (`/api/v1/instances/<instance-name>/_start`) 
 using the new  `metric_flags` option.
 
@@ -212,7 +212,7 @@ using the new  `metric_flags` option.
         ]
     }
 
-Currently the following metrics are supported:
+Currently, the following metrics are supported:
 
 * `session_counters` session statistics
 * `interfaces` interface counters
@@ -227,8 +227,8 @@ Currently the following metrics are supported:
     sessions_established{hostname="blaster",instance_name="test"} 10
     ...
 
-Instance metrics are labelled with the instance name. All interface specific metrics
-are also labelled with the corresponding interface name.
+Instance metrics are labeled with the instance name. All interface-specific metrics
+are also labeled with the corresponding interface name.
 
 .. code-block:: none
 

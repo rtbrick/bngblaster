@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Interfaces &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Interfaces &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -43,16 +43,31 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Interfaces</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#interface-settings">Interface Settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#network-interfaces">Network Interfaces</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#access-interfaces">Access Interfaces</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#untagged">Untagged</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#single-tagged">Single Tagged</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#double-tagged">Double Tagged</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#triple-tagged">Triple Tagged</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operating-system-settings">Operating System Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interface-settings">Interface Settings</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#links">Links</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#link-aggregation-lag">Link Aggregation (LAG)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multithreaded-interfaces">Multithreaded Interfaces</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#a10nsp-interfaces">A10NSP Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interface-functions">Interface Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#network-interfaces">Network Interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#access-interfaces">Access Interfaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#untagged">Untagged</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#single-tagged">Single Tagged</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#double-tagged">Double Tagged</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#triple-tagged">Triple Tagged</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#a10nsp-interfaces">A10NSP Interfaces</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#i-o-modes">I/O Modes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#packet-mmap">Packet MMAP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#raw">RAW</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dpdk">DPDK</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="access/index.html">Access Protocols</a></li>
@@ -63,7 +78,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -93,94 +107,30 @@
              
   <section id="interfaces">
 <span id="id1"></span><h1>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h1>
-<p>The BNG Blaster supports three types of interfaces.</p>
-<p>All interfaces are optional but obviously at least
-one interface is required to start the BNG Blaster.</p>
-<section id="interface-settings">
-<h2>Interface Settings<a class="headerlink" href="#interface-settings" title="Permalink to this headline"></a></h2>
-<p>The following settings are applied to all interfaces.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2048</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<table class="colwidths-given docutils align-default">
-<colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Attribute</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
-<td><p>TX ring polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
-<td><p>RX ring polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
-<td><p>Bypass the kernel’s qdisc layer</p></td>
-<td><p>true</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
-<td><p>IO mode</p></td>
-<td><p>packet_mmap_raw</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
-<td><p>IO slots (ring size)</p></td>
-<td><p>4096</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>io-stream-max-ppi</cite></p></td>
-<td><p>IO traffic stream max packets per interval</p></td>
-<td><p>32</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>capture-include-streams</cite></p></td>
-<td><p>Include traffic streams in capture</p></td>
-<td><p>true</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>mac-modifier</cite></p></td>
-<td><p>Third byte of access session MAC address (0-255)</p></td>
-<td><p>0</p></td>
-</tr>
-</tbody>
-</table>
-<p>The <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> should be set to at to at least <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms)
-if more precise timestamps or high throughput is needed. This is recommended for IGMP
-join/leave or QoS delay measurements. For higher packet rates (&gt;1g) it might be needed to
-increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">4096</span></code>.</p>
-<p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
-<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered as experimental. In
-the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
-ring buffer and send directly trough RAW packet sockets.</p>
-<p>The BNG Blaster implements all protocols in userspace. Therefore the user interfaces
-must not have an IP address configured in the host operating system, to prevent the received
-packets are handled by Kernel.</p>
-<p>All used interfaces must be in an operational state up.</p>
+<p>The BNG Blaster distinguishes between interface links and interface functions.
+An interface link can be considered as the actual interface with all the
+corresponding IO settings. This is similar but not the same as physical interfaces
+in typical router implementations. Interface functions are similar to logical interfaces
+and define the actual services. One or more interface functions can be attached to each
+interface link.</p>
+<p>At least one interface function is required to start the BNG Blaster.</p>
+<section id="operating-system-settings">
+<h2>Operating System Settings<a class="headerlink" href="#operating-system-settings" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster implements all protocols in user space. Therefore the used interfaces
+links must not have an IP address configured in the host operating system, to prevent that
+the received packets are handled or even responded to from the Linux kernel as well.</p>
+<p>All used interface links must be in an operational state up.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set dev &lt;interface&gt; up
 </pre></div>
 </div>
-<p>It is not possible to send packets larger than the interface MTU which is 1500 per default
-but for PPPoE with multiple VLAN headers this might be not enough for large packets.
-Therefore the interface MTU should be increased using the following commands.</p>
+<p>It is not possible to send packets larger than the configured interface MTU, which is 1500
+bytes per default. For PPPoE with multiple VLAN headers, this might be not enough for large
+packets. Therefore the interface MTU should be increased using the following commands.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set mtu 9000 dev &lt;interface&gt;
 </pre></div>
 </div>
-<p>This can be also archived via netplan using the following configuration for each BNG Blaster
-interface.</p>
+<p>All this can be also archived via netplan using the following configuration for each BNG Blaster
+interface link.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">network</span><span class="p">:</span><span class="w"></span>
 <span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w"></span>
 <span class="nt">renderer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">networkd</span><span class="w"></span>
@@ -197,12 +147,8 @@ interface.</p>
 <span class="w">    </span><span class="nt">mtu</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9000</span><span class="w"></span>
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The number of interfaces is currently limited to 32!</p>
-</div>
 <p>It might be also needed to increase the hardware and software queue size of your
-network interfaces for higher throughput.</p>
+network interface links for higher throughput.</p>
 <p>The command <code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-g</span> <span class="pre">&lt;interface&gt;</span></code> shows the currently applied and maximum
 hardware queue size.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo ethtool -g ens5f1
@@ -219,7 +165,7 @@ RX Jumbo:       0
 TX:             512
 </pre></div>
 </div>
-<p>The currently applied settings can be change with the following command:</p>
+<p>The currently applied settings can be changed with the following command:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ethtool -G ens5f1 tx 4096 rx 4096
 </pre></div>
 </div>
@@ -227,23 +173,344 @@ TX:             512
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo ip link set txqueuelen 4096 dev ens5f1
 </pre></div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Today all traffic is received in main thread, therefore
-the single thread performance of your CPU is the most
-significant performance factor.</p>
+</section>
+<section id="interface-settings">
+<h2>Interface Settings<a class="headerlink" href="#interface-settings" title="Permalink to this headline"></a></h2>
+<p>The interfaces section contains all configurations around interface links and options.</p>
+<p>The following configuration allows to overwrite the global default interface link settings.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>io-mode</cite></p></td>
+<td><p>IO mode</p></td>
+<td><p>packet_mmap_raw</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-slots</cite></p></td>
+<td><p>IO slots (ring size)</p></td>
+<td><p>4096</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
+<td><p>Bypass the kernel’s qdisc layer</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>tx-interval</cite></p></td>
+<td><p>TX polling interval in milliseconds</p></td>
+<td><p>1.0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>rx-interval</cite></p></td>
+<td><p>RX polling interval in milliseconds</p></td>
+<td><p>1.0</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>tx-threads</cite></p></td>
+<td><p>Number of TX threads per interface link</p></td>
+<td><p>0 (main thread)</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>rx-threads</cite></p></td>
+<td><p>Number of RX threads per interface link</p></td>
+<td><p>0 (main thread)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>capture-include-streams</cite></p></td>
+<td><p>Include traffic streams in the capture</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac-modifier</cite></p></td>
+<td><p>Third byte of access session MAC address (0-255)</p></td>
+<td><p>0</p></td>
+</tr>
+</tbody>
+</table>
+<p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
+<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered experimental. In
+the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
+ring buffer and sent directly through RAW packet sockets.</p>
+<p>The default <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> of <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms) allows precise timestamps
+and high throughput. Those values can be further increased (e.g. <code class="docutils literal notranslate"><span class="pre">0.1</span></code>) for higher throughput
+or decreased (e.g. <code class="docutils literal notranslate"><span class="pre">5.0</span></code>) for lower system load.</p>
+<p>It might be also needed to increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">4096</span></code> to
+reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode.
+For Packet MMAP, it defines the maximum number of packets in the ring buffer.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2048</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<section id="links">
+<h3>Links<a class="headerlink" href="#links" title="Permalink to this headline"></a></h3>
+<p id="id2">The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions.</p>
+<p>The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Interface name (e.g. eth0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>description</cite></p></td>
+<td><p>Interface description</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac</cite></p></td>
+<td><p>Overwrite the MAC address</p></td>
+<td><p>Interface MAC address</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
+<td><p>Overwrite the IO mode</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
+<td><p>Overwrite the IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-slots-tx</cite></p></td>
+<td><p>Overwrite the TX IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots-rx</cite></p></td>
+<td><p>Overwrite the RX IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>qdisc-bypass</cite></p></td>
+<td><p>Overwrite the kernel’s qdisc layer configuration</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
+<td><p>Overwrite the TX polling interval in milliseconds</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
+<td><p>Overwrite the RX polling interval in milliseconds</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-threads</cite></p></td>
+<td><p>Overwrite the number of TX threads per interface link</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-threads</cite></p></td>
+<td><p>Overwrite the number of RX threads per interface link</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-cpuset</cite></p></td>
+<td><p>Optionally pin TX threads to CPU cores (cpuset)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-cpuset</cite></p></td>
+<td><p>Optionally pin RX threads to CPU cores (cpuset)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>lag-interface</cite></p></td>
+<td><p>Add interface link to LAG group</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-priority</cite></p></td>
+<td><p>LACP interface priority</p></td>
+<td><p>32768</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2048</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
 </div>
 </section>
+<section id="link-aggregation-lag">
+<span id="lag-interface"></span><h3>Link Aggregation (LAG)<a class="headerlink" href="#link-aggregation-lag" title="Permalink to this headline"></a></h3>
+<p>The BNG Blaster supports link aggregation (LAG) with and without
+LACP. The created LAG interface can be used as the parent interface link
+for all kinds of interface functions.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Interface name (e.g. lag0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp</cite></p></td>
+<td><p>De-/activate LACP</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-timeout-short</cite></p></td>
+<td><p>De-/activate LACP short timeout (3x1s)</p></td>
+<td><p>false (3x30s)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-system-priority</cite></p></td>
+<td><p>LACP system priority</p></td>
+<td><p>32768</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-system-id</cite></p></td>
+<td><p>LACP system identifier</p></td>
+<td><p>02:ff:ff:ff:ff:00</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-min-active-links</cite></p></td>
+<td><p>Define the minimum number of active links</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-max-active-links</cite></p></td>
+<td><p>Limit the maximum number of active links</p></td>
+<td><p>255</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>mac</cite></p></td>
+<td><p>LAG interface MAC address</p></td>
+<td><p>02:ff:ff:ff:ff:&lt;id&gt;</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Multithreaded IO is not supported for LAG member interfaces!</p>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lag1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lacp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lacp-timeout-short&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lag-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lag1&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;lag-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lag1&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lag1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.0.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.0.1&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
+<section id="multithreaded-interfaces">
+<span id="io-modes"></span><h3>Multithreaded Interfaces<a class="headerlink" href="#multithreaded-interfaces" title="Permalink to this headline"></a></h3>
+<p>The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
+With this default behavior, you can achieve between 100.000 and 200.000 PPS bidirectional
+traffic in most environments. Depending on the actual setup, this can be even less or much
+more, which is primarily driven by the single-thread performance of the given CPU.</p>
+<p>Those numbers can be increased by splitting the workload over multiple I/O worker threads.
+Every I/O thread will handle only one interface and direction. It is also possible to start
+multiple threads for the same interface and direction.</p>
+<p>The number of I/O threads can be configured globally for all interfaces or per interface link.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The configuration per interface link allows asymmetric thread pools. Assuming you would send
+massive unidirectional traffic from eth1 to eth2. In such a scenario, you would set up multiple
+TX threads and one RX thread on eth1. For eth2 you would do the opposite, meaning to set up
+multiple RX threads but only one TX thread.</p>
+<p>It is also possible to start dedicated threads for TX but remain RX in the main thread or
+vice versa by setting the number of threads to zero (default).</p>
+<p>With multithreading, you should be able to scale up to 1 million PPS bidirectional, depending on
+the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over
+at least 4 TX threads to verify all prefixes of a BGP full table for example.</p>
+<p>The configured traffic streams are automatically balanced over all TX threads of the corresponding
+interfaces but a single stream can’t be split over multiple threads to prevent re-ordering issues.</p>
+<p>Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with
+CPU cache coherence, which should apply to all modern CPU architectures. It is also not possible
+to bundle (Link Aggregation) multithreaded interfaces. It is also not possible to capture traffic
+streams send or received on threaded interfaces. All other traffic is still captured on threaded
+interfaces.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The BNG Blaster is currently tested for up to 1 million PPS with 1 million flows, which is not a
+hard limitation but everything above should be considered experimental. It is also possible to
+scale beyond using DPDK-enabled interfaces.</p>
+</div>
+</section>
+</section>
+<section id="interface-functions">
+<h2>Interface Functions<a class="headerlink" href="#interface-functions" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster supports three types of interface functions,
+<code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">access</span></code>, and <code class="docutils literal notranslate"><span class="pre">a10nsp</span></code>.</p>
+<img alt="BNG Blaster Interfaces" src="_images/bbl_interfaces.png" />
 <section id="network-interfaces">
-<h2>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Permalink to this headline"></a></h2>
-<p id="network-interface">The network interfaces are used for traffic and routing protocols.</p>
+<span id="network-interface"></span><h3>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Permalink to this headline"></a></h3>
+<p>The network interfaces are used to emulate the core-facing side of the internet
+with optional routing protocols and traffic.</p>
 <p>Those interfaces can communicate with the configured gateway only.
 Meaning that all traffic sent from the network interface will be sent
 to the learned MAC address of the configured gateway.</p>
 <p>The network interface behaves like a router. It accepts all traffic sent
-to its own MAC address. This allows to send and receive traffic for prefixes
+to its own MAC address. This allows sending and receiving traffic for prefixes
 advertised via routing protocols or configured via static routes on the
 connected device under test.</p>
+<p>The network interfaces are also used to inject downstream multicast test traffic
+for IPTV tests. It is also possible to send RAW traffic streams between network
+interfaces without any access interface defined for non-BNG testing.</p>
 <p>The BNG Blaster responds to all ICMP echo requests sent to its own MAC address.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
@@ -262,7 +529,7 @@ connected device under test.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Network interface name (e.g. eth0, …)</p></td>
+<td><p>Parent interface link name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>address</cite></p></td>
@@ -325,16 +592,16 @@ as shown in the example below.</p>
 <span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
 <span class="w">            </span><span class="p">{</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="w"></span>
 <span class="w">            </span><span class="p">},</span><span class="w"></span>
 <span class="w">            </span><span class="p">{</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth3&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1/24&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::1/64&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331:1::2&quot;</span><span class="w"></span>
 <span class="w">            </span><span class="p">}</span><span class="w"></span>
 <span class="w">        </span><span class="p">],</span><span class="w"></span>
@@ -342,14 +609,54 @@ as shown in the example below.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>Using multiple network interfaces requires to select which network interface
-to be used. If not explicitly configured one of the interface is selected
+<p>Using multiple network interfaces requires selecting which network interface
+to be used. If not explicitly configured, one of the interfaces is selected
 automatically. Therefore, the configuration option <code class="docutils literal notranslate"><span class="pre">network-interface</span></code>
 is supported in different sections.</p>
+<p>It is also supported to have multiple VLAN-tagged network interfaces on the
+same interface link.</p>
+<p>VLAN-tagged network interfaces must be referenced by <code class="docutils literal notranslate"><span class="pre">&lt;interface&gt;:&lt;vlan&gt;</span></code>
+in the configuration to distinguish between them.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.0.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.200.0.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.200.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S100&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1:100&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.200.0.2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S200&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1:200&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.0.2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
 </section>
 <section id="access-interfaces">
-<h2>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Permalink to this headline"></a></h2>
-<p id="access-interface">The access interfaces are used to emulate PPPoE and IPoE clients.</p>
+<span id="access-interface"></span><h3>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Permalink to this headline"></a></h3>
+<p>The access interfaces are used to emulate PPPoE and IPoE clients.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -367,7 +674,7 @@ is supported in different sections.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Access interface name (e.g. eth0, …)</p></td>
+<td><p>Parent interface link name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
@@ -435,35 +742,35 @@ is supported in different sections.</p>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>username</cite></p></td>
-<td><p>Overwrite the username from authentication section</p></td>
+<td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>password</cite></p></td>
-<td><p>Overwrite the password from authentication section</p></td>
+<td><p>Overwrite the password from the authentication section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>authentication-protocol</cite></p></td>
-<td><p>Overwrite the username from authentication section</p></td>
+<td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>agent-circuit-id</cite></p></td>
-<td><p>Overwrite the agent-circuit-id from access-line section</p></td>
+<td><p>Overwrite the agent-circuit-id from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>agent-remote-id</cite></p></td>
-<td><p>Overwrite the agent-remote-id from access-line section</p></td>
+<td><p>Overwrite the agent-remote-id from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>rate-up</cite></p></td>
-<td><p>Overwrite the rate-up from access-line section</p></td>
+<td><p>Overwrite the rate-up from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>rate-down</cite></p></td>
-<td><p>Overwrite the rate-down from access-line section</p></td>
+<td><p>Overwrite the rate-down from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>dsl-type</cite></p></td>
-<td><p>Overwrite the dsl-type from access-line section</p></td>
+<td><p>Overwrite the dsl-type from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipcp</cite></p></td>
@@ -475,11 +782,11 @@ is supported in different sections.</p>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv4</cite></p></td>
-<td><p>De-/activate IPoE IPv4</p></td>
+<td><p>De-/activate IPv4</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv6</cite></p></td>
-<td><p>De-/activate IPoE IPv6</p></td>
+<td><p>De-/activate IPv6</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>dhcp</cite></p></td>
@@ -551,7 +858,7 @@ corresponding VLAN header.</p>
 </pre></div>
 </div>
 <section id="untagged">
-<h3>Untagged<a class="headerlink" href="#untagged" title="Permalink to this headline"></a></h3>
+<h4>Untagged<a class="headerlink" href="#untagged" title="Permalink to this headline"></a></h4>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
@@ -565,7 +872,7 @@ corresponding VLAN header.</p>
 </div>
 </section>
 <section id="single-tagged">
-<h3>Single Tagged<a class="headerlink" href="#single-tagged" title="Permalink to this headline"></a></h3>
+<h4>Single Tagged<a class="headerlink" href="#single-tagged" title="Permalink to this headline"></a></h4>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
@@ -579,7 +886,7 @@ corresponding VLAN header.</p>
 </div>
 </section>
 <section id="double-tagged">
-<h3>Double Tagged<a class="headerlink" href="#double-tagged" title="Permalink to this headline"></a></h3>
+<h4>Double Tagged<a class="headerlink" href="#double-tagged" title="Permalink to this headline"></a></h4>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
@@ -593,7 +900,7 @@ corresponding VLAN header.</p>
 </div>
 </section>
 <section id="triple-tagged">
-<h3>Triple Tagged<a class="headerlink" href="#triple-tagged" title="Permalink to this headline"></a></h3>
+<h4>Triple Tagged<a class="headerlink" href="#triple-tagged" title="Permalink to this headline"></a></h4>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
@@ -654,9 +961,9 @@ or VLAN ranges as shown in the example below.</p>
 <p>The configuration attributes for username, agent-remote-id and agent-circuit-id
 support also some variable substitution. The variable <code class="docutils literal notranslate"><span class="pre">{session-global}</span></code> will
 be replaced with a number starting from 1 and incremented for every new session.
-where as the variable <code class="docutils literal notranslate"><span class="pre">{session}</span></code> is incremented per interface section.</p>
+whereas the variable <code class="docutils literal notranslate"><span class="pre">{session}</span></code> is incremented per-interface section.</p>
 <p>In VLAN mode <code class="docutils literal notranslate"><span class="pre">N:1</span></code> only one VLAN combination is supported per access interface section.
-This means that only VLAN min or max is considered as VLAN identifier.</p>
+This means that only VLAN min or max is considered as a VLAN identifier.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
@@ -678,13 +985,15 @@ This means that only VLAN min or max is considered as VLAN identifier.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>The BNG Blaster supports access and network interface functions on the same
+interface link if both are tagged with disjoint VLAN ranges.</p>
 </section>
 </section>
 <section id="a10nsp-interfaces">
-<h2>A10NSP Interfaces<a class="headerlink" href="#a10nsp-interfaces" title="Permalink to this headline"></a></h2>
-<p id="a10nsp-interface">The A10NSP interface emulates an layer two provider interface. The term A10
-refers to the end-to-end ADSL network reference model from TR-025.</p>
-<p>The A10NSP interface is required for <a class="reference internal" href="access/l2bsa.html#l2bsa"><span class="std std-ref">L2BSA</span></a> tests.</p>
+<span id="a10nsp-interface"></span><h3>A10NSP Interfaces<a class="headerlink" href="#a10nsp-interfaces" title="Permalink to this headline"></a></h3>
+<p>The A10NSP interface function is required for <a class="reference internal" href="access/l2bsa.html#l2bsa"><span class="std std-ref">L2BSA</span></a> tests and
+emulates a layer two provider interface. The term A10 refers to the end-to-end
+ADSL network reference model from TR-025.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -702,7 +1011,7 @@ refers to the end-to-end ADSL network reference model from TR-025.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>A10nSP interface name (e.g. eth0, …)</p></td>
+<td><p>Parent interface link name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>qinq</cite></p></td>
@@ -737,8 +1046,109 @@ as shown in the example below.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>You can define multiple interfaces with the same MAC
-address to emulate some static link aggregation (without LACP).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The A10NSP interface function can’t reside on the same link with
+with network or access interface functions!</p>
+</div>
+</section>
+</section>
+<section id="i-o-modes">
+<h2>I/O Modes<a class="headerlink" href="#i-o-modes" title="Permalink to this headline"></a></h2>
+<p>The BNG Blaster supports many configurable I/O modes listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code>.
+In the default mode <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>, all packets are received in a Packet MMAP
+ring buffer and sent through RAW packet sockets.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ bngblaster -v
+Version: 0.8.1
+Compiler: GNU (7.5.0)
+IO Modes: packet_mmap_raw (default), packet_mmap, raw
+</pre></div>
+</div>
+<section id="packet-mmap">
+<h3>Packet MMAP<a class="headerlink" href="#packet-mmap" title="Permalink to this headline"></a></h3>
+<p><a class="reference external" href="https://www.kernel.org/doc/html/latest/networking/packet_mmap.html">Packet MMAP</a>
+is a so-called PACKET_RX_RING/PACKET_TX_RING abstraction where a user-space
+program gets a fast lane into reading and writing to kernel interfaces using a shared
+ring buffer. The shared ring buffer is a memory-mapped window shared between the kernel
+and the user space. This low overhead abstraction allows us to transmit and receive
+traffic without doing expensive system calls. Sending and transmitting traffic via
+Packet MMAP is as easy as copying a packet into a buffer and setting a flag.</p>
+</section>
+<section id="raw">
+<h3>RAW<a class="headerlink" href="#raw" title="Permalink to this headline"></a></h3>
+<p><a class="reference external" href="https://man7.org/linux/man-pages/man7/packet.7.html">RAW Packet Sockets</a>.
+are used to receive or send raw packets at the device driver (OSI Layer 2) level.</p>
+</section>
+<section id="dpdk">
+<span id="dpdk-interface"></span><h3>DPDK<a class="headerlink" href="#dpdk" title="Permalink to this headline"></a></h3>
+<p>Using the experimental <a class="reference external" href="https://www.dpdk.org/">DPDK</a> support requires building
+the BNG Blaster from sources with DPDK enabled as explained
+in the corresponding <a class="reference internal" href="install.html#install-dpdk"><span class="std std-ref">installation</span></a> section.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The official BNG Blaster Debian release packages do not support
+<a class="reference external" href="https://www.dpdk.org/">DPDK</a>!</p>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">12</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">14</span><span class="p">,</span><span class="mi">15</span><span class="p">],</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">9</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">11</span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">],</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</section>
 </section>
 </section>
 

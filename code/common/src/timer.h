@@ -49,6 +49,7 @@ typedef struct timer_
     CIRCLEQ_ENTRY(timer_) timer_qnode;
     CIRCLEQ_ENTRY(timer_) timer_change_qnode;
     struct timespec expire; /* expiration interval */
+    struct timespec *timestamp;
     struct timer_bucket_ *timer_bucket; /* back pointer */
     struct timer_ **ptimer; /* where this timer pointer gets stored */
     void *data; /* misc. data */

@@ -30,7 +30,9 @@ io_raw_rx_job(timer_s *timer)
     assert(io->thread == NULL);
 
     /* Get RX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
     while(true) {
         io->buf_len = recvfrom(io->fd, io->buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
         if(io->buf_len < 14 || io->buf_len > IO_BUFFER_LEN) {
@@ -81,7 +83,9 @@ io_raw_tx_job(timer_s *timer)
     io_update_stream_token_bucket(io);
 
     /* Get TX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
     while(true) {
         /* If sendto fails, the failed packet remains in TX buffer to be retried
          * in the next interval. */
@@ -124,7 +128,7 @@ io_raw_tx_job(timer_s *timer)
         if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
             pcap = true;
             pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                        interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+                                      interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
         }
         io->stats.packets++;
         io->stats.bytes += io->buf_len;
@@ -202,7 +206,9 @@ io_raw_thread_tx_job(timer_s *timer)
     }
 
     /* Get TX timestamp */
-    clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+    io->timestamp.tv_sec = timer->timestamp->tv_sec;
+    io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
 
     /* Send traffic streams up to allowed burst. */
     while(stream_packets++ < io->stream_burst) {

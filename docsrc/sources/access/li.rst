@@ -90,7 +90,7 @@ The received flows can be displayed with the command `li-flows`.
     }
 
 The ``packets-rx-ipv4-host-internal`` refers to the IPv4 protocol number 61 
-(any host internal protocol) which is used by some network testers as default 
+(any host internal protocol) which is used by some network testers as the default 
 type for traffic streams. The same is valid for ``packets-rx-ipv6-host-internal`` 
 which refers to next header 61 and ``packets-rx-ipv6-no-next-header`` with next 
 header 59.

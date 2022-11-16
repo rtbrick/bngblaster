@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 0.7 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -49,7 +49,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -101,8 +100,19 @@
 <td><p>Automatically stop traffic streams if verified</p></td>
 <td><p>false</p></td>
 </tr>
+<tr class="row-even"><td><p><cite>max-burst</cite></p></td>
+<td><p>Stream flow burst size in packets</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>stream-rate-calculation</cite></p></td>
+<td><p>Enable stream rate calculation</p></td>
+<td><p>true</p></td>
+</tr>
 </tbody>
 </table>
+<p>The option <code class="docutils literal notranslate"><span class="pre">stream-rate-calculation</span></code> should be set to
+false if massive streams (&gt; 1M) are defined but per-stream
+live rate statistics are not required.</p>
 
 
            </div>

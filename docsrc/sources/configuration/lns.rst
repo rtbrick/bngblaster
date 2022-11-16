@@ -21,13 +21,16 @@
      - 
    * - `receive-window-size`
      - Control messages receive window size
-     - 4
+     - 16
    * - `max-retry`
      - Control messages max retry
-     - 30
+     - 5
    * - `congestion-mode`
      - Control messages congestion mode
      - default
+   * - `hello-interval`
+     - Set hello interval
+     - 30
    * - `data-control-priority`
      - Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, ...)
      - false
@@ -43,6 +46,9 @@
    * - `data-control-tos`
      - Set the L2TP tunnel TOS priority (outer IPv4 header) for all non-IP data packets (LCP, IPCP, ...)
      - 0
+   * - `lcp-padding`
+     - Add fixed padding to LCP packets send from LNS
+     - 0 
 
 The BNG Blaster supports different congestion modes for the
 reliable delivery of control messages. The ``default`` mode

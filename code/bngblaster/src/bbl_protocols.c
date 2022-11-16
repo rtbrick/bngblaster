@@ -1206,7 +1206,7 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
             lcp_len = lcp->options_len + 4;
             *lcp_len_field = htobe16(lcp_len);
         } else {
-            /* Constuct options ... */
+            /* Options ... */
             lcp_len = 4;
             if(lcp->mru) {
                 *buf = PPP_LCP_OPTION_MRU;
@@ -1237,6 +1237,9 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
             }
             *lcp_len_field = htobe16(lcp_len);
         }
+    }
+    if(lcp->padding) {
+        BUMP_WRITE_BUFFER(buf, len, lcp->padding);
     }
     return PROTOCOL_SUCCESS;
 }

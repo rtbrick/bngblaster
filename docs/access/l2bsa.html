@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>L2BSA &mdash; BNG Blaster 0.7 documentation</title>
+  <title>L2BSA &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -60,7 +60,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -97,11 +96,12 @@ providers who provide their Internet services. In Germany, this service is manda
 the Federal Network Agency (German: Bundesnetzagentur or BNetzA). This is the regulatory
 office for electricity, gas, telecommunications, post, and railway markets. It is a federal
 agency of the Federal Ministry for Economic Affairs and Energy located in Bonn, Germany.</p>
-<p>The definition of L2BSA service was defined by the so-called <a class="reference external" href="https://www.bundesnetzagentur.de/EN/Areas/Telecommunications/Companies/MarketRegulation/NGAForum/NGAForum_node.html">NGA Forum</a>.
+<p>The definition of L2BSA service was defined by the so-called
+<a class="reference external" href="https://www.bundesnetzagentur.de/EN/Areas/Telecommunications/Companies/MarketRegulation/NGAForum/NGAForum_node.html">NGA Forum</a>.
 This is an advisory board founded in May 2010 by the Bundesnetzagentur for promoting dialogue
 between the Bundesnetzagentur, network operators, manufacturers, states, and local authorities
 on NGA rollout.</p>
-<p>The L2BSA specification defines two interfaces. The so called U interface (User Interface)
+<p>The L2BSA specification defines two interfaces. The so-called U interface (User Interface)
 at the customer location and the A10-NSP interface (A10 Network Service Provider) between
 the service provider networks. Those interface types were introduced in the Broadband Forum
 TR-101 (Migration to Ethernet-Based Broadband Aggregation).</p>
@@ -111,7 +111,7 @@ VLAN tags by the wholesale service providers. This means that some CPE will send
 untagged while another CPE is configured for tagged traffic. All those traffic needs to be forwarded
 between the U interface and the A10-NSP interface.</p>
 <p>The A10-NSP interface is defined as a link aggregation bundle interface with one or more interfaces
-and LACP enabled or disabled. All traffic on this interface is at least single tagged with the so-called
+and LACP enabled or disabled. All traffic on this interface is at least single-tagged with the so-called
 S-VLAN tag which identifies the U interface. This limits the amount of L2BSA services to 4094 per A10-NSP
 interface caused by the usable VLAN range. So some providers need many A10-NSP interfaces if they need to
 address more than the 4094 services.</p>
@@ -128,7 +128,7 @@ upstream direction (from U to A10-NSP interface). Those headers allow the wholes
 the actual U interface for traffic received on the A10-NSP interface. This functionality is referred to
 as the intermediate agent functionality.</p>
 <p>The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts
-all DHCPv4 and PPPoE sessions received to verify forwarding and header enrichment.</p>
+all DHCPv4 and PPPoE sessions were received to verify forwarding and header enrichment.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>It is also planned to emulate a lightweight DHCPv6 server
@@ -158,7 +158,8 @@ detailed explained in the configuration section.</p>
 <span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth4&quot;</span><span class="w"></span>
 <span class="w">            </span><span class="p">}</span><span class="w"></span>
 <span class="w">        </span><span class="p">]</span><span class="w"></span>
 <span class="w">    </span><span class="p">},</span><span class="w"></span>
@@ -202,7 +203,20 @@ detailed explained in the configuration section.</p>
 </pre></div>
 </div>
 <p>You can define multiple interfaces with the same MAC
-address to emulate some static link aggregation (without LACP).</p>
+address to emulate some static link aggregation (without LACP)
+or directly use <a class="reference internal" href="../interfaces.html#lag-interface"><span class="std std-ref">Link Aggregation (LAG)</span></a>
+interfaces as the parent interface for the A10-NSP interface function.
+Using static link aggregation allows to manually define the sending
+interface for every stream (<code class="docutils literal notranslate"><span class="pre">&quot;a10nsp-interface&quot;:</span> <span class="pre">&quot;&lt;interface&quot;</span></code>)
+where LAG interfaces automatically balance streams over the member
+interfaces. It also allows using TX threads for those interfaces
+which is not supported for LAG interfaces.</p>
+<p>It is recommended to manually specify the corresponding
+a10nsp-interface in the access interface function, otherwise the
+first found a10nsp interface function is used.
+This interface is used for corresponding traffic streams
+where the a10nsp-interface is not explicitly defined, including
+the autogenerated <a class="reference internal" href="traffic.html#session-traffic"><span class="std std-ref">session traffic</span></a>.</p>
 </section>
 
 

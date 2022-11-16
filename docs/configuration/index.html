@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Configuration &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Configuration &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -49,6 +49,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#links">Links</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#link-aggregation-lag">Link Aggregation (LAG)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#network-interfaces">Network Interfaces</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#access-interfaces">Access Interfaces</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#a10nsp-interfaces">A10NSP Interfaces</a></li>
@@ -84,7 +86,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -118,6 +119,7 @@
 <h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster interfaces are explained detailed in the
 <a class="reference internal" href="../interfaces.html#interfaces"><span class="std std-ref">interfaces section</span></a>.</p>
+<p>The following configuration allows to overwrite the global default interface link settings.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
@@ -134,40 +136,199 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
-<td><p>TX ring polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
+<tr class="row-even"><td><p><cite>io-mode</cite></p></td>
+<td><p>IO mode</p></td>
+<td><p>packet_mmap_raw</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
-<td><p>RX ring polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
+<tr class="row-odd"><td><p><cite>io-slots</cite></p></td>
+<td><p>IO slots (ring size)</p></td>
+<td><p>4096</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
 <td><p>Bypass the kernel’s qdisc layer</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
-<td><p>IO mode</p></td>
-<td><p>packet_mmap_raw</p></td>
+<tr class="row-odd"><td><p><cite>tx-interval</cite></p></td>
+<td><p>TX polling interval in milliseconds</p></td>
+<td><p>1.0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
-<td><p>IO slots (ring size)</p></td>
-<td><p>4096</p></td>
+<tr class="row-even"><td><p><cite>rx-interval</cite></p></td>
+<td><p>RX polling interval in milliseconds</p></td>
+<td><p>1.0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-stream-max-ppi</cite></p></td>
-<td><p>IO traffic stream max packets per interval</p></td>
-<td><p>32</p></td>
+<tr class="row-odd"><td><p><cite>tx-threads</cite></p></td>
+<td><p>Number of TX threads per interface link</p></td>
+<td><p>0 (main thread)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>capture-include-streams</cite></p></td>
-<td><p>Include traffic streams in capture</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><cite>rx-threads</cite></p></td>
+<td><p>Number of RX threads per interface link</p></td>
+<td><p>0 (main thread)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>mac-modifier</cite></p></td>
+<tr class="row-odd"><td><p><cite>capture-include-streams</cite></p></td>
+<td><p>Include traffic streams in the capture</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac-modifier</cite></p></td>
 <td><p>Third byte of access session MAC address (0-255)</p></td>
 <td><p>0</p></td>
 </tr>
 </tbody>
 </table>
+<p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
+<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered experimental. In
+the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
+ring buffer and sent directly through RAW packet sockets.</p>
+<p>The default <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> of <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms) allows precise timestamps
+and high throughput. Those values can be further increased (e.g. <code class="docutils literal notranslate"><span class="pre">0.1</span></code>) for higher throughput
+or decreased (e.g. <code class="docutils literal notranslate"><span class="pre">5.0</span></code>) for lower system load.</p>
+<p>It might be also needed to increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">4096</span></code> to
+reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode.
+For Packet MMAP, it defines the maximum number of packets in the ring buffer.</p>
+<section id="links">
+<h3>Links<a class="headerlink" href="#links" title="Permalink to this headline"></a></h3>
+<p>The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Interface name (e.g. eth0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>description</cite></p></td>
+<td><p>Interface description</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac</cite></p></td>
+<td><p>Overwrite the MAC address</p></td>
+<td><p>Interface MAC address</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
+<td><p>Overwrite the IO mode</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
+<td><p>Overwrite the IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>io-slots-tx</cite></p></td>
+<td><p>Overwrite the TX IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>io-slots-rx</cite></p></td>
+<td><p>Overwrite the RX IO slots (ring size)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>qdisc-bypass</cite></p></td>
+<td><p>Overwrite the kernel’s qdisc layer configuration</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
+<td><p>Overwrite the TX polling interval in milliseconds</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
+<td><p>Overwrite the RX polling interval in milliseconds</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-threads</cite></p></td>
+<td><p>Overwrite the number of TX threads per interface link</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-threads</cite></p></td>
+<td><p>Overwrite the number of RX threads per interface link</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>tx-cpuset</cite></p></td>
+<td><p>Optionally pin TX threads to CPU cores (cpuset)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rx-cpuset</cite></p></td>
+<td><p>Optionally pin RX threads to CPU cores (cpuset)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>lag-interface</cite></p></td>
+<td><p>Add interface link to LAG group</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-priority</cite></p></td>
+<td><p>LACP interface priority</p></td>
+<td><p>32768</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="link-aggregation-lag">
+<h3>Link Aggregation (LAG)<a class="headerlink" href="#link-aggregation-lag" title="Permalink to this headline"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>interface</cite></p></td>
+<td><p>Interface name (e.g. lag0, …)</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp</cite></p></td>
+<td><p>De-/activate LACP</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-timeout-short</cite></p></td>
+<td><p>De-/activate LACP short timeout (3x1s)</p></td>
+<td><p>false (3x30s)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-system-priority</cite></p></td>
+<td><p>LACP system priority</p></td>
+<td><p>32768</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-system-id</cite></p></td>
+<td><p>LACP system identifier</p></td>
+<td><p>02:ff:ff:ff:ff:00</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>lacp-min-active-links</cite></p></td>
+<td><p>Define the minimum number of active links</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lacp-max-active-links</cite></p></td>
+<td><p>Limit the maximum number of active links</p></td>
+<td><p>255</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>mac</cite></p></td>
+<td><p>LAG interface MAC address</p></td>
+<td><p>02:ff:ff:ff:ff:&lt;id&gt;</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Multithreaded IO is not supported for LAG member interfaces!</p>
+</div>
+</section>
 <section id="network-interfaces">
 <h3>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Permalink to this headline"></a></h3>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
@@ -187,7 +348,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Network interface name (e.g. eth0, …)</p></td>
+<td><p>Parent interface link name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>address</cite></p></td>
@@ -260,7 +421,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Access interface name (e.g. eth0, …)</p></td>
+<td><p>Parent interface link name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
@@ -328,35 +489,35 @@
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>username</cite></p></td>
-<td><p>Overwrite the username from authentication section</p></td>
+<td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>password</cite></p></td>
-<td><p>Overwrite the password from authentication section</p></td>
+<td><p>Overwrite the password from the authentication section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>authentication-protocol</cite></p></td>
-<td><p>Overwrite the username from authentication section</p></td>
+<td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>agent-circuit-id</cite></p></td>
-<td><p>Overwrite the agent-circuit-id from access-line section</p></td>
+<td><p>Overwrite the agent-circuit-id from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>agent-remote-id</cite></p></td>
-<td><p>Overwrite the agent-remote-id from access-line section</p></td>
+<td><p>Overwrite the agent-remote-id from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>rate-up</cite></p></td>
-<td><p>Overwrite the rate-up from access-line section</p></td>
+<td><p>Overwrite the rate-up from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>rate-down</cite></p></td>
-<td><p>Overwrite the rate-down from access-line section</p></td>
+<td><p>Overwrite the rate-down from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>dsl-type</cite></p></td>
-<td><p>Overwrite the dsl-type from access-line section</p></td>
+<td><p>Overwrite the dsl-type from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipcp</cite></p></td>
@@ -368,11 +529,11 @@
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv4</cite></p></td>
-<td><p>De-/activate IPoE IPv4</p></td>
+<td><p>De-/activate IPv4</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv6</cite></p></td>
-<td><p>De-/activate IPoE IPv6</p></td>
+<td><p>De-/activate IPv6</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>dhcp</cite></p></td>
@@ -457,7 +618,7 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>A10nSP interface name (e.g. eth0, …)</p></td>
+<td><p>Parent interface link name (e.g. eth0, …)</p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>qinq</cite></p></td>
@@ -511,7 +672,7 @@
 <td><p>false</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
-<td><p>Wait N seconds after all interface are resolved before starting sessions</p></td>
+<td><p>Wait N seconds after all interfaces are resolved before starting sessions</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>autostart</cite></p></td>
@@ -524,9 +685,9 @@
 </tr>
 </tbody>
 </table>
-<p>Per default sessions are created by iteration over inner VLAN range first and
+<p>Per default, sessions are created by iteration over the inner VLAN range first and
 outer VLAN second. Which can be changed by <code class="docutils literal notranslate"><span class="pre">iterate-vlan-outer</span></code> to iterate
-on outer VLAN first and inner VLAN second.</p>
+on the outer VLAN first and inner VLAN second.</p>
 <p>Therefore the following configuration generates the sessions on VLAN (outer:inner)
 1:3, 1:4, 2:3, 2:4 per default or alternative 1:3, 2:3, 1:4, 2:4 with
 <code class="docutils literal notranslate"><span class="pre">iterate-vlan-outer</span></code> enabled.</p>
@@ -557,21 +718,21 @@ on outer VLAN first and inner VLAN second.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>ipv4</cite></p></td>
+<tr class="row-even"><td><p><cite>ipv6</cite></p></td>
+<td><p>Enable/disable IPv6</p></td>
+<td><p>true (enabled)</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv4</cite></p></td>
 <td><p>Enable/disable IPv4</p></td>
 <td><p>true (enabled)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>arp-timeout</cite></p></td>
-<td><p>Initial ARP resolve timeout/retry interval in seconds</p></td>
+<tr class="row-even"><td><p><cite>arp-timeout</cite></p></td>
+<td><p>Initial ARP timeout/retry interval in seconds</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>arp-interval</cite></p></td>
+<tr class="row-odd"><td><p><cite>arp-interval</cite></p></td>
 <td><p>Periodic ARP interval in seconds (0 means disabled)</p></td>
 <td><p>300</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>ipv6</cite></p></td>
-<td><p>Enable/disable IPv6</p></td>
-<td><p>true (enabled)</p></td>
 </tr>
 </tbody>
 </table>
@@ -729,7 +890,7 @@ on outer VLAN first and inner VLAN second.</p>
 <td><p>0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ignore-vendor-specific</cite></p></td>
-<td><p>Ignore LCP vendor specific requests</p></td>
+<td><p>Ignore LCP vendor-specific requests</p></td>
 <td><p>false</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>connection-status-message</cite></p></td>
@@ -894,7 +1055,7 @@ on outer VLAN first and inner VLAN second.</p>
 <td><p>true</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>rapid-commit</cite></p></td>
-<td><p>DHCPv6 rapid commit (2 way handshake)</p></td>
+<td><p>DHCPv6 rapid commit (2-way handshake)</p></td>
 <td><p>true</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>timeout</cite></p></td>
@@ -927,7 +1088,7 @@ on outer VLAN first and inner VLAN second.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>autostart</cite></p></td>
-<td><p>Automatically join after session is established</p></td>
+<td><p>Automatically join after the session is established</p></td>
 <td><p>true</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>version</cite></p></td>
@@ -963,7 +1124,7 @@ on outer VLAN first and inner VLAN second.</p>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>zapping-count</cite></p></td>
-<td><p>Define the amount of channel changes before starting view duration</p></td>
+<td><p>Define the number of channel changes before starting the view duration</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>view-duration</cite></p></td>
@@ -974,13 +1135,21 @@ on outer VLAN first and inner VLAN second.</p>
 <td><p>Generate multicast traffic</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>multicast-traffic-length</cite></p></td>
+<tr class="row-even"><td><p><cite>multicast-traffic-autostart</cite></p></td>
+<td><p>Automatically start multicast traffic</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>multicast-traffic-length</cite></p></td>
 <td><p>Multicast traffic IP length</p></td>
 <td><p>76</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>multicast-traffic-tos</cite></p></td>
+<tr class="row-even"><td><p><cite>multicast-traffic-tos</cite></p></td>
 <td><p>Multicast traffic TOS priority</p></td>
 <td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>multicast-traffic-pps</cite></p></td>
+<td><p>Multicast traffic PPS per group</p></td>
+<td><p>1000</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>network-interface</cite></p></td>
 <td><p>Multicast traffic source interface</p></td>
@@ -992,19 +1161,22 @@ on outer VLAN first and inner VLAN second.</p>
 </tr>
 </tbody>
 </table>
-<p>Per default join and leave requests are send using dedicated reports.
+<p>Per default, join and leave requests are sent using dedicated reports.
 The option <code class="docutils literal notranslate"><span class="pre">combined-leave-join</span></code> allows the combination of leave and
 join records within a single IGMPv3 report using multiple group records.
-This option is applicable to IGMP version 3 only!</p>
+This option applies to the IGMP version 3 only!</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">send-multicast-traffic</span></code> is true, the BNG Blaster generates multicast
 traffic on the network interface based on the specified group and source
 attributes mentioned before. This traffic includes some special signatures
-for faster processing and more detailed analysis.</p>
+for faster processing and more detailed analysis. This traffic starts
+automatically, which can be suppressed by setting <code class="docutils literal notranslate"><span class="pre">multicast-traffic-autostart</span></code>
+to false. The length, TOS and packets per second (PPS) can be controlled
+with the corresponding options.</p>
 <p>If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1
-and group-count 3 the result are the following three groups (S.G)
+and group-count 3, the result are the following three groups (S.G)
 1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">max-join-delay</span></code> is configured, the final report includes how often
-the measured join delay is above the configured threshold here.</p>
+the measured join delay is above this threshold.</p>
 </section>
 <section id="l2tpv2-server-lns">
 <h2>L2TPv2 Server (LNS)<a class="headerlink" href="#l2tpv2-server-lns" title="Permalink to this headline"></a></h2>
@@ -1038,34 +1210,42 @@ the measured join delay is above the configured threshold here.</p>
 </tr>
 <tr class="row-odd"><td><p><cite>receive-window-size</cite></p></td>
 <td><p>Control messages receive window size</p></td>
-<td><p>4</p></td>
+<td><p>16</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>max-retry</cite></p></td>
 <td><p>Control messages max retry</p></td>
-<td><p>30</p></td>
+<td><p>5</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>congestion-mode</cite></p></td>
 <td><p>Control messages congestion mode</p></td>
 <td><p>default</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>data-control-priority</cite></p></td>
+<tr class="row-even"><td><p><cite>hello-interval</cite></p></td>
+<td><p>Set hello interval</p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>data-control-priority</cite></p></td>
 <td><p>Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, …)</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>data-length</cite></p></td>
+<tr class="row-even"><td><p><cite>data-length</cite></p></td>
 <td><p>Set length bit for all data packets</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>data-offset</cite></p></td>
+<tr class="row-odd"><td><p><cite>data-offset</cite></p></td>
 <td><p>Set offset bit with offset zero for all data packets</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>control-tos</cite></p></td>
+<tr class="row-even"><td><p><cite>control-tos</cite></p></td>
 <td><p>L2TP control traffic (SCCRQ, ICRQ, …) TOS priority</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>data-control-tos</cite></p></td>
+<tr class="row-odd"><td><p><cite>data-control-tos</cite></p></td>
 <td><p>Set the L2TP tunnel TOS priority (outer IPv4 header) for all non-IP data packets (LCP, IPCP, …)</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lcp-padding</cite></p></td>
+<td><p>Add fixed padding to LCP packets send from LNS</p></td>
 <td><p>0</p></td>
 </tr>
 </tbody>
@@ -1103,8 +1283,19 @@ received window size.</p>
 <td><p>Automatically stop traffic streams if verified</p></td>
 <td><p>false</p></td>
 </tr>
+<tr class="row-even"><td><p><cite>max-burst</cite></p></td>
+<td><p>Stream flow burst size in packets</p></td>
+<td><p>16</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>stream-rate-calculation</cite></p></td>
+<td><p>Enable stream rate calculation</p></td>
+<td><p>true</p></td>
+</tr>
 </tbody>
 </table>
+<p>The option <code class="docutils literal notranslate"><span class="pre">stream-rate-calculation</span></code> should be set to
+false if massive streams (&gt; 1M) are defined but per-stream
+live rate statistics are not required.</p>
 </section>
 <section id="traffic-streams">
 <h2>Traffic-Streams<a class="headerlink" href="#traffic-streams" title="Permalink to this headline"></a></h2>
@@ -1217,7 +1408,7 @@ received window size.</p>
 <td><p>0 (infinity)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
-<td><p>Wait N seconds after session is established before start</p></td>
+<td><p>Wait N seconds after the session is established before starting</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label1</cite></p></td>
@@ -1225,11 +1416,11 @@ received window size.</p>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label1-exp</cite></p></td>
-<td><p>EXP bits of first label (outer label)</p></td>
+<td><p>EXP bits of the first label (outer label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label1-ttl</cite></p></td>
-<td><p>TTL of first label (outer label)</p></td>
+<td><p>TTL of the first label (outer label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2</cite></p></td>
@@ -1237,11 +1428,11 @@ received window size.</p>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label2-exp</cite></p></td>
-<td><p>EXP bits of first label (inner label)</p></td>
+<td><p>EXP bits of the first label (inner label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2-ttl</cite></p></td>
-<td><p>TTL of first label (inner label)</p></td>
+<td><p>TTL of the first label (inner label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>rx-label1</cite></p></td>
@@ -1254,14 +1445,14 @@ received window size.</p>
 </tr>
 </tbody>
 </table>
-<p>For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4
+<p>For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4
 and inner IPv4 header.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pps</span></code> option supports also float numbers like 0.1, or 2.5 PPS and has
-priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
+priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where the second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
 based on given <code class="docutils literal notranslate"><span class="pre">bps</span></code> and <code class="docutils literal notranslate"><span class="pre">length</span></code>.</p>
 <p>The options <code class="docutils literal notranslate"><span class="pre">access-ipv4-source-address</span></code> and <code class="docutils literal notranslate"><span class="pre">access-ipv6-source-address</span></code>
-are used to test the BNG RPF functionality with traffic send from source addresses
-different to those assigned to the client.</p>
+can be used to test the BNG RPF functionality with traffic sent from source addresses
+different than those assigned to the client.</p>
 </section>
 <section id="session-traffic">
 <h2>Session-Traffic<a class="headerlink" href="#session-traffic" title="Permalink to this headline"></a></h2>
@@ -1282,35 +1473,35 @@ different to those assigned to the client.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>autostart</cite></p></td>
-<td><p>Automatically start session traffic after session is established</p></td>
+<td><p>Automatically start session traffic after the session is established</p></td>
 <td><p>true</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv4-pps</cite></p></td>
-<td><p>Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses</p></td>
+<td><p>Autogenerate bidirectional IPv4 traffic between a network interface and all sessions</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv4-label</cite></p></td>
-<td><p>Send traffic from network interface with the specified MPLS label</p></td>
-<td><p>0 (unlabelled)</p></td>
+<td><p>Send downstream IPv4 traffic with the specified MPLS label</p></td>
+<td><p>0 (unlabeled)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv4-address</cite></p></td>
-<td><p>Send traffic from network interface with the specified address</p></td>
+<td><p>Overwrite network interface IPv4 address</p></td>
 <td><p>network interface address</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv6-pps</cite></p></td>
-<td><p>Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses</p></td>
+<td><p>Generate bidirectional IPv6 traffic between a network interface and all sessions</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv6-label</cite></p></td>
-<td><p>Send traffic from network interface with the specified MPLS label</p></td>
-<td><p>0 (unlabelled)</p></td>
+<td><p>Send downstream IPv6 traffic with the specified MPLS label</p></td>
+<td><p>0 (unlabeled)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv6-address</cite></p></td>
-<td><p>Send traffic from network interface with the specified address</p></td>
+<td><p>Overwrite network interface IPv6 address</p></td>
 <td><p>network interface address</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv6pd-pps</cite></p></td>
-<td><p>Generate bidirectional IPv6 traffic between network interface and all session delegated IPv6 addresses</p></td>
+<td><p>Generate bidirectional IPv6PD (delegated prefix) traffic between a network interface and all sessions</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 </tbody>
@@ -1505,9 +1696,9 @@ different to those assigned to the client.</p>
 </tr>
 </tbody>
 </table>
-<p>Attributes with value set to 0 will not be send.</p>
+<p>Attributes with values set to 0 will not be sent.</p>
 <p>The values for <code class="docutils literal notranslate"><span class="pre">rate-up</span></code>, <code class="docutils literal notranslate"><span class="pre">rate-down</span></code> and <code class="docutils literal notranslate"><span class="pre">dsl-type</span></code> defined in the
-access-line or interface section have priority over those defined here.</p>
+access-line or interface section has priority over those defined here.</p>
 </section>
 <section id="isis">
 <h2>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h2>
@@ -1711,11 +1902,11 @@ access-line or interface section have priority over those defined here.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>network-interface</cite></p></td>
-<td><p>BGP local interface (source-interface)</p></td>
+<td><p>BGP local interface (source interface)</p></td>
 <td><p>first network interface</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>local-ipv4-address</cite></p></td>
-<td><p>BGP local IPv4 address (source-address)</p></td>
+<td><p>BGP local IPv4 address (source address)</p></td>
 <td><p>network interface address</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>local-as</cite></p></td>
@@ -1743,7 +1934,7 @@ access-line or interface section have priority over those defined here.</p>
 <td><p>true</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>start-traffic</cite></p></td>
-<td><p>BGP start global traffic after RAW update</p></td>
+<td><p>BGP starts global traffic after RAW update</p></td>
 <td><p>false</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>

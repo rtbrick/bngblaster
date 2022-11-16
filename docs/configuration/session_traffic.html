@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 0.7 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -49,7 +49,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -94,35 +93,35 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><cite>autostart</cite></p></td>
-<td><p>Automatically start session traffic after session is established</p></td>
+<td><p>Automatically start session traffic after the session is established</p></td>
 <td><p>true</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv4-pps</cite></p></td>
-<td><p>Generate bidirectional IPv4 traffic between network interface and all session framed IPv4 addresses</p></td>
+<td><p>Autogenerate bidirectional IPv4 traffic between a network interface and all sessions</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv4-label</cite></p></td>
-<td><p>Send traffic from network interface with the specified MPLS label</p></td>
-<td><p>0 (unlabelled)</p></td>
+<td><p>Send downstream IPv4 traffic with the specified MPLS label</p></td>
+<td><p>0 (unlabeled)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv4-address</cite></p></td>
-<td><p>Send traffic from network interface with the specified address</p></td>
+<td><p>Overwrite network interface IPv4 address</p></td>
 <td><p>network interface address</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv6-pps</cite></p></td>
-<td><p>Generate bidirectional IPv6 traffic between network interface and all session framed IPv6 addresses</p></td>
+<td><p>Generate bidirectional IPv6 traffic between a network interface and all sessions</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv6-label</cite></p></td>
-<td><p>Send traffic from network interface with the specified MPLS label</p></td>
-<td><p>0 (unlabelled)</p></td>
+<td><p>Send downstream IPv6 traffic with the specified MPLS label</p></td>
+<td><p>0 (unlabeled)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>ipv6-address</cite></p></td>
-<td><p>Send traffic from network interface with the specified address</p></td>
+<td><p>Overwrite network interface IPv6 address</p></td>
 <td><p>network interface address</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ipv6pd-pps</cite></p></td>
-<td><p>Generate bidirectional IPv6 traffic between network interface and all session delegated IPv6 addresses</p></td>
+<td><p>Generate bidirectional IPv6PD (delegated prefix) traffic between a network interface and all sessions</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
 </tbody>

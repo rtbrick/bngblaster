@@ -3,60 +3,38 @@
 Interfaces
 ==========
 
-The BNG Blaster supports three types of interfaces. 
+The BNG Blaster distinguishes between interface links and interface functions.
+An interface link can be considered as the actual interface with all the 
+corresponding IO settings. This is similar but not the same as physical interfaces
+in typical router implementations. Interface functions are similar to logical interfaces 
+and define the actual services. One or more interface functions can be attached to each 
+interface link.
 
-All interfaces are optional but obviously at least
-one interface is required to start the BNG Blaster.
+At least one interface function is required to start the BNG Blaster.
 
-Interface Settings
-------------------
+Operating System Settings
+-------------------------
 
-The following settings are applied to all interfaces. 
+The BNG Blaster implements all protocols in user space. Therefore the used interfaces 
+links must not have an IP address configured in the host operating system, to prevent that 
+the received packets are handled or even responded to from the Linux kernel as well.
 
-.. code-block:: json
-
-    {
-        "interfaces": {
-            "tx-interval": 0.1,
-            "rx-interval": 0.1,
-            "io-slots": 2048,
-        }
-    }
-
-
-.. include:: configuration/interfaces.rst
-
-The ``tx-interval`` and ``rx-interval`` should be set to at to at least ``1.0`` (1ms)
-if more precise timestamps or high throughput is needed. This is recommended for IGMP 
-join/leave or QoS delay measurements. For higher packet rates (>1g) it might be needed to
-increase the ``io-slots`` from the default value of ``4096``.
-
-The supported IO modes are listed with ``bngblaster -v`` but except
-``packet_mmap_raw`` all other modes are currently considered as experimental. In
-the default mode (``packet_mmap_raw``) all packets are received in a Packet MMAP
-ring buffer and send directly trough RAW packet sockets.
-
-The BNG Blaster implements all protocols in userspace. Therefore the user interfaces 
-must not have an IP address configured in the host operating system, to prevent the received 
-packets are handled by Kernel. 
-
-All used interfaces must be in an operational state up.
+All used interface links must be in an operational state up.
 
 .. code-block:: none
 
     sudo ip link set dev <interface> up
 
-It is not possible to send packets larger than the interface MTU which is 1500 per default
-but for PPPoE with multiple VLAN headers this might be not enough for large packets.
-Therefore the interface MTU should be increased using the following commands.
+It is not possible to send packets larger than the configured interface MTU, which is 1500 
+bytes per default. For PPPoE with multiple VLAN headers, this might be not enough for large 
+packets. Therefore the interface MTU should be increased using the following commands.
 
 .. code-block:: none
     
     sudo ip link set mtu 9000 dev <interface>
 
-
-This can be also archived via netplan using the following configuration for each BNG Blaster
-interface.
+All this can be also archived via netplan using the following configuration for each BNG Blaster
+interface link.
 
 .. code-block:: yaml
 
@@ -75,11 +53,8 @@ interface.
         link-local: []
         mtu: 9000
 
-
-.. note:: The number of interfaces is currently limited to 32!
-
 It might be also needed to increase the hardware and software queue size of your
-network interfaces for higher throughput. 
+network interface links for higher throughput. 
 
 The command ``ethtool -g <interface>`` shows the currently applied and maximum 
 hardware queue size.
@@ -99,7 +74,7 @@ hardware queue size.
     RX Jumbo:       0
     TX:             512
 
-The currently applied settings can be change with the following command: 
+The currently applied settings can be changed with the following command: 
 
 .. code-block:: none
 
@@ -111,29 +86,176 @@ You can even change the software queue size:
 
     sudo ip link set txqueuelen 4096 dev ens5f1
 
+Interface Settings
+------------------
+
+The interfaces section contains all configurations around interface links and options. 
+
+.. include:: configuration/interfaces.rst
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "tx-interval": 0.1,
+            "rx-interval": 0.1,
+            "io-slots": 2048,
+        }
+    }
+
+Links
+~~~~~
+
+.. _links:
+
+The link configuration is optional and allows to define per interface link configurations. An explicit
+link configuration with the global default settings is automatically generated if no link is defined
+for interface links referenced by interface functions. 
+
+.. include:: configuration/interfaces_links.rst
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "tx-interval": 0.1,
+            "rx-interval": 0.1,
+            "io-slots": 2048,
+        }
+    }
+
+.. _lag-interface:
+
+Link Aggregation (LAG)
+~~~~~~~~~~~~~~~~~~~~~~
+
+The BNG Blaster supports link aggregation (LAG) with and without 
+LACP. The created LAG interface can be used as the parent interface link 
+for all kinds of interface functions. 
+
+.. include:: configuration/interfaces_lag.rst
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "lag": [
+                {
+                    "interface": "lag1",
+                    "lacp": true,
+                    "lacp-timeout-short": true
+                }
+            ],
+            "links": [
+                {
+                    "interface": "eth1",
+                    "lag-interface": "lag1"
+                },
+                {
+                    "interface": "eth1",
+                    "lag-interface": "lag1"
+                }
+            ],
+            "network": [
+                {
+                    "interface": "lag1", 
+                    "address": "10.100.0.2/24",
+                    "gateway": "10.100.0.1"
+                }
+            ]
+        }
+    }
+
+.. _io-modes:
+
+Multithreaded Interfaces 
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default. 
+With this default behavior, you can achieve between 100.000 and 200.000 PPS bidirectional 
+traffic in most environments. Depending on the actual setup, this can be even less or much 
+more, which is primarily driven by the single-thread performance of the given CPU. 
+
+Those numbers can be increased by splitting the workload over multiple I/O worker threads. 
+Every I/O thread will handle only one interface and direction. It is also possible to start 
+multiple threads for the same interface and direction. 
+
+The number of I/O threads can be configured globally for all interfaces or per interface link.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "rx-threads": 2,
+            "tx-threads": 1,
+            "links": [
+                {
+                    "interface": "eth1",
+                    "rx-threads": 4,
+                    "rx-cpuset": [4,5,6,7],
+                    "tx-threads": 3,
+                    "tx-cpuset": [1,2,3]
+                }
+            ]
+        }
+    }
+
+The configuration per interface link allows asymmetric thread pools. Assuming you would send 
+massive unidirectional traffic from eth1 to eth2. In such a scenario, you would set up multiple 
+TX threads and one RX thread on eth1. For eth2 you would do the opposite, meaning to set up 
+multiple RX threads but only one TX thread. 
+
+It is also possible to start dedicated threads for TX but remain RX in the main thread or 
+vice versa by setting the number of threads to zero (default). 
+
+With multithreading, you should be able to scale up to 1 million PPS bidirectional, depending on 
+the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over 
+at least 4 TX threads to verify all prefixes of a BGP full table for example.
+
+The configured traffic streams are automatically balanced over all TX threads of the corresponding
+interfaces but a single stream can't be split over multiple threads to prevent re-ordering issues.
+
+Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with 
+CPU cache coherence, which should apply to all modern CPU architectures. It is also not possible 
+to bundle (Link Aggregation) multithreaded interfaces. It is also not possible to capture traffic 
+streams send or received on threaded interfaces. All other traffic is still captured on threaded 
+interfaces. 
 
 .. note::
-    
-    Today all traffic is received in main thread, therefore 
-    the single thread performance of your CPU is the most 
-    significant performance factor. 
 
+    The BNG Blaster is currently tested for up to 1 million PPS with 1 million flows, which is not a 
+    hard limitation but everything above should be considered experimental. It is also possible to 
+    scale beyond using DPDK-enabled interfaces. 
 
-Network Interfaces
-------------------
+Interface Functions
+-------------------
+
+The BNG Blaster supports three types of interface functions, 
+``network``, ``access``, and ``a10nsp``. 
+
+.. image:: images/bbl_interfaces.png
+    :alt: BNG Blaster Interfaces
 
 .. _network-interface:
 
-The network interfaces are used for traffic and routing protocols. 
+Network Interfaces
+~~~~~~~~~~~~~~~~~~
+
+The network interfaces are used to emulate the core-facing side of the internet 
+with optional routing protocols and traffic. 
 
 Those interfaces can communicate with the configured gateway only.
 Meaning that all traffic sent from the network interface will be sent 
 to the learned MAC address of the configured gateway. 
 
 The network interface behaves like a router. It accepts all traffic sent 
-to its own MAC address. This allows to send and receive traffic for prefixes 
+to its own MAC address. This allows sending and receiving traffic for prefixes 
 advertised via routing protocols or configured via static routes on the 
 connected device under test.
+
+The network interfaces are also used to inject downstream multicast test traffic 
+for IPTV tests. It is also possible to send RAW traffic streams between network
+interfaces without any access interface defined for non-BNG testing.
 
 The BNG Blaster responds to all ICMP echo requests sent to its own MAC address. 
 
@@ -152,31 +274,75 @@ as shown in the example below.
             "network": [
                 {
                     "interface": "eth2",
-                    "address": "10.0.0.1",
+                    "address": "10.0.0.1/24",
                     "gateway": "10.0.0.2",
-                    "address-ipv6": "fc66:1337:7331::1",
+                    "address-ipv6": "fc66:1337:7331::1/64",
                     "gateway-ipv6": "fc66:1337:7331::2"
                 },
                 {
                     "interface": "eth3",
-                    "address": "10.0.1.1",
+                    "address": "10.0.1.1/24",
                     "gateway": "10.0.1.2",
-                    "address-ipv6": "fc66:1337:7331:1::1",
+                    "address-ipv6": "fc66:1337:7331:1::1/64",
                     "gateway-ipv6": "fc66:1337:7331:1::2"
                 }
             ],
         }
     }
 
-Using multiple network interfaces requires to select which network interface
-to be used. If not explicitly configured one of the interface is selected 
+Using multiple network interfaces requires selecting which network interface
+to be used. If not explicitly configured, one of the interfaces is selected 
 automatically. Therefore, the configuration option ``network-interface`` 
 is supported in different sections.
 
-Access Interfaces
------------------
+It is also supported to have multiple VLAN-tagged network interfaces on the 
+same interface link. 
+
+VLAN-tagged network interfaces must be referenced by ``<interface>:<vlan>``
+in the configuration to distinguish between them. 
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": [
+                {
+                    "interface": "eth1", 
+                    "address": "10.100.0.2/24",
+                    "gateway": "10.100.0.1",
+                    "vlan": 100
+                },
+                {
+                    "interface": "eth1",
+                    "address": "10.200.0.2/24",
+                    "gateway": "10.200.0.1",
+                    "vlan": 200
+                }
+            ]
+        },
+        "streams": [
+            {
+                "name": "S100",
+                "type": "ipv4",
+                "pps": 10,
+                "network-interface": "eth1:100",
+                "destination-ipv4-address": "10.200.0.2"
+            },
+            {
+                "name": "S200",
+                "type": "ipv4",
+                "pps": 20,
+                "network-interface": "eth1:200",
+                "destination-ipv4-address": "10.100.0.2"
+            }
+        ]
+    }
+
 
 .. _access-interface:
+
+Access Interfaces
+~~~~~~~~~~~~~~~~~
 
 The access interfaces are used to emulate PPPoE and IPoE clients.
 
@@ -192,7 +358,7 @@ corresponding VLAN header.
 
 
 Untagged
-~~~~~~~~
+""""""""
 .. code-block:: json
 
     {
@@ -206,7 +372,7 @@ Untagged
     }
 
 Single Tagged
-~~~~~~~~~~~~~
+"""""""""""""
 .. code-block:: json
 
     {
@@ -221,7 +387,7 @@ Single Tagged
 
 
 Double Tagged
-~~~~~~~~~~~~~
+"""""""""""""
 .. code-block:: json
 
     {
@@ -235,7 +401,7 @@ Double Tagged
     }
 
 Triple Tagged
-~~~~~~~~~~~~~
+"""""""""""""
 .. code-block:: json
 
     {
@@ -300,10 +466,10 @@ or VLAN ranges as shown in the example below.
 The configuration attributes for username, agent-remote-id and agent-circuit-id
 support also some variable substitution. The variable ``{session-global}`` will
 be replaced with a number starting from 1 and incremented for every new session.
-where as the variable ``{session}`` is incremented per interface section.
+whereas the variable ``{session}`` is incremented per-interface section.
 
 In VLAN mode ``N:1`` only one VLAN combination is supported per access interface section.
-This means that only VLAN min or max is considered as VLAN identifier.
+This means that only VLAN min or max is considered as a VLAN identifier.
 
 .. code-block:: json
 
@@ -327,15 +493,17 @@ This means that only VLAN min or max is considered as VLAN identifier.
         ]
     }
 
-A10NSP Interfaces
------------------
+The BNG Blaster supports access and network interface functions on the same
+interface link if both are tagged with disjoint VLAN ranges. 
 
 .. _a10nsp-interface:
 
-The A10NSP interface emulates an layer two provider interface. The term A10
-refers to the end-to-end ADSL network reference model from TR-025.
+A10NSP Interfaces
+~~~~~~~~~~~~~~~~~
 
-The A10NSP interface is required for :ref:`L2BSA <l2bsa>` tests.  
+The A10NSP interface function is required for :ref:`L2BSA <l2bsa>` tests and
+emulates a layer two provider interface. The term A10 refers to the end-to-end 
+ADSL network reference model from TR-025. 
 
 .. include:: configuration/interfaces_a10nsp.rst
 
@@ -363,5 +531,114 @@ as shown in the example below.
         }
     }
 
-You can define multiple interfaces with the same MAC
-address to emulate some static link aggregation (without LACP).
+.. note::
+
+    The A10NSP interface function can't reside on the same link with
+    with network or access interface functions!
+
+
+I/O Modes
+---------
+
+The BNG Blaster supports many configurable I/O modes listed with ``bngblaster -v``. 
+In the default mode ``packet_mmap_raw``, all packets are received in a Packet MMAP
+ring buffer and sent through RAW packet sockets.
+
+.. code-block:: none
+
+    $ bngblaster -v
+    Version: 0.8.1
+    Compiler: GNU (7.5.0)
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw
+
+Packet MMAP
+~~~~~~~~~~~
+
+`Packet MMAP <https://www.kernel.org/doc/html/latest/networking/packet_mmap.html>`_ 
+is a so-called PACKET_RX_RING/PACKET_TX_RING abstraction where a user-space 
+program gets a fast lane into reading and writing to kernel interfaces using a shared 
+ring buffer. The shared ring buffer is a memory-mapped window shared between the kernel 
+and the user space. This low overhead abstraction allows us to transmit and receive 
+traffic without doing expensive system calls. Sending and transmitting traffic via 
+Packet MMAP is as easy as copying a packet into a buffer and setting a flag.
+
+RAW
+~~~
+
+`RAW Packet Sockets <https://man7.org/linux/man-pages/man7/packet.7.html>`_. 
+are used to receive or send raw packets at the device driver (OSI Layer 2) level.
+
+
+.. _dpdk-interface:
+
+DPDK
+~~~~
+
+Using the experimental `DPDK <https://www.dpdk.org/>`_ support requires building 
+the BNG Blaster from sources with DPDK enabled as explained 
+in the corresponding :ref:`installation <install-dpdk>` section. 
+
+.. note::
+
+    The official BNG Blaster Debian release packages do not support 
+    `DPDK <https://www.dpdk.org/>`_!
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "tx-interval": 0.1,
+            "links": [
+                {
+                    "interface": "0000:23:00.0",
+                    "io-mode": "dpdk",
+                    "rx-threads": 4,
+                    "rx-cpuset": [4,5,6,7],
+                    "tx-threads": 3,
+                    "tx-cpuset": [1,2,3]
+                },
+                {
+                    "interface": "0000:23:00.2",
+                    "io-mode": "dpdk",
+                    "rx-threads": 4,
+                    "rx-cpuset": [12,13,14,15],
+                    "tx-threads": 3,
+                    "tx-cpuset": [9,10,11]
+                }
+            ],
+            "a10nsp": [
+                {
+                    "__comment__": "PPPoE Server",
+                    "interface": "0000:23:00.0"
+                }
+            ],
+            "access": [
+                {
+                    "__comment__": "PPPoE Client",
+                    "interface": "0000:23:00.2",
+                    "type": "pppoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan-min": 1,
+                    "inner-vlan-max": 4000,
+                    "stream-group-id": 1
+                }
+            ]
+        },
+        "pppoe": {
+            "reconnect": true
+        },
+        "dhcpv6": {
+            "enable": false
+        },
+        "streams": [
+            {
+                "stream-group-id": 1,
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "both",
+                "pps": 1000,
+                "a10nsp-interface": "0000:23:00.0"
+            }
+        ]
+    }

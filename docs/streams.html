@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Traffic Streams &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Traffic Streams &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -50,8 +50,16 @@
 <li class="toctree-l2"><a class="reference internal" href="#stream-configuration-file">Stream Configuration File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stream-commands">Stream Commands</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#raw-streams">RAW Streams</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#threaded-streams">Threaded Streams</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#start-stop-session-stream-traffic">Start/Stop Session Stream Traffic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bng-blaster-traffic">BNG Blaster Traffic</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#unicast-session-traffic">Unicast Session Traffic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multicast-traffic">Multicast Traffic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bng-blaster-magic-sequence">BNG Blaster Magic Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flow-identifier">Flow Identifier</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#flow-sequence-number">Flow Sequence Number</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nanosecond-send-timestamps">Nanosecond Send Timestamps</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
@@ -59,7 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -92,10 +99,10 @@
 <p>Traffic streams allow doing various forwarding verification
 and QoS tests using BNG Blaster.</p>
 <img alt="Interactive Streams" src="_images/bbl_streams.png" />
-<p>Traffic streams are be divided in bounded and raw streams.
+<p>Traffic streams are divided into bounded and RAW streams.
 The first one is bound to an access configuration and derives
 addresses dynamically from the sessions.</p>
-<p>A raw stream is supported on <a class="reference internal" href="interfaces.html#interfaces"><span class="std std-ref">network interfaces</span></a> only.</p>
+<p>RAW streams are supported from <a class="reference internal" href="interfaces.html#network-interface"><span class="std std-ref">network interfaces</span></a> only.</p>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
 <p>Following a simple PPPoE example with streams.</p>
@@ -266,7 +273,7 @@ addresses dynamically from the sessions.</p>
 <td><p>0 (infinity)</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
-<td><p>Wait N seconds after session is established before start</p></td>
+<td><p>Wait N seconds after the session is established before starting</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label1</cite></p></td>
@@ -274,11 +281,11 @@ addresses dynamically from the sessions.</p>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label1-exp</cite></p></td>
-<td><p>EXP bits of first label (outer label)</p></td>
+<td><p>EXP bits of the first label (outer label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label1-ttl</cite></p></td>
-<td><p>TTL of first label (outer label)</p></td>
+<td><p>TTL of the first label (outer label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2</cite></p></td>
@@ -286,11 +293,11 @@ addresses dynamically from the sessions.</p>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label2-exp</cite></p></td>
-<td><p>EXP bits of first label (inner label)</p></td>
+<td><p>EXP bits of the first label (inner label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2-ttl</cite></p></td>
-<td><p>TTL of first label (inner label)</p></td>
+<td><p>TTL of the first label (inner label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>rx-label1</cite></p></td>
@@ -303,19 +310,19 @@ addresses dynamically from the sessions.</p>
 </tr>
 </tbody>
 </table>
-<p>For L2TP downstream traffic the IPv4 TOS is applied to the outer IPv4
+<p>For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4
 and inner IPv4 header.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pps</span></code> option supports also float numbers like 0.1, or 2.5 PPS and has
-priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
+priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where the second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
 based on given <code class="docutils literal notranslate"><span class="pre">bps</span></code> and <code class="docutils literal notranslate"><span class="pre">length</span></code>.</p>
 <p>The options <code class="docutils literal notranslate"><span class="pre">access-ipv4-source-address</span></code> and <code class="docutils literal notranslate"><span class="pre">access-ipv6-source-address</span></code>
-are used to test the BNG RPF functionality with traffic send from source addresses
-different to those assigned to the client.</p>
+can be used to test the BNG RPF functionality with traffic sent from source addresses
+different than those assigned to the client.</p>
 </section>
 <section id="stream-configuration-file">
 <h2>Stream Configuration File<a class="headerlink" href="#stream-configuration-file" title="Permalink to this headline"></a></h2>
-<p>The command line argument <code class="docutils literal notranslate"><span class="pre">-T</span> <span class="pre">&lt;filename&gt;</span></code> allows to include
-streams defined from a separate file. The format is equal to
+<p>The command line argument <code class="docutils literal notranslate"><span class="pre">-T</span> <span class="pre">&lt;filename&gt;</span></code> allows the include
+of streams defined in a separate file. The format is equal to
 streams defined in the actual configuration file. Such stream
 configuration files could be generated by scripts and
 easily merged with the base configuration.</p>
@@ -359,8 +366,8 @@ easily merged with the base configuration.</p>
 <span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54232</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-nsec-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37650</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-nsec-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98595049</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98595</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8240000</span><span class="p">,</span><span class="w"></span>
@@ -384,8 +391,8 @@ easily merged with the base configuration.</p>
 <span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54232</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-nsec-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">43550</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-nsec-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98903960</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">43</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98903</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8112000</span><span class="p">,</span><span class="w"></span>
@@ -409,8 +416,8 @@ easily merged with the base configuration.</p>
 <span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5422</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5458</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-nsec-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">41700</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-nsec-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">96548542</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">41</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">96548</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">811200</span><span class="p">,</span><span class="w"></span>
@@ -425,21 +432,21 @@ easily merged with the base configuration.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">rx-outer-vlan-pbit</span></code> might be wrong depending on network interface driver and
+<p>The <code class="docutils literal notranslate"><span class="pre">rx-outer-vlan-pbit</span></code> might be wrong depending on the network interface driver and
 optional VLAN offloading.</p>
-<p>The measured <code class="docutils literal notranslate"><span class="pre">rx-delay-nsec-min/max</span></code> shows the minimum and maximum calculated delay
-in nanosecond. The delay is calculated by subtracting the send and receive timestamp.
+<p>The measured <code class="docutils literal notranslate"><span class="pre">rx-delay-us-min/max</span></code> shows the minimum and maximum calculated delay
+in microseconds. The delay is calculated by subtracting the send and receive timestamp.
 The send timestamp is stored in the BBL header (see section Traffic). This calculated
 result depends also on the actual test environment, configured rx-interval and host IO
 delay.</p>
 <p>Traffic streams will start as soon as the session is established using the rate as configured
 starting with sequence number 1 for each flow. The attribute <code class="docutils literal notranslate"><span class="pre">rx-first-seq</span></code> stores the first
-sequence number received. Assuming the first sequence number received for given flow is 1000
+sequence number received. Assuming the first sequence number received for a given flow is 1000
 combined with a rate of 1000 PPS would mean that it took around 1 second until forwarding is
-working. After first packet is received for a given flow, for every further packet it checks
-if there is a gap between last and new sequence number which is than reported as loss.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">rx/tx-accounting-packets</span></code> are all packets which should be counted in the session volume
-accounting of the BNG, meaning session rx/tx packets excluding control traffic.</p>
+working. After the first packet is received for a given flow, for every further packet it checks
+if there is a gap between the last and new sequence number which is then reported as a loss.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">rx/tx-accounting-packets</span></code> are all packets that should be counted in the session volume
+accounting of the BNG, meaning session RX/TX packets excluding control traffic.</p>
 <p>Each flow can be queried separately using jsonpath expression with name and direction or flow-id.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock session-streams session-id 1 | jq &#39;.&quot;session-streams&quot;.streams[] | select(.name == &quot;BE&quot; and .direction == &quot;downstream&quot; )&#39;
 </pre></div>
@@ -458,8 +465,8 @@ accounting of the BNG, meaning session rx/tx packets excluding control traffic.<
 <span class="w">    </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27008</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27040</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;rx-delay-nsec-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50450</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;rx-delay-nsec-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10561572</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10561</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90288</span><span class="p">,</span><span class="w"></span>
@@ -474,8 +481,8 @@ accounting of the BNG, meaning session rx/tx packets excluding control traffic.<
 </section>
 <section id="raw-streams">
 <h2>RAW Streams<a class="headerlink" href="#raw-streams" title="Permalink to this headline"></a></h2>
-<p>Streams with default <code class="docutils literal notranslate"><span class="pre">stream-group-id</span></code> set to zero are considered as raw streams not
-bound to any session which is supported in downstream only. For those streams the
+<p>Streams with default <code class="docutils literal notranslate"><span class="pre">stream-group-id</span></code> set to zero are considered raw streams not
+bound to any session which is supported downstream only. For those streams, the
 destination address must be explicitly set.</p>
 <p>RAW streams can be used for traffic between two or network interfaces but also to send traffic
 from network to access interfaces.</p>
@@ -496,51 +503,8 @@ from network to access interfaces.</p>
 </pre></div>
 </div>
 <p>If <code class="docutils literal notranslate"><span class="pre">destination-ipv4-address</span></code> is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
-the BNG Blaster will set the the destination MAC address to the corresponding
+the BNG Blaster will set the destination MAC address to the corresponding
 multicast MAC address automatically. For unicast traffic the network gateway MAC address is used.</p>
-</section>
-<section id="threaded-streams">
-<h2>Threaded Streams<a class="headerlink" href="#threaded-streams" title="Permalink to this headline"></a></h2>
-<p>With threading enabled, those streams will be started per default in a dedicated thread per flow.
-This means one thread per session and stream direction. A threaded, bidirectional stream assigned
-to 10 sessions will therefore run in 20 threads. It is also possible to assign multiple
-steams to a single thread using thread groups.</p>
-<p>In most environments we see between 200.000 and 300.000 PPS single threaded is working. Depending
-on actual setup this can be also much more. With threaded streams we are also able to scale up to
-10 million PPS depending on actual configuration and setup. This allows to start 1 million flows
-with 1 PPS per flow over 4 threads in example to verify all prefixes of a BGP full table.</p>
-<p>The BNG Blaster is currently tested for up to 1 million flows which is not a hard limitation but
-everything above should be considered as experimental.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RAW1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;threaded&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;thread-group&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RAW2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;etg1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;threaded&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;thread-group&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
 </section>
 <section id="start-stop-session-stream-traffic">
 <h2>Start/Stop Session Stream Traffic<a class="headerlink" href="#start-stop-session-stream-traffic" title="Permalink to this headline"></a></h2>
@@ -550,9 +514,116 @@ using the commands <code class="docutils literal notranslate"><span class="pre">
 <p>Those commands start/stop the traffic for all sessions if invoked without
 session identifier.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">stream-traffic-disabled</span></code></p>
-<p>Alternatively all session and stream traffic (including RAW streams)
+<p>Alternatively, all the session and stream traffic (including RAW streams)
 can be started or stopped globally using the <code class="docutils literal notranslate"><span class="pre">traffic-start</span></code> and
 <code class="docutils literal notranslate"><span class="pre">traffic-stop</span></code> commands.</p>
+</section>
+<section id="bng-blaster-traffic">
+<span id="bbl-header"></span><h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Permalink to this headline"></a></h2>
+<p><em>Blaster Header and Fast Decode Signature</em></p>
+<p>The 48 Byte fixed size BNG Blaster Header is added to all data packets
+for traffic validation and fast decoding. The header is expected on the
+last 48 bytes of the packet.</p>
+<p>The type is set to 1 for all unicast session traffic and 2 for
+IPv4 multicast traffic.</p>
+<section id="unicast-session-traffic">
+<h3>Unicast Session Traffic<a class="headerlink" href="#unicast-session-traffic" title="Permalink to this headline"></a></h3>
+<p>The 64-bit session key is used for all traffic from access (upstream)
+and to access (downstream) interfaces to identify the corresponding
+session which has sent or should receive the packet.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| BNG Blaster Magic Sequence                                    |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Type          | Sub-Type      | Direction     | TX TOS        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Session Identifier                                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Session Access Interface Index                                |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Session Outer VLAN            | Session Inner VLAN            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Identifier                                               |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Sequence Number                                          |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Nanosecond Send Timestamp                                     |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<img alt="BNG Blaster Header" src="_images/bbl_header.png" />
+</section>
+<section id="multicast-traffic">
+<h3>Multicast Traffic<a class="headerlink" href="#multicast-traffic" title="Permalink to this headline"></a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| BNG Blaster Magic Sequence                                    |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Type          | Sub-Type      | Direction     | TX TOS        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Reserved                                                      |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Source                                                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Group                                                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Identifier                                               |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Flow Sequence Number                                          |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Nanosecond Send Timestamp                                     |
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All attributes except IP addresses in the Blaster Header are
+stored in host byte order for faster processing
+(LE or BE depending on the test system).</p>
+</div>
+</section>
+<section id="bng-blaster-magic-sequence">
+<h3>BNG Blaster Magic Sequence<a class="headerlink" href="#bng-blaster-magic-sequence" title="Permalink to this headline"></a></h3>
+<p>The 64-bit magic sequence is the word <code class="docutils literal notranslate"><span class="pre">RtBrick!</span></code> decoded as ASCII:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0x5274427269636b21
+</pre></div>
+</div>
+<p>Storing the magic number on a fixed offset allows fast identification
+of blaster traffic.</p>
+</section>
+<section id="flow-identifier">
+<h3>Flow Identifier<a class="headerlink" href="#flow-identifier" title="Permalink to this headline"></a></h3>
+<p>The 64-bit flow identifier is a globally unique number that identifies
+the flow.</p>
+</section>
+<section id="flow-sequence-number">
+<h3>Flow Sequence Number<a class="headerlink" href="#flow-sequence-number" title="Permalink to this headline"></a></h3>
+<p>The 64-bit flow sequence number is a sequential number starting with 1
+and incremented per packet primary used to identify packet loss.</p>
+<p>This number 0 means that sequencing is disabled.</p>
+</section>
+<section id="nanosecond-send-timestamps">
+<h3>Nanosecond Send Timestamps<a class="headerlink" href="#nanosecond-send-timestamps" title="Permalink to this headline"></a></h3>
+<p>The 64-bit nanoseconds send timestamp is used for optional latency and
+jitter calculations.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Seconds                                                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Nano Seconds                                                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre></div>
+</div>
+<p>The timestamp 0 means that timestamps are disabled.</p>
+</section>
 </section>
 </section>
 

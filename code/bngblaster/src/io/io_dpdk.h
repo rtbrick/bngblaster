@@ -16,4 +16,7 @@ typedef struct io_dpdk_ctx_ {
 bool
 io_dpdk_init();
 
+bool
+io_dpdk_interface_init(bbl_interface_s *interface);
+
 #endif

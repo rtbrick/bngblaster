@@ -70,7 +70,9 @@ bbl_a10nsp_interfaces_add()
         a10nsp_interface->qinq = a10nsp_config->qinq;
         if(*(uint32_t*)a10nsp_config->mac) {
             memcpy(a10nsp_interface->mac, a10nsp_config->mac, ETH_ADDR_LEN);
-        }
+        } else {
+            memcpy(a10nsp_interface->mac, interface->mac, ETH_ADDR_LEN);
+        }      
 
         /* TX list init */
         CIRCLEQ_INIT(&a10nsp_interface->session_tx_qhead);

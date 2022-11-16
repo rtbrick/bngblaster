@@ -3,14 +3,14 @@
 IPoE
 ----
 
-The BNG Blaster is able to emulate IP over Ethernet (IPoE)
+The BNG Blaster can emulate IP over Ethernet (IPoE)
 subscribers with static and dynamic address assignment
 supporting 1:1 and N:1 VLAN mode.
 
 Static Addresses
 ~~~~~~~~~~~~~~~~
 
-Static addresses means that the IP address and gateway is assigned
+Static addresses mean that the IP address and gateway are assigned
 statically as shown in the example below.
 
 .. code-block:: json
@@ -140,30 +140,42 @@ detailed information for IPoE sessions.
             "session-traffic": {
                 "total-flows": 6,
                 "verified-flows": 0,
-                "first-seq-rx-access-ipv4": 0,
-                "first-seq-rx-access-ipv6": 0,
-                "first-seq-rx-access-ipv6pd": 0,
-                "first-seq-rx-network-ipv4": 0,
-                "first-seq-rx-network-ipv6": 0,
-                "first-seq-rx-network-ipv6pd": 0,
-                "access-tx-session-packets": 0,
-                "access-rx-session-packets": 0,
-                "access-rx-session-packets-loss": 0,
-                "network-tx-session-packets": 0,
-                "network-rx-session-packets": 0,
-                "network-rx-session-packets-loss": 0,
-                "access-tx-session-packets-ipv6": 0,
-                "access-rx-session-packets-ipv6": 0,
-                "access-rx-session-packets-ipv6-loss": 0,
-                "network-tx-session-packets-ipv6": 0,
-                "network-rx-session-packets-ipv6": 0,
-                "network-rx-session-packets-ipv6-loss": 0,
-                "access-tx-session-packets-ipv6pd": 0,
-                "access-rx-session-packets-ipv6pd": 0,
-                "access-rx-session-packets-ipv6pd-loss": 0,
-                "network-tx-session-packets-ipv6pd": 0,
-                "network-rx-session-packets-ipv6pd": 0,
-                "network-rx-session-packets-ipv6pd-loss": 0
+                "downstream-ipv4-flow-id": 2,
+                "downstream-ipv4-tx-packets": 13,
+                "downstream-ipv4-rx-packets": 13,
+                "downstream-ipv4-rx-first-seq": 1,
+                "downstream-ipv4-loss": 0,
+                "downstream-ipv4-wrong-session": 0,
+                "upstream-ipv4-flow-id": 1,
+                "upstream-ipv4-tx-packets": 13,
+                "upstream-ipv4-rx-packets": 13,
+                "upstream-ipv4-rx-first-seq": 1,
+                "upstream-ipv4-loss": 0,
+                "upstream-ipv4-wrong-session": 0,
+                "downstream-ipv6-flow-id": 4,
+                "downstream-ipv6-tx-packets": 13,
+                "downstream-ipv6-rx-packets": 13,
+                "downstream-ipv6-rx-first-seq": 1,
+                "downstream-ipv6-loss": 0,
+                "downstream-ipv6-wrong-session": 0,
+                "upstream-ipv6-flow-id": 3,
+                "upstream-ipv6-tx-packets": 13,
+                "upstream-ipv6-rx-packets": 13,
+                "upstream-ipv6-rx-first-seq": 1,
+                "upstream-ipv6-loss": 0,
+                "upstream-ipv6-wrong-session": 0,
+                "downstream-ipv6pd-flow-id": 6,
+                "downstream-ipv6pd-tx-packets": 13,
+                "downstream-ipv6pd-rx-packets": 13,
+                "downstream-ipv6pd-rx-first-seq": 1,
+                "downstream-ipv6pd-loss": 0,
+                "downstream-ipv6pd-wrong-session": 0,
+                "upstream-ipv6pd-flow-id": 5,
+                "upstream-ipv6pd-tx-packets": 13,
+                "upstream-ipv6pd-rx-packets": 13,
+                "upstream-ipv6pd-rx-first-seq": 1,
+                "upstream-ipv6pd-loss": 0,
+                "upstream-ipv6pd-wrong-session": 0
             }
         }
     }

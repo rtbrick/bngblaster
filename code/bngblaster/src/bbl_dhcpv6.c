@@ -21,22 +21,26 @@
 void
 bbl_dhcpv6_stop(bbl_session_s *session)
 {
+    if(session->dhcpv6_state == BBL_DHCP_DISABLED) {
+        return;
+    }
+
     LOG(DHCP, "DHCP (ID: %u) Stop DHCPv6\n", session->session_id);
 
     /* Reset session IP configuration */
     if(session->access_type == ACCESS_TYPE_IPOE) {
         session->ipv6_prefix.len = 0;
         memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
-        session->endpoint.ipv6 = ENDPOINT_ENABLED;
+        ENABLE_ENDPOINT(session->endpoint.ipv6);
     }
     session->delegated_ipv6_prefix.len = 0;
     memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
-    session->endpoint.ipv6pd = ENDPOINT_ENABLED;
-
+    ENABLE_ENDPOINT(session->endpoint.ipv6pd);
     /* Reset DHCPv6 */
     timer_del(session->timer_dhcpv6);
     timer_del(session->timer_dhcpv6_t1);
     timer_del(session->timer_dhcpv6_t2);
+    session->version++;
     session->dhcpv6_state = BBL_DHCP_INIT;
     session->dhcpv6_ia_na_option_len = 0;
     session->dhcpv6_ia_pd_option_len = 0;
@@ -203,7 +207,6 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 memcpy(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 memcpy(&session->ipv6_prefix.address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 session->ipv6_prefix.len = 128;
-                session->endpoint.ipv6 = ENDPOINT_ACTIVE;
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_NA address %s/128\n", session->session_id,
                     format_ipv6_address(&session->ipv6_address));
             }
@@ -215,7 +218,9 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 memcpy(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
                 session->delegated_ipv6_address[15] = 0x01;
-                session->endpoint.ipv6pd = ENDPOINT_ACTIVE;
+                if(session->access_type == ACCESS_TYPE_PPPOE) {
+                    ACTIVATE_ENDPOINT(session->endpoint.ipv6pd);
+                }
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
             }
@@ -232,9 +237,11 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", 
                       session->dhcpv6_t2, 0, session, &bbl_dhcpv6_s2);
         }
-        bbl_access_rx_established_ipoe(interface, session, eth);
-        session->send_requests |= BBL_SEND_ICMPV6_RS;
-        bbl_session_tx_qnode_insert(session);
+        if(session->access_type == ACCESS_TYPE_IPOE) {
+            bbl_access_rx_established_ipoe(interface, session, eth);
+            session->send_requests |= BBL_SEND_ICMPV6_RS;
+            bbl_session_tx_qnode_insert(session);
+        }
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Advertise received\n", session->session_id);
         session->stats.dhcpv6_rx_advertise++;

@@ -11,7 +11,7 @@
      - Description
      - Default
    * - `interface`
-     - Network interface name (e.g. eth0, ...)
+     - Parent interface link name (e.g. eth0, ...)
      - 
    * - `address`
      - Local network interface IPv4 address

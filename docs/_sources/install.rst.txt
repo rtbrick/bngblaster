@@ -3,8 +3,8 @@
 Installation
 ============
 
-The BNG Blaster should run on any modern linux distribution
-but is primary tested on Ubuntu 18.04, 20.04 and 22.04 LTS.
+The BNG Blaster should run on any modern Linux distribution
+but is primarily tested on Ubuntu 18.04, 20.04 and 22.04 LTS.
 
 Install Ubuntu
 --------------
@@ -16,10 +16,10 @@ Install dependencies:
     # Ubuntu 18.04 and 20.04
     sudo apt install -y libssl1.1 libncurses5 libjansson4
     # Ubuntu 22.04
-    sudo apt install -y libssl1.1 libncurses5 libjansson4
+    sudo apt install -y libssl3 libncurses6 libjansson4
 
 
-Download and install debian package: https://github.com/rtbrick/bngblaster/releases
+Download and install the Debian package: https://github.com/rtbrick/bngblaster/releases
 
 .. code-block:: none
 
@@ -33,7 +33,7 @@ Build from Sources
 Dependencies
 ^^^^^^^^^^^^
 
-The BNG Blaster has dependencies to the RtBrick
+The BNG Blaster has dependencies on the RtBrick
 `libdict fork <https://github.com/rtbrick/libdict>`_
 and the following standard dependencies:
 
@@ -55,8 +55,8 @@ and the following standard dependencies:
 Build
 ^^^^^
 
-Per default cmake (`cmake .`) will build the BNG Blaster as release
-version with optimization and without debug symbols.
+Per default cmake (`cmake .`) will build the BNG Blaster as a release
+version with optimization and without debugging symbols.
 
 .. code-block:: none
 
@@ -78,11 +78,11 @@ version for detailed troubleshooting using gdb.
     make all
 
 
-There are also CPack files generated which allows to easily generate a debian
-package by just executing `cpack` from build directory.
+There are also CPack files generated which allow to easily generate a Debian
+package by just executing `cpack` from the build directory.
 
 It is also recommended to provide the GIT commit details to be included in the
-manually build version as shown below:
+manually build the version as shown below:
 
 .. code-block:: none
 
@@ -101,7 +101,7 @@ manually build version as shown below:
 Install
 ^^^^^^^
 
-Then BNG Blaster can be installed using make install target.
+Then BNG Blaster can be installed using the make install target.
 
 .. code-block:: none
 
@@ -140,10 +140,71 @@ The option `BNGBLASTER_TESTS` enables to build unit tests.
 
     Total Test time (real) =   0.00 sec
 
+.. _install-dpdk:
+
+Build with DPDK Support
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The following steps are required to build the BNG Blaster with experimental
+:ref:`DPDK <dpdk-interface>` support. 
+
+.. note::
+
+    Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!
+
+Download and Install DPDK:
+https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
+
+.. code-block:: none
+
+    # install meson 
+    sudo apt install meson ninja-build
+
+    # download DPDK
+    wget https://fast.dpdk.org/rel/dpdk-21.11.2.tar.xz
+    tar xJf dpdk-21.11.2.tar.xz
+    cd dpdk-stable-21.11.2
+
+    # build 
+    meson build 
+    cd build
+    ninja
+
+    # install 
+    sudo ninja install
+    sudo ldconfig
+
+Building BNG Blaster with DPDK support works as explained before but with 
+the additional cmake argument ``-DBNGBLASTER_DPDK=on``
+
+.. code-block:: none
+
+    cmake -DBNGBLASTER_DPDK=on ..
+
+If DPDK is installed correctly, cmake should show the following output: 
+
+.. code-block:: none
+
+    -- Build bngblaster with DPDK support
+    -- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2")
+    -- Checking for module 'libdpdk'
+    --   Found libdpdk, version 21.11.2
+    -- Found DPDK via pkg-config
+
+The installed version should now show `dpdk` as new IO mode. 
+
+.. code-block:: none
+
+    sudo bngblaster -v
+    Version: DEV
+    Compiler: GNU (11.2.0)
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
+
+
 Running BNG Blaster
 -------------------
 
-The BNG Blaster needs permissions to send raw packets and change network interface
+The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or with
 sudo:
 
@@ -156,7 +217,7 @@ sudo:
     sudo bngblaster -C config.json -I
 
 
-A third option is to set capabilities on the binary with in example `setcap`
+A third option is to set capabilities on the binary with for example `setcap`
 as shown below:
 
 .. code-block:: none

@@ -37,6 +37,7 @@ typedef struct bbl_ctx_
     struct timespec timestamp_start;
     struct timespec timestamp_stop;
     struct timespec timestamp_resolved;
+    struct timespec timestamp_established;
 
     uint32_t sessions;
     uint32_t sessions_pppoe;
@@ -257,14 +258,14 @@ typedef struct bbl_ctx_
         uint16_t ip6cp_conf_request_retry;
 
         /* IPv4 (IPoE) */
-        bool ipv4_enable;
+        bool ipoe_ipv4_enable;
+
+        /* IPv6 (IPoE) */
+        bool ipoe_ipv6_enable;
 
         /* ARP (IPoE) */
         uint16_t arp_timeout;
         uint16_t arp_interval;
-
-        /* IPv6 (IPoE) */
-        bool ipv6_enable;
 
         /* DHCP */
         bool dhcp_enable;
@@ -313,7 +314,6 @@ typedef struct bbl_ctx_
         bool traffic_stop_verified;
         bool stream_rate_calc; /* Enable/disable stream rate calculation */
         uint8_t stream_max_burst; /* Limit the max packets per TX interval */
-        uint8_t stream_max_per_group; /* Limit max streams per group */
 
         /* Session Traffic */
         bool session_traffic_autostart;

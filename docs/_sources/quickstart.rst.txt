@@ -146,44 +146,32 @@ directory from where you started the BNG Blaster and enter the following command
             "ipv4-dns1": "10.12.12.10",
             "ipv4-dns2": "10.13.13.10",
             "dhcpv6-state": "Init",
-            "tx-packets": 87,
-            "rx-packets": 80,
+            "tx-packets": 38,
+            "rx-packets": 35,
             "rx-fragmented-packets": 0,
             "session-traffic": {
                 "total-flows": 2,
-                "verified-flows": 1,
-                "first-seq-rx-access-ipv4": 1,
-                "first-seq-rx-access-ipv6": 0,
-                "first-seq-rx-access-ipv6pd": 0,
-                "first-seq-rx-network-ipv4": 1,
-                "first-seq-rx-network-ipv6": 0,
-                "first-seq-rx-network-ipv6pd": 0,
-                "access-tx-session-packets": 34,
-                "access-rx-session-packets": 34,
-                "access-rx-session-packets-loss": 0,
-                "network-tx-session-packets": 34,
-                "network-rx-session-packets": 34,
-                "network-rx-session-packets-loss": 0,
-                "access-tx-session-packets-ipv6": 0,
-                "access-rx-session-packets-ipv6": 0,
-                "access-rx-session-packets-ipv6-loss": 0,
-                "network-tx-session-packets-ipv6": 0,
-                "network-rx-session-packets-ipv6": 0,
-                "network-rx-session-packets-ipv6-loss": 0,
-                "access-tx-session-packets-ipv6pd": 0,
-                "access-rx-session-packets-ipv6pd": 0,
-                "access-rx-session-packets-ipv6pd-loss": 0,
-                "network-tx-session-packets-ipv6pd": 0,
-                "network-rx-session-packets-ipv6pd": 0,
-                "network-rx-session-packets-ipv6pd-loss": 0
+                "verified-flows": 2,
+                "downstream-ipv4-flow-id": 2,
+                "downstream-ipv4-tx-packets": 13,
+                "downstream-ipv4-rx-packets": 13,
+                "downstream-ipv4-rx-first-seq": 1,
+                "downstream-ipv4-loss": 0,
+                "downstream-ipv4-wrong-session": 0,
+                "upstream-ipv4-flow-id": 1,
+                "upstream-ipv4-tx-packets": 13,
+                "upstream-ipv4-rx-packets": 13,
+                "upstream-ipv4-rx-first-seq": 1,
+                "upstream-ipv4-loss": 0,
+                "upstream-ipv4-wrong-session": 0
             },
             "a10nsp": {
                 "interface": "veth1.1",
                 "s-vlan": 1,
                 "qinq-send": false,
                 "qinq-received": false,
-                "tx-packets": 46,
-                "rx-packets": 87
+                "tx-packets": 35,
+                "rx-packets": 38
             }
         }
     }
@@ -468,10 +456,10 @@ BNG Blaster configuration files needed.
             afi-safi-name = "ipv6-unicast"
         [[neighbors.afi-safis]]
             [neighbors.afi-safis.config]
-            afi-safi-name = "ipv4-labelled-unicast"
+            afi-safi-name = "ipv4-labeled-unicast"
         [[neighbors.afi-safis]]
             [neighbors.afi-safis.config]
-            afi-safi-name = "ipv6-labelled-unicast"
+            afi-safi-name = "ipv6-labeled-unicast"
 
 **bgp.json:**
 
@@ -594,8 +582,8 @@ The following command shows the session in `gobgp <https://github.com/osrg/gobgp
         multiprotocol:
             ipv4-unicast:	advertised and received
             ipv6-unicast:	advertised and received
-            ipv4-labelled-unicast:	advertised and received
-            ipv6-labelled-unicast:	advertised and received
+            ipv4-labeled-unicast:	advertised and received
+            ipv6-labeled-unicast:	advertised and received
         route-refresh:	advertised
         4-octet-as:	advertised and received
     Message statistics:

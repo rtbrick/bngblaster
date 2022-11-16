@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Troubleshooting &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Troubleshooting &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Reference" href="reference/index.html" />
+    <link rel="next" title="Frequently Asked Questions" href="faq.html" />
     <link rel="prev" title="Controller" href="controller.html" /> 
 </head>
 
@@ -58,7 +58,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -90,22 +89,20 @@
 <h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline"></a></h1>
 <section id="logging">
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster is able to log events to the standard output
-or logging window of the interactive courses interface. Those
-events could be also logged to files using the argument
+<p>The BNG Blaster can log events to the standard output
+or the logging window of the interactive courses interface.
+Those events could be also logged into files using the argument
 <code class="docutils literal notranslate"><span class="pre">-L</span> <span class="pre">&lt;file&gt;</span></code>.</p>
-<p>Per default only events classified as <cite>info</cite> or <cite>error</cite> are logged.
+<p>Per default, only events classified as <cite>info</cite> or <cite>error</cite> are logged.
 The following list shows all supported logging options.</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code>: debug events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">info</span></code>: informational events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">error</span></code>: error events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">igmp</span></code>: igmp events with join and leave time</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">io</span></code>: interface input/output events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pppoe</span></code>: pppoe events</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">info</span></code>: informational events (enabled per default)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pcap</span></code>: PCAP related events</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">timer</span></code>: timer events</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">timer-detail</span></code>: detailed timer events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ip</span></code>: log learned IP addresses</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">loss</span></code>: log traffic loss with sequence number</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">l2tp</span></code>: log L2TP (LNS) events</p></li>
@@ -113,6 +110,8 @@ The following list shows all supported logging options.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">isis</span></code>: log ISIS events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">bgp</span></code>: log BGP events</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">tcp</span></code>: log TCP events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lag</span></code>: log link aggregation (LAG) events</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dpdk</span></code>: log DPDK events</p></li>
 </ul>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C test.json -L test.log -l ip -l isis -l bgp
 </pre></div>
@@ -121,30 +120,32 @@ The following list shows all supported logging options.</p>
 <section id="pcap">
 <h2>PCAP<a class="headerlink" href="#pcap" title="Permalink to this headline"></a></h2>
 <p>You can start the BNG Blaster with the argument <code class="docutils literal notranslate"><span class="pre">-P</span> <span class="pre">&lt;file&gt;</span></code>
-to capture all traffic send and received by the BNG Blaster
+to capture all traffic sent and received by the BNG Blaster
 into a single PCAP file. This file includes all traffic from all
 interfaces in use with proper meta header to filter by interface
 names.</p>
-<p>This helps to verify if traffic is received or how it has received.
+<p>This helps to verify if traffic is received or how it has been received.
 Some network interfaces drop the most outer VLAN which can be easily
 verified using the capture file.</p>
 <p>The configuration option <code class="docutils literal notranslate"><span class="pre">capture-include-streams</span></code> allows to
-include (default behavior) or exclude traffic streams from capture.</p>
+include or exclude (default behavior) traffic streams from capture.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;capture-include-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;capture-include-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>Traffic streams send or received on threaded interfaces will be also not captured.
+All other traffic is still captured on threaded interfaces.</p>
 <section id="wireshark-plugin">
 <h3>Wireshark Plugin<a class="headerlink" href="#wireshark-plugin" title="Permalink to this headline"></a></h3>
 <p>Traffic streams generated with the BNG Blaster include the
-<a class="reference internal" href="reference/traffic.html#bbl-header"><span class="std std-ref">BNG Blaster Header</span></a> which can analyzed
+<a class="reference internal" href="streams.html#bbl-header"><span class="std std-ref">BNG Blaster Header</span></a> which can be analyzed
 with the Wireshark BNG Blaster Header Dissector.</p>
 <p>Download the LUA dissector script
 <a class="reference external" href="https://github.com/rtbrick/bngblaster/tree/main/wireshark">bbl_header.lua</a>
-and start wireshark as shown below from the directory where the script is placed.</p>
+and start Wireshark as shown below from the directory where the script is placed.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ wireshark -X lua_script:bbl_header.lua
 </pre></div>
 </div>
@@ -157,7 +158,7 @@ and start wireshark as shown below from the directory where the script is placed
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="controller.html" class="btn btn-neutral float-left" title="Controller" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="reference/index.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="faq.html" class="btn btn-neutral float-right" title="Frequently Asked Questions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

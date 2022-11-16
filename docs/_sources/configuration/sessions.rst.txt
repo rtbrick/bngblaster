@@ -26,7 +26,7 @@
      - Iterate on outer VLAN first
      - false
    * - `start-delay`
-     - Wait N seconds after all interface are resolved before starting sessions
+     - Wait N seconds after all interfaces are resolved before starting sessions
      - 0
    * - `autostart`
      - Start sessions automatically
@@ -35,9 +35,9 @@
      - Start monkey testing automatically if enabled
      - true
 
-Per default sessions are created by iteration over inner VLAN range first and 
+Per default, sessions are created by iteration over the inner VLAN range first and 
 outer VLAN second. Which can be changed by ``iterate-vlan-outer`` to iterate 
-on outer VLAN first and inner VLAN second.
+on the outer VLAN first and inner VLAN second.
 
 Therefore the following configuration generates the sessions on VLAN (outer:inner) 
 1:3, 1:4, 2:3, 2:4 per default or alternative 1:3, 2:3, 1:4, 2:4 with 

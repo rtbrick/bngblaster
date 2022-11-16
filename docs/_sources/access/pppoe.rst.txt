@@ -7,22 +7,21 @@ Emulating PPP over Ethernet (PPPoE) sessions was initial
 use case of the BNG Blaster supporting 1:1 and N:1 VLAN
 mode.
 
-The BNG Blaster concept is leant to the idea of fail-fast.
+The BNG Blaster concept is leaned to the idea of fail-fast.
 Therefore PPPoE sessions may not be established if not all 
 expected conditions are fulfilled. PPPoE sessions become 
 established only if all enabled network protocols
-(IPCP and IP6CP) are negotiated successful. 
+(IPCP and IP6CP) are negotiated successfully. 
 If IPCP is configured to request two DNS servers, 
 it fails if only one is returned.
 
-The BNG Blaster is not optimized for robustness. Actually the
-opposite is the case, to ensure it failed if the device under 
-test behaves faulty. 
+The BNG Blaster is not optimized for robustness. The opposite is 
+the case, to ensure it failed if the device under test behaves faulty. 
 
 Configuration
 ~~~~~~~~~~~~~
 
-Following a basic PPPoE configuration example.
+Following is a basic PPPoE configuration example.
 
 .. code-block:: json
 
@@ -30,9 +29,9 @@ Following a basic PPPoE configuration example.
         "interfaces": {
             "network": {
                 "interface": "eth2",
-                "address": "10.0.0.1",
+                "address": "10.0.0.1/24",
                 "gateway": "10.0.0.2",
-                "address-ipv6": "fc66:1337:7331::1",
+                "address-ipv6": "fc66:1337:7331::1/64",
                 "gateway-ipv6": "fc66:1337:7331::2"
             },
             "access": [
@@ -142,15 +141,15 @@ LCP Vendor Extension
 
 This chapter refers to RFC 2153 PPP vendor extensions.
 
-Per default all LCP vendor specific requests will be rejected sending a
-LCP code reject message. With the LCP option ``ignore-vendor-specific`` 
-enabled, those messages will be ignored as required to emulate different CPE
-behaviors.
+Per default, all LCP vendor-specific requests will be rejected sending a
+LCP code-reject message. With the LCP option ``ignore-vendor-specific`` 
+enabled in the configuration, those messages will be ignored as required 
+to emulate different CPE behaviors.
 
 The LCP option ``connection-status-message`` allows to accept LCP vendor requests
 with any OUI if kind is set to ``1`` by responding with vendor request of
-kind ``2``. The OUI from request is copied to response in this case.
-The value from request is stored in the session as ``connection-status-message``.
+kind ``2``. The OUI from the request is copied to the response in this case.
+The value from the request is stored in the session as ``connection-status-message``.
 
 PPPoE Commands
 ~~~~~~~~~~~~~~
@@ -195,30 +194,42 @@ detailed information for PPPoE sessions.
             "session-traffic": {
                 "total-flows": 6,
                 "verified-flows": 6,
-                "first-seq-rx-access-ipv4": 2,
-                "first-seq-rx-access-ipv6": 3,
-                "first-seq-rx-access-ipv6pd": 3,
-                "first-seq-rx-network-ipv4": 2,
-                "first-seq-rx-network-ipv6": 3,
-                "first-seq-rx-network-ipv6pd": 3,
-                "access-tx-session-packets": 3266,
-                "access-rx-session-packets": 3265,
-                "access-rx-session-packets-loss": 0,
-                "network-tx-session-packets": 3266,
-                "network-rx-session-packets": 3265,
-                "network-rx-session-packets-loss": 0,
-                "access-tx-session-packets-ipv6": 3266,
-                "access-rx-session-packets-ipv6": 3264,
-                "access-rx-session-packets-ipv6-loss": 0,
-                "network-tx-session-packets-ipv6": 3266,
-                "network-rx-session-packets-ipv6": 3264,
-                "network-rx-session-packets-ipv6-loss": 0,
-                "access-tx-session-packets-ipv6pd": 3266,
-                "access-rx-session-packets-ipv6pd": 3264,
-                "access-rx-session-packets-ipv6pd-loss": 0,
-                "network-tx-session-packets-ipv6pd": 3266,
-                "network-rx-session-packets-ipv6pd": 3264,
-                "network-rx-session-packets-ipv6pd-loss": 0
+                "downstream-ipv4-flow-id": 2,
+                "downstream-ipv4-tx-packets": 13,
+                "downstream-ipv4-rx-packets": 13,
+                "downstream-ipv4-rx-first-seq": 1,
+                "downstream-ipv4-loss": 0,
+                "downstream-ipv4-wrong-session": 0,
+                "upstream-ipv4-flow-id": 1,
+                "upstream-ipv4-tx-packets": 13,
+                "upstream-ipv4-rx-packets": 13,
+                "upstream-ipv4-rx-first-seq": 1,
+                "upstream-ipv4-loss": 0,
+                "upstream-ipv4-wrong-session": 0,
+                "downstream-ipv6-flow-id": 4,
+                "downstream-ipv6-tx-packets": 13,
+                "downstream-ipv6-rx-packets": 13,
+                "downstream-ipv6-rx-first-seq": 1,
+                "downstream-ipv6-loss": 0,
+                "downstream-ipv6-wrong-session": 0,
+                "upstream-ipv6-flow-id": 3,
+                "upstream-ipv6-tx-packets": 13,
+                "upstream-ipv6-rx-packets": 13,
+                "upstream-ipv6-rx-first-seq": 1,
+                "upstream-ipv6-loss": 0,
+                "upstream-ipv6-wrong-session": 0,
+                "downstream-ipv6pd-flow-id": 6,
+                "downstream-ipv6pd-tx-packets": 13,
+                "downstream-ipv6pd-rx-packets": 13,
+                "downstream-ipv6pd-rx-first-seq": 1,
+                "downstream-ipv6pd-loss": 0,
+                "downstream-ipv6pd-wrong-session": 0,
+                "upstream-ipv6pd-flow-id": 5,
+                "upstream-ipv6pd-tx-packets": 13,
+                "upstream-ipv6pd-rx-packets": 13,
+                "upstream-ipv6pd-rx-first-seq": 1,
+                "upstream-ipv6pd-loss": 0,
+                "upstream-ipv6pd-wrong-session": 0
             }
         }
     }

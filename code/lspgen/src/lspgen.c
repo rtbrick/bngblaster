@@ -76,10 +76,12 @@ struct keyval_ log_names[] = {
     { DEBUG,         "debug" },
     { LSP,           "lsp" },
     { LSDB,          "lsdb" },
-    { TIMER,         "timer" },
-    { TIMER_DETAIL,  "timer-detail" },
     { CTRL,          "ctrl" },
     { ERROR,         "error" },
+#ifdef BNGBLASTER_TIMER_LOGGING
+    { TIMER,         "timer" },
+    { TIMER_DETAIL,  "timer-detail" },
+#endif
     { 0, NULL}
 };
 

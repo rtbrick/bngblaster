@@ -49,6 +49,13 @@ typedef struct io_handle_ {
     struct tpacket_req req;
     struct sockaddr_ll addr;
 
+#ifdef BNGBLASTER_DPDK
+    struct rte_eth_dev_tx_buffer *tx_buffer;
+    struct rte_mempool *mbuf_pool;
+    struct rte_mbuf *mbuf;
+    uint16_t queue;
+#endif
+
     uint8_t *ring; /* ring buffer */
     unsigned int cursor; /* ring buffer cursor */
     unsigned int queued;
@@ -78,6 +85,7 @@ typedef struct io_handle_ {
         uint64_t io_errors;
         uint64_t no_buffer;
         uint64_t polled;
+        uint64_t dropped;
     } stats;
 
     struct io_handle_ *next;
@@ -91,6 +99,9 @@ typedef struct io_thread_ {
     pthread_mutex_t mutex;
     volatile bool active;
     volatile bool stopped;
+    
+    bool set_cpu_affinity;
+    cpu_set_t cpuset;
 
     io_thread_cb_fn setup_fn;
     io_thread_cb_fn run_fn;

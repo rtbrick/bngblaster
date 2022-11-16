@@ -11,7 +11,7 @@
      - Description
      - Default
    * - `interface`
-     - A10nSP interface name (e.g. eth0, ...)
+     - Parent interface link name (e.g. eth0, ...)
      - 
    * - `qinq`
      - Set outer VLAN ethertype to QinQ (0x88a8)

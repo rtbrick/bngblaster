@@ -40,6 +40,25 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
 }
 
 int
+bbl_ctrl_test_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root;
+    root = json_pack("{ss si s{ss si}}",
+                     "status", "ok",
+                     "code", 200,
+                     "test-info",
+                     "state", test_state(),
+                     "duration", test_duration());
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+    return result;
+}
+
+int
 bbl_ctrl_multicast_traffic_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     g_ctx->multicast_endpoint = ENDPOINT_ACTIVE;
@@ -138,6 +157,7 @@ struct action actions[] = {
     {"monkey-start", bbl_session_ctrl_monkey_start, false},
     {"monkey-stop", bbl_session_ctrl_monkey_stop, false},
     {"lag-info", bbl_lag_ctrl_info, true},
+    {"test-info", bbl_ctrl_test_info, true},
     {NULL, NULL, false},
 };
 
@@ -184,7 +204,7 @@ bbl_ctrl_socket_thread(void *thread_data)
 
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 1 * MSEC;
+    sleep.tv_nsec = 100 * MSEC;
 
     /* ToDo: Add connection manager!
      * This is just a temporary workaround! Finally we need

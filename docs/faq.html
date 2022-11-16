@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Frequently Asked Questions &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Frequently Asked Questions &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="BNG Blaster Traffic" href="reference/traffic.html" /> 
+    <link rel="prev" title="Troubleshooting" href="troubleshooting.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -50,7 +50,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Frequently Asked Questions</a></li>
 </ul>
 
@@ -84,13 +83,13 @@
 <p>Some interface drivers drop the outer VLAN header. The BNG Blaster tries to
 recover the VLAN from kernel headers but will not change the packets stored
 in the PCAP file.</p>
-<p><strong>Some session established on BNG are not established on BNG Blaster?</strong></p>
+<p><strong>Some sessions established on BNG are not established on BNG Blaster?</strong></p>
 <p>The BNG Blaster considers a session only as established if all configured
 protocols are established. This could occur if the device under test (your BNG)
 is configured for IPv4 only but the BNG Blaster is configured for IPv4 and IPv6.</p>
-<p>The idea here is to prevent that potential failures will be overseen.</p>
+<p>The idea here is to prevent potential failures will be overseen.</p>
 <p><strong>DHCPv6 does not start for PPPoE sessions?</strong></p>
-<p>The BNG Blaster expects an ICMPv6 router-advertisement with other-config flag
+<p>The BNG Blaster expects an ICMPv6 router-advertisement with an other-config flag
 before it starts sending DHCPv6 within a PPPoE session.</p>
 </section>
 
@@ -98,7 +97,7 @@ before it starts sending DHCPv6 within a PPPoE session.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="reference/traffic.html" class="btn btn-neutral float-left" title="BNG Blaster Traffic" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-left" title="Troubleshooting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

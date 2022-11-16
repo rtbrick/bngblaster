@@ -62,6 +62,37 @@ teardown_handler(int sig)
     g_teardown_request_count++;
 }
 
+const char*
+test_state()
+{
+    if(g_teardown) {
+        return "teardown";
+    } else if(g_init_phase) {
+        return "init";
+    } else {
+        return "active";
+    }
+}
+
+time_t
+test_duration()
+{
+    struct timespec now;
+    struct timespec time_diff = {0};
+    if(g_ctx) {
+        if(g_ctx->timestamp_stop.tv_sec) {
+            timespec_sub(&time_diff, 
+                         &g_ctx->timestamp_stop, 
+                         &g_ctx->timestamp_start);
+        } else {
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            timespec_sub(&time_diff, &now, 
+                         &g_ctx->timestamp_start);
+        }
+    }
+    return time_diff.tv_sec;
+}
+
 void
 enable_disable_traffic(bool status)
 {
@@ -116,8 +147,6 @@ struct keyval_ log_names[] = {
     { PPPOE,         "pppoe" },
     { INFO,          "info" },
     { PCAP,          "pcap" },
-    { TIMER,         "timer" },
-    { TIMER_DETAIL,  "timer-detail" },
     { IP,            "ip" },
     { LOSS,          "loss" },
     { L2TP,          "l2tp" },
@@ -126,11 +155,16 @@ struct keyval_ log_names[] = {
     { BGP,           "bgp" },
     { TCP,           "tcp" },
     { LAG,           "lag" },
+    { DPDK,          "dpdk" },
+#ifdef BNGBLASTER_TIMER_LOGGING
+    { TIMER,         "timer" },
+    { TIMER_DETAIL,  "timer-detail" },
+#endif
     { 0, NULL}
 };
 
 static char *
-bbl_print_usage_arg (struct option *option)
+bbl_print_usage_arg(struct option *option)
 {
     if(option->has_arg == 1) {
         if(strcmp(option->name, "logging") == 0) {
@@ -168,7 +202,7 @@ bbl_print_version (void)
 }
 
 static void
-bbl_print_usage (void)
+bbl_print_usage(void)
 {
     int idx;
     printf("%s", banner);
@@ -313,7 +347,7 @@ bbl_ctrl_job(timer_s *timer)
                             session->session_state = BBL_IPOE_SETUP;
                             session->send_requests = 0;
                             if(session->access_config->ipv4_enable) {
-                                if(session->access_config->dhcp_enable) {
+                                if(session->dhcp_state > BBL_DHCP_DISABLED) {
                                     /* Start IPoE session by sending DHCP discovery if enabled. */
                                     bbl_dhcp_start(session);
                                 } else if(session->ip_address && session->peer_ip_address) {
@@ -323,7 +357,7 @@ bbl_ctrl_job(timer_s *timer)
                                 }
                             }
                             if(session->access_config->ipv6_enable) {
-                                if(session->access_config->dhcpv6_enable) {
+                                if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
                                     /* Start IPoE session by sending DHCPv6 request if enabled. */
                                     bbl_dhcpv6_start(session);
                                 } else {
@@ -629,10 +663,10 @@ main(int argc, char *argv[])
     /* Cleanup resources. */
 CLEANUP:
     bbl_interface_unlock_all();
-    log_close();
     if(g_ctx->ctrl_socket_path) {
         bbl_ctrl_socket_close();
     }
+    log_close();
     bbl_ctx_del();
     return exit_status;
 }

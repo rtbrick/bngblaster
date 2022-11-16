@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PPPoE &mdash; BNG Blaster 0.7 documentation</title>
+  <title>PPPoE &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -73,7 +73,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -107,26 +106,25 @@
 <p>Emulating PPP over Ethernet (PPPoE) sessions was initial
 use case of the BNG Blaster supporting 1:1 and N:1 VLAN
 mode.</p>
-<p>The BNG Blaster concept is leant to the idea of fail-fast.
+<p>The BNG Blaster concept is leaned to the idea of fail-fast.
 Therefore PPPoE sessions may not be established if not all
 expected conditions are fulfilled. PPPoE sessions become
 established only if all enabled network protocols
-(IPCP and IP6CP) are negotiated successful.
+(IPCP and IP6CP) are negotiated successfully.
 If IPCP is configured to request two DNS servers,
 it fails if only one is returned.</p>
-<p>The BNG Blaster is not optimized for robustness. Actually the
-opposite is the case, to ensure it failed if the device under
-test behaves faulty.</p>
+<p>The BNG Blaster is not optimized for robustness. The opposite is
+the case, to ensure it failed if the device under test behaves faulty.</p>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
-<p>Following a basic PPPoE configuration example.</p>
+<p>Following is a basic PPPoE configuration example.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="w"></span>
 <span class="w">        </span><span class="p">},</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
@@ -362,7 +360,7 @@ test behaves faulty.</p>
 <td><p>0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>ignore-vendor-specific</cite></p></td>
-<td><p>Ignore LCP vendor specific requests</p></td>
+<td><p>Ignore LCP vendor-specific requests</p></td>
 <td><p>false</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>connection-status-message</cite></p></td>
@@ -454,14 +452,14 @@ test behaves faulty.</p>
 <section id="lcp-vendor-extension">
 <h2>LCP Vendor Extension<a class="headerlink" href="#lcp-vendor-extension" title="Permalink to this headline"></a></h2>
 <p>This chapter refers to RFC 2153 PPP vendor extensions.</p>
-<p>Per default all LCP vendor specific requests will be rejected sending a
-LCP code reject message. With the LCP option <code class="docutils literal notranslate"><span class="pre">ignore-vendor-specific</span></code>
-enabled, those messages will be ignored as required to emulate different CPE
-behaviors.</p>
+<p>Per default, all LCP vendor-specific requests will be rejected sending a
+LCP code-reject message. With the LCP option <code class="docutils literal notranslate"><span class="pre">ignore-vendor-specific</span></code>
+enabled in the configuration, those messages will be ignored as required
+to emulate different CPE behaviors.</p>
 <p>The LCP option <code class="docutils literal notranslate"><span class="pre">connection-status-message</span></code> allows to accept LCP vendor requests
 with any OUI if kind is set to <code class="docutils literal notranslate"><span class="pre">1</span></code> by responding with vendor request of
-kind <code class="docutils literal notranslate"><span class="pre">2</span></code>. The OUI from request is copied to response in this case.
-The value from request is stored in the session as <code class="docutils literal notranslate"><span class="pre">connection-status-message</span></code>.</p>
+kind <code class="docutils literal notranslate"><span class="pre">2</span></code>. The OUI from the request is copied to the response in this case.
+The value from the request is stored in the session as <code class="docutils literal notranslate"><span class="pre">connection-status-message</span></code>.</p>
 </section>
 <section id="pppoe-commands">
 <h2>PPPoE Commands<a class="headerlink" href="#pppoe-commands" title="Permalink to this headline"></a></h2>
@@ -501,30 +499,42 @@ detailed information for PPPoE sessions.</p>
 <span class="w">        </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;total-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;verified-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;first-seq-rx-access-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;first-seq-rx-network-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-tx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3266</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-rx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3265</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-rx-session-packets-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-tx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3266</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-rx-session-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3265</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-rx-session-packets-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-tx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3266</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-rx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3264</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-rx-session-packets-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-tx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3266</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-rx-session-packets-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3264</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-rx-session-packets-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-tx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3266</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-rx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3264</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;access-rx-session-packets-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-tx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3266</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-rx-session-packets-ipv6pd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3264</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-rx-session-packets-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
 <span class="w">        </span><span class="p">}</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>

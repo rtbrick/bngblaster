@@ -251,9 +251,9 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
     bbl_l2tp_queue_s *q = NULL;
     bbl_l2tp_queue_s *q_del = NULL;
 
-    struct timespec timestamp;
+    struct timespec now;
     struct timespec time_diff;
-    double time_diff_ms;
+    int backoff;
 
     uint16_t max_ns = l2tp_tunnel->peer_nr + l2tp_tunnel->cwnd;
 
@@ -264,7 +264,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
         }
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &timestamp);
+    clock_gettime(CLOCK_MONOTONIC, &now);
 
     q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
     while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
@@ -281,9 +281,9 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
         }
         if(L2TP_SEQ_LT(q->ns, max_ns)) {
             if(q->last_tx_time.tv_sec) {
-                timespec_sub(&time_diff, &timestamp, &q->last_tx_time);
-                time_diff_ms = round(time_diff.tv_nsec / 1.0e6) * (time_diff.tv_sec * 1000);
-                if(time_diff_ms < (q->retries * 1000)) {
+                timespec_sub(&time_diff, &now, &q->last_tx_time);
+                backoff = 1 << (q->retries - 1);
+                if(time_diff.tv_sec < backoff) {
                     q = CIRCLEQ_NEXT(q, txq_qnode);
                     continue;
                 }
@@ -292,8 +292,8 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
             l2tp_tunnel->stats.control_tx++;
             interface->stats.l2tp_control_tx++;
             l2tp_tunnel->zlb = false;
-            q->last_tx_time.tv_sec = timestamp.tv_sec;
-            q->last_tx_time.tv_nsec = timestamp.tv_nsec;
+            q->last_tx_time.tv_sec = now.tv_sec;
+            q->last_tx_time.tv_nsec = now.tv_nsec;
             /* Update Nr. ... */
             *(uint16_t*)(q->packet + q->nr_offset) = htobe16(l2tp_tunnel->nr);
             if(q->retries) {
@@ -904,21 +904,20 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
     }
 
     l2tp_session->stats.data_rx++;
-    switch (l2tp->protocol) {
+    switch(l2tp->protocol) {
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_s*)l2tp->next;
-            if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
+            lcp_rx->padding = l2tp_session->tunnel->server->lcp_padding;
+            if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
+                lcp_rx->code = PPP_CODE_ECHO_REPLY;
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+            } else if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
                 l2tp_session->disconnect_code = 3;
                 l2tp_session->disconnect_protocol = 0;
                 l2tp_session->disconnect_direction = 1;
                 bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
                 bbl_l2tp_session_delete(l2tp_session);
-                return;
-            }
-            if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
-                lcp_rx->code = PPP_CODE_ECHO_REPLY;
-                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
-            }
+            } 
             break;
         case PROTOCOL_PAP:
             memset(&pap_tx, 0x0, sizeof(bbl_pap_s));

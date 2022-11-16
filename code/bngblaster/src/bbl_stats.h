@@ -51,6 +51,8 @@ typedef struct bbl_stats_
     uint64_t avg_down_ipv4_rx_first_seq;
     uint64_t max_down_ipv4_rx_first_seq;
     uint64_t violations_down_ipv4_1s;
+    uint64_t violations_down_ipv4_2s;
+    uint64_t violations_down_ipv4_3s;
     uint32_t sessions_down_ipv4_rx;
 
     float min_down_ipv4_rx_seconds;
@@ -61,6 +63,8 @@ typedef struct bbl_stats_
     uint64_t avg_up_ipv4_rx_first_seq;
     uint64_t max_up_ipv4_rx_first_seq;
     uint64_t violations_up_ipv4_1s;
+    uint64_t violations_up_ipv4_2s;
+    uint64_t violations_up_ipv4_3s;
     uint32_t sessions_up_ipv4_rx;
 
     float min_up_ipv4_rx_seconds;
@@ -71,6 +75,8 @@ typedef struct bbl_stats_
     uint64_t avg_down_ipv6_rx_first_seq;
     uint64_t max_down_ipv6_rx_first_seq;
     uint64_t violations_down_ipv6_1s;
+    uint64_t violations_down_ipv6_2s;
+    uint64_t violations_down_ipv6_3s;
     uint32_t sessions_down_ipv6_rx;
 
     float min_down_ipv6_rx_seconds;
@@ -81,6 +87,8 @@ typedef struct bbl_stats_
     uint64_t avg_up_ipv6_rx_first_seq;
     uint64_t max_up_ipv6_rx_first_seq;
     uint64_t violations_up_ipv6_1s;
+    uint64_t violations_up_ipv6_2s;
+    uint64_t violations_up_ipv6_3s;
     uint32_t sessions_up_ipv6_rx;
 
     float min_up_ipv6_rx_seconds;
@@ -91,6 +99,8 @@ typedef struct bbl_stats_
     uint64_t avg_down_ipv6pd_rx_first_seq;
     uint64_t max_down_ipv6pd_rx_first_seq;
     uint64_t violations_down_ipv6pd_1s;
+    uint64_t violations_down_ipv6pd_2s;
+    uint64_t violations_down_ipv6pd_3s;
     uint32_t sessions_down_ipv6pd_rx;
 
     float min_down_ipv6pd_rx_seconds;
@@ -101,6 +111,8 @@ typedef struct bbl_stats_
     uint64_t avg_up_ipv6pd_rx_first_seq;
     uint64_t max_up_ipv6pd_rx_first_seq;
     uint64_t violations_up_ipv6pd_1s;
+    uint64_t violations_up_ipv6pd_2s;
+    uint64_t violations_up_ipv6pd_3s;
     uint32_t sessions_up_ipv6pd_rx;
 
     float min_up_ipv6pd_rx_seconds;
@@ -113,8 +125,8 @@ typedef struct bbl_stats_
     uint64_t max_stream_loss;
     uint64_t min_stream_rx_first_seq;
     uint64_t max_stream_rx_first_seq;
-    uint64_t min_stream_delay_ns;
-    uint64_t max_stream_delay_ns;
+    uint64_t min_stream_delay_us;
+    uint64_t max_stream_delay_us;
 
     /* L2TP */
 

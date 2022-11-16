@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; BNG Blaster 0.7 documentation</title>
+  <title>Installation &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
@@ -47,6 +47,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#build">Build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id1">Install</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build-and-run-unit-tests">Build and Run Unit Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-with-dpdk-support">Build with DPDK Support</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#running-bng-blaster">Running BNG Blaster</a></li>
@@ -62,7 +63,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -92,18 +92,18 @@
              
   <section id="installation">
 <span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h1>
-<p>The BNG Blaster should run on any modern linux distribution
-but is primary tested on Ubuntu 18.04, 20.04 and 22.04 LTS.</p>
+<p>The BNG Blaster should run on any modern Linux distribution
+but is primarily tested on Ubuntu 18.04, 20.04 and 22.04 LTS.</p>
 <section id="install-ubuntu">
 <h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Permalink to this headline"></a></h2>
 <p>Install dependencies:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Ubuntu 18.04 and 20.04
 sudo apt install -y libssl1.1 libncurses5 libjansson4
 # Ubuntu 22.04
-sudo apt install -y libssl1.1 libncurses5 libjansson4
+sudo apt install -y libssl3 libncurses6 libjansson4
 </pre></div>
 </div>
-<p>Download and install debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster/releases">https://github.com/rtbrick/bngblaster/releases</a></p>
+<p>Download and install the Debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster/releases">https://github.com/rtbrick/bngblaster/releases</a></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo dpkg -i &lt;package&gt;
 </pre></div>
 </div>
@@ -113,7 +113,7 @@ sudo apt install -y libssl1.1 libncurses5 libjansson4
 <h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Permalink to this headline"></a></h2>
 <section id="dependencies">
 <h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h3>
-<p>The BNG Blaster has dependencies to the RtBrick
+<p>The BNG Blaster has dependencies on the RtBrick
 <a class="reference external" href="https://github.com/rtbrick/libdict">libdict fork</a>
 and the following standard dependencies:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># libdict
@@ -133,8 +133,8 @@ sudo apt install -y cmake \
 </section>
 <section id="build">
 <h3>Build<a class="headerlink" href="#build" title="Permalink to this headline"></a></h3>
-<p>Per default cmake (<cite>cmake .</cite>) will build the BNG Blaster as release
-version with optimization and without debug symbols.</p>
+<p>Per default cmake (<cite>cmake .</cite>) will build the BNG Blaster as a release
+version with optimization and without debugging symbols.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/rtbrick/bngblaster.git
 cd bngblaster
 mkdir build
@@ -151,10 +151,10 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 make all
 </pre></div>
 </div>
-<p>There are also CPack files generated which allows to easily generate a debian
-package by just executing <cite>cpack</cite> from build directory.</p>
+<p>There are also CPack files generated which allow to easily generate a Debian
+package by just executing <cite>cpack</cite> from the build directory.</p>
 <p>It is also recommended to provide the GIT commit details to be included in the
-manually build version as shown below:</p>
+manually build the version as shown below:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cmake -DGIT_REF=`git rev-parse --abbrev-ref HEAD` -DGIT_SHA=`git rev-parse HEAD` .
 </pre></div>
 </div>
@@ -169,7 +169,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw
 </section>
 <section id="id1">
 <h3>Install<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
-<p>Then BNG Blaster can be installed using make install target.</p>
+<p>Then BNG Blaster can be installed using the make install target.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo make install
 </pre></div>
 </div>
@@ -200,10 +200,59 @@ Total Test time (real) =   0.00 sec
 </pre></div>
 </div>
 </section>
+<section id="build-with-dpdk-support">
+<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Permalink to this headline"></a></h3>
+<p>The following steps are required to build the BNG Blaster with experimental
+<a class="reference internal" href="interfaces.html#dpdk-interface"><span class="std std-ref">DPDK</span></a> support.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!</p>
+</div>
+<p>Download and Install DPDK:
+<a class="reference external" href="https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html">https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html</a></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install meson
+sudo apt install meson ninja-build
+
+# download DPDK
+wget https://fast.dpdk.org/rel/dpdk-21.11.2.tar.xz
+tar xJf dpdk-21.11.2.tar.xz
+cd dpdk-stable-21.11.2
+
+# build
+meson build
+cd build
+ninja
+
+# install
+sudo ninja install
+sudo ldconfig
+</pre></div>
+</div>
+<p>Building BNG Blaster with DPDK support works as explained before but with
+the additional cmake argument <code class="docutils literal notranslate"><span class="pre">-DBNGBLASTER_DPDK=on</span></code></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cmake -DBNGBLASTER_DPDK=on ..
+</pre></div>
+</div>
+<p>If DPDK is installed correctly, cmake should show the following output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-- Build bngblaster with DPDK support
+-- Found PkgConfig: /usr/bin/pkg-config (found version &quot;0.29.2&quot;)
+-- Checking for module &#39;libdpdk&#39;
+--   Found libdpdk, version 21.11.2
+-- Found DPDK via pkg-config
+</pre></div>
+</div>
+<p>The installed version should now show <cite>dpdk</cite> as new IO mode.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo bngblaster -v
+Version: DEV
+Compiler: GNU (11.2.0)
+IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
+</pre></div>
+</div>
+</section>
 </section>
 <section id="running-bng-blaster">
 <h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Permalink to this headline"></a></h2>
-<p>The BNG Blaster needs permissions to send raw packets and change network interface
+<p>The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or with
 sudo:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># As root
@@ -213,7 +262,7 @@ bngblaster -C config.json -I
 sudo bngblaster -C config.json -I
 </pre></div>
 </div>
-<p>A third option is to set capabilities on the binary with in example <cite>setcap</cite>
+<p>A third option is to set capabilities on the binary with for example <cite>setcap</cite>
 as shown below:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo setcap cap_net_raw,cap_net_admin,cap_dac_read_search+eip `which bngblaster`
 

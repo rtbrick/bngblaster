@@ -370,8 +370,9 @@ link_add(char *interface_name)
 static bool
 json_parse_link(json_t *link, bbl_link_config_s *link_config)
 {
-    json_t *value = NULL;
+    json_t *value, *sub = NULL;
     char *s = NULL;
+    int i, size;
 
     if(json_unpack(link, "{s:s}", "interface", &s) == 0) {
         if(link_present(s) || lag_present(s)) {
@@ -409,6 +410,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 #if BNGBLASTER_DPDK
         } else if(strcmp(s, "dpdk") == 0) {
             link_config->io_mode = IO_MODE_DPDK;
+            g_ctx->dpdk = true;
 #endif
         } else {
             fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
@@ -462,6 +464,50 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->rx_threads = json_number_value(value);
     } else {
         link_config->rx_threads = g_ctx->config.rx_threads;
+    }
+
+    value = json_object_get(link, "rx-cpuset");
+    if(json_is_array(value)) {
+        size = json_array_size(value);
+        link_config->rx_cpuset_cur = 0;
+        link_config->rx_cpuset_count = size;
+        link_config->rx_cpuset = calloc(size, sizeof(uint16_t));
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(value, i);
+            if(json_is_number(sub)) {
+                link_config->rx_cpuset[i] = json_number_value(sub);
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
+                return false;
+            }
+        }
+    } else if(json_is_number(value)) {
+        link_config->rx_cpuset = calloc(1, sizeof(uint16_t));
+        link_config->rx_cpuset[0] = json_number_value(value);
+        link_config->rx_cpuset_count = 1;
+        link_config->rx_cpuset_cur = 0;
+    }
+
+    value = json_object_get(link, "tx-cpuset");
+    if(json_is_array(value)) {
+        size = json_array_size(value);
+        link_config->tx_cpuset_cur = 0;
+        link_config->tx_cpuset_count = size;
+        link_config->tx_cpuset = calloc(size, sizeof(uint16_t));
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(value, i);
+            if(json_is_number(sub)) {
+                link_config->tx_cpuset[i] = json_number_value(sub);
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for links->tx-cpuset\n");
+                return false;
+            }
+        }
+    } else if(json_is_number(value)) {
+        link_config->tx_cpuset = calloc(1, sizeof(uint16_t));
+        link_config->tx_cpuset[0] = json_number_value(value);
+        link_config->tx_cpuset_count = 1;
+        link_config->tx_cpuset_cur = 0;
     }
 
     /* Link Aggregation Group (LAG) Configuration */
@@ -600,6 +646,9 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     uint32_t ipv4;
     double number;
 
+    access_config->ipv4_enable = true;
+    access_config->ipv6_enable = true;
+
     if(json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
         access_config->interface = strdup(s);
         link_add(access_config->interface);
@@ -648,11 +697,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             access_config->access_type = ACCESS_TYPE_PPPOE;
         } else if(strcmp(s, "ipoe") == 0) {
             access_config->access_type = ACCESS_TYPE_IPOE;
+            access_config->ipv4_enable = g_ctx->config.ipoe_ipv4_enable;
+            access_config->ipv6_enable = g_ctx->config.ipoe_ipv6_enable;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for access->type\n");
             return false;
         }
     }
+
     if(json_unpack(access_interface, "{s:s}", "vlan-mode", &s) == 0) {
         if(strcmp(s, "1:1") == 0) {
             access_config->vlan_mode = VLAN_MODE_11;
@@ -839,20 +891,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     value = json_object_get(access_interface, "ipv4");
     if(json_is_boolean(value)) {
         access_config->ipv4_enable = json_boolean_value(value);
-    } else {
-        access_config->ipv4_enable = g_ctx->config.ipv4_enable;
-    }
-    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
-        /* Disable IPv4 on PPPoE if IPCP is disabled. */
-        if(!access_config->ipcp_enable) {
-            access_config->ipv4_enable = false;
-        }
-    } else {
-        /* Disable IPv4 on IPoE if neither DHCP is enabled or
-         * a static IPv4 address is configured. */
-        if(!(access_config->dhcp_enable || access_config->static_ip)) {
-            access_config->ipv4_enable = false;
-        }
     }
 
     /* IPv6 settings */
@@ -871,14 +909,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     value = json_object_get(access_interface, "ipv6");
     if(json_is_boolean(value)) {
         access_config->ipv6_enable = json_boolean_value(value);
-    } else {
-        access_config->ipv6_enable = g_ctx->config.ipv6_enable;
-    }
-    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
-        /* Disable IPv6 on PPPoE if IP6CP is disabled. */
-        if(!access_config->ip6cp_enable) {
-            access_config->ipv6_enable = false;
-        }
     }
 
     value = json_object_get(access_interface, "igmp-autostart");
@@ -935,6 +965,26 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
+
+    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
+        /* Disable IPv4 on PPPoE if IPCP is disabled. */
+        if(!access_config->ipcp_enable) {
+            access_config->ipv4_enable = false;
+        }
+        /* Disable IPv6 on PPPoE if IP6CP is disabled. */
+        if(!access_config->ip6cp_enable) {
+            access_config->ipv6_enable = false;
+            access_config->dhcpv6_enable = false;
+        }
+    } else {
+        /* Disable IPv4 on IPoE if neither DHCP is enabled or
+         * a static IPv4 address is configured. */
+        if(!(access_config->dhcp_enable ||
+            (access_config->static_ip && access_config->static_gateway))) {
+            access_config->ipv4_enable = false;
+        }
+    }
+
     return true;
 }
 
@@ -1638,9 +1688,13 @@ json_parse_config(json_t *root)
     /* IPoE Configuration */
     section = json_object_get(root, "ipoe");
     if(json_is_object(section)) {
+        value = json_object_get(section, "ipv6");
+        if(json_is_boolean(value)) {
+            g_ctx->config.ipoe_ipv6_enable = json_boolean_value(value);
+        }
         value = json_object_get(section, "ipv4");
         if(json_is_boolean(value)) {
-            g_ctx->config.ipv4_enable = json_boolean_value(value);
+            g_ctx->config.ipoe_ipv4_enable = json_boolean_value(value);
         }
         value = json_object_get(section, "arp-timeout");
         if(json_is_number(value)) {
@@ -1649,10 +1703,6 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "arp-interval");
         if(json_is_number(value)) {
             g_ctx->config.arp_interval = json_number_value(value);
-        }
-        value = json_object_get(section, "ipv6");
-        if(json_is_boolean(value)) {
-            g_ctx->config.ipv6_enable = json_boolean_value(value);
         }
     }
 
@@ -1911,8 +1961,12 @@ json_parse_config(json_t *root)
             g_ctx->config.igmp_autostart = json_boolean_value(value);
         }
         value = json_object_get(section, "start-delay");
-        if(json_is_number(value) && json_number_value(value)) {
-            /* Min 1 second */
+        if(json_is_number(value)) {
+            number = json_number_value(value);
+            if(number < 1 || number > UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for igmp->start-delay\n");
+                return false;
+            }
             g_ctx->config.igmp_start_delay = json_number_value(value);
         }
         if(json_unpack(section, "{s:s}", "group", &s) == 0) {
@@ -2053,15 +2107,6 @@ json_parse_config(json_t *root)
                 return false;
             }
             g_ctx->config.stream_max_burst = number;
-        }
-        value = json_object_get(section, "max-streams-per-group");
-        if(json_is_number(value)) {
-            number = json_number_value(value);
-            if(number < 1 || number > UINT8_MAX) {
-                fprintf(stderr, "JSON config error: Invalid value for traffic->max-streams-per-group\n");
-                return false;
-            }
-            g_ctx->config.stream_max_per_group = number;
         }
         value = json_object_get(section, "stream-rate-calculation");
         if(json_is_boolean(value)) {
@@ -2431,7 +2476,7 @@ json_parse_config(json_t *root)
                 }
                 l2tp_server->receive_window = number;
             } else {
-                l2tp_server->receive_window = 4;
+                l2tp_server->receive_window = 16;
             }
             value = json_object_get(sub, "max-retry");
             if(json_is_number(value)) {
@@ -2442,7 +2487,7 @@ json_parse_config(json_t *root)
                 }
                 l2tp_server->max_retry = number;
             } else {
-                l2tp_server->max_retry = 30;
+                l2tp_server->max_retry = 5;
             }
             if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
                 if(strcmp(s, "default") == 0) {
@@ -2487,6 +2532,21 @@ json_parse_config(json_t *root)
                     return false;
                 }
                 l2tp_server->data_control_tos = number;
+            }
+            value = json_object_get(sub, "hello-interval");
+            if(json_is_number(value)) {
+                number = json_number_value(value);
+                if(number < 0 || number > UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->hello-interval\n");
+                    return false;
+                }
+                l2tp_server->hello_interval = number;
+            } else {
+                l2tp_server->hello_interval = 30;
+            }
+            value = json_object_get(sub, "lcp-padding");
+            if(json_is_number(value)) {
+                l2tp_server->lcp_padding = json_number_value(value);;
             }
         }
     } else if(json_is_object(section)) {
@@ -2634,10 +2694,10 @@ bbl_config_init_defaults()
     g_ctx->config.lcp_keepalive_retry = 3;
     g_ctx->config.authentication_timeout = 5;
     g_ctx->config.authentication_retry = 30;
-    g_ctx->config.ipv4_enable = true;
+    g_ctx->config.ipoe_ipv6_enable = true;
+    g_ctx->config.ipoe_ipv4_enable = true;
     g_ctx->config.arp_timeout = 1;
     g_ctx->config.arp_interval = 300;
-    g_ctx->config.ipv6_enable = true;
     g_ctx->config.ipcp_enable = true;
     g_ctx->config.ipcp_request_ip = true;
     g_ctx->config.ipcp_request_dns1 = true;
@@ -2668,8 +2728,7 @@ bbl_config_init_defaults()
     g_ctx->config.multicast_traffic_pps = 1000;
     g_ctx->config.traffic_autostart = true;
     g_ctx->config.stream_rate_calc = true;
-    g_ctx->config.stream_max_burst = 16;
-    g_ctx->config.stream_max_per_group = 64;
+    g_ctx->config.stream_max_burst = 32;
     g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }

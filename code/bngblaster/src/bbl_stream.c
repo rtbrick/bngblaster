@@ -25,18 +25,21 @@ static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
 {
     struct timespec delay;
-    uint64_t delay_nsec;
+    uint64_t delay_us;
     timespec_sub(&delay, rx_timestamp, bbl_timestamp);
-    delay_nsec = delay.tv_sec * 1000000000 + delay.tv_nsec;
-    if(delay_nsec > stream->rx_max_delay_ns) {
-        stream->rx_max_delay_ns = delay_nsec;
+    
+    delay_us = (delay.tv_sec * 1000000) + (delay.tv_nsec / 1000);
+    if(delay_us == 0) delay_us = 1;
+
+    if(delay_us > stream->rx_max_delay_us) {
+        stream->rx_max_delay_us = delay_us;
     }
-    if(stream->rx_min_delay_ns) {
-        if(delay_nsec < stream->rx_min_delay_ns) {
-            stream->rx_min_delay_ns = delay_nsec;
+    if(stream->rx_min_delay_us) {
+        if(delay_us < stream->rx_min_delay_us) {
+            stream->rx_min_delay_us = delay_us;
         }
     } else {
-        stream->rx_min_delay_ns = delay_nsec;
+        stream->rx_min_delay_us = delay_us;
     }
 }
 
@@ -1189,9 +1192,9 @@ bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len)
         stream = CIRCLEQ_FIRST(&io->stream_tx_qhead);
         if(stream->token_bucket && stream->tx_buf) {
             /* Update BBL header fields */
+            *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
             *(uint32_t*)(stream->tx_buf + (stream->tx_len - 8)) = io->timestamp.tv_sec;
             *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = io->timestamp.tv_nsec;
-            *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
             *len = stream->tx_len;
             memcpy(buf, stream->tx_buf, *len);
             stream->token_bucket--;
@@ -1230,35 +1233,19 @@ bbl_stream_lag(bbl_stream_s *stream)
     return true;
 }
 
-static bool
-bbl_stream_wait(bbl_stream_s *stream)
-{
-    struct timespec time_elapsed = {0};
-    struct timespec now = {0};
-
-    if(stream->wait) {
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        timespec_sub(&time_elapsed, &now, &stream->wait_start);
-        if(time_elapsed.tv_sec > stream->config->start_delay) {
-            /** Stop wait window ... */
-            return false;
-        }
-    } else {
-        /** Start wait window ... */
-        clock_gettime(CLOCK_MONOTONIC, &stream->wait_start);
-        stream->wait = true;
-    }
-    return true;
-}
-
 void
 bbl_stream_token_job(timer_s *timer)
 {
     bbl_stream_s *stream = timer->data;
     bbl_session_s *session = stream->session;
+    struct timespec time_elapsed;
+
+    uint64_t packets_expected;
+    uint64_t packets_send;
 
     if(!bbl_stream_can_send(stream)) {
         stream->token_bucket = 0;
+        stream->send_window_active = false;
         return;
     }
 
@@ -1266,29 +1253,70 @@ bbl_stream_token_job(timer_s *timer)
         if(stream->session_traffic) {
             if(!session->session_traffic.active) {
                 stream->token_bucket = 0;
+                stream->send_window_active = false;
                 return;
             }
         } else if(!session->streams.active) {
             stream->token_bucket = 0;
+            stream->send_window_active = false;
             return;
+        }
+        if(stream->session_version != session->version) {
+            if(stream->tx_buf) {
+                free(stream->tx_buf);
+                stream->tx_buf = NULL;
+                stream->tx_len = 0;
+            }
+            stream->session_version = session->version;
         }
     }
 
     if(stream->lag) {
         if(!bbl_stream_lag(stream)) {
             stream->token_bucket = 0;
+            stream->send_window_active = false;
             return;
         }
     }
 
-    stream->token_bucket++;
-
     /** Enforce optional stream traffic start delay ... */
     if(stream->config->start_delay && stream->tx_packets == 0) {
-        if(bbl_stream_wait(stream)) {
-            stream->token_bucket = 0;
+        if(stream->wait) {
+            timespec_sub(&time_elapsed, timer->timestamp, &stream->wait_start);
+            if(time_elapsed.tv_sec <= stream->config->start_delay) {
+                /** Wait ... */
+                return;
+            }
+        } else {
+            /** Start wait window ... */
+            stream->wait = true;
+            stream->wait_start.tv_sec = timer->timestamp->tv_sec;
+            stream->wait_start.tv_nsec = timer->timestamp->tv_nsec;
             return;
         }
+    }
+
+    if(stream->send_window_active) {
+        /** Update send window */
+        timespec_sub(&time_elapsed, timer->timestamp, &stream->send_window_start);
+        packets_expected = time_elapsed.tv_sec * stream->config->pps;
+        packets_expected += stream->config->pps * ((double)time_elapsed.tv_nsec / 1000000000.0);
+        packets_send = stream->tx_packets - stream->send_window_start_packets;
+        if(packets_expected > packets_send) {
+            stream->token_bucket = packets_expected - packets_send;
+            if(stream->token_bucket > stream->token_burst) {
+                stream->token_bucket = stream->token_burst;
+            }
+        } else {
+            stream->token_bucket = 1;
+        }
+    } else {
+        /* Open new send window */
+        stream->send_window_active = true;
+        stream->send_window_start_packets = stream->tx_packets;
+        stream->send_window_start.tv_sec = timer->timestamp->tv_sec;
+        stream->send_window_start.tv_nsec = timer->timestamp->tv_nsec;
+        stream->token_bucket = 1;
     }
 
     /** Enforce optional stream packet limit ... */
@@ -1302,10 +1330,6 @@ bbl_stream_token_job(timer_s *timer)
        }
     }
     
-    if(stream->token_bucket > stream->token_burst) {
-        stream->token_bucket = stream->token_burst;
-    }
-
     if(!stream->tx_buf) {
         if(!bbl_stream_build_packet(stream)) {
             LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
@@ -1524,11 +1548,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(stream->session_traffic) {
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
-            LOG(DEBUG, "Session traffic stream %s (upstream) added to %s (access) with %lf PPS\n", 
+            LOG(DEBUG, "Session traffic stream %s (upstream) added to %s (access) with %0.2lf PPS\n", 
                 config->name, access_interface->name, config->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
-            LOG(DEBUG, "Traffic stream %s (upstream) added to %s (access) with %lf PPS\n", 
+            LOG(DEBUG, "Traffic stream %s (upstream) added to %s (access) with %0.2lf PPS\n", 
                 config->name, access_interface->name, config->pps);
         }
     }
@@ -1573,11 +1597,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             if(stream->session_traffic) {
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
-                LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (network) with %lf PPS\n", 
+                LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (network) with %0.2lf PPS\n", 
                     config->name, network_interface->name, config->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s (downstream) added to %s (network) with %lf PPS\n", 
+                LOG(DEBUG, "Traffic stream %s (downstream) added to %s (network) with %0.2lf PPS\n", 
                     config->name, network_interface->name, config->pps);
             }
         } else if(a10nsp_interface) {
@@ -1587,12 +1611,12 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             if(stream->session_traffic) {
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
-                LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (a10nsp) with %lf PPS\n", 
-                    config->name, network_interface->name, config->pps);
+                LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (a10nsp) with %0.2lf PPS\n", 
+                    config->name, a10nsp_interface->name, config->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
-                LOG(DEBUG, "Traffic stream %s (downstream) added to %s (a10nsp) with %lf PPS\n", 
-                    config->name, network_interface->name, config->pps);
+                LOG(DEBUG, "Traffic stream %s (downstream) added to %s (a10nsp) with %0.2lf PPS\n", 
+                    config->name, a10nsp_interface->name, config->pps);
             }
         } else {
             LOG(ERROR, "Failed to add stream %s (downstream) because of missing interface\n", config->name);
@@ -1716,11 +1740,11 @@ bbl_stream_init() {
                 *result.datum_ptr = stream;
                 bbl_stream_add(stream);
                 if(stream->type == BBL_TYPE_MULTICAST) {
-                    LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %lf PPS\n", 
+                    LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %0.2lf PPS\n", 
                         config->name, network_interface->name, config->pps);
                 } else {
                     g_ctx->stats.stream_traffic_flows++;
-                    LOG(DEBUG, "RAW traffic stream %s added to %s with %lf PPS\n", 
+                    LOG(DEBUG, "RAW traffic stream %s added to %s with %0.2lf PPS\n", 
                         config->name, network_interface->name, config->pps);
                 }
             }
@@ -1781,7 +1805,7 @@ bbl_stream_init() {
             }
             *result.datum_ptr = stream;
             bbl_stream_add(stream);
-            LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %lf PPS\n", 
+            LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %0.2lf PPS\n", 
                 network_interface->name, config->pps);
         }
     }
@@ -1892,8 +1916,8 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->reset_loss = stream->rx_loss;
     stream->reset_wrong_session = stream->rx_wrong_session;
 
-    stream->rx_min_delay_ns = 0;
-    stream->rx_max_delay_ns = 0;
+    stream->rx_min_delay_us = 0;
+    stream->rx_max_delay_us = 0;
     stream->rx_len = 0;
     stream->rx_first_seq = 0;
     stream->rx_last_seq = 0;
@@ -2097,8 +2121,8 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-packets", stream->rx_packets - stream->reset_packets_rx,
             "rx-loss", stream->rx_loss - stream->reset_loss,
             "rx-wrong-session", stream->rx_wrong_session - stream->reset_wrong_session,
-            "rx-delay-nsec-min", stream->rx_min_delay_ns,
-            "rx-delay-nsec-max", stream->rx_max_delay_ns,
+            "rx-delay-us-min", stream->rx_min_delay_us,
+            "rx-delay-us-max", stream->rx_max_delay_us,
             "rx-pps", stream->rate_packets_rx.avg,
             "tx-pps", stream->rate_packets_tx.avg,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
@@ -2330,7 +2354,9 @@ bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_
         if(!stream) {
             continue;
         }
-        bbl_stream_reset(stream);
+        if(!stream->session_traffic) {
+            bbl_stream_reset(stream);
+        }
     }
     dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    

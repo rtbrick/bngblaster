@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 0.7 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -49,7 +49,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../reference/index.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
 </ul>
 
@@ -77,7 +76,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+  <p>The following configuration allows to overwrite the global default interface link settings.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -93,40 +93,54 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
-<td><p>TX ring polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
+<tr class="row-even"><td><p><cite>io-mode</cite></p></td>
+<td><p>IO mode</p></td>
+<td><p>packet_mmap_raw</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
-<td><p>RX ring polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
+<tr class="row-odd"><td><p><cite>io-slots</cite></p></td>
+<td><p>IO slots (ring size)</p></td>
+<td><p>4096</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
 <td><p>Bypass the kernel’s qdisc layer</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
-<td><p>IO mode</p></td>
-<td><p>packet_mmap_raw</p></td>
+<tr class="row-odd"><td><p><cite>tx-interval</cite></p></td>
+<td><p>TX polling interval in milliseconds</p></td>
+<td><p>1.0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
-<td><p>IO slots (ring size)</p></td>
-<td><p>4096</p></td>
+<tr class="row-even"><td><p><cite>rx-interval</cite></p></td>
+<td><p>RX polling interval in milliseconds</p></td>
+<td><p>1.0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-stream-max-ppi</cite></p></td>
-<td><p>IO traffic stream max packets per interval</p></td>
-<td><p>32</p></td>
+<tr class="row-odd"><td><p><cite>tx-threads</cite></p></td>
+<td><p>Number of TX threads per interface link</p></td>
+<td><p>0 (main thread)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>capture-include-streams</cite></p></td>
-<td><p>Include traffic streams in capture</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><cite>rx-threads</cite></p></td>
+<td><p>Number of RX threads per interface link</p></td>
+<td><p>0 (main thread)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>mac-modifier</cite></p></td>
+<tr class="row-odd"><td><p><cite>capture-include-streams</cite></p></td>
+<td><p>Include traffic streams in the capture</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>mac-modifier</cite></p></td>
 <td><p>Third byte of access session MAC address (0-255)</p></td>
 <td><p>0</p></td>
 </tr>
 </tbody>
 </table>
+<p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
+<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered experimental. In
+the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
+ring buffer and sent directly through RAW packet sockets.</p>
+<p>The default <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> of <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms) allows precise timestamps
+and high throughput. Those values can be further increased (e.g. <code class="docutils literal notranslate"><span class="pre">0.1</span></code>) for higher throughput
+or decreased (e.g. <code class="docutils literal notranslate"><span class="pre">5.0</span></code>) for lower system load.</p>
+<p>It might be also needed to increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">4096</span></code> to
+reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode.
+For Packet MMAP, it defines the maximum number of packets in the ring buffer.</p>
 
 
            </div>

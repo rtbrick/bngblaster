@@ -131,7 +131,8 @@ bbl_lag_select(bbl_lag_s *lag)
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         member->primary = false;
-        if(member->partner_state & (LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING)) {
+        if(member->lacp_state == LACP_CURRENT && 
+           member->partner_state & LACP_STATE_FLAG_COLLECTING) {
             if(active_count >= LAG_MEMBER_ACTIVE_MAX ||
                active_count >= lag->config->lacp_max_active_links) {
                 bbl_lag_member_update_state(member, INTERFACE_STANDBY);
@@ -167,7 +168,6 @@ bbl_lag_lacp_job(timer_s *timer)
     interface->send_requests |= BBL_SEND_LACP;
     member->timeout++;
     if(member->timeout > 3) {
-        interface->state = INTERFACE_DOWN;
         if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
             member->lacp_state = LACP_EXPIRED;
             member->actor_state |= LACP_STATE_FLAG_EXPIRED;
@@ -179,6 +179,12 @@ bbl_lag_lacp_job(timer_s *timer)
             if(!(member->actor_state & LACP_STATE_FLAG_DEFAULTED)) {
                 member->lacp_state = LACP_DEFAULTED;
                 member->actor_state |= LACP_STATE_FLAG_DEFAULTED;
+                memset(member->partner_system_id, 0x0, ETH_ADDR_LEN);
+                member->partner_system_priority = 0;
+                member->partner_key = 0;
+                member->partner_port_priority = 0;
+                member->partner_port_id = 0;
+                member->partner_state = 0;
                 LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
                     member->lag->interface->name, interface->name);
             }
@@ -264,12 +270,14 @@ bbl_lag_rx_lacp(bbl_interface_s *interface,
 
     if(member && member->lacp_state) {
         member->timeout = 0;
-        member->lacp_state = LACP_CURRENT;
         member->actor_state &= ~(LACP_STATE_FLAG_DEFAULTED|LACP_STATE_FLAG_EXPIRED);
         member->stats.lacp_rx++;
-        if(member->partner_state != lacp->actor_state ||
+        if(member->lacp_state != LACP_CURRENT ||
+           member->partner_state != lacp->actor_state ||
            member->partner_system_priority != lacp->actor_system_priority ||
            member->partner_port_priority != lacp->actor_port_priority) {
+            /* Update partner informations and trigger member selection */
+            member->lacp_state = LACP_CURRENT;
             memcpy(member->partner_system_id, lacp->actor_system_id, ETH_ADDR_LEN);
             member->partner_system_priority = lacp->actor_system_priority;
             member->partner_key = lacp->actor_key;
@@ -278,6 +286,7 @@ bbl_lag_rx_lacp(bbl_interface_s *interface,
             member->partner_state = lacp->actor_state;
             bbl_lag_select(member->lag);
         }
+        
     }
 }
 

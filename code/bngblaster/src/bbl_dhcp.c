@@ -23,6 +23,9 @@ bbl_dhcp_stop(bbl_session_s *session)
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     /* Reset session IP configuration */
+    ENABLE_ENDPOINT(session->endpoint.ipv4);
+    session->version++;
+    session->arp_resolved = false;
     session->ip_address = 0;
     session->ip_netmask = 0;
     session->peer_ip_address = 0;
@@ -211,7 +214,6 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 }
                 /* Update session ... */
                 if(session->dhcp_address != session->ip_address) {
-                    session->endpoint.ipv4 = ENDPOINT_ACTIVE;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->dhcp_address));
                 }
