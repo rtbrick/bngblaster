@@ -110,6 +110,7 @@ typedef struct lsdb_ctx_
     FILE *config_file;          /* File handle for configuration. */
     bool config_read;
     bool config_write;
+    FILE *seq_cache_file;       /* File handle for sequence number cache file. */
 } lsdb_ctx_t;
 
 /*

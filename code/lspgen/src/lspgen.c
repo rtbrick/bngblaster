@@ -992,6 +992,11 @@ main(int argc, char *argv[])
     }
 
     /*
+     * Write the sequence cache file.
+     */
+    lspgen_write_seq_cache(ctx);
+
+    /*
      * Flush and close all we have.
      */
  flush_and_close:

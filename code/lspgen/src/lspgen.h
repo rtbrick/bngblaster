@@ -51,9 +51,13 @@ void lspgen_dump_stream(lsdb_ctx_t *);
 /* lspgen_config.c */
 void lspgen_read_config(lsdb_ctx_t *);
 void lspgen_write_config(lsdb_ctx_t *);
+extern struct keyval_ isis_level_names[];
 
 /* lspgen_packet.c */
 void lspgen_serialize_attr(lsdb_attr_t *, io_buffer_t *);
 void lspgen_gen_packet(lsdb_ctx_t *);
+
+/* lspgen_seq_cache.c */
+void lspgen_write_seq_cache(lsdb_ctx_t *);
 
 #endif /*__LSPGEN_H__*/
