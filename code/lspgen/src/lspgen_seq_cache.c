@@ -86,3 +86,90 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
 
     LOG(NORMAL, "Wrote %d nodes to file %s\n", num_nodes, seq_cache_filename);
 }
+
+void
+lspgen_read_node_seq_cache(lsdb_ctx_t *ctx, json_t *node_obj)
+{
+    struct lsdb_node_ node_template;
+    struct lsdb_node_ *node;
+    char *s;
+
+    /*
+     * Read the node sequence information and bump it by one in the LSDB.
+     */
+    memset(&node_template, 0, sizeof(node_template));
+    if (json_unpack(node_obj, "{s:s}", "node_id", &s) == 0) {
+        lsdb_scan_node_id(node_template.key.node_id, s);
+
+        if (json_unpack(node_obj, "{s:s}", "hostname", &s) == 0) {
+            node_template.node_name = s;
+        }
+
+        node = lsdb_get_node(ctx, &node_template);
+	if (!node) {
+	    return;
+	}
+
+        if (json_unpack(node_obj, "{s:s}", "sequence", &s) == 0) {
+            node->sequence = strtol(s, NULL, 0) + 1;
+        }
+    }
+}
+
+void
+lspgen_read_level_seq_cache(lsdb_ctx_t *ctx, json_t *level_arr)
+{
+    uint32_t num_nodes, idx;
+
+    num_nodes = json_array_size(level_arr);
+    for (idx = 0; idx < num_nodes; idx++) {
+        lspgen_read_node_seq_cache(ctx, json_array_get(level_arr, idx));
+    }
+}
+
+void
+lspgen_read_seq_cache(lsdb_ctx_t *ctx)
+{
+    json_t *root_obj;
+    json_error_t error;
+    json_t *level;
+
+    char seq_cache_filename[32];
+
+    snprintf(seq_cache_filename, sizeof(seq_cache_filename),
+	     "level%u-sequence-cache.json", ctx->topology_id.level);
+
+    root_obj = json_load_file(seq_cache_filename, 0, &error);
+    if (!root_obj) {
+
+	/* Probably no file found */
+        return;
+    }
+
+    if (json_typeof(root_obj) != JSON_OBJECT) {
+        LOG(ERROR, "Error reading sequence cache file %s, root element must be object\n",
+            seq_cache_filename);
+        return;
+    }
+
+    LOG(NORMAL, "Reading sequence cache file %s\n", seq_cache_filename);
+
+    switch (ctx->topology_id.level) {
+    case 1:
+	level = json_object_get(root_obj, "level1");
+	if (level && json_is_array(level)) {
+	    lspgen_read_level_seq_cache(ctx, level);
+	}
+	break;
+    case 2:
+	level = json_object_get(root_obj, "level2");
+	if (level && json_is_array(level)) {
+	    lspgen_read_level_seq_cache(ctx, level);
+	}
+	break;
+    default:
+	break;
+    }
+
+    json_decref(root_obj);
+}

@@ -911,6 +911,11 @@ main(int argc, char *argv[])
     }
 
     /*
+     * Bump the seqeunce numbers if there is a cache file.
+     */
+    lspgen_read_seq_cache(ctx);
+
+    /*
      * Serialize the Link-State packets.
      */
     lspgen_gen_packet(ctx);

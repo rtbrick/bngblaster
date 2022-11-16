@@ -58,6 +58,7 @@ void lspgen_serialize_attr(lsdb_attr_t *, io_buffer_t *);
 void lspgen_gen_packet(lsdb_ctx_t *);
 
 /* lspgen_seq_cache.c */
+void lspgen_read_seq_cache(lsdb_ctx_t *);
 void lspgen_write_seq_cache(lsdb_ctx_t *);
 
 #endif /*__LSPGEN_H__*/
