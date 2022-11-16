@@ -63,6 +63,7 @@ static struct option long_options[] = {
     {"stream-file", required_argument, NULL, 'f'},
     {"seed", required_argument, NULL, 's'},
     {"sequence", required_argument, NULL, 'q'},
+    {"quit-loop", no_argument, NULL, 'Q'},
     {"level", required_argument, NULL, 'V'},
     {"log", required_argument,  NULL, 't' },
     {NULL, 0, NULL, 0}
@@ -712,6 +713,13 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
     LOG(NORMAL, "Add connector to 0x%llx\n", node_id);
 }
 
+/* Get out of event loop */
+void
+lspgen_quit_loop (void)
+{
+    loop_running = false;
+}
+
 void
 lspgen_sig_handler (int signum)
 {
@@ -719,7 +727,7 @@ lspgen_sig_handler (int signum)
 
     switch (signum) {
         case SIGINT:
-            loop_running = false; /* Get out of event loop */
+            lspgen_quit_loop();
             break;
         default:
             break;
@@ -748,7 +756,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:q:r:s:S:t:T:V:w:x:X:zZ",
+    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:q:Qr:s:S:t:T:V:w:x:X:zZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -866,6 +874,10 @@ main(int argc, char *argv[])
                 ctx->sequence = 1;
                 }
                 break;
+            case 'Q':
+                /* Quit event loop after draining LSDB once  */
+                ctx->quit_loop = true;
+                break;
             case 's':
                 /* seed value such that random graph generation becomes deterministic */
                 ctx->seed = strtol(optarg, NULL, 0);
@@ -979,6 +991,13 @@ main(int argc, char *argv[])
 
         timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
                            "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+
+	/*
+	 * Wakup at least once a second doing nothing,
+	 * such that we do not sleep while user tries to quit the timer loop.
+	 */
+        timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_wakeup_timer,
+                           "wakeup", 1, 0, ctx, &lspgen_ctrl_wakeup_cb);
 
         /*
          * Block SIGPIPE. This happens when a session disconnects.

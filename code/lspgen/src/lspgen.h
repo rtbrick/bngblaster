@@ -35,6 +35,7 @@
 __uint128_t lspgen_load_addr(uint8_t *, uint32_t);
 void lspgen_store_addr(__uint128_t, uint8_t *, uint32_t);
 void lspgen_store_bcd_addr(__uint128_t, uint8_t *, uint32_t);
+void lspgen_quit_loop(void);
 
 /* lspgen_mrt.c */
 void lspgen_dump_mrt(lsdb_ctx_t *);
@@ -44,6 +45,7 @@ void lspgen_dump_pcap(lsdb_ctx_t *);
 
 /* lspgen_ctrl.c */
 void lspgen_ctrl_connect_cb(timer_s *);
+void lspgen_ctrl_wakeup_cb(timer_s *);
 
 /* lspgen_stream.c */
 void lspgen_dump_stream(lsdb_ctx_t *);
