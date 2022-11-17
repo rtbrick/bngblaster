@@ -92,6 +92,8 @@ bbl_dhcp_start(bbl_session_s *session)
         /* Init DHCP */
         session->dhcp_state = BBL_DHCP_SELECTING;
         session->dhcp_xid = rand();
+        session->dhcp_request_timestamp.tv_sec = 0;
+        session->dhcp_request_timestamp.tv_nsec = 0;
         session->dhcp_retry = 0;
         session->send_requests |= BBL_SEND_DHCP_REQUEST;
 
@@ -194,6 +196,8 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                     return;
                 }
                 timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_s2);
+                session->dhcp_request_timestamp.tv_sec = 0;
+                session->dhcp_request_timestamp.tv_nsec = 0;
                 session->dhcp_retry = 0;
                 session->send_requests |= BBL_SEND_DHCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);

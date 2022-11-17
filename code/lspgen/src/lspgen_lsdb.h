@@ -90,11 +90,13 @@ typedef struct lsdb_ctx_
     /* BNG blaster Control socket */
     char *ctrl_socket_path;
     timer_s *ctrl_socket_connect_timer;
+    timer_s *ctrl_socket_wakeup_timer; /* dummy timer */
     timer_s *ctrl_socket_write_timer;
     timer_s *ctrl_socket_close_timer;
     struct io_buffer_ ctrl_io_buf;
     int ctrl_socket_sockfd;
     bool ctrl_packet_first;
+    bool quit_loop; /* Terminate loop after draining the LSDB */
     struct {
     uint32_t octets_sent;
     uint32_t packets_sent;
@@ -110,6 +112,7 @@ typedef struct lsdb_ctx_
     FILE *config_file;          /* File handle for configuration. */
     bool config_read;
     bool config_write;
+    FILE *seq_cache_file;       /* File handle for sequence number cache file. */
 } lsdb_ctx_t;
 
 /*

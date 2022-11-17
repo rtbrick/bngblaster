@@ -482,7 +482,7 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = dhcp->server_identifier;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
-    if(dhcp->option_address) {
+    if(dhcp->option_address && dhcp->address) {
         *buf = DHCP_OPTION_REQUESTED_IP_ADDRESS;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         *buf = 4;
@@ -490,7 +490,7 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = dhcp->address;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
-    if(dhcp->option_router) {
+    if(dhcp->option_router && dhcp->router) {
         *buf = DHCP_OPTION_ROUTER;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         *buf = 4;
@@ -498,7 +498,7 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = dhcp->router;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
-    if(dhcp->option_lease_time) {
+    if(dhcp->option_lease_time && dhcp->lease_time) {
         *buf = DHCP_OPTION_IP_ADDRESS_LEASE_TIME;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         *buf = 4;
