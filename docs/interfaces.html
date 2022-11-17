@@ -958,12 +958,17 @@ or VLAN ranges as shown in the example below.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>The configuration attributes for username, agent-remote-id and agent-circuit-id
-support also some variable substitution. The variable <code class="docutils literal notranslate"><span class="pre">{session-global}</span></code> will
-be replaced with a number starting from 1 and incremented for every new session.
-whereas the variable <code class="docutils literal notranslate"><span class="pre">{session}</span></code> is incremented per-interface section.</p>
-<p>In VLAN mode <code class="docutils literal notranslate"><span class="pre">N:1</span></code> only one VLAN combination is supported per access interface section.
-This means that only VLAN min or max is considered as a VLAN identifier.</p>
+<p>The configuration attributes for username, password, agent-remote-id, agent-circuit-id,
+and cfm-ma-name support variable substitution. The variable <code class="docutils literal notranslate"><span class="pre">{session-global}</span></code> will
+be replaced with the actual session-id starting from 1 and incremented for every
+new session. The variable <code class="docutils literal notranslate"><span class="pre">{session}</span></code> is incremented per-interface section. The
+variables <code class="docutils literal notranslate"><span class="pre">{outer-vlan}</span></code> and <code class="docutils literal notranslate"><span class="pre">{inner-vlan}</span></code> will be replaced with the corresponding
+VLAN identifier or 0 if not defined. The two variables <code class="docutils literal notranslate"><span class="pre">{i1}</span></code> and <code class="docutils literal notranslate"><span class="pre">{i2}</span></code> are
+configurable per-interface sections with user-defined start values and steps.</p>
+<p>The BNG Blaster supports the VLAN mode <code class="docutils literal notranslate"><span class="pre">1:1</span></code> (default) and <code class="docutils literal notranslate"><span class="pre">N:1</span></code>. The first one
+assigns a dedicated VLAN per subscriber. The VLAN mode <code class="docutils literal notranslate"><span class="pre">N:1</span></code> assigns one VLAN to N
+subscribers and therefore only one VLAN combination is supported per access interface
+section using this mode.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
@@ -971,15 +976,15 @@ This means that only VLAN min or max is considered as a VLAN identifier.</p>
 <span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
 <span class="w">        </span><span class="p">},</span><span class="w"></span>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="p">},</span><span class="w"></span>
 <span class="w">    </span><span class="p">]</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
