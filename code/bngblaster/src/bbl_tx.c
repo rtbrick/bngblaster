@@ -446,11 +446,16 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         return IGNORED;
     }
 
-    access_line.aci = session->agent_circuit_id;
-    access_line.ari = session->agent_remote_id;
-    access_line.up = session->rate_up;
-    access_line.down = session->rate_down;
-    access_line.dsl_type = session->dsl_type;
+    if(g_ctx->config.dhcpv6_access_line && 
+       (session->agent_circuit_id || session->agent_remote_id) && 
+       session->dhcpv6_state != BBL_DHCP_RELEASE) {
+        access_line.aci = session->agent_circuit_id;
+        access_line.ari = session->agent_remote_id;
+        access_line.up = session->rate_up;
+        access_line.down = session->rate_down;
+        access_line.dsl_type = session->dsl_type;
+        dhcpv6.access_line = &access_line;
+    }
 
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
@@ -507,19 +512,16 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             dhcpv6.server_duid_len = 0;
             dhcpv6.ia_na_option_len = 0;
             dhcpv6.ia_pd_option_len = 0;
-            dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
             break;
         case BBL_DHCP_REQUESTING:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
             session->stats.dhcpv6_tx_request++;
-            dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
             break;
         case BBL_DHCP_RENEWING:
             dhcpv6.type = DHCPV6_MESSAGE_RENEW;
             session->stats.dhcpv6_tx_renew++;
-            dhcpv6.access_line = &access_line;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
@@ -1099,7 +1101,9 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     }
 
     /* Option 82 ... */
-    if((session->agent_circuit_id || session->agent_remote_id) && session->dhcp_state != BBL_DHCP_RELEASE) {
+    if(g_ctx->config.dhcp_access_line && 
+       (session->agent_circuit_id || session->agent_remote_id) && 
+       session->dhcp_state != BBL_DHCP_RELEASE) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         access_line.up = session->rate_up;

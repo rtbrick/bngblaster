@@ -207,6 +207,13 @@ lspgen_ctrl_close_cb(timer_s *timer)
 	 ctx->ctrl_socket_sockfd = 0;
      }
      LOG(NORMAL, "Closing connection to %s\n", ctx->ctrl_socket_path);
+
+     /*
+      * Terminate the event loop if user wants.
+      */
+     if (ctx->quit_loop) {
+	 lspgen_quit_loop();
+     }
 }
 
 bool
@@ -302,6 +309,14 @@ lspgen_ctrl_write_cb(timer_s *timer)
       */
      timer_add(&ctx->timer_root, &ctx->ctrl_socket_close_timer, "close",
                1, 0, ctx, &lspgen_ctrl_close_cb);
+}
+
+/*
+ * Dummy timer for not sleeping too long in the event loop.
+ */
+void
+lspgen_ctrl_wakeup_cb(__attribute__((unused))timer_s *timer)
+{
 }
 
 void

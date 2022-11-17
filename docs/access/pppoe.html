@@ -194,7 +194,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <span class="w">    </span><span class="p">},</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;access-line&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.{session-global}&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth 0:{session-global}&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth {outer-vlan}:{inner-vlan}&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;rate-up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;rate-down&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="w"></span>
 <span class="w">    </span><span class="p">},</span><span class="w"></span>
@@ -456,7 +456,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 LCP code-reject message. With the LCP option <code class="docutils literal notranslate"><span class="pre">ignore-vendor-specific</span></code>
 enabled in the configuration, those messages will be ignored as required
 to emulate different CPE behaviors.</p>
-<p>The LCP option <code class="docutils literal notranslate"><span class="pre">connection-status-message</span></code> allows to accept LCP vendor requests
+<p>The LCP option <code class="docutils literal notranslate"><span class="pre">connection-status-message</span></code> allows accepting LCP vendor requests
 with any OUI if kind is set to <code class="docutils literal notranslate"><span class="pre">1</span></code> by responding with vendor request of
 kind <code class="docutils literal notranslate"><span class="pre">2</span></code>. The OUI from the request is copied to the response in this case.
 The value from the request is stored in the session as <code class="docutils literal notranslate"><span class="pre">connection-status-message</span></code>.</p>

@@ -270,6 +270,7 @@ typedef struct bbl_ctx_
         /* DHCP */
         bool dhcp_enable;
         bool dhcp_broadcast;
+        bool dhcp_access_line;
         uint16_t dhcp_timeout;
         uint8_t dhcp_retry;
         uint8_t dhcp_release_interval;
@@ -280,6 +281,7 @@ typedef struct bbl_ctx_
         /* DHCPv6 */
         bool dhcpv6_enable;
         bool dhcpv6_rapid_commit;
+        bool dhcpv6_access_line;
         uint16_t dhcpv6_timeout;
         uint8_t dhcpv6_retry;
         uint8_t dhcpv6_tc;

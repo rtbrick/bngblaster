@@ -463,13 +463,18 @@ or VLAN ranges as shown in the example below.
     }
 
 
-The configuration attributes for username, agent-remote-id and agent-circuit-id
-support also some variable substitution. The variable ``{session-global}`` will
-be replaced with a number starting from 1 and incremented for every new session.
-whereas the variable ``{session}`` is incremented per-interface section.
+The configuration attributes for username, password, agent-remote-id, agent-circuit-id,
+and cfm-ma-name support variable substitution. The variable ``{session-global}`` will
+be replaced with the actual session-id starting from 1 and incremented for every 
+new session. The variable ``{session}`` is incremented per-interface section. The
+variables ``{outer-vlan}`` and ``{inner-vlan}`` will be replaced with the corresponding
+VLAN identifier or 0 if not defined. The two variables ``{i1}`` and ``{i2}`` are 
+configurable per-interface sections with user-defined start values and steps. 
 
-In VLAN mode ``N:1`` only one VLAN combination is supported per access interface section.
-This means that only VLAN min or max is considered as a VLAN identifier.
+The BNG Blaster supports the VLAN mode ``1:1`` (default) and ``N:1``. The first one
+assigns a dedicated VLAN per subscriber. The VLAN mode ``N:1`` assigns one VLAN to N 
+subscribers and therefore only one VLAN combination is supported per access interface 
+section using this mode.
 
 .. code-block:: json
 
@@ -480,15 +485,15 @@ This means that only VLAN min or max is considered as a VLAN identifier.
                 "type": "pppoe",
                 "vlan-mode": "N:1",
                 "username": "test@rtbrick.com",
-                "outer-vlan-min": 7
+                "outer-vlan": 7
             },
             {
                 "interface": "eth2",
                 "type": "pppoe",
                 "vlan-mode": "N:1",
                 "username": "test@rtbrick.com",
-                "outer-vlan-min": 2000,
-                "inner-vlan-min": 7,
+                "outer-vlan": 2000,
+                "inner-vlan": 7,
             },
         ]
     }

@@ -101,7 +101,7 @@ Following is a basic PPPoE configuration example.
         },
         "access-line": {
             "agent-remote-id": "DEU.RTBRICK.{session-global}",
-            "agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:{session-global}",
+            "agent-circuit-id": "0.0.0.0/0.0.0.0 eth {outer-vlan}:{inner-vlan}",
             "rate-up": 1024,
             "rate-down": 16384
         },
@@ -146,7 +146,7 @@ LCP code-reject message. With the LCP option ``ignore-vendor-specific``
 enabled in the configuration, those messages will be ignored as required 
 to emulate different CPE behaviors.
 
-The LCP option ``connection-status-message`` allows to accept LCP vendor requests
+The LCP option ``connection-status-message`` allows accepting LCP vendor requests
 with any OUI if kind is set to ``1`` by responding with vendor request of
 kind ``2``. The OUI from the request is copied to the response in this case.
 The value from the request is stored in the session as ``connection-status-message``.

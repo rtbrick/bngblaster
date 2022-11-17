@@ -310,6 +310,7 @@ typedef struct isis_instance_ {
     struct {
         hb_tree *lsdb;
         isis_adjacency_s *adjacency;
+        uint8_t self_lsp_fragment;
     } level[ISIS_LEVELS];
 
     struct isis_instance_ *next; /* pointer to next instance */

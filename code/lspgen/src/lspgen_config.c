@@ -216,7 +216,7 @@ lspgen_write_node_config(__attribute__((unused))lsdb_ctx_t *ctx,
         return;
     }
 
-    /* Node DB empty? */
+    /* Node attribute DB empty? */
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));

@@ -137,10 +137,10 @@ bbl_lag_select(bbl_lag_s *lag)
                active_count >= lag->config->lacp_max_active_links) {
                 bbl_lag_member_update_state(member, INTERFACE_STANDBY);
             } else {
-                lag->active_list[active_count++] = member;
-                if(active_count == 1) {
+                if(active_count == 0) {
                     member->primary = true;
                 }
+                lag->active_list[active_count++] = member;
                 bbl_lag_member_update_state(member, INTERFACE_UP);
             }
         } else {
