@@ -610,6 +610,9 @@ update_strings(char **target, const char *source, uint32_t *i, bbl_access_config
     static char snum2[32];
     static char si1[32];
     static char si2[32];
+    static char vlan1[32];
+    static char vlan2[32];
+
     char *s;
 
     if(i && access_config) {
@@ -620,12 +623,16 @@ update_strings(char **target, const char *source, uint32_t *i, bbl_access_config
         access_config->i1 += access_config->i1_step;
         snprintf(si2, sizeof(si2), "%d", access_config->i2);
         access_config->i2 += access_config->i2_step;
+        snprintf(vlan1, sizeof(si2), "%d", access_config->access_outer_vlan);
+        snprintf(vlan2, sizeof(si2), "%d", access_config->access_inner_vlan);
     }
     if(target && source) {
         s = replace_substring(source, "{session-global}", snum1);
         s = replace_substring(s, "{session}", snum2);
         s = replace_substring(s, "{i1}", si1);
         s = replace_substring(s, "{i2}", si2);
+        s = replace_substring(s, "{outer-vlan}", vlan1);
+        s = replace_substring(s, "{inner-vlan}", vlan2);
         if(s) *target = strdup(s);
     }
 }
