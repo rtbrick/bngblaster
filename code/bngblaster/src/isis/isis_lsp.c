@@ -309,32 +309,31 @@ isis_lsp_new(uint64_t id, uint8_t level, isis_instance_s *instance)
     return lsp;
 }
 
-/**
- * This function adds/updates 
- * the self originated LSP entries. 
- *
- * @param instance  ISIS instance
- * @param level ISIS level
- * @return true (success) / false (error)
- */
-bool
-isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
+static void
+isis_lsp_final(isis_lsp_s *lsp)
 {
-    isis_config_s    *config    = instance->config;
-    isis_adjacency_s *adjacency = NULL;
-    isis_lsp_s       *lsp       = NULL;
-    uint64_t          lsp_id    = 0;
-    isis_pdu_s       *pdu;
-    
-    ipv4_prefix loopback_prefix;
+    isis_pdu_s *pdu = &lsp->pdu;
+    isis_pdu_update_len(pdu);
+    isis_pdu_update_auth(pdu, lsp->auth_key);
+    isis_pdu_update_lifetime(pdu, lsp->lifetime);
+    isis_pdu_update_checksum(pdu);
+}
+
+static isis_lsp_s *
+isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint8_t fragment, bool purge)
+{
+    isis_config_s *config = instance->config;
+
+    isis_lsp_s *lsp = NULL;
+    isis_pdu_s *pdu = NULL;
+
+    uint64_t lsp_id = htobe64(fragment);
 
     hb_tree *lsdb;
     void **search = NULL;
     dict_insert_result result;
 
     isis_auth_type auth_type = ISIS_AUTH_NONE;
-
-    isis_external_connection_s *external_connection = NULL;
 
     /* Create LSP-ID */
     memcpy(&lsp_id, &config->system_id, ISIS_SYSTEM_ID_LEN);
@@ -354,17 +353,17 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
             *result.datum_ptr = lsp;
         } else {
             LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
-            return false;
+            return NULL;
         }
     }
-
-    clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     lsp->level = level;
     lsp->source.type = ISIS_SOURCE_SELF;
     lsp->seq++;
     lsp->instance = instance;
-    if(instance->teardown) {
+
+    clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
+    if(purge || instance->teardown) {
         lsp->lifetime = ISIS_DEFAULT_PURGE_LIFETIME;
         timer_del(lsp->timer_refresh);
     } else {
@@ -394,8 +393,40 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     isis_pdu_add_u16(pdu, 0);
     isis_pdu_add_u8(pdu, 0x03); 
 
-    /* TLV section */
+    /* Add authentication TLV */
     isis_pdu_add_tlv_auth(pdu, auth_type, lsp->auth_key);
+
+    return lsp;
+}
+
+/**
+ * This function adds/updates 
+ * the self originated LSP entries. 
+ *
+ * @param instance  ISIS instance
+ * @param level ISIS level
+ * @return true (success) / false (error)
+ */
+bool
+isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
+{
+    isis_config_s    *config    = instance->config;
+    isis_adjacency_s *adjacency = NULL;
+
+    isis_lsp_s *lsp;
+    isis_pdu_s *pdu;
+
+    uint8_t  fragment = 0;
+    
+    ipv4_prefix loopback_prefix;
+
+    isis_external_connection_s *external_connection = NULL;
+
+    lsp = isis_lsp_fragment(instance, level, fragment, false);
+    if(!lsp) return false;
+    pdu = &lsp->pdu;
+
+    /* TLV section */
     isis_pdu_add_tlv_area(pdu, config->area, config->area_count);
     isis_pdu_add_tlv_protocols(pdu, config->protocol_ipv4, config->protocol_ipv6);
     isis_pdu_add_tlv_hostname(pdu, (char*)config->hostname);
@@ -431,6 +462,16 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
         if(adjacency->state != ISIS_ADJACENCY_STATE_UP) {
             goto NEXT;
         }
+
+        if(PDU_REMAINING(pdu) < 48) {
+            isis_lsp_final(lsp);
+            isis_lsp_flood(lsp);
+            if(fragment == UINT8_MAX) return false;
+            lsp = isis_lsp_fragment(instance, level, ++fragment, false);
+            if(!lsp) return false;
+            pdu = &lsp->pdu;
+        }
+
         if(config->protocol_ipv4 && adjacency->interface->ip.len) {
             isis_pdu_add_tlv_ext_ipv4_reachability(pdu, 
                 &adjacency->interface->ip, 
@@ -450,19 +491,32 @@ NEXT:
     
     external_connection = config->external_connection;
     while(external_connection) {
+        if(PDU_REMAINING(pdu) < 16) {
+            isis_lsp_final(lsp);
+            isis_lsp_flood(lsp);
+            if(fragment == UINT8_MAX) return false;
+            lsp = isis_lsp_fragment(instance, level, ++fragment, false);
+            if(!lsp) return false;
+            pdu = &lsp->pdu;
+        }
+
         isis_pdu_add_tlv_ext_reachability(pdu, 
             external_connection->system_id, 
             external_connection->level[level-1].metric);
         external_connection = external_connection->next;
     }
-    
-    /* Update checksum... */
-    isis_pdu_update_len(pdu);
-    isis_pdu_update_auth(pdu, lsp->auth_key);
-    isis_pdu_update_lifetime(pdu, lsp->lifetime);
-    isis_pdu_update_checksum(pdu);
+
+    isis_lsp_final(lsp);
     isis_lsp_flood(lsp);
-    return lsp;
+
+    /* Purge remaining fragments if number of fragments has reduced. */
+    while(fragment < instance->level[level-1].self_lsp_fragment) {
+        lsp = isis_lsp_fragment(instance, level, ++fragment, true);
+        isis_lsp_final(lsp);
+        isis_lsp_flood(lsp);
+    }
+    instance->level[level-1].self_lsp_fragment = fragment;
+    return true;
 }
 
 /**
