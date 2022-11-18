@@ -1218,16 +1218,22 @@ static bool
 bbl_stream_lag(bbl_stream_s *stream)
 {
     bbl_lag_s *lag = stream->tx_interface->lag;
+    io_handle_s *io;
     uint8_t key;
+
+    if(!lag->active_count) {
+        return false;
+    }
 
     if(lag->select != stream->lag_select) {
         stream->lag_select = lag->select;
-        bbl_stream_tx_qnode_remove(stream->io, stream);
-        if(lag->active_count) {
-            key = stream->flow_id % lag->active_count;
-            stream->io = lag->active_list[key]->interface->io.tx;
-        } else {
-            return false;
+        key = stream->flow_id % lag->active_count;
+        io = lag->active_list[key]->interface->io.tx;
+        if(stream->io != io) {
+            if(CIRCLEQ_NEXT(stream, tx_qnode)) {
+                bbl_stream_tx_qnode_remove(stream->io, stream);
+            }
+            stream->io = io;
         }
     }
     return true;
@@ -1386,15 +1392,10 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
     bbl_lag_s *lag = stream->tx_interface->lag;
     bbl_lag_member_s *member;
 
+    stream->lag = true;
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         if(!stream->io) {
             stream->io = member->interface->io.tx;
-        } else {
-            /* Select the interface with largest TC interval (slowest.) */
-            if(member->interface->io.tx->interface->config->tx_interval >
-               stream->io->interface->config->tx_interval) {
-                stream->io = member->interface->io.tx;
-            }
         }
         member->interface->io.tx->stream_pps += stream->config->pps;
     }
@@ -1437,7 +1438,7 @@ bbl_stream_add(bbl_stream_s *stream)
     /* Calculate timer. */
     timer_sec = stream->tx_interval / 1000000000;
     timer_nsec = stream->tx_interval % 1000000000;
-    if(stream->io->thread) {
+    if(stream->io && stream->io->thread) {
         timer_add_periodic(&stream->io->thread->timer.root, &stream->tx_timer, "Stream Tokens",
                             timer_sec, timer_nsec, stream, &bbl_stream_token_job);
     } else {
