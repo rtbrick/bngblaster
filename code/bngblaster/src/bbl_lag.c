@@ -242,7 +242,7 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             member->actor_key = lag->id;
             member->actor_port_priority = interface->config->lacp_priority;
             member->actor_port_id = g_lag_port_id++;
-            member->actor_state = LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_DEFAULTED;
+            member->actor_state = LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_EXPIRED|LACP_STATE_FLAG_DEFAULTED;
             if(lag->config->lacp_timeout_short) {
                 timer_sec = 1;
                 member->actor_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
