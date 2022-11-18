@@ -319,10 +319,12 @@ bbl_lag_json(bbl_lag_s *lag)
         } else {
             jobj_lacp = NULL;
         }
-        jobj_member = json_pack("{ss* ss* si ss* so*}",
+        jobj_member = json_pack("{ss* ss* si si si ss* so*}",
             "interface", member->interface->name,
             "state", interface_state_string(member->interface->state),
             "state-transitions", member->interface->state_transitions,
+            "packets-rx", member->interface->io.rx->stats.packets,
+            "packets-tx", member->interface->io.tx->stats.packets,
             "lacp-state", lacp_state_string(member->lacp_state),
             "lacp", jobj_lacp);
         if(jobj_member) {
