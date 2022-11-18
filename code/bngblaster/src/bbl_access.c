@@ -1594,7 +1594,7 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
                 session->arp_resolved = true;
                 bbl_access_rx_established_ipoe(interface, session, eth);
                 if(g_ctx->config.arp_interval) {
-                    timer_add(&g_ctx->timer_root, &session->timer_arp, "ARP timeout", g_ctx->config.arp_interval, 0, session, &bbl_arp_simeout);
+                    timer_add(&g_ctx->timer_root, &session->timer_arp, "ARP timeout", g_ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
                 } else {
                     timer_del(session->timer_arp);
                 }
