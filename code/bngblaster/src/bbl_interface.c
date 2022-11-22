@@ -221,17 +221,46 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
     int result = 0;
 
     bbl_interface_s *interface;
+
+    io_handle_s *io;
     json_t *root, *jobj, *jobj_array;
 
     jobj_array = json_array();
 
+    uint64_t tx_packets;
+    uint64_t tx_bytes;
+    uint64_t rx_packets;
+    uint64_t rx_bytes;
+
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        jobj = json_pack("{ss si ss* ss* si }",
+
+        io = interface->io.tx;
+        tx_packets = 0;
+        tx_bytes = 0;
+        while(io) {
+            tx_packets += io->stats.packets;
+            tx_bytes += io->stats.bytes;
+            io = io->next;
+        }
+        io = interface->io.rx;
+        rx_packets = 0;
+        rx_bytes = 0;
+        while(io) {
+            rx_packets += io->stats.packets;
+            rx_bytes += io->stats.bytes;
+            io = io->next;
+        }
+
+        jobj = json_pack("{ss si ss* ss* si si si si si }",
             "name", interface->name,
             "ifindex", interface->ifindex,
             "type", interface_type_string(interface->type),
             "state", interface_state_string(interface->state),
-            "state-transitions", interface->state_transitions);
+            "state-transitions", interface->state_transitions,
+            "tx-packets", tx_packets,
+            "tx-bytes", tx_bytes,
+            "rx-packets", rx_packets,
+            "rx-bytes", rx_bytes);
         if(jobj) {
             json_array_append(jobj_array, jobj);
         }
