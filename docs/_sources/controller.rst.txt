@@ -215,24 +215,35 @@ using the new  `metric_flags` option.
 Currently, the following metrics are supported:
 
 * `session_counters` session statistics
-* `interfaces` interface counters
+* `interfaces` interface/link counters
+* `access_interfaces` access interface function counters
+* `network_interfaces` network interface function counters
+* `a10nsp_interfaces` a10nsp interface function counters
+* `streams` stream counters
+
+The `streams` metric generates statistics for every stream and direction.
+Therefore the `streams` metric should not be used with massive streams 
+(e.g. > 10.000 streams) but there is no limit enforced. 
 
 .. code-block:: none
 
     # HELP sessions The total number of sessions
     # TYPE sessions counter
     sessions{hostname="blaster",instance_name="test"} 10
-    # HELP sessions_established The number of sessions in state established
+    # HELP sessions_established The number of sessions in the state established
     # TYPE sessions_established gauge
     sessions_established{hostname="blaster",instance_name="test"} 10
     ...
 
 Instance metrics are labeled with the instance name. All interface-specific metrics
-are also labeled with the corresponding interface name.
+are also labeled with the corresponding interface name and type. 
 
 .. code-block:: none
 
-    # HELP interfaces_rx_bytes Interface RX bytes
-    # TYPE interfaces_rx_bytes counter
-    interfaces_rx_bytes{hostname="blaster",instance_name="test",interface_name="eth1",interface_type="access"} 36270
+    # HELP interfaces_rx_packets Interface RX packets
+    # TYPE interfaces_rx_packets counter
+    interfaces_rx_packets{hostname="rbfs",instance_name="test",interface_name="eth1",interface_type="Interface"} 163
+    interfaces_rx_packets{hostname="rbfs",instance_name="test",interface_name="eth11",interface_type="Network"} 155
+    interfaces_rx_packets{hostname="rbfs",instance_name="test",interface_name="eth12",interface_type="Interface"} 158
+    interfaces_rx_packets{hostname="rbfs",instance_name="test",interface_name="eth12",interface_type="Access"} 150
     ...

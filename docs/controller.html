@@ -262,22 +262,32 @@ using the new  <cite>metric_flags</cite> option.</p>
 <p>Currently, the following metrics are supported:</p>
 <ul class="simple">
 <li><p><cite>session_counters</cite> session statistics</p></li>
-<li><p><cite>interfaces</cite> interface counters</p></li>
+<li><p><cite>interfaces</cite> interface/link counters</p></li>
+<li><p><cite>access_interfaces</cite> access interface function counters</p></li>
+<li><p><cite>network_interfaces</cite> network interface function counters</p></li>
+<li><p><cite>a10nsp_interfaces</cite> a10nsp interface function counters</p></li>
+<li><p><cite>streams</cite> stream counters</p></li>
 </ul>
+<p>The <cite>streams</cite> metric generates statistics for every stream and direction.
+Therefore the <cite>streams</cite> metric should not be used with massive streams
+(e.g. &gt; 10.000 streams) but there is no limit enforced.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP sessions The total number of sessions
 # TYPE sessions counter
 sessions{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;} 10
-# HELP sessions_established The number of sessions in state established
+# HELP sessions_established The number of sessions in the state established
 # TYPE sessions_established gauge
 sessions_established{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;} 10
 ...
 </pre></div>
 </div>
 <p>Instance metrics are labeled with the instance name. All interface-specific metrics
-are also labeled with the corresponding interface name.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP interfaces_rx_bytes Interface RX bytes
-# TYPE interfaces_rx_bytes counter
-interfaces_rx_bytes{hostname=&quot;blaster&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth1&quot;,interface_type=&quot;access&quot;} 36270
+are also labeled with the corresponding interface name and type.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP interfaces_rx_packets Interface RX packets
+# TYPE interfaces_rx_packets counter
+interfaces_rx_packets{hostname=&quot;rbfs&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth1&quot;,interface_type=&quot;Interface&quot;} 163
+interfaces_rx_packets{hostname=&quot;rbfs&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth11&quot;,interface_type=&quot;Network&quot;} 155
+interfaces_rx_packets{hostname=&quot;rbfs&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth12&quot;,interface_type=&quot;Interface&quot;} 158
+interfaces_rx_packets{hostname=&quot;rbfs&quot;,instance_name=&quot;test&quot;,interface_name=&quot;eth12&quot;,interface_type=&quot;Access&quot;} 150
 ...
 </pre></div>
 </div>
