@@ -2059,12 +2059,17 @@ bbl_stream_summary_json()
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         stream = (bbl_stream_s*)*dict_itor_datum(itor);
         if(stream) {
-            jobj = json_pack("{si ss* ss ss ss}",
+            jobj = json_pack("{si ss* ss ss ss si si si si si }",
                 "flow-id", stream->flow_id,
                 "name", stream->config->name,
                 "type", stream_type_string(stream),
                 "sub-type", stream_sub_type_string(stream),
-                "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream");
+                "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
+                "tx-packets", stream->tx_packets - stream->reset_packets_tx,
+                "tx-bytes", (stream->tx_packets - stream->reset_packets_tx) * stream->tx_len,
+                "rx-packets", stream->rx_packets - stream->reset_packets_rx,
+                "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
+                "rx-loss", stream->rx_loss - stream->reset_loss);
             if(jobj) {
                 if(stream->session) {
                     json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
@@ -2101,7 +2106,7 @@ bbl_stream_json(bbl_stream_s *stream)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{ss* ss ss ss ss* ss* ss* sb si si si si si si si si si si si si si si si si si si si sf sf sf}",
+        root = json_pack("{ss* ss ss ss ss* ss* ss* sb si si si si si si si si si si si si si si si si si si si si si sf sf sf}",
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
@@ -2119,7 +2124,9 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-len", stream->rx_len,
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,
+            "tx-bytes", (stream->tx_packets - stream->reset_packets_tx) * stream->tx_len,
             "rx-packets", stream->rx_packets - stream->reset_packets_rx,
+            "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
             "rx-loss", stream->rx_loss - stream->reset_loss,
             "rx-wrong-session", stream->rx_wrong_session - stream->reset_wrong_session,
             "rx-delay-us-min", stream->rx_min_delay_us,
