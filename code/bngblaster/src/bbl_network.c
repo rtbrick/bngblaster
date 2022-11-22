@@ -423,7 +423,7 @@ bbl_network_interface_json(bbl_network_interface_s *interface)
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                      "name", interface->name,
                      "ifindex", interface->ifindex,
-                     "type", "network",
+                     "type", "Network",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
                      "tx-pps", interface->stats.rate_packets_tx.avg,

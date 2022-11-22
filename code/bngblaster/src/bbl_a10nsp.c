@@ -557,7 +557,7 @@ bbl_a10nsp_interface_json(bbl_a10nsp_interface_s *interface)
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                      "name", interface->name,
                      "ifindex", interface->ifindex,
-                     "type", "a10nsp",
+                     "type", "A10NSP",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
                      "tx-pps", interface->stats.rate_packets_tx.avg,
