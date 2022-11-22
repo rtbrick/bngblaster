@@ -1808,7 +1808,7 @@ bbl_access_interface_json(bbl_access_interface_s *interface)
     return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
                      "name", interface->name,
                      "ifindex", interface->ifindex,
-                     "type", "access",
+                     "type", "Access",
                      "tx-packets", interface->stats.packets_tx,
                      "tx-bytes", interface->stats.bytes_tx, 
                      "tx-pps", interface->stats.rate_packets_tx.avg,
