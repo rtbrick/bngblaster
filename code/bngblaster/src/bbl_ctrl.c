@@ -202,20 +202,19 @@ bbl_ctrl_socket_thread(void *thread_data)
     bbl_session_s *session;
     void **search;
 
-    struct timespec sleep, rem;
-    sleep.tv_sec = 0;
-    sleep.tv_nsec = 100 * MSEC;
-
     /* ToDo: Add connection manager!
      * This is just a temporary workaround! Finally we need
      * to create a connection manager. */
     static int fd = 0;
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 100 * MSEC;
 
     ctrl->active = true;
     while(ctrl->active) {
         fd = accept(ctrl->socket, 0, 0);
         if(fd > 0) {
-            /* New connection */
+            /* New connection. */
             root = json_loadfd(fd, flags, &error);
             if(!root) {
                 LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
@@ -320,9 +319,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                         }
                     }
                 }
-            }
 CLOSE:
-            if(root) {
                 json_decref(root);
                 root = NULL;
             }
