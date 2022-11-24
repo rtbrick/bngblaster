@@ -61,6 +61,12 @@ bbl_interface_s *
 bbl_interface_get(char *interface_name);
 
 int
+bbl_interface_ctrl_enable(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+bbl_interface_ctrl_disable(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
 bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

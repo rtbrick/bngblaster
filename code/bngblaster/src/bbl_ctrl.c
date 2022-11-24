@@ -99,6 +99,8 @@ struct action actions[] = {
     {"access-interfaces", bbl_access_ctrl_interfaces, true},
     {"network-interfaces", bbl_network_ctrl_interfaces, true},
     {"a10nsp-interfaces", bbl_a10nsp_ctrl_interfaces, true},
+    {"interface-enable", bbl_interface_ctrl_enable, false},
+    {"interface-disable", bbl_interface_ctrl_disable, false},
     {"terminate", bbl_session_ctrl_terminate, false},
     {"sessions-pending", bbl_session_ctrl_pending, true},
     {"session-counters", bbl_session_ctrl_counters, true},

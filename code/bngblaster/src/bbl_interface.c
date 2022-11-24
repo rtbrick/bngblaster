@@ -215,6 +215,57 @@ bbl_interface_get(char *interface_name)
     return NULL;
 }
 
+static int
+bbl_interface_ctrl_enable_disable(int fd, json_t *arguments, bool enable)
+{
+    const char *s;
+    bbl_interface_s *interface;
+
+    /* Unpack further arguments */
+    if(json_unpack(arguments, "{s:s}", "interface", &s) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing argument interface");
+    }
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if(strcmp(interface->name, s) == 0) {
+            if(interface->type == LAG_INTERFACE) {
+                return bbl_ctrl_status(fd, "error", 400, "invalid interface");
+            }
+            if(enable) {
+                if(interface->state == INTERFACE_DISABLED) {
+                    if(interface->lag_member && interface->lag_member->lacp_state) {
+                        interface->state = INTERFACE_DOWN;
+                    } else {
+                        interface->state = INTERFACE_UP;
+                    }
+                    LOG(INFO, "Interface (%s) enabled\n", interface->name);
+                }
+            } else {
+                if(interface->state != INTERFACE_DISABLED) {
+                    bbl_lag_member_lacp_reset(interface);
+                    interface->state = INTERFACE_DISABLED;
+                    LOG(INFO, "Interface (%s) disabled\n", interface->name);
+                }
+            }
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        }
+    }
+
+    return bbl_ctrl_status(fd, "warning", 404, "interface not found");
+}
+
+int
+bbl_interface_ctrl_enable(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    return bbl_interface_ctrl_enable_disable(fd, arguments, true);
+}
+
+int
+bbl_interface_ctrl_disable(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    return bbl_interface_ctrl_enable_disable(fd, arguments, false);
+}
+
 int
 bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {

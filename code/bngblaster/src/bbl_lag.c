@@ -131,20 +131,22 @@ bbl_lag_select(bbl_lag_s *lag)
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         member->primary = false;
-        if(member->lacp_state == LACP_CURRENT && 
-           member->partner_state & LACP_STATE_FLAG_COLLECTING) {
-            if(active_count >= LAG_MEMBER_ACTIVE_MAX ||
-               active_count >= lag->config->lacp_max_active_links) {
-                bbl_lag_member_update_state(member, INTERFACE_STANDBY);
-            } else {
-                if(active_count == 0) {
-                    member->primary = true;
+        if(member->interface->state != INTERFACE_DISABLED) {
+            if(member->lacp_state == LACP_CURRENT && 
+               member->partner_state & LACP_STATE_FLAG_COLLECTING) {
+                if(active_count >= LAG_MEMBER_ACTIVE_MAX ||
+                   active_count >= lag->config->lacp_max_active_links) {
+                    bbl_lag_member_update_state(member, INTERFACE_STANDBY);
+                } else {
+                    if(active_count == 0) {
+                        member->primary = true;
+                    }
+                    lag->active_list[active_count++] = member;
+                    bbl_lag_member_update_state(member, INTERFACE_UP);
                 }
-                lag->active_list[active_count++] = member;
-                bbl_lag_member_update_state(member, INTERFACE_UP);
+            } else {
+                bbl_lag_member_update_state(member, INTERFACE_DOWN);
             }
-        } else {
-            bbl_lag_member_update_state(member, INTERFACE_DOWN);
         }
     }
 
@@ -262,8 +264,27 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
 }
 
 void
-bbl_lag_rx_lacp(bbl_interface_s *interface,
-                bbl_ethernet_header_s *eth)
+bbl_lag_member_lacp_reset(bbl_interface_s *interface)
+{
+    bbl_lag_member_s *member = interface->lag_member;
+
+    if(member && member->lacp_state) {
+        member->lacp_state = LACP_DEFAULTED;
+        member->actor_state |= (LACP_STATE_FLAG_EXPIRED|LACP_STATE_FLAG_DEFAULTED);
+        memset(member->partner_system_id, 0x0, ETH_ADDR_LEN);
+        member->partner_system_priority = 0;
+        member->partner_key = 0;
+        member->partner_port_priority = 0;
+        member->partner_port_id = 0;
+        member->partner_state = 0;
+        LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
+            member->lag->interface->name, interface->name);
+        bbl_lag_select(member->lag);
+    }
+}
+
+void
+bbl_lag_rx_lacp(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
 {
     bbl_lag_member_s *member = interface->lag_member;
     bbl_lacp_s *lacp = (bbl_lacp_s*)eth->next; 

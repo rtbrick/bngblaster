@@ -1489,6 +1489,10 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
     bbl_session_s *session;
     bbl_l2tp_queue_s *l2tpq;
 
+    if(interface->state == INTERFACE_DISABLED) {
+        return EMPTY;
+    }
+
     /* Interface packets like LACP or LLDP. */
     if(interface->send_requests) {
         return bbl_tx_encode_interface_packet(interface, buf, len);
