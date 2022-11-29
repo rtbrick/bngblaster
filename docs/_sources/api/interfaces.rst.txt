@@ -6,7 +6,7 @@
      - Mandatory Arguments
      - Optional Arguments
    * - `interfaces`
-     - List all interfaces with index
+     - List all interfaces  with index
      - 
      - 
    * - `access-interfaces`
@@ -24,4 +24,12 @@
    * - `lag-info`
      - List all link aggregation (LAG) interfaces
      - 
+     - 
+   * - `interface-enable`
+     - Enable interface
+     - `interface`
+     - 
+   * - `interface-disable`
+     - Disable interface
+     - `interface`
      - 
