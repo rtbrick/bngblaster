@@ -212,6 +212,7 @@
 
 #define ICMPV6_FLAGS_MANAGED            0x80
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
+#define ICMPV6_OPTION_DEST_LINK_LAYER   2
 #define ICMPV6_OPTION_PREFIX            3
 #define ICMPV6_OPTION_DNS               25
 
@@ -799,6 +800,7 @@ typedef struct bbl_icmpv6_ {
     uint16_t     data_len;
     ipv6addr_t  *dns1;
     ipv6addr_t  *dns2;
+    uint8_t     *dst_mac;
 } bbl_icmpv6_s;
 
 typedef struct bbl_dhcpv6_ {

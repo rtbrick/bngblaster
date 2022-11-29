@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
+#include "bbl_protocols.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
 
@@ -309,6 +310,7 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
 static void
 bbl_network_rx_icmpv6(bbl_network_interface_s *interface, 
                       bbl_ethernet_header_s *eth) {
+    uint8_t *gw_mac;
     bbl_ipv6_s *ipv6;
     bbl_icmpv6_s *icmpv6;
     bbl_secondary_ip6_s *secondary_ip6;
@@ -316,13 +318,20 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
     ipv6 = (bbl_ipv6_s*)eth->next;
     icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
-    if(memcmp(ipv6->src, interface->gateway6, IPV6_ADDR_LEN) == 0) {
-        interface->icmpv6_nd_resolved = true;
-        if(*(uint32_t*)interface->gateway_mac == 0) {
-            memcpy(interface->gateway_mac, eth->src, ETH_ADDR_LEN);
+
+    if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
+        if(memcmp(icmpv6->prefix.address, interface->gateway6, IPV6_ADDR_LEN) == 0) {
+            interface->icmpv6_nd_resolved = true;
+            if(*(uint32_t*)interface->gateway_mac == 0) {
+                if(icmpv6->dst_mac == NULL) {
+                    gw_mac = eth->src;
+                } else {
+                    gw_mac = icmpv6->dst_mac;
+                }
+                memcpy(interface->gateway_mac, gw_mac, ETH_ADDR_LEN);
+            }
         }
-    }
-    if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
+    } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, interface->ip6.address, IPV6_ADDR_LEN) == 0) {
             bbl_network_icmpv6_na(interface, eth, ipv6, icmpv6);
         } else if(memcmp(icmpv6->prefix.address, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {

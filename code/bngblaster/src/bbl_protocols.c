@@ -2175,7 +2175,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
             icmpv6->flags = *buf;
             BUMP_BUFFER(buf, len, 11);
-            while(len > 2) {
+            while(len >= 8) {
                 option = *buf;
                 BUMP_BUFFER(buf, len, sizeof(uint8_t));
                 option_len = *buf;
@@ -2202,12 +2202,37 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             }
             break;
         case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
+            if(len < 20) {
+                return DECODE_ERROR;
+            }
+            BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* flags / reserved */
+            memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
+            break;
         case IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT:
             if(len < 20) {
                 return DECODE_ERROR;
             }
             BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* flags / reserved */
             memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
+            BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
+            while(len >= 8) {
+                option = *buf;
+                BUMP_BUFFER(buf, len, sizeof(uint8_t));
+                option_len = (*buf) * 8;
+                BUMP_BUFFER(buf, len, sizeof(uint8_t));
+                if(option_len < 2 || len < option_len - 2) {
+                    return DECODE_ERROR;
+                }
+                if(option == ICMPV6_OPTION_DEST_LINK_LAYER) {
+                    if(option_len != 8) {
+                        // Maleformed ICMPv6 packet
+                        return DECODE_ERROR;
+                    }
+                    icmpv6->dst_mac = buf;
+                    break;
+                }
+                BUMP_BUFFER(buf, len, option_len-2);
+            }
             break;
         default:
             break;
