@@ -72,7 +72,7 @@ io_packet_mmap_rx_job(timer_s *timer)
         io->stats.bytes += io->buf_len;
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
-            vlan = tphdr->tp_vlan_tci & ETH_VLAN_ID_MAX;
+            vlan = tphdr->tp_vlan_tci & BBL_ETH_VLAN_ID_MAX;
             if(vlan && eth->vlan_outer != vlan) {
                 /* The outer VLAN is stripped from header */
                 eth->vlan_inner = eth->vlan_outer;
