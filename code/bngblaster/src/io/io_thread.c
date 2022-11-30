@@ -66,7 +66,7 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
-            vlan = io->vlan_tci & ETH_VLAN_ID_MAX;
+            vlan = io->vlan_tci & BBL_ETH_VLAN_ID_MAX;
             if(eth->vlan_outer != vlan) {
                 /* The outer VLAN is stripped from header */
                 eth->vlan_inner = eth->vlan_outer;
@@ -114,7 +114,7 @@ io_thread_main_rx_job(timer_s *timer)
             while((slot = bbl_txq_read_slot(thread->txq))) {
                 decode_result = decode_ethernet(slot->packet, slot->packet_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
                 if(decode_result == PROTOCOL_SUCCESS) {
-                    vlan = slot->vlan_tci & ETH_VLAN_ID_MAX;
+                    vlan = slot->vlan_tci & BBL_ETH_VLAN_ID_MAX;
                     if(vlan && eth->vlan_outer != vlan) {
                         /* Restore outer VLAN */
                         eth->vlan_inner = eth->vlan_outer;
