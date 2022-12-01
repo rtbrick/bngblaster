@@ -21,7 +21,7 @@ isis_ctrl_adjacency(isis_adjacency_s *adjacency)
 
     peer = json_pack("{ss si}",
                      "system-id", isis_system_id_to_str(adjacency->peer->system_id),
-                     "holding-timer", adjacency->peer->holding_time);
+                     "hold-timer", adjacency->peer->hold_time);
 
     root = json_pack("{ss ss ss si ss so}",
                 "interface", adjacency->interface->name,
@@ -50,7 +50,7 @@ isis_ctrl_adjacency_p2p(isis_adjacency_p2p_s *adjacency)
 
     peer = json_pack("{ss si}",
                      "system-id", isis_system_id_to_str(adjacency->peer->system_id),
-                     "holding-timer", adjacency->peer->holding_time);
+                     "hold-timer", adjacency->peer->hold_time);
 
     root = json_pack("{ss ss, ss si ss so}",
                      "interface", adjacency->interface->name,

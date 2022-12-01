@@ -69,7 +69,7 @@ bgp_push_open_message(bgp_session_s *session)
     } else {
         push_be_uint(buffer, 2, session->config->local_as); 
     }
-    push_be_uint(buffer, 2, session->config->holdtime); /* holdtime */
+    push_be_uint(buffer, 2, session->config->hold_time); /* hold-time */
     push_data(buffer, (uint8_t*)&session->config->id, 4); /* BGP ID */
 
     /* Optional parameters */

@@ -23,15 +23,14 @@
 bbl_ctx_s *g_ctx = NULL;
 
 /* Global Variables */
-bool    g_interactive = false; /* interactive mode using ncurses */
-
-uint8_t g_log_buf_cur = 0;
-char   *g_log_buf = NULL;
-
+bool g_interactive = false; /* interactive mode using ncurses */
 bool g_init_phase = true;
 bool g_traffic = true;
 bool g_banner = true;
 bool g_monkey = true;
+
+uint8_t g_log_buf_cur = 0;
+char *g_log_buf = NULL;
 
 extern char *g_log_file;
 volatile bool g_teardown = false;
@@ -152,6 +151,7 @@ struct keyval_ log_names[] = {
     { L2TP,          "l2tp" },
     { DHCP,          "dhcp" },
     { ISIS,          "isis" },
+    { LDP,           "ldp" },
     { BGP,           "bgp" },
     { TCP,           "tcp" },
     { LAG,           "lag" },
@@ -293,6 +293,7 @@ bbl_ctrl_job(timer_s *timer)
             }
             /* Teardown routing protocols. */
             isis_teardown();
+            ldp_teardown();
             bgp_teardown();
             g_teardown_request = false;
         } else {
@@ -546,6 +547,12 @@ main(int argc, char *argv[])
     /* Init IS-IS instances. */
     if(!isis_init()) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
+        goto CLEANUP;
+    }
+
+    /* Init LDP instances. */
+    if(!ldp_init()) {
+        fprintf(stderr, "Error: Failed to init LDP\n");
         goto CLEANUP;
     }
 

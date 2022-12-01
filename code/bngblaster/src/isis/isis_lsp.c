@@ -291,6 +291,7 @@ isis_lsp_sx_job(timer_s *timer)
             entry->tx_timestamp.tv_sec = now.tv_sec;
             entry->tx_timestamp.tv_nsec = now.tv_nsec;
             adjacency->stats.lsp_tx++;
+            adjacency->interface->stats.isis_tx++;
             if(window) window--;
             if(window == 0) break;
         }

@@ -90,6 +90,7 @@
 #define BBL_IF_SEND_ARP_REQUEST     0x00000001
 #define BBL_IF_SEND_ICMPV6_NS       0x00000002
 #define BBL_IF_SEND_ISIS_P2P_HELLO  0x00000004
+#define BBL_IF_SEND_LDP_HELLO       0x00000008
 
 #define DUID_LEN                    10
 
