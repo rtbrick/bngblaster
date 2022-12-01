@@ -27,6 +27,7 @@
 #include "io/io_def.h"
 #include "bgp/bgp_def.h"
 #include "isis/isis_def.h"
+#include "ldp/ldp_def.h"
 
 #include "bbl_ctrl.h"
 #include "bbl_stats.h"
@@ -49,6 +50,7 @@
 #include "io/io.h"
 #include "bgp/bgp.h"
 #include "isis/isis.h"
+#include "ldp/ldp.h"
 
 extern bbl_ctx_s *g_ctx;
 extern WINDOW *log_win;

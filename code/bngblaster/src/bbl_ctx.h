@@ -95,6 +95,7 @@ typedef struct bbl_ctx_
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
     isis_instance_s *isis_instances;
+    ldp_instance_s *ldp_instances;
 
     /* Scratchpad memory */
     uint8_t *sp;
@@ -190,6 +191,9 @@ typedef struct bbl_ctx_
 
         /* ISIS Instances */
         isis_config_s *isis_config;
+
+        /* LDP Instances */
+        ldp_config_s *ldp_config;
 
         /* Global Session Settings */
         uint32_t sessions;

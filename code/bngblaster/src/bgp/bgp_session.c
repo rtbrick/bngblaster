@@ -176,10 +176,10 @@ bgp_session_state_established(bgp_session_s *session)
     clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
 
     /* Start BGP keepalive */
-    if(session->peer.holdtime < session->config->holdtime) {
-        keepalive_interval = session->peer.holdtime/2U;
+    if(session->peer.hold_time < session->config->hold_time) {
+        keepalive_interval = session->peer.hold_time/2U;
     } else {
-        keepalive_interval = session->config->holdtime/2U;
+        keepalive_interval = session->config->hold_time/2U;
     }
     if(!keepalive_interval) {
         keepalive_interval = 1;
@@ -320,7 +320,7 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
 
         session->peer.as = 0;
         session->peer.id = 0;
-        session->peer.holdtime = 0;
+        session->peer.hold_time = 0;
 
         session->stats.message_rx = 0;
         session->stats.message_tx = 0;

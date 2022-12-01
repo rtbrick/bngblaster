@@ -92,14 +92,14 @@ bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
         return;
     }
     session->peer.as = read_be_uint(start+20, 2);
-    session->peer.holdtime = read_be_uint(start+22, 2);
+    session->peer.hold_time = read_be_uint(start+22, 2);
     session->peer.id = read_be_uint(start+24, 4);
 
-    LOG(BGP, "BGP (%s %s - %s) open message received with peer AS: %u, holdtime: %us\n",
+    LOG(BGP, "BGP (%s %s - %s) open message received with peer AS: %u, hold-time: %us\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_local_address),
         format_ipv4_address(&session->ipv4_peer_address),
-        session->peer.as, session->peer.holdtime);
+        session->peer.as, session->peer.hold_time);
 
     bgp_session_state_change(session, BGP_OPENCONFIRM);
     return;
@@ -185,7 +185,7 @@ bgp_rebase_read_buffer(bgp_session_s *session)
 }
 
 static void
-bpg_read(bgp_session_s *session)
+bgp_read(bgp_session_s *session)
 {
     uint32_t size;
     uint16_t length;
@@ -223,7 +223,7 @@ bpg_read(bgp_session_s *session)
             format_ipv4_address(&session->ipv4_peer_address),
             keyval_get_key(bgp_msg_names, type));
 
-        switch (type) {
+        switch(type) {
             case BGP_MSG_OPEN:
                 bgp_open(session, start, length);
                 break;
@@ -244,7 +244,7 @@ bpg_read(bgp_session_s *session)
         }
 
         /* Reset hold timer */
-        bgp_restart_hold_timer(session, session->config->holdtime);
+        bgp_restart_hold_timer(session, session->config->hold_time);
 
         /* Progress pointer to next BGP message */
         buffer->start_idx += length;
@@ -274,6 +274,6 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
         memcpy(buffer->data+buffer->idx, buf, len);
         buffer->idx+=len;
     } else {
-        bpg_read(session);
+        bgp_read(session);
     }
 }

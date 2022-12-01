@@ -25,8 +25,8 @@
    * - `peer-as`
      - BGP peer AS
      - local AS
-   * - `holdtime`
-     - BGP holdtime in seconds
+   * - `hold-time`
+     - BGP hold-time in seconds
      - 90
    * - `id`
      - BGP identifier

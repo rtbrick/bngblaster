@@ -519,7 +519,7 @@ Finally, start the BNG Blaster in another terminal window.
     Apr 08 14:53:52.904389 All network interfaces resolved
     Apr 08 14:53:53.904448 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from idle -> connect
     Apr 08 14:53:53.905659 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from connect -> opensent
-    Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, holdtime: 90s
+    Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, hold-time: 90s
     Apr 08 14:53:53.907903 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from opensent -> openconfirm
     Apr 08 14:53:53.907917 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from openconfirm -> established
     Apr 08 14:53:54.907989 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update start
@@ -544,11 +544,11 @@ from where you started the BNG Blaster and enter the following command.
                 "local-address": "192.168.92.2",
                 "local-id": "1.2.3.4",
                 "local-as": 65001,
-                "local-holdtime": 90,
+                "local-hold-time": 90,
                 "peer-address": "192.168.92.1",
                 "peer-id": "1.92.168.192",
                 "peer-as": 65001,
-                "peer-holdtime": 90,
+                "peer-hold-time": 90,
                 "state": "established",
                 "raw-update-state": "done",
                 "raw-update-file": "out.bgp",

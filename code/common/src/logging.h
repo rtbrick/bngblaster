@@ -36,6 +36,7 @@ enum {
     L2TP,
     DHCP,
     ISIS,
+    LDP,
     BGP,
     TCP,
     LSDB,

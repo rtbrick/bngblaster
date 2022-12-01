@@ -16,7 +16,7 @@
 #define BGP_MAX_MESSAGE_SIZE        4096U
 #define BGP_BUF_SIZE                256*1024
 #define BGP_DEFAULT_AS              65000
-#define BGP_DEFAULT_HOLDTIME        90
+#define BGP_DEFAULT_HOLD_TIME       90
 #define BGP_DEFAULT_TEARDOWN_TIME   5
 
 #define BGP_MSG_OPEN                1
@@ -58,7 +58,7 @@ typedef struct bgp_config_ {
     uint32_t id;
     uint32_t local_as;
     uint32_t peer_as;
-    uint16_t holdtime;
+    uint16_t hold_time;
     uint16_t teardown_time;
 
     bool reconnect;
@@ -101,7 +101,7 @@ typedef struct bgp_session_ {
     struct {
         uint32_t as;
         uint32_t id;
-        uint16_t holdtime;
+        uint16_t hold_time;
     } peer;
 
     struct {

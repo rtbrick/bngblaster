@@ -635,6 +635,13 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             network_config->isis_l2_metric = 10;
         }
     }
+
+    /* LDP interface configuration */
+    value = json_object_get(network_interface, "ldp-instance-id");
+    if(json_is_number(value)) {
+        network_config->ldp_instance_id = json_number_value(value);
+    }
+
     return true;
 }
 
@@ -1068,11 +1075,11 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->peer_as = bgp_config->local_as;
     }
 
-    value = json_object_get(bgp, "holdtime");
+    value = json_object_get(bgp, "hold-time");
     if(value) {
-        bgp_config->holdtime = json_number_value(value);
+        bgp_config->hold_time = json_number_value(value);
     } else {
-        bgp_config->holdtime = BGP_DEFAULT_HOLDTIME;
+        bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
     }
 
     bgp_config->id = htobe32(0x01020304);
@@ -1191,11 +1198,11 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->hello_padding  = json_boolean_value(value);
     }
 
-    value = json_object_get(isis, "holding-time");
+    value = json_object_get(isis, "hold-time");
     if(json_is_number(value)) {
-        isis_config->holding_time = json_number_value(value);
+        isis_config->hold_time = json_number_value(value);
     } else {
-        isis_config->holding_time = ISIS_DEFAULT_HOLDING_TIME;
+        isis_config->hold_time = ISIS_DEFAULT_HOLD_TIME;
     }
 
     value = json_object_get(isis, "lsp-lifetime");
@@ -1354,6 +1361,72 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                 }
             }
         }
+    }
+    return true;
+}
+
+static bool
+json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    
+    value = json_object_get(ldp, "instance-id");
+    if(value) {
+        ldp_config->id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for ldp->instance-id\n");
+        return false;
+    }
+
+    value = json_object_get(ldp, "overload");
+    if(json_is_boolean(value)) {
+        ldp_config->overload  = json_boolean_value(value);
+    }
+
+    value = json_object_get(ldp, "hello-interval");
+    if(json_is_number(value)) {
+        ldp_config->hello_interval = json_number_value(value);
+    } else {
+        ldp_config->hello_interval = LDP_DEFAULT_HELLO_INTERVAL;
+    }
+
+    value = json_object_get(ldp, "hold-time");
+    if(json_is_number(value)) {
+        ldp_config->hold_time = json_number_value(value);
+    } else {
+        ldp_config->hold_time = LDP_DEFAULT_HOLD_TIME;
+    }
+
+    value = json_object_get(ldp, "teardown-time");
+    if(json_is_number(value)) {
+        ldp_config->teardown_time = json_number_value(value);
+    } else {
+        ldp_config->teardown_time = LDP_DEFAULT_TEARDOWN_TIME;
+    }
+
+    if(json_unpack(ldp, "{s:s}", "hostname", &s) == 0) {
+        ldp_config->hostname = strdup(s);
+    } else {
+        ldp_config->hostname = g_default_hostname;
+    }
+
+    if(json_unpack(ldp, "{s:s}", "lsr-id", &s) == 0) {
+        ldp_config->lsr_id_str = strdup(s);
+    } else {
+        ldp_config->lsr_id_str = g_default_router_id;
+    }
+    if(!inet_pton(AF_INET, ldp_config->lsr_id_str, &ldp_config->lsr_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for ldp->lsr-id\n");
+        return false;
+    }
+    if(json_unpack(ldp, "{s:s}", "ipv4-transport-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &ldp_config->ipv4_transport_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for ldp->ipv4-transport-address\n");
+            return false;
+        }
+    } else {
+        ldp_config->ipv4_transport_address = ldp_config->lsr_id;
     }
     return true;
 }
@@ -1642,6 +1715,7 @@ json_parse_config(json_t *root)
 
     bgp_config_s                *bgp_config             = NULL;
     isis_config_s               *isis_config            = NULL;
+    ldp_config_s                *ldp_config             = NULL;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -2167,7 +2241,7 @@ json_parse_config(json_t *root)
     /* BGP Configuration */
     sub = json_object_get(root, "bgp");
     if(json_is_array(sub)) {
-        /* Config is provided as array (multiple bgp sessions) */
+        /* Config is provided as array (multiple BGP sessions) */
         size = json_array_size(sub);
         for(i = 0; i < size; i++) {
             if(!bgp_config) {
@@ -2182,7 +2256,7 @@ json_parse_config(json_t *root)
             }
         }
     } else if(json_is_object(sub)) {
-        /* Config is provided as object (single bgp session) */
+        /* Config is provided as object (single BGP session) */
         bgp_config = calloc(1, sizeof(bgp_config_s));
         if(!g_ctx->config.bgp_config) {
             g_ctx->config.bgp_config = bgp_config;
@@ -2209,7 +2283,7 @@ json_parse_config(json_t *root)
     /* IS-IS Configuration */
     sub = json_object_get(root, "isis");
     if(json_is_array(sub)) {
-        /* Config is provided as array (multiple isis instances) */
+        /* Config is provided as array (multiple IS-IS instances) */
         size = json_array_size(sub);
         for(i = 0; i < size; i++) {
             if(!isis_config) {
@@ -2224,12 +2298,40 @@ json_parse_config(json_t *root)
             }
         }
     } else if(json_is_object(sub)) {
-        /* Config is provided as object (single isis instance) */
+        /* Config is provided as object (single IS-IS instance) */
         isis_config = calloc(1, sizeof(isis_config_s));
         if(!g_ctx->config.isis_config) {
             g_ctx->config.isis_config = isis_config;
         }
         if(!json_parse_isis_config(sub, isis_config)) {
+            return false;
+        }
+    }
+
+    /* LDP Configuration */
+    sub = json_object_get(root, "ldp");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple LDP instances) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!ldp_config) {
+                g_ctx->config.ldp_config = calloc(1, sizeof(ldp_config_s));
+                ldp_config = g_ctx->config.ldp_config;
+            } else {
+                ldp_config->next = calloc(1, sizeof(ldp_config_s));
+                ldp_config = ldp_config->next;
+            }
+            if(!json_parse_ldp_config(json_array_get(sub, i), ldp_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single LDP instance) */
+        ldp_config = calloc(1, sizeof(ldp_config_s));
+        if(!g_ctx->config.ldp_config) {
+            g_ctx->config.ldp_config = ldp_config;
+        }
+        if(!json_parse_ldp_config(sub, ldp_config)) {
             return false;
         }
     }

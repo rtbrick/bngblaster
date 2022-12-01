@@ -1421,6 +1421,9 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
     } else if(interface->send_requests & BBL_IF_SEND_ISIS_P2P_HELLO) {
         interface->send_requests &= ~BBL_IF_SEND_ISIS_P2P_HELLO;
         result = isis_p2p_hello_encode(interface, buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_LDP_HELLO) {
+        interface->send_requests &= ~BBL_IF_SEND_LDP_HELLO;
+        result = ldp_hello_encode(interface, buf, len, &eth);
     } else {
         interface->send_requests = 0;
     }

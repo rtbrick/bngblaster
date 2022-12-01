@@ -62,7 +62,7 @@
 
 #define ISIS_DEFAULT_HELLO_INTERVAL     10
 #define ISIS_DEFAULT_CSNP_INTERVAL      30
-#define ISIS_DEFAULT_HOLDING_TIME       30
+#define ISIS_DEFAULT_HOLD_TIME          30
 #define ISIS_DEFAULT_LSP_LIFETIME       65535
 #define ISIS_DEFAULT_LSP_RETRY_IVL      5
 #define ISIS_DEFAULT_LSP_REFRESH_IVL    300
@@ -130,7 +130,7 @@ typedef enum isis_pdu_type_ {
 /* IS-IS TLV Codepoints
  * https://www.iana.org/assignments/isis-tlv-codepoints/isis-tlv-codepoints.xhtml
  */
-typedef enum isis_tlv_sype_ {   
+typedef enum isis_tlv_type_ {   
     ISIS_TLV_AREA_ADDRESSES         = 1,
     ISIS_TLV_PADDING                = 8,
     ISIS_TLV_LSP_ENTRIES            = 9,
@@ -145,7 +145,7 @@ typedef enum isis_tlv_sype_ {
     ISIS_TLV_IPV6_REACHABILITY      = 236,
     ISIS_TLV_P2P_ADJACENCY_STATE    = 240,
     ISIS_TLV_ROUTER_CAPABILITY      = 242
-} isis_tlv_sype;
+} isis_tlv_type;
 
 /* STRUCTURES ... */
 
@@ -203,7 +203,7 @@ typedef struct isis_config_ {
     uint16_t            lsp_refresh_interval;
     uint16_t            lsp_lifetime;
     uint16_t            hello_interval;
-    uint16_t            holding_time;
+    uint16_t            hold_time;
     uint16_t            teardown_time;
 
     const char         *hostname;
@@ -238,7 +238,7 @@ typedef struct isis_config_ {
 typedef struct isis_peer_ {
     uint8_t  level;
     uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
-    uint16_t holding_time;
+    uint16_t hold_time;
     char    *hostname;
 } isis_peer_s;
 
@@ -260,7 +260,7 @@ typedef struct isis_adjacency_ {
     struct timer_   *timer_csnp;
     struct timer_   *timer_csnp_next;
     struct timer_   *timer_psnp_next;
-    struct timer_   *timer_holding;
+    struct timer_   *timer_hold;
 
     bool timer_psnp_started;
 

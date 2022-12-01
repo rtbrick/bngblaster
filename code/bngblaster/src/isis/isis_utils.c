@@ -52,7 +52,7 @@ isis_adjacency_state_string(uint8_t state)
 }
 
 const char *
-isis_pdu_sype_string(uint8_t type)
+isis_pdu_type_string(uint8_t type)
 {
     switch(type) {
         case ISIS_PDU_L1_HELLO: return "L1-Hello";

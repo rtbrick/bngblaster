@@ -202,6 +202,7 @@
 #define UDP_PROTOCOL_L2TP               3
 #define UDP_PROTOCOL_QMX_LI             4
 #define UDP_PROTOCOL_DHCP               5
+#define UDP_PROTOCOL_LDP                6  
 
 #define IPV6_NEXT_HEADER_TCP            6
 #define IPV6_NEXT_HEADER_UDP            17
@@ -285,6 +286,8 @@ static const ipv6addr_t ipv6_solicited_node_multicast = {0xFF, 0x02, 0x00, 0x00,
 /* MAC Addresses */
 static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static const uint8_t slow_mac[ETH_ADDR_LEN] =  { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x02};
+static const uint8_t all_hosts_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x01};
+static const uint8_t all_routers_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x02};
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
@@ -530,11 +533,19 @@ typedef struct bbl_mpls_ {
 /*
  * ISIS PDU
  */
-typedef struct bbl_isis_s {
+typedef struct bbl_isis_ {
     uint8_t  type;
     uint8_t *pdu;
     uint16_t pdu_len;
 } bbl_isis_s;
+
+typedef struct bbl_ldp_hello_ {
+    uint32_t lsr_id;
+    uint16_t label_space_id;
+    uint32_t msg_id;
+    uint32_t ipv4_transport_address;
+    uint16_t hold_time;
+} bbl_ldp_hello_s;
 
 typedef struct bbl_bbl_ {
     uint16_t     padding;

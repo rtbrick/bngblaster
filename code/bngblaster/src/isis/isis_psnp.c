@@ -129,8 +129,9 @@ isis_psnp_job (timer_s *timer)
     isis.pdu_len = pdu.pdu_len;
     if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) == BBL_TXQ_OK) {
         LOG(DEBUG, "ISIS TX %s on interface %s\n",
-            isis_pdu_sype_string(isis.type), adjacency->interface->name);
+            isis_pdu_type_string(isis.type), adjacency->interface->name);
         adjacency->stats.psnp_tx++;
+        adjacency->interface->stats.isis_tx++;
     }
     return;
 }
