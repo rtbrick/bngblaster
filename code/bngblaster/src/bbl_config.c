@@ -1371,6 +1371,8 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     json_t *value = NULL;
     const char *s = NULL;
     
+    g_ctx->tcp = true;
+
     value = json_object_get(ldp, "instance-id");
     if(value) {
         ldp_config->id = json_number_value(value);

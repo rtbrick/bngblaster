@@ -565,7 +565,7 @@ encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
     /* LDP identifier (LSR ID + label space) */
-    *(uint32_t*)buf = htobe32(ldp->lsr_id);
+    *(uint32_t*)buf = ldp->lsr_id;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     *(uint16_t*)buf = htobe16(ldp->label_space_id);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -595,7 +595,7 @@ encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint16_t*)buf = htobe16(4);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint32_t*)buf = htobe32(ldp->ipv4_transport_address);
+    *(uint32_t*)buf = ldp->ipv4_transport_address;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
 
     return PROTOCOL_SUCCESS;
@@ -2843,8 +2843,8 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
     len = pdu_len;
 
     /* LDP identifier (LSR ID + label space) */
-    ldp->lsr_id = be32toh(*(uint32_t*)buf);
-    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    ldp->lsr_id = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
     ldp->label_space_id = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
 
@@ -2887,7 +2887,7 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
                 if(tlv_len != 4) {
                     return DECODE_ERROR;
                 }
-                ldp->ipv4_transport_address = be32toh(*(uint16_t*)buf);
+                ldp->ipv4_transport_address = *(uint32_t*)buf;
                 break;
             default:
                 break;
