@@ -52,7 +52,7 @@ ldp_hello_encode(bbl_network_interface_s *interface,
     result = encode_ethernet(buf, len, eth);
     if(result == PROTOCOL_SUCCESS) {
         LOG(DEBUG, "LDP TX hello on interface %s\n", interface->name);
-        adjacency->interface->stats.ldp_udp_tx++;
+            adjacency->interface->stats.ldp_udp_tx++;
     }
     return result;
 }
@@ -130,6 +130,8 @@ ldp_hello_rx(bbl_network_interface_s *interface,
     if(!adjacency) {
         return;
     }
+
+    LOG(DEBUG, "LDP RX hello on interface %s\n", interface->name);
 
     instance = adjacency->instance;
     session = instance->sessions;

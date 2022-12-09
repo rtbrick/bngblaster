@@ -439,6 +439,7 @@ ldp_session_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->local.keepalive_time = config->keepalive_interval;
         session->local.max_pdu_len = LDP_MAX_PDU_LEN_INIT;
     }
+    session->interface = adjacency->interface;
     session->max_pdu_len = session->local.max_pdu_len;
     session->keepalive_time = session->local.keepalive_time;
 
