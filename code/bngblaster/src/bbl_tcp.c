@@ -77,29 +77,29 @@ bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc) {
 static bbl_tcp_ctx_s *
 bbl_tcp_ctx_new(bbl_network_interface_s *interface) {
     
-    bbl_tcp_ctx_s *tcp;
+    bbl_tcp_ctx_s *tcpc;
 
     /* Init TCP context */
-    tcp = calloc(1, sizeof(bbl_tcp_ctx_s));
-    if(!tcp) {
+    tcpc = calloc(1, sizeof(bbl_tcp_ctx_s));
+    if(!tcpc) {
         return NULL;
     }
-    tcp->interface = interface;
+    tcpc->interface = interface;
 
     /* Init TCP PCB */
-    tcp->pcb = tcp_new();
-    if(!tcp->pcb) {
-        free(tcp);
+    tcpc->pcb = tcp_new();
+    if(!tcpc->pcb) {
+        free(tcpc);
         return NULL;
     }
 
     /* Bind local network interface */
-    tcp_bind_netif(tcp->pcb, &interface->netif);
+    tcp_bind_netif(tcpc->pcb, &interface->netif);
     
     /* Add BBL TCP context as argument */
-    tcp_arg(tcp->pcb, tcp);
+    tcp_arg(tcpc->pcb, tcpc);
 
-    return tcp;
+    return tcpc;
 }
 
 err_t 
@@ -207,7 +207,8 @@ bbl_tcp_error_cb(void *arg, err_t err) {
  *         callback function!
  */
 err_t
-bbl_tcp_poll_cb(void *arg, struct tcp_pcb *tpcb) {
+bbl_tcp_poll_cb(void *arg, struct tcp_pcb *tpcb)
+{
     bbl_tcp_ctx_s *tcpc = arg;
     if(tcpc->poll_cb) {
         return (tcpc->poll_cb)(tcpc->arg, tpcb);
@@ -216,7 +217,8 @@ bbl_tcp_poll_cb(void *arg, struct tcp_pcb *tpcb) {
 }
 
 err_t 
-bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
+bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
+{
     bbl_tcp_ctx_s *tcpc = arg;
 
     UNUSED(err); /* TODO!!! */
@@ -250,6 +252,87 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
     return ERR_OK;
 }
 
+err_t
+bbl_tcp_ipv4_listen_accept(void *arg, struct tcp_pcb *tpcb, err_t err)
+{
+    bbl_tcp_ctx_s *listen = arg;
+    bbl_tcp_ctx_s *tcpc;
+
+    UNUSED(err); /* TODO!!! */
+
+    //tcp_setprio(tpcb, TCP_PRIO_MIN);
+
+    tcpc = calloc(1, sizeof(bbl_tcp_ctx_s));
+    if(!tcpc) {
+        return ERR_MEM;
+    }
+    tcpc->interface = listen->interface;
+    tcpc->af = listen->af;
+    tcpc->local_port = listen->local_port;
+    tcpc->local_ipv4 = listen->local_ipv4;
+
+    tcpc->pcb = tpcb;
+    tcp_arg(tpcb, tcpc);
+
+    if(listen->accepted_cb) {
+        (listen->accepted_cb)(tcpc, listen->arg);
+    }
+
+    /* Add send/receive callback functions. */
+    tcp_sent(tpcb, bbl_tcp_sent_cb);
+    tcp_recv(tpcb, bbl_tcp_recv_cb);
+    if(tcpc->poll_cb && tcpc->poll_interval) {
+        tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval);
+    }
+    tcp_err(tpcb, bbl_tcp_error_cb);
+
+    return ERR_OK;  
+}
+
+/**
+ * bbl_tcp_ipv4_listen 
+ * 
+ * @param interface interface
+ * @param address local address
+ * @param port local port
+ * @return TCP context
+ */
+bbl_tcp_ctx_s *
+bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uint16_t port)
+{
+    bbl_tcp_ctx_s *tcpc;
+
+    if(!g_ctx->tcp) {
+        /* TCP not enabled! */
+        return NULL;
+    }
+
+    tcpc = bbl_tcp_ctx_new(interface);
+    if(!tcpc) {
+        return NULL;
+    }
+
+    /* Bind local IP address and port */
+    if(tcp_bind(tcpc->pcb, (const ip_addr_t*)address, port) != ERR_OK) {
+        bbl_tcp_ctx_free(tcpc);
+    }
+
+    tcpc->pcb = tcp_listen(tcpc->pcb);
+    tcp_accept(tcpc->pcb, bbl_tcp_ipv4_listen_accept);
+
+    tcpc->af = AF_INET;
+    tcpc->local_port = port;
+    tcpc->local_ipv4 = *address;
+    tcpc->pcb->local_ip.type = IPADDR_TYPE_V4;
+    tcpc->pcb->remote_ip.type = IPADDR_TYPE_V4;
+    tcpc->state = BBL_TCP_STATE_LISTEN;
+    LOG(TCP, "TCP (%s %s:%u) listen\n",
+        interface->name,
+        format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port);
+
+    return tcpc;
+}
+
 /**
  * bbl_tcp_ipv4_connect 
  * 
@@ -260,8 +343,8 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err) {
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port) {
-
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port)
+{
     bbl_tcp_ctx_s *tcpc;
 
     if(!g_ctx->tcp) {
@@ -444,8 +527,7 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
  */
 err_t 
 bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t *ipaddr) {
-    bbl_tcp_ctx_s *tcpc = netif->state;
-    bbl_network_interface_s *interface = tcpc->interface;
+    bbl_network_interface_s *interface = netif->state;
     bbl_ethernet_header_s eth = {0};
     UNUSED(ipaddr);
 

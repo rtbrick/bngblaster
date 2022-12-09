@@ -11,9 +11,11 @@
 
 #include "../bbl.h"
 #include "ldp_def.h"
-#include "ldp_pdu.h"
+#include "ldp_message.h"
 #include "ldp_hello.h"
 #include "ldp_interface.h"
+#include "ldp_receive.h"
+#include "ldp_session.h"
 
 bool
 ldp_init();

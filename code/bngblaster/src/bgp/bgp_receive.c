@@ -84,12 +84,11 @@ bgp_decode_error(bgp_session_s *session)
     bgp_session_close(session);
 }
 
-static void
+static bool
 bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
     if(length < 28) {
-        bgp_decode_error(session);
-        return;
+        return false;
     }
     session->peer.as = read_be_uint(start+20, 2);
     session->peer.hold_time = read_be_uint(start+22, 2);
@@ -102,17 +101,16 @@ bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
         session->peer.as, session->peer.hold_time);
 
     bgp_session_state_change(session, BGP_OPENCONFIRM);
-    return;
+    return true;
 }
 
-static void
+static bool
 bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t error_code, error_subcode;
 
     if(length < 21) {
-        bgp_decode_error(session);
-        return;
+        return false;
     }
 
     error_code = *(start+19);
@@ -160,7 +158,7 @@ bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
     }
     session->error_code = 0;
     bgp_session_close(session);
-    return;
+    return true;
 }
 
 /*
@@ -206,7 +204,7 @@ bgp_read(bgp_session_s *session)
         if(length < BGP_MIN_MESSAGE_SIZE ||
             length > BGP_MAX_MESSAGE_SIZE) {
             bgp_decode_error(session);
-            break;
+            return;
         }
 
         /* Full message on the wire to consume? */
@@ -225,10 +223,16 @@ bgp_read(bgp_session_s *session)
 
         switch(type) {
             case BGP_MSG_OPEN:
-                bgp_open(session, start, length);
+                if(!bgp_open(session, start, length)) {
+                    bgp_decode_error(session);
+                    return;
+                }
                 break;
             case BGP_MSG_NOTIFICATION:
-                bgp_notification(session, start, length);
+                if(!bgp_notification(session, start, length)) {
+                    bgp_decode_error(session);
+                    return;
+                }
                 return;
             case BGP_MSG_KEEPALIVE:
                 session->stats.keepalive_rx++;

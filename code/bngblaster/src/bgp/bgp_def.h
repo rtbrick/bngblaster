@@ -84,8 +84,6 @@ typedef struct bgp_session_ {
     bbl_tcp_ctx_s *tcpc;
 
     struct timer_ *connect_timer;
-    struct timer_ *send_open_timer;
-    struct timer_ *open_sent_timer;
     struct timer_ *keepalive_timer;
     struct timer_ *hold_timer;
     struct timer_ *close_timer;

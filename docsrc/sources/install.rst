@@ -152,7 +152,14 @@ The following steps are required to build the BNG Blaster with experimental
 
     Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!
 
-Download and Install DPDK:
+It is recommended to install the DPDK development package if possible:
+
+.. code-block:: none
+
+    sudo apt install dpdk libdpdk-dev
+
+This package does not support all NIC types (e.g. Mellanox, ...),
+which requires to download and installing DPDK manually:
 https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
 
 .. code-block:: none
