@@ -53,6 +53,9 @@
 #define POWEROF2(x) ((((x)-1) & (x)) == 0) /* true if x is a power of 2 */
 #define BITS_TO_BYTES(_len) ((_len+7) >> 3)
 
+#define IO_BUF_REMAINING(_buf) (_buf->size - _buf->idx)
+
+
 /* Key-Value structure. */
 typedef struct keyval_ {
     uint32_t val;    /* value */

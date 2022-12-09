@@ -14,6 +14,9 @@
 #define LDP_PORT                                    646
 #define LDP_IDENTIFIER_LEN                          6U
 #define LDP_MAX_PDU_LEN_INIT                        4096U
+#define LDP_MIN_PDU_LEN                             10
+#define LDP_MIN_MSG_LEN                             8
+#define LDP_MIN_TLV_LEN                             4
 
 #define LDP_MESSAGE_TYPE_NOTIFICATION               0x0001
 #define LDP_MESSAGE_TYPE_HELLO                      0x0100
@@ -45,57 +48,64 @@
 
 #define LDP_TLV_LEN_MIN                             4
 
-#define LDP_DEFAULT_HELLO_INTERVAL                  10
-#define LDP_DEFAULT_HOLD_TIME                    30
+#define LDP_STATUS_SUCCESS                          0x00000000
+#define LDP_STATUS_BAD_IDENTIFIER                   0x00000001
+#define LDP_STATUS_BAD_VERSION                      0x00000002
+#define LDP_STATUS_BAD_MSG_LEN                      0x00000005
+#define LDP_STATUS_BAD_TLV_LEN                      0x00000007
+#define LDP_STATUS_BAD_TLV_VALUE                    0x00000008
+#define LDP_STATUS_HOLD_TIMER_EXPIRED               0x00000009
+#define LDP_STATUS_KEEPALIVE_TIMER_EXPIRED          0x00000014
+
+#define LDP_STATUS_SHUTDOWN                         0x0000000A
+#define LDP_STATUS_INTERNAL_ERROR                   0x00000019
+
+#define LDP_DEFAULT_KEEPALIVE_INTERVAL              15
+#define LDP_DEFAULT_HOLD_TIME                       15
 #define LDP_DEFAULT_TEARDOWN_TIME                   5
 
 typedef enum ldp_state_ {
-    LDP_NON_EXISTENT,
+    LDP_CLOSED,
+    LDP_IDLE,
+    LDP_LISTEN,
+    LDP_CONNECT,
     LDP_INITIALIZED,
     LDP_OPENREC,
     LDP_OPENSENT,
     LDP_OPERATIONAL,
+    LDP_CLOSING,
+    LDP_ERROR
 } ldp_state_t;
+
+typedef enum ldp_event_ {
+    LDP_EVENT_START,
+    LDP_EVENT_RX_INITIALIZED,
+    LDP_EVENT_RX_KEEPALIVE,
+} ldp_event_t;
+
+typedef enum ldp_adjacency_state_ {
+    LDP_ADJACENCY_STATE_DOWN   = 0,
+    LDP_ADJACENCY_STATE_UP     = 1
+} ldp_adjacency_state;    
 
 typedef struct ldp_instance_ ldp_instance_s;
 typedef struct ldp_session_ ldp_session_s;
 typedef struct ldp_adjacency_ ldp_adjacency_s;
 
 /*
- * LDP Type-Length-Value (TLV). 
+ * LDP RAW Update File
  */
-typedef struct ldp_tlv_ {
-    bool u_bit; /* Unknown TLV bit. */
-    bool f_bit; /* Forward unknown TLV bit. */
-    uint16_t type;
-    uint16_t len;
-    uint8_t *value;
-    struct ldp_tlv_ *next;
-} ldp_tlv_s;
+typedef struct ldp_raw_update_ {
+    const char *file;
 
-/*
- * LDP Message which contains
- * one or more LDP TLV.
- */
-typedef struct ldp_message_ {
-    bool u_bit; /* Unknown message bit. */
-    uint16_t type;
-    uint32_t msg_id;
-    ldp_tlv_s *tlv;
-    struct ldp_message_ *next;
-} ldp_message_s;
+    uint8_t *buf;
+    uint32_t len;
+    uint32_t pdu; /* PDU counter */
+    uint32_t messages; /* Message counter*/
 
-/*
- * LDP Protocol Data Unit (PDU) which contains 
- * one or more LDP messages.
- */
-typedef struct ldp_pdu_ {
-    uint16_t version;
-    uint16_t len;
-    uint32_t lsr_id;
-    uint16_t label_space_id;
-    ldp_message_s *message;
-} ldp_pdu_s;
+    /* Pointer to next instance */
+    struct ldp_raw_update_ *next;
+} ldp_raw_update_s;
 
 /*
  * LDP Instance Configuration.
@@ -108,9 +118,7 @@ typedef struct ldp_config_ {
     const char *lsr_id_str;
     const char *hostname;
 
-    bool overload;
-
-    uint16_t hello_interval;
+    uint16_t keepalive_interval;
     uint16_t hold_time;
     uint16_t teardown_time;
 
@@ -122,41 +130,65 @@ typedef struct ldp_config_ {
  * LDP Session.
  */
 typedef struct ldp_session_ {
+    ldp_instance_s *instance;
+    bbl_network_interface_s *interface;
+    bbl_tcp_ctx_s *tcpc;
+
+    struct timer_ *connect_timer;
+    struct timer_ *keepalive_timer;
+    struct timer_ *close_timer;
+
+    struct timer_ *update_timer;
+    struct timer_ *teardown_timer;
+
+    io_buffer_t read_buf;
+    io_buffer_t write_buf;
+
+    uint32_t pdu_start_idx;
+    uint32_t msg_start_idx;
+    uint32_t tlv_start_idx;
+    uint32_t message_id;
+    uint32_t error_code;
+
+    bool active;
+    ldp_state_t state;
+    uint16_t max_pdu_len;
+    uint16_t keepalive_time;
+
     struct {
         uint32_t ipv4_address;
         uint32_t lsr_id;
         uint16_t label_space_id;
-        uint16_t hold_time;
+        uint16_t keepalive_time;
+        uint16_t max_pdu_len;
     } local;
 
     struct {
         uint32_t ipv4_address;
         uint32_t lsr_id;
         uint16_t label_space_id;
-        uint16_t hold_time;
+        uint16_t keepalive_time;
+        uint16_t max_pdu_len;
     } peer;
 
     struct {
+        uint32_t pdu_rx;
+        uint32_t pdu_tx;
         uint32_t message_rx;
         uint32_t message_tx;
         uint32_t keepalive_rx;
         uint32_t keepalive_tx;
     } stats;
 
-    struct {
-        bool e_bit; /* Fatal error bit. */
-        bool f_bit; /* Forward bit. */
-        uint32_t code;
-        uint16_t msg_type;
-    } status;
+    ldp_raw_update_s *raw_update_start;
+    ldp_raw_update_s *raw_update;
+    bool raw_update_sending;
 
-    uint16_t max_pdu_len;
+    struct timespec operational_timestamp;
+    struct timespec update_start_timestamp;
+    struct timespec update_stop_timestamp;
 
-    ldp_instance_s *instance;
-    ldp_state_t state;
-
-    io_buffer_t read_buf;
-    io_buffer_t write_buf;
+    bool teardown;
 
     /* Pointer to next peer of 
      * corresponding instance. */
@@ -169,9 +201,13 @@ typedef struct ldp_session_ {
 typedef struct ldp_adjacency_ {
     bbl_network_interface_s *interface;
     ldp_instance_s *instance;
-    ldp_session_s *session;
 
     struct timer_ *hello_timer;
+    struct timer_ *hold_timer;
+
+    uint16_t hold_time;
+
+    ldp_adjacency_state state;
 
     /* Pointer to next adjacency of 
      * corresponding instance with. */

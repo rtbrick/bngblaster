@@ -8,15 +8,6 @@
  */
 #include "ldp.h"
 
-void
-ldp_interface_hello_job(timer_s *timer)
-{
-    ldp_adjacency_s *adjacency = timer->data;
-    bbl_network_interface_s *interface = adjacency->interface;
-
-    interface->send_requests |= BBL_IF_SEND_LDP_HELLO;
-}
-
 /**
  * ldp_interface_init
  * 
@@ -42,8 +33,9 @@ ldp_interface_init(bbl_network_interface_s *interface,
     instance->adjacencies = adjacency;
     adjacency->instance = instance;
     adjacency->interface = interface;
+    adjacency->hold_time = config->hold_time;
     interface->ldp_adjacency = adjacency;
     
-    ldp_hello_start(config, adjacency);
+    ldp_hello_start(adjacency);
     return true;
 }

@@ -1379,16 +1379,11 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         return false;
     }
 
-    value = json_object_get(ldp, "overload");
-    if(json_is_boolean(value)) {
-        ldp_config->overload  = json_boolean_value(value);
-    }
-
-    value = json_object_get(ldp, "hello-interval");
+    value = json_object_get(ldp, "keepalive-interval");
     if(json_is_number(value)) {
-        ldp_config->hello_interval = json_number_value(value);
+        ldp_config->keepalive_interval = json_number_value(value);
     } else {
-        ldp_config->hello_interval = LDP_DEFAULT_HELLO_INTERVAL;
+        ldp_config->keepalive_interval = LDP_DEFAULT_KEEPALIVE_INTERVAL;
     }
 
     value = json_object_get(ldp, "hold-time");

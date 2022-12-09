@@ -8,28 +8,6 @@
  */
 #include "ldp.h"
 
-void
-ldp_hello_job(timer_s *timer)
-{
-    ldp_adjacency_s *adjacency = timer->data;
-    bbl_network_interface_s *interface = adjacency->interface;
-    interface->send_requests |= BBL_IF_SEND_LDP_HELLO;
-}
-
-/**
- * ldp_hello_start
- *
- * @param config LDP configuration
- * @param adjacency LDP adjacency
- */
-void
-ldp_hello_start(ldp_config_s *config, ldp_adjacency_s *adjacency) 
-{
-    timer_add_periodic(&g_ctx->timer_root, &adjacency->hello_timer, 
-                       "LDP Hello", config->hello_interval, 0, adjacency, 
-                       &ldp_hello_job);
-}
-
 /**
  * ldp_hello_encode
  *
@@ -58,7 +36,6 @@ ldp_hello_encode(bbl_network_interface_s *interface,
     eth->type = ETH_TYPE_IPV4;
     eth->next = &ipv4;
     eth->dst = (uint8_t*)all_routers_mac;
-
     ipv4.dst = IPV4_MC_ALL_ROUTERS;
     ipv4.src = interface->ip.address;
     ipv4.ttl = 1;
@@ -80,6 +57,53 @@ ldp_hello_encode(bbl_network_interface_s *interface,
     return result;
 }
 
+void
+ldp_hello_job(timer_s *timer)
+{
+    ldp_adjacency_s *adjacency = timer->data;
+    bbl_network_interface_s *interface = adjacency->interface;
+    interface->send_requests |= BBL_IF_SEND_LDP_HELLO;
+}
+
+/**
+ * ldp_hello_start
+ *
+ * @param config LDP configuration
+ * @param adjacency LDP adjacency
+ */
+void
+ldp_hello_start(ldp_adjacency_s *adjacency) 
+{
+    time_t hello_interval = adjacency->hold_time/3U;
+    if(!hello_interval) {
+        hello_interval = 1;
+    }
+    timer_add_periodic(&g_ctx->timer_root, &adjacency->hello_timer, 
+                       "LDP Hello", hello_interval, 0, adjacency, 
+                       &ldp_hello_job);
+}
+
+void
+ldp_hello_hold_timeout_job(timer_s *timer)
+{
+    ldp_adjacency_s *adjacency = timer->data;
+
+    if(adjacency->state == LDP_ADJACENCY_STATE_DOWN) {
+        return;
+    }
+
+    adjacency->state = LDP_ADJACENCY_STATE_DOWN;
+    LOG(LDP, "LDP hold timeout on interface %s\n", adjacency->interface->name);
+}
+
+static void
+ldp_hello_restart_hold_timeout(ldp_adjacency_s *adjacency)
+{
+    adjacency->state = LDP_ADJACENCY_STATE_UP;
+    timer_add(&g_ctx->timer_root, &adjacency->hold_timer, 
+              "LDP HOLD TIMEOUT", adjacency->hold_time, 0, adjacency, &ldp_hello_hold_timeout_job);
+}
+
 /**
  * ldp_hello_rx
  *
@@ -97,10 +121,37 @@ ldp_hello_rx(bbl_network_interface_s *interface,
              bbl_ldp_hello_s *ldp)
 {
     ldp_adjacency_s *adjacency = interface->ldp_adjacency;
+    ldp_instance_s  *instance;
+    ldp_session_s   *session;
 
-    UNUSED(adjacency);
     UNUSED(eth);
-    UNUSED(ipv4);
-    UNUSED(ldp);
 
+    interface->stats.ldp_udp_rx++;
+    if(!adjacency) {
+        return;
+    }
+
+    instance = adjacency->instance;
+    session = instance->sessions;
+
+    if(ldp->hold_time > 0 && ldp->hold_time < adjacency->hold_time) {
+        adjacency->hold_time = ldp->hold_time;
+        ldp_hello_start(adjacency);
+    }
+    ldp_hello_restart_hold_timeout(adjacency);
+
+    while(session) {
+        if(session->peer.lsr_id == ldp->lsr_id && 
+           session->peer.label_space_id == ldp->label_space_id) {
+            if(session->state == LDP_CLOSED) {
+                break;
+            } else {
+                return;
+            }
+        }
+        session = session->next;
+    }
+
+    /* Init LDP session. */
+    ldp_session_init(session, adjacency, ipv4, ldp);
 }

@@ -216,7 +216,7 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
 
     session->state = new_state;
 
-    switch (new_state) {
+    switch(new_state) {
         case BGP_OPENSENT:
             bgp_session_state_opensent(session);
             break;
@@ -376,8 +376,6 @@ bgp_session_close(bgp_session_s *session)
 
     /* Stop all timers */
     timer_del(session->connect_timer);
-    timer_del(session->send_open_timer);
-    timer_del(session->open_sent_timer);
     timer_del(session->keepalive_timer);
     timer_del(session->hold_timer);
     timer_del(session->update_timer);
