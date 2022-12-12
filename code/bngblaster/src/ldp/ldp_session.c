@@ -457,6 +457,9 @@ ldp_session_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->local.label_space_id = 0;
         session->local.keepalive_time = config->keepalive_time;
         session->local.max_pdu_len = LDP_MAX_PDU_LEN_INIT;
+        if(config->raw_update_file) {
+            session->raw_update_start = ldp_raw_update_load(config->raw_update_file, true);
+        }
         session->next = instance->sessions;
         instance->sessions = session;
     }
