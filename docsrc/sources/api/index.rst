@@ -189,6 +189,10 @@ BGP
 ---
 .. include:: bgp.rst
 
+LDP
+---
+.. include:: ldp.rst
+
 CFM
 ---
 .. include:: cfm.rst
