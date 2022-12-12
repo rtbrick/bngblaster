@@ -16,7 +16,7 @@ ldp_pdu_close(ldp_session_s *session)
 
     if(session->pdu_start_idx) {
         /* update PDU length */
-        len = buffer->idx - buffer->start_idx;
+        len = buffer->idx - session->pdu_start_idx;
         write_be_uint(buffer->data+session->pdu_start_idx-2, 2, len); 
         session->pdu_start_idx = 0;
     }
@@ -51,7 +51,7 @@ ldp_msg_close(ldp_session_s *session)
 
     if(session->msg_start_idx) {
         /* update message length */
-        len = buffer->idx - buffer->start_idx;
+        len = buffer->idx - session->msg_start_idx;
         write_be_uint(buffer->data+session->msg_start_idx-2, 2, len); 
         session->msg_start_idx = 0;
     }
@@ -73,7 +73,7 @@ ldp_msg_init(ldp_session_s *session, uint16_t type)
     push_be_uint(buffer, 2, type); /* Type */
     push_be_uint(buffer, 2, 0); /* Length */
     session->msg_start_idx = buffer->idx;
-    push_be_uint(buffer, session->message_id++, 4);
+    push_be_uint(buffer, 4, session->message_id++);
     return true;
 }
 
@@ -85,7 +85,7 @@ ldp_tlv_close(ldp_session_s *session)
 
     if(session->tlv_start_idx) {
         /* update length */
-        len = buffer->idx - buffer->start_idx;
+        len = buffer->idx - session->tlv_start_idx;
         write_be_uint(buffer->data+session->tlv_start_idx-2, 2, len); 
         session->tlv_start_idx = 0;
     }
@@ -107,7 +107,6 @@ ldp_tlv_init(ldp_session_s *session, uint16_t type)
     push_be_uint(buffer, 2, type); /* Type */
     push_be_uint(buffer, 2, 0); /* Length */
     session->tlv_start_idx = buffer->idx;
-    push_be_uint(buffer, session->message_id++, 4);
     return true;
 }
 
@@ -127,7 +126,7 @@ ldp_push_init_message(ldp_session_s *session, bool keepalive)
     push_be_uint(buffer, 2, session->peer.label_space_id);
     ldp_tlv_close(session);
     ldp_msg_close(session);
-    if(!keepalive) {
+    if(keepalive) {
         ldp_msg_init(session, LDP_MESSAGE_TYPE_KEEPALIVE);
         ldp_msg_close(session);
     }

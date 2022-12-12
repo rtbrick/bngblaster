@@ -18,6 +18,8 @@
 #define LDP_MIN_MSG_LEN                             8
 #define LDP_MIN_TLV_LEN                             4
 
+#define LDP_BUF_SIZE                                256*1024
+
 #define LDP_MESSAGE_TYPE_NOTIFICATION               0x0001
 #define LDP_MESSAGE_TYPE_HELLO                      0x0100
 #define LDP_MESSAGE_TYPE_INITIALIZATION             0x0200
@@ -133,9 +135,11 @@ typedef struct ldp_session_ {
     ldp_instance_s *instance;
     bbl_network_interface_s *interface;
     bbl_tcp_ctx_s *tcpc;
+    bbl_tcp_ctx_s *listen_tcpc;
 
     struct timer_ *connect_timer;
     struct timer_ *keepalive_timer;
+    struct timer_ *keepalive_timeout_timer;
     struct timer_ *close_timer;
 
     struct timer_ *update_timer;
@@ -150,6 +154,7 @@ typedef struct ldp_session_ {
     uint32_t message_id;
     uint32_t error_code;
 
+    bool decode_error;
     bool active;
     ldp_state_t state;
     uint16_t max_pdu_len;

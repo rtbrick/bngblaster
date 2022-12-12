@@ -12,7 +12,8 @@
 #endif
 
 const char *
-tcp_err_string(err_t err) {
+tcp_err_string(err_t err)
+{
     switch(err) {
         case ERR_OK: return "ok";
         case ERR_MEM: return "out of memory error";
@@ -43,14 +44,17 @@ tcp_err_string(err_t err) {
  * @param tcpc TCP context
  */
 void
-bbl_tcp_close(bbl_tcp_ctx_s *tcpc) {
+bbl_tcp_close(bbl_tcp_ctx_s *tcpc)
+{
     if(tcpc) {
         if(tcpc->pcb) {
-            tcp_arg(tcpc->pcb, NULL);
-            tcp_sent(tcpc->pcb, NULL);
-            tcp_recv(tcpc->pcb, NULL);
-            tcp_err(tcpc->pcb, NULL);
-            tcp_poll(tcpc->pcb, NULL, 0);
+            if(!tcpc->listen) {
+                tcp_arg(tcpc->pcb, NULL);
+                tcp_sent(tcpc->pcb, NULL);
+                tcp_recv(tcpc->pcb, NULL);
+                tcp_err(tcpc->pcb, NULL);
+                tcp_poll(tcpc->pcb, NULL, 0);
+            }
             tcp_close(tcpc->pcb);
         }
         tcpc->state = BBL_TCP_STATE_CLOSED;
@@ -75,8 +79,8 @@ bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc) {
 }
 
 static bbl_tcp_ctx_s *
-bbl_tcp_ctx_new(bbl_network_interface_s *interface) {
-    
+bbl_tcp_ctx_new(bbl_network_interface_s *interface)
+{
     bbl_tcp_ctx_s *tcpc;
 
     /* Init TCP context */
@@ -103,7 +107,8 @@ bbl_tcp_ctx_new(bbl_network_interface_s *interface) {
 }
 
 err_t 
-bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
+bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
+{
     bbl_tcp_ctx_s *tcpc = arg;
     uint16_t tx = tcp_sndbuf(tpcb);
     err_t result = ERR_OK;
@@ -138,7 +143,8 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len) {
 }
 
 err_t 
-bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
+bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
+{
     bbl_tcp_ctx_s *tcpc = arg;
     struct pbuf *_p;
 
@@ -172,7 +178,8 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
  *            ERR_RST: the connection was reset by the remote host
  */
 void 
-bbl_tcp_error_cb(void *arg, err_t err) {
+bbl_tcp_error_cb(void *arg, err_t err)
+{
     bbl_tcp_ctx_s *tcpc = arg;
     tcpc->state = BBL_TCP_STATE_CLOSED;
     tcpc->pcb = NULL;
@@ -253,14 +260,12 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 }
 
 err_t
-bbl_tcp_ipv4_listen_accept(void *arg, struct tcp_pcb *tpcb, err_t err)
+bbl_tcp_ipv4_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     bbl_tcp_ctx_s *listen = arg;
     bbl_tcp_ctx_s *tcpc;
 
     UNUSED(err); /* TODO!!! */
-
-    //tcp_setprio(tpcb, TCP_PRIO_MIN);
 
     tcpc = calloc(1, sizeof(bbl_tcp_ctx_s));
     if(!tcpc) {
@@ -269,14 +274,19 @@ bbl_tcp_ipv4_listen_accept(void *arg, struct tcp_pcb *tpcb, err_t err)
     tcpc->interface = listen->interface;
     tcpc->af = listen->af;
     tcpc->local_port = listen->local_port;
-    tcpc->local_ipv4 = listen->local_ipv4;
+    tcpc->remote_port = tpcb->remote_port;
+
+    tcpc->accepted_cb = listen->accepted_cb;
+    tcpc->connected_cb = listen->connected_cb;
+    tcpc->idle_cb = listen->idle_cb;
+    tcpc->receive_cb = listen->receive_cb;
+    tcpc->error_cb = listen->error_cb;
+    tcpc->poll_cb = listen->poll_cb;
+    tcpc->poll_interval = listen->poll_interval;
+    tcpc->arg = listen->arg;
 
     tcpc->pcb = tpcb;
     tcp_arg(tpcb, tcpc);
-
-    if(listen->accepted_cb) {
-        (listen->accepted_cb)(tcpc, listen->arg);
-    }
 
     /* Add send/receive callback functions. */
     tcp_sent(tpcb, bbl_tcp_sent_cb);
@@ -286,6 +296,38 @@ bbl_tcp_ipv4_listen_accept(void *arg, struct tcp_pcb *tpcb, err_t err)
     }
     tcp_err(tpcb, bbl_tcp_error_cb);
 
+    if(tcpc->af == AF_INET) {
+        tcpc->local_ipv4 = tpcb->local_ip.u_addr.ip4.addr;
+        tcpc->remote_ipv4 = tpcb->remote_ip.u_addr.ip4.addr;
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) session accepted\n",
+            tcpc->interface->name,
+            format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
+    } else {
+        memcpy(tcpc->local_ipv6, tpcb->local_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
+        memcpy(tcpc->remote_ipv6, tpcb->remote_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) session accepted\n",
+            tcpc->interface->name,
+            format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
+            format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port);
+    }
+
+    /* Call application TCP accepted callback function. */
+    if(listen->accepted_cb) {
+        if((listen->accepted_cb)(tcpc, listen->arg) != ERR_OK) {
+            free(tcpc);
+            tcp_abort(tpcb);
+            return ERR_ABRT;
+        };
+    }
+
+    tcpc->state = BBL_TCP_STATE_IDLE;
+
+    /* Call application TCP connected callback function. */
+    if(tcpc->connected_cb) {
+        (tcpc->connected_cb)(tcpc->arg);
+    }
+    bbl_tcp_sent_cb(tcpc, tpcb, 0);
     return ERR_OK;  
 }
 
@@ -318,8 +360,9 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uin
     }
 
     tcpc->pcb = tcp_listen(tcpc->pcb);
-    tcp_accept(tcpc->pcb, bbl_tcp_ipv4_listen_accept);
+    tcp_accept(tcpc->pcb, bbl_tcp_ipv4_listen_accepted);
 
+    tcpc->listen = true;
     tcpc->af = AF_INET;
     tcpc->local_port = port;
     tcpc->local_ipv4 = *address;
@@ -432,8 +475,8 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port) {
-
+bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port)
+{
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return NULL;
@@ -454,7 +497,8 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
  * @param interface receiving interface
  */
 void
-bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6) {
+bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6)
+{
     struct pbuf *pbuf;
     UNUSED(eth);
 
@@ -484,8 +528,8 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
  * @return true if successful
  */
 bool
-bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len) {
-
+bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len)
+{
     if(tcpc->state == BBL_TCP_STATE_SENDING) {
         return false;
     }
@@ -504,7 +548,8 @@ bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len) {
  * Function of type netif_output_fn
  */
 err_t 
-bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t *ipaddr) {
+bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t *ipaddr)
+{
     bbl_network_interface_s *interface = netif->state;
     bbl_ethernet_header_s eth = {0};
     UNUSED(ipaddr);
@@ -526,7 +571,8 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
  * Function of type netif_output_ip6_fn
  */
 err_t 
-bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t *ipaddr) {
+bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t *ipaddr)
+{
     bbl_network_interface_s *interface = netif->state;
     bbl_ethernet_header_s eth = {0};
     UNUSED(ipaddr);
@@ -545,7 +591,8 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
 }
 
 err_t 
-bbl_tcp_netif_init(struct netif *netif) {
+bbl_tcp_netif_init(struct netif *netif)
+{
     netif->output = bbl_tcp_netif_output_ipv4;
     netif->output_ip6 = bbl_tcp_netif_output_ipv6;
     netif_set_up(netif);
@@ -562,7 +609,8 @@ bbl_tcp_netif_init(struct netif *netif) {
  * @return return true if successfully
  */
 bool
-bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_config_s *config) {
+bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_config_s *config)
+{
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return true;
@@ -577,7 +625,8 @@ bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_c
 }
 
 void
-bbl_tcp_simer(timer_s *timer) {
+bbl_tcp_simer(timer_s *timer)
+{
     UNUSED(timer);
     sys_check_timeouts();
 }
@@ -588,7 +637,8 @@ bbl_tcp_simer(timer_s *timer) {
  * Init TCP (LwIP) and start global TCP timer job. 
  */
 void
-bbl_tcp_init() {
+bbl_tcp_init()
+{
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
         return;

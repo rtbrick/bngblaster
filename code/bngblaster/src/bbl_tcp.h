@@ -19,13 +19,13 @@
 
 typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_CLOSED,
+    BBL_TCP_STATE_LISTEN,
     BBL_TCP_STATE_CONNECTING,
     BBL_TCP_STATE_IDLE,
     BBL_TCP_STATE_SENDING,
-    BBL_TCP_STATE_LISTEN,
 } bbl_tcp_state_t;
 
-typedef void (*bbl_tcp_accepted_fn)(bbl_tcp_ctx_s *tcpc, void *arg);
+typedef err_t (*bbl_tcp_accepted_fn)(bbl_tcp_ctx_s *tcpc, void *arg);
 typedef void (*bbl_tcp_callback_fn)(void *arg);
 typedef void (*bbl_tcp_receive_fn)(void *arg, uint8_t *buf, uint16_t len);
 typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);

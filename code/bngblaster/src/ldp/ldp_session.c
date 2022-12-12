@@ -174,10 +174,10 @@ ldp_session_keepalive_timeout_job(timer_s *timer)
     ldp_session_close(session);
 }
 
-static void
+void
 ldp_session_restart_keepalive_timeout(ldp_session_s *session)
 {
-    timer_add(&g_ctx->timer_root, &session->keepalive_timer, 
+    timer_add(&g_ctx->timer_root, &session->keepalive_timeout_timer, 
               "LDP TIMEOUT", session->keepalive_time, 0, session, &ldp_session_keepalive_timeout_job);
 }
 
@@ -204,7 +204,7 @@ ldp_session_operational(ldp_session_s *session)
     } else {
         session->keepalive_time = session->local.keepalive_time;
     }
-    keepalive_interval = session->keepalive_time/2U;
+    keepalive_interval = session->keepalive_time/3U;
     if(!keepalive_interval) {
         keepalive_interval = 1;
     }
@@ -228,27 +228,30 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
             if(session->active) {
                 ldp_session_reset_write_buffer(session);
                 ldp_push_init_message(session, false);
-                ldp_session_send(session);
-                session->stats.pdu_tx++;
-                session->stats.message_tx++;
-                ldp_session_state_change(session, LDP_OPENSENT);
+                if(ldp_session_send(session)) {
+                    session->stats.pdu_tx++;
+                    session->stats.message_tx++;
+                    ldp_session_state_change(session, LDP_OPENSENT);
+                }
             }
             break;
         case LDP_EVENT_RX_INITIALIZED:
             if(session->state == LDP_INITIALIZED) {
                 ldp_session_reset_write_buffer(session);
                 ldp_push_init_message(session, true);
-                ldp_session_send(session);
-                session->stats.pdu_tx++;
-                session->stats.message_tx++;
-                ldp_session_state_change(session, LDP_OPENREC);
+                if(ldp_session_send(session)) {
+                    session->stats.pdu_tx++;
+                    session->stats.message_tx++;
+                    ldp_session_state_change(session, LDP_OPENREC);
+                }
             } else if(session->state == LDP_OPENSENT) {
                 ldp_session_reset_write_buffer(session);
                 ldp_push_keepalive_message(session);
-                ldp_session_send(session);
-                session->stats.pdu_tx++;
-                session->stats.message_tx++;
-                ldp_session_state_change(session, LDP_OPENREC);
+                if(ldp_session_send(session)) {
+                    session->stats.pdu_tx++;
+                    session->stats.message_tx++;
+                    ldp_session_state_change(session, LDP_OPENREC);
+                }
             } else {
                 if(!session->error_code) {
                     session->error_code = LDP_STATUS_INTERNAL_ERROR;
@@ -260,17 +263,29 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
             if(session->state == LDP_OPENREC) {
                 ldp_session_operational(session);
             }
-            ldp_session_restart_keepalive_timeout(session);
             break;
         default:
             break;
     }
 }
 
+err_t 
+ldp_accepted_cb(bbl_tcp_ctx_s *tcpc, void *arg)
+{
+    ldp_session_s *session = (ldp_session_s*)arg;
+    if(session->state == LDP_LISTEN) {
+        session->tcpc = tcpc;
+    } else {
+        return ERR_ABRT;
+    }
+    return ERR_OK;
+}
+
 void 
 ldp_connected_cb(void *arg)
 {
     ldp_session_s *session = (ldp_session_s*)arg;
+    g_ctx->routing_sessions++;
     ldp_session_fsm(session, LDP_EVENT_START);
 }
 
@@ -338,16 +353,17 @@ ldp_session_connect_job(timer_s *timer)
 static void
 ldp_session_listen(ldp_session_s *session)
 {
-    session->tcpc = bbl_tcp_ipv4_listen(
+    session->listen_tcpc = bbl_tcp_ipv4_listen(
         session->interface,
         &session->local.ipv4_address,
         LDP_PORT);
 
-    if(session->tcpc) {
-        session->tcpc->arg = session;
-        session->tcpc->connected_cb = ldp_connected_cb;
-        session->tcpc->receive_cb = ldp_receive_cb;
-        session->tcpc->error_cb = ldp_error_cb;
+    if(session->listen_tcpc) {
+        session->listen_tcpc->arg = session;
+        session->listen_tcpc->accepted_cb = ldp_accepted_cb;
+        session->listen_tcpc->connected_cb = ldp_connected_cb;
+        session->listen_tcpc->receive_cb = ldp_receive_cb;
+        session->listen_tcpc->error_cb = ldp_error_cb;
 
         ldp_session_state_change(session, LDP_LISTEN);
         timer_add_periodic(&g_ctx->timer_root, &session->connect_timer, 
@@ -372,7 +388,9 @@ ldp_session_connect(ldp_session_s *session, time_t delay)
 {
     if(!session->teardown && session->state == LDP_CLOSED) {
         bbl_tcp_ctx_free(session->tcpc);
+        bbl_tcp_ctx_free(session->listen_tcpc);
         session->tcpc = NULL;
+        session->listen_tcpc = NULL;
 
         ldp_session_reset_read_buffer(session);
         ldp_session_reset_write_buffer(session);
@@ -382,7 +400,7 @@ ldp_session_connect(ldp_session_s *session, time_t delay)
         session->tlv_start_idx = 0;
         session->message_id = 0;
         session->error_code = 0;
-
+        session->decode_error = false;
         session->max_pdu_len = LDP_MAX_PDU_LEN_INIT;
         session->keepalive_time = session->local.keepalive_time;
 
@@ -453,6 +471,12 @@ ldp_session_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     session->peer.keepalive_time = 0;
     session->peer.max_pdu_len = 0;
 
+    /* Init read/write buffer */
+    session->read_buf.data = malloc(LDP_BUF_SIZE);
+    session->read_buf.size = LDP_BUF_SIZE;
+    session->write_buf.data = malloc(LDP_BUF_SIZE);
+    session->write_buf.size = LDP_BUF_SIZE;
+
     if(be32toh(session->local.ipv4_address) > be32toh(session->peer.ipv4_address)) {
         session->active = true;
     } else {
@@ -466,9 +490,16 @@ void
 ldp_session_close_job(timer_s *timer)
 {
     ldp_session_s *session = timer->data;
+    if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
+
+    /* Close TCP session */
+    if(session->listen_tcpc) {
+        bbl_tcp_ctx_free(session->listen_tcpc);
+        session->listen_tcpc = NULL;
+    }
     if(session->state > LDP_IDLE) {
-        /* Close TCP session */
-        bbl_tcp_close(session->tcpc);
+        bbl_tcp_ctx_free(session->tcpc);
+        session->tcpc = NULL;
     }
     ldp_session_state_change(session, LDP_CLOSED);
     if(!session->teardown) {
@@ -486,9 +517,14 @@ ldp_session_close(ldp_session_s *session)
 {
     time_t delay = 0;
 
+    LOG(LDP, "LDP (%s:%u - %s:%u) close session\n",
+        format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
+        format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+
     /* Stop all timers */
     timer_del(session->connect_timer);
     timer_del(session->keepalive_timer);
+    timer_del(session->keepalive_timeout_timer);
     timer_del(session->update_timer);
 
     if(!session->error_code) {
