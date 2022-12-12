@@ -65,7 +65,6 @@ typedef struct bgp_config_ {
     bool start_traffic;
 
     char *network_interface;
-    char *mrt_file;
     char *raw_update_file;
 
     /* Pointer to next instance */

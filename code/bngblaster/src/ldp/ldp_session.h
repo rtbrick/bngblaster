@@ -9,6 +9,12 @@
 #ifndef __BBL_LDP_SESSION_H__
 #define __BBL_LDP_SESSION_H__
 
+const char *
+ldp_session_state_string(ldp_state_t state);
+
+void
+ldp_session_update_job(timer_s *timer);
+
 void
 ldp_session_restart_keepalive_timeout(ldp_session_s *session);
 

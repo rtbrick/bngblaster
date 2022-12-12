@@ -241,7 +241,8 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
                 ldp_push_init_message(session, true);
                 if(ldp_session_send(session)) {
                     session->stats.pdu_tx++;
-                    session->stats.message_tx++;
+                    session->stats.message_tx += 2;
+                    session->stats.keepalive_tx++;
                     ldp_session_state_change(session, LDP_OPENREC);
                 }
             } else if(session->state == LDP_OPENSENT) {
@@ -250,6 +251,7 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
                 if(ldp_session_send(session)) {
                     session->stats.pdu_tx++;
                     session->stats.message_tx++;
+                    session->stats.keepalive_tx++;
                     ldp_session_state_change(session, LDP_OPENREC);
                 }
             } else {
@@ -449,13 +451,14 @@ ldp_session_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
 
     if(!session) {
         session = calloc(1, sizeof(ldp_session_s));
-        session->next = instance->sessions;
-        instance->sessions = session;
+        session->instance = instance;
         session->local.ipv4_address = config->ipv4_transport_address;
         session->local.lsr_id = config->lsr_id;
         session->local.label_space_id = 0;
-        session->local.keepalive_time = config->keepalive_interval;
+        session->local.keepalive_time = config->keepalive_time;
         session->local.max_pdu_len = LDP_MAX_PDU_LEN_INIT;
+        session->next = instance->sessions;
+        instance->sessions = session;
     }
     session->interface = adjacency->interface;
     session->max_pdu_len = session->local.max_pdu_len;

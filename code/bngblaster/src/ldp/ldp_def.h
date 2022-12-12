@@ -62,7 +62,7 @@
 #define LDP_STATUS_SHUTDOWN                         0x0000000A
 #define LDP_STATUS_INTERNAL_ERROR                   0x00000019
 
-#define LDP_DEFAULT_KEEPALIVE_INTERVAL              15
+#define LDP_DEFAULT_KEEPALIVE_TIME                  15
 #define LDP_DEFAULT_HOLD_TIME                       15
 #define LDP_DEFAULT_TEARDOWN_TIME                   5
 
@@ -120,9 +120,11 @@ typedef struct ldp_config_ {
     const char *lsr_id_str;
     const char *hostname;
 
-    uint16_t keepalive_interval;
+    uint16_t keepalive_time;
     uint16_t hold_time;
     uint16_t teardown_time;
+
+    char *raw_update_file;
 
     /* Pointer to next instance. */
     struct ldp_config_ *next; 

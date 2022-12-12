@@ -1384,7 +1384,7 @@ bbl_session_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
         /* Terminate single matching session ... */
         session = bbl_session_get(session_id);
         if(session) {
-            json_unpack(arguments, "{s:i}", "reconnect-delay", &session->reconnect_delay);
+            json_unpack(arguments, "{s:i}", "reconnect-delay", &reconnect_delay);
             if(reconnect_delay > 0) {
                 session->reconnect_delay = reconnect_delay;
             }

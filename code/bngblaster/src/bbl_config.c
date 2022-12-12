@@ -1381,11 +1381,11 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         return false;
     }
 
-    value = json_object_get(ldp, "keepalive-interval");
+    value = json_object_get(ldp, "keepalive-time");
     if(json_is_number(value)) {
-        ldp_config->keepalive_interval = json_number_value(value);
+        ldp_config->keepalive_time = json_number_value(value);
     } else {
-        ldp_config->keepalive_interval = LDP_DEFAULT_KEEPALIVE_INTERVAL;
+        ldp_config->keepalive_time = LDP_DEFAULT_KEEPALIVE_TIME;
     }
 
     value = json_object_get(ldp, "hold-time");
@@ -1424,6 +1424,13 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         }
     } else {
         ldp_config->ipv4_transport_address = ldp_config->lsr_id;
+    }
+
+    if(json_unpack(ldp, "{s:s}", "raw-update-file", &s) == 0) {
+        ldp_config->raw_update_file = strdup(s);
+        if(!ldp_raw_update_load(ldp_config->raw_update_file, true)) {
+            return false;
+        }
     }
     return true;
 }
@@ -2330,6 +2337,20 @@ json_parse_config(json_t *root)
         }
         if(!json_parse_ldp_config(sub, ldp_config)) {
             return false;
+        }
+    }
+
+    /* Pre-Load LDP RAW update files */
+    sub = json_object_get(root, "ldp-raw-update-files");
+    if(json_is_array(sub)) {
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            s = json_string_value(json_array_get(sub, i));
+            if(s) {
+                if(!ldp_raw_update_load(s, true)) {
+                    return false;
+                }
+            }
         }
     }
 
