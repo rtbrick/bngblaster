@@ -10,6 +10,9 @@
 #define __BBL_LDP_SESSION_H__
 
 void
+ldp_session_restart_keepalive_timeout(ldp_session_s *session);
+
+void
 ldp_session_fsm(ldp_session_s *session, ldp_event_t event);
 
 void

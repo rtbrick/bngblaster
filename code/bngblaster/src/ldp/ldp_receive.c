@@ -27,10 +27,11 @@ struct keyval_ ldp_msg_names[] = {
 static void 
 ldp_decode_error(ldp_session_s *session)
 {
-    LOG(BGP, "LDP (%s:%u - %s:%u) invalid PDU received\n",
+    LOG(LDP, "LDP (%s:%u - %s:%u) invalid PDU received\n",
         format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
         format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
 
+    session->decode_error = true;
     if(!session->error_code) {
         session->error_code = LDP_STATUS_INTERNAL_ERROR;
     }
@@ -118,7 +119,7 @@ ldp_read(ldp_session_s *session)
     uint16_t msg_length;
     uint32_t msg_id;
 
-    while(true) {
+    while(!session->decode_error) {
         pdu_start = buffer->data+buffer->start_idx;
         size = buffer->idx - buffer->start_idx;
 
@@ -149,7 +150,7 @@ ldp_read(ldp_session_s *session)
         session->stats.pdu_rx++;
 
         /* Read LDP Identifier. */
-        lsr_id = read_be_uint(pdu_start+4, 4);
+        lsr_id = *(uint32_t*)(pdu_start+4);
         label_space_id = read_be_uint(pdu_start+8, 2);
 
         if(lsr_id != session->peer.lsr_id || 
@@ -159,7 +160,7 @@ ldp_read(ldp_session_s *session)
         }
 
         pdu_length -= LDP_IDENTIFIER_LEN;
-        msg_start = pdu_start+10;
+        msg_start = pdu_start+LDP_MIN_PDU_LEN;
         while(pdu_length >= LDP_MIN_MSG_LEN) {
             session->stats.message_rx++;
 
@@ -175,6 +176,8 @@ ldp_read(ldp_session_s *session)
                 format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
                 format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id,
                 keyval_get_key(ldp_msg_names, msg_type), msg_id);
+
+            ldp_session_restart_keepalive_timeout(session);
 
             switch(msg_type) {
                 case LDP_MESSAGE_TYPE_NOTIFICATION:
@@ -204,7 +207,8 @@ ldp_read(ldp_session_s *session)
                 default:
                     break;
             }
-            msg_start += msg_length+4;
+            pdu_length -= (msg_length+4);
+            msg_start += (msg_length+4);
         }
 
         /* Progress pointer to next LDP PDU. */
@@ -218,6 +222,7 @@ ldp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
 {
     ldp_session_s *session = (ldp_session_s*)arg;
     io_buffer_t *buffer = &session->read_buf;
+
     if(buf) {
         if(buffer->idx+len > buffer->size) {
             LOG(ERROR, "LDP (%s:%u - %s:%u) receive error (read buffer exhausted)\n",

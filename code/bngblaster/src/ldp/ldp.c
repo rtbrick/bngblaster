@@ -50,10 +50,17 @@ void
 ldp_teardown()
 {
     ldp_instance_s *instance = g_ctx->ldp_instances;
+    ldp_session_s *session;
     while(instance) {
         if(!instance->teardown) {
             LOG(LDP, "Teardown LDP instance %u\n", instance->config->id);
             instance->teardown = true;
+            session = instance->sessions;
+            while(session) {
+                session->teardown = true;
+                ldp_session_close(session);
+                session = session->next;
+            }
             timer_add(&g_ctx->timer_root, &instance->teardown_timer, 
                       "LDP TEARDOWN", instance->config->teardown_time, 0, instance,
                       &ldp_teardown_job);
