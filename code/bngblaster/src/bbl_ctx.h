@@ -96,6 +96,7 @@ typedef struct bbl_ctx_
     bgp_raw_update_s *bgp_raw_updates;
     isis_instance_s *isis_instances;
     ldp_instance_s *ldp_instances;
+    ldp_raw_update_s *ldp_raw_updates;
 
     /* Scratchpad memory */
     uint8_t *sp;
