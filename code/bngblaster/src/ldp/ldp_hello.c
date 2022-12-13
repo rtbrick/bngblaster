@@ -40,7 +40,6 @@ ldp_hello_encode(bbl_network_interface_s *interface,
     ipv4.src = interface->ip.address;
     ipv4.ttl = 1;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
-    ipv4.router_alert_option = true;
     ipv4.next = &udp;
     udp.src = LDP_PORT;
     udp.dst = LDP_PORT;
