@@ -10,12 +10,24 @@
 #define __BBL_LDP_MESSAGE_H__
 
 void
-ldp_push_init_message(ldp_session_s *session, bool keepalive);
+ldp_pdu_close(ldp_session_s *session);
+
+bool
+ldp_pdu_init(ldp_session_s *session);
+
+void
+ldp_push_init_message(ldp_session_s *session);
 
 void
 ldp_push_keepalive_message(ldp_session_s *session);
 
 void
 ldp_push_notification_message(ldp_session_s *session);
+
+void
+ldp_push_label_mapping_message(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label);
+
+void
+ldp_push_self_message(ldp_session_s *session);
 
 #endif

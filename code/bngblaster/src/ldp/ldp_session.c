@@ -149,12 +149,10 @@ ldp_session_keepalive_job(timer_s *timer)
     if(session->state == LDP_OPERATIONAL) {
         if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
             ldp_session_reset_write_buffer(session);
+            ldp_pdu_init(session);
             ldp_push_keepalive_message(session);
-            if(ldp_session_send(session)) {
-                session->stats.pdu_tx++;
-                session->stats.message_tx++;
-                session->stats.keepalive_tx++;
-            }
+            ldp_pdu_close(session);
+            ldp_session_send(session);
         }
     }
 }
@@ -197,7 +195,7 @@ ldp_session_operational(ldp_session_s *session)
         session->max_pdu_len = session->local.max_pdu_len;
     }
 
-    /* Start LDP keepalive */
+    /* Start LDP keepalive. */
     if(session->peer.keepalive_time > 0 && 
        session->peer.keepalive_time < session->local.keepalive_time) {
         session->keepalive_time = session->peer.keepalive_time;
@@ -213,7 +211,7 @@ ldp_session_operational(ldp_session_s *session)
                        "LDP KEEPALIVE", keepalive_interval, 0, session,
                        &ldp_session_keepalive_job);
 
-    /* Start LDP updates */
+    /* Start LDP updates. */
     timer_add(&g_ctx->timer_root, &session->update_timer, 
               "LDP UPDATE", 0, 0, session,
               &ldp_session_update_job);
@@ -227,33 +225,29 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
             ldp_session_state_change(session, LDP_INITIALIZED);
             if(session->active) {
                 ldp_session_reset_write_buffer(session);
-                ldp_push_init_message(session, false);
-                if(ldp_session_send(session)) {
-                    session->stats.pdu_tx++;
-                    session->stats.message_tx++;
-                    ldp_session_state_change(session, LDP_OPENSENT);
-                }
+                ldp_pdu_init(session);
+                ldp_push_init_message(session);
+                ldp_pdu_close(session);
+                ldp_session_send(session);
+                ldp_session_state_change(session, LDP_OPENSENT);
             }
             break;
         case LDP_EVENT_RX_INITIALIZED:
             if(session->state == LDP_INITIALIZED) {
                 ldp_session_reset_write_buffer(session);
-                ldp_push_init_message(session, true);
-                if(ldp_session_send(session)) {
-                    session->stats.pdu_tx++;
-                    session->stats.message_tx += 2;
-                    session->stats.keepalive_tx++;
-                    ldp_session_state_change(session, LDP_OPENREC);
-                }
+                ldp_pdu_init(session);
+                ldp_push_init_message(session);
+                ldp_push_keepalive_message(session);
+                ldp_pdu_close(session);
+                ldp_session_send(session);
+                ldp_session_state_change(session, LDP_OPENREC);
             } else if(session->state == LDP_OPENSENT) {
                 ldp_session_reset_write_buffer(session);
+                ldp_pdu_init(session);
                 ldp_push_keepalive_message(session);
-                if(ldp_session_send(session)) {
-                    session->stats.pdu_tx++;
-                    session->stats.message_tx++;
-                    session->stats.keepalive_tx++;
-                    ldp_session_state_change(session, LDP_OPENREC);
-                }
+                ldp_pdu_close(session);
+                ldp_session_send(session);
+                ldp_session_state_change(session, LDP_OPENREC);
             } else {
                 if(!session->error_code) {
                     session->error_code = LDP_STATUS_INTERNAL_ERROR;
@@ -264,6 +258,11 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
         case LDP_EVENT_RX_KEEPALIVE:
             if(session->state == LDP_OPENREC) {
                 ldp_session_operational(session);
+                ldp_session_reset_write_buffer(session);
+                ldp_pdu_init(session);
+                ldp_push_self_message(session);
+                ldp_pdu_close(session);
+                ldp_session_send(session);
             }
             break;
         default:
@@ -543,7 +542,9 @@ ldp_session_close(ldp_session_s *session)
             format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
 
         ldp_session_reset_write_buffer(session);
+        ldp_pdu_init(session);
         ldp_push_notification_message(session);
+        ldp_pdu_close(session);
         ldp_session_send(session);
         session->stats.pdu_tx++;
         session->stats.message_tx++;
@@ -555,5 +556,3 @@ ldp_session_close(ldp_session_s *session)
               "LDP CLOSE", delay, 0, session,
               &ldp_session_close_job);
 }
-
-
