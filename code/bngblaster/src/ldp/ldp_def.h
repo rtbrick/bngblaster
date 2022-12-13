@@ -227,7 +227,6 @@ typedef struct ldp_adjacency_ {
 typedef struct ldp_instance_ {
     ldp_config_s *config;
 
-    bool overload;
     bool teardown;
     
     struct timer_ *teardown_timer;
