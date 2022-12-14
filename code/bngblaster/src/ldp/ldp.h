@@ -15,9 +15,13 @@
 #include "ldp_interface.h"
 #include "ldp_session.h"
 #include "ldp_message.h"
+#include "ldp_db.h"
 #include "ldp_receive.h"
 #include "ldp_raw_update.h"
 #include "ldp_ctrl.h"
+
+char *
+ldp_id_to_str(uint32_t lsr_id, uint16_t label_space_id);
 
 bool
 ldp_init();

@@ -13,6 +13,7 @@
 
 #define LDP_PORT                                    646
 #define LDP_IDENTIFIER_LEN                          6U
+#define LDP_IDENTIFIER_STR_LEN                      sizeof("255.255.255.255:6500")
 #define LDP_MAX_PDU_LEN_INIT                        4096U
 #define LDP_MIN_PDU_LEN                             10
 #define LDP_MIN_MSG_LEN                             8
@@ -49,6 +50,8 @@
 #define LDP_TLV_TYPE_LABEL_REQUEST_ID               0x0600
 
 #define LDP_TLV_LEN_MIN                             4
+#define LDP_FEC_LEN_MIN                             4
+#define LDP_FEC_ELEMENT_TYPE_PREFIX                 2
 
 #define LDP_STATUS_SUCCESS                          0x00000000
 #define LDP_STATUS_BAD_IDENTIFIER                   0x00000001
@@ -93,6 +96,21 @@ typedef enum ldp_adjacency_state_ {
 typedef struct ldp_instance_ ldp_instance_s;
 typedef struct ldp_session_ ldp_session_s;
 typedef struct ldp_adjacency_ ldp_adjacency_s;
+
+/*
+ * LDP database entry
+ */
+typedef struct ldp_db_entry_ {
+    iana_afi_t afi;
+    bool active;
+    union {
+        ipv4_prefix ipv4;
+        ipv6_prefix ipv6;
+    } prefix;
+    uint32_t label;
+    uint32_t version;
+    ldp_session_s *source;
+} ldp_db_entry_s;
 
 /*
  * LDP RAW Update File
@@ -234,7 +252,10 @@ typedef struct ldp_instance_ {
     ldp_adjacency_s *adjacencies;
     ldp_session_s *sessions;
 
-    hb_tree *ldb; /* Label database. */
+    struct {
+        hb_tree *ipv4;
+        hb_tree *ipv6;
+    } db; /* Label database. */
 
     /* Pointer to next instance. */
     struct ldp_instance_ *next;

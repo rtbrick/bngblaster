@@ -27,9 +27,9 @@ struct keyval_ ldp_msg_names[] = {
 static void 
 ldp_decode_error(ldp_session_s *session)
 {
-    LOG(LDP, "LDP (%s:%u - %s:%u) invalid PDU received\n",
-        format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-        format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+    LOG(LDP, "LDP (%s - %s) invalid PDU received\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
     session->decode_error = true;
     if(!session->error_code) {
@@ -48,6 +48,79 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
 }
 
 static bool
+ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
+{
+    uint8_t *tlv_start = start;
+    uint16_t tlv_type;
+    uint16_t tlv_length;
+
+    uint8_t prefix_length;
+    uint8_t prefix_bytes;
+
+    uint8_t *fec_element;
+    uint16_t fec_length;
+    uint16_t fec_afi;
+    uint32_t label;
+
+    ipv4_prefix ipv4prefix;
+
+    /* Read all TLV's. */
+    while(length >= LDP_TLV_LEN_MIN) {
+        tlv_type = read_be_uint(tlv_start, 2) & 0x3FFF;
+        tlv_length = read_be_uint(tlv_start+2, 2);
+        if(tlv_length+LDP_TLV_LEN_MIN > length) {
+            return false;
+        }
+        switch(tlv_type) {
+            case LDP_TLV_TYPE_FEC:
+                if(tlv_length < LDP_FEC_LEN_MIN) {
+                    return false;
+                }
+                fec_element = tlv_start+LDP_TLV_LEN_MIN;
+                fec_length = tlv_length;
+                if(*fec_element != LDP_FEC_ELEMENT_TYPE_PREFIX) {
+                    return false;
+                }
+                break;
+            case LDP_TLV_TYPE_GENERIC_LABEL:
+                if(tlv_length < sizeof(label)) {
+                    return false;
+                }
+                label = read_be_uint(tlv_start+LDP_TLV_LEN_MIN, sizeof(label));
+                break;
+            default:
+                break;
+        }
+        length -= (tlv_length+LDP_TLV_LEN_MIN);
+        tlv_start += (tlv_length+LDP_TLV_LEN_MIN);
+    }
+
+    /* Read all FEC elements. */
+    while(fec_length >= LDP_FEC_LEN_MIN) {
+        fec_afi = read_be_uint(fec_element+1, 2);
+        prefix_length = *(fec_element+3);
+        prefix_bytes = BITS_TO_BYTES(prefix_length);
+        if(prefix_bytes+LDP_FEC_LEN_MIN > fec_length) {
+            return false;
+        }
+        if(fec_afi == IANA_AFI_IPV4) {
+            ipv4prefix.len = prefix_length;
+            ipv4prefix.address = 0;
+            memcpy((uint8_t*)&ipv4prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
+            LOG(DEBUG, "LDP (%s - %s) add %s via label %u\n",
+                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+                format_ipv4_prefix(&ipv4prefix), label);
+
+            ldb_db_add_ipv4(session, &ipv4prefix, label);
+        }
+        fec_length -= (prefix_bytes+LDP_FEC_LEN_MIN);
+        fec_element += (prefix_bytes+LDP_FEC_LEN_MIN);
+    }
+    return true;
+}
+
+static bool
 ldp_initialization(ldp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t *tlv_start = start;
@@ -57,10 +130,9 @@ ldp_initialization(ldp_session_s *session, uint8_t *start, uint16_t length)
     while(length > LDP_TLV_LEN_MIN) {
         tlv_type = read_be_uint(tlv_start, 2) & 0x3FFF;
         tlv_length = read_be_uint(tlv_start+2, 2);
-        if(tlv_length+2 > length) {
+        if(tlv_length+LDP_TLV_LEN_MIN > length) {
             return false;
         }
-        
         switch(tlv_type) {
             case LDP_TLV_TYPE_COMMON_SESSION_PARAMETERS:
                 if(tlv_length < 14) {
@@ -72,8 +144,8 @@ ldp_initialization(ldp_session_s *session, uint8_t *start, uint16_t length)
             default:
                 break;
         }
-        length -= (tlv_length+2);
-        tlv_start += (tlv_length+2);
+        length -= (tlv_length+LDP_TLV_LEN_MIN);
+        tlv_start += (tlv_length+LDP_TLV_LEN_MIN);
     }
     ldp_session_fsm(session, LDP_EVENT_RX_INITIALIZED);
     return true;
@@ -172,9 +244,9 @@ ldp_read(ldp_session_s *session)
                 return;
             }
 
-            LOG(DEBUG, "LDP (%s:%u - %s:%u) read %s message (%u)\n",
-                format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-                format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id,
+            LOG(DEBUG, "LDP (%s - %s) read %s message (%u)\n",
+                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
                 keyval_get_key(ldp_msg_names, msg_type), msg_id);
 
             ldp_session_restart_keepalive_timeout(session);
@@ -196,9 +268,14 @@ ldp_read(ldp_session_s *session)
                     session->stats.keepalive_rx++;
                     ldp_session_fsm(session, LDP_EVENT_RX_KEEPALIVE);
                     break;
+                case LDP_MESSAGE_TYPE_LABEL_MAPPING:
+                    if(!ldp_label_mapping(session, msg_start+8, msg_length-4)) {
+                        ldp_decode_error(session);
+                        return;
+                    }
+                    break;
                 case LDP_MESSAGE_TYPE_ADDRESS:
                 case LDP_MESSAGE_TYPE_ADDRESS_WITHDRAW:
-                case LDP_MESSAGE_TYPE_LABEL_MAPPING:
                 case LDP_MESSAGE_TYPE_LABEL_REQUEST:
                 case LDP_MESSAGE_TYPE_LABEL_WITHDRAW:
                 case LDP_MESSAGE_TYPE_LABEL_RELEASE:
@@ -225,9 +302,9 @@ ldp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
 
     if(buf) {
         if(buffer->idx+len > buffer->size) {
-            LOG(ERROR, "LDP (%s:%u - %s:%u) receive error (read buffer exhausted)\n",
-                format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-                format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+            LOG(ERROR, "LDP (%s - %s) receive error (read buffer exhausted)\n",
+                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
             if(!session->error_code) {
                 session->error_code = LDP_STATUS_INTERNAL_ERROR;
             }

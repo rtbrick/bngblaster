@@ -8,6 +8,31 @@
  */
 #include "ldp.h"
 
+
+/**
+ * ldp_id_to_str
+ *
+ * @param lsr_id LDP LSR ID
+ * @param label_space_id LDP label space
+
+ * @return LDP identifier string
+ */
+char *
+ldp_id_to_str(uint32_t lsr_id, uint16_t label_space_id)
+{
+    static char buffer[4][LDP_IDENTIFIER_STR_LEN];
+    static int idx = 0;
+    char *ret;
+    ret = buffer[idx];
+    idx = (idx+1) & 3;
+
+    snprintf(ret, LDP_IDENTIFIER_STR_LEN, "%s:%u",
+             format_ipv4_address(&lsr_id), 
+             label_space_id);
+
+    return ret;
+}
+
 /**
  * ldp_init
  * 
@@ -29,7 +54,7 @@ ldp_init()
             g_ctx->ldp_instances = instance;
         }
         instance->config = config;
-
+        ldb_db_init(instance);
         config = config->next;
     }
     return true;

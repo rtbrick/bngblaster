@@ -27,4 +27,7 @@ ldp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
 int
 ldp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
+int
+ldb_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
 #endif

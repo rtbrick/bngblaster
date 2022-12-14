@@ -199,8 +199,8 @@ ldp_push_self_message(ldp_session_s *session)
 
     ldp_msg_init(session, LDP_MESSAGE_TYPE_LABEL_MAPPING);
     ldp_tlv_init(session, LDP_TLV_TYPE_FEC);
-    push_be_uint(buffer, 1, 2); /* Prefix FEC */
-    push_be_uint(buffer, 2, 1); /* IPv4 */
+    push_be_uint(buffer, 1, LDP_FEC_ELEMENT_TYPE_PREFIX);
+    push_be_uint(buffer, 2, IANA_AFI_IPV4);
     push_be_uint(buffer, 1, 32);
     push_data(buffer, (uint8_t*)&lsr_id, 4);
     adjacency = session->instance->adjacencies;
@@ -208,8 +208,8 @@ ldp_push_self_message(ldp_session_s *session)
         ipv4 = adjacency->interface->ip.address;
         prefix_len = adjacency->interface->ip.len; 
         prefix_bytes = BITS_TO_BYTES(prefix_len);
-        push_be_uint(buffer, 1, 2); /* Prefix FEC */
-        push_be_uint(buffer, 2, 1); /* IPv4 */
+        push_be_uint(buffer, 1, LDP_FEC_ELEMENT_TYPE_PREFIX);
+        push_be_uint(buffer, 2, IANA_AFI_IPV4);
         push_be_uint(buffer, 1, prefix_len);
         push_data(buffer, (uint8_t*)&adjacency->interface->ip.address, prefix_bytes);
         adjacency = adjacency->next;
