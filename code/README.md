@@ -33,3 +33,8 @@ control socket JSON RPC API.
 
 Simple python script to generate BGP RAW update 
 streams for use with the BNG Blaster. 
+
+### ldpupdate
+
+Simple python script to generate LDP RAW update 
+streams for use with the BNG Blaster. 

@@ -646,3 +646,68 @@ Finally, you can withdraw them again.
     bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f withdraw.bgp --withdraw
     sudo bngblaster-cli run.sock bgp-raw-update file withdraw.bgp
 
+LDP
+---
+
+In the following example, we create two connected :ref:`LDP <ldp>` instances.
+
+**ldp.json:**
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "capture-include-streams": true,
+            "network": [
+                {
+                    "interface": "veth1.1",
+                    "address": "10.0.0.1/24",
+                    "gateway": "10.0.0.2",
+                    "ldp-instance-id": 1
+                },
+                {
+                    "interface": "veth1.2",
+                    "address": "10.0.0.2/24",
+                    "gateway": "10.0.0.1",
+                    "ldp-instance-id": 2
+                }
+            ]
+        },
+        "ldp": [
+            {
+                "instance-id": 1,
+                "lsr-id": "10.2.3.1",
+                "raw-update-file": "out.ldp"
+            },
+            {
+                "instance-id": 2,
+                "lsr-id": "10.2.3.2"
+            }
+        ],
+        "streams": [
+            {
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "downstream",
+                "priority": 128,
+                "network-interface": "veth1.2",
+                "destination-ipv4-address": "100.0.0.1",
+                "ldp-ipv4-lookup-address": "13.37.0.1",
+                "pps": 1
+            }
+        ]
+    }
+
+Use the included tool ``ldpupdate`` to generate an LDP update file 
+with 10 labeled IPv4 prefixes. 
+
+.. code-block:: none
+
+    ldpupdate -l 10.2.3.1 -p 13.37.0.0/32 -P 10 -M 10000
+
+Now you can start the BNG Blaster with this configuration.
+
+.. code-block:: none
+
+    sudo bngblaster -C ldp.json -l ldp -S run.sock -P ldp.pcap
+
