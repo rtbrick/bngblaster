@@ -21,16 +21,12 @@ attached to two network interfaces.
                     "interface": "eth1",
                     "address": "10.0.1.2/24",
                     "gateway": "10.0.1.1",
-                    "address-ipv6": "fc66:1337:7331:1::2/64",
-                    "gateway-ipv6": "fc66:1337:7331:1::1",
                     "ldp-instance-id": 1,
                 },
                 {
                     "interface": "eth2",
                     "address": "10.0.2.2/24",
                     "gateway": "10.0.2.1",
-                    "address-ipv6": "fc66:1337:7331:2::2/64",
-                    "gateway-ipv6": "fc66:1337:7331:2::1",
                     "ldp-instance-id": 2
                 }
             ]
@@ -38,13 +34,11 @@ attached to two network interfaces.
         "ldp": [
             {
                 "instance-id": 1,
-                "lsr-id": "10.10.10.11",
-                "hostname": "R1",
+                "lsr-id": "10.10.10.11"
             },
             {
                 "instance-id": 1,
-                "lsr-id": "10.10.10.12",
-                "hostname": "R2",
+                "lsr-id": "10.10.10.12"
             }
         ]
     }
@@ -54,8 +48,77 @@ attached to two network interfaces.
 Limitations
 ~~~~~~~~~~~
 
+LDP sessions between IPv6 addresses and IPv6 label mappings
+are currently not supported. 
+
 LDP authentication is currently not supported but already 
-planned as an enhancement in one of the next releases. 
+planned as an enhancement in one of the next releases.
+
+LDP Traffic Streams
+~~~~~~~~~~~~~~~~~~~
+
+Traffic streams send from network interface functions (downstream)
+can be configured to dynamically resolve the outer MPLS 
+label using the learned label mappings.
+
+The traffic stream configuration option `ldp-ipv4-lookup-address`
+specifies the lookup IPv4 address. This means that traffic
+will not start until this address is found in the corresponding
+label database of the sending network interface function. 
+
+.. code-block:: json
+
+    {
+        "streams": [
+            {
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "downstream",
+                "priority": 128,
+                "network-interface": "eth1",
+                "destination-ipv4-address": "10.0.0.1",
+                "ldp-ipv4-lookup-address": "13.37.0.1",
+                "pps": 1
+            }
+        ]
+    }
+
+``$ sudo bngblaster-cli run.sock ldp-database instance 1``
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "ldp-database": [
+            {
+                "direction": "ipv4",
+                "prefix": "10.0.0.0/24",
+                "label": 3,
+                "source-identifier": "10.2.3.1:0"
+            },
+            {
+                "direction": "ipv4",
+                "prefix": "13.37.0.0/32",
+                "label": 10000,
+                "source-identifier": "10.2.3.1:0"
+            },
+            {
+                "direction": "ipv4",
+                "prefix": "13.37.0.1/32",
+                "label": 10001,
+                "source-identifier": "10.2.3.1:0"
+            }
+        ]
+    }
+
+The `ldp-ipv4-lookup-address` must exactly match the prefix address
+as shown in the LDP database. 
+
+.. note::
+
+    There is currently no longest prefix match supported, 
+    meaning that the actual prefix length is ignored! 
 
 RAW Update Files
 ~~~~~~~~~~~~~~~~
@@ -87,3 +150,63 @@ more than a pre-compiled binary stream of LDP PDU.
     .                         LDP Messages
     .
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Those files can be created using the included LDP RAW update generator
+script ``ldpupdate`` or manually using libraries like scapy. 
+
+The configured ``raw-update-file`` under the LDP instance is loaded 
+during BNG Blaster startup phase and send it as soon as the session is 
+established. 
+
+The ``ldp-raw-update`` :ref:`command <api>` allows to send further updates during
+the session lifetime.
+
+``$ sudo bngblaster-cli run.sock ldp-raw-update file update1.ldp``
+
+This allows loading label mappings after the LDP session has
+started and manually trigger a series of changes using incremental
+updates files.
+
+All LDP RAW update files are loaded once and can then be used for 
+multiple sessions. Meaning if two or more sessions reference the 
+same file identified by file name, this file is loaded once into 
+memory and used by multiple sessions. 
+
+LDP RAW Update Generator
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The LDP RAW update generator is a simple tool to generate LDP RAW update
+streams for use with the BNG Blaster. 
+
+.. code-block:: none
+
+    $ ldpupdate --help
+    usage: ldpupdate [-h] -l ADDRESS [-i N] -p PREFIX [-P N] [-m LABEL] [-M N]
+                    [-f FILE] [--append] [--pcap FILE]
+                    [--log-level {warning,info,debug}]
+
+    The LDP RAW update generator is a simple tool to generate LDP RAW update
+    streams for use with the BNG Blaster.
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -l ADDRESS, --lsr-id ADDRESS
+                            LSR identifier
+    -i N, --message-id-base N
+                            message identifier base
+    -p PREFIX, --prefix-base PREFIX
+                            prefix base network
+    -P N, --prefix-num N  prefix count
+    -m LABEL, --label-base LABEL
+                            label base
+    -M N, --label-num N   label count
+    -f FILE, --file FILE  output file
+    --append              append to file if exist
+    --pcap FILE           write LDP updates to PCAP file
+    --log-level {warning,info,debug}
+                            logging Level
+
+The python LDP RAW update generator is a python script that uses
+scapy to build LDP PDU. Therefore this tool can be easily 
+modified, extend or used as a blueprint for your own tools to generate
+valid LDP update streams. 
