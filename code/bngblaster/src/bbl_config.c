@@ -1641,32 +1641,33 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->tx_mpls1 = true;
         stream_config->tx_mpls1_label = json_number_value(value);
-        value = json_object_get(stream, "tx-label1-exp");
-        if(value) {
-            stream_config->tx_mpls1_exp = json_number_value(value);
-        }
-        value = json_object_get(stream, "tx-label1-ttl");
-        if(value) {
-            stream_config->tx_mpls1_ttl = json_number_value(value);
-        } else {
-            stream_config->tx_mpls1_ttl = 255;
-        }
+    }
+    value = json_object_get(stream, "tx-label1-exp");
+    if(value) {
+        stream_config->tx_mpls1_exp = json_number_value(value);
+    }
+    value = json_object_get(stream, "tx-label1-ttl");
+    if(value) {
+        stream_config->tx_mpls1_ttl = json_number_value(value);
+    } else {
+        stream_config->tx_mpls1_ttl = 255;
     }
     value = json_object_get(stream, "tx-label2");
     if(value) {
         stream_config->tx_mpls2 = true;
         stream_config->tx_mpls2_label = json_number_value(value);
-        value = json_object_get(stream, "tx-label2-exp");
-        if(value) {
-            stream_config->tx_mpls2_exp = json_number_value(value);
-        }
-        value = json_object_get(stream, "tx-label2-ttl");
-        if(value) {
-            stream_config->tx_mpls2_ttl = json_number_value(value);
-        } else {
-            stream_config->tx_mpls2_ttl = 255;
-        }
     }
+    value = json_object_get(stream, "tx-label2-exp");
+    if(value) {
+        stream_config->tx_mpls2_exp = json_number_value(value);
+    }
+    value = json_object_get(stream, "tx-label2-ttl");
+    if(value) {
+        stream_config->tx_mpls2_ttl = json_number_value(value);
+    } else {
+        stream_config->tx_mpls2_ttl = 255;
+    }
+
     value = json_object_get(stream, "rx-label1");
     if(value) {
         stream_config->rx_mpls1 = true;
