@@ -580,9 +580,13 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     eth.vlan_inner = 0;
 
     /* Add MPLS labels */
-    if(config->tx_mpls1) {
+    if(config->tx_mpls1 || stream->ldp_entry) {
         eth.mpls = &mpls1;
-        mpls1.label = config->tx_mpls1_label;
+        if(stream->ldp_entry) {
+            mpls1.label = stream->ldp_entry->label;
+        } else {
+            mpls1.label = config->tx_mpls1_label;
+        }
         mpls1.exp = config->tx_mpls1_exp;
         mpls1.ttl = config->tx_mpls1_ttl;
         if(config->tx_mpls2) {
@@ -1144,6 +1148,32 @@ bbl_stream_final()
 }
 
 static bool
+bbl_stream_ldp_lookup(bbl_stream_s *stream)
+{
+    if(!stream->ldp_entry) {
+        if(stream->sub_type == BBL_SUB_TYPE_IPV4) {
+            stream->ldp_entry = ldb_db_lookup_ipv4(
+                stream->network_interface->ldp_adjacency->instance, 
+                stream->config->ipv4_ldp_lookup_address);
+        }
+    }
+
+    if(!(stream->ldp_entry && stream->ldp_entry->active)) {
+        return false;
+    }
+    if(stream->ldp_entry->version != stream->ldp_entry_version) {
+        stream->ldp_entry_version = stream->ldp_entry->version;
+        /* Free packet if LDP entry has changed. */
+        if(stream->tx_buf) {
+            free(stream->tx_buf);
+            stream->tx_buf = NULL;
+            stream->tx_len = 0;
+        }
+    }
+    return true;
+}
+
+static bool
 bbl_stream_can_send(bbl_stream_s *stream)
 {
     if(stream->reset) {
@@ -1155,10 +1185,13 @@ bbl_stream_can_send(bbl_stream_s *stream)
            stream->stop) {
             return false;
         }
+        if(stream->ldp_lookup) {
+            return bbl_stream_ldp_lookup(stream);
+        }
         return true;
     }
 
-    /* Free packet if not ready to send */
+    /* Free packet if not ready to send. */
     if(stream->tx_buf) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
@@ -1570,6 +1603,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         switch(stream->sub_type) {
             case BBL_SUB_TYPE_IPV4:
                 stream->endpoint = &session->endpoint.ipv4;
+                if(config->ipv4_ldp_lookup_address && 
+                   network_interface && 
+                   network_interface->ldp_adjacency) {
+                    stream->ldp_lookup = true;
+                }
                 break;
             case BBL_SUB_TYPE_IPV6:
                 stream->endpoint = &session->endpoint.ipv6;
@@ -1726,6 +1764,9 @@ bbl_stream_init() {
                     if((config->ipv4_destination_address & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
                         stream->endpoint = &(g_ctx->multicast_endpoint);
                         stream->type = BBL_TYPE_MULTICAST;
+                    }
+                    if(config->ipv4_ldp_lookup_address && network_interface->ldp_adjacency) {
+                        stream->ldp_lookup = true;
                     }
                 }
                 stream->direction = BBL_DIRECTION_DOWN;

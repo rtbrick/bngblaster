@@ -64,3 +64,17 @@ ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
     entry->source = session;
     return true;
 }
+
+ldp_db_entry_s *
+ldb_db_lookup_ipv4(ldp_instance_s *instance, uint32_t address)
+{
+    void **search = NULL;
+    ldp_db_entry_s *entry;
+
+    search = hb_tree_search(instance->db.ipv4, &address);
+    if(search) {
+        entry = *search;
+        return entry;
+    }
+    return NULL;
+}
