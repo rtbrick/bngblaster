@@ -1577,6 +1577,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->start_delay = json_number_value(value);
     }
 
+    if(json_unpack(stream, "{s:s}", "ldp-ipv4-lookup-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &stream_config->ipv4_ldp_lookup_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->ldp-ipv4-lookup-address\n");
+            return false;
+        }
+    }
+
     if(json_unpack(stream, "{s:s}", "access-ipv4-source-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &stream_config->ipv4_access_src_address)) {
             fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv4-source-address\n");

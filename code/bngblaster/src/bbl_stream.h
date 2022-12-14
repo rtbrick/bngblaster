@@ -30,6 +30,7 @@ typedef struct bbl_stream_config_
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
 
+    uint32_t ipv4_ldp_lookup_address;
     uint32_t ipv4_access_src_address; /* overwrite default IPv4 access address */
     ipv6addr_t ipv6_access_src_address; /* overwrite default IPv6 access address */
     uint32_t ipv4_network_address; /* overwrite default IPv4 network address */
@@ -105,6 +106,9 @@ typedef struct bbl_stream_
     bool stop;
     bool reset;
     bool lag;
+    bool ldp_lookup;
+    uint32_t ldp_entry_version;
+    ldp_db_entry_s *ldp_entry;
 
     bool send_window_active;
     uint64_t send_window_start_packets;

@@ -15,4 +15,7 @@ ldb_db_init(ldp_instance_s *instance);
 bool
 ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label);
 
+ldp_db_entry_s *
+ldb_db_lookup_ipv4(ldp_instance_s *instance, uint32_t address);
+
 #endif
