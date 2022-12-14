@@ -103,20 +103,17 @@ ldp_ctrl_session_json(ldp_session_s *session)
         return NULL;
     }
 
-    root = json_pack("{si ss ss ss si ss ss si ss ss* ss* so*}",
+    root = json_pack("{si ss ss ss ss ss ss ss* ss* so*}",
                      "ldp-instance-id", session->instance->config->id,
                      "interface", session->interface->name,
                      "local-address", format_ipv4_address(&session->local.ipv4_address),
-                     "local-lsr-id", format_ipv4_address(&session->local.lsr_id),
-                     "local-label-space-id", session->local.label_space_id,
+                     "local-identifier", ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
                      "peer-address", format_ipv4_address(&session->peer.ipv4_address),
-                     "peer-lsr-id", format_ipv4_address(&session->peer.lsr_id),
-                     "peer-label-space-id", session->peer.label_space_id,
+                     "peer-identifier", ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
                      "state", ldp_session_state_string(session->state),
                      "raw-update-state", raw_update_state(session),
                      "raw-update-file", raw_update_file,
                      "stats", stats);
-
     if(!root) {
         if(stats) json_decref(stats);
     }
@@ -404,4 +401,104 @@ ldp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
     }
     return result;
+}
+
+static json_t *
+ldb_ctrl_database_entries(ldp_instance_s *instance)
+{
+    json_t *json_database, *json_entry;
+    ldp_db_entry_s *entry;
+
+    hb_tree *db;
+    hb_itor *itor;
+    bool next;
+
+    json_database = json_array();
+
+    /* Add IPv4 prefixes. */
+    db = instance->db.ipv4;
+    itor = hb_itor_new(db);
+    next = hb_itor_first(itor);
+    while(next) {
+        entry = *hb_itor_datum(itor);
+        json_entry = json_pack("{ss ss* si ss*}", 
+            "direction", "ipv4",
+            "prefix", format_ipv4_prefix(&entry->prefix.ipv4),
+            "label", entry->label,
+            "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
+
+        if(json_entry) {
+            json_array_append(json_database, json_entry);
+        }
+        next = hb_itor_next(itor);
+    }
+    hb_itor_free(itor);
+
+    /* Add IPv6 prefixes. */
+    db = instance->db.ipv6;
+    itor = hb_itor_new(db);
+    next = hb_itor_first(itor);
+    while(next) {
+        entry = *hb_itor_datum(itor);
+        json_entry = json_pack("{ss ss* si ss*}", 
+            "direction", "ipv6",
+            "prefix", format_ipv6_prefix(&entry->prefix.ipv6),
+            "label", entry->label,
+            "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
+
+        if(json_entry) {
+            json_array_append(json_database, json_entry);
+        }
+        next = hb_itor_next(itor);
+    }
+    hb_itor_free(itor);
+
+    return json_database;
+}
+
+int
+ldb_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+    json_t *root = NULL;
+    json_t *database = NULL;
+    ldp_instance_s *instance = NULL;
+
+    int instance_id = 0;
+
+    /* Unpack further arguments */
+    if(json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "LDP instance missing");
+    }
+
+    /* Search for matching instance */
+    instance = g_ctx->ldp_instances;
+    while(instance) {
+        if(instance->config->id == instance_id) {
+            break;
+        }
+        instance = instance->next;
+    }
+
+    if(!instance) {
+        return bbl_ctrl_status(fd, "error", 400, "LDP instance not found");
+    }
+
+    database = ldb_ctrl_database_entries(instance);
+    if(database) {
+        root = json_pack("{ss si so}",
+                         "status", "ok",
+                         "code", 200,
+                         "ldp-database", database);
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(database);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
 }

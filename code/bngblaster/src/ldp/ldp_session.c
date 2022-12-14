@@ -32,9 +32,9 @@ static void
 ldp_session_state_change(ldp_session_s *session, ldp_state_t new_state)
 {
     if(session->state != new_state) {
-        LOG(LDP, "LDP (%s:%u - %s:%u) state changed from %s -> %s\n",
-            format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-            format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id,
+        LOG(LDP, "LDP (%s - %s) state changed from %s -> %s\n",
+            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
             ldp_session_state_string(session->state),
             ldp_session_state_string(new_state));
         session->state = new_state;
@@ -103,9 +103,9 @@ ldp_raw_update_stop_cb(void *arg)
     session->stats.pdu_tx += session->raw_update->pdu;
     session->stats.message_tx += session->raw_update->messages;
     
-    LOG(LDP, "LDP (%s:%u - %s:%u) raw update stop after %lds\n",
-        format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-        format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id,
+    LOG(LDP, "LDP (%s - %s) raw update stop after %lds\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
         time_diff.tv_sec);
 }
 
@@ -119,9 +119,9 @@ ldp_session_update_job(timer_s *timer)
             if(bbl_tcp_send(session->tcpc, session->raw_update->buf, session->raw_update->len)) {
                 session->raw_update_sending = true;
 
-                LOG(LDP, "LDP (%s:%u - %s:%u) raw update start\n",
-                    format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-                    format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+                LOG(LDP, "LDP (%s - %s) raw update start\n",
+                    ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                    ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
                 clock_gettime(CLOCK_MONOTONIC, &session->update_start_timestamp);
                 session->tcpc->idle_cb = ldp_raw_update_stop_cb;
@@ -162,9 +162,9 @@ ldp_session_keepalive_timeout_job(timer_s *timer)
 {
     ldp_session_s *session = timer->data;
 
-    LOG(LDP, "LDP (%s:%u - %s:%u) keepalive timer expired\n",
-        format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-        format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+    LOG(LDP, "LDP (%s - %s) keepalive timer expired\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
     if(!session->error_code) {
         session->error_code = LDP_STATUS_KEEPALIVE_TIMER_EXPIRED;
@@ -294,9 +294,9 @@ void
 ldp_error_cb(void *arg, err_t err) {
     ldp_session_s *session = (ldp_session_s*)arg;
 
-    LOG(LDP, "LDP (%s:%u - %s:%u) TCP error %d (%s)\n",
-        format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-        format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id,
+    LOG(LDP, "LDP (%s - %s) TCP error %d (%s)\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
         err, tcp_err_string(err));
 
     ldp_session_state_change(session, LDP_ERROR);
@@ -329,17 +329,17 @@ ldp_session_connect_job(timer_s *timer)
             /* Close session if not established within 60 seconds */
             timeout = 60; 
         } else {
-            LOG(LDP, "LDP (%s:%u - %s:%u) TCP connect failed\n", 
-                format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-                format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+            LOG(LDP, "LDP (%s - %s) TCP connect failed\n", 
+                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
         }
     } else if(session->state == LDP_OPERATIONAL) {
         timer->periodic = false;
         return;
     } else {
-        LOG(LDP, "LDP (%s:%u - %s:%u) connect timeout\n", 
-            format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-            format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+        LOG(LDP, "LDP (%s - %s) connect timeout\n", 
+            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
         ldp_session_close(session);
         timer->periodic = false;
@@ -371,9 +371,9 @@ ldp_session_listen(ldp_session_s *session)
                            "LDP CONNECT", 60, 0, session,
                            &ldp_session_connect_job);
     } else {
-        LOG(LDP, "LDP (%s:%u - %s:%u) TCP listen failed\n", 
-            format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-            format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+        LOG(LDP, "LDP (%s - %s) TCP listen failed\n", 
+            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
         ldp_session_close(session);
     }
 }
@@ -522,9 +522,9 @@ ldp_session_close(ldp_session_s *session)
 {
     time_t delay = 0;
 
-    LOG(LDP, "LDP (%s:%u - %s:%u) close session\n",
-        format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-        format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+    LOG(LDP, "LDP (%s - %s) close session\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
     /* Stop all timers */
     timer_del(session->connect_timer);
@@ -537,9 +537,9 @@ ldp_session_close(ldp_session_s *session)
     }
 
     if(session->state > LDP_CONNECT && session->state < LDP_CLOSING) {
-        LOG(LDP, "LDP (%s:%u - %s:%u) send notification message\n",
-            format_ipv4_address(&session->local.lsr_id), session->local.label_space_id,
-            format_ipv4_address(&session->peer.lsr_id), session->peer.label_space_id);
+        LOG(LDP, "LDP (%s - %s) send notification message\n",
+            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
         ldp_session_reset_write_buffer(session);
         ldp_pdu_init(session);

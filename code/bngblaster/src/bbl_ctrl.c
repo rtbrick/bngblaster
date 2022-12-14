@@ -158,6 +158,7 @@ struct action actions[] = {
     {"bgp-raw-update", bgp_ctrl_raw_update, false},
     {"ldp-adjacencies", ldp_ctrl_adjacencies, true},
     {"ldp-sessions", ldp_ctrl_sessions, true},
+    {"ldp-database", ldb_ctrl_database, true},
     {"ldp-disconnect", ldp_ctrl_disconnect, false},
     {"ldp-teardown", ldp_ctrl_teardown, true},
     {"ldp-raw-update-list", ldp_ctrl_raw_update_list, true},

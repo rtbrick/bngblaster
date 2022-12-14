@@ -108,6 +108,12 @@
     if(_endpoint != ENDPOINT_DISABLED) _endpoint = ENDPOINT_ACTIVE
 
 typedef enum {
+    IANA_AFI_RESERVED   = 0,
+    IANA_AFI_IPV4       = 1,
+    IANA_AFI_IPV6       = 2,
+} __attribute__ ((__packed__)) iana_afi_t;
+
+typedef enum {
     ACCESS_TYPE_PPPOE = 0,
     ACCESS_TYPE_IPOE
 } __attribute__ ((__packed__)) access_type_t;
@@ -129,7 +135,6 @@ typedef enum {
     LAG_INTERFACE,
     LAG_MEMBER_INTERFACE,
 } __attribute__ ((__packed__)) interface_type_t;
-
 
 typedef enum {
     IGMP_GROUP_IDLE = 0,
