@@ -90,7 +90,7 @@ ldp_hello_hold_timeout_job(timer_s *timer)
     if(adjacency->state == LDP_ADJACENCY_STATE_DOWN) {
         return;
     }
-
+    adjacency->state_transitions++;
     adjacency->state = LDP_ADJACENCY_STATE_DOWN;
     LOG(LDP, "LDP hold timeout on interface %s\n", adjacency->interface->name);
 }
@@ -98,7 +98,11 @@ ldp_hello_hold_timeout_job(timer_s *timer)
 static void
 ldp_hello_restart_hold_timeout(ldp_adjacency_s *adjacency)
 {
-    adjacency->state = LDP_ADJACENCY_STATE_UP;
+    if(adjacency->state == LDP_ADJACENCY_STATE_DOWN) {
+        adjacency->state_transitions++;
+        adjacency->state = LDP_ADJACENCY_STATE_UP;
+        LOG(LDP, "LDP adjacency on interface %s\n", adjacency->interface->name);
+    }
     timer_add(&g_ctx->timer_root, &adjacency->hold_timer, 
               "LDP HOLD TIMEOUT", adjacency->hold_time, 0, adjacency, &ldp_hello_hold_timeout_job);
 }

@@ -32,6 +32,9 @@ static void
 ldp_session_state_change(ldp_session_s *session, ldp_state_t new_state)
 {
     if(session->state != new_state) {
+        if(session->state == LDP_OPERATIONAL || new_state == LDP_OPERATIONAL) {
+            session->state_transitions++;
+        }
         LOG(LDP, "LDP (%s - %s) state changed from %s -> %s\n",
             ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
             ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),

@@ -49,10 +49,14 @@ ldp_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t
         }
         ldp_adjacency = ldp_instance->adjacencies;
         while(ldp_adjacency) {
-            adjacency = json_pack("{si ss ss}",
+            adjacency = json_pack("{si ss ss si si si si}",
                                   "ldp-instance-id", ldp_adjacency->instance->config->id,
                                   "interface", ldp_adjacency->interface->name,
-                                  "state", ldp_adjacency->state == LDP_ADJACENCY_STATE_UP ? "up" : "down");
+                                  "state", ldp_adjacency->state == LDP_ADJACENCY_STATE_UP ? "up" : "down",
+                                  "state-transitions", ldp_adjacency->state_transitions,
+                                  "rx-discovery", ldp_adjacency->interface->stats.ldp_udp_rx,
+                                  "rx-discovery-error", ldp_adjacency->interface->stats.ldp_udp_rx_error,
+                                  "tx-discovery", ldp_adjacency->interface->stats.ldp_udp_tx);
             if(adjacency) {
                 json_array_append(adjacencies, adjacency);
             }
@@ -103,7 +107,7 @@ ldp_ctrl_session_json(ldp_session_s *session)
         return NULL;
     }
 
-    root = json_pack("{si ss ss ss ss ss ss ss* ss* so*}",
+    root = json_pack("{si ss ss ss ss ss ss si ss* ss* so*}",
                      "ldp-instance-id", session->instance->config->id,
                      "interface", session->interface->name,
                      "local-address", format_ipv4_address(&session->local.ipv4_address),
@@ -111,6 +115,7 @@ ldp_ctrl_session_json(ldp_session_s *session)
                      "peer-address", format_ipv4_address(&session->peer.ipv4_address),
                      "peer-identifier", ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
                      "state", ldp_session_state_string(session->state),
+                     "state-transitions", session->state_transitions,
                      "raw-update-state", raw_update_state(session),
                      "raw-update-file", raw_update_file,
                      "stats", stats);
