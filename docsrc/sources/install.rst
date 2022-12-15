@@ -159,7 +159,7 @@ It is recommended to install the DPDK development package if possible:
     sudo apt install dpdk libdpdk-dev
 
 This package does not support all NIC types (e.g. Mellanox, ...),
-which requires to download and installing DPDK manually:
+which requires downloading and installing DPDK manually:
 https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
 
 .. code-block:: none
@@ -212,8 +212,8 @@ Running BNG Blaster
 -------------------
 
 The BNG Blaster needs permission to send raw packets and change network interface
-settings. The easiest way to run the BNG Blaster is either as the root user or with
-sudo:
+settings. The easiest way to run the BNG Blaster is either as the root user or 
+with `sudo`:
 
 .. code-block:: none
 
