@@ -3,14 +3,23 @@
 LDP
 ---
 
-The Label Distribution Protocol (LDP) is a protocol defined for
-distributing labels.
+Label Distribution Protocol (LDP) is a protocol in which routers capable 
+of Multiprotocol Label Switching (MPLS) exchange label mapping information. 
+Two routers with an established session are called LDP peers and the exchange 
+of information is bi-directional. LDP is used to build and maintain LSP databases 
+that are used to forward traffic through MPLS networks.
+
+LDP discovery runs on UDP port 646 and the session is built on TCP port 646. During 
+the discovery phase hello packets are sent on UDP port 646 to the 'all routers on this subnet' 
+group multicast address (224.0.0.2).
+
+LDP is defined by the IETF (RFC 5036).
 
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example LDP configuration with one instance 
-attached to two network interfaces.
+Following an example LDP configuration with one instance
+attached to a network interface function.
 
 .. code-block:: json
 
@@ -22,12 +31,6 @@ attached to two network interfaces.
                     "address": "10.0.1.2/24",
                     "gateway": "10.0.1.1",
                     "ldp-instance-id": 1,
-                },
-                {
-                    "interface": "eth2",
-                    "address": "10.0.2.2/24",
-                    "gateway": "10.0.2.1",
-                    "ldp-instance-id": 2
                 }
             ]
         },
@@ -35,10 +38,6 @@ attached to two network interfaces.
             {
                 "instance-id": 1,
                 "lsr-id": "10.10.10.11"
-            },
-            {
-                "instance-id": 1,
-                "lsr-id": "10.10.10.12"
             }
         ]
     }
@@ -48,11 +47,80 @@ attached to two network interfaces.
 Limitations
 ~~~~~~~~~~~
 
-LDP sessions between IPv6 addresses and IPv6 label mappings
-are currently not supported. 
+The following LDP functionalities are currently 
+not supported:
 
-LDP authentication is currently not supported but already 
-planned as an enhancement in one of the next releases.
++ Targeted LDP
++ LDP TCP authentication
++ LDP sessions between IPv6 addresses 
++ Learn IPv6 label mappings
++ Multiple links between LDP instance and DUT (ECMP)
+
+LDP Adjacencies
+~~~~~~~~~~~~~~~~
+
+When the BNG Blaster receives an LDP discovery hello message, 
+an LDP adjacency is set up between the two peers.
+
+``$ sudo bngblaster-cli run.sock ldp-adjacencies``
+
+.. code-block:: json
+    {
+        "status": "ok",
+        "code": 200,
+        "ldp-adjacencies": [
+            {
+                "ldp-instance-id": 1,
+                "interface": "eth0",
+                "state": "up"
+            }
+        ]
+    }
+
+LDP Sessions
+~~~~~~~~~~~~
+
+LDP peers exchange messages over a TCP session which is initiated by 
+the peer with the larger transport IP address (active peer). 
+
+The LDP transport IP address can be explicitly configured for the 
+LDP instance using the option `ipv4-transport-address`. The `lsr-id`
+is used as a transport IP address if not explicitly configured.
+
+.. note:: 
+    
+    It is currently not supported to setup multiple links between 
+    a single LDP instance and the device under test (ECMP).
+
+``$ sudo bngblaster-cli run.sock ldp-sessions``
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "ldp-sessions": [
+            {
+                "ldp-instance-id": 1,
+                "interface": "eth0",
+                "local-address": "10.2.3.1",
+                "local-identifier": "10.2.3.1:0",
+                "peer-address": "10.2.3.2",
+                "peer-identifier": "10.2.3.2:0",
+                "state": "operational",
+                "raw-update-state": "done",
+                "raw-update-file": "out.ldp",
+                "stats": {
+                    "pdu-rx": 23,
+                    "pdu-tx": 32,
+                    "messages-rx": 24,
+                    "messages-tx": 34,
+                    "keepalive-rx": 21,
+                    "keepalive-tx": 21
+                }
+            }
+        ]
+    }
 
 LDP Traffic Streams
 ~~~~~~~~~~~~~~~~~~~
