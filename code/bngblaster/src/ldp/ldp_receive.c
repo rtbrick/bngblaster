@@ -24,6 +24,23 @@ struct keyval_ ldp_msg_names[] = {
     { 0, NULL}
 };
 
+struct keyval_ ldp_status_names[] = {
+    { LDP_STATUS_SUCCESS,                   "success" },
+    { LDP_STATUS_BAD_IDENTIFIER,            "bad LDP identifier" },
+    { LDP_STATUS_BAD_VERSION,               "bad protocol version" },
+    { LDP_STATUS_BAD_PDU_LEN,               "bad PDU length" },
+    { LDP_STATUS_UNKNOWN_MSG_TYPE,          "unknown message type" },
+    { LDP_STATUS_BAD_MSG_LEN,               "bad message length" },
+    { LDP_STATUS_UNKNOWN_TLV_TYPE,          "unknown TLV type" },
+    { LDP_STATUS_BAD_TLV_LEN,               "bad TLV length" },
+    { LDP_STATUS_BAD_TLV_VALUE,             "bad TLV value" },
+    { LDP_STATUS_HOLD_TIMER_EXPIRED,        "hold timer expired" },
+    { LDP_STATUS_KEEPALIVE_TIMER_EXPIRED,   "keepalive timer expired" },
+    { LDP_STATUS_SHUTDOWN,                  "shutdown" },
+    { LDP_STATUS_INTERNAL_ERROR,            "internal error" },
+    { 0, NULL}
+};
+
 static void 
 ldp_decode_error(ldp_session_s *session)
 {
@@ -41,9 +58,37 @@ ldp_decode_error(ldp_session_s *session)
 static bool
 ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
 {
-    UNUSED(session);
-    UNUSED(start);
-    UNUSED(length);
+    uint8_t *tlv_start = start;
+    uint16_t tlv_type;
+    uint16_t tlv_length;
+    uint32_t status_code = UINT32_MAX;
+
+    /* Read all TLV's. */
+    while(length >= LDP_TLV_LEN_MIN) {
+        tlv_type = read_be_uint(tlv_start, 2) & 0x3FFF;
+        tlv_length = read_be_uint(tlv_start+2, 2);
+        if(tlv_length+LDP_TLV_LEN_MIN > length) {
+            return false;
+        }
+        switch(tlv_type) {
+            case LDP_TLV_TYPE_STATUS:
+                if(tlv_length < LDP_STATUS_LEN_MIN) {
+                    return false;
+                }
+                status_code = read_be_uint(tlv_start+LDP_TLV_LEN_MIN, 4);
+                break;
+            default:
+                break;
+        }
+        length -= (tlv_length+LDP_TLV_LEN_MIN);
+        tlv_start += (tlv_length+LDP_TLV_LEN_MIN);
+    }
+
+    LOG(LDP, "LDP (%s - %s) received notification with status code %u (%s)\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+        status_code, keyval_get_key(ldp_status_names, status_code));
+
     return true;
 }
 

@@ -52,11 +52,15 @@
 #define LDP_TLV_LEN_MIN                             4
 #define LDP_FEC_LEN_MIN                             4
 #define LDP_FEC_ELEMENT_TYPE_PREFIX                 2
+#define LDP_STATUS_LEN_MIN                          10
 
 #define LDP_STATUS_SUCCESS                          0x00000000
 #define LDP_STATUS_BAD_IDENTIFIER                   0x00000001
 #define LDP_STATUS_BAD_VERSION                      0x00000002
+#define LDP_STATUS_BAD_PDU_LEN                      0x00000003
+#define LDP_STATUS_UNKNOWN_MSG_TYPE                 0x00000004
 #define LDP_STATUS_BAD_MSG_LEN                      0x00000005
+#define LDP_STATUS_UNKNOWN_TLV_TYPE                 0x00000006
 #define LDP_STATUS_BAD_TLV_LEN                      0x00000007
 #define LDP_STATUS_BAD_TLV_VALUE                    0x00000008
 #define LDP_STATUS_HOLD_TIMER_EXPIRED               0x00000009
@@ -177,6 +181,7 @@ typedef struct ldp_session_ {
     bool decode_error;
     bool active;
     ldp_state_t state;
+    uint32_t state_transitions;
     uint16_t max_pdu_len;
     uint16_t keepalive_time;
 
@@ -233,6 +238,7 @@ typedef struct ldp_adjacency_ {
     uint16_t hold_time;
 
     ldp_adjacency_state state;
+    uint32_t state_transitions;
 
     /* Pointer to next adjacency of 
      * corresponding instance with. */
