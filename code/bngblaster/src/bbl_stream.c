@@ -1151,7 +1151,7 @@ static bool
 bbl_stream_ldp_lookup(bbl_stream_s *stream)
 {
     if(!stream->ldp_entry) {
-        if(stream->sub_type == BBL_SUB_TYPE_IPV4) {
+        if(stream->config->ipv4_ldp_lookup_address) {
             stream->ldp_entry = ldb_db_lookup_ipv4(
                 stream->network_interface->ldp_adjacency->instance, 
                 stream->config->ipv4_ldp_lookup_address);
@@ -1603,11 +1603,6 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         switch(stream->sub_type) {
             case BBL_SUB_TYPE_IPV4:
                 stream->endpoint = &session->endpoint.ipv4;
-                if(config->ipv4_ldp_lookup_address && 
-                   network_interface && 
-                   network_interface->ldp_adjacency) {
-                    stream->ldp_lookup = true;
-                }
                 break;
             case BBL_SUB_TYPE_IPV6:
                 stream->endpoint = &session->endpoint.ipv6;
@@ -1632,6 +1627,9 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(network_interface) {
             stream->network_interface = network_interface;
             stream->tx_interface = network_interface->interface;
+            if(config->ipv4_ldp_lookup_address && network_interface->ldp_adjacency) {
+                stream->ldp_lookup = true;
+            }
             bbl_stream_add(stream);
             if(stream->session_traffic) {
                 g_ctx->stats.session_traffic_flows++;
@@ -1765,14 +1763,14 @@ bbl_stream_init() {
                         stream->endpoint = &(g_ctx->multicast_endpoint);
                         stream->type = BBL_TYPE_MULTICAST;
                     }
-                    if(config->ipv4_ldp_lookup_address && network_interface->ldp_adjacency) {
-                        stream->ldp_lookup = true;
-                    }
                 }
                 stream->direction = BBL_DIRECTION_DOWN;
                 stream->network_interface = network_interface;
                 stream->tx_interface = network_interface->interface;
                 stream->tx_interval = tx_interval;
+                if(config->ipv4_ldp_lookup_address && network_interface->ldp_adjacency) {
+                    stream->ldp_lookup = true;
+                }
                 result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
                 if(!result.inserted) {
                     LOG(ERROR, "Failed to insert RAW stream %s\n", config->name);
