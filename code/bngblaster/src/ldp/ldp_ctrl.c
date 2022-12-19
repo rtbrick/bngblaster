@@ -382,7 +382,7 @@ ldp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
                 continue;
             }
             if(!ldp_session->error_code) {
-                ldp_session->error_code = LDP_STATUS_SHUTDOWN;
+                ldp_session->error_code = LDP_STATUS_SHUTDOWN|LDP_STATUS_FATAL_ERROR;
             }
             ldp_session_close(ldp_session);
             disconnected++;

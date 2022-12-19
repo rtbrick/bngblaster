@@ -170,7 +170,7 @@ ldp_session_keepalive_timeout_job(timer_s *timer)
         ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
 
     if(!session->error_code) {
-        session->error_code = LDP_STATUS_KEEPALIVE_TIMER_EXPIRED;
+        session->error_code = LDP_STATUS_KEEPALIVE_TIMER_EXPIRED|LDP_STATUS_FATAL_ERROR;
     }
     ldp_session_close(session);
 }
@@ -253,7 +253,7 @@ ldp_session_fsm(ldp_session_s *session, ldp_event_t event)
                 ldp_session_state_change(session, LDP_OPENREC);
             } else {
                 if(!session->error_code) {
-                    session->error_code = LDP_STATUS_INTERNAL_ERROR;
+                    session->error_code = LDP_STATUS_INTERNAL_ERROR|LDP_STATUS_FATAL_ERROR;
                 }
                 ldp_session_close(session);
             }
@@ -536,7 +536,7 @@ ldp_session_close(ldp_session_s *session)
     timer_del(session->update_timer);
 
     if(!session->error_code) {
-        session->error_code = LDP_STATUS_SHUTDOWN;
+        session->error_code = LDP_STATUS_SHUTDOWN|LDP_STATUS_FATAL_ERROR;
     }
 
     if(session->state > LDP_CONNECT && session->state < LDP_CLOSING) {

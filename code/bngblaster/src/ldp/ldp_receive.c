@@ -50,7 +50,7 @@ ldp_decode_error(ldp_session_s *session)
 
     session->decode_error = true;
     if(!session->error_code) {
-        session->error_code = LDP_STATUS_INTERNAL_ERROR;
+        session->error_code = LDP_STATUS_INTERNAL_ERROR|LDP_STATUS_FATAL_ERROR;
     }
     ldp_session_close(session);
 }
@@ -62,6 +62,8 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
     uint16_t tlv_type;
     uint16_t tlv_length;
     uint32_t status_code = UINT32_MAX;
+    bool e_bit = false;
+    bool f_bit = false;
 
     /* Read all TLV's. */
     while(length >= LDP_TLV_LEN_MIN) {
@@ -76,6 +78,9 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
                     return false;
                 }
                 status_code = read_be_uint(tlv_start+LDP_TLV_LEN_MIN, 4);
+                e_bit = status_code & LDP_STATUS_FATAL_ERROR;
+                f_bit = status_code & LDP_STATUS_FORWARD;
+                status_code &= 0x3FFFFFFF;
                 break;
             default:
                 break;
@@ -84,10 +89,12 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
         tlv_start += (tlv_length+LDP_TLV_LEN_MIN);
     }
 
-    LOG(LDP, "LDP (%s - %s) received notification with status code %u (%s)\n",
+    LOG(LDP, "LDP (%s - %s) received %s notification with status code %u (%s)%s\n",
         ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
         ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
-        status_code, keyval_get_key(ldp_status_names, status_code));
+        (e_bit ? "fatal error" : "advisory"),
+        status_code, keyval_get_key(ldp_status_names, status_code), 
+        (f_bit ? " wit forwarding bit set" : ""));
 
     return true;
 }
@@ -351,7 +358,7 @@ ldp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
                 ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
                 ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
             if(!session->error_code) {
-                session->error_code = LDP_STATUS_INTERNAL_ERROR;
+                session->error_code = LDP_STATUS_INTERNAL_ERROR|LDP_STATUS_FATAL_ERROR;
             }
             ldp_session_close(session);
             return;

@@ -69,6 +69,9 @@
 #define LDP_STATUS_SHUTDOWN                         0x0000000A
 #define LDP_STATUS_INTERNAL_ERROR                   0x00000019
 
+#define LDP_STATUS_FATAL_ERROR                      0x80000000
+#define LDP_STATUS_FORWARD                          0x40000000
+
 #define LDP_DEFAULT_KEEPALIVE_TIME                  15
 #define LDP_DEFAULT_HOLD_TIME                       15
 #define LDP_DEFAULT_TEARDOWN_TIME                   5
