@@ -1707,6 +1707,46 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 }
 
 static bool
+json_parse_config_streams(json_t *root)
+{
+
+    json_t *section = NULL;
+    int i, size;
+
+    bbl_stream_config_s *stream_config = g_ctx->config.stream_config;
+
+    if(json_typeof(root) != JSON_OBJECT) {
+        fprintf(stderr, "JSON config error: Configuration root element must object\n");
+        return false;
+    }
+
+    section = json_object_get(root, "streams");
+    if(json_is_array(section)) {
+        /* Get tail end of stream-config list. */
+        if(stream_config) {
+            while(stream_config->next) {
+                stream_config = stream_config->next;
+            }
+        }
+        /* Config is provided as array (multiple streams) */
+        size = json_array_size(section);
+        for(i = 0; i < size; i++) {
+            if(!stream_config) {
+                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
+                stream_config = g_ctx->config.stream_config;
+            } else {
+                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
+                stream_config = stream_config->next;
+            }
+            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool
 json_parse_config(json_t *root)
 {
     json_t *section, *sub, *value = NULL;
@@ -1716,7 +1756,6 @@ json_parse_config(json_t *root)
     double number;
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
-    bbl_stream_config_s         *stream_config          = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
 
     bbl_lag_config_s            *lag_config             = NULL;
@@ -2690,24 +2729,9 @@ json_parse_config(json_t *root)
     }
 
     /* Traffic Streams Configuration */
-    section = json_object_get(root, "streams");
-    if(json_is_array(section)) {
-        /* Config is provided as array (multiple streams) */
-        size = json_array_size(section);
-        for(i = 0; i < size; i++) {
-            if(!stream_config) {
-                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = g_ctx->config.stream_config;
-            } else {
-                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = stream_config->next;
-            }
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
-                return false;
-            }
-        }
+    if(!json_parse_config_streams(root)) {
+        return false;
     }
-
     return true;
 }
 
@@ -2736,40 +2760,6 @@ bbl_config_load_json(const char *filename)
         fprintf(stderr, "JSON config error: File %s Line %d: %s\n", filename, error.line, error.text);
     }
     return result;
-}
-
-static bool
-json_parse_config_streams(json_t *root)
-{
-
-    json_t *section = NULL;
-    int i, size;
-
-    bbl_stream_config_s *stream_config = g_ctx->config.stream_config;
-
-    if(json_typeof(root) != JSON_OBJECT) {
-        fprintf(stderr, "JSON config error: Configuration root element must object\n");
-        return false;
-    }
-
-    section = json_object_get(root, "streams");
-    if(json_is_array(section)) {
-        /* Config is provided as array (multiple streams) */
-        size = json_array_size(section);
-        for(i = 0; i < size; i++) {
-            if(!stream_config) {
-                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = g_ctx->config.stream_config;
-            } else {
-                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = stream_config->next;
-            }
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
-                return false;
-            }
-        }
-    }
-    return true;
 }
 
 /**
