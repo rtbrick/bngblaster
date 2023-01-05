@@ -262,9 +262,14 @@ streams for use with the BNG Blaster.
                             LSR identifier
     -i N, --message-id-base N
                             message identifier base
+    -w, --withdraw        withdraw
+    -a ADDRESS, --address-base ADDRESS
+                            address message base
+    -A N, --address-num N
+                            address message count
     -p PREFIX, --prefix-base PREFIX
-                            prefix base network
-    -P N, --prefix-num N  prefix count
+                            label mapping base prefix
+    -P N, --prefix-num N  label mapping prefix count
     -m LABEL, --label-base LABEL
                             label base
     -M N, --label-num N   label count
