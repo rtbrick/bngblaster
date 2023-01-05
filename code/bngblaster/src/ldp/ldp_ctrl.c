@@ -427,7 +427,7 @@ ldb_ctrl_database_entries(ldp_instance_s *instance)
     while(next) {
         entry = *hb_itor_datum(itor);
         json_entry = json_pack("{ss ss* si ss*}", 
-            "direction", "ipv4",
+            "afi", "ipv4",
             "prefix", format_ipv4_prefix(&entry->prefix.ipv4),
             "label", entry->label,
             "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
@@ -446,7 +446,7 @@ ldb_ctrl_database_entries(ldp_instance_s *instance)
     while(next) {
         entry = *hb_itor_datum(itor);
         json_entry = json_pack("{ss ss* si ss*}", 
-            "direction", "ipv6",
+            "afi", "ipv6",
             "prefix", format_ipv6_prefix(&entry->prefix.ipv6),
             "label", entry->label,
             "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
@@ -472,7 +472,7 @@ ldb_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     int instance_id = 0;
 
     /* Unpack further arguments */
-    if(json_unpack(arguments, "{s:i}", "instance", &instance_id) != 0) {
+    if(json_unpack(arguments, "{s:i}", "ldp-instance-id", &instance_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "LDP instance missing");
     }
 
