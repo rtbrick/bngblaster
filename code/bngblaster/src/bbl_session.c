@@ -10,6 +10,7 @@
 #include "bbl_session.h"
 #include "bbl_stream.h"
 #include "bbl_stats.h"
+#include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
 
 extern volatile bool g_teardown;
@@ -200,6 +201,50 @@ bbl_session_monkey_pppoe(bbl_session_s *session) {
     }
 }
 
+static void
+bbl_session_monkey_ipoe(bbl_session_s *session) {
+    switch(rand() % 256) {
+        case 10:
+            /* Clear session. */ 
+            bbl_session_clear(session);
+            break;
+        case 20:
+            /* Release DHCP */
+            if(session->dhcp_state != BBL_DHCP_RELEASE) {
+                session->dhcp_state = BBL_DHCP_RELEASE;
+                session->dhcp_xid = rand();
+                session->dhcp_request_timestamp.tv_sec = 0;
+                session->dhcp_request_timestamp.tv_nsec = 0;
+                session->dhcp_retry = 0;
+                session->send_requests |= BBL_SEND_DHCP_REQUEST;
+                bbl_session_tx_qnode_insert(session);
+            }
+            break;
+        case 30:
+            /* Release DHCPv6 */
+            if(session->dhcpv6_state != BBL_DHCP_RELEASE) {
+                session->dhcpv6_state = BBL_DHCP_RELEASE;
+                session->dhcpv6_xid = rand() & 0xffffff;
+                session->dhcpv6_request_timestamp.tv_sec = 0;
+                session->dhcpv6_request_timestamp.tv_nsec = 0;
+                session->dhcpv6_retry = 0;
+                session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+                bbl_session_tx_qnode_insert(session);
+            }
+            break;
+        case 40:
+            /* Restart DHCPv4 */
+            bbl_dhcp_restart(session);
+            break;
+        case 50:
+            /* Restart DHCPv6 */
+            bbl_dhcpv6_restart(session);
+            break;
+        default:
+            break;
+    }
+}
+
 void
 bbl_session_monkey_job(timer_s *timer) {
     bbl_session_s *session = timer->data;
@@ -218,6 +263,8 @@ bbl_session_monkey_job(timer_s *timer) {
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         bbl_session_monkey_pppoe(session);
+    } else if(session->access_type == ACCESS_TYPE_IPOE) {
+        bbl_session_monkey_ipoe(session);
     }
 }
 
