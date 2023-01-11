@@ -322,6 +322,7 @@ bbl_session_reset(bbl_session_s *session) {
     session->dns2 = 0;
     session->ipv6_prefix.len = 0;
     session->delegated_ipv6_prefix.len = 0;
+    session->arp_resolved = false;
     session->icmpv6_ra_received = false;
     if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
         session->dhcpv6_state = BBL_DHCP_INIT;
@@ -503,24 +504,20 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             if(g_teardown) {
                 g_ctx->sessions_terminated++;
             } else {
-                if(session->access_type == ACCESS_TYPE_PPPOE) {
-                    if(g_ctx->config.pppoe_reconnect) {
-                        /* Increment flap counter */
-                        session->stats.flapped++;
-                        g_ctx->sessions_flapped++;
-                        if(session->reconnect_delay) {
-                            timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
-                                      session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
-                        } else {
-                            state = BBL_IDLE;
-                            bbl_session_reset(session);
-                            CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
-                        }
+                if((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
+                   (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect)) {
+                    /* Increment flap counter */
+                    session->stats.flapped++;
+                    g_ctx->sessions_flapped++;
+                    if(session->reconnect_delay) {
+                        timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
+                                    session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
                     } else {
-                        g_ctx->sessions_terminated++;
+                        state = BBL_IDLE;
+                        bbl_session_reset(session);
+                        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
                     }
                 } else {
-                    /* IPoE */
                     g_ctx->sessions_terminated++;
                 }
             }

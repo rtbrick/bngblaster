@@ -202,6 +202,7 @@ typedef struct bbl_ctx_
         uint16_t sessions_start_rate;
         uint16_t sessions_stop_rate;
         uint16_t sessions_start_delay;
+        bool sessions_reconnect;
         bool sessions_autostart;
         bool monkey_autostart;
         bool iterate_outer_vlan;

@@ -1804,6 +1804,10 @@ json_parse_config(json_t *root)
         if(json_is_boolean(value)) {
             g_ctx->config.sessions_autostart = json_boolean_value(value);
         }
+        value = json_object_get(section, "reconnect");
+        if(json_is_boolean(value)) {
+            g_ctx->config.sessions_reconnect = json_boolean_value(value);
+        }
         value = json_object_get(section, "monkey-autostart");
         if(json_is_boolean(value)) {
             g_ctx->config.monkey_autostart = json_boolean_value(value);
@@ -1865,6 +1869,8 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "reconnect");
         if(json_is_boolean(value)) {
             g_ctx->config.pppoe_reconnect = json_boolean_value(value);
+        } else {
+            g_ctx->config.pppoe_reconnect = g_ctx->config.sessions_reconnect;
         }
         value = json_object_get(section, "discovery-timeout");
         if(json_is_number(value)) {
