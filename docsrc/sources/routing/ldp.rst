@@ -65,6 +65,7 @@ an LDP adjacency is set up between the two peers.
 ``$ sudo bngblaster-cli run.sock ldp-adjacencies``
 
 .. code-block:: json
+
     {
         "status": "ok",
         "code": 200,
