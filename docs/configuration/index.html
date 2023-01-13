@@ -81,6 +81,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#bgp">BGP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ldp">LDP</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -675,11 +676,15 @@ for interface links referenced by interface functions.</p>
 <td><p>Wait N seconds after all interfaces are resolved before starting sessions</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>autostart</cite></p></td>
+<tr class="row-even"><td><p><cite>reconnect</cite></p></td>
+<td><p>Automatically reconnect sessions (PPPoE and IPoE) if terminated</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>autostart</cite></p></td>
 <td><p>Start sessions automatically</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>monkey-autostart</cite></p></td>
+<tr class="row-even"><td><p><cite>monkey-autostart</cite></p></td>
 <td><p>Start monkey testing automatically if enabled</p></td>
 <td><p>true</p></td>
 </tr>
@@ -1436,11 +1441,11 @@ live rate statistics are not required.</p>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>tx-label2-exp</cite></p></td>
-<td><p>EXP bits of the first label (inner label)</p></td>
+<td><p>EXP bits of the second label (inner label)</p></td>
 <td><p>0</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>tx-label2-ttl</cite></p></td>
-<td><p>TTL of the first label (inner label)</p></td>
+<td><p>TTL of the second label (inner label)</p></td>
 <td><p>255</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>rx-label1</cite></p></td>
@@ -1449,6 +1454,10 @@ live rate statistics are not required.</p>
 </tr>
 <tr class="row-odd"><td><p><cite>rx-label2</cite></p></td>
 <td><p>Expected receive MPLS label (inner label)</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>ldp-ipv4-lookup-address</cite></p></td>
+<td><p>Dynamically resolve outer label</p></td>
 <td></td>
 </tr>
 </tbody>
@@ -1770,8 +1779,8 @@ access-line or interface section has priority over those defined here.</p>
 <td><p>ISIS hello padding</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>holding-time</cite></p></td>
-<td><p>ISIS holding time in seconds</p></td>
+<tr class="row-odd"><td><p><cite>hold-time</cite></p></td>
+<td><p>ISIS hold time in seconds</p></td>
 <td><p>30</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>lsp-lifetime</cite></p></td>
@@ -1929,8 +1938,8 @@ access-line or interface section has priority over those defined here.</p>
 <td><p>BGP peer AS</p></td>
 <td><p>local AS</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>holdtime</cite></p></td>
-<td><p>BGP holdtime in seconds</p></td>
+<tr class="row-odd"><td><p><cite>hold-time</cite></p></td>
+<td><p>BGP hold-time in seconds</p></td>
 <td><p>90</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>id</cite></p></td>
@@ -1956,6 +1965,59 @@ access-line or interface section has priority over those defined here.</p>
 </tbody>
 </table>
 </section>
+<section id="ldp">
+<h2>LDP<a class="headerlink" href="#ldp" title="Permalink to this headline"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>instance-id</cite></p></td>
+<td><p>LDP instance identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>keepalive-time</cite></p></td>
+<td><p>LDP keepalive time in seconds</p></td>
+<td><p>15</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>hold-time</cite></p></td>
+<td><p>LDP hold time in seconds</p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>hostname</cite></p></td>
+<td><p>LDP hostname</p></td>
+<td><p>bngblaster</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lsr-id</cite></p></td>
+<td><p>LDP LSR identifier</p></td>
+<td><p>10.10.10.10</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
+<td><p>LDP teardown time in seconds</p></td>
+<td><p>5</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipv4-transport-address</cite></p></td>
+<td><p>LDP transport address</p></td>
+<td><p><cite>lsr-id</cite></p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>raw-update-file</cite></p></td>
+<td><p>LDP RAW update file</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 
 
@@ -1969,7 +2031,7 @@ access-line or interface section has priority over those defined here.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+    <p>&#169; Copyright 2020-2023, RtBrick, Inc..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

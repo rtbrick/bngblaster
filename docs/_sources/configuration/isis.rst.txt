@@ -43,8 +43,8 @@
    * - `hello-padding`
      - ISIS hello padding
      - false
-   * - `holding-time`
-     - ISIS holding time in seconds
+   * - `hold-time`
+     - ISIS hold time in seconds
      - 30
    * - `lsp-lifetime`
      - ISIS LSP lifetime in seconds
