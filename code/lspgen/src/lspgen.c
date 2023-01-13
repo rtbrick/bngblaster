@@ -370,7 +370,7 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
             lsdb_add_node_attr(node, &attr_template);
         }
 
-        /* ipv4 loopback address */
+        /* IPv4 loopback address */
         lsdb_reset_attr_template(&attr_template);
         addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
         addr += node->node_index;
@@ -379,18 +379,20 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.attr_type = ISIS_TLV_IPV4_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
-        /* ipv4 loopback prefix */
+        /* IPv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
         attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
-        attr_template.key.prefix.sid = node->node_index;
-        attr_template.key.prefix.adv_sid = true;
+        if (!ctx->no_sr) {
+            attr_template.key.prefix.sid = node->node_index;
+            attr_template.key.prefix.adv_sid = true;
+        }
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
         lsdb_add_node_attr(node, &attr_template);
 
-        /* ipv6 loopback address */
+        /* IPv6 loopback address */
         lsdb_reset_attr_template(&attr_template);
         addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
         addr += node->node_index;
@@ -399,12 +401,14 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
         attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
         lsdb_add_node_attr(node, &attr_template);
 
-        /* ipv6 loopback prefix */
+        /* IPv6 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
         attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
-        attr_template.key.prefix.sid = ctx->srgb_range/2 + node->node_index;
-        attr_template.key.prefix.adv_sid = true;
+        if (!ctx->no_sr) {
+            attr_template.key.prefix.sid = ctx->srgb_range/2 + node->node_index;
+            attr_template.key.prefix.adv_sid = true;
+        }
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV6_REACH;
@@ -463,7 +467,7 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.link.metric = link->link_metric;
             lsdb_add_node_attr(node, &attr_template);
 
-            /* Generate an ipv4 prefix for each link */
+            /* Generate an IPv4 prefix for each link */
             lsdb_reset_attr_template(&attr_template);
             addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
             inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
@@ -474,7 +478,7 @@ lspgen_gen_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
             lsdb_add_node_attr(node, &attr_template);
 
-            /* Generate an ipv6 prefix for each link */
+            /* Generate an IPv6 prefix for each link */
             lsdb_reset_attr_template(&attr_template);
             addr = lspgen_load_addr(ctx->ipv6_link_prefix.address, IPV6_ADDR_LEN);
             inc = lspgen_get_prefix_inc(AF_INET6, ctx->ipv6_link_prefix.len);
