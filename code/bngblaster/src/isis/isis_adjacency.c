@@ -140,7 +140,7 @@ isis_adjacency_down(isis_adjacency_s *adjacency)
     timer_del(adjacency->timer_retry);
     timer_del(adjacency->timer_csnp);
     timer_del(adjacency->timer_csnp_next);
-    timer_del(adjacency->timer_holding);
+    timer_del(adjacency->timer_hold);
 
     if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
 }

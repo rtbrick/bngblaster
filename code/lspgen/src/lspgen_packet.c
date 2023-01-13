@@ -346,16 +346,16 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
             break;
         case ISIS_TLV_IS_REACH:
             push_be_uint(buf, 1, 0); /* virtual */
-	    metric = attr->key.link.metric;
-	    if (metric > 63) {
-		metric = 63; /* limit metric to 6 bits */
-	    }
+            metric = attr->key.link.metric;
+            if (metric > 63) {
+                metric = 63; /* limit metric to 6 bits */
+            }
             push_be_uint(buf, 1, metric); /* default metric */
             push_be_uint(buf, 1, 0x80); /* delay metric */
             push_be_uint(buf, 1, 0x80); /* expense metric */
             push_be_uint(buf, 1, 0x80); /* error metric */
             push_data(buf, attr->key.link.remote_node_id, 7);
-	    break;
+            break;
         case ISIS_TLV_EXTD_IS_REACH:
             push_data(buf, attr->key.link.remote_node_id, 7);
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
@@ -373,11 +373,11 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
             break;
         case ISIS_TLV_INT_IPV4_REACH: /* fall through */
         case ISIS_TLV_EXT_IPV4_REACH:
-	    metric = attr->key.prefix.metric;
-	    if (metric > 63) {
-		metric = 63; /* limit metric to 6 bits */
-	    }
-	    flags = metric;
+            metric = attr->key.prefix.metric;
+            if (metric > 63) {
+                metric = 63; /* limit metric to 6 bits */
+            }
+            flags = metric;
             if (attr->key.prefix.updown_flag) {
                 flags |= 0x80;
             }
@@ -386,11 +386,11 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
             push_be_uint(buf, 1, 0x80); /* expense metric */
             push_be_uint(buf, 1, 0x80); /* error metric */
             push_data(buf, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4);
-	    mask = 0xffffffff;
-	    /* convert prefix length to mask */
-	    mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
-	    push_be_uint(buf, 4, mask);
-	    break;
+            mask = 0xffffffff;
+            /* convert prefix length to mask */
+            mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
+            push_be_uint(buf, 4, mask);
+            break;
         case ISIS_TLV_EXTD_IPV4_REACH:
             push_be_uint(buf, 4, attr->key.prefix.metric); /* Metric */
             flags = attr->key.prefix.ipv4_prefix.len & 0x3f;
@@ -398,12 +398,11 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
                 flags |= 0x80;
             }
             if (subtlv_present) {
-                flags |= 0x40; /* subTLVs present */
+                flags |= 0x40; /* Sub-TLVs present */
             }
             push_be_uint(buf, 1, flags); /* Flags */
             attr_len = (attr->key.prefix.ipv4_prefix.len+7)/8;
             push_data(buf, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, attr_len);
-
             /* Generate subTLVs */
             if (subtlv_present) {
                 lspgen_serialize_prefix_subtlv(attr, buf, true);
@@ -549,7 +548,7 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         */
         CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = true;
-	ctx->ctrl_stats.packets_queued++;
+    ctx->ctrl_stats.packets_queued++;
 
         /*
         * Parent
@@ -589,10 +588,10 @@ lspgen_refresh_cb (timer_s *timer)
      */
     if (ctx->ctrl_socket_path) {
 
-	if (!ctx->ctrl_socket_connect_timer) {
-	    timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
-			       "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
-	}
+    if (!ctx->ctrl_socket_connect_timer) {
+        timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
+                   "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+    }
     }
 }
 
@@ -607,7 +606,7 @@ lspgen_refresh_interval (lsdb_ctx_t *ctx)
 
     refresh = ctx->lsp_lifetime - 300;
     if (refresh < 60) {
-	refresh = 60;
+    refresh = 60;
     }
 
     return refresh;
@@ -667,8 +666,8 @@ lspgen_gen_packet_node(lsdb_node_t *node)
      * Start refresh timer.
      */
     if (ctx->ctrl_socket_path) {
-	timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
-			   lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+    timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
+               lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
     }
 
     do {
@@ -712,7 +711,7 @@ lspgen_gen_packet_node(lsdb_node_t *node)
          */
         if ((last_attr != attr->key.attr_type) ||
             (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
-	    attr->key.start_tlv) {
+        attr->key.start_tlv) {
             tlv_start_idx = packet->buf.idx;
             push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
             push_be_uint(&packet->buf, 1, 0); /* Length */
@@ -758,14 +757,14 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
     do {
         node = *dict_itor_datum(itor);
 
-	/*
-	 * Init per-packet tree for this node.
-	 */
-	if (!node->packet_dict) {
-	    node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
-	}
+    /*
+     * Init per-packet tree for this node.
+     */
+    if (!node->packet_dict) {
+        node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
+    }
 
-	/*
+    /*
          * Generate the link-state packets for this node.
          */
         lspgen_gen_packet_node(node);

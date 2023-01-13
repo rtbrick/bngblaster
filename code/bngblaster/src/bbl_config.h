@@ -106,6 +106,8 @@ typedef struct bbl_network_config_
     uint32_t isis_l1_metric;
     uint32_t isis_l2_metric;
 
+    uint16_t ldp_instance_id;
+
     void *next; /* pointer to next network config element */
     bbl_network_interface_s *network_interface;
 } bbl_network_config_s;

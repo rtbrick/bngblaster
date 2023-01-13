@@ -176,10 +176,10 @@ bgp_session_state_established(bgp_session_s *session)
     clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
 
     /* Start BGP keepalive */
-    if(session->peer.holdtime < session->config->holdtime) {
-        keepalive_interval = session->peer.holdtime/2U;
+    if(session->peer.hold_time < session->config->hold_time) {
+        keepalive_interval = session->peer.hold_time/2U;
     } else {
-        keepalive_interval = session->config->holdtime/2U;
+        keepalive_interval = session->config->hold_time/2U;
     }
     if(!keepalive_interval) {
         keepalive_interval = 1;
@@ -216,7 +216,7 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
 
     session->state = new_state;
 
-    switch (new_state) {
+    switch(new_state) {
         case BGP_OPENSENT:
             bgp_session_state_opensent(session);
             break;
@@ -320,7 +320,7 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
 
         session->peer.as = 0;
         session->peer.id = 0;
-        session->peer.holdtime = 0;
+        session->peer.hold_time = 0;
 
         session->stats.message_rx = 0;
         session->stats.message_tx = 0;
@@ -376,8 +376,6 @@ bgp_session_close(bgp_session_s *session)
 
     /* Stop all timers */
     timer_del(session->connect_timer);
-    timer_del(session->send_open_timer);
-    timer_del(session->open_sent_timer);
     timer_del(session->keepalive_timer);
     timer_del(session->hold_timer);
     timer_del(session->update_timer);

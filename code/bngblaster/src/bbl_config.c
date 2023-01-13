@@ -635,6 +635,13 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             network_config->isis_l2_metric = 10;
         }
     }
+
+    /* LDP interface configuration */
+    value = json_object_get(network_interface, "ldp-instance-id");
+    if(json_is_number(value)) {
+        network_config->ldp_instance_id = json_number_value(value);
+    }
+
     return true;
 }
 
@@ -1068,11 +1075,11 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->peer_as = bgp_config->local_as;
     }
 
-    value = json_object_get(bgp, "holdtime");
+    value = json_object_get(bgp, "hold-time");
     if(value) {
-        bgp_config->holdtime = json_number_value(value);
+        bgp_config->hold_time = json_number_value(value);
     } else {
-        bgp_config->holdtime = BGP_DEFAULT_HOLDTIME;
+        bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
     }
 
     bgp_config->id = htobe32(0x01020304);
@@ -1191,11 +1198,11 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->hello_padding  = json_boolean_value(value);
     }
 
-    value = json_object_get(isis, "holding-time");
+    value = json_object_get(isis, "hold-time");
     if(json_is_number(value)) {
-        isis_config->holding_time = json_number_value(value);
+        isis_config->hold_time = json_number_value(value);
     } else {
-        isis_config->holding_time = ISIS_DEFAULT_HOLDING_TIME;
+        isis_config->hold_time = ISIS_DEFAULT_HOLD_TIME;
     }
 
     value = json_object_get(isis, "lsp-lifetime");
@@ -1359,6 +1366,76 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 }
 
 static bool
+json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    
+    g_ctx->tcp = true;
+
+    value = json_object_get(ldp, "instance-id");
+    if(value) {
+        ldp_config->id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for ldp->instance-id\n");
+        return false;
+    }
+
+    value = json_object_get(ldp, "keepalive-time");
+    if(json_is_number(value)) {
+        ldp_config->keepalive_time = json_number_value(value);
+    } else {
+        ldp_config->keepalive_time = LDP_DEFAULT_KEEPALIVE_TIME;
+    }
+
+    value = json_object_get(ldp, "hold-time");
+    if(json_is_number(value)) {
+        ldp_config->hold_time = json_number_value(value);
+    } else {
+        ldp_config->hold_time = LDP_DEFAULT_HOLD_TIME;
+    }
+
+    value = json_object_get(ldp, "teardown-time");
+    if(json_is_number(value)) {
+        ldp_config->teardown_time = json_number_value(value);
+    } else {
+        ldp_config->teardown_time = LDP_DEFAULT_TEARDOWN_TIME;
+    }
+
+    if(json_unpack(ldp, "{s:s}", "hostname", &s) == 0) {
+        ldp_config->hostname = strdup(s);
+    } else {
+        ldp_config->hostname = g_default_hostname;
+    }
+
+    if(json_unpack(ldp, "{s:s}", "lsr-id", &s) == 0) {
+        ldp_config->lsr_id_str = strdup(s);
+    } else {
+        ldp_config->lsr_id_str = g_default_router_id;
+    }
+    if(!inet_pton(AF_INET, ldp_config->lsr_id_str, &ldp_config->lsr_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for ldp->lsr-id\n");
+        return false;
+    }
+    if(json_unpack(ldp, "{s:s}", "ipv4-transport-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &ldp_config->ipv4_transport_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for ldp->ipv4-transport-address\n");
+            return false;
+        }
+    } else {
+        ldp_config->ipv4_transport_address = ldp_config->lsr_id;
+    }
+
+    if(json_unpack(ldp, "{s:s}", "raw-update-file", &s) == 0) {
+        ldp_config->raw_update_file = strdup(s);
+        if(!ldp_raw_update_load(ldp_config->raw_update_file, true)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool
 json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 {
     json_t *value = NULL;
@@ -1500,6 +1577,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->start_delay = json_number_value(value);
     }
 
+    if(json_unpack(stream, "{s:s}", "ldp-ipv4-lookup-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &stream_config->ipv4_ldp_lookup_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->ldp-ipv4-lookup-address\n");
+            return false;
+        }
+    }
+
     if(json_unpack(stream, "{s:s}", "access-ipv4-source-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &stream_config->ipv4_access_src_address)) {
             fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv4-source-address\n");
@@ -1557,32 +1641,33 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->tx_mpls1 = true;
         stream_config->tx_mpls1_label = json_number_value(value);
-        value = json_object_get(stream, "tx-label1-exp");
-        if(value) {
-            stream_config->tx_mpls1_exp = json_number_value(value);
-        }
-        value = json_object_get(stream, "tx-label1-ttl");
-        if(value) {
-            stream_config->tx_mpls1_ttl = json_number_value(value);
-        } else {
-            stream_config->tx_mpls1_ttl = 255;
-        }
+    }
+    value = json_object_get(stream, "tx-label1-exp");
+    if(value) {
+        stream_config->tx_mpls1_exp = json_number_value(value);
+    }
+    value = json_object_get(stream, "tx-label1-ttl");
+    if(value) {
+        stream_config->tx_mpls1_ttl = json_number_value(value);
+    } else {
+        stream_config->tx_mpls1_ttl = 255;
     }
     value = json_object_get(stream, "tx-label2");
     if(value) {
         stream_config->tx_mpls2 = true;
         stream_config->tx_mpls2_label = json_number_value(value);
-        value = json_object_get(stream, "tx-label2-exp");
-        if(value) {
-            stream_config->tx_mpls2_exp = json_number_value(value);
-        }
-        value = json_object_get(stream, "tx-label2-ttl");
-        if(value) {
-            stream_config->tx_mpls2_ttl = json_number_value(value);
-        } else {
-            stream_config->tx_mpls2_ttl = 255;
-        }
     }
+    value = json_object_get(stream, "tx-label2-exp");
+    if(value) {
+        stream_config->tx_mpls2_exp = json_number_value(value);
+    }
+    value = json_object_get(stream, "tx-label2-ttl");
+    if(value) {
+        stream_config->tx_mpls2_ttl = json_number_value(value);
+    } else {
+        stream_config->tx_mpls2_ttl = 255;
+    }
+
     value = json_object_get(stream, "rx-label1");
     if(value) {
         stream_config->rx_mpls1 = true;
@@ -1622,6 +1707,46 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 }
 
 static bool
+json_parse_config_streams(json_t *root)
+{
+
+    json_t *section = NULL;
+    int i, size;
+
+    bbl_stream_config_s *stream_config = g_ctx->config.stream_config;
+
+    if(json_typeof(root) != JSON_OBJECT) {
+        fprintf(stderr, "JSON config error: Configuration root element must object\n");
+        return false;
+    }
+
+    section = json_object_get(root, "streams");
+    if(json_is_array(section)) {
+        /* Get tail end of stream-config list. */
+        if(stream_config) {
+            while(stream_config->next) {
+                stream_config = stream_config->next;
+            }
+        }
+        /* Config is provided as array (multiple streams) */
+        size = json_array_size(section);
+        for(i = 0; i < size; i++) {
+            if(!stream_config) {
+                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
+                stream_config = g_ctx->config.stream_config;
+            } else {
+                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
+                stream_config = stream_config->next;
+            }
+            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool
 json_parse_config(json_t *root)
 {
     json_t *section, *sub, *value = NULL;
@@ -1631,7 +1756,6 @@ json_parse_config(json_t *root)
     double number;
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
-    bbl_stream_config_s         *stream_config          = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
 
     bbl_lag_config_s            *lag_config             = NULL;
@@ -1642,6 +1766,7 @@ json_parse_config(json_t *root)
 
     bgp_config_s                *bgp_config             = NULL;
     isis_config_s               *isis_config            = NULL;
+    ldp_config_s                *ldp_config             = NULL;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
@@ -1678,6 +1803,10 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "autostart");
         if(json_is_boolean(value)) {
             g_ctx->config.sessions_autostart = json_boolean_value(value);
+        }
+        value = json_object_get(section, "reconnect");
+        if(json_is_boolean(value)) {
+            g_ctx->config.sessions_reconnect = json_boolean_value(value);
         }
         value = json_object_get(section, "monkey-autostart");
         if(json_is_boolean(value)) {
@@ -1740,6 +1869,8 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "reconnect");
         if(json_is_boolean(value)) {
             g_ctx->config.pppoe_reconnect = json_boolean_value(value);
+        } else {
+            g_ctx->config.pppoe_reconnect = g_ctx->config.sessions_reconnect;
         }
         value = json_object_get(section, "discovery-timeout");
         if(json_is_number(value)) {
@@ -2167,7 +2298,7 @@ json_parse_config(json_t *root)
     /* BGP Configuration */
     sub = json_object_get(root, "bgp");
     if(json_is_array(sub)) {
-        /* Config is provided as array (multiple bgp sessions) */
+        /* Config is provided as array (multiple BGP sessions) */
         size = json_array_size(sub);
         for(i = 0; i < size; i++) {
             if(!bgp_config) {
@@ -2182,7 +2313,7 @@ json_parse_config(json_t *root)
             }
         }
     } else if(json_is_object(sub)) {
-        /* Config is provided as object (single bgp session) */
+        /* Config is provided as object (single BGP session) */
         bgp_config = calloc(1, sizeof(bgp_config_s));
         if(!g_ctx->config.bgp_config) {
             g_ctx->config.bgp_config = bgp_config;
@@ -2209,7 +2340,7 @@ json_parse_config(json_t *root)
     /* IS-IS Configuration */
     sub = json_object_get(root, "isis");
     if(json_is_array(sub)) {
-        /* Config is provided as array (multiple isis instances) */
+        /* Config is provided as array (multiple IS-IS instances) */
         size = json_array_size(sub);
         for(i = 0; i < size; i++) {
             if(!isis_config) {
@@ -2224,13 +2355,55 @@ json_parse_config(json_t *root)
             }
         }
     } else if(json_is_object(sub)) {
-        /* Config is provided as object (single isis instance) */
+        /* Config is provided as object (single IS-IS instance) */
         isis_config = calloc(1, sizeof(isis_config_s));
         if(!g_ctx->config.isis_config) {
             g_ctx->config.isis_config = isis_config;
         }
         if(!json_parse_isis_config(sub, isis_config)) {
             return false;
+        }
+    }
+
+    /* LDP Configuration */
+    sub = json_object_get(root, "ldp");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple LDP instances) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!ldp_config) {
+                g_ctx->config.ldp_config = calloc(1, sizeof(ldp_config_s));
+                ldp_config = g_ctx->config.ldp_config;
+            } else {
+                ldp_config->next = calloc(1, sizeof(ldp_config_s));
+                ldp_config = ldp_config->next;
+            }
+            if(!json_parse_ldp_config(json_array_get(sub, i), ldp_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single LDP instance) */
+        ldp_config = calloc(1, sizeof(ldp_config_s));
+        if(!g_ctx->config.ldp_config) {
+            g_ctx->config.ldp_config = ldp_config;
+        }
+        if(!json_parse_ldp_config(sub, ldp_config)) {
+            return false;
+        }
+    }
+
+    /* Pre-Load LDP RAW update files */
+    sub = json_object_get(root, "ldp-raw-update-files");
+    if(json_is_array(sub)) {
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            s = json_string_value(json_array_get(sub, i));
+            if(s) {
+                if(!ldp_raw_update_load(s, true)) {
+                    return false;
+                }
+            }
         }
     }
 
@@ -2562,24 +2735,9 @@ json_parse_config(json_t *root)
     }
 
     /* Traffic Streams Configuration */
-    section = json_object_get(root, "streams");
-    if(json_is_array(section)) {
-        /* Config is provided as array (multiple streams) */
-        size = json_array_size(section);
-        for(i = 0; i < size; i++) {
-            if(!stream_config) {
-                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = g_ctx->config.stream_config;
-            } else {
-                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = stream_config->next;
-            }
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
-                return false;
-            }
-        }
+    if(!json_parse_config_streams(root)) {
+        return false;
     }
-
     return true;
 }
 
@@ -2608,40 +2766,6 @@ bbl_config_load_json(const char *filename)
         fprintf(stderr, "JSON config error: File %s Line %d: %s\n", filename, error.line, error.text);
     }
     return result;
-}
-
-static bool
-json_parse_config_streams(json_t *root)
-{
-
-    json_t *section = NULL;
-    int i, size;
-
-    bbl_stream_config_s *stream_config = g_ctx->config.stream_config;
-
-    if(json_typeof(root) != JSON_OBJECT) {
-        fprintf(stderr, "JSON config error: Configuration root element must object\n");
-        return false;
-    }
-
-    section = json_object_get(root, "streams");
-    if(json_is_array(section)) {
-        /* Config is provided as array (multiple streams) */
-        size = json_array_size(section);
-        for(i = 0; i < size; i++) {
-            if(!stream_config) {
-                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = g_ctx->config.stream_config;
-            } else {
-                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = stream_config->next;
-            }
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
-                return false;
-            }
-        }
-    }
-    return true;
 }
 
 /**

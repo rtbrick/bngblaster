@@ -95,6 +95,8 @@ typedef struct bbl_ctx_
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
     isis_instance_s *isis_instances;
+    ldp_instance_s *ldp_instances;
+    ldp_raw_update_s *ldp_raw_updates;
 
     /* Scratchpad memory */
     uint8_t *sp;
@@ -191,12 +193,16 @@ typedef struct bbl_ctx_
         /* ISIS Instances */
         isis_config_s *isis_config;
 
+        /* LDP Instances */
+        ldp_config_s *ldp_config;
+
         /* Global Session Settings */
         uint32_t sessions;
         uint32_t sessions_max_outstanding;
         uint16_t sessions_start_rate;
         uint16_t sessions_stop_rate;
         uint16_t sessions_start_delay;
+        bool sessions_reconnect;
         bool sessions_autostart;
         bool monkey_autostart;
         bool iterate_outer_vlan;

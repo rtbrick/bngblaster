@@ -84,35 +84,33 @@ bgp_decode_error(bgp_session_s *session)
     bgp_session_close(session);
 }
 
-static void
+static bool
 bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
     if(length < 28) {
-        bgp_decode_error(session);
-        return;
+        return false;
     }
     session->peer.as = read_be_uint(start+20, 2);
-    session->peer.holdtime = read_be_uint(start+22, 2);
+    session->peer.hold_time = read_be_uint(start+22, 2);
     session->peer.id = read_be_uint(start+24, 4);
 
-    LOG(BGP, "BGP (%s %s - %s) open message received with peer AS: %u, holdtime: %us\n",
+    LOG(BGP, "BGP (%s %s - %s) open message received with peer AS: %u, hold-time: %us\n",
         session->interface->name,
         format_ipv4_address(&session->ipv4_local_address),
         format_ipv4_address(&session->ipv4_peer_address),
-        session->peer.as, session->peer.holdtime);
+        session->peer.as, session->peer.hold_time);
 
     bgp_session_state_change(session, BGP_OPENCONFIRM);
-    return;
+    return true;
 }
 
-static void
+static bool
 bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t error_code, error_subcode;
 
     if(length < 21) {
-        bgp_decode_error(session);
-        return;
+        return false;
     }
 
     error_code = *(start+19);
@@ -160,7 +158,7 @@ bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
     }
     session->error_code = 0;
     bgp_session_close(session);
-    return;
+    return true;
 }
 
 /*
@@ -185,7 +183,7 @@ bgp_rebase_read_buffer(bgp_session_s *session)
 }
 
 static void
-bpg_read(bgp_session_s *session)
+bgp_read(bgp_session_s *session)
 {
     uint32_t size;
     uint16_t length;
@@ -206,7 +204,7 @@ bpg_read(bgp_session_s *session)
         if(length < BGP_MIN_MESSAGE_SIZE ||
             length > BGP_MAX_MESSAGE_SIZE) {
             bgp_decode_error(session);
-            break;
+            return;
         }
 
         /* Full message on the wire to consume? */
@@ -223,12 +221,18 @@ bpg_read(bgp_session_s *session)
             format_ipv4_address(&session->ipv4_peer_address),
             keyval_get_key(bgp_msg_names, type));
 
-        switch (type) {
+        switch(type) {
             case BGP_MSG_OPEN:
-                bgp_open(session, start, length);
+                if(!bgp_open(session, start, length)) {
+                    bgp_decode_error(session);
+                    return;
+                }
                 break;
             case BGP_MSG_NOTIFICATION:
-                bgp_notification(session, start, length);
+                if(!bgp_notification(session, start, length)) {
+                    bgp_decode_error(session);
+                    return;
+                }
                 return;
             case BGP_MSG_KEEPALIVE:
                 session->stats.keepalive_rx++;
@@ -244,7 +248,7 @@ bpg_read(bgp_session_s *session)
         }
 
         /* Reset hold timer */
-        bgp_restart_hold_timer(session, session->config->holdtime);
+        bgp_restart_hold_timer(session, session->config->hold_time);
 
         /* Progress pointer to next BGP message */
         buffer->start_idx += length;
@@ -274,6 +278,6 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
         memcpy(buffer->data+buffer->idx, buf, len);
         buffer->idx+=len;
     } else {
-        bpg_read(session);
+        bgp_read(session);
     }
 }

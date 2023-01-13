@@ -72,6 +72,7 @@ typedef struct lsdb_ctx_
     struct lsdb_node_id_ connector[3];
     uint32_t num_connector;
     uint32_t num_ext; /* number of external prefixes */
+    bool no_sr;
     bool no_ipv4;
     bool no_ipv6;
     uint16_t lsp_lifetime;

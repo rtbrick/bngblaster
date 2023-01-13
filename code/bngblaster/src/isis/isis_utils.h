@@ -22,7 +22,7 @@ const char *
 isis_adjacency_state_string(uint8_t state);
 
 const char *
-isis_pdu_sype_string(uint8_t type);
+isis_pdu_type_string(uint8_t type);
 
 bool
 isis_str_to_area(const char *str, isis_area_s *area);

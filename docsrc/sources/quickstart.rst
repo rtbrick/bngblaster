@@ -519,7 +519,7 @@ Finally, start the BNG Blaster in another terminal window.
     Apr 08 14:53:52.904389 All network interfaces resolved
     Apr 08 14:53:53.904448 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from idle -> connect
     Apr 08 14:53:53.905659 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from connect -> opensent
-    Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, holdtime: 90s
+    Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, hold-time: 90s
     Apr 08 14:53:53.907903 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from opensent -> openconfirm
     Apr 08 14:53:53.907917 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from openconfirm -> established
     Apr 08 14:53:54.907989 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update start
@@ -544,11 +544,11 @@ from where you started the BNG Blaster and enter the following command.
                 "local-address": "192.168.92.2",
                 "local-id": "1.2.3.4",
                 "local-as": 65001,
-                "local-holdtime": 90,
+                "local-hold-time": 90,
                 "peer-address": "192.168.92.1",
                 "peer-id": "1.92.168.192",
                 "peer-as": 65001,
-                "peer-holdtime": 90,
+                "peer-hold-time": 90,
                 "state": "established",
                 "raw-update-state": "done",
                 "raw-update-file": "out.bgp",
@@ -645,4 +645,69 @@ Finally, you can withdraw them again.
 
     bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f withdraw.bgp --withdraw
     sudo bngblaster-cli run.sock bgp-raw-update file withdraw.bgp
+
+LDP
+---
+
+In the following example, we create two connected :ref:`LDP <ldp>` instances.
+
+**ldp.json:**
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "capture-include-streams": true,
+            "network": [
+                {
+                    "interface": "veth1.1",
+                    "address": "10.0.0.1/24",
+                    "gateway": "10.0.0.2",
+                    "ldp-instance-id": 1
+                },
+                {
+                    "interface": "veth1.2",
+                    "address": "10.0.0.2/24",
+                    "gateway": "10.0.0.1",
+                    "ldp-instance-id": 2
+                }
+            ]
+        },
+        "ldp": [
+            {
+                "instance-id": 1,
+                "lsr-id": "10.2.3.1",
+                "raw-update-file": "out.ldp"
+            },
+            {
+                "instance-id": 2,
+                "lsr-id": "10.2.3.2"
+            }
+        ],
+        "streams": [
+            {
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "downstream",
+                "priority": 128,
+                "network-interface": "veth1.2",
+                "destination-ipv4-address": "100.0.0.1",
+                "ldp-ipv4-lookup-address": "13.37.0.1",
+                "pps": 1
+            }
+        ]
+    }
+
+Use the included tool ``ldpupdate`` to generate an LDP update file 
+with 10 labeled IPv4 prefixes. 
+
+.. code-block:: none
+
+    ldpupdate -l 10.2.3.1 -p 13.37.0.0/32 -P 10 -M 10000
+
+Now you can start the BNG Blaster with this configuration.
+
+.. code-block:: none
+
+    sudo bngblaster -C ldp.json -l ldp -S run.sock -P ldp.pcap
 

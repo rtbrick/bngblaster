@@ -19,11 +19,13 @@
 
 typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_CLOSED,
+    BBL_TCP_STATE_LISTEN,
     BBL_TCP_STATE_CONNECTING,
     BBL_TCP_STATE_IDLE,
     BBL_TCP_STATE_SENDING,
 } bbl_tcp_state_t;
 
+typedef err_t (*bbl_tcp_accepted_fn)(bbl_tcp_ctx_s *tcpc, void *arg);
 typedef void (*bbl_tcp_callback_fn)(void *arg);
 typedef void (*bbl_tcp_receive_fn)(void *arg, uint8_t *buf, uint16_t len);
 typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);
@@ -33,6 +35,7 @@ typedef struct bbl_tcp_ctx_
 {
     bbl_network_interface_s *interface;
 
+    bool listen;
     uint8_t af; /* AF_INET or AF_INET6 */
 
     uint16_t   local_port;
@@ -45,6 +48,7 @@ typedef struct bbl_tcp_ctx_
     
     struct tcp_pcb *pcb;
 
+    bbl_tcp_accepted_fn accepted_cb; /* accepted callback (listen) */
     bbl_tcp_callback_fn connected_cb; /* application connected callback */
     bbl_tcp_callback_fn idle_cb; /* application idle callback */
 
@@ -81,6 +85,9 @@ bbl_tcp_close(bbl_tcp_ctx_s *tcpc);
 
 void
 bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc);
+
+bbl_tcp_ctx_s *
+bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uint16_t port);
 
 bbl_tcp_ctx_s *
 bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);

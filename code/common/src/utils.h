@@ -23,7 +23,7 @@ bool push_le_uint(struct io_buffer_ *buffer, uint32_t length, uint64_t value);
 
 const char *val2key(struct keyval_ *keyval, uint32_t val);
 uint32_t    key2val(struct keyval_ *ptr, const char *key);
-const char *keyval_get_key (struct keyval_ *keyval, uint32_t val);
+const char *keyval_get_key(struct keyval_ *keyval, uint32_t val);
 
 char *format_mac_address(uint8_t *mac);
 char *format_ipv4_address(uint32_t *addr4);

@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
+#include "bbl_protocols.h"
 #include "bbl_session.h"
 #include "bbl_stream.h"
 
@@ -41,7 +42,8 @@ bbl_network_interfaces_add()
     bbl_network_interface_s *network_interface;
     bbl_interface_s *interface;
     isis_instance_s *isis;
-    bool isis_result;
+    ldp_instance_s *ldp;
+    bool result;
 
     char ifname[SUB_STR_LEN];
 
@@ -141,12 +143,12 @@ bbl_network_interfaces_add()
 
         /* Init routing protocols */ 
         if(network_config->isis_instance_id) {
-            isis_result = false;
+            result = false;
             isis = g_ctx->isis_instances;
-            while (isis) {
+            while(isis) {
                 if(isis->config->id == network_config->isis_instance_id) {
-                    isis_result = isis_adjacency_init(network_interface, network_config, isis);
-                    if(!isis_result) {
+                    result = isis_adjacency_init(network_interface, network_config, isis);
+                    if(!result) {
                         LOG(ERROR, "Failed to enable IS-IS for network interface %s (adjacency init failed)\n", ifname);
                         return false;
                     }
@@ -154,8 +156,27 @@ bbl_network_interfaces_add()
                 }
                 isis = isis->next;
             }
-            if(!isis_result) {
+            if(!result) {
                 LOG(ERROR, "Failed to enable IS-IS for network interface %s (instance not found)\n", ifname);
+                return false;
+            }
+        }
+        if(network_config->ldp_instance_id) {
+            result = false;
+            ldp = g_ctx->ldp_instances;
+            while(ldp) {
+                if(ldp->config->id == network_config->ldp_instance_id) {
+                    result = ldp_interface_init(network_interface, network_config, ldp);
+                    if(!result) {
+                        LOG(ERROR, "Failed to enable LDP for network interface %s (adjacency init failed)\n", ifname);
+                        return false;
+                    }
+                    break;
+                }
+                ldp = ldp->next;
+            }
+            if(!result) {
+                LOG(ERROR, "Failed to enable LDP for network interface %s (instance not found)\n", ifname);
                 return false;
             }
         }
@@ -309,6 +330,7 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
 static void
 bbl_network_rx_icmpv6(bbl_network_interface_s *interface, 
                       bbl_ethernet_header_s *eth) {
+    uint8_t *gw_mac;
     bbl_ipv6_s *ipv6;
     bbl_icmpv6_s *icmpv6;
     bbl_secondary_ip6_s *secondary_ip6;
@@ -316,13 +338,20 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
     ipv6 = (bbl_ipv6_s*)eth->next;
     icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
-    if(memcmp(ipv6->src, interface->gateway6, IPV6_ADDR_LEN) == 0) {
-        interface->icmpv6_nd_resolved = true;
-        if(*(uint32_t*)interface->gateway_mac == 0) {
-            memcpy(interface->gateway_mac, eth->src, ETH_ADDR_LEN);
+
+    if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
+        if(memcmp(icmpv6->prefix.address, interface->gateway6, IPV6_ADDR_LEN) == 0) {
+            interface->icmpv6_nd_resolved = true;
+            if(*(uint32_t*)interface->gateway_mac == 0) {
+                if(icmpv6->dst_mac == NULL) {
+                    gw_mac = eth->src;
+                } else {
+                    gw_mac = icmpv6->dst_mac;
+                }
+                memcpy(interface->gateway_mac, gw_mac, ETH_ADDR_LEN);
+            }
         }
-    }
-    if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
+    } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, interface->ip6.address, IPV6_ADDR_LEN) == 0) {
             bbl_network_icmpv6_na(interface, eth, ipv6, icmpv6);
         } else if(memcmp(icmpv6->prefix.address, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {
@@ -377,25 +406,39 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
             bbl_network_rx_arp(interface, eth);
             return;
         case ETH_TYPE_IPV4:
-            if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
-                /* Drop wrong MAC */
-                return;
-            }
             ipv4 = (bbl_ipv4_s*)eth->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
                 udp = (bbl_udp_s*)ipv4->next;
+                /* LDP hello is send to all routers multicast address and therefore 
+                 * processed before check on local MAC address. */
+                if(udp->protocol == UDP_PROTOCOL_LDP) {
+                    ldp_hello_rx(interface, eth, ipv4, (bbl_ldp_hello_s*)udp->next);
+                    return;
+                }
+                if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                   /* Drop wrong MAC */
+                    return;
+                }
                 if(udp->protocol == UDP_PROTOCOL_QMX_LI) {
                     bbl_qmx_li_handler_rx(interface, eth, (bbl_qmx_li_s*)udp->next);
                     return;
                 } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
                     bbl_l2tp_handler_rx(interface, eth, (bbl_l2tp_s*)udp->next);
                     return;
-                }
+                } 
             } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
+                if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                   /* Drop wrong MAC */
+                    return;
+                }
                 interface->stats.icmp_rx++;
                 bbl_network_rx_icmp(interface, eth, ipv4);
                 return;
             } else if(ipv4->protocol == PROTOCOL_IPV4_TCP) {
+                if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                   /* Drop wrong MAC */
+                    return;
+                }
                 interface->stats.tcp_rx++;
                 bbl_tcp_ipv4_rx(interface, eth, ipv4);
                 return;

@@ -95,16 +95,19 @@
      - MPLS send (TX) label (inner label)
      - 
    * - `tx-label2-exp`
-     - EXP bits of the first label (inner label)
+     - EXP bits of the second label (inner label)
      - 0
    * - `tx-label2-ttl`
-     - TTL of the first label (inner label)
+     - TTL of the second label (inner label)
      - 255
    * - `rx-label1`
      - Expected receive MPLS label (outer label)
      - 
    * - `rx-label2`
      - Expected receive MPLS label (inner label)
+     - 
+   * - `ldp-ipv4-lookup-address`
+     - Dynamically resolve outer label 
      - 
 
 For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4 

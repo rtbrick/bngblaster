@@ -10,6 +10,7 @@
 #include "bbl_protocols.h"
 #include "bbl_access_line.h"
 #include "isis/isis_def.h"
+#include "ldp/ldp_def.h"
 
 static protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_ethernet_header_s *eth, bbl_l2tp_s **_l2tp);
 static protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_s *l2tp);
@@ -552,6 +553,55 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_ldp_hello
+ */
+static protocol_error_t
+encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
+{
+    /* PDU version and length */
+    *(uint16_t*)buf = htobe16(1); 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(30); 
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* LDP identifier (LSR ID + label space) */
+    *(uint32_t*)buf = ldp->lsr_id;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint16_t*)buf = htobe16(ldp->label_space_id);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* LDP message type and length */
+    *(uint16_t*)buf = htobe16(LDP_MESSAGE_TYPE_HELLO);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(20);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* LDP message ID */
+    *(uint32_t*)buf = htobe32(ldp->msg_id);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    /* Common hello parameters TLV */
+    *(uint16_t*)buf = htobe16(LDP_TLV_TYPE_COMMON_HELLO_PARAMETERS);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(4);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(ldp->hold_time);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* IPv4 transport address TLV */
+    *(uint16_t*)buf = htobe16(LDP_TLV_TYPE_IPV4_TRANSPORT_ADDRESS);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(4);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint32_t*)buf = ldp->ipv4_transport_address;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_bbl
  */
 static protocol_error_t
@@ -627,6 +677,9 @@ encode_udp(uint8_t *buf, uint16_t *len,
             break;
         case UDP_PROTOCOL_DHCP:
             result = encode_dhcp(buf, len, (bbl_dhcp_s*)udp->next);
+            break;
+        case UDP_PROTOCOL_LDP:
+            result = encode_ldp_hello(buf, len, (bbl_ldp_hello_s*)udp->next);
             break;
         default:
             result = PROTOCOL_SUCCESS;
@@ -2175,7 +2228,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             BUMP_BUFFER(buf, len, sizeof(uint8_t)); /* hop limit */
             icmpv6->flags = *buf;
             BUMP_BUFFER(buf, len, 11);
-            while(len > 2) {
+            while(len >= 8) {
                 option = *buf;
                 BUMP_BUFFER(buf, len, sizeof(uint8_t));
                 option_len = *buf;
@@ -2202,12 +2255,37 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
             }
             break;
         case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
+            if(len < 20) {
+                return DECODE_ERROR;
+            }
+            BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* flags / reserved */
+            memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
+            break;
         case IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT:
             if(len < 20) {
                 return DECODE_ERROR;
             }
             BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* flags / reserved */
             memcpy(&icmpv6->prefix.address, buf, IPV6_ADDR_LEN);
+            BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
+            while(len >= 8) {
+                option = *buf;
+                BUMP_BUFFER(buf, len, sizeof(uint8_t));
+                option_len = (*buf) * 8;
+                BUMP_BUFFER(buf, len, sizeof(uint8_t));
+                if(option_len < 2 || len < option_len - 2) {
+                    return DECODE_ERROR;
+                }
+                if(option == ICMPV6_OPTION_DEST_LINK_LAYER) {
+                    if(option_len != 8) {
+                        // Maleformed ICMPv6 packet
+                        return DECODE_ERROR;
+                    }
+                    icmpv6->dst_mac = buf;
+                    break;
+                }
+                BUMP_BUFFER(buf, len, option_len-2);
+            }
             break;
         default:
             break;
@@ -2722,6 +2800,106 @@ decode_qmx_li(uint8_t *buf, uint16_t len,
 }
 
 /*
+ * decode_ldp_hello
+ */
+static protocol_error_t
+decode_ldp_hello(uint8_t *buf, uint16_t len,
+                     uint8_t *sp, uint16_t sp_len,
+                     bbl_ldp_hello_s **_ldp)
+{
+    bbl_ldp_hello_s *ldp;
+
+    uint16_t pdu_version;
+    uint16_t pdu_len;
+    uint16_t msg_type;
+    uint16_t msg_len;
+    uint16_t tlv_type;
+    uint16_t tlv_len;
+
+    if(len < 10 || sp_len < sizeof(bbl_ldp_hello_s)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init LDP structure */
+    ldp = (bbl_ldp_hello_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ldp_hello_s));
+    memset(ldp, 0x0, sizeof(bbl_ldp_hello_s));
+
+    /* PDU version and length */
+    pdu_version = be16toh(*(uint16_t*)buf) & 0x7FFF;
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    pdu_len = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+
+    if(pdu_version != 1) {
+        return UNKNOWN_PROTOCOL;
+    }
+
+    /* The PDU length is defined as two octet integer specifying 
+     * the total length of the PDU in octets, excluding the version 
+     * and PDU length fields. */
+    if(pdu_len > len) {
+        return UNKNOWN_PROTOCOL;
+    }
+    len = pdu_len;
+
+    /* LDP identifier (LSR ID + label space) */
+    ldp->lsr_id = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    ldp->label_space_id = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+
+    /* LDP message type and length */
+    if(len < 4) {
+        return DECODE_ERROR;
+    }
+    msg_type = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    msg_len = be16toh(*(uint16_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+
+    if(msg_len > len || msg_len < 4 || 
+       msg_type != LDP_MESSAGE_TYPE_HELLO) {
+        return DECODE_ERROR;
+    }
+    len = msg_len;
+
+    /* LDP message ID */
+    ldp->msg_id = be32toh(*(uint32_t*)buf);
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+
+    /* LDP TLV's */
+    while(len >= LDP_TLV_LEN_MIN) {
+        tlv_type = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        tlv_len = be16toh(*(uint16_t*)buf);
+        BUMP_BUFFER(buf, len, sizeof(uint16_t));
+        if(tlv_len > len) {
+            return DECODE_ERROR;
+        }
+        switch(tlv_type) {
+            case LDP_TLV_TYPE_COMMON_HELLO_PARAMETERS:
+                if(tlv_len != 4) {
+                    return DECODE_ERROR;
+                }
+                ldp->hold_time = be16toh(*(uint16_t*)buf);
+                break;
+            case LDP_TLV_TYPE_IPV4_TRANSPORT_ADDRESS:
+                if(tlv_len != 4) {
+                    return DECODE_ERROR;
+                }
+                ldp->ipv4_transport_address = *(uint32_t*)buf;
+                break;
+            default:
+                break;
+        }
+        BUMP_BUFFER(buf, len, tlv_len);
+    }
+
+    *_ldp = ldp;
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * decode_udp
  */
 static protocol_error_t
@@ -2730,7 +2908,7 @@ decode_udp(uint8_t *buf, uint16_t len,
            bbl_ethernet_header_s *eth,
            bbl_udp_s **_udp)
 {
-    protocol_error_t ret_val = PROTOCOL_SUCCESS;
+    protocol_error_t ret_val = UNKNOWN_PROTOCOL;
 
     bbl_udp_s *udp;
 
@@ -2766,8 +2944,10 @@ decode_udp(uint8_t *buf, uint16_t len,
             eth->bbl = udp->next;
             break;
         case L2TP_UDP_PORT:
-            udp->protocol = UDP_PROTOCOL_L2TP;
-            ret_val = decode_l2tp(buf, len, sp, sp_len, eth, (bbl_l2tp_s**)&udp->next);
+            if(udp->src == L2TP_UDP_PORT) {
+                udp->protocol = UDP_PROTOCOL_L2TP;
+                ret_val = decode_l2tp(buf, len, sp, sp_len, eth, (bbl_l2tp_s**)&udp->next);
+            }
             break;
         case DHCP_UDP_CLIENT:
         case DHCP_UDP_SERVER:
@@ -2778,23 +2958,34 @@ decode_udp(uint8_t *buf, uint16_t len,
             udp->protocol = UDP_PROTOCOL_QMX_LI;
             ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_s**)&udp->next);
             break;
-        default:
-            if(udp->src == QMX_LI_UDP_PORT) {
-                udp->protocol = UDP_PROTOCOL_QMX_LI;
-                ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_s**)&udp->next);
-            } else {
-                /* Try if payload could be decoded as BBL! 
-                 * This fails fast if the 64 bit magic number 
-                 * is not found on the expected position. */
-                if(decode_bbl(buf, len, sp, sp_len, (bbl_bbl_s**)&udp->next) == PROTOCOL_SUCCESS) {
-                    udp->protocol = UDP_PROTOCOL_BBL;
-                    eth->bbl = udp->next;
-                } else {
-                    udp->protocol = 0;
-                    udp->next = NULL;
-                }
+        case LDP_PORT:
+            if(udp->src == LDP_PORT) {
+                udp->protocol = UDP_PROTOCOL_LDP;
+                ret_val = decode_ldp_hello(buf, len, sp, sp_len, (bbl_ldp_hello_s**)&udp->next);
             }
             break;
+        default:
+            break;
+    }
+
+    if(ret_val == UNKNOWN_PROTOCOL) {
+        if(udp->src == QMX_LI_UDP_PORT) {
+            udp->protocol = UDP_PROTOCOL_QMX_LI;
+            ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_s**)&udp->next);
+        } else {
+            /* Try if payload could be decoded as BBL! 
+             * This fails fast if the 64 bit magic number 
+             * is not found on the expected position. */
+            ret_val = decode_bbl(buf, len, sp, sp_len, (bbl_bbl_s**)&udp->next);
+            if(ret_val == PROTOCOL_SUCCESS) {
+                udp->protocol = UDP_PROTOCOL_BBL;
+                eth->bbl = udp->next;
+            } else {
+                ret_val = PROTOCOL_SUCCESS;
+                udp->protocol = 0;
+                udp->next = NULL;
+            }
+        }
     }
 
     *_udp = udp;
@@ -3932,7 +4123,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         }
         eth->vlan_outer_priority = *buf >> 5;
         eth->vlan_outer = be16toh(*(uint16_t*)buf);
-        eth->vlan_outer &= ETH_VLAN_ID_MAX;
+        eth->vlan_outer &= BBL_ETH_VLAN_ID_MAX;
 
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
         eth->type = *(uint16_t*)buf;
@@ -3943,7 +4134,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
             }
             eth->vlan_inner_priority = *buf >> 5;
             eth->vlan_inner = be16toh(*(uint16_t*)buf);
-            eth->vlan_inner &= ETH_VLAN_ID_MAX;
+            eth->vlan_inner &= BBL_ETH_VLAN_ID_MAX;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
             eth->type = *(uint16_t*)buf;
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -3952,7 +4143,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                     return DECODE_ERROR;
                 }
                 eth->vlan_three = be16toh(*(uint16_t*)buf);
-                eth->vlan_three &= ETH_VLAN_ID_MAX;
+                eth->vlan_three &= BBL_ETH_VLAN_ID_MAX;
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
                 eth->type = *(uint16_t*)buf;
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
