@@ -3,7 +3,7 @@
  *
  * Hannes Gredler, January 2022
  *
- * Copyright (C) 2020-2022, RtBrick, Inc.
+ * Copyright (C) 2020-2023, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <jansson.h>
