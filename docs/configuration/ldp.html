@@ -68,7 +68,7 @@
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
       <li>&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/configuration/interfaces_a10nsp.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/configuration/ldp.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -76,7 +76,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -92,16 +92,36 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Parent interface link name (e.g. eth0, …)</p></td>
+<tr class="row-even"><td><p><cite>instance-id</cite></p></td>
+<td><p>LDP instance identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
-<td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><cite>keepalive-time</cite></p></td>
+<td><p>LDP keepalive time in seconds</p></td>
+<td><p>15</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>mac</cite></p></td>
-<td><p>Optional set gateway interface address manually</p></td>
+<tr class="row-even"><td><p><cite>hold-time</cite></p></td>
+<td><p>LDP hold time in seconds</p></td>
+<td><p>30</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>hostname</cite></p></td>
+<td><p>LDP hostname</p></td>
+<td><p>bngblaster</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>lsr-id</cite></p></td>
+<td><p>LDP LSR identifier</p></td>
+<td><p>10.10.10.10</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
+<td><p>LDP teardown time in seconds</p></td>
+<td><p>5</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipv4-transport-address</cite></p></td>
+<td><p>LDP transport address</p></td>
+<td><p><cite>lsr-id</cite></p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>raw-update-file</cite></p></td>
+<td><p>LDP RAW update file</p></td>
 <td></td>
 </tr>
 </tbody>

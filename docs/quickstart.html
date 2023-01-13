@@ -46,6 +46,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#dhcp">DHCP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#isis">ISIS</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#bgp">BGP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ldp">LDP</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces</a></li>
@@ -545,7 +546,7 @@ Apr 08 14:53:52.904359 Resolve network interfaces
 Apr 08 14:53:52.904389 All network interfaces resolved
 Apr 08 14:53:53.904448 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from idle -&gt; connect
 Apr 08 14:53:53.905659 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from connect -&gt; opensent
-Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, holdtime: 90s
+Apr 08 14:53:53.907888 BGP (veth1.2 192.168.92.2 - 192.168.92.1) open message received with peer AS: 65001, hold-time: 90s
 Apr 08 14:53:53.907903 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from opensent -&gt; openconfirm
 Apr 08 14:53:53.907917 BGP (veth1.2 192.168.92.2 - 192.168.92.1) state changed from openconfirm -&gt; established
 Apr 08 14:53:54.907989 BGP (veth1.2 192.168.92.2 - 192.168.92.1) raw update start
@@ -566,11 +567,11 @@ from where you started the BNG Blaster and enter the following command.</p>
 <span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.2&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;local-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.2.3.4&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-holdtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;local-hold-time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.92.1&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;peer-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.92.168.192&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-holdtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;peer-hold-time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;established&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;raw-update-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;done&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;out.bgp&quot;</span><span class="p">,</span><span class="w"></span>
@@ -655,6 +656,64 @@ sudo bngblaster-cli run.sock bgp-raw-update file withdraw.bgp
 </pre></div>
 </div>
 </section>
+<section id="ldp">
+<h2>LDP<a class="headerlink" href="#ldp" title="Permalink to this headline"></a></h2>
+<p>In the following example, we create two connected <a class="reference internal" href="routing/ldp.html#ldp"><span class="std std-ref">LDP</span></a> instances.</p>
+<p><strong>ldp.json:</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;capture-include-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;veth1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ldp-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;veth1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;ldp-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lsr-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.2.3.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;out.ldp&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;lsr-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.2.3.2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">],</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;veth1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ldp-ipv4-lookup-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;13.37.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Use the included tool <code class="docutils literal notranslate"><span class="pre">ldpupdate</span></code> to generate an LDP update file
+with 10 labeled IPv4 prefixes.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ldpupdate -l 10.2.3.1 -p 13.37.0.0/32 -P 10 -M 10000
+</pre></div>
+</div>
+<p>Now you can start the BNG Blaster with this configuration.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo bngblaster -C ldp.json -l ldp -S run.sock -P ldp.pcap
+</pre></div>
+</div>
+</section>
 </section>
 
 
@@ -668,7 +727,7 @@ sudo bngblaster-cli run.sock bgp-raw-update file withdraw.bgp
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+    <p>&#169; Copyright 2020-2023, RtBrick, Inc..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

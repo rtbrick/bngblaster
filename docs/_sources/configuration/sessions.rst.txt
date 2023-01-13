@@ -28,6 +28,9 @@
    * - `start-delay`
      - Wait N seconds after all interfaces are resolved before starting sessions
      - 0
+   * - `reconnect`
+     - Automatically reconnect sessions (PPPoE and IPoE) if terminated
+     - false
    * - `autostart`
      - Start sessions automatically
      - true

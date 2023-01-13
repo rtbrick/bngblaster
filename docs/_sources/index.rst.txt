@@ -2,7 +2,7 @@ BNG Blaster
 ===========
 
 The **BNG Blaster** is an open-source network tester 
-for access and routing protocols. It can emulate massive 
+for access and routing protocols. It can emulate a huge amount of 
 PPPoE and IPoE (DHCP) subscribers including IPTV, and L2TP (LNS). 
 There are various routing protocols supported like ISIS and BGP. 
 So you can use it for end-to-end BNG and non-BNG router testing.
@@ -41,10 +41,11 @@ RtBrick and many more.
 
    .. tab:: Routing Protocols
 
-        * Emulate ISIS topologies with thousands of nodes 
-        * Support for ISIS Segment Routing
         * Setup thousands of BGP sessions with millions of prefixes
         * Verify MPLS labels for millions of flows
+        * Emulate ISIS topologies with thousands of nodes 
+        * Support for ISIS Segment Routing
+        * Support for LDP and traffic streams with dynamically resolved labels
         * Support all routing protocols with link aggregation (LAG)
         * ...
 
@@ -122,7 +123,7 @@ Copyright
 ---------
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| 2020-2022, RtBrick, Inc.
+Copyright |copy| 2020-2023, RtBrick, Inc.
 
 Contact
 -------

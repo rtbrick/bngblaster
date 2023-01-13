@@ -208,7 +208,12 @@ Total Test time (real) =   0.00 sec
 <p class="admonition-title">Note</p>
 <p>Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!</p>
 </div>
-<p>Download and Install DPDK:
+<p>It is recommended to install the DPDK development package if possible:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install dpdk libdpdk-dev
+</pre></div>
+</div>
+<p>This package does not support all NIC types (e.g. Mellanox, …),
+which requires downloading and installing DPDK manually:
 <a class="reference external" href="https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html">https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html</a></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install meson
 sudo apt install meson ninja-build
@@ -253,8 +258,8 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
 <section id="running-bng-blaster">
 <h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster needs permission to send raw packets and change network interface
-settings. The easiest way to run the BNG Blaster is either as the root user or with
-sudo:</p>
+settings. The easiest way to run the BNG Blaster is either as the root user or
+with <cite>sudo</cite>:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># As root
 bngblaster -C config.json -I
 
@@ -284,7 +289,7 @@ bngblaster -C config.json -I
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020-2022, RtBrick, Inc..</p>
+    <p>&#169; Copyright 2020-2023, RtBrick, Inc..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
