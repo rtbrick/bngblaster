@@ -154,9 +154,11 @@ streams for use with the BNG Blaster.
                     [-M N] [-l LOCAL_PREF] [-f FILE] [-w] [-s STREAMS]
                     [--stream-tx-label LABEL] [--stream-tx-inner-label LABEL]
                     [--stream-rx-label LABEL] [--stream-rx-label-num N]
-                    [--stream-threads N] [--stream-pps N]
-                    [--stream-interface IFACE] [--stream-append] [--end-of-rib]
-                    [--append] [--pcap FILE] [--log-level {warning,info,debug}]
+                    [--stream-pps N] [--stream-interface IFACE]
+                    [--stream-group-id N]
+                    [--stream-direction {upstream,downstream,both}]
+                    [--stream-append] [--end-of-rib] [--append] [--pcap FILE]
+                    [--log-level {warning,info,debug}]
 
     The BGP RAW update generator is a simple tool to generate BGP RAW update
     streams for use with the BNG Blaster.
@@ -188,17 +190,18 @@ streams for use with the BNG Blaster.
                             stream RX label
     --stream-rx-label-num N
                             stream RX label count
-    --stream-threads N    stream TX threads
     --stream-pps N        stream packets per seconds
     --stream-interface IFACE
                             stream interface
+    --stream-group-id N   stream group identifier
+    --stream-direction {upstream,downstream,both}
+                            stream direction
     --stream-append       append to stream file if exist
     --end-of-rib          add end-of-rib message
     --append              append to file if exist
     --pcap FILE           write BGP updates to PCAP file
     --log-level {warning,info,debug}
                             logging Level
-
 
 
 The python BGP RAW update generator is a python script that uses

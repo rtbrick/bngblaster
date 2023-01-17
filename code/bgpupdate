@@ -254,12 +254,22 @@ def main():
                 "direction": args.stream_direction,
                 "pps": args.stream_pps
             }
-            if ip_version == 4:
-                stream["type"] = "ipv4"
-                stream["destination-ipv4-address"] = str(prefix.network_address+1)
+
+            if args.stream_direction == "both":
+                if ip_version == 4:
+                    stream["type"] = "ipv4"
+                    stream["network-ipv4-address"] = str(prefix.network_address+1)
+                else:
+                    stream["type"] = "ipv6"
+                    stream["network-ipv6-address"] = str(prefix.network_address+1)
             else:
-                stream["type"] = "ipv6"
-                stream["destination-ipv6-address"] = str(prefix.network_address+1)
+                if ip_version == 4:
+                    stream["type"] = "ipv4"
+                    stream["destination-ipv4-address"] = str(prefix.network_address+1)
+                else:
+                    stream["type"] = "ipv6"
+                    stream["destination-ipv6-address"] = str(prefix.network_address+1)
+
 
             if args.stream_interface:
                 stream["network-interface"] = args.stream_interface
