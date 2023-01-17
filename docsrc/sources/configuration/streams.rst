@@ -70,12 +70,6 @@
    * - `access-ipv6-source-address`
      - Overwrite the access IPv6 source address (client)
      - 
-   * - `threaded`
-     - Run those streams in separate threads
-     - false
-   * - `thread-group`
-     - Assign this stream to thread group (1-255)
-     - 0 (thread per stream)
    * - `max-packets`
      - Send a burst of N packets and stop
      - 0 (infinity)

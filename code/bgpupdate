@@ -181,7 +181,6 @@ def main():
     parser.add_argument('--stream-tx-inner-label', metavar='LABEL', type=label_type, help="stream TX inner label")
     parser.add_argument('--stream-rx-label', metavar='LABEL', type=label_type, help="stream RX label")
     parser.add_argument('--stream-rx-label-num', metavar='N', type=int, default=1, help="stream RX label count")
-    parser.add_argument('--stream-threads', metavar='N', type=int, default=1, help="stream TX threads")
     parser.add_argument('--stream-pps', metavar='N', type=float, default=1.0, help="stream packets per seconds")
     parser.add_argument('--stream-interface', metavar='IFACE', type=str, help="stream interface")
     parser.add_argument('--stream-group-id', metavar='N', type=int, help="stream group identifier")
@@ -214,7 +213,6 @@ def main():
     ip_version = args.prefix_base.version
 
     streams = []
-    stream_thread = 1
     stream_label_index = 0
     stream_label = args.stream_rx_label
     if args.streams and args.stream_append:
@@ -254,9 +252,7 @@ def main():
             stream = {
                 "name": "%s" % prefix,
                 "direction": args.stream_direction,
-                "pps": args.stream_pps,
-                "threaded": True,
-                "thread-group": stream_thread
+                "pps": args.stream_pps
             }
             if ip_version == 4:
                 stream["type"] = "ipv4"
@@ -294,9 +290,6 @@ def main():
                     stream["tx-label2"] = args.stream_tx_inner_label
 
             streams.append(stream)
-            stream_thread += 1
-            if stream_thread > args.stream_threads:
-                stream_thread = 1
 
         # next...
         nh_index += 1
