@@ -14,11 +14,11 @@
      - LDP instance identifier
      - 
    * - `keepalive-time`
-     - LDP keepalive time in seconds
+     - LDP session keepalive time in seconds
      - 15
    * - `hold-time`
-     - LDP hold time in seconds
-     - 30
+     - LDP hello hold time in seconds
+     - 15
    * - `hostname`
      - LDP hostname
      - bngblaster
@@ -34,3 +34,15 @@
    * - `raw-update-file`
      - LDP RAW update file
      - 
+
+The `keepalive-time` defines the local LDP session keepalive 
+timeout. Each LDP peer must calculate the effective keepalive
+timeout by using the smaller of its locally defined and received
+timeout in the PDU. The value chosen indicates the maximum number
+of seconds that may elapse between the receipt of successive PDUs
+from the LDP peer on the session TCP connection. The keepalive
+timeout is reset each time a PDU arrives. The BNG Blaster will 
+send keepalive messages at an interval calculated by using the
+effective keepalive time divided by 3. Assuming an effective
+keepalive time of 15 seconds results in a keepalive interval
+of 5 seconds. 
