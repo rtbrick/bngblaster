@@ -1581,17 +1581,15 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
     bbl_arp_s *arp = (bbl_arp_s*)eth->next;
 
     if(arp->sender_ip == session->peer_ip_address) {
-        if(!session->arp_resolved) {
-            memcpy(session->server_mac, arp->sender, ETH_ADDR_LEN);
-        }
         if(arp->code == ARP_REQUEST) {
             if(arp->target_ip == session->ip_address) {
                 session->send_requests |= BBL_SEND_ARP_REPLY;
                 bbl_session_tx_qnode_insert(session);
             }
-        } else {
+        } else if(arp->code == ARP_REPLY) {
             if(!session->arp_resolved) {
                 session->arp_resolved = true;
+                memcpy(session->server_mac, arp->sender, ETH_ADDR_LEN);
                 bbl_access_rx_established_ipoe(interface, session, eth);
                 if(g_ctx->config.arp_interval) {
                     timer_add(&g_ctx->timer_root, &session->timer_arp, "ARP timeout", g_ctx->config.arp_interval, 0, session, &bbl_arp_timeout);
@@ -1660,6 +1658,11 @@ bbl_access_rx_handler_multicast(bbl_access_interface_s *interface,
 
     for(session_index = 0; session_index < g_ctx->sessions; session_index++) {
         session = &g_ctx->session_list[session_index];
+
+        if(session->access_interface != interface) {
+            continue;
+        }
+
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {
@@ -1690,6 +1693,11 @@ bbl_access_rx_handler_broadcast(bbl_access_interface_s *interface,
 
     for(session_index = 0; session_index < g_ctx->sessions; session_index++) {
         session = &g_ctx->session_list[session_index];
+
+        if(session->access_interface != interface) {
+            continue;
+        }
+
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {
