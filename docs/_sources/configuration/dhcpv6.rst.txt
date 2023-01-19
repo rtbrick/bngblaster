@@ -13,6 +13,12 @@
    * - `enable`
      - This option allows to enable or disable DHCPv6
      - true
+   * - `ia-na`
+     - This option allows to enable or disable DHCPv6 IA_NA
+     - true
+   * - `ia-pd`
+     - This option allows to enable or disable DHCPv6 IA_PD
+     - true
    * - `rapid-commit`
      - DHCPv6 rapid commit (2-way handshake)
      - true

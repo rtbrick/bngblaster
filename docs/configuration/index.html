@@ -1063,6 +1063,14 @@ on the outer VLAN first and inner VLAN second.</p>
 <td><p>This option allows to enable or disable DHCPv6</p></td>
 <td><p>true</p></td>
 </tr>
+<tr class="row-odd"><td><p><cite>ia-na</cite></p></td>
+<td><p>This option allows to enable or disable DHCPv6 IA_NA</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>ia-pd</cite></p></td>
+<td><p>This option allows to enable or disable DHCPv6 IA_PD</p></td>
+<td><p>true</p></td>
+</tr>
 <tr class="row-odd"><td><p><cite>rapid-commit</cite></p></td>
 <td><p>DHCPv6 rapid commit (2-way handshake)</p></td>
 <td><p>true</p></td>
@@ -1407,14 +1415,6 @@ live rate statistics are not required.</p>
 <tr class="row-odd"><td><p><cite>access-ipv6-source-address</cite></p></td>
 <td><p>Overwrite the access IPv6 source address (client)</p></td>
 <td></td>
-</tr>
-<tr class="row-even"><td><p><cite>threaded</cite></p></td>
-<td><p>Run those streams in separate threads</p></td>
-<td><p>false</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>thread-group</cite></p></td>
-<td><p>Assign this stream to thread group (1-255)</p></td>
-<td><p>0 (thread per stream)</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>max-packets</cite></p></td>
 <td><p>Send a burst of N packets and stop</p></td>
@@ -1988,12 +1988,12 @@ access-line or interface section has priority over those defined here.</p>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><cite>keepalive-time</cite></p></td>
-<td><p>LDP keepalive time in seconds</p></td>
+<td><p>LDP session keepalive time in seconds</p></td>
 <td><p>15</p></td>
 </tr>
 <tr class="row-even"><td><p><cite>hold-time</cite></p></td>
-<td><p>LDP hold time in seconds</p></td>
-<td><p>30</p></td>
+<td><p>LDP hello hold time in seconds</p></td>
+<td><p>15</p></td>
 </tr>
 <tr class="row-odd"><td><p><cite>hostname</cite></p></td>
 <td><p>LDP hostname</p></td>
@@ -2017,6 +2017,17 @@ access-line or interface section has priority over those defined here.</p>
 </tr>
 </tbody>
 </table>
+<p>The <cite>keepalive-time</cite> defines the local LDP session keepalive
+timeout. Each LDP peer must calculate the effective keepalive
+timeout by using the smaller of its locally defined and received
+timeout in the PDU. The value chosen indicates the maximum number
+of seconds that may elapse between the receipt of successive PDUs
+from the LDP peer on the session TCP connection. The keepalive
+timeout is reset each time a PDU arrives. The BNG Blaster will
+send keepalive messages at an interval calculated by using the
+effective keepalive time divided by 3. Assuming an effective
+keepalive time of 15 seconds results in a keepalive interval
+of 5 seconds.</p>
 </section>
 </section>
 
