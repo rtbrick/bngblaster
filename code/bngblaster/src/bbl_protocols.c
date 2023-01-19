@@ -2410,6 +2410,12 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
                 dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
                 dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
                 break;
+            case DHCPV6_OPTION_STATUS_CODE:
+                if(ia_option_len < 2) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_na_status_code = be16toh(*(uint16_t*)buf);
+                break;
             default:
                 break;
         }
@@ -2452,6 +2458,12 @@ decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
                 dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf));
                 dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+4));
                 dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+8);
+                break;
+            case DHCPV6_OPTION_STATUS_CODE:
+                if(ia_option_len < 2) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->ia_pd_status_code = be16toh(*(uint16_t*)buf);
                 break;
             default:
                 break;

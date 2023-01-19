@@ -11,6 +11,21 @@
 #include "bbl_session.h"
 #include "bbl_rx.h"
 
+const char*
+bbl_dhcpv6_status_code_string(uint16_t status_code)
+{
+    switch(status_code) {
+        case DHCPV6_STATUS_CODE_SUCCESS: return "Success";
+        case DHCPV6_STATUS_CODE_UNSPECFAIL: return "UnspecFail";
+        case DHCPV6_STATUS_CODE_NOADDRSAVAIL: return "NoAddrsAvail";
+        case DHCPV6_STATUS_CODE_NOBINDING: return "NoBinding";
+        case DHCPV6_STATUS_CODE_NOTONLINK: return "NotOnLink";
+        case DHCPV6_STATUS_CODE_USEMULTICAST: return "UseMulticast";
+        case DHCPV6_STATUS_CODE_NOPREFIXAVAIL: return "NoPrefixAvail";
+        default: return "unkown";
+    }
+}
+
 /**
  * bbl_dhcpv6_stop
  *
@@ -75,6 +90,11 @@ bbl_dhcpv6_stop(bbl_session_s *session)
 void
 bbl_dhcpv6_start(bbl_session_s *session)
 {
+    static uint32_t g_dhcpv6_iaid = 1;
+    if(g_dhcpv6_iaid > UINT32_MAX-10) {
+        g_dhcpv6_iaid = 1;
+    }
+
     if(!session->dhcpv6_requested) {
         session->dhcpv6_requested = true;
         g_ctx->dhcpv6_requested++;
@@ -83,16 +103,14 @@ bbl_dhcpv6_start(bbl_session_s *session)
         session->dhcpv6_state = BBL_DHCP_SELECTING;
         session->dhcpv6_xid = rand() & 0xffffff;
 
-        if(session->access_type == ACCESS_TYPE_IPOE) {
-            session->dhcpv6_ia_na_iaid = rand();
-            if(!session->dhcpv6_ia_na_iaid) session->dhcpv6_ia_na_iaid = 1;
+        if(g_ctx->config.dhcpv6_ia_na && 
+           session->access_type == ACCESS_TYPE_IPOE) {
+            session->dhcpv6_ia_na_iaid = g_dhcpv6_iaid++;
+        }
+        if(g_ctx->config.dhcpv6_ia_pd) {
+            session->dhcpv6_ia_pd_iaid = g_dhcpv6_iaid++;
         }
 
-        session->dhcpv6_ia_pd_iaid = rand();
-        if(session->dhcpv6_ia_pd_iaid == session->dhcpv6_ia_na_iaid) {
-            session->dhcpv6_ia_pd_iaid = session->dhcpv6_ia_na_iaid + 1;
-        }
-        if(!session->dhcpv6_ia_pd_iaid) session->dhcpv6_ia_na_iaid = 2;
         session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
 
@@ -138,6 +156,36 @@ bbl_dhcpv6_s2(timer_s *timer)
     bbl_dhcpv6_restart(session);
 }
 
+static bool
+bbl_dhcpv6_validate_ia(bbl_session_s *session, bbl_dhcpv6_s *dhcpv6)
+{
+    if(dhcpv6->ia_na_status_code) {
+        LOG(DHCP, "DHCPv6 (ID: %u) IA_NA received with status code %u (%s)\n", 
+            session->session_id, dhcpv6->ia_na_status_code, 
+            bbl_dhcpv6_status_code_string(dhcpv6->ia_na_status_code));
+        return false;
+    }
+
+    if(session->dhcpv6_ia_na_iaid && !dhcpv6->ia_na_address) {
+        LOG(DHCP, "DHCPv6 (ID: %u) missing IA_NA address\n", session->session_id);
+        return false;
+    }
+
+    if(dhcpv6->ia_pd_status_code) {
+        LOG(DHCP, "DHCPv6 (ID: %u) IA_PD received with status code %u (%s)\n", 
+            session->session_id, dhcpv6->ia_pd_status_code, 
+            bbl_dhcpv6_status_code_string(dhcpv6->ia_pd_status_code));
+        return false;
+    }
+
+    if(session->dhcpv6_ia_pd_iaid && !(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len)) {
+        LOG(DHCP, "DHCPv6 (ID: %u) missing IA_PD prefix\n", session->session_id);
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * bbl_dhcpv6_rx
  *
@@ -178,6 +226,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
     if(dhcpv6->type == DHCPV6_MESSAGE_REPLY) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Reply received\n", session->session_id);
         session->stats.dhcpv6_rx_reply++;
+
         /* Handle DHCPv6 teardown */
         if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
             session->dhcpv6_state = BBL_DHCP_INIT;
@@ -186,6 +235,12 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             }
             return;
         }
+
+        /* Validate DHCPv6 IA */
+        if(!bbl_dhcpv6_validate_ia(session, dhcpv6)) {
+            return;
+        }
+
         /* Establish DHCPv6 */
         if(!session->dhcpv6_established) {
             session->dhcpv6_established = true;
@@ -245,6 +300,12 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {
         LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Advertise received\n", session->session_id);
         session->stats.dhcpv6_rx_advertise++;
+
+        /* Validate DHCPv6 IA */
+        if(!bbl_dhcpv6_validate_ia(session, dhcpv6)) {
+            return;
+        }
+
         session->dhcpv6_state = BBL_DHCP_REQUESTING;
         session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;

@@ -2062,6 +2062,14 @@ json_parse_config(json_t *root)
         if(json_is_boolean(value)) {
             g_ctx->config.dhcpv6_enable = json_boolean_value(value);
         }
+        value = json_object_get(section, "ia-na");
+        if(json_is_boolean(value)) {
+            g_ctx->config.dhcpv6_ia_na = json_boolean_value(value);
+        }
+        value = json_object_get(section, "ia-pd");
+        if(json_is_boolean(value)) {
+            g_ctx->config.dhcpv6_ia_pd = json_boolean_value(value);
+        }
         value = json_object_get(section, "rapid-commit");
         if(json_is_boolean(value)) {
             g_ctx->config.dhcpv6_rapid_commit = json_boolean_value(value);
@@ -2846,6 +2854,8 @@ bbl_config_init_defaults()
     g_ctx->config.dhcp_release_interval = 1;
     g_ctx->config.dhcp_release_retry = 3;
     g_ctx->config.dhcpv6_enable = true;
+    g_ctx->config.dhcpv6_ia_na = true;
+    g_ctx->config.dhcpv6_ia_pd = true;
     g_ctx->config.dhcpv6_rapid_commit = true;
     g_ctx->config.dhcpv6_access_line = true;
     g_ctx->config.dhcpv6_timeout = 5;

@@ -374,6 +374,17 @@ typedef enum dhcpv6_option_ {
     DHCPV6_OPTION_MAX,
 } dhcpv6_option_t;
 
+typedef enum {
+    DHCPV6_STATUS_CODE_SUCCESS          = 0,
+    DHCPV6_STATUS_CODE_UNSPECFAIL       = 1,
+    DHCPV6_STATUS_CODE_NOADDRSAVAIL     = 2,
+    DHCPV6_STATUS_CODE_NOBINDING        = 3,
+    DHCPV6_STATUS_CODE_NOTONLINK        = 4,
+    DHCPV6_STATUS_CODE_USEMULTICAST     = 5,
+    DHCPV6_STATUS_CODE_NOPREFIXAVAIL    = 6
+} dhcpv6_status_code_t;
+
+
 typedef enum dhcp_message_ {
     DHCP_MESSAGE_DISCOVER              = 1,
     DHCP_MESSAGE_OFFER                 = 2,
@@ -828,6 +839,7 @@ typedef struct bbl_dhcpv6_ {
     uint8_t       *ia_na_option;
     uint8_t        ia_na_option_len;
     uint32_t       ia_na_iaid;
+    uint16_t       ia_na_status_code;
     ipv6addr_t    *ia_na_address;
     uint32_t       ia_na_t1;
     uint32_t       ia_na_t2;
@@ -836,6 +848,7 @@ typedef struct bbl_dhcpv6_ {
     uint8_t       *ia_pd_option;
     uint8_t        ia_pd_option_len;
     uint32_t       ia_pd_iaid;
+    uint16_t       ia_pd_status_code;
     ipv6_prefix   *ia_pd_prefix;
     uint32_t       ia_pd_t1;
     uint32_t       ia_pd_t2;
