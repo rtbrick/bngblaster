@@ -726,17 +726,17 @@ bbl_sessions_init()
             } else {
                 if(g_ctx->config.iterate_outer_vlan) {
                     /* Iterate over outer VLAN first and inner VLAN second */
-                    access_config->access_outer_vlan++;
+                    access_config->access_outer_vlan += access_config->access_outer_vlan_step;
                     if(access_config->access_outer_vlan > access_config->access_outer_vlan_max) {
                         access_config->access_outer_vlan = access_config->access_outer_vlan_min;
-                        access_config->access_inner_vlan++;
+                        access_config->access_inner_vlan += access_config->access_inner_vlan_step;
                     }
                 } else {
                     /* Iterate over inner VLAN first and outer VLAN second (default) */
-                    access_config->access_inner_vlan++;
+                    access_config->access_inner_vlan += access_config->access_inner_vlan_step;
                     if(access_config->access_inner_vlan > access_config->access_inner_vlan_max) {
                         access_config->access_inner_vlan = access_config->access_inner_vlan_min;
-                        access_config->access_outer_vlan++;
+                        access_config->access_outer_vlan += access_config->access_outer_vlan_step;
                     }
                 }
             }
