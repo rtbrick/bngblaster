@@ -103,7 +103,7 @@ defined in the body.
         ]
     }
 
-For creating the result file at the end of the test, please use the attributes result and result_flags:
+For creating the result file at the end of the test, please use the attributes report and report_flags:
 
 .. code-block:: json
 
