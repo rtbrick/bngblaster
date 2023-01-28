@@ -264,9 +264,12 @@ are also labeled with the corresponding interface name and type.
 Results
 ~~~~~~~
 
-`GET /api/v1/instances/<instance-name>/run_report.json`
+`GET /api/v1/instances/<instance-name>/run_report.json` 
 
 The result data structure can be retrieved with this request. 
+
+If you have automated the test procedure, please grant a couple of seconds (e.g. 3 seconds after _stop request) for the completion of the report.
+
 Given that the result-flag attribute in the _start request includes interface, sessions and streams, the result data structure for the get-start pppoe example like this:
 
 .. code-block:: json
