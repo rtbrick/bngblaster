@@ -266,7 +266,8 @@ Results
 
 `GET /api/v1/instances/<instance-name>/run_report.json`
 
-The result data structure can be retrieved with this request. Given the gets pppoe example the result looks like this:
+The result data structure can be retrieved with this request. 
+Given that the result-flag attribute in the _start request includes interface, sessions and streams, the result data structure for the get-start pppoe example like this:
 
 .. code-block:: json
 
