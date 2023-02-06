@@ -29,7 +29,7 @@ jobs:
 
     - name: Install Dependencies
       shell: bash
-      run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+      run: sudo apt install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
 
     - name: Set export SOURCE_DATE_EPOCH to git commit time
       run: |
@@ -41,7 +41,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DGIT_REF=$GITHUB_REF -DGIT_SHA=$GITHUB_SHA -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+      run: cmake $GITHUB_WORKSPACE -DGIT_REF=$GITHUB_REF -DGIT_SHA=$GITHUB_SHA -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_OS=${{matrix.os}}
 
     - name: Build
       working-directory: ${{github.workspace}}/build
