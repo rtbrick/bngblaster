@@ -1067,7 +1067,11 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.src = session->ip_address;
-    ipv4.dst = session->dhcp_server;
+    if(session->dhcp_server) {
+        ipv4.dst = session->dhcp_server;
+    } else {
+        ipv4.dst = IPV4_BROADCAST;
+    }
     ipv4.ttl = 255;
     ipv4.tos = g_ctx->config.dhcp_tos;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
