@@ -1,6 +1,8 @@
 Troubleshooting
 ===============
 
+.. _logging:
+
 Logging
 -------
 
@@ -33,6 +35,7 @@ The following list shows all supported logging options.
     
     $ sudo bngblaster -C test.json -L test.log -l ip -l isis -l bgp
 
+.. _capture:
 
 PCAP
 ----
