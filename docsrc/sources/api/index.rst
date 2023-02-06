@@ -143,6 +143,14 @@ Test
      - Display information about the running test instance
      - 
      - 
+   * - `test-stop`
+     - Stop/teardown the test
+     - 
+     - 
+   * - `terminate`
+     - Stop/teardown the test
+     - 
+     - 
    * - `monkey-start`
      - Start monkey test
      - 

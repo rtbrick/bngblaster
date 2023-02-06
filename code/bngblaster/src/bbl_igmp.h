@@ -10,6 +10,23 @@
 #ifndef __BBL_IGMP_H__
 #define __BBL_IGMP_H__
 
+typedef struct bbl_igmp_group_
+{
+    uint8_t  state;
+    uint8_t  robustness_count;
+    bool     send;
+    bool     zapping;
+    bool     zapping_result;
+    uint32_t group;
+    uint32_t source[IGMP_MAX_SOURCES];
+    uint64_t packets;
+    uint64_t loss;
+    struct timespec join_tx_time;
+    struct timespec first_mc_rx_time;
+    struct timespec leave_tx_time;
+    struct timespec last_mc_rx_time;
+} bbl_igmp_group_s;
+
 void
 bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4);
 

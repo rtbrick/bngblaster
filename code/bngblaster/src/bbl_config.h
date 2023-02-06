@@ -23,6 +23,7 @@ typedef struct bbl_access_config_
     vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
 
     uint16_t stream_group_id;
+    uint16_t session_group_id;
 
     uint16_t access_outer_vlan;
     uint16_t access_outer_vlan_min;

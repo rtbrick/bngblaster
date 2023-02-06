@@ -213,6 +213,7 @@ typedef struct bbl_ctx_ bbl_ctx_s;
 typedef struct bbl_txq_ bbl_txq_s;
 typedef struct bbl_lag_ bbl_lag_s;
 typedef struct bbl_lag_member_ bbl_lag_member_s;
+typedef struct bbl_igmp_group_ bbl_igmp_group_s;
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_access_interface_ bbl_access_interface_s;
 typedef struct bbl_network_interface_ bbl_network_interface_s;

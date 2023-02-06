@@ -34,6 +34,7 @@
 #include "bbl_access_line.h"
 #include "bbl_config.h"
 #include "bbl_l2tp.h"
+#include "bbl_igmp.h"
 #include "bbl_session.h"
 #include "bbl_ctx.h"
 #include "bbl_txq.h"
@@ -43,7 +44,6 @@
 #include "bbl_network.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
-#include "bbl_igmp.h"
 #include "bbl_cfm.h"
 #include "bbl_tcp.h"
 

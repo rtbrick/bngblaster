@@ -953,6 +953,15 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->session_traffic_autostart = g_ctx->config.session_traffic_autostart;
     }
 
+    value = json_object_get(access_interface, "session-group-id");
+    if(value) {
+        number = json_number_value(value);
+        if(number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for access->session-group-id\n");
+        }
+        access_config->session_group_id = number;
+    }
+
     value = json_object_get(access_interface, "stream-group-id");
     if(value) {
         number = json_number_value(value);
