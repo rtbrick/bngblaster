@@ -27,6 +27,45 @@
 
 #define BACKLOG 4
 
+extern volatile bool g_teardown;
+extern volatile bool g_teardown_request;
+extern volatile uint8_t g_teardown_request_count;
+
+extern volatile bool g_monkey;
+
+int
+bbl_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
+{
+    bbl_session_s *session;
+    int reconnect_delay = 0;
+
+    if(session_id) {
+        /* DEPRECATED! 
+         * Terminate single matching session.
+         * The option to reconnect session via "terminate" command
+         * remains for backward compatibility only. The new commands
+         * "session-start/stop/restart" should be used instead. */
+        session = bbl_session_get(session_id);
+        if(session) {
+            json_unpack(arguments, "{s:i}", "reconnect-delay", &reconnect_delay);
+            if(reconnect_delay > 0) {
+                session->reconnect_delay = reconnect_delay;
+            }
+            bbl_session_clear(session);
+            return bbl_ctrl_status(fd, "ok", 200, "terminate session");
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Terminate all sessions and teardown test ... */
+        g_teardown = true;
+        g_teardown_request = true;
+        g_teardown_request_count++;
+        LOG_NOARG(INFO, "Teardown request\n");
+        return bbl_ctrl_status(fd, "ok", 200, "teardown requested");
+    }
+}
+
 int
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
 {
@@ -37,6 +76,16 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
         json_decref(root);
     }
     return result;
+}
+
+int
+bbl_ctrl_test_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    g_teardown = true;
+    g_teardown_request = true;
+    g_teardown_request_count++;
+    LOG_NOARG(INFO, "Teardown request\n");
+    return bbl_ctrl_status(fd, "ok", 200, "teardown requested");
 }
 
 int
@@ -86,6 +135,26 @@ bbl_ctrl_traffic_stop(int fd, uint32_t session_id __attribute__((unused)), json_
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
+int
+bbl_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(!g_monkey) {
+        LOG_NOARG(INFO, "Start monkey\n");
+    }
+    g_monkey = true;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+bbl_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(g_monkey) {
+        LOG_NOARG(INFO, "Stop monkey\n");
+    }
+    g_monkey = false;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
 typedef int callback_function(int fd, uint32_t session_id, json_t *arguments);
 
 struct action {
@@ -101,11 +170,13 @@ struct action actions[] = {
     {"a10nsp-interfaces", bbl_a10nsp_ctrl_interfaces, true},
     {"interface-enable", bbl_interface_ctrl_enable, false},
     {"interface-disable", bbl_interface_ctrl_disable, false},
-    {"terminate", bbl_session_ctrl_terminate, false},
+    {"terminate", bbl_ctrl_terminate, false},
     {"sessions-pending", bbl_session_ctrl_pending, true},
     {"session-counters", bbl_session_ctrl_counters, true},
     {"session-info", bbl_session_ctrl_info, true},
     {"session-start", bbl_session_ctrl_start, true},
+    {"session-stop", bbl_session_ctrl_stop, true},
+    {"session-restart", bbl_session_ctrl_restart, true},
     {"session-traffic", bbl_session_ctrl_traffic_stats, true},
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, false},
     {"session-traffic-start", bbl_session_ctrl_traffic_start, false},
@@ -163,10 +234,11 @@ struct action actions[] = {
     {"ldp-teardown", ldp_ctrl_teardown, true},
     {"ldp-raw-update-list", ldp_ctrl_raw_update_list, true},
     {"ldp-raw-update", ldp_ctrl_raw_update, false},
-    {"monkey-start", bbl_session_ctrl_monkey_start, false},
-    {"monkey-stop", bbl_session_ctrl_monkey_stop, false},
+    {"monkey-start", bbl_ctrl_monkey_start, false},
+    {"monkey-stop", bbl_ctrl_monkey_stop, false},
     {"lag-info", bbl_lag_ctrl_info, true},
     {"test-info", bbl_ctrl_test_info, true},
+    {"test-stop", bbl_ctrl_test_stop, true},
     {NULL, NULL, false},
 };
 

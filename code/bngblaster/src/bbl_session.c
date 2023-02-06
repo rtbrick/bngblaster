@@ -347,6 +347,11 @@ void
 bbl_session_reset(bbl_session_s *session) {    
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
     session->version++;
+
+    session->reconnect_delay = 0;
+    session->reconnect_disabled = false;
+    timer_del(session->timer_reconnect);
+
     session->pppoe_session_id = 0;
     if(session->pppoe_ac_cookie) {
         free(session->pppoe_ac_cookie);
@@ -439,13 +444,37 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.icmpv6_tx = 0;
 }
 
+static bool
+bbl_session_start(bbl_session_s *session)
+{
+    if(g_teardown) {
+        return false;
+    }
+
+    /* Reset session */
+    if(session->session_state == BBL_TERMINATED) {
+        session->session_state = BBL_IDLE;
+        bbl_session_reset(session);
+        if(g_ctx->sessions_terminated) {
+            g_ctx->sessions_terminated--;
+        }
+    }
+
+    /* Put on idle list */
+    if(session->session_state == BBL_IDLE &&
+       !CIRCLEQ_NEXT(session, session_idle_qnode) &&
+       !CIRCLEQ_PREV(session, session_idle_qnode)) {
+        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+        return true;
+    }
+
+    return false;
+}
+
 void
 bbl_session_reconnect_job(timer_s *timer) {
     bbl_session_s *session = timer->data;
-    session->session_state = BBL_IDLE;
-    session->reconnect_delay = 0;
-    bbl_session_reset(session);
-    CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+    bbl_session_start(session);
 }
 
 /**
@@ -529,6 +558,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             timer_del(session->timer_zapping);
             timer_del(session->timer_icmpv6);
             timer_del(session->timer_session);
+            timer_del(session->timer_reconnect);
 
             /* Reset all states */
             if(session->access_type == ACCESS_TYPE_PPPOE) {
@@ -547,25 +577,25 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             /* Cleanup A10NSP session */
             bbl_a10nsp_session_free(session);
 
-            /* Increment sessions terminated if new state is terminated. */
-            if(g_teardown) {
-                g_ctx->sessions_terminated++;
-            } else {
-                if((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
-                   (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect)) {
-                    /* Increment flap counter */
-                    session->stats.flapped++;
-                    g_ctx->sessions_flapped++;
+            /* Increment sessions terminated if new state is terminated */
+            g_ctx->sessions_terminated++;
+
+            if(!g_teardown) {
+                /* Increment flap counter */
+                session->stats.flapped++;
+                g_ctx->sessions_flapped++;
+
+                /* Reconnect */
+                if(!session->reconnect_disabled && 
+                   ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
+                    (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect))) {
                     if(session->reconnect_delay) {
                         timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
-                                    session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
+                                  session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
                     } else {
-                        state = BBL_IDLE;
-                        bbl_session_reset(session);
-                        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+                        session->session_state = state;
+                        bbl_session_start(session);
                     }
-                } else {
-                    g_ctx->sessions_terminated++;
                 }
             }
         }
@@ -757,6 +787,7 @@ bbl_sessions_init()
         memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         memset(&session->dhcp_server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
         session->session_id = i; /* BNG Blaster internal session identifier */
+        session->session_group_id = access_config->session_group_id;
         session->access_type = access_config->access_type;
         session->access_interface = access_config->access_interface;
         session->network_interface = bbl_network_interface_get(access_config->network_interface);
@@ -938,10 +969,11 @@ bbl_sessions_init()
             timer_add_periodic(&g_ctx->timer_root, &session->timer_monkey, "MONKEY", 1, 1337, session, &bbl_session_monkey_job);
         }
 
-        LOG(DEBUG, "Session %u created (%s.%u:%u)\n", i, 
+        LOG(DEBUG, "Session %u created (%s.%u:%u group %u)\n", i, 
             access_config->access_interface->name, 
             access_config->access_outer_vlan, 
-            access_config->access_inner_vlan);
+            access_config->access_inner_vlan,
+            access_config->session_group_id);
 
         i++;
 NEXT:
@@ -1381,68 +1413,127 @@ bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute
     }
 }
 
-int
-bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+static int
+bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bool restart)
 {
     bbl_session_s *session;
+    uint32_t i;
 
-    if(g_teardown) {
-        return bbl_ctrl_status(fd, "error", 405, "teardown");
-    }
-
-    if(session_id == 0) {
-        /* session-id is mandatory */
-        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
-    }
-
-    session = bbl_session_get(session_id);
-    if(session) {
-        if(session->session_state == BBL_TERMINATED && 
-           session->reconnect_delay == 0) {
-            g_ctx->sessions_flapped++;
-            session->stats.flapped++;
-            session->session_state = BBL_IDLE;
-            bbl_session_reset(session);
-            if(g_ctx->sessions_terminated) {
-                g_ctx->sessions_terminated--;
-            }
-        } else if(session->session_state != BBL_IDLE || 
-           CIRCLEQ_NEXT(session, session_idle_qnode) || 
-           CIRCLEQ_PREV(session, session_idle_qnode)) {
-           return bbl_ctrl_status(fd, "error", 405, "wrong session state");
-        }
-        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
-        return bbl_ctrl_status(fd, "ok", 200, NULL);
-    } else {
-        return bbl_ctrl_status(fd, "warning", 404, "session not found");
-    }
-}
-
-int
-bbl_session_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
-{
-    bbl_session_s *session;
+    int session_group_id = -1;
     int reconnect_delay = 0;
 
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
+    if(restart) {
+        json_unpack(arguments, "{s:i}", "reconnect-delay", &reconnect_delay);
+        if(reconnect_delay < 0) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid reconnect-delay");
+        }
+    }
+
     if(session_id) {
-        /* Terminate single matching session ... */
+        /* Stop/disconnect single matching session ... */
         session = bbl_session_get(session_id);
         if(session) {
-            json_unpack(arguments, "{s:i}", "reconnect-delay", &reconnect_delay);
-            if(reconnect_delay > 0) {
-                session->reconnect_delay = reconnect_delay;
+            if(restart) {
+                if(session->session_state == BBL_TERMINATED) {
+                    bbl_session_start(session);
+                } else {
+                    session->reconnect_disabled = false;
+                    session->reconnect_delay = reconnect_delay;
+                    bbl_session_clear(session);
+                }
+            } else {
+                session->reconnect_disabled = true;
+                bbl_session_clear(session);
             }
-            bbl_session_clear(session);
-            return bbl_ctrl_status(fd, "ok", 200, "terminate session");
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
     } else {
-        /* Terminate all sessions ... */
-        g_teardown = true;
-        g_teardown_request = true;
-        LOG_NOARG(INFO, "Teardown request\n");
-        return bbl_ctrl_status(fd, "ok", 200, "terminate all sessions");
+        /* Stop/disconnect all sessions ... */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                    /* Skip sessions with wrong session-group-id if present. */
+                    continue;
+                }
+                if(restart) {
+                    if(session->session_state == BBL_TERMINATED) {
+                        bbl_session_start(session);
+                    } else {
+                        session->reconnect_disabled = false;
+                        session->reconnect_delay = reconnect_delay;
+                        bbl_session_clear(session);
+                    }
+                } else {
+                    session->reconnect_disabled = true;
+                    bbl_session_clear(session);
+                }
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_session_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_session_ctrl_stop_restart(fd, session_id, arguments, false);
+}
+
+int
+bbl_session_ctrl_restart(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_session_ctrl_stop_restart(fd, session_id, arguments, true);
+}
+
+int
+bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    int session_group_id = -1;
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
+    if(g_teardown) {
+        return bbl_ctrl_status(fd, "error", 405, "teardown in progress");
+    }
+
+    if(session_id) {
+        /* Start single session ... */
+        session = bbl_session_get(session_id);
+        if(session) {
+            if(!bbl_session_start(session)) {
+                return bbl_ctrl_status(fd, "error", 405, "wrong session state");
+            }
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Start all sessions ... */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                /* Skip sessions with wrong session-group-id if present. */
+                continue;
+            }
+            bbl_session_start(session);
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
 }
 
@@ -1563,24 +1654,3 @@ bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused
     }
     return result;
 }
-
-int
-bbl_session_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
-{
-    if(!g_monkey) {
-        LOG_NOARG(INFO, "Start monkey\n");
-    }
-    g_monkey = true;
-    return bbl_ctrl_status(fd, "ok", 200, NULL);
-}
-
-int
-bbl_session_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
-{
-    if(g_monkey) {
-        LOG_NOARG(INFO, "Stop monkey\n");
-    }
-    g_monkey = false;
-    return bbl_ctrl_status(fd, "ok", 200, NULL);
-}
-
