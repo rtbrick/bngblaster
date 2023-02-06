@@ -629,24 +629,25 @@ main(int argc, char *argv[])
 
     signal(SIGINT, teardown_handler);
 
-    /* Start event loop. */
+    /* Start event loop ... */
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     while(g_teardown_request_count < 10) {
-        if(!(g_ctx->l2tp_tunnels || g_ctx->routing_sessions)) {
+        if(g_teardown && !(g_ctx->l2tp_tunnels || g_ctx->routing_sessions)) {
+            /* If teardown has requested, wait for all L2TP 
+             * tunnels and routing sessions to be terminated. */
             if(g_ctx->sessions) {
                 /* With sessions, wait for all sessions
                  * to be terminated. */
-                if(g_ctx->sessions_terminated >= g_ctx->sessions && g_ctx->l2tp_tunnels == 0) {
+                if(g_ctx->sessions_terminated >= g_ctx->sessions) {
                     break;
                 }
             } else {
                 /* Without sessions, we can stop immediately
                  * as soon as teardown was requested. */
-                if(g_teardown) {
-                    break;
-                }
+                break;
             }
         }
+        /* Continue with event loop ... */
         timer_walk(&g_ctx->timer_root);
     }
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_stop);
