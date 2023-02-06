@@ -44,8 +44,17 @@ if(BNGBLASTER_TESTS)
 endif()
 add_subdirectory(code)
 
+# cpack
 set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")
+
+if (BNGBLASTER_OS STREQUAL "ubuntu-18.04")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")
+elseif (BNGBLASTER_OS STREQUAL "ubuntu-20.04")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl1.1, libncurses5, libjansson4")
+else()
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl3, libncurses6, libjansson4")
+endif()
+
 set(CPACK_DEBIAN_LIB_PACKAGE_NAME "bngblaster")
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "RtBrick BNG Blaster")
