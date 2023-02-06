@@ -69,7 +69,7 @@ IPoE
 
 DHCP
 ^^^^
-.. include:: ../configuration/dhcp.rst
+.. include:: ../configuration/dhcp.rst 
 
 DHCPv6
 ^^^^^^
