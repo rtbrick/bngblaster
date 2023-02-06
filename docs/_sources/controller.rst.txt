@@ -79,6 +79,7 @@ This directory contains the following files:
 * `config.json`: bngblaster configuration
 * `run.pid`: bngblaster process ID (if running)
 * `run.json`: bngblaster arguments
+* `run.log`: bngblaster log file (if enabled)
 * `run_report.json`: bngblaster report (if enabled)
 * `run.pcap`: bngblaster traffic capture (if enabled)
 * `run.sock`: bngblaster control socket
@@ -98,9 +99,11 @@ defined in the body.
     {
         "logging": true,
         "logging_flags": [
-            "error",
+            "debug",
             "ip"
-        ]
+        ],
+        "report": true,
+        "session_count": 1000
     }
 
 All supported argument options are explained in the OpenAPI schema.
@@ -110,7 +113,8 @@ Status
 
 `GET /api/v1/instances/<instance-name>`
 
-The status API endpoint returns the status of the test. 
+The status API endpoint returns the status of the test which can be either 
+`started` or `stopped`.
 
 Command 
 ~~~~~~~
@@ -163,7 +167,8 @@ Stop Test
 
 `POST /api/v1/instances/<instance-name>/_stop`
 
-The stop API endpoint will send the SIGINT signal to the corresponding BNG blaster instance (`kill -INT <pid>`).
+The stop API endpoint will send the SIGINT signal to the corresponding 
+BNG blaster instance (`kill -INT <pid>`).
 
 Delete Test Instance
 ~~~~~~~~~~~~~~~~~~~~
@@ -172,6 +177,93 @@ Delete Test Instance
 
 This API endpoint deletes the test instance directory. The corresponding
 test run is forcefully terminated (`kill -9 <pid>`) if running. 
+
+Reports 
+~~~~~~~
+
+The BNG Blaster can generate detailed :ref:`reports <reports>`
+at the end of the test execution. Those reports must be enabled
+during the start with the argument option `report`. This detailed
+report can be further enhanced using `report_flags` to include 
+detailed per-session and stream results. Consider that the resulting 
+report may be large if `streams` flag is enabled in combination with 
+a huge amount of streams (around 500MB report file for one million streams). 
+
+`POST /api/v1/instances/<instance-name>/_start`
+
+ .. code-block:: json
+
+     {
+        "report": true,
+        "report_flags": [
+            "sessions",
+            "streams"
+        ]
+     }
+
+The final report can be retrieved with the following request 
+after the test has finally stopped.
+
+`GET /api/v1/instances/<instance-name>/run_report.json` 
+
+After requesting the test to stop, it can take some time until the test 
+has gracefully stopped. This can be verified using the status command.
+As soon as the status becomes stopped, the report file should be available. 
+
+Logs
+~~~~
+
+The BNG Blaster supports extensive :ref:`logging <logging>` 
+during the test execution. This log file must be enabled
+during the start with the argument option `logging`. The optional
+argument `logging_flags` allows for enabling log categories.
+
+`POST /api/v1/instances/<instance-name>/_start`
+
+ .. code-block:: json
+
+     {
+        "logging": true,
+        "logging_flags": [
+            "bgp",
+            "isis",
+            "ip"
+        ]
+     }
+
+Please check :ref:`logging <logging>` section for detailed list
+of all logging flags.
+
+The final log file can be retrieved with the following request 
+after the test has finally stopped.
+
+`GET /api/v1/instances/<instance-name>/run.log`
+
+It is also possible to retrieve the standard output and error
+for troubleshooting purposes. 
+
+`GET /api/v1/instances/<instance-name>/run.stderr` 
+`GET /api/v1/instances/<instance-name>/run.stdout` 
+
+PCAP
+~~~~
+
+The BNG Blaster supports to :ref:`capture <capture>` all traffic 
+sent and received by the BNG Blaster which must be enabled during 
+the start with the argument option `pcap_capture`.
+
+`POST /api/v1/instances/<instance-name>/_start`
+
+ .. code-block:: json
+
+     {
+        "pcap_capture": true
+     }
+
+The final capture file can be retrieved with the following request 
+after the test has finally stopped.
+
+`GET /api/v1/instances/<instance-name>/run.pcap`
 
 Metrics
 ~~~~~~~

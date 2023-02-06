@@ -1,7 +1,9 @@
+.. _reports:
+
 Reports
 =======
 
-The BNG Blaster can generate detailed result reports
+The BNG Blaster can generate detailed reports
 at the end of the test execution. 
 
 Session Setup Rate

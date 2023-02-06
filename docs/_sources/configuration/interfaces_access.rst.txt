@@ -31,6 +31,9 @@
    * - `outer-vlan-max`
      - Outer VLAN maximum value
      - 0 (untagged)
+   * - `outer-vlan-step`
+     - Outer VLAN step (iterator)
+     - 1
    * - `outer-vlan`
      - Set outer-vlan-min/max equally
      - 
@@ -40,6 +43,9 @@
    * - `inner-vlan-max`
      - Inner VLAN maximum value
      - 0 (untagged)
+   * - `inner-vlan-step`
+     - Inner VLAN step (iterator)
+     - 1
    * - `inner-vlan`
      - Set inner-vlan-min/max equally
      - 
