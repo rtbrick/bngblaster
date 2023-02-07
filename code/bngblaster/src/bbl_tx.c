@@ -1054,8 +1054,6 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     }
 
     dhcp.header = &header;
-
-    eth.dst = session->dhcp_server_mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
@@ -1067,11 +1065,6 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.src = session->ip_address;
-    if(session->dhcp_server) {
-        ipv4.dst = session->dhcp_server;
-    } else {
-        ipv4.dst = IPV4_BROADCAST;
-    }
     ipv4.ttl = 255;
     ipv4.tos = g_ctx->config.dhcp_tos;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -1088,10 +1081,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     header.xid = session->dhcp_xid;
     if(g_ctx->config.dhcp_broadcast && session->dhcp_state < BBL_DHCP_BOUND) {
         header.flags = htobe16(1 << 15);
-        eth.dst = (uint8_t*)broadcast_mac;
-        ipv4.dst = IPV4_BROADCAST;
     }
-    header.ciaddr = session->ip_address;
     memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
     /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
      * elapsed time, in seconds, since the client sent its first
@@ -1139,6 +1129,8 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             dhcp.type = DHCP_MESSAGE_REQUEST;
             session->stats.dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
+            eth.dst = (uint8_t*)broadcast_mac;
+            ipv4.dst = IPV4_BROADCAST;
             dhcp.option_address = true;
             dhcp.address = session->dhcp_address;
             dhcp.option_server_identifier = true;
@@ -1155,11 +1147,17 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             dhcp.type = DHCP_MESSAGE_REQUEST;
             session->stats.dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
+            eth.dst = session->dhcp_server_mac;
+            ipv4.dst = session->dhcp_server;
+            header.ciaddr = session->ip_address;
             break;
         case BBL_DHCP_RELEASE:
             dhcp.type = DHCP_MESSAGE_RELEASE;
             session->stats.dhcp_tx_release++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
+            eth.dst = session->dhcp_server_mac;
+            ipv4.dst = session->dhcp_server;
+            header.ciaddr = session->ip_address;
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
             break;
