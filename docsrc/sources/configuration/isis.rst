@@ -31,12 +31,30 @@
    * - `level1-auth-type`
      - ISIS level 1 authentication type (simple or md5)
      - disabled
+   * - `level1-auth-hello`
+     - ISIS level 1 hello authentication 
+     - true
+   * - `level1-auth-csnp`
+     - ISIS level 1 CSNP authentication 
+     - true
+   * - `level1-auth-psnp`
+     - ISIS level 1 PSNP authentication 
+     - true
    * - `level2-auth-key`
      - ISIS level 2 authentication key
      - 
    * - `level2-auth-type`
      - ISIS level 2 authentication type (simple or md5)
      - disabled
+   * - `level2-auth-hello`
+     - ISIS level 2 hello authentication 
+     - true
+   * - `level2-auth-csnp`
+     - ISIS level 2 CSNP authentication 
+     - true
+   * - `level2-auth-psnp`
+     - ISIS level 2 PSNP authentication 
+     - true
    * - `hello-interval`
      - ISIS hello interval in seconds
      - 10
