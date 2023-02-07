@@ -625,7 +625,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             }
             /* Destination address */
             if(stream->config->ipv4_destination_address) {
-                ipv4.dst = stream->config->ipv4_destination_address;                
+                ipv4.dst = stream->config->ipv4_destination_address;
             } else {
                 if(session) {
                     ipv4.dst = session->ip_address;
@@ -1878,6 +1878,7 @@ bbl_stream_init() {
         if(g_ctx->config.session_traffic_ipv4_label) {
             config->tx_mpls1 = true;
             config->tx_mpls1_label = g_ctx->config.session_traffic_ipv4_label;
+            config->tx_mpls1_ttl = 255;
         }
         g_ctx->config.stream_config_session_ipv4_down = config;
     }
@@ -1908,6 +1909,7 @@ bbl_stream_init() {
         if(g_ctx->config.session_traffic_ipv6_label) {
             config->tx_mpls1 = true;
             config->tx_mpls1_label = g_ctx->config.session_traffic_ipv6_label;
+            config->tx_mpls1_ttl = 255;
         }
         g_ctx->config.stream_config_session_ipv6_down = config;
     }
@@ -1938,6 +1940,7 @@ bbl_stream_init() {
         if(g_ctx->config.session_traffic_ipv6_label) {
             config->tx_mpls1 = true;
             config->tx_mpls1_label = g_ctx->config.session_traffic_ipv6_label;
+            config->tx_mpls1_ttl = 255;
         }
         g_ctx->config.stream_config_session_ipv6pd_down = config;
     }
