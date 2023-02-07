@@ -1166,6 +1166,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     }
     if(isis_config->level == 0 || isis_config->level > 3) {
         fprintf(stderr, "JSON config error: Invalid value for isis->level\n");
+        return false;
     }
 
     value = json_object_get(isis, "overload");
@@ -1189,20 +1190,70 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 
     if(json_unpack(isis, "{s:s}", "level1-auth-key", &s) == 0) {
         isis_config->level1_key = strdup(s);
-        isis_config->level1_auth = ISIS_AUTH_CLEARTEXT;
+        isis_config->level1_auth = ISIS_AUTH_NONE;
         if(json_unpack(isis, "{s:s}", "level1-auth-type", &s) == 0) {
             if(strcmp(s, "md5") == 0) {
                 isis_config->level1_auth = ISIS_AUTH_HMAC_MD5;
+            } else if(strcmp(s, "simple") == 0) {
+                isis_config->level1_auth = ISIS_AUTH_CLEARTEXT;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for isis->level1-auth-type\n");
+                return false;
+            }
+        }
+        if(isis_config->level1_auth) {
+            value = json_object_get(isis, "level1-auth-hello");
+            if(json_is_boolean(value)) {
+                isis_config->level1_auth_hello  = json_boolean_value(value);
+            } else {
+                isis_config->level1_auth_hello  = true;
+            }
+            value = json_object_get(isis, "level1-auth-csnp");
+            if(json_is_boolean(value)) {
+                isis_config->level1_auth_csnp  = json_boolean_value(value);
+            } else {
+                isis_config->level1_auth_csnp  = true;
+            }
+            value = json_object_get(isis, "level1-auth-psnp");
+            if(json_is_boolean(value)) {
+                isis_config->level1_auth_psnp  = json_boolean_value(value);
+            } else {
+                isis_config->level1_auth_psnp  = true;
             }
         }
     }
 
     if(json_unpack(isis, "{s:s}", "level2-auth-key", &s) == 0) {
         isis_config->level2_key = strdup(s);
-        isis_config->level2_auth = ISIS_AUTH_CLEARTEXT;
+        isis_config->level2_auth = ISIS_AUTH_NONE;
         if(json_unpack(isis, "{s:s}", "level2-auth-type", &s) == 0) {
             if(strcmp(s, "md5") == 0) {
                 isis_config->level2_auth = ISIS_AUTH_HMAC_MD5;
+            } else if(strcmp(s, "simple") == 0) {
+                isis_config->level2_auth = ISIS_AUTH_CLEARTEXT;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for isis->level2-auth-type\n");
+                return false;
+            }
+        }
+        if(isis_config->level2_auth) {
+            value = json_object_get(isis, "level2-auth-hello");
+            if(json_is_boolean(value)) {
+                isis_config->level2_auth_hello  = json_boolean_value(value);
+            } else {
+                isis_config->level2_auth_hello  = true;
+            }
+            value = json_object_get(isis, "level2-auth-csnp");
+            if(json_is_boolean(value)) {
+                isis_config->level2_auth_csnp  = json_boolean_value(value);
+            } else {
+                isis_config->level2_auth_csnp  = true;
+            }
+            value = json_object_get(isis, "level2-auth-psnp");
+            if(json_is_boolean(value)) {
+                isis_config->level2_auth_psnp  = json_boolean_value(value);
+            } else {
+                isis_config->level2_auth_psnp  = true;
             }
         }
     }

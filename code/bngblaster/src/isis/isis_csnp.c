@@ -44,13 +44,13 @@ isis_csnp_job(timer_s *timer)
     /* Build PDU */
     if(level == ISIS_LEVEL_1) {
         isis_pdu_init(&pdu, ISIS_PDU_L1_CSNP);
-        if(config->level1_auth && config->level1_key) {
+        if(config->level1_auth_csnp) {
             auth = config->level1_auth;
             key = config->level1_key;
         }
     } else {
         isis_pdu_init(&pdu, ISIS_PDU_L2_CSNP);
-        if(config->level2_auth && config->level2_key) {
+        if(config->level2_auth_csnp) {
             auth = config->level2_auth;
             key = config->level2_key;
         }
@@ -196,13 +196,14 @@ isis_csnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
     lsp_start = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_START));
     lsp_end = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_END));
 
-    if(level == ISIS_LEVEL_1 && config->level1_auth && config->level1_key) {
+    if(level == ISIS_LEVEL_1 && config->level1_auth_csnp) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if(level == ISIS_LEVEL_2 && config->level2_auth && config->level2_key) {
+    } else if(level == ISIS_LEVEL_2 && config->level2_auth_csnp) {
         auth = config->level2_auth;
         key = config->level2_key;
     }
+
     if(!isis_pdu_validate_auth(pdu, auth, key)) {
         LOG(ISIS, "ISIS RX %s-CSNP authentication failed on interface %s\n",
             isis_level_string(level), interface->name);

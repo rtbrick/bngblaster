@@ -197,8 +197,15 @@ typedef struct isis_config_ {
 
     isis_auth_type      level1_auth;
     char               *level1_key;
+    bool                level1_auth_hello;
+    bool                level1_auth_csnp;
+    bool                level1_auth_psnp;
+
     isis_auth_type      level2_auth;
     char               *level2_key;
+    bool                level2_auth_hello;
+    bool                level2_auth_csnp;
+    bool                level2_auth_psnp;
 
     uint16_t            lsp_refresh_interval;
     uint16_t            lsp_lifetime;
