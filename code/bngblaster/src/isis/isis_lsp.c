@@ -561,10 +561,10 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
         isis_lsp_id_to_str(&lsp_id), 
         seq, interface->name);
 
-    if(level == ISIS_LEVEL_1 && config->level1_auth && config->level1_key) {
+    if(level == ISIS_LEVEL_1 && config->level1_auth) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if(level == ISIS_LEVEL_2 && config->level2_auth && config->level2_key) {
+    } else if(level == ISIS_LEVEL_2 && config->level2_auth) {
         auth = config->level2_auth;
         key = config->level2_key;
     }

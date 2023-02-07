@@ -43,13 +43,13 @@ isis_psnp_job (timer_s *timer)
     /* Build PDU */
     if(level == ISIS_LEVEL_1) {
         isis_pdu_init(&pdu, ISIS_PDU_L1_PSNP);
-        if(config->level1_auth && config->level1_key) {
+        if(config->level1_auth_psnp) {
             auth = config->level1_auth;
             key = config->level1_key;
         }
     } else {
         isis_pdu_init(&pdu, ISIS_PDU_L2_PSNP);
-        if(config->level2_auth && config->level2_key) {
+        if(config->level2_auth_psnp) {
             auth = config->level2_auth;
             key = config->level2_key;
         }
@@ -163,13 +163,14 @@ isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
 
     adjacency->stats.psnp_rx++;
     
-    if(level == ISIS_LEVEL_1 && config->level1_auth && config->level1_key) {
+    if(level == ISIS_LEVEL_1 && config->level1_auth_psnp) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if(level == ISIS_LEVEL_2 && config->level2_auth && config->level2_key) {
+    } else if(level == ISIS_LEVEL_2 && config->level2_auth_psnp) {
         auth = config->level2_auth;
         key = config->level2_key;
     }
+
     if(!isis_pdu_validate_auth(pdu, auth, key)) {
         LOG(ISIS, "ISIS RX %s-PSNP authentication failed on interface %s\n",
             isis_level_string(level), interface->name);

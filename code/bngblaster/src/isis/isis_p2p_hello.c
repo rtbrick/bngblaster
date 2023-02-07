@@ -80,10 +80,10 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
               "ISIS Hello", config->hello_interval, 0, interface, 
               &isis_p2p_hello_timeout);
 
-    if(config->level1_auth && config->level1_key) {
+    if((adjacency->level & ISIS_LEVEL_1) && config->level1_auth_hello) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if(config->level2_auth && config->level2_key) {
+    } else if((adjacency->level & ISIS_LEVEL_2) && config->level2_auth_hello) {
         auth = config->level2_auth;
         key = config->level2_key;
     }
@@ -155,10 +155,10 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
 
     adjacency->stats.hello_rx++;
 
-    if(config->level1_auth && config->level1_key) {
+    if((adjacency->level & ISIS_LEVEL_1) && config->level1_auth_hello) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if(config->level2_auth && config->level2_key) {
+    } else if((adjacency->level & ISIS_LEVEL_2) && config->level2_auth_hello) {
         auth = config->level2_auth;
         key = config->level2_key;
     }
@@ -188,7 +188,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
     }
 
     if(state) {
-        switch (*state) {
+        switch(*state) {
             case ISIS_P2P_ADJACENCY_STATE_UP:
                 new_state = ISIS_P2P_ADJACENCY_STATE_UP;
                 break;
