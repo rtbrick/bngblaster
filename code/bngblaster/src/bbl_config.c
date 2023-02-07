@@ -1636,6 +1636,33 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             }
             stream_config->pps = bps / (stream_config->length * 8);
         }
+        value = json_object_get(stream, "Kbps");
+        if(value) {
+            bps = json_number_value(value);
+            if(!bps) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->Kbps\n");
+                return false;
+            }
+            stream_config->pps = (bps*1000) / (stream_config->length * 8);
+        }
+        value = json_object_get(stream, "Mbps");
+        if(value) {
+            bps = json_number_value(value);
+            if(!bps) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->Mbps\n");
+                return false;
+            }
+            stream_config->pps = (bps*1000000) / (stream_config->length * 8);
+        }
+        value = json_object_get(stream, "Gbps");
+        if(value) {
+            bps = json_number_value(value);
+            if(!bps) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->Gbps\n");
+                return false;
+            }
+            stream_config->pps = (bps*1000000000) / (stream_config->length * 8);
+        }
     }
     if(!stream_config->pps) stream_config->pps = 1;
 
