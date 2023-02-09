@@ -310,7 +310,11 @@ addresses dynamically from the sessions.</p>
 and inner IPv4 header.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">pps</span></code> option supports also float numbers like 0.1, or 2.5 PPS and has
 priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where the second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
-based on given <code class="docutils literal notranslate"><span class="pre">bps</span></code> and <code class="docutils literal notranslate"><span class="pre">length</span></code>.</p>
+based on given <code class="docutils literal notranslate"><span class="pre">bps</span></code> and <code class="docutils literal notranslate"><span class="pre">length</span></code>. The resulting rate in <code class="docutils literal notranslate"><span class="pre">bps</span></code> is the
+layer 3 rate because <code class="docutils literal notranslate"><span class="pre">length</span></code> is also the layer 3 length (IP header + payload).
+It is also supported to put the capital letters <code class="docutils literal notranslate"><span class="pre">K</span></code> (Kilo), <code class="docutils literal notranslate"><span class="pre">M</span></code> (Mega)
+or <code class="docutils literal notranslate"><span class="pre">G</span></code> (Giga) in front of <code class="docutils literal notranslate"><span class="pre">bps</span></code> for better readability.
+For example <code class="docutils literal notranslate"><span class="pre">&quot;Gbps&quot;:</span> <span class="pre">1</span></code> which is equal to <code class="docutils literal notranslate"><span class="pre">&quot;bps&quot;:</span> <span class="pre">1000000000</span></code>.</p>
 <p>The options <code class="docutils literal notranslate"><span class="pre">access-ipv4-source-address</span></code> and <code class="docutils literal notranslate"><span class="pre">access-ipv6-source-address</span></code>
 can be used to test the BNG RPF functionality with traffic sent from source addresses
 different than those assigned to the client.</p>

@@ -246,7 +246,7 @@ For Packet MMAP, it defines the maximum number of packets in the ring buffer.</p
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2048</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
@@ -345,7 +345,7 @@ for interface links referenced by interface functions.</p>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2048</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
@@ -480,9 +480,9 @@ at least 4 TX threads to verify all prefixes of a BGP full table for example.</p
 <p>The configured traffic streams are automatically balanced over all TX threads of the corresponding
 interfaces but a single stream can’t be split over multiple threads to prevent re-ordering issues.</p>
 <p>Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with
-CPU cache coherence, which should apply to all modern CPU architectures. It is also not possible
-to bundle (Link Aggregation) multithreaded interfaces. It is also not possible to capture traffic
-streams send or received on threaded interfaces. All other traffic is still captured on threaded
+CPU cache coherence, which should apply to all modern CPU architectures. TX threads are not allowed
+for LAG (Link Aggregation) interfaces but RX threads are supported. It is also not possible to capture
+traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
 interfaces.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -813,47 +813,51 @@ in the configuration to distinguish between them.</p>
 <td><p>Overwrite IGMP protocol version (1, 2 or 3)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>stream-group-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>session-group-id</cite></p></td>
+<td><p>Session group identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>stream-group-id</cite></p></td>
 <td><p>Stream group identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>access-line-profile-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>access-line-profile-id</cite></p></td>
 <td><p>Access-line-profile identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-cc</cite></p></td>
+<tr class="row-even"><td><p><cite>cfm-cc</cite></p></td>
 <td><p>De-/activate EOAM CFM CC (IPoE only)</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-level</cite></p></td>
+<tr class="row-odd"><td><p><cite>cfm-level</cite></p></td>
 <td><p>Set EOAM CFM maintenance domain level</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-ma-id</cite></p></td>
+<tr class="row-even"><td><p><cite>cfm-ma-id</cite></p></td>
 <td><p>Set EOAM CFM maintenance association identifier</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-ma-name</cite></p></td>
+<tr class="row-odd"><td><p><cite>cfm-ma-name</cite></p></td>
 <td><p>Set EOAM CFM maintenance association short name</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>i1-start</cite></p></td>
+<tr class="row-even"><td><p><cite>i1-start</cite></p></td>
 <td><p>Iterator for usage in strings <cite>{i1}</cite></p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>i1-step</cite></p></td>
+<tr class="row-odd"><td><p><cite>i1-step</cite></p></td>
 <td><p>Iterator step per session</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>i2-start</cite></p></td>
+<tr class="row-even"><td><p><cite>i2-start</cite></p></td>
 <td><p>Iterator for usage in strings <cite>{i2}</cite></p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>i2-step</cite></p></td>
+<tr class="row-odd"><td><p><cite>i2-step</cite></p></td>
 <td><p>Iterator step per session</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>monkey</cite></p></td>
+<tr class="row-even"><td><p><cite>monkey</cite></p></td>
 <td><p>Enable monkey testing</p></td>
 <td><p>false</p></td>
 </tr>
@@ -928,6 +932,7 @@ or VLAN ranges as shown in the example below.</p>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pta@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span><span class="w"></span>
@@ -937,6 +942,7 @@ or VLAN ranges as shown in the example below.</p>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2tp@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2999</span><span class="p">,</span><span class="w"></span>
@@ -946,6 +952,7 @@ or VLAN ranges as shown in the example below.</p>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth3&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
@@ -955,6 +962,7 @@ or VLAN ranges as shown in the example below.</p>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth4&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;200.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
@@ -993,6 +1001,37 @@ section using this mode.</p>
 <span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>One or more access interface blocks can be grouped using the <code class="docutils literal notranslate"><span class="pre">session-group-id</span></code>,
+which allows applying some commands like <cite>session-start</cite>, <cite>session-stop</cite> or
+<cite>session-restart</cite> to all sessions belonging to the same group. The example
+below shows how to assign all even VLAN identifiers to session group 1 and
+all odd VLAN identifiers to session group 2.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;even@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1998</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;odd@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
 <span class="w">        </span><span class="p">},</span><span class="w"></span>
 <span class="w">    </span><span class="p">]</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
