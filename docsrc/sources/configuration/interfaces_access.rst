@@ -115,6 +115,9 @@
    * - `igmp-version`
      - Overwrite IGMP protocol version (1, 2 or 3)
      - 
+   * - `session-group-id`
+     - Session group identifier
+     - 
    * - `stream-group-id`
      - Stream group identifier
      - 
