@@ -109,7 +109,11 @@ and inner IPv4 header.
 
 The ``pps`` option supports also float numbers like 0.1, or 2.5 PPS and has 
 priority over ``bps`` where the second is only a helper to calculate the ``pps`` 
-based on given ``bps`` and ``length``.
+based on given ``bps`` and ``length``. The resulting rate in ``bps`` is the 
+layer 3 rate because ``length`` is also the layer 3 length (IP header + payload).
+It is also supported to put the capital letters ``K`` (Kilo), ``M`` (Mega) 
+or ``G`` (Giga) in front of ``bps`` for better readability. 
+For example ``"Gbps": 1`` which is equal to ``"bps": 1000000000``. 
 
 The options ``access-ipv4-source-address`` and ``access-ipv6-source-address`` 
 can be used to test the BNG RPF functionality with traffic sent from source addresses 

@@ -99,7 +99,7 @@ The interfaces section contains all configurations around interface links and op
         "interfaces": {
             "tx-interval": 0.1,
             "rx-interval": 0.1,
-            "io-slots": 2048,
+            "io-slots": 4096,
         }
     }
 
@@ -120,7 +120,7 @@ for interface links referenced by interface functions.
         "interfaces": {
             "tx-interval": 0.1,
             "rx-interval": 0.1,
-            "io-slots": 2048,
+            "io-slots": 4096,
         }
     }
 
@@ -216,9 +216,9 @@ The configured traffic streams are automatically balanced over all TX threads of
 interfaces but a single stream can't be split over multiple threads to prevent re-ordering issues.
 
 Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with 
-CPU cache coherence, which should apply to all modern CPU architectures. It is also not possible 
-to bundle (Link Aggregation) multithreaded interfaces. It is also not possible to capture traffic 
-streams send or received on threaded interfaces. All other traffic is still captured on threaded 
+CPU cache coherence, which should apply to all modern CPU architectures. TX threads are not allowed
+for LAG (Link Aggregation) interfaces but RX threads are supported. It is also not possible to capture
+traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded 
 interfaces. 
 
 .. note::
@@ -425,6 +425,7 @@ or VLAN ranges as shown in the example below.
             {
                 "interface": "eth1",
                 "type": "pppoe",
+                "session-group-id": 1,
                 "username": "pta@rtbrick.com",
                 "outer-vlan-min": 1000,
                 "outer-vlan-max": 1999,
@@ -434,6 +435,7 @@ or VLAN ranges as shown in the example below.
             {
                 "interface": "eth1",
                 "type": "pppoe",
+                "session-group-id": 2,
                 "username": "l2tp@rtbrick.com",
                 "outer-vlan-min": 2000,
                 "outer-vlan-max": 2999,
@@ -443,6 +445,7 @@ or VLAN ranges as shown in the example below.
             {
                 "interface": "eth3",
                 "type": "pppoe",
+                "session-group-id": 1,
                 "username": "test@rtbrick.com",
                 "outer-vlan-min": 128,
                 "outer-vlan-max": 4000,
@@ -452,6 +455,7 @@ or VLAN ranges as shown in the example below.
             {
                 "interface": "eth4",
                 "type": "ipoe",
+                "session-group-id": 3,
                 "outer-vlan-min": 8,
                 "outer-vlan-max": 9,
                 "address": "200.0.0.1",
@@ -497,6 +501,40 @@ section using this mode.
             },
         ]
     }
+
+One or more access interface blocks can be grouped using the ``session-group-id``, 
+which allows applying some commands like `session-start`, `session-stop` or 
+`session-restart` to all sessions belonging to the same group. The example
+below shows how to assign all even VLAN identifiers to session group 1 and
+all odd VLAN identifiers to session group 2.
+
+.. code-block:: json
+
+    {
+        "access": [
+            {
+                "interface": "eth1",
+                "type": "pppoe",
+                "session-group-id": 1,
+                "username": "even@rtbrick.com",
+                "outer-vlan-min": 1000,
+                "outer-vlan-max": 1998,
+                "outer-vlan-step": 2,
+                "inner-vlan": 7
+            },
+            {
+                "interface": "eth1",
+                "type": "pppoe",
+                "session-group-id": 2,
+                "username": "odd@rtbrick.com",
+                "outer-vlan-min": 1001,
+                "outer-vlan-max": 1999,
+                "outer-vlan-step": 2,
+                "inner-vlan": 7
+            },
+        ]
+    }
+
 
 The BNG Blaster supports access and network interface functions on the same
 interface link if both are tagged with disjoint VLAN ranges. 
