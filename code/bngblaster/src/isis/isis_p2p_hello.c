@@ -100,8 +100,12 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     isis_pdu_add_tlv_auth(&pdu, auth, key);
     isis_pdu_add_tlv_area(&pdu, config->area, config->area_count);
     isis_pdu_add_tlv_protocols(&pdu, config->protocol_ipv4, config->protocol_ipv6);
-    isis_pdu_add_tlv_ipv4_int_address(&pdu, interface->ip.address);
-    isis_pdu_add_tlv_ipv6_int_address(&pdu, &interface->ip6_ll);
+    if(config->protocol_ipv4) {
+        isis_pdu_add_tlv_ipv4_int_address(&pdu, interface->ip.address);
+    }
+    if(config->protocol_ipv6) {
+        isis_pdu_add_tlv_ipv6_int_address(&pdu, &interface->ip6_ll);
+    }
     isis_pdu_add_tlv_p2p_adjacency_state(&pdu, adjacency->state);
     if(config->hello_padding) {
         isis_pdu_padding(&pdu);
