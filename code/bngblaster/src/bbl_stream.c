@@ -168,7 +168,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
             return false;
     }
 
-    buf_len = config->length + 64;
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
@@ -286,7 +286,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
             return false;
     }
 
-    buf_len = config->length + 64;
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
@@ -409,7 +409,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
             return false;
     }
 
-    buf_len = config->length + 64;
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
@@ -541,7 +541,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
             return false;
     }
 
-    buf_len = config->length + 64;
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
@@ -687,7 +687,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             return false;
     }
 
-    buf_len = config->length + 64;
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
@@ -772,7 +772,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     if(config->length > 76) {
         bbl.padding = config->length - 76;
     }
-    buf_len = config->length + 128;
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {

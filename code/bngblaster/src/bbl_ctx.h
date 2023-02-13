@@ -143,6 +143,7 @@ typedef struct bbl_ctx_
         io_mode_t io_mode;
 
         uint16_t io_slots;
+        uint16_t io_max_stream_len;
 
         bool qdisc_bypass;
 

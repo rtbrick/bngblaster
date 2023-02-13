@@ -62,6 +62,7 @@ bbl_stats_generate_interface(io_handle_s *io, bbl_interface_stats_s *stats)
         stats->unknown += io->stats.unknown;
         stats->protocol_errors += io->stats.protocol_errors;
         stats->io_errors += io->stats.io_errors;
+        stats->to_long += io->stats.to_long;
         stats->no_buffer += io->stats.no_buffer;
         stats->polled += io->stats.polled;
         io = io->next;
@@ -467,13 +468,26 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             printf("  TX:                %10lu packets %16lu bytes\n", 
                 interface_stats_tx.packets, interface_stats_tx.bytes);
             printf("  TX Polled:         %10lu\n", interface_stats_tx.polled);
-            printf("  TX IO Error:       %10lu\n", interface_stats_tx.io_errors);
+            if(interface_stats_tx.io_errors) {
+                printf("  TX IO Error:       %10lu\n", interface_stats_tx.io_errors);
+            }
+            if(interface_stats_tx.to_long) {
+                printf("  TX To Long:        %10lu\n", interface_stats_tx.to_long);
+            }
+            if(interface_stats_tx.no_buffer) {
+                printf("  TX No Buffer:      %10lu\n", interface_stats_tx.no_buffer);
+            }
             printf("  RX:                %10lu packets %16lu bytes\n",
                 interface_stats_rx.packets, interface_stats_rx.bytes);
             printf("  RX Protocol Error: %10lu packets\n", interface_stats_rx.protocol_errors);
             printf("  RX Unknown:        %10lu packets\n", interface_stats_rx.unknown);
             printf("  RX Polled:         %10lu\n", interface_stats_rx.polled);
-            printf("  RX IO Error:       %10lu\n", interface_stats_rx.io_errors);
+            if(interface_stats_rx.io_errors) {
+                printf("  RX IO Error:       %10lu\n", interface_stats_rx.io_errors);
+            }
+            if(interface_stats_rx.no_buffer) {
+                printf("  RX No Buffer:      %10lu\n", interface_stats_rx.no_buffer);
+            }
         }
 
         if(interface->type == LAG_MEMBER_INTERFACE && 
@@ -850,16 +864,21 @@ bbl_stats_json(bbl_stats_s * stats)
         if(interface->type != LAG_INTERFACE) {
             bbl_stats_generate_interface(interface->io.tx, &interface_stats_tx);
             bbl_stats_generate_interface(interface->io.rx, &interface_stats_rx);
+
             json_object_set(jobj_sub, "tx-packets", json_integer(interface_stats_tx.packets));
             json_object_set(jobj_sub, "tx-bytes", json_integer(interface_stats_tx.bytes));
             json_object_set(jobj_sub, "tx-polled", json_integer(interface_stats_tx.polled));
             json_object_set(jobj_sub, "tx-io-error", json_integer(interface_stats_tx.io_errors));
+            json_object_set(jobj_sub, "tx-to-long", json_integer(interface_stats_tx.to_long));
+            json_object_set(jobj_sub, "tx-no-buffer", json_integer(interface_stats_tx.no_buffer));
+
             json_object_set(jobj_sub, "rx-packets", json_integer(interface_stats_rx.packets));
             json_object_set(jobj_sub, "rx-bytes", json_integer(interface_stats_rx.bytes));
             json_object_set(jobj_sub, "rx-protocol-error", json_integer(interface_stats_rx.protocol_errors));
             json_object_set(jobj_sub, "rx-unknown", json_integer(interface_stats_rx.unknown));
             json_object_set(jobj_sub, "rx-polled", json_integer(interface_stats_rx.bytes));
             json_object_set(jobj_sub, "rx-io-error", json_integer(interface_stats_rx.io_errors));
+            json_object_set(jobj_sub, "rx-no-buffer", json_integer(interface_stats_rx.no_buffer));
         }
         if(interface->type == LAG_MEMBER_INTERFACE && 
            interface->lag_member->lacp_state) {

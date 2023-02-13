@@ -83,6 +83,7 @@ typedef struct io_handle_ {
         uint64_t unknown;
         uint64_t protocol_errors;
         uint64_t io_errors;
+        uint64_t to_long;
         uint64_t no_buffer;
         uint64_t polled;
         uint64_t dropped;

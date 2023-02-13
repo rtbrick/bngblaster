@@ -382,3 +382,14 @@ io_packet_mmap_init(io_handle_s *io)
     }
     return true;
 }
+
+void
+io_packet_mmap_set_max_stream_len()
+{
+    uint16_t len = getpagesize() - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
+
+    if(len < g_ctx->config.io_max_stream_len) {
+        LOG(DEBUG, "Set max allowed stream length to %u because of packet_mmap limitations\n", len);
+        g_ctx->config.io_max_stream_len = len;
+    }
+}

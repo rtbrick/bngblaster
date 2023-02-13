@@ -92,14 +92,11 @@
 #define BBL_IF_SEND_ISIS_P2P_HELLO  0x00000004
 #define BBL_IF_SEND_LDP_HELLO       0x00000008
 
-#define DUID_LEN                    10
-
-#define DHCPV6_BUFFER               64
-
-#define BBL_MAX_INTERFACES          32
-
 #define BBL_AVG_SAMPLES             5
-#define DATA_TRAFFIC_MAX_LEN        1920
+#define BBL_MAX_STREAM_OVERHEAD     128
+
+#define DUID_LEN                    10
+#define DHCPV6_BUFFER               64
 
 #define ENABLE_ENDPOINT(_endpoint) \
     if(_endpoint != ENDPOINT_DISABLED) _endpoint = ENDPOINT_ENABLED

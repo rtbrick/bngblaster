@@ -403,8 +403,10 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     if(json_unpack(link, "{s:s}", "io-mode", &s) == 0) {
         if(strcmp(s, "packet_mmap_raw") == 0) {
             link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
+            io_packet_mmap_set_max_stream_len();
         } else if(strcmp(s, "packet_mmap") == 0) {
             link_config->io_mode = IO_MODE_PACKET_MMAP;
+            io_packet_mmap_set_max_stream_len();
         } else if(strcmp(s, "raw") == 0) {
             link_config->io_mode = IO_MODE_RAW;
 #if BNGBLASTER_DPDK
@@ -1600,8 +1602,10 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     value = json_object_get(stream, "length");
     if(value) {
         stream_config->length = json_number_value(value);
-        if(stream_config->length < 76 || stream_config->length > 9000) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->length\n");
+        if(stream_config->length < 76 || 
+           stream_config->length > 9000 ||
+           stream_config->length > g_ctx->config.io_max_stream_len) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->length (must be between 76 and %u)\n", g_ctx->config.io_max_stream_len);
             return false;
         }
     } else {
@@ -2520,8 +2524,10 @@ json_parse_config(json_t *root)
         if(json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if(strcmp(s, "packet_mmap_raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
+                io_packet_mmap_set_max_stream_len();
             } else if(strcmp(s, "packet_mmap") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+                io_packet_mmap_set_max_stream_len();
             } else if(strcmp(s, "raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_RAW;
 #if BNGBLASTER_DPDK
@@ -2535,6 +2541,7 @@ json_parse_config(json_t *root)
             }
         } else {
             g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
+            io_packet_mmap_set_max_stream_len();
         }
         value = json_object_get(section, "io-slots");
         if(json_is_number(value)) {
@@ -2917,6 +2924,7 @@ bbl_config_init_defaults()
     g_ctx->config.tx_interval = 1 * MSEC;
     g_ctx->config.rx_interval = 1 * MSEC;
     g_ctx->config.io_slots = 4096;
+    g_ctx->config.io_max_stream_len = 9000;
     g_ctx->config.qdisc_bypass = true;
     g_ctx->config.sessions = 1;
     g_ctx->config.sessions_max_outstanding = 800;

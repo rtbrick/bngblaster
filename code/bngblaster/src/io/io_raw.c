@@ -64,6 +64,23 @@ io_raw_rx_job(timer_s *timer)
 }
 
 /**
+ * If the message is too long to pass atomically through the underlying protocol, 
+ * the error EMSGSIZE is returned, and the message is not transmitted. In this 
+ * case we must not retry the packet, because it will always fail. 
+ */
+void
+io_raw_tx_lo_long(io_handle_s *io)
+{
+    bbl_interface_s *interface = io->interface;
+    if(io->stats.to_long == 0) {
+        /* Log error for first oversized packet only! */
+        LOG(ERROR, "RAW sendto on interface %s failed because of to long packet (%u byte), please check MTU settings!\n", 
+            interface->name, io->buf_len);
+    }
+    io->stats.to_long++;
+}
+
+/**
  * This job is for RAW TX in main thread!
  */
 void
@@ -113,28 +130,29 @@ io_raw_tx_job(timer_s *timer)
         }
 
         if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-            /* This packet will be retried next interval 
-             * because io->buf_len is not reset to zero. */
-            LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                interface->name, strerror(errno), errno);
-            io->stats.io_errors++;
-            if(pcap) {
-                pcapng_fflush();
+            if(errno == EMSGSIZE) {
+                io_raw_tx_lo_long(io);
+            } else {
+                /* This packet will be retried next interval 
+                 * because io->buf_len is not reset to zero. */
+                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                    interface->name, strerror(errno), errno);
+                io->stats.io_errors++;
+                break;
             }
-            return;
+        } else {
+            /* Dump the packet into pcap file. */
+            if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                        interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+            }
+            io->stats.packets++;
+            io->stats.bytes += io->buf_len;
+
         }
-        
-        /* Dump the packet into pcap file. */
-        if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
-            pcap = true;
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
-        }
-        io->stats.packets++;
-        io->stats.bytes += io->buf_len;
         io->buf_len = 0;
     }
-    io->buf_len = 0;
     if(pcap) {
         pcapng_fflush();
     }
@@ -226,18 +244,22 @@ io_raw_thread_tx_job(timer_s *timer)
             }
         }
         if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-            /* This packet will be retried next interval 
-             * because io->buf_len is not reset to zero. */
-            LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                io->interface->name, strerror(errno), errno);
-            io->stats.io_errors++;
-            return;
+            if(errno == EMSGSIZE) {
+                io_raw_tx_lo_long(io);
+            } else {
+                /* This packet will be retried next interval 
+                 * because io->buf_len is not reset to zero. */
+                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                    io->interface->name, strerror(errno), errno);
+                io->stats.io_errors++;
+                break;
+            }
+        } else {
+            io->stats.packets++;
+            io->stats.bytes += io->buf_len;
         }
-        io->stats.packets++;
-        io->stats.bytes += io->buf_len;
         io->buf_len = 0;
     }
-    io->buf_len = 0;
 }
 
 bool

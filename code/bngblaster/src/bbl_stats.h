@@ -149,6 +149,7 @@ typedef struct bbl_interface_stats_ {
     uint64_t unknown;
     uint64_t protocol_errors;
     uint64_t io_errors;
+    uint64_t to_long;
     uint64_t no_buffer;
     uint64_t polled;
 } bbl_interface_stats_s;
