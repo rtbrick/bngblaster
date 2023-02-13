@@ -310,18 +310,18 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
         if(*(uint32_t*)interface->gateway_mac == 0) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
         }
-        if(arp->code == ARP_REQUEST) {
-            if(arp->target_ip == interface->ip.address) {
-                bbl_network_arp_reply(interface, eth, arp);
-            } else {
-                secondary_ip = g_ctx->config.secondary_ip_addresses;
-                while(secondary_ip) {
-                    if(arp->target_ip == secondary_ip->ip) {
-                        bbl_network_arp_reply(interface, eth, arp);
-                        return;
-                    }
-                    secondary_ip = secondary_ip->next;
+    }
+    if(arp->code == ARP_REQUEST) {
+        if(arp->target_ip == interface->ip.address) {
+            bbl_network_arp_reply(interface, eth, arp);
+        } else {
+            secondary_ip = g_ctx->config.secondary_ip_addresses;
+            while(secondary_ip) {
+                if(arp->target_ip == secondary_ip->ip) {
+                    bbl_network_arp_reply(interface, eth, arp);
+                    return;
                 }
+                secondary_ip = secondary_ip->next;
             }
         }
     }
