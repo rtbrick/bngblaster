@@ -37,8 +37,6 @@ volatile bool g_teardown = false;
 volatile bool g_teardown_request = false;
 volatile uint8_t g_teardown_request_count = 0;
 
-uint16_t g_teardown_countdown = 1;
-
 const char banner[] = "\n"
 "      ____   __   ____         _        __                                  ,/\n"
 "     / __ \\ / /_ / __ ) _____ (_)_____ / /__                              ,'/\n"
@@ -275,7 +273,6 @@ bbl_ctrl_job(timer_s *timer)
     if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
 
     if(g_teardown) {
-        if(g_teardown_countdown) g_teardown_countdown--;
         if(g_ctx->l2tp_tunnels && g_ctx->sessions_terminated >= g_ctx->sessions) {
             bbl_l2tp_stop_all_tunnel();
         }
@@ -299,7 +296,7 @@ bbl_ctrl_job(timer_s *timer)
         } else {
             /* Process teardown list in chunks. */
             rate = g_ctx->config.sessions_stop_rate;
-            while (!CIRCLEQ_EMPTY(&g_ctx->sessions_teardown_qhead)) {
+            while(!CIRCLEQ_EMPTY(&g_ctx->sessions_teardown_qhead)) {
                 session = CIRCLEQ_FIRST(&g_ctx->sessions_teardown_qhead);
                 if(rate > 0) {
                     if(session->session_state != BBL_IDLE) rate--;
@@ -632,19 +629,21 @@ main(int argc, char *argv[])
     /* Start event loop ... */
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
     while(g_teardown_request_count < 10) {
-        if(g_teardown && !(g_ctx->l2tp_tunnels || g_ctx->routing_sessions)) {
+        if(g_teardown) {
             /* If teardown has requested, wait for all L2TP 
              * tunnels and routing sessions to be terminated. */
-            if(g_ctx->sessions) {
-                /* With sessions, wait for all sessions
-                 * to be terminated. */
-                if(g_ctx->sessions_terminated >= g_ctx->sessions) {
+            if(g_ctx->l2tp_tunnels == 0 && g_ctx->routing_sessions == 0) {
+                if(g_ctx->sessions) {
+                    /* With sessions, wait for all sessions
+                     * to be terminated. */
+                    if(g_ctx->sessions_terminated >= g_ctx->sessions) {
+                        break;
+                    }
+                } else {
+                    /* Without sessions, we can stop immediately
+                     * as soon as teardown was requested. */
                     break;
                 }
-            } else {
-                /* Without sessions, we can stop immediately
-                 * as soon as teardown was requested. */
-                break;
             }
         }
         /* Continue with event loop ... */
