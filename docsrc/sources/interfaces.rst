@@ -42,12 +42,12 @@ interface link.
     version: 2
     renderer: networkd
     ethernets:
-        eth1:
+      eth1:
         dhcp4: no
         dhcp6: no
         link-local: []
         mtu: 9000
-        eth2:
+      eth2:
         dhcp4: no
         dhcp6: no
         link-local: []
