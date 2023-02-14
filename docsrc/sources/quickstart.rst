@@ -711,3 +711,57 @@ Now you can start the BNG Blaster with this configuration.
 
     sudo bngblaster -C ldp.json -l ldp -S run.sock -P ldp.pcap
 
+
+Network Traffic
+---------------
+
+In the following example, we create two connected network interfaces 
+and set up RAW traffic streams between them.
+
+**network.json:**
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": [
+                {
+                    "interface": "veth1.1",
+                    "address": "192.168.0.1/24",
+                    "gateway": "192.168.0.2"
+                },
+                {
+                    "interface": "veth1.2",
+                    "address": "192.168.0.2/24",
+                    "gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "streams": [
+            {
+                "name": "S1",
+                "type": "ipv4",
+                "pps": 1,
+                "network-interface": "veth1.1",
+                "destination-ipv4-address": "192.168.0.2"
+            },
+            {
+                "name": "S2",
+                "type": "ipv4",
+                "pps": 1,
+                "network-interface": "veth1.2",
+                "destination-ipv4-address": "192.168.0.1"
+            }
+        ]
+    }
+
+Now you can start the BNG Blaster with stream reports enabled to get extensive
+result of every single stream at the end of the test.
+
+.. code-block:: none
+    
+    $ sudo bngblaster -C network.json -l loss -J report.json -j streams -S run.sock -I
+
+Such a configuration with two network interfaces in the same network can be used to 
+test layer two network QoS configurations or filters. The same would also work through
+a routed network with two network interfaces in different networks. 
