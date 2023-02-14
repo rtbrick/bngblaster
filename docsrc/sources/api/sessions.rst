@@ -29,6 +29,10 @@
      - Disable/stop session traffic
      - 
      - `session-id`
+   * - `session-traffic-reset`
+     - Reset all session traffic streams
+     - 
+     - 
    * - `session-streams`
      - Display session streams
      - `session-id`

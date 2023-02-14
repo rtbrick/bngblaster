@@ -1637,6 +1637,29 @@ bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __a
     return bbl_session_ctrl_traffic(fd, session_id, false);
 }
 
+int
+bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    bbl_stream_s *stream;
+    struct dict_itor *itor;
+    
+    g_ctx->stats.session_traffic_flows_verified = 0;
+
+    /* Iterate over all traffic streams */
+    itor = dict_itor_new(g_ctx->stream_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        stream = (bbl_stream_s*)*dict_itor_datum(itor);
+        if(!stream) {
+            continue;
+        }
+        if(stream->session_traffic) {
+            bbl_stream_reset(stream);
+        }
+    }
+    dict_itor_free(itor);
+    return bbl_ctrl_status(fd, "ok", 200, NULL);    
+}
 
 int
 bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))

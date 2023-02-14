@@ -182,6 +182,7 @@ struct action actions[] = {
     {"session-traffic-start", bbl_session_ctrl_traffic_start, false},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, false},
     {"session-traffic-stop", bbl_session_ctrl_traffic_stop, false},
+    {"session-traffic-reset", bbl_session_ctrl_traffic_reset, false},
     {"session-streams", bbl_stream_ctrl_session, true},
     {"stream-traffic-enabled", bbl_stream_ctrl_traffic_start, false},
     {"stream-traffic-start", bbl_stream_ctrl_traffic_start, false},
