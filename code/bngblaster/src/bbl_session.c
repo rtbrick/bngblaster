@@ -1653,7 +1653,8 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused
         if(!stream) {
             continue;
         }
-        if(stream->session_traffic) {
+        if(stream->session && stream->session_traffic) {
+            stream->session->session_traffic.flows_verified = 0;
             bbl_stream_reset(stream);
         }
     }
