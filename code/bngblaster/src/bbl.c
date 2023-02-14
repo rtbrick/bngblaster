@@ -249,18 +249,17 @@ bbl_ctrl_job(timer_s *timer)
         CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
             network_interface = interface->network;
             while(network_interface) {
-                if(network_interface->gateway_resolve_wait == false) {
-                    continue;
-                }
-                if(ipv6_addr_not_zero(&network_interface->gateway6) && !network_interface->icmpv6_nd_resolved) {
-                    LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n",
-                        network_interface->name, format_ipv6_address(&network_interface->gateway6));
-                    return;
-                }
-                if(network_interface->gateway && !network_interface->arp_resolved) {
-                    LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n",
-                        network_interface->name, format_ipv4_address(&network_interface->gateway));
-                    return;
+                if(network_interface->gateway_resolve_wait) {
+                    if(ipv6_addr_not_zero(&network_interface->gateway6) && !network_interface->icmpv6_nd_resolved) {
+                        LOG(DEBUG, "Wait for %s IPv6 gateway %s to be resolved\n",
+                            network_interface->name, format_ipv6_address(&network_interface->gateway6));
+                        return;
+                    }
+                    if(network_interface->gateway && !network_interface->arp_resolved) {
+                        LOG(DEBUG, "Wait for %s IPv4 gateway %s to be resolved\n",
+                            network_interface->name, format_ipv4_address(&network_interface->gateway));
+                        return;
+                    }
                 }
                 network_interface = network_interface->next;
             }
