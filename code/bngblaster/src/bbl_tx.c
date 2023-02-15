@@ -912,6 +912,9 @@ bbl_encode_padi(bbl_session_s *session)
         pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
         pppoe.host_uniq_len = sizeof(uint64_t);
     }
+    if(g_ctx->config.pppoe_max_payload) {
+        pppoe.max_payload = g_ctx->config.pppoe_max_payload;
+    }
     if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
@@ -951,6 +954,9 @@ bbl_encode_padr(bbl_session_s *session)
     if(session->pppoe_host_uniq) {
         pppoe.host_uniq = (uint8_t*)&session->pppoe_host_uniq;
         pppoe.host_uniq_len = sizeof(uint64_t);
+    }
+    if(g_ctx->config.pppoe_max_payload) {
+        pppoe.max_payload = g_ctx->config.pppoe_max_payload;
     }
     if(session->agent_circuit_id || session->agent_remote_id) {
         access_line.aci = session->agent_circuit_id;
