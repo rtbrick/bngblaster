@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Access Protocols &mdash; BNG Blaster 0.8 documentation</title>
+  <title>Monkey &mdash; BNG Blaster 0.8 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
@@ -19,8 +19,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="PPPoE" href="pppoe.html" />
-    <link rel="prev" title="Interfaces" href="../interfaces.html" /> 
+    <link rel="next" title="Routing Protocols" href="../routing/index.html" />
+    <link rel="prev" title="Legal Interception (LI)" href="li.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,7 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Access Protocols</a><ul>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Access Protocols</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="pppoe.html">PPPoE</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ipoe.html">IPoE</a></li>
 <li class="toctree-l2"><a class="reference internal" href="l2tp.html">L2TP</a></li>
@@ -51,7 +51,7 @@
 <li class="toctree-l2"><a class="reference internal" href="traffic.html">Session Traffic</a></li>
 <li class="toctree-l2"><a class="reference internal" href="multicast.html">Multicast and IPTV</a></li>
 <li class="toctree-l2"><a class="reference internal" href="li.html">Legal Interception (LI)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="monkey.html">Monkey</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Monkey</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
@@ -79,9 +79,10 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Access Protocols</li>
+          <li><a href="index.html">Access Protocols</a> &raquo;</li>
+      <li>Monkey</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/access/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/access/monkey.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -89,28 +90,51 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="access-protocols">
-<h1>Access Protocols<a class="headerlink" href="#access-protocols" title="Permalink to this headline"></a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="pppoe.html">PPPoE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ipoe.html">IPoE</a></li>
-<li class="toctree-l1"><a class="reference internal" href="l2tp.html">L2TP</a></li>
-<li class="toctree-l1"><a class="reference internal" href="l2bsa.html">L2BSA</a></li>
-<li class="toctree-l1"><a class="reference internal" href="traffic.html">Session Traffic</a></li>
-<li class="toctree-l1"><a class="reference internal" href="multicast.html">Multicast and IPTV</a></li>
-<li class="toctree-l1"><a class="reference internal" href="li.html">Legal Interception (LI)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="monkey.html">Monkey</a></li>
-</ul>
+  <section id="monkey">
+<span id="id1"></span><h1>Monkey<a class="headerlink" href="#monkey" title="Permalink to this headline"></a></h1>
+<p>Monkey testing allows testing a BNG for robustness. If enabled,
+it will randomly kill sessions using different methods. For PPPoE
+sessions, it may restart sessions without a termination request or
+PADT (e.g. CPE power outage), gracefully with LCP terminate request,
+flaps IPCP (IPv4) and IP6CP (IPv6) independently, and many more. This
+works similarly for IPoE by flapping DHCPv4 and DHCPv6 sessions.</p>
+<p>Monkey testing must be enabled per access function and starts automatically
+per default, which can be changed using the monkey-autostart option. It is
+also required to enable session auto-reconnect for monkey testing!</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;monkey&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;monkey-autostart&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
 </div>
+<p>It is possible to start and stop the monkey test feature globally using
+the following two <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">commands</span></a>:</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">monkey-start</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">monkey-stop</span></code></p>
+<p>A common test could be to start a test with the maximum number of session and
+monkey test autostart disabled. As soon as all sessions are established, start
+monkey testing with the corresponding start <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> and keep it running.
+After 24 hours stop monkey testing with the corresponding stop <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>
+and wait for all sessions to become established again. The device under test should
+fully recover without hanging sessions, crashes or memory leaks.</p>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../interfaces.html" class="btn btn-neutral float-left" title="Interfaces" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="pppoe.html" class="btn btn-neutral float-right" title="PPPoE" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="li.html" class="btn btn-neutral float-left" title="Legal Interception (LI)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../routing/index.html" class="btn btn-neutral float-right" title="Routing Protocols" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

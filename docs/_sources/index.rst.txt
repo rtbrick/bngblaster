@@ -102,6 +102,7 @@ Contents
    configuration/index
    api/index
    controller
+   performance
    troubleshooting
    faq
 

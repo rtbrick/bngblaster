@@ -47,7 +47,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#interface-settings">Interface Settings</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#links">Links</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#link-aggregation-lag">Link Aggregation (LAG)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#multithreaded-interfaces">Multithreaded Interfaces</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#interface-functions">Interface Functions</a><ul>
@@ -77,6 +76,7 @@
 <li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
 </ul>
@@ -441,59 +441,9 @@ for all kinds of interface functions.</p>
 </pre></div>
 </div>
 </section>
-<section id="multithreaded-interfaces">
-<span id="io-modes"></span><h3>Multithreaded Interfaces<a class="headerlink" href="#multithreaded-interfaces" title="Permalink to this headline"></a></h3>
-<p>The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
-With this default behavior, you can achieve between 100.000 and 200.000 PPS bidirectional
-traffic in most environments. Depending on the actual setup, this can be even less or much
-more, which is primarily driven by the single-thread performance of the given CPU.</p>
-<p>Those numbers can be increased by splitting the workload over multiple I/O worker threads.
-Every I/O thread will handle only one interface and direction. It is also possible to start
-multiple threads for the same interface and direction.</p>
-<p>The number of I/O threads can be configured globally for all interfaces or per interface link.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<p>The configuration per interface link allows asymmetric thread pools. Assuming you would send
-massive unidirectional traffic from eth1 to eth2. In such a scenario, you would set up multiple
-TX threads and one RX thread on eth1. For eth2 you would do the opposite, meaning to set up
-multiple RX threads but only one TX thread.</p>
-<p>It is also possible to start dedicated threads for TX but remain RX in the main thread or
-vice versa by setting the number of threads to zero (default).</p>
-<p>With multithreading, you should be able to scale up to 1 million PPS bidirectional, depending on
-the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over
-at least 4 TX threads to verify all prefixes of a BGP full table for example.</p>
-<p>The configured traffic streams are automatically balanced over all TX threads of the corresponding
-interfaces but a single stream can’t be split over multiple threads to prevent re-ordering issues.</p>
-<p>Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with
-CPU cache coherence, which should apply to all modern CPU architectures. TX threads are not allowed
-for LAG (Link Aggregation) interfaces but RX threads are supported. It is also not possible to capture
-traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
-interfaces.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The BNG Blaster is currently tested for up to 1 million PPS with 1 million flows, which is not a
-hard limitation but everything above should be considered experimental. It is also possible to
-scale beyond using DPDK-enabled interfaces.</p>
-</div>
-</section>
 </section>
 <section id="interface-functions">
-<h2>Interface Functions<a class="headerlink" href="#interface-functions" title="Permalink to this headline"></a></h2>
+<span id="io-modes"></span><h2>Interface Functions<a class="headerlink" href="#interface-functions" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster supports three types of interface functions,
 <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">access</span></code>, and <code class="docutils literal notranslate"><span class="pre">a10nsp</span></code>.</p>
 <img alt="BNG Blaster Interfaces" src="_images/bbl_interfaces.png" />
