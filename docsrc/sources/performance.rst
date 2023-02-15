@@ -77,6 +77,10 @@ The following settings are recommended for most tests with 1M PPS or beyond.
         }
     }
 
+It is also recommended to increase the hardware and software queue size of your
+network interface links to the maximum for higher throughput as explained 
+in the :ref:`Operating System Settings <interfaces>`. 
+
 The packet receives performance is also limited by the abilities of your network 
 interfaces to properly distribute the traffic over multiple hardware queues. Some
 network interfaces are not able to distribute traffic based on VLAN or PPPoE session
