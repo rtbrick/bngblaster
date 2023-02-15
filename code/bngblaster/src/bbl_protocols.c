@@ -1451,6 +1451,15 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
             BUMP_WRITE_BUFFER(buf, len, pppoe->host_uniq_len);
             pppoe_len += pppoe->host_uniq_len;
         }
+        if(pppoe->max_payload) {
+            *(uint16_t*)buf = htobe16(PPPOE_TAG_MAX_PAYLOAD);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(sizeof(uint16_t));
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(pppoe->max_payload);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            pppoe_len += 6;
+        }
         if(pppoe->ac_cookie) {
             *(uint16_t*)buf = htobe16(PPPOE_TAG_AC_COOKIE);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));

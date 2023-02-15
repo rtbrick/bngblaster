@@ -1990,6 +1990,10 @@ json_parse_config(json_t *root)
         if(json_is_boolean(value)) {
             g_ctx->config.pppoe_host_uniq = json_boolean_value(value);
         }
+        value = json_object_get(section, "max-payload");
+        if(json_is_number(value)) {
+            g_ctx->config.pppoe_max_payload = json_number_value(value);
+        }
         value = json_object_get(section, "vlan-priority");
         if(json_is_number(value)) {
             g_ctx->config.pppoe_vlan_priority = json_number_value(value);

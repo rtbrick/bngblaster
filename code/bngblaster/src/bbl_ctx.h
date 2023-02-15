@@ -229,6 +229,7 @@ typedef struct bbl_ctx_
         uint32_t pppoe_session_time;
         uint16_t pppoe_discovery_timeout;
         uint16_t pppoe_discovery_retry;
+        uint16_t pppoe_max_payload;
         uint8_t  pppoe_vlan_priority;
         char    *pppoe_service_name;
         bool     pppoe_reconnect;
