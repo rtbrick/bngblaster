@@ -143,6 +143,9 @@ performance increases to 320K PPS. The max burst size is should not be increased
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<p>It is also recommended to increase the hardware and software queue size of your
+network interface links to the maximum for higher throughput as explained
+in the <a class="reference internal" href="interfaces.html#interfaces"><span class="std std-ref">Operating System Settings</span></a>.</p>
 <p>The packet receives performance is also limited by the abilities of your network
 interfaces to properly distribute the traffic over multiple hardware queues. Some
 network interfaces are not able to distribute traffic based on VLAN or PPPoE session
