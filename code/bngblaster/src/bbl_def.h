@@ -180,12 +180,13 @@ typedef enum {
  */
 typedef enum {
     BBL_PPP_DISABLED    = 0,
-    BBL_PPP_CLOSED      = 1,
-    BBL_PPP_INIT        = 2,
-    BBL_PPP_LOCAL_ACK   = 3,
-    BBL_PPP_PEER_ACK    = 4,
-    BBL_PPP_OPENED      = 5,
-    BBL_PPP_TERMINATE   = 6,
+    BBL_PPP_REJECTED    = 1,
+    BBL_PPP_CLOSED      = 2,
+    BBL_PPP_INIT        = 3,
+    BBL_PPP_LOCAL_ACK   = 4,
+    BBL_PPP_PEER_ACK    = 5,
+    BBL_PPP_OPENED      = 6,
+    BBL_PPP_TERMINATE   = 7,
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
 

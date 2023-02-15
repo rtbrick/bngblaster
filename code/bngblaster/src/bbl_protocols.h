@@ -650,6 +650,7 @@ typedef struct bbl_lcp_ {
     uint8_t     options_len;
     uint16_t    mru;
     uint16_t    auth;
+    uint16_t    protocol;
     uint32_t    magic;
     uint8_t     vendor_oui[OUI_LEN];
     uint8_t     vendor_kind;
