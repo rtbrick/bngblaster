@@ -448,28 +448,19 @@ bbl_session_reset(bbl_session_s *session) {
 static bool
 bbl_session_start(bbl_session_s *session)
 {
-    if(g_teardown) {
+    if(g_teardown || session->session_state != BBL_TERMINATED) {
         return false;
     }
 
-    /* Reset session */
-    if(session->session_state == BBL_TERMINATED) {
-        session->session_state = BBL_IDLE;
-        bbl_session_reset(session);
-        if(g_ctx->sessions_terminated) {
-            g_ctx->sessions_terminated--;
-        }
+    /* Reset session */    
+    session->session_state = BBL_IDLE;
+    bbl_session_reset(session);
+    if(g_ctx->sessions_terminated) {
+        g_ctx->sessions_terminated--;
     }
-
     /* Put on idle list */
-    if(session->session_state == BBL_IDLE &&
-       !CIRCLEQ_NEXT(session, session_idle_qnode) &&
-       !CIRCLEQ_PREV(session, session_idle_qnode)) {
-        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
-        return true;
-    }
-
-    return false;
+    CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+    return true;
 }
 
 void
@@ -489,11 +480,16 @@ bbl_session_reconnect_job(timer_s *timer) {
  * @param state new session state
  */
 void
-bbl_session_update_state(bbl_session_s *session, session_state_t state)
+bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
 {
-    if(session->session_state != state) {
+    session_state_t old_state = session->session_state;
+
+    if(old_state != new_state) {
         /* State has changed ... */
-        if(session->session_state == BBL_ESTABLISHED) {
+        session->session_state = new_state;
+        assert(session->session_state > BBL_IDLE && session->session_state < BBL_MAX);
+
+        if(old_state == BBL_ESTABLISHED) {
             /* Decrement sessions established if old state is established. */
             if(g_ctx->sessions_established) {
                 g_ctx->sessions_established--;
@@ -503,17 +499,23 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             ENABLE_ENDPOINT(session->endpoint.ipv6);
             ENABLE_ENDPOINT(session->endpoint.ipv6pd);
         }
-        if(state == BBL_ESTABLISHED) {
-            /* Increment sessions established and decrement outstanding
-             * if new state is established. */
-            g_ctx->sessions_established++;
-            if(g_ctx->sessions_established > g_ctx->sessions_established_max) g_ctx->sessions_established_max = g_ctx->sessions_established;
+        
+        /* Update outstanding session count. */
+        if(old_state > BBL_IDLE && old_state < BBL_ESTABLISHED && new_state >= BBL_ESTABLISHED) {
+            assert(g_ctx->sessions_outstanding);
             if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
+        }
+        
+        if(new_state == BBL_ESTABLISHED) {
+            /* Increment sessions established if new state is established. */
+            g_ctx->sessions_established++;
+            assert(g_ctx->sessions_established <= g_ctx->sessions);
+            if(g_ctx->sessions_established > g_ctx->sessions_established_max) g_ctx->sessions_established_max = g_ctx->sessions_established;
             if(g_ctx->sessions_established == g_ctx->sessions) {
                 LOG_NOARG(INFO, "ALL SESSIONS ESTABLISHED\n");
                 clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_established);
             }
-        } else if(state == BBL_PPP_TERMINATING) {
+        } else if(new_state == BBL_PPP_TERMINATING) {
             if(session->ipcp_state > BBL_PPP_DISABLED) {
                 session->ipcp_state = BBL_PPP_CLOSED;
             }
@@ -523,7 +525,10 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             ENABLE_ENDPOINT(session->endpoint.ipv4);
             ENABLE_ENDPOINT(session->endpoint.ipv6);
             ENABLE_ENDPOINT(session->endpoint.ipv6pd);
-        } else if(state == BBL_TERMINATED) {
+        } else if(new_state == BBL_TERMINATED) {
+            /* Increment sessions terminated if new state is terminated */
+            g_ctx->sessions_terminated++;
+            assert(g_ctx->sessions_terminated <= g_ctx->sessions);
             if(session->dhcp_established) {
                 session->dhcp_established = false;
                 g_ctx->dhcp_established--;
@@ -578,10 +583,11 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
             /* Cleanup A10NSP session */
             bbl_a10nsp_session_free(session);
 
-            /* Increment sessions terminated if new state is terminated */
-            g_ctx->sessions_terminated++;
-
-            if(!g_teardown) {
+            if(g_teardown) {
+                if(g_ctx->sessions_terminated == g_ctx->sessions) {
+                    LOG_NOARG(INFO, "ALL SESSIONS TERMINATED\n");
+                }
+            } else {
                 /* Increment flap counter */
                 session->stats.flapped++;
                 g_ctx->sessions_flapped++;
@@ -594,13 +600,11 @@ bbl_session_update_state(bbl_session_s *session, session_state_t state)
                         timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
                                   session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
                     } else {
-                        session->session_state = state;
                         bbl_session_start(session);
                     }
                 }
             }
         }
-        session->session_state = state;
     }
 }
 
@@ -935,10 +939,15 @@ bbl_sessions_init()
         }
         session->access_interface = access_config->access_interface;
         session->network_interface = bbl_network_interface_get(access_config->network_interface);
-        session->session_state = BBL_IDLE;
+        
         if(g_ctx->config.sessions_autostart) {
+            session->session_state = BBL_IDLE;
             CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+        } else {
+            session->session_state = BBL_TERMINATED;
+            g_ctx->sessions_terminated++;
         }
+
         g_ctx->sessions++;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             g_ctx->sessions_pppoe++;
@@ -1437,7 +1446,7 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
     }
 
     if(session_id) {
-        /* Stop/disconnect single matching session ... */
+        /* Stop/start single matching session ... */
         session = bbl_session_get(session_id);
         if(session) {
             if(restart) {
@@ -1457,7 +1466,7 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
     } else {
-        /* Stop/disconnect all sessions ... */
+        /* Stop/start all sessions ... */
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session) {

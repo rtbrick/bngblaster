@@ -269,8 +269,6 @@ bbl_ctrl_job(timer_s *timer)
         clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_resolved);
     }
 
-    if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
-
     if(g_teardown) {
         if(g_ctx->l2tp_tunnels && g_ctx->sessions_terminated >= g_ctx->sessions) {
             bbl_l2tp_stop_all_tunnel();
