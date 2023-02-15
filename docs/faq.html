@@ -92,6 +92,11 @@ is configured for IPv4 only but the BNG Blaster is configured for IPv4 and IPv6.
 <p><strong>DHCPv6 does not start for PPPoE sessions?</strong></p>
 <p>The BNG Blaster expects an ICMPv6 router-advertisement with an other-config flag
 before it starts sending DHCPv6 within a PPPoE session.</p>
+<p><strong>Why is stream length limited to 3936 bytes?</strong></p>
+<p>The stream length limit is dynamically calculated depending on the configured
+IO mode. The default mode using Packet MMAP limits the stream length to pagesize
+minus internal header and overhead (ethernet, MPLS, …) which results in 3936 bytes
+on most systems. The IO mode RAW would allow streams with up to 9000 bytes.</p>
 </section>
 
 

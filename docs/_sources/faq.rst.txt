@@ -20,3 +20,9 @@ The idea here is to prevent potential failures will be overseen.
 The BNG Blaster expects an ICMPv6 router-advertisement with an other-config flag
 before it starts sending DHCPv6 within a PPPoE session.
 
+**Why is stream length limited to 3936 bytes?**
+
+The stream length limit is dynamically calculated depending on the configured
+IO mode. The default mode using Packet MMAP limits the stream length to pagesize
+minus internal header and overhead (ethernet, MPLS, ...) which results in 3936 bytes 
+on most systems. The IO mode RAW would allow streams with up to 9000 bytes. 
