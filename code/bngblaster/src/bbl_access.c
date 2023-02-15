@@ -914,6 +914,19 @@ bbl_access_lcp_echo(timer_s *timer)
     }
 }
 
+static bool
+bbl_access_ncp_success(uint8_t state)
+{
+    switch(state) {
+        case BBL_PPP_DISABLED:
+        case BBL_PPP_REJECTED:
+        case BBL_PPP_OPENED:
+            return true;
+        default:
+            return false;
+    }
+}
+
 /**
  * bbl_access_rx_established_pppoe
  * 
@@ -926,13 +939,10 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
                                 bbl_session_s *session, 
                                 bbl_ethernet_header_s *eth)
 {
-    bool ipcp = false;
-    bool ip6cp = false;
-
     UNUSED(interface);
 
-    if(session->ipcp_state == BBL_PPP_DISABLED || session->ipcp_state == BBL_PPP_OPENED) ipcp = true;
-    if(session->ip6cp_state == BBL_PPP_DISABLED || session->ip6cp_state == BBL_PPP_OPENED) ip6cp = true;
+    bool ipcp = bbl_access_ncp_success(session->ipcp_state);
+    bool ip6cp = bbl_access_ncp_success(session->ip6cp_state);
 
     if(ipcp && ip6cp) {
         if(session->session_state != BBL_ESTABLISHED) {
@@ -1400,6 +1410,19 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             session->send_requests = BBL_SEND_DISCOVERY;
             bbl_session_update_state(session, BBL_TERMINATING);
             bbl_session_tx_qnode_insert(session);
+            break;
+        case PPP_CODE_PROT_REJECT:
+            if(lcp->protocol == PROTOCOL_IPCP) {
+                session->ipcp_state = BBL_PPP_REJECTED;
+                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IPCP rejected\n", session->session_id);
+            } else if(lcp->protocol == PROTOCOL_IP6CP) {
+                session->ip6cp_state = BBL_PPP_REJECTED;
+                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IP6CP rejected\n", session->session_id);
+            } else {
+                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol 0x%04x rejected\n", 
+                    session->session_id, lcp->protocol);
+            }
+            bbl_access_rx_established_pppoe(interface, session, eth);
             break;
         default:
             session->lcp_response_code = PPP_CODE_CODE_REJECT;

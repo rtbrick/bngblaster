@@ -3584,6 +3584,12 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
             lcp->vendor_value = buf;
             lcp->vendor_value_len = lcp_len;
             break;
+        case PPP_CODE_PROT_REJECT:
+            if(lcp_len < 2) {
+                return DECODE_ERROR;
+            }
+            lcp->protocol = be16toh(*(uint16_t*)buf);
+            break;
         case PPP_CODE_ECHO_REQUEST:
         case PPP_CODE_ECHO_REPLY:
             if(lcp_len>=4) {

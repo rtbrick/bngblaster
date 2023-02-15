@@ -41,6 +41,7 @@ ppp_state_string(uint32_t state)
 {
     switch(state) {
         case BBL_PPP_DISABLED: return "Disabled";
+        case BBL_PPP_REJECTED: return "Rejected";
         case BBL_PPP_CLOSED: return "Closed";
         case BBL_PPP_INIT: return "Init";
         case BBL_PPP_LOCAL_ACK: return "Local-Ack";
