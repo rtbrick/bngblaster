@@ -89,7 +89,7 @@ set_ring(io_handle_s *io, int slots) {
         return false;
     }
     io->ring = mmap(0, ring_size, PROT_READ|PROT_WRITE, MAP_SHARED, io->fd, 0);
-    if(!io->ring) {
+    if(io->ring == NULL || io->ring == MAP_FAILED) {
         return false;
     }
     return true;

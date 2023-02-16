@@ -373,6 +373,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     json_t *value, *sub = NULL;
     char *s = NULL;
     int i, size;
+    double number;
 
     if(json_unpack(link, "{s:s}", "interface", &s) == 0) {
         if(link_present(s) || lag_present(s)) {
@@ -423,18 +424,33 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     }
     value = json_object_get(link, "io-slots");
     if(json_is_number(value)) {
-        link_config->io_slots_tx = json_number_value(value);
-        link_config->io_slots_rx = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 32 || number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for links->io-slots\n");
+            return false;
+        }
+        link_config->io_slots_tx = number;
+        link_config->io_slots_rx = number;
     } else {
         link_config->io_slots_tx = g_ctx->config.io_slots;
         link_config->io_slots_rx = g_ctx->config.io_slots;
     }
     value = json_object_get(link, "io-slots-tx");
     if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 32 || number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for links->io-slots-tx\n");
+            return false;
+        }
         link_config->io_slots_tx = json_number_value(value);
     }
     value = json_object_get(link, "io-slots-rx");
     if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 32 || number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for links->io-slots-rx\n");
+            return false;
+        }
         link_config->io_slots_rx = json_number_value(value);
     }
     value = json_object_get(link, "qdisc-bypass");
@@ -2549,6 +2565,11 @@ json_parse_config(json_t *root)
         }
         value = json_object_get(section, "io-slots");
         if(json_is_number(value)) {
+            number = json_number_value(value);
+            if(number < 32 || number >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for interfaces->io-slots\n");
+                return false;
+            }
             g_ctx->config.io_slots = json_number_value(value);
         }
 
