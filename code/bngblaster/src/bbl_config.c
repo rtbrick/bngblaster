@@ -976,6 +976,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         number = json_number_value(value);
         if(number >= UINT16_MAX) {
             fprintf(stderr, "JSON config error: Invalid value for access->session-group-id\n");
+            return false;
         }
         access_config->session_group_id = number;
     }
@@ -985,6 +986,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         number = json_number_value(value);
         if(number >= UINT16_MAX) {
             fprintf(stderr, "JSON config error: Invalid value for access->stream-group-id\n");
+            return false;
         }
         access_config->stream_group_id = number;
     }
@@ -2979,7 +2981,7 @@ bbl_config_init_defaults()
     g_ctx->config.ip6cp_enable = true;
     g_ctx->config.ip6cp_conf_request_timeout = 5;
     g_ctx->config.ip6cp_conf_request_retry = 10;
-    g_ctx->config.dhcp_enable = false;
+    g_ctx->config.dhcp_enable = true;
     g_ctx->config.dhcp_access_line = true;
     g_ctx->config.dhcp_timeout = 5;
     g_ctx->config.dhcp_retry = 10;
