@@ -140,9 +140,10 @@ io_socket_open(io_handle_s *io) {
         if(!set_ring(io, slots)) {
             return false;
         }
-        if(!set_fanout(io)) {
-            return false;
-        }
+    }
+
+    if(!set_fanout(io)) {
+        return false;
     }
     return true;
 }
