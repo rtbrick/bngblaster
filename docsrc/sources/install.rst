@@ -146,7 +146,7 @@ Build with DPDK Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 The following steps are required to build the BNG Blaster with experimental
-:ref:`DPDK <dpdk-interface>` support. 
+:ref:`DPDK <dpdk>` support. 
 
 .. note::
 

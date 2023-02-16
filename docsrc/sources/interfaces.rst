@@ -546,83 +546,21 @@ and the user space. This low overhead abstraction allows us to transmit and rece
 traffic without doing expensive system calls. Sending and transmitting traffic via 
 Packet MMAP is as easy as copying a packet into a buffer and setting a flag.
 
+Using I/O mode ``packet_mmap_raw`` or ``packet_mmap`` limits the maximum
+stream packet length to 3936 bytes on most systems. The actual limit is dynamically
+calcualted based on pagesize (typically 4096) minus overhead. 
+
 RAW
 ~~~
 
 `RAW Packet Sockets <https://man7.org/linux/man-pages/man7/packet.7.html>`_. 
-are used to receive or send raw packets at the device driver (OSI Layer 2) level.
+are used to receive or send raw packets at the device driver (OSI layer 2) level.
 
-
-.. _dpdk-interface:
+The I/O mode ``raw`` allows steam packet lengths of up to 9000 bytes (layer 3). 
 
 DPDK
 ~~~~
 
-Using the experimental `DPDK <https://www.dpdk.org/>`_ support requires building 
-the BNG Blaster from sources with DPDK enabled as explained 
-in the corresponding :ref:`installation <install-dpdk>` section. 
-
-.. note::
-
-    The official BNG Blaster Debian release packages do not support 
-    `DPDK <https://www.dpdk.org/>`_!
-
-.. code-block:: json
-
-    {
-        "interfaces": {
-            "tx-interval": 0.1,
-            "links": [
-                {
-                    "interface": "0000:23:00.0",
-                    "io-mode": "dpdk",
-                    "rx-threads": 4,
-                    "rx-cpuset": [4,5,6,7],
-                    "tx-threads": 3,
-                    "tx-cpuset": [1,2,3]
-                },
-                {
-                    "interface": "0000:23:00.2",
-                    "io-mode": "dpdk",
-                    "rx-threads": 4,
-                    "rx-cpuset": [12,13,14,15],
-                    "tx-threads": 3,
-                    "tx-cpuset": [9,10,11]
-                }
-            ],
-            "a10nsp": [
-                {
-                    "__comment__": "PPPoE Server",
-                    "interface": "0000:23:00.0"
-                }
-            ],
-            "access": [
-                {
-                    "__comment__": "PPPoE Client",
-                    "interface": "0000:23:00.2",
-                    "type": "pppoe",
-                    "outer-vlan-min": 1,
-                    "outer-vlan-max": 4000,
-                    "inner-vlan-min": 1,
-                    "inner-vlan-max": 4000,
-                    "stream-group-id": 1
-                }
-            ]
-        },
-        "pppoe": {
-            "reconnect": true
-        },
-        "dhcpv6": {
-            "enable": false
-        },
-        "streams": [
-            {
-                "stream-group-id": 1,
-                "name": "S1",
-                "type": "ipv4",
-                "direction": "both",
-                "pps": 1000,
-                "a10nsp-interface": "0000:23:00.0"
-            }
-        ]
-    }
+`DPDK <https://www.dpdk.org/>`_ support should be considered as experimental. 
+This I/O mode is detailed explained in the :ref:`DPDK <dpdk>` section of the 
+:ref:`performance guide <performance>`. 

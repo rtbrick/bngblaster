@@ -92,3 +92,85 @@ cores, this could be the reason.
 
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
+
+.. _dpdk:
+
+DPDK
+----
+
+Using the experimental `DPDK <https://www.dpdk.org/>`_ support requires building 
+the BNG Blaster from sources with DPDK enabled as explained 
+in the corresponding :ref:`installation <install-dpdk>` section. 
+
+.. note::
+
+    The official BNG Blaster Debian release packages do not support 
+    `DPDK <https://www.dpdk.org/>`_!
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "tx-interval": 0.1,
+            "rx-interval": 0.1,
+            "links": [
+                {
+                    "interface": "0000:23:00.0",
+                    "io-mode": "dpdk",
+                    "rx-threads": 4,
+                    "rx-cpuset": [4,5,6,7],
+                    "tx-threads": 3,
+                    "tx-cpuset": [1,2,3]
+                },
+                {
+                    "interface": "0000:23:00.2",
+                    "io-mode": "dpdk",
+                    "rx-threads": 4,
+                    "rx-cpuset": [12,13,14,15],
+                    "tx-threads": 3,
+                    "tx-cpuset": [9,10,11]
+                }
+            ],
+            "a10nsp": [
+                {
+                    "__comment__": "PPPoE Server",
+                    "interface": "0000:23:00.0"
+                }
+            ],
+            "access": [
+                {
+                    "__comment__": "PPPoE Client",
+                    "interface": "0000:23:00.2",
+                    "type": "pppoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan-min": 1,
+                    "inner-vlan-max": 4000,
+                    "stream-group-id": 1
+                }
+            ]
+        },
+        "pppoe": {
+            "reconnect": true
+        },
+        "dhcpv6": {
+            "enable": false
+        },
+        "streams": [
+            {
+                "stream-group-id": 1,
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "both",
+                "pps": 1000,
+                "a10nsp-interface": "0000:23:00.0"
+            }
+        ]
+    }
+
+Hardware
+--------
+
+Intel® Ethernet 700 Series
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
