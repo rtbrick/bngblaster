@@ -168,9 +168,3 @@ in the corresponding :ref:`installation <install-dpdk>` section.
         ]
     }
 
-Hardware
---------
-
-Intel® Ethernet 700 Series
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
