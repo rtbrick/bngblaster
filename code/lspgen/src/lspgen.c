@@ -612,38 +612,40 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
             ctx->authentication_key, val2key(isis_auth_names, ctx->authentication_type));
     }
     if (!ctx->no_ipv4) {
-    end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_node_prefix, ctx->num_nodes);
-    LOG(NORMAL, " IPv4 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
-        format_ipv4_prefix(&ctx->ipv4_node_prefix),
-        format_ipv4_prefix(end_prefix4), ctx->num_nodes);
+        end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_node_prefix, ctx->num_nodes);
+        LOG(NORMAL, " IPv4 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
+            format_ipv4_prefix(&ctx->ipv4_node_prefix),
+            format_ipv4_prefix(end_prefix4), ctx->num_nodes);
 
-    end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_link_prefix, ctx->num_nodes*2);
-    LOG(NORMAL, " IPv4 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
-        format_ipv4_prefix(&ctx->ipv4_link_prefix),
-        format_ipv4_prefix(end_prefix4), ctx->num_nodes*2);
+        end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_link_prefix, ctx->num_nodes*2);
+        LOG(NORMAL, " IPv4 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
+            format_ipv4_prefix(&ctx->ipv4_link_prefix),
+            format_ipv4_prefix(end_prefix4), ctx->num_nodes*2);
 
-    end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_ext_prefix, ctx->num_ext);
-    LOG(NORMAL, " IPv4 External Base Prefix %s, End Prefix %s, %u prefixes\n",
-        format_ipv4_prefix(&ctx->ipv4_ext_prefix),
-        format_ipv4_prefix(end_prefix4), ctx->num_ext);
+        end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_ext_prefix, ctx->num_ext);
+        LOG(NORMAL, " IPv4 External Base Prefix %s, End Prefix %s, %u prefixes\n",
+            format_ipv4_prefix(&ctx->ipv4_ext_prefix),
+            format_ipv4_prefix(end_prefix4), ctx->num_ext);
     }
     if (!ctx->no_ipv6) {
-    end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_node_prefix, ctx->num_nodes);
-    LOG(NORMAL, " IPv6 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
-        format_ipv6_prefix(&ctx->ipv6_node_prefix),
-        format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+        end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_node_prefix, ctx->num_nodes);
+        LOG(NORMAL, " IPv6 Node Base Prefix %s, End Prefix %s, %u prefixes\n",
+            format_ipv6_prefix(&ctx->ipv6_node_prefix),
+            format_ipv6_prefix(end_prefix6), ctx->num_nodes);
 
-    end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_link_prefix, ctx->num_nodes*2);
-    LOG(NORMAL, " IPv6 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
-        format_ipv6_prefix(&ctx->ipv6_link_prefix),
-        format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+        end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_link_prefix, ctx->num_nodes*2);
+        LOG(NORMAL, " IPv6 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
+            format_ipv6_prefix(&ctx->ipv6_link_prefix),
+            format_ipv6_prefix(end_prefix6), ctx->num_nodes);
 
-    end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_ext_prefix, ctx->num_ext);
-    LOG(NORMAL, " IPv6 External Base Prefix %s, End Prefix %s, %u prefixes\n",
-        format_ipv6_prefix(&ctx->ipv6_ext_prefix),
-        format_ipv6_prefix(end_prefix6), ctx->num_ext);
+        end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_ext_prefix, ctx->num_ext);
+        LOG(NORMAL, " IPv6 External Base Prefix %s, End Prefix %s, %u prefixes\n",
+            format_ipv6_prefix(&ctx->ipv6_ext_prefix),
+            format_ipv6_prefix(end_prefix6), ctx->num_ext);
     }
-    LOG(NORMAL, " SRGB base %u, range %u\n", ctx->srgb_base, ctx->srgb_range);
+    if (!ctx->no_sr) {
+        LOG(NORMAL, " SRGB base %u, range %u\n", ctx->srgb_base, ctx->srgb_range);
+    }
 }
 
 /*
