@@ -62,5 +62,5 @@ end
 
 -- load the udp.port table
 udp_table = DissectorTable.get("udp.port")
--- register our protocol to handle udp port 65056
+-- register our protocol to handle udp port 7777
 udp_table:add(65056,bbl_proto)

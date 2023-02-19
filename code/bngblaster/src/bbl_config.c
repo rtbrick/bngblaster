@@ -1607,7 +1607,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->src_port = json_number_value(value);
     } else {
-        stream_config->src_port = 0;
+        stream_config->src_port = BBL_UDP_PORT;
     }
 
     value = json_object_get(stream, "destination-port");

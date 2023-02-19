@@ -21,17 +21,6 @@ const char g_session_traffic_ipv6[] = "session-ipv6";
 const char g_session_traffic_ipv6pd[] = "session-ipv6pd";
 endpoint_state_t g_endpoint = ENDPOINT_ACTIVE;
 
-static uint16_t
-bbl_stream_get_port()
-{
-    static uint16_t port = 0;
-    port++;
-    if(port < 10000 || port > 19999) {
-        port = 10000;
-    }
-    return port;
-}
-
 static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
 {
@@ -97,11 +86,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
-    if(config->src_port) {
-        udp.src = config->src_port;
-    } else {
-        udp.src = bbl_stream_get_port();
-    }
+    udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
@@ -237,11 +222,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
-    if(config->src_port) {
-        udp.src = config->src_port;
-    } else {
-        udp.src = bbl_stream_get_port();
-    }
+    udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
@@ -355,11 +336,8 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner_priority = config->vlan_priority;
-    if(config->src_port) {
-        udp.src = config->src_port;
-    } else {
-        udp.src = bbl_stream_get_port();
-    }
+
+    udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
@@ -482,11 +460,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_inner_priority = config->vlan_priority;
     eth.vlan_outer_priority = config->vlan_priority;
-    if(config->src_port) {
-        udp.src = config->src_port;
-    } else {
-        udp.src = bbl_stream_get_port();
-    }
+
+    udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
@@ -621,11 +596,8 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             mpls2.ttl = config->tx_mpls2_ttl;
         }
     }
-    if(config->src_port) {
-        udp.src = config->src_port;
-    } else {
-        udp.src = bbl_stream_get_port();
-    }
+
+    udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
@@ -784,11 +756,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     ipv4.tos = config->priority;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
-    if(config->src_port) {
-        udp.src = config->src_port;
-    } else {
-        udp.src = bbl_stream_get_port();
-    }
+    udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
@@ -1893,7 +1861,7 @@ bbl_stream_init() {
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv4_pps;
         config->dst_port = BBL_UDP_PORT;
-        //config->src_port = BBL_UDP_PORT;
+        config->src_port = BBL_UDP_PORT;
         config->ipv4_network_address = g_ctx->config.session_traffic_ipv4_address;
         g_ctx->config.stream_config_session_ipv4_up = config;
         /* Downstream */
@@ -1905,7 +1873,7 @@ bbl_stream_init() {
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv4_pps;
         config->dst_port = BBL_UDP_PORT;
-        //config->src_port = BBL_UDP_PORT;
+        config->src_port = BBL_UDP_PORT;
         config->ipv4_network_address = g_ctx->config.session_traffic_ipv4_address;
         if(g_ctx->config.session_traffic_ipv4_label) {
             config->tx_mpls1 = true;
@@ -1924,7 +1892,7 @@ bbl_stream_init() {
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6_pps;
         config->dst_port = BBL_UDP_PORT;
-        //config->src_port = BBL_UDP_PORT;
+        config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
         g_ctx->config.stream_config_session_ipv6_up = config;
         /* Downstream */
@@ -1936,7 +1904,7 @@ bbl_stream_init() {
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6_pps;
         config->dst_port = BBL_UDP_PORT;
-        //config->src_port = BBL_UDP_PORT;
+        config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
         if(g_ctx->config.session_traffic_ipv6_label) {
             config->tx_mpls1 = true;
@@ -1955,7 +1923,7 @@ bbl_stream_init() {
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6pd_pps;
         config->dst_port = BBL_UDP_PORT;
-        //config->src_port = BBL_UDP_PORT;
+        config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
         g_ctx->config.stream_config_session_ipv6pd_up = config;
         /* Downstream */
@@ -1967,7 +1935,7 @@ bbl_stream_init() {
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6pd_pps;
         config->dst_port = BBL_UDP_PORT;
-        //config->src_port = BBL_UDP_PORT;
+        config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
         if(g_ctx->config.session_traffic_ipv6_label) {
             config->tx_mpls1 = true;
