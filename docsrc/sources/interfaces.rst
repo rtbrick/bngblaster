@@ -562,5 +562,5 @@ DPDK
 ~~~~
 
 `DPDK <https://www.dpdk.org/>`_ support should be considered as experimental. 
-This I/O mode is detailed explained in the :ref:`DPDK <dpdk>` section of the 
+This I/O mode is detailed explained in the :ref:`DPDK <dpdk-usage>` section of the 
 :ref:`performance guide <performance>`. 

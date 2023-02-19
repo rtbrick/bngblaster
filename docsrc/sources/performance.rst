@@ -93,7 +93,7 @@ cores, this could be the reason.
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
 
-.. _dpdk:
+.. _dpdk-usage:
 
 DPDK
 ----
