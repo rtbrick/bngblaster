@@ -12,7 +12,7 @@
      - Default
    * - `enable`
      - This option allows to enable or disable DHCP
-     - false
+     - true
    * - `broadcast`
      - DHCP broadcast flag
      - false
