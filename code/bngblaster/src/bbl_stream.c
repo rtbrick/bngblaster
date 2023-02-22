@@ -1947,36 +1947,36 @@ bbl_stream_init() {
     return true;
 }
 
-void
+void __attribute__((optimize("O0")))
 bbl_stream_reset(bbl_stream_s *stream)
 {
-    if(!stream) return;
+    if(stream) {
+        stream->reset = true;
 
-    stream->reset = true;
+        stream->reset_packets_tx = stream->tx_packets;
+        stream->reset_packets_rx = stream->rx_packets;
+        stream->reset_loss = stream->rx_loss;
+        stream->reset_wrong_session = stream->rx_wrong_session;
 
-    stream->reset_packets_tx = stream->tx_packets;
-    stream->reset_packets_rx = stream->rx_packets;
-    stream->reset_loss = stream->rx_loss;
-    stream->reset_wrong_session = stream->rx_wrong_session;
-
-    stream->rx_min_delay_us = 0;
-    stream->rx_max_delay_us = 0;
-    stream->rx_len = 0;
-    stream->rx_first_seq = 0;
-    stream->rx_last_seq = 0;
-    stream->rx_priority = 0;
-    stream->rx_outer_vlan_pbit = 0;
-    stream->rx_inner_vlan_pbit = 0;
-    stream->rx_mpls1 = false;
-    stream->rx_mpls1_exp = 0;
-    stream->rx_mpls1_ttl = 0;
-    stream->rx_mpls1_label = 0;
-    stream->rx_mpls2 = false;
-    stream->rx_mpls2_exp = 0;
-    stream->rx_mpls2_ttl = 0;
-    stream->rx_mpls2_label = 0;
-    stream->verified = false;
-    stream->stop = false;
+        stream->rx_min_delay_us = 0;
+        stream->rx_max_delay_us = 0;
+        stream->rx_len = 0;
+        stream->rx_first_seq = 0;
+        stream->rx_last_seq = 0;
+        stream->rx_priority = 0;
+        stream->rx_outer_vlan_pbit = 0;
+        stream->rx_inner_vlan_pbit = 0;
+        stream->rx_mpls1 = false;
+        stream->rx_mpls1_exp = 0;
+        stream->rx_mpls1_ttl = 0;
+        stream->rx_mpls1_label = 0;
+        stream->rx_mpls2 = false;
+        stream->rx_mpls2_exp = 0;
+        stream->rx_mpls2_ttl = 0;
+        stream->rx_mpls2_label = 0;
+        stream->verified = false;
+        stream->stop = false;
+    }
 }
 
 const char *
