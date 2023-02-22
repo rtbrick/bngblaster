@@ -9,6 +9,17 @@
 #include "bbl.h"
 #include "bbl_stream.h"
 
+static uint32_t
+bbl_a10nsp_ipv4_address()
+{
+    static uint32_t index = 0;
+    index++;
+    if(index > 16000000) {
+        index = 1;
+    }
+    return htobe32(MOCK_IP_LOCAL + index);
+}
+
 void
 bbl_a10nsp_interface_rate_job(timer_s *timer)
 {
@@ -270,13 +281,13 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
 
     switch(ipcp->code) {
         case PPP_CODE_CONF_REQUEST:
-            if(ipcp->address == A10NSP_IP_REMOTE) {
+            if(ipcp->address == a10nsp_session->ipv4_address) {
                 ipcp->code = PPP_CODE_CONF_ACK;
             } else {
                 ipcp->options = NULL;
                 ipcp->options_len = 0;
                 ipcp->code = PPP_CODE_CONF_NAK;
-                ipcp->address = MOCK_IP_REMOTE;
+                ipcp->address = a10nsp_session->ipv4_address;
                 ipcp->option_address = true;
                 if(ipcp->option_dns1) {
                     ipcp->dns1 = MOCK_DNS1;
@@ -430,7 +441,7 @@ bbl_a10nsp_dhcp_handler(bbl_a10nsp_interface_s *interface,
     dhcp->header->op = BOOTREPLY;
     dhcp->header->secs = 0;
     dhcp->header->hops = 0;
-    dhcp->header->yiaddr = MOCK_IP_REMOTE;
+    dhcp->header->yiaddr = a10nsp_session->ipv4_address;
     dhcp->header->siaddr = MOCK_IP_LOCAL;
     dhcp->parameter_request_list = false;
     dhcp->client_identifier = NULL;
@@ -438,7 +449,7 @@ bbl_a10nsp_dhcp_handler(bbl_a10nsp_interface_s *interface,
     dhcp->option_server_identifier = true;
     dhcp->server_identifier = MOCK_IP_LOCAL;
     dhcp->option_address = true;
-    dhcp->address = MOCK_IP_REMOTE;
+    dhcp->address = a10nsp_session->ipv4_address;
     dhcp->option_router = true;
     dhcp->router = MOCK_IP_LOCAL;
     dhcp->option_lease_time = true;
@@ -489,6 +500,7 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
             session->session_id, interface->name, eth->vlan_outer);
         session->a10nsp_session = calloc(1, sizeof(bbl_a10nsp_session_s));
         session->a10nsp_session->session = session;
+        session->a10nsp_session->ipv4_address = bbl_a10nsp_ipv4_address();
         session->a10nsp_session->a10nsp_interface = interface;
         session->a10nsp_session->s_vlan = eth->vlan_outer;
         session->a10nsp_session->qinq_received = eth->qinq;

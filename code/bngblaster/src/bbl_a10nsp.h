@@ -84,6 +84,8 @@ typedef struct bbl_a10nsp_session_
 
     bool qinq_received;
 
+    uint32_t ipv4_address;
+
     char *pppoe_ari;
     char *pppoe_aci;
     char *dhcp_ari;

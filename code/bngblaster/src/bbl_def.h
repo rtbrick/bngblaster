@@ -56,11 +56,11 @@
 #define BBL_STREAM_FLOW_HASHTABLE_SIZE 128993 /* is a prime number */
 
 /* Mock Addresses */
-#define MOCK_IP_LOCAL               168495882
-#define MOCK_IP_REMOTE              168430090
-#define MOCK_DNS1                   168561674
-#define MOCK_DNS2                   168627466
+#define MOCK_IP_LOCAL               167772170   /* 10.0.0.10 */
+#define MOCK_IP_REMOTE              168430090   /* 10.10.10.10 */
 
+#define MOCK_DNS1                   134744072   /* 8.8.8.8 */
+#define MOCK_DNS2                   16843009    /* 1.1.1.1 */
 
 /* Interface Send Mask */
 #define BBL_SEND_LACP               0x00000001
