@@ -143,6 +143,8 @@ io_dpdk_init()
             LOG(DPDK, "DPDK: interface %s (%u) driver %s\n",
                 dev_info.device->name, port_id, dev_info.driver_name);
         }
+        LOG(DPDK, "DPDK: interface %s (%u) max queues rx %u tx %u\n",
+                dev_info.device->name, port_id, dev_info.max_rx_queues, dev_info.max_tx_queues);
     }
 
     return true;
