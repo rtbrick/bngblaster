@@ -9,10 +9,6 @@
 #ifndef __BBL_IO_DPDK_H__
 #define __BBL_IO_DPDK_H__
 
-typedef struct io_dpdk_ctx_ {
-    uint16_t dev_count;
-} io_dpdk_ctx_s;
-
 bool
 io_dpdk_init();
 

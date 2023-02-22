@@ -22,12 +22,14 @@
 #include <rte_per_lcore.h>
 #include <rte_lcore.h>
 #include <rte_debug.h>
+#include <rte_version.h>
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 
 #define NUM_MBUFS 4096
 #define MBUF_CACHE_SIZE 250
-#define BURST_SIZE 32
+#define BURST_SIZE_RX 64
+#define BURST_SIZE_TX 32
 
 static struct rte_eth_conf port_conf = {
     .rxmode = {
@@ -38,25 +40,77 @@ static struct rte_eth_conf port_conf = {
     },
 };
 
-static bool
-io_dpdk_dev_info(uint16_t portid, struct rte_eth_dev_info *dev_info)
+static bbl_interface_s *
+io_dpdk_get_interface_by_port_id(uint16_t port_id)
 {
-    int ret = rte_eth_dev_info_get(portid, dev_info);
-    if(ret != 0) {
-        LOG(ERROR, "DPDK: Error during getting device (port %u) info: %s\n",
-            portid, strerror(-ret));
+    bbl_interface_s *interface;
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if(interface->port_id == port_id) {
+            return interface;
+        }
+    }
+    return NULL;
+}
+
+static bool
+io_dpdk_link_status(uint16_t port_id)
+{
+    struct rte_eth_link link = {0};
+    bbl_interface_s *interface;
+    
+    interface = io_dpdk_get_interface_by_port_id(port_id);
+    if(!interface) return false; /* unlikely */
+    
+    if(rte_eth_link_get_nowait(port_id, &link) == 0) {
+        if(link.link_status) {
+            interface->state = INTERFACE_UP;
+            LOG(DPDK, "DPDK: interface %s (%u) link up (speed %u Mbps %s)\n", 
+                interface->name, port_id, (unsigned)link.link_speed,
+                (link.link_duplex == ETH_LINK_FULL_DUPLEX) ? ("full-duplex") : ("half-duplex"));
+        } else {
+            interface->state = INTERFACE_DOWN;
+            LOG(DPDK, "DPDK: interface %s (%u) link down\n", 
+                interface->name, port_id);
+        }
+    } else {
         return false;
     }
     return true;
 }
 
+static bool
+io_dpdk_dev_info(uint16_t port_id, struct rte_eth_dev_info *dev_info)
+{
+    int ret = rte_eth_dev_info_get(port_id, dev_info);
+    if(ret != 0) {
+        LOG(ERROR, "DPDK: Error during getting device (port %u) info: %s\n",
+            port_id, strerror(-ret));
+        return false;
+    }
+    return true;
+}
+
+int 
+io_dpdk_event_callback(uint16_t port_id, enum rte_eth_event_type type, void *cb_arg, void *ret_param)
+{
+    RTE_SET_USED(cb_arg);
+    RTE_SET_USED(ret_param);
+
+    LOG(DPDK, "DPDK: %s event\n", type == RTE_ETH_EVENT_INTR_LSC ? "LSC interrupt" : "unknown");
+
+    io_dpdk_link_status(port_id);
+    return 0;
+}
+
 bool
 io_dpdk_init()
 {
-    uint16_t portid;
+    uint16_t port_id;
     uint16_t dpdk_ports;
 
-    struct rte_eth_dev_info dev_info;    
+    char fw_version[64];
+
+    struct rte_eth_dev_info dev_info;
     
     if(!g_ctx->dpdk) {
         return true;
@@ -70,16 +124,25 @@ io_dpdk_init()
 
     LOG_NOARG(DPDK, "DPDK: init the EAL\n");
     rte_eal_init(2, argv);
-    dpdk_ports = rte_eth_dev_count_avail();
+    LOG(DPDK, "DPDK: version %s\n", rte_version());
 
+    dpdk_ports = rte_eth_dev_count_avail();
     LOG(DPDK, "DPDK: %u ports available\n", dpdk_ports);
 
-    RTE_ETH_FOREACH_DEV(portid) {
-        if(!io_dpdk_dev_info(portid, &dev_info)) {
+    RTE_ETH_FOREACH_DEV(port_id) {
+        if(!io_dpdk_dev_info(port_id, &dev_info)) {
+            LOG_NOARG(ERROR, "DPDK: failed to get device info\n");
             return false;
         }
-        LOG(DPDK, "DPDK: %s (port %u)\n",
-            dev_info.device->name, portid);
+        memset(fw_version, 0x0, sizeof(fw_version));
+        if(rte_eth_dev_fw_version_get(port_id, fw_version, sizeof(fw_version)) == 0) {
+            LOG(DPDK, "DPDK: interface %s (%u) driver %s firmware %s\n",
+                dev_info.device->name, port_id, dev_info.driver_name, fw_version);
+
+        } else {
+            LOG(DPDK, "DPDK: interface %s (%u) driver %s\n",
+                dev_info.device->name, port_id, dev_info.driver_name);
+        }
     }
 
     return true;
@@ -96,8 +159,8 @@ io_dpdk_rx_job(timer_s *timer)
 
     bbl_ethernet_header_s *eth;
 
-    struct rte_mbuf *packet_burst[BURST_SIZE];
-	struct rte_mbuf *packet;
+    struct rte_mbuf *packet_burst[BURST_SIZE_RX];
+    struct rte_mbuf *packet;
     uint16_t nb_rx;
     uint16_t i;
 
@@ -113,12 +176,13 @@ io_dpdk_rx_job(timer_s *timer)
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
     while(true) {
-        nb_rx = rte_eth_rx_burst(interface->portid, io->queue, packet_burst, BURST_SIZE);
+        nb_rx = rte_eth_rx_burst(interface->port_id, io->queue, packet_burst, BURST_SIZE_RX);
         if(nb_rx == 0) {
             break;
         }
         for(i = 0; i < nb_rx; i++) {
             packet = packet_burst[i];
+            rte_prefetch0(rte_pktmbuf_mtod(packet, void *));
             io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
             io->buf_len = packet->pkt_len;
             io->stats.packets++;
@@ -227,7 +291,7 @@ io_dpdk_tx_job(timer_s *timer)
         }
         io->mbuf->data_len = io->buf_len;
         /* Transmit the packet. */
-        if(rte_eth_tx_burst(interface->portid, io->queue, &io->mbuf, 1) == 0) {
+        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) == 0) {
             /* This packet will be retried next interval 
              * because io->buf_len is not reset to zero. */
             if(pcap) {
@@ -258,10 +322,10 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
     io_handle_s *io = thread->io;
     bbl_interface_s *interface = io->interface;
 
-    struct rte_mbuf *pkts_burst[BURST_SIZE];
+    struct rte_mbuf *pkts_burst[BURST_SIZE_RX];
     struct rte_mbuf *packet;
 
-    uint16_t portid = interface->portid;
+    uint16_t port_id = interface->port_id;
     uint16_t nb_rx;
     uint16_t i;
 
@@ -274,7 +338,7 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
     sleep.tv_nsec = 0;
 
     while(thread->active) {
-        nb_rx = rte_eth_rx_burst(portid, io->queue, pkts_burst, BURST_SIZE);
+        nb_rx = rte_eth_rx_burst(port_id, io->queue, pkts_burst, BURST_SIZE_RX);
         if(nb_rx == 0) {
             sleep.tv_nsec = 10;
             nanosleep(&sleep, &rem);
@@ -284,6 +348,7 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
         for(i = 0; i < nb_rx; i++) {
             packet = pkts_burst[i];
+            rte_prefetch0(rte_pktmbuf_mtod(packet, void *));
             io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
             io->buf_len = packet->pkt_len;
             /* Process packet */
@@ -358,7 +423,7 @@ io_dpdk_thread_tx_job(timer_s *timer)
         }
         io->mbuf->data_len = io->buf_len;
         /* Transmit the packet. */
-        if(rte_eth_tx_burst(interface->portid, io->queue, &io->mbuf, 1) == 0) {
+        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) == 0) {
             /* This packet will be retried next interval 
              * because io->buf_len is not reset to zero. */
             return;
@@ -386,7 +451,7 @@ io_dpdk_add_mbuf_pool(io_handle_s *io)
     mbuf_pool = rte_pktmbuf_pool_create(name,
             NUM_MBUFS, MBUF_CACHE_SIZE, 0,
             RTE_MBUF_DEFAULT_BUF_SIZE, 
-            rte_eth_dev_socket_id(io->interface->portid));
+            rte_eth_dev_socket_id(io->interface->port_id));
     if(!mbuf_pool) {
         free(name);
         return false;
@@ -403,7 +468,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
     int ret;
     bool found = false;
 
-    uint16_t portid;
+    uint16_t port_id;
     uint16_t queue;
     uint16_t id;
     uint16_t nb_rx_queue = 1;
@@ -415,11 +480,11 @@ io_dpdk_interface_init(bbl_interface_s *interface)
     struct rte_ether_addr mac;
     io_handle_s *io;
 
-    RTE_ETH_FOREACH_DEV(portid) {
-        if(io_dpdk_dev_info(portid, &dev_info)) {
+    RTE_ETH_FOREACH_DEV(port_id) {
+        if(io_dpdk_dev_info(port_id, &dev_info)) {
             if(strcmp(dev_info.device->name, interface->name) == 0) {
                 found = true;
-                interface->portid = portid;
+                interface->port_id = port_id;
                 break;
             }
         }
@@ -433,11 +498,13 @@ io_dpdk_interface_init(bbl_interface_s *interface)
     if(*(uint32_t*)config->mac) {
         memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
     } else {
-        if(rte_eth_macaddr_get(portid, &mac) < 0) {
-            LOG(ERROR, "DPDK: failed to get MAC from interface %s\n", interface->name);
+        if(rte_eth_macaddr_get(port_id, &mac) < 0) {
+            LOG(ERROR, "DPDK: interface %s (%u) failed to get MAC\n", 
+                interface->name, port_id);
             return false;
         }
-        LOG(DPDK, "DPDK: Set MAC %s for interface %s\n", format_mac_address(mac.addr_bytes), interface->name);
+        LOG(DPDK, "DPDK: interface %s (%u) MAC address %s\n", 
+            interface->name, port_id, format_mac_address(mac.addr_bytes));
         memcpy(interface->mac, mac.addr_bytes, ETH_ADDR_LEN);
     }
 
@@ -457,16 +524,24 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         (RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP) &
         dev_info.flow_type_rss_offloads;
 
-    ret = rte_eth_dev_configure(portid, nb_rx_queue, nb_tx_queue, &local_port_conf);
+    ret = rte_eth_dev_configure(port_id, nb_rx_queue, nb_tx_queue, &local_port_conf);
     if(ret < 0) {
-        LOG(ERROR, "DPDK: failed to configure interface %s (error %d)\n",
-            interface->name, ret);
+        LOG(ERROR, "DPDK: interface %s (%u) failed to configure interface (error %d)\n",
+            interface->name, port_id, ret);
         return false;
     }
-    ret = rte_eth_dev_adjust_nb_rx_tx_desc(portid, &config->io_slots_rx, &config->io_slots_tx);
+
+    ret = rte_eth_dev_adjust_nb_rx_tx_desc(port_id, &config->io_slots_rx, &config->io_slots_tx);
     if(ret < 0) {
-        LOG(ERROR, "DPDK: failed to adjust number of descriptors for interface %s (error %d)\n",
-            interface->name, ret);
+        LOG(ERROR, "DPDK: %s (%u) failed to adjust number of rx/tx descriptors (error %d)\n",
+            interface->name, port_id, ret);
+        return false;
+    }
+
+    ret = rte_eth_dev_callback_register(port_id, RTE_ETH_EVENT_INTR_LSC, (rte_eth_dev_cb_fn)io_dpdk_event_callback, NULL);
+    if(ret < 0) {
+        LOG(ERROR, "DPDK: interface %s (%u) failed to register callback (error %d)\n",
+            interface->name, port_id, ret);
         return false;
     }
 
@@ -492,19 +567,19 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         }
         io->queue = queue;
         if(!io_dpdk_add_mbuf_pool(io)) {
-            LOG(ERROR, "DPDK: failed to create RX mbuf pool for interface %s queue %u\n",
-                interface->name, queue);
+            LOG(ERROR, "DPDK: interface %s (%u) failed to create RX mbuf pool for queue %u\n",
+                interface->name, port_id, queue);
             return false;
         }
 
         rx_conf = dev_info.default_rxconf;
         rx_conf.offloads = local_port_conf.rxmode.offloads;
-        ret = rte_eth_rx_queue_setup(portid, queue, config->io_slots_rx,
-                                     rte_eth_dev_socket_id(portid), 
+        ret = rte_eth_rx_queue_setup(port_id, queue, config->io_slots_rx,
+                                     rte_eth_dev_socket_id(port_id), 
                                      &rx_conf, io->mbuf_pool);
         if(ret < 0) {
-            LOG(ERROR, "DPDK: failed to setup RX queue %u for interface %s (error %d)\n",
-                queue, interface->name, ret);
+            LOG(ERROR, "DPDK: interface %s (%u) failed to setup RX queue %u (error %d)\n",
+                interface->name, port_id, queue, ret);
             return false;
         }
     }
@@ -536,62 +611,63 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         }
         io->queue = queue;
         if(!io_dpdk_add_mbuf_pool(io)) {
-            LOG(ERROR, "DPDK: failed to create TX mbuf pool for interface %s queue %u\n",
-                interface->name, queue);
+            LOG(ERROR, "DPDK: interface %s (%u) failed to create TX mbuf pool for queue %u\n",
+                interface->name, port_id, queue);
             return false;
         }
 
         tx_conf = dev_info.default_txconf;
         tx_conf.offloads = local_port_conf.txmode.offloads;
-        ret = rte_eth_tx_queue_setup(portid, queue, config->io_slots_tx,
-                                     rte_eth_dev_socket_id(portid),
+        ret = rte_eth_tx_queue_setup(port_id, queue, config->io_slots_tx,
+                                     rte_eth_dev_socket_id(port_id),
                                      &tx_conf);
         if(ret < 0) {
-            LOG(ERROR, "DPDK: failed to setup TX queue %u for interface %s (error %d)\n",
-                queue, interface->name, ret);
+            LOG(ERROR, "DPDK: interface %s (%u) failed to setup TX queue %u (error %d)\n",
+                interface->name, port_id, queue, ret);
             return false;
         }
 
         /* Initialize TX buffers */
         io->tx_buffer = rte_zmalloc_socket("tx_buffer",
-                RTE_ETH_TX_BUFFER_SIZE(BURST_SIZE), 0,
-                rte_eth_dev_socket_id(portid));
+                RTE_ETH_TX_BUFFER_SIZE(BURST_SIZE_TX), 0,
+                rte_eth_dev_socket_id(port_id));
         if (!io->tx_buffer) {
-            LOG(ERROR, "DPDK: failed to allocate TX buffer for interface %s queue %u (error %d)\n",
-                interface->name, queue, ret);
+            LOG(ERROR, "DPDK: interface %s (%u) failed to allocate TX buffer for queue %u (error %d)\n",
+                interface->name, port_id, queue, ret);
             return false;
         }
-        rte_eth_tx_buffer_init(io->tx_buffer, BURST_SIZE);
+        rte_eth_tx_buffer_init(io->tx_buffer, BURST_SIZE_TX);
         ret = rte_eth_tx_buffer_set_err_callback(io->tx_buffer, 
             rte_eth_tx_buffer_count_callback, &io->stats.dropped);
         if(ret < 0) {
-            LOG(ERROR, "DPDK: failed to set TX error callback for interface %s queue %u (error %d)\n",
-                interface->name, queue, ret);
+            LOG(ERROR, "DPDK: interface %s (%u) failed to set TX error callback for queue %u (error %d)\n",
+                interface->name, port_id, queue, ret);
             return false;
         }
     }
 
-    ret = rte_eth_dev_set_ptypes(portid, RTE_PTYPE_UNKNOWN, NULL, 0);
+    ret = rte_eth_dev_set_ptypes(port_id, RTE_PTYPE_UNKNOWN, NULL, 0);
     if (ret < 0) {
-        LOG(ERROR, "DPDK: failed to disable ptype parsing for interface %s (error %d)\n",
-            interface->name, ret);
+        LOG(ERROR, "DPDK: interface %s (%u) failed to disable ptype parsing (error %d)\n",
+            interface->name, port_id, ret);
         return false;
     }
  
-    ret = rte_eth_dev_start(portid);
+    ret = rte_eth_dev_start(port_id);
     if (ret < 0) {
-        LOG(ERROR, "DPDK: failed to start interface %s (error %d)\n",
-            interface->name, ret);
+        LOG(ERROR, "DPDK: interface %s (%u) failed to start device (error %d)\n",
+            interface->name, port_id, ret);
         return false;
     }
 
-    ret = rte_eth_promiscuous_enable(portid);
+    ret = rte_eth_promiscuous_enable(port_id);
     if (ret < 0) {
-        LOG(ERROR, "DPDK: failed to enable promiscuous mode for interface %s (error %d)\n",
-            interface->name, ret);
+        LOG(ERROR, "DPDK: interface %s (%u) failed to enable promiscuous mode (error %d)\n",
+            interface->name, port_id, ret);
         return false;
     }
 
+    io_dpdk_link_status(port_id);
     return true;
 }
 
