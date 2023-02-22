@@ -596,12 +596,11 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 if(!session->reconnect_disabled && 
                    ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
                     (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect))) {
-                    if(session->reconnect_delay) {
-                        timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
-                                  session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
-                    } else {
-                        bbl_session_start(session);
+                    if(!session->reconnect_delay) {
+                        session->reconnect_delay = 1;
                     }
+                    timer_add(&g_ctx->timer_root, &session->timer_reconnect, "RECONNECT", 
+                              session->reconnect_delay, 0, session, &bbl_session_reconnect_job);
                 }
             }
         }
