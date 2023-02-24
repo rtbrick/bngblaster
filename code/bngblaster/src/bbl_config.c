@@ -584,6 +584,13 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             return false;
         }
     }
+    value = json_object_get(network_interface, "ipv6-router-advertisement");
+    if(json_is_boolean(value)) {
+        network_config->ipv6_ra = json_boolean_value(value);
+    } else {
+        network_config->ipv6_ra = true;
+    }
+
     if(json_unpack(network_interface, "{s:s}", "gateway-mac", &s) == 0) {
         if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                 &network_config->gateway_mac[0],

@@ -118,6 +118,10 @@ bbl_network_interfaces_add()
         network_interface->ip6_ll[13] = network_interface->mac[3];
         network_interface->ip6_ll[14] = network_interface->mac[4];
         network_interface->ip6_ll[15] = network_interface->mac[5];
+        if(network_config->ipv6_ra) {
+            network_interface->ipv6_ra = true;
+            network_interface->send_requests |= BBL_IF_SEND_ICMPV6_RA;
+        }
 
         /* Init IPv6 */
         if(ipv6_prefix_not_zero(&network_config->ip6) && 
@@ -366,6 +370,8 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
                 secondary_ip6 = secondary_ip6->next;
             }
         }
+    } else if(icmpv6->type == IPV6_ICMPV6_ROUTER_SOLICITATION && interface->ipv6_ra) {
+        interface->send_requests |= BBL_IF_SEND_ICMPV6_RA;
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         bbl_network_icmpv6_echo_reply(interface, eth, ipv6, icmpv6);
     }
