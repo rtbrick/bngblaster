@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
+#include "ifaddrs.h"
 
 static bool
 set_kernel_info(bbl_interface_s *interface)
@@ -159,6 +160,44 @@ io_interface_init_tx(bbl_interface_s *interface)
     return true;
 }
 
+static void
+address_warning(bbl_interface_s *interface)
+{
+    struct ifaddrs *ifaddr = NULL;
+    struct ifaddrs *ifa = NULL;
+    struct sockaddr_in *ipv4;
+    struct sockaddr_in6 *ipv6;
+
+    char address[INET6_ADDRSTRLEN];
+
+    static bool warning = false;
+
+    if(getifaddrs(&ifaddr) == 0) {
+        for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+            if(strcmp(ifa->ifa_name, interface->name) == 0) {
+                if(ifa->ifa_addr->sa_family == AF_INET) {
+                    ipv4 = (struct sockaddr_in *) ifa->ifa_addr;
+                    inet_ntop(AF_INET, &(ipv4->sin_addr), address, INET6_ADDRSTRLEN);
+                } else if(ifa->ifa_addr->sa_family == AF_INET6) {
+                    ipv6 = (struct sockaddr_in6 *) ifa->ifa_addr;
+                    inet_ntop(AF_INET6, &(ipv6->sin6_addr), address, INET6_ADDRSTRLEN);
+                } else {
+                    continue;
+                }
+
+                if(!warning) {
+                    warning = true;
+                    LOG_NOARG(INFO, "Warning: Interfaces must not have an IP address configured in the host OS!\n");
+                }
+
+                LOG(INFO, "Warning: IP address %s on interface %s not supported!\n",
+                    address, interface->name);
+            }
+        }
+    }
+    freeifaddrs(ifaddr);
+}
+
 /**
  * io_interface_init
  *
@@ -178,6 +217,7 @@ io_interface_init(bbl_interface_s *interface)
 #endif
 
     if(config->io_mode != IO_MODE_DPDK) {
+        address_warning(interface);
         if(!set_kernel_info(interface)) {
             return false;
         }

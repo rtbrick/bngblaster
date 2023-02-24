@@ -11,7 +11,8 @@
 /* Bypass TC_QDISC, such that the kernel is hammered 30% less with 
  * processing packets. Only for the TX FD. */
 static bool
-set_qdisc_bypass(io_handle_s *io) {
+set_qdisc_bypass(io_handle_s *io)
+{
     /* PACKET_QDISC_BYPASS (since Linux 3.14)
      * By default, packets sent through packet sockets pass through
      * the kernel's qdisc (traffic control) layer, which is fine for
@@ -34,7 +35,8 @@ set_qdisc_bypass(io_handle_s *io) {
 
 /* Set fanout group. */
 static bool
-set_fanout(io_handle_s *io) {     
+set_fanout(io_handle_s *io)
+{     
     if(io->fanout_id && io->direction == IO_INGRESS) {
         int fanout_arg = (io->fanout_id | (io->fanout_type << 16));
         if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
@@ -48,7 +50,8 @@ set_fanout(io_handle_s *io) {
 
 /* Set packet version (TPACKET_V1, TPACKET_V2 or TPACKET_V3). */
 static bool
-set_packet_version(io_handle_s *io, int version) {
+set_packet_version(io_handle_s *io, int version)
+{
     if((setsockopt(io->fd, SOL_PACKET, PACKET_VERSION, &version, sizeof(version))) == -1) {
         LOG(ERROR, "Failed to set packet version error for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
@@ -59,7 +62,8 @@ set_packet_version(io_handle_s *io, int version) {
 
 /* Setup ringbuffer. */
 static bool
-set_ring(io_handle_s *io, int slots) {
+set_ring(io_handle_s *io, int slots)
+{
     /* The following are conditions that are checked in packet_set_ring:
      * - tp_block_size must be a multiple of PAGE_SIZE (1)
      * - tp_frame_size must be greater than TPACKET_HDRLEN (obvious)
