@@ -100,6 +100,7 @@ typedef struct bbl_network_config_
     ipv4_prefix ip;
     ipv4addr_t gateway;
 
+    bool ipv6_ra;
     ipv6_prefix ip6;
     ipv6addr_t gateway6;
 

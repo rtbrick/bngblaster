@@ -713,6 +713,24 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 *(uint32_t*)buf = 0;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 break;
+            case IPV6_ICMPV6_ROUTER_ADVERTISEMENT:
+                *buf = 64; /* Hop Limit */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 0; /* Flags */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *(uint16_t*)buf = htobe16(30); /* Router lifetime */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+                *(uint32_t*)buf = 0; /* Reachable time */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                *(uint32_t*)buf = 0; /* Retrans time */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                *buf = 1; /* Source link-layer address */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                *buf = 1; /* Length (1 = 8 byte) */
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                memcpy(buf, icmp->mac, ETH_ADDR_LEN);
+                BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
+                break;
             case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
                 *(uint32_t*)buf = 0; /* Reserved */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));

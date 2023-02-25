@@ -1373,6 +1373,13 @@ bbl_tx_network_nd_timeout(timer_s *timer)
     interface->send_requests |= BBL_IF_SEND_ICMPV6_NS;
 }
 
+void
+bbl_tx_network_ra_timeout(timer_s *timer)
+{
+    bbl_network_interface_s *interface = timer->data;
+    interface->send_requests |= BBL_IF_SEND_ICMPV6_RA;
+}
+
 static protocol_error_t
 bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
@@ -1425,6 +1432,22 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
             timer_add(&g_ctx->timer_root, &interface->timer_nd, "ND timeout", 
                       1, 0, interface, &bbl_tx_network_nd_timeout);
         }
+        result = encode_ethernet(buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_RA) {
+        interface->send_requests &= ~BBL_IF_SEND_ICMPV6_RA;
+        ipv6_multicast_mac(ipv6_multicast_all_nodes, mac);
+        eth.dst = mac;
+        eth.type = ETH_TYPE_IPV6;
+        eth.next = &ipv6;
+        ipv6.src = interface->ip6_ll;
+        ipv6.dst = (void*)ipv6_multicast_all_nodes;
+        ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+        ipv6.next = &icmpv6;
+        ipv6.ttl = 255;
+        icmpv6.type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
+        icmpv6.mac = interface->mac;
+        timer_add(&g_ctx->timer_root, &interface->timer_nd, "RA timer", 
+                  10, 0, interface, &bbl_tx_network_ra_timeout);
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ISIS_P2P_HELLO) {
         interface->send_requests &= ~BBL_IF_SEND_ISIS_P2P_HELLO;
