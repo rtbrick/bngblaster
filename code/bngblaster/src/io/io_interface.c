@@ -190,7 +190,7 @@ address_warning(bbl_interface_s *interface)
                     LOG_NOARG(INFO, "Warning: Interfaces must not have an IP address configured in the host OS!\n");
                 }
 
-                LOG(INFO, "Warning: IP address %s on interface %s not supported!\n",
+                LOG(INFO, "Warning: IP address %s on interface %s is conflicting!\n",
                     address, interface->name);
             }
         }
