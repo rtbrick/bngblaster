@@ -240,9 +240,9 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
             pppoe.next = &ipv4;
             if(stream->direction == BBL_DIRECTION_UP) {
                 ipv4.src = session->ip_address;
-                ipv4.dst = A10NSP_IP_LOCAL;
+                ipv4.dst = MOCK_IP_LOCAL;
             } else {
-                ipv4.src = A10NSP_IP_LOCAL;
+                ipv4.src = MOCK_IP_LOCAL;
                 ipv4.dst = session->ip_address;
             }
             if(stream->config->ipv4_destination_address) {
@@ -362,7 +362,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
                 if(stream->config->ipv4_network_address) {
                     ipv4.dst = stream->config->ipv4_network_address;
                 } else {
-                    ipv4.dst = A10NSP_IP_LOCAL;
+                    ipv4.dst = MOCK_IP_LOCAL;
                 }
             }
             if(config->ipv4_df) {

@@ -14,11 +14,6 @@
 #define A10NSP_PPPOE_AC_NAME        "BNG-Blaster-A10NSP"
 #define A10NSP_REPLY_MESSAGE        "BNG-Blaster-A10NSP"
 
-#define A10NSP_IP_LOCAL             168495882
-#define A10NSP_IP_REMOTE            168430090
-#define A10NSP_DNS1                 168561674
-#define A10NSP_DNS2                 168627466
-
 typedef struct bbl_a10nsp_interface_
 {
     char *name; /* interface name */
