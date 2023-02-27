@@ -25,6 +25,9 @@
    * - `gateway-ipv6`
      - Gateway network interface IPv6 address (implicitly /64)
      - 
+   * - `ipv6-router-advertisement`
+     - Disable IPv6 router advertisements
+     - true
    * - `vlan`
      - Network interface VLAN
      - 0 (untagged)
@@ -35,7 +38,7 @@
      - Sessions will not start until gateways are resolved
      - true
    * - `isis-instance-id`
-     - Assign interface to ISIS instance
+     - Assign the interface to ISIS instance
      - 
    * - `isis-level`
      - ISIS interface level
