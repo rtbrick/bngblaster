@@ -34,7 +34,6 @@ typedef struct bbl_network_interface_
     ipv4_prefix ip;
     ipv4addr_t  gateway;
 
-    bool ipv6_enabled;
     bool ipv6_ra;
 
     ipv6_prefix ip6; /* global IPv6 address */
