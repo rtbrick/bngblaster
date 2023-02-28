@@ -248,12 +248,13 @@ static bbl_txq_result_t
 bbl_network_arp_reply(bbl_network_interface_s *interface,
                       bbl_ethernet_header_s *eth,
                       bbl_arp_s *arp) {
+    uint32_t target_ip = arp->target_ip;
     bbl_network_update_eth(interface, eth);
     arp->code = ARP_REPLY;
+    arp->target = arp->sender;
+    arp->target_ip = arp->sender_ip;
     arp->sender = interface->mac;
-    arp->sender_ip = arp->target_ip;
-    arp->target = interface->gateway_mac;
-    arp->target_ip = interface->gateway;
+    arp->sender_ip = target_ip;
     return bbl_txq_to_buffer(interface->txq, eth);
 }
 
