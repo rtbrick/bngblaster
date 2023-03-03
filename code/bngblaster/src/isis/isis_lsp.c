@@ -162,7 +162,7 @@ isis_lsp_gc_job(timer_s *timer)
             while(next) {
                 lsp = *hb_itor_datum(itor);
                 next = hb_itor_next(itor);
-                if(lsp->expired && lsp->refcount == 0) {
+                if(lsp && lsp->expired && lsp->refcount == 0) {
                     removed = hb_tree_remove(instance->level[i].lsdb, &lsp->id);
                     if(removed.removed) {
                         free(lsp);
