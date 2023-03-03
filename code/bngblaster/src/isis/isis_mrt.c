@@ -108,7 +108,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path)
         lsp->source.type = ISIS_SOURCE_EXTERNAL;
         lsp->source.adjacency = NULL;
         lsp->seq = seq;
-        lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_LIFETIME));
+        lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_LIFETIME));
         lsp->expired = false;
         lsp->instance = instance;
         lsp->timestamp.tv_sec = now.tv_sec;

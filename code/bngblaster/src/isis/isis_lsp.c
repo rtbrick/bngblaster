@@ -616,7 +616,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     lsp->source.type = ISIS_SOURCE_ADJACENCY;
     lsp->source.adjacency = adjacency;
     lsp->seq = seq;
-    lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+    lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;
     lsp->instance = adjacency->instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
@@ -775,7 +775,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
     lsp->source.type = ISIS_SOURCE_EXTERNAL;
     lsp->source.adjacency = NULL;
     lsp->seq = seq;
-    lsp->lifetime = be16toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+    lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;
     lsp->instance = instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
