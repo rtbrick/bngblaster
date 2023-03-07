@@ -310,7 +310,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     json_object_foreach(lag, key, value) {
         
         if (!strcmp(key, "interface")) {
-              lag_config->interface = json_string_value(value);
+              lag_config->interface = strdup(json_string_value(value));
               lag_interface_absent = false;
               continue;
         }
@@ -376,7 +376,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
         }  
 
         /* If none of the above key values are macthed*/
-        fprintf(stderr, "Config error: Incorrect atrribute name in access-line-profile\n");
+        fprintf(stderr, "Config error: Incorrect atrribute name in interfaces->lag\n");
 
     }
 
