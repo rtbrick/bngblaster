@@ -111,10 +111,11 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
 {
     /*
     * The next 2 lines of code is used to declare the key and value variables where the
-    * json_object_foreach() sets the values of key and value to the parameters
+    * json_object_foreach() sets the values of key and value
     */
     json_t *value = NULL;
     const char *key;
+
     bool access_line_profile_id_absent = true;
     
     json_object_foreach(config, key, value) {
@@ -268,6 +269,9 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
             profile->pon_max_down = json_number_value(value);
             continue;
         }
+
+        /* If none of the above key values are macthed*/
+        fprintf(stderr, "Config error: Incorrect atrribute name in access-line-profile\n");
     }
 
     if (access_line_profile_id_absent) {
@@ -276,206 +280,132 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     }
     
     return true;
-    /*Commented out blocks below are already refactored*/
 
-    // value = json_object_get(config, "access-line-profile-id");
-    // if(value) {
-    //     profile->access_line_profile_id = json_number_value(value);
-    // } else {
-    //     fprintf(stderr, "Config error: Missing value for access-line-profiles->access-line-profile-id\n");
-    //     return false;
-    // }
-
-    // value = json_object_get(config, "act-up");
-    // if(value) {
-    //     profile->act_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "act-down");
-    // if(value) {
-    //     profile->act_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "min-up");
-    // if(value) {
-    //     profile->min_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "min-down");
-    // if(value) {
-    //     profile->min_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "att-up");
-    // if(value) {
-    //     profile->att_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "att-down");
-    // if(value) {
-    //     profile->att_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "min-up-low");
-    // if(value) {
-    //     profile->min_up_low = json_number_value(value);
-    // }
-    // value = json_object_get(config, "min-down-low");
-    // if(value) {
-    //     profile->min_down_low = json_number_value(value);
-    // }
-    // value = json_object_get(config, "max-interl-delay-up");
-    // if(value) {
-    //     profile->max_interl_delay_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "act-interl-delay-up");
-    // if(value) {
-    //     profile->act_interl_delay_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "max-interl-delay-down");
-    // if(value) {
-    //     profile->max_interl_delay_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "act-interl-delay-down");
-    // if(value) {
-    //     profile->act_interl_delay_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "data-link-encaps");
-    // if(value) {
-    //     profile->data_link_encaps = json_number_value(value);
-    // }
-    // value = json_object_get(config, "dsl-type");
-    // if(value) {
-    //     profile->dsl_type = json_number_value(value);
-    // }
-    // value = json_object_get(config, "pon-type");
-    // if(value) {
-    //     profile->pon_type = json_number_value(value);
-    // }
-    // value = json_object_get(config, "etr-up");
-    // if(value) {
-    //     profile->etr_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "etr-down");
-    // if(value) {
-    //     profile->etr_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "attetr-up");
-    // if(value) {
-    //     profile->attetr_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "attetr-down");
-    // if(value) {
-    //     profile->attetr_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "gdr-up");
-    // if(value) {
-    //     profile->gdr_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "gdr-down");
-    // if(value) {
-    //     profile->gdr_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "attgdr-up");
-    // if(value) {
-    //     profile->attgdr_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "attgdr-down");
-    // if(value) {
-    //     profile->attgdr_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "ont-onu-avg-down");
-    // if(value) {
-    //     profile->ont_onu_avg_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "ont-onu-peak-down");
-    // if(value) {
-    //     profile->ont_onu_peak_down = json_number_value(value);
-    // }
-    // value = json_object_get(config, "ont-onu-max-up");
-    // if(value) {
-    //     profile->ont_onu_max_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "ont-onu-ass-up");
-    // if(value) {
-    //     profile->ont_onu_ass_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "pon-max-up");
-    // if(value) {
-    //     profile->pon_max_up = json_number_value(value);
-    // }
-    // value = json_object_get(config, "pon-max-down");
-    // if(value) {
-    //     profile->pon_max_down = json_number_value(value);
-    // }
 }
 
 static bool
 json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
 {
+    /*
+    * The next 2 lines of code is used to declare the key and value variables where the
+    * json_object_foreach() sets the values of key and value
+    */
     json_t *value = NULL;
-    const char *s = NULL;
+    const char *key;
+
+    /*flag variables to check are declared here*/
+    bool lag_interface_absent = true;
+    bool lacp_sys_prior_absent = true;
+    bool lacp_sys_id_absent = true;
+    bool lacp_min_act_links_absent = true;
+    bool lacp_max_act_links_absent = true;
+    bool lacp_mac_absent = true;
+
+    /*char *s is used to get the lacp-system-id / mac*/
+    const char *string = NULL;
     
     static uint8_t lag_id = 0;
-
     lag_config->id = ++lag_id;
-    if(json_unpack(lag, "{s:s}", "interface", &s) == 0) {
-        lag_config->interface = strdup(s);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for lag->interface\n");
-        return false;
-    }
-    value = json_object_get(lag, "lacp");
-    if(json_is_boolean(value)) {
-        lag_config->lacp_enable = json_boolean_value(value);
-    }
-    value = json_object_get(lag, "lacp-timeout-short");
-    if(json_is_boolean(value)) {
-        lag_config->lacp_timeout_short = json_boolean_value(value);
-    }
-    value = json_object_get(lag, "lacp-system-priority");
-    if(value) {
-        lag_config->lacp_system_priority = json_number_value(value);
-    } else {
-        lag_config->lacp_system_priority = 32768;
-    }
-    if(json_unpack(lag, "{s:s}", "lacp-system-id", &s) == 0) {
-        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+
+    json_object_foreach(lag, key, value) {
+        
+        if (!strcmp(key, "interface")) {
+              lag_config->interface = json_string_value(value);
+              lag_interface_absent = false;
+              continue;
+        }
+
+        if (!strcmp(key,"lacp")) {
+            lag_config->lacp_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"lacp-timeout-short")) {
+            lag_config->lacp_timeout_short = json_boolean_value(value);
+            continue;
+        }        
+        
+        if (!strcmp(key,"lacp-system-priority")) {
+            lag_config->lacp_system_priority = json_number_value(value);
+            lacp_sys_prior_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key,"lacp-system-id")) {
+            string = json_string_value(value);
+            lacp_sys_id_absent = false;
+            if(sscanf(string, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                 &lag_config->lacp_system_id[0],
                 &lag_config->lacp_system_id[1],
                 &lag_config->lacp_system_id[2],
                 &lag_config->lacp_system_id[3],
                 &lag_config->lacp_system_id[4],
                 &lag_config->lacp_system_id[5]) < 6) {
-            fprintf(stderr, "JSON config error: Invalid value for lag->lacp-system-id\n");
-            return false;
-        }
-    } else {
-        lag_config->lacp_system_id[0] = 0x02;
-        lag_config->lacp_system_id[1] = 0xff;
-        lag_config->lacp_system_id[2] = 0xff;
-        lag_config->lacp_system_id[3] = 0xff;
-        lag_config->lacp_system_id[4] = 0xff;
-    }
-    value = json_object_get(lag, "lacp-min-active-links");
-    if(value) {
-        lag_config->lacp_min_active_links = json_number_value(value);
-    } else {
-        lag_config->lacp_min_active_links = 0;
-    }
-    value = json_object_get(lag, "lacp-max-active-links");
-    if(value) {
-        lag_config->lacp_min_active_links = json_number_value(value);
-    } else {
-        lag_config->lacp_max_active_links = UINT8_MAX;
-    }
+                    fprintf(stderr, "JSON config error: Invalid value for lag->lacp-system-id\n");
+                    return false;
+            }
+            continue;
+        }   
 
-    if(json_unpack(lag, "{s:s}", "mac", &s) == 0) {
-        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+        if (!strcmp(key,"lacp-min-active-links")) {
+            lag_config->lacp_min_active_links = json_number_value(value);
+            lacp_min_act_links_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key,"lacp-max-active-links")) {
+            lag_config->lacp_max_active_links = json_number_value(value);
+            lacp_max_act_links_absent = false;
+            continue;
+        }      
+
+        if (!strcmp(key,"mac")) {
+            string = json_string_value(value);
+            lacp_mac_absent = false;
+            if(sscanf(string, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                 &lag_config->mac[0],
                 &lag_config->mac[1],
                 &lag_config->mac[2],
                 &lag_config->mac[3],
                 &lag_config->mac[4],
                 &lag_config->mac[5]) < 6) {
-            fprintf(stderr, "JSON config error: Invalid value for lag->mac\n");
-            return false;
-        }
-    } else {
+                    fprintf(stderr, "JSON config error: Invalid value for lag->mac\n");
+                    return false;
+            }
+            continue;
+        }  
+
+        /* If none of the above key values are macthed*/
+        fprintf(stderr, "Config error: Incorrect atrribute name in access-line-profile\n");
+
+    }
+
+    if (lag_interface_absent) {
+        fprintf(stderr, "JSON config error: Missing value for lag->interface\n");
+        return false;
+    }
+
+    if (lacp_sys_prior_absent) {
+        lag_config->lacp_system_priority = 32768;
+    }
+
+    if (lacp_sys_id_absent) {
+        lag_config->lacp_system_id[0] = 0x02;
+        lag_config->lacp_system_id[1] = 0xff;
+        lag_config->lacp_system_id[2] = 0xff;
+        lag_config->lacp_system_id[3] = 0xff;
+        lag_config->lacp_system_id[4] = 0xff;
+    }
+
+    if (lacp_min_act_links_absent) {
+        lag_config->lacp_min_active_links = 0;
+    }
+
+    if (lacp_max_act_links_absent) {
+        lag_config->lacp_max_active_links = UINT8_MAX;
+    }
+
+    if (lacp_mac_absent) {
         lag_config->mac[0] = 0x02;
         lag_config->mac[1] = 0xff;
         lag_config->mac[2] = 0xff;
@@ -483,6 +413,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
         lag_config->mac[4] = 0xff;
         lag_config->mac[5] = lag_config->id;
     }
+
     return true;
 }
 
