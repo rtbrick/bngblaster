@@ -7,6 +7,7 @@
  * Copyright (C) 2020-2023, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
 #include "bbl.h"
 #include "bbl_config.h"
 #include "bbl_stream.h"
@@ -108,133 +109,299 @@ add_secondary_ipv6(ipv6addr_t ipv6)
 static bool
 json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profile)
 {
+    /*
+    * The next 2 lines of code is used to declare the key and value variables where the
+    * json_object_foreach() sets the values of key and value to the parameters
+    */
     json_t *value = NULL;
+    const char *key;
+    bool access_line_profile_id_absent = true;
+    
+    json_object_foreach(config, key, value) {
+        if (!strcmp(key,"access-line-profile-id")) {
+            profile->access_line_profile_id = json_number_value(value);
+            access_line_profile_id_absent = false;
+            continue;
+        }
 
-    value = json_object_get(config, "access-line-profile-id");
-    if(value) {
-        profile->access_line_profile_id = json_number_value(value);
-    } else {
+        if (!strcmp(key,"act-up")) {
+            profile->act_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"act-down")) {
+            profile->act_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"min-up")) {
+            profile->min_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"min-down")) {
+            profile->min_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"att-up")) {
+            profile->att_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"att-down")) {
+            profile->att_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"min-up-low")) {
+            profile->min_up_low = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"min-down-low")) {
+            profile->min_down_low = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"max-interl-delay-up")) {
+            profile->max_interl_delay_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"act-interl-delay-up")) {
+            profile->act_interl_delay_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"max-interl-delay-down")) {
+            profile->max_interl_delay_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"act-interl-delay-down")) {
+            profile->act_interl_delay_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"data-link-encaps")) {
+            profile->data_link_encaps = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"dsl-type")) {
+            profile->dsl_type = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"pon-type")) {
+            profile->pon_type = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"etr-up")) {
+            profile->etr_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"etr-down")) {
+            profile->etr_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"attetr-up")) {
+            profile->attetr_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"attetr-down")) {
+            profile->attetr_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"gdr-up")) {
+            profile->gdr_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"gdr-down")) {
+            profile->gdr_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"attgdr-up")) {
+            profile->attgdr_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"attgdr-down")) {
+            profile->attgdr_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"ont-onu-avg-down")) {
+            profile->ont_onu_avg_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"ont-onu-peak-down")) {
+            profile->ont_onu_peak_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"ont-onu-max-up")) {
+            profile->ont_onu_max_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"ont-onu-ass-up")) {
+            profile->ont_onu_ass_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"pon-max-up")) {
+            profile->pon_max_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"pon-max-down")) {
+            profile->pon_max_down = json_number_value(value);
+            continue;
+        }
+    }
+
+    if (access_line_profile_id_absent) {
         fprintf(stderr, "Config error: Missing value for access-line-profiles->access-line-profile-id\n");
         return false;
     }
-
-    value = json_object_get(config, "act-up");
-    if(value) {
-        profile->act_up = json_number_value(value);
-    }
-    value = json_object_get(config, "act-down");
-    if(value) {
-        profile->act_down = json_number_value(value);
-    }
-    value = json_object_get(config, "min-up");
-    if(value) {
-        profile->min_up = json_number_value(value);
-    }
-    value = json_object_get(config, "min-down");
-    if(value) {
-        profile->min_down = json_number_value(value);
-    }
-    value = json_object_get(config, "att-up");
-    if(value) {
-        profile->att_up = json_number_value(value);
-    }
-    value = json_object_get(config, "att-down");
-    if(value) {
-        profile->att_down = json_number_value(value);
-    }
-    value = json_object_get(config, "min-up-low");
-    if(value) {
-        profile->min_up_low = json_number_value(value);
-    }
-    value = json_object_get(config, "min-down-low");
-    if(value) {
-        profile->min_down_low = json_number_value(value);
-    }
-    value = json_object_get(config, "max-interl-delay-up");
-    if(value) {
-        profile->max_interl_delay_up = json_number_value(value);
-    }
-    value = json_object_get(config, "act-interl-delay-up");
-    if(value) {
-        profile->act_interl_delay_up = json_number_value(value);
-    }
-    value = json_object_get(config, "max-interl-delay-down");
-    if(value) {
-        profile->max_interl_delay_down = json_number_value(value);
-    }
-    value = json_object_get(config, "act-interl-delay-down");
-    if(value) {
-        profile->act_interl_delay_down = json_number_value(value);
-    }
-    value = json_object_get(config, "data-link-encaps");
-    if(value) {
-        profile->data_link_encaps = json_number_value(value);
-    }
-    value = json_object_get(config, "dsl-type");
-    if(value) {
-        profile->dsl_type = json_number_value(value);
-    }
-    value = json_object_get(config, "pon-type");
-    if(value) {
-        profile->pon_type = json_number_value(value);
-    }
-    value = json_object_get(config, "etr-up");
-    if(value) {
-        profile->etr_up = json_number_value(value);
-    }
-    value = json_object_get(config, "etr-down");
-    if(value) {
-        profile->etr_down = json_number_value(value);
-    }
-    value = json_object_get(config, "attetr-up");
-    if(value) {
-        profile->attetr_up = json_number_value(value);
-    }
-    value = json_object_get(config, "attetr-down");
-    if(value) {
-        profile->attetr_down = json_number_value(value);
-    }
-    value = json_object_get(config, "gdr-up");
-    if(value) {
-        profile->gdr_up = json_number_value(value);
-    }
-    value = json_object_get(config, "gdr-down");
-    if(value) {
-        profile->gdr_down = json_number_value(value);
-    }
-    value = json_object_get(config, "attgdr-up");
-    if(value) {
-        profile->attgdr_up = json_number_value(value);
-    }
-    value = json_object_get(config, "attgdr-down");
-    if(value) {
-        profile->attgdr_down = json_number_value(value);
-    }
-    value = json_object_get(config, "ont-onu-avg-down");
-    if(value) {
-        profile->ont_onu_avg_down = json_number_value(value);
-    }
-    value = json_object_get(config, "ont-onu-peak-down");
-    if(value) {
-        profile->ont_onu_peak_down = json_number_value(value);
-    }
-    value = json_object_get(config, "ont-onu-max-up");
-    if(value) {
-        profile->ont_onu_max_up = json_number_value(value);
-    }
-    value = json_object_get(config, "ont-onu-ass-up");
-    if(value) {
-        profile->ont_onu_ass_up = json_number_value(value);
-    }
-    value = json_object_get(config, "pon-max-up");
-    if(value) {
-        profile->pon_max_up = json_number_value(value);
-    }
-    value = json_object_get(config, "pon-max-down");
-    if(value) {
-        profile->pon_max_down = json_number_value(value);
-    }
+    
     return true;
+    /*Commented out blocks below are already refactored*/
+
+    // value = json_object_get(config, "access-line-profile-id");
+    // if(value) {
+    //     profile->access_line_profile_id = json_number_value(value);
+    // } else {
+    //     fprintf(stderr, "Config error: Missing value for access-line-profiles->access-line-profile-id\n");
+    //     return false;
+    // }
+
+    // value = json_object_get(config, "act-up");
+    // if(value) {
+    //     profile->act_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "act-down");
+    // if(value) {
+    //     profile->act_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "min-up");
+    // if(value) {
+    //     profile->min_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "min-down");
+    // if(value) {
+    //     profile->min_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "att-up");
+    // if(value) {
+    //     profile->att_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "att-down");
+    // if(value) {
+    //     profile->att_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "min-up-low");
+    // if(value) {
+    //     profile->min_up_low = json_number_value(value);
+    // }
+    // value = json_object_get(config, "min-down-low");
+    // if(value) {
+    //     profile->min_down_low = json_number_value(value);
+    // }
+    // value = json_object_get(config, "max-interl-delay-up");
+    // if(value) {
+    //     profile->max_interl_delay_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "act-interl-delay-up");
+    // if(value) {
+    //     profile->act_interl_delay_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "max-interl-delay-down");
+    // if(value) {
+    //     profile->max_interl_delay_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "act-interl-delay-down");
+    // if(value) {
+    //     profile->act_interl_delay_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "data-link-encaps");
+    // if(value) {
+    //     profile->data_link_encaps = json_number_value(value);
+    // }
+    // value = json_object_get(config, "dsl-type");
+    // if(value) {
+    //     profile->dsl_type = json_number_value(value);
+    // }
+    // value = json_object_get(config, "pon-type");
+    // if(value) {
+    //     profile->pon_type = json_number_value(value);
+    // }
+    // value = json_object_get(config, "etr-up");
+    // if(value) {
+    //     profile->etr_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "etr-down");
+    // if(value) {
+    //     profile->etr_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "attetr-up");
+    // if(value) {
+    //     profile->attetr_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "attetr-down");
+    // if(value) {
+    //     profile->attetr_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "gdr-up");
+    // if(value) {
+    //     profile->gdr_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "gdr-down");
+    // if(value) {
+    //     profile->gdr_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "attgdr-up");
+    // if(value) {
+    //     profile->attgdr_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "attgdr-down");
+    // if(value) {
+    //     profile->attgdr_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "ont-onu-avg-down");
+    // if(value) {
+    //     profile->ont_onu_avg_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "ont-onu-peak-down");
+    // if(value) {
+    //     profile->ont_onu_peak_down = json_number_value(value);
+    // }
+    // value = json_object_get(config, "ont-onu-max-up");
+    // if(value) {
+    //     profile->ont_onu_max_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "ont-onu-ass-up");
+    // if(value) {
+    //     profile->ont_onu_ass_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "pon-max-up");
+    // if(value) {
+    //     profile->pon_max_up = json_number_value(value);
+    // }
+    // value = json_object_get(config, "pon-max-down");
+    // if(value) {
+    //     profile->pon_max_down = json_number_value(value);
+    // }
 }
 
 static bool
