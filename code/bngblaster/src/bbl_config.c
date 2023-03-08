@@ -20,20 +20,6 @@ const char g_default_router_id[] = "10.10.10.10";
 const char g_default_system_id[] = "0100.1001.0010";
 const char g_default_area[] = "49.0001/24";
 
-/*
-*   This function is used to detect if any unknown key
-*   should be ignored or raise an error.
-*   @key        key name
-*   @string     attribute name
-*/
-static void
-begin_with_underscore(const char *key, const char *string)
-{
-    if (key[0] == '_')
-        return;
-    fprintf( stderr, "Config error: Incorrect atrribute name in %s\n", string);
-}
-
 static void
 add_secondary_ipv4(uint32_t ipv4)
 {
@@ -285,7 +271,10 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         }
 
         /* If none of the above key values are macthed */
-        begin_with_underscore(key, "access-line-profile");
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in access-line-profiles\n", key);
+        return false;
     }
 
     if (access_line_profile_id_absent) {
@@ -390,7 +379,10 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
         }  
 
         /* If none of the above key values are macthed*/
-        begin_with_underscore(key, "interfaces->lag");
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interface->lag\n",key);
+        return false;
 
     }
 
