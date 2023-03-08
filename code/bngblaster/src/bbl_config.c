@@ -522,7 +522,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         }
 
         if (!strcmp(key, "io-mode")) {
-            string = json_string_value(value);
+            string = strdup(json_string_value(value));
             link_io_mode_absent = false;
             if (!strcmp(string, "packet_mmap_raw")) {
                 link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
