@@ -390,7 +390,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
         }  
 
         /* If none of the above key values are macthed*/
-        fprintf(stderr, "Config error: Incorrect atrribute name in interfaces->lag\n");
+        begin_with_underscore(key, "interfaces->lag");
 
     }
 
