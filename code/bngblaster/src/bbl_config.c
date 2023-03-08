@@ -474,71 +474,106 @@ link_add(char *interface_name)
 static bool
 json_parse_link(json_t *link, bbl_link_config_s *link_config)
 {
-    json_t *value, *sub = NULL;
+    const char *key;
+    json_t *value;
+
+    char *string;
+    json_t *sub = NULL;
     char *s = NULL;
     int i, size;
     double number;
 
-    if(json_unpack(link, "{s:s}", "interface", &s) == 0) {
-        if(link_present(s) || lag_present(s)) {
-            fprintf(stderr, "JSON config error: Duplicate link configuration for %s\n", s);
-            return false;
+    /*  All flag variables are declared here    */
+    bool link_interface_absent = true;
+    bool link_io_mode_absent = true;
+    bool link_io_slots_absent = true;
+
+    json_object_foreach(link, key, value) {
+        
+        if (!strcmp(key,"interface")) {
+            string = strdup(json_string_value(value));
+            if(link_present(string) || lag_present(string)) {
+                fprintf(stderr, "JSON config error: Duplicate link configuration for %s\n", string);
+                return false;
+            }
+            link_config->interface = string;
+            link_interface_absent = false;   
+            continue;     
         }
-        link_config->interface = strdup(s);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for links->interface\n");
-        return false;
-    }
-    
-    if(json_unpack(link, "{s:s}", "description", &s) == 0) {
-        link_config->description = strdup(s);
-    }
-    if(json_unpack(link, "{s:s}", "mac", &s) == 0) {
-        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+
+        if (!strcmp(key, "description")) {
+            link_config->description = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "mac")) {
+            string = strdup(json_string_value(value));
+            if(sscanf(string, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
                 &link_config->mac[0],
                 &link_config->mac[1],
                 &link_config->mac[2],
                 &link_config->mac[3],
                 &link_config->mac[4],
                 &link_config->mac[5]) < 6) {
-            fprintf(stderr, "JSON config error: Invalid value for links->mac\n");
-            return false;
+                    fprintf(stderr, "JSON config error: Invalid value for links->mac\n");
+                    return false;
+            }
+            continue;
         }
-    }
-    if(json_unpack(link, "{s:s}", "io-mode", &s) == 0) {
-        if(strcmp(s, "packet_mmap_raw") == 0) {
-            link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
-            io_packet_mmap_set_max_stream_len();
-        } else if(strcmp(s, "packet_mmap") == 0) {
-            link_config->io_mode = IO_MODE_PACKET_MMAP;
-            io_packet_mmap_set_max_stream_len();
-        } else if(strcmp(s, "raw") == 0) {
-            link_config->io_mode = IO_MODE_RAW;
+
+        if (!strcmp(key, "io-mode")) {
+            string = json_string_value(value);
+            link_io_mode_absent = false;
+            if (!strcmp(string, "packet_mmap_raw")) {
+                link_config->io_mode = IO_MODE_PACKET_MMAP_RAW;
+                io_packet_mmap_set_max_stream_len();
+            } else if (!strcmp(string, "packet_mmap")) {
+                link_config->io_mode = IO_MODE_PACKET_MMAP;
+                io_packet_mmap_set_max_stream_len();
+            } else if (!strcmp(string, "raw")) {
+                link_config->io_mode = IO_MODE_RAW;
 #if BNGBLASTER_DPDK
-        } else if(strcmp(s, "dpdk") == 0) {
-            link_config->io_mode = IO_MODE_DPDK;
-            g_ctx->dpdk = true;
-#endif
-        } else {
-            fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
-            return false;
+            } else if (!strcmp(string, "dpdk")) {
+                link_config->io_mode = IO_MODE_DPDK;
+                g_ctx->dpdk = true;
+#endif                
+            } else {
+                fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
+                return false;
+            }
+            continue;
         }
-    } else {
+
+        if (!strcmp(key, "io-slots")) {
+            number = json_number_value(value);
+            if(number < 32 || number >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for links->io-slots\n");
+                return false;
+            }
+            link_config->io_slots_tx = number;
+            link_config->io_slots_rx = number;
+            link_io_slots_absent = false;
+            continue;
+        }
+    
+    }
+
+    if (link_interface_absent) {
+        fprintf(stderr, "JSON config error: Missing value for links->interface\n");
+        return false;
+    }
+
+    if (link_io_mode_absent) {
         link_config->io_mode = g_ctx->config.io_mode;
     }
-    value = json_object_get(link, "io-slots");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 32 || number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for links->io-slots\n");
-            return false;
-        }
-        link_config->io_slots_tx = number;
-        link_config->io_slots_rx = number;
-    } else {
+
+    if (link_io_slots_absent) {
         link_config->io_slots_tx = g_ctx->config.io_slots;
         link_config->io_slots_rx = g_ctx->config.io_slots;
     }
+
+    /*  unrefactored code is yet to be commented / removed  */
+
     value = json_object_get(link, "io-slots-tx");
     if(json_is_number(value)) {
         number = json_number_value(value);
