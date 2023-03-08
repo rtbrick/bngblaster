@@ -98,7 +98,7 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
         }
     } else if(inner_eth->type == ETH_TYPE_IPV4) {
         inner_ipv4 = (bbl_ipv4_s*)eth->next;
-    } else if(inner_eth->type == PROTOCOL_IPV6) {
+    } else if(inner_eth->type == ETH_TYPE_IPV6) {
         inner_ipv6 = (bbl_ipv6_s*)eth->next;
     }
 
