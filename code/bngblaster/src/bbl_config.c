@@ -479,6 +479,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 
     char *string;
     json_t *sub = NULL;
+    int index;
     char *s = NULL;
     int i, size;
     double number;
@@ -487,6 +488,13 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     bool link_interface_absent = true;
     bool link_io_mode_absent = true;
     bool link_io_slots_absent = true;
+    bool link_qdisc_bypass_absent = true;
+    bool link_tx_int_absent = true;
+    bool link_rx_int_absent = true;
+    bool link_tx_threads_absent = true;
+    bool link_rx_threads_absent = true;
+    bool link_lag_int_absent = true; //used inside json_object_foreach
+    bool link_lag_lacp_absent = true;
 
     json_object_foreach(link, key, value) {
         
@@ -555,7 +563,130 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             link_io_slots_absent = false;
             continue;
         }
-    
+
+        if (!strcmp(key, "io-slots-tx")) {
+            number = json_number_value(value);
+            if(number < 32 || number >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for links->io-slots-tx\n");
+                return false;
+            }
+            link_config->io_slots_tx = number;
+            continue;
+        }
+
+        if (!strcmp(key, "io-slots-rx")) {
+            number = json_number_value(value);
+            if(number < 32 || number >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for links->io-slots-rx\n");
+                return false;
+            }
+            link_config->io_slots_rx = number; 
+            continue;        
+        }
+
+        if (!strcmp(key, "qdisc-bypass")) {
+            link_config->qdisc_bypass = json_number_value(value);
+            link_qdisc_bypass_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "tx-interval")) {
+            link_config->tx_interval = json_number_value(value) * MSEC;
+            link_tx_int_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "rx-interval")) {
+            link_config->rx_interval = json_number_value(value) * MSEC;
+            link_rx_int_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "tx-threads")) {
+            link_config->tx_threads = json_number_value(value);
+            link_tx_threads_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "rx-threads")) {
+            link_config->rx_threads = json_number_value(value);
+            link_rx_threads_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "rx-cpuset")) {
+            if (json_is_array(value)) {
+                size = json_array_size(value);
+                link_config->rx_cpuset_cur = 0;
+                link_config->rx_cpuset_count = size;
+                link_config->rx_cpuset = calloc(size, sizeof(uint16_t));
+                json_array_foreach(value, index, sub) {
+                    if(json_is_number(sub)) {
+                        link_config->rx_cpuset[i] = json_number_value(sub);
+                    } else {
+                        fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
+                        return false;
+                    }
+                }
+            } else if(json_is_number(value)) {
+                link_config->rx_cpuset = calloc(1, sizeof(uint16_t));
+                link_config->rx_cpuset[0] = json_number_value(value);
+                link_config->rx_cpuset_count = 1;
+                link_config->rx_cpuset_cur = 0;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "tx-cpuset")) {
+            if (json_is_array(value)) {
+                size = json_array_size(value);
+                link_config->tx_cpuset_cur = 0;
+                link_config->tx_cpuset_count = size;
+                link_config->tx_cpuset = calloc(size, sizeof(uint16_t));
+                json_array_foreach(value, index, sub) {
+                    if(json_is_number(sub)) {
+                        link_config->tx_cpuset[i] = json_number_value(sub);
+                    } else {
+                        fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
+                        return false;
+                    }
+                }
+            } else if(json_is_number(value)) {
+                link_config->tx_cpuset = calloc(1, sizeof(uint16_t));
+                link_config->tx_cpuset[0] = json_number_value(value);
+                link_config->tx_cpuset_count = 1;
+                link_config->tx_cpuset_cur = 0;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "lag-interface")) {
+            string = strdup(json_string_value(value));
+            if(!lag_present(string)) {
+                fprintf(stderr, "JSON config error: Missing configuration for lag-interface %s\n", string);
+                return false;
+            }
+            link_config->lag_interface = string;
+            link_lag_int_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "lacp-priority")) {
+            if (link_lag_int_absent) {
+                fprintf(stderr, "JSON config error: Missing configuration for lag-interface %s\n", string);
+                return false;
+            }
+            link_config->lacp_priority = json_number_value(value);
+            link_lag_lacp_absent = false;
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces->links\n",key);
+        return false;
+
     }
 
     if (link_interface_absent) {
@@ -572,115 +703,30 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->io_slots_rx = g_ctx->config.io_slots;
     }
 
-    /*  unrefactored code is yet to be commented / removed  */
-
-    value = json_object_get(link, "io-slots-tx");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 32 || number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for links->io-slots-tx\n");
-            return false;
-        }
-        link_config->io_slots_tx = json_number_value(value);
-    }
-    value = json_object_get(link, "io-slots-rx");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 32 || number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for links->io-slots-rx\n");
-            return false;
-        }
-        link_config->io_slots_rx = json_number_value(value);
-    }
-    value = json_object_get(link, "qdisc-bypass");
-    if(json_is_number(value)) {
-        link_config->qdisc_bypass = json_number_value(value);
-    } else {
+    if (link_qdisc_bypass_absent) {
         link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
     }
-    value = json_object_get(link, "tx-interval");
-    if(json_is_number(value)) {
-        link_config->tx_interval = json_number_value(value) * MSEC;
-    } else {
+
+    if (link_tx_int_absent) {
         link_config->tx_interval = g_ctx->config.tx_interval;
     }
-    value = json_object_get(link, "rx-interval");
-    if(json_is_number(value)) {
-        link_config->rx_interval = json_number_value(value) * MSEC;
-    } else {
+
+    if (link_rx_int_absent) {
         link_config->rx_interval = g_ctx->config.rx_interval;
     }
-    value = json_object_get(link, "tx-threads");
-    if(value) {
-        link_config->tx_threads = json_number_value(value);
-    } else {
+
+    if (link_tx_threads_absent) {
         link_config->tx_threads = g_ctx->config.tx_threads;
     }
-    value = json_object_get(link, "rx-threads");
-    if(value) {
-        link_config->rx_threads = json_number_value(value);
-    } else {
+
+    if (link_rx_threads_absent) {
         link_config->rx_threads = g_ctx->config.rx_threads;
     }
 
-    value = json_object_get(link, "rx-cpuset");
-    if(json_is_array(value)) {
-        size = json_array_size(value);
-        link_config->rx_cpuset_cur = 0;
-        link_config->rx_cpuset_count = size;
-        link_config->rx_cpuset = calloc(size, sizeof(uint16_t));
-        for(i = 0; i < size; i++) {
-            sub = json_array_get(value, i);
-            if(json_is_number(sub)) {
-                link_config->rx_cpuset[i] = json_number_value(sub);
-            } else {
-                fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
-                return false;
-            }
-        }
-    } else if(json_is_number(value)) {
-        link_config->rx_cpuset = calloc(1, sizeof(uint16_t));
-        link_config->rx_cpuset[0] = json_number_value(value);
-        link_config->rx_cpuset_count = 1;
-        link_config->rx_cpuset_cur = 0;
+    if (link_lag_lacp_absent) {
+        link_config->lacp_priority = 32768;      
     }
 
-    value = json_object_get(link, "tx-cpuset");
-    if(json_is_array(value)) {
-        size = json_array_size(value);
-        link_config->tx_cpuset_cur = 0;
-        link_config->tx_cpuset_count = size;
-        link_config->tx_cpuset = calloc(size, sizeof(uint16_t));
-        for(i = 0; i < size; i++) {
-            sub = json_array_get(value, i);
-            if(json_is_number(sub)) {
-                link_config->tx_cpuset[i] = json_number_value(sub);
-            } else {
-                fprintf(stderr, "JSON config error: Invalid value for links->tx-cpuset\n");
-                return false;
-            }
-        }
-    } else if(json_is_number(value)) {
-        link_config->tx_cpuset = calloc(1, sizeof(uint16_t));
-        link_config->tx_cpuset[0] = json_number_value(value);
-        link_config->tx_cpuset_count = 1;
-        link_config->tx_cpuset_cur = 0;
-    }
-
-    /* Link Aggregation Group (LAG) Configuration */
-    if(json_unpack(link, "{s:s}", "lag-interface", &s) == 0) {
-        if(!lag_present(s)) {
-            fprintf(stderr, "JSON config error: Missing configuration for lag-interface %s\n", s);
-            return false;
-        }
-        link_config->lag_interface = strdup(s);
-        value = json_object_get(link, "lacp-priority");
-        if(value) {
-            link_config->lacp_priority = json_number_value(value);
-        } else {
-            link_config->lacp_priority = 32768;
-        }
-    }
     return true;
 }
 
