@@ -480,8 +480,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     char *string;
     json_t *sub = NULL;
     int index;
-    char *s = NULL;
-    int i, size;
+    int size;
     double number;
 
     /*  All flag variables are declared here    */
@@ -622,7 +621,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
                 link_config->rx_cpuset = calloc(size, sizeof(uint16_t));
                 json_array_foreach(value, index, sub) {
                     if(json_is_number(sub)) {
-                        link_config->rx_cpuset[i] = json_number_value(sub);
+                        link_config->rx_cpuset[index] = json_number_value(sub);
                     } else {
                         fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
                         return false;
@@ -645,7 +644,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
                 link_config->tx_cpuset = calloc(size, sizeof(uint16_t));
                 json_array_foreach(value, index, sub) {
                     if(json_is_number(sub)) {
-                        link_config->tx_cpuset[i] = json_number_value(sub);
+                        link_config->tx_cpuset[index] = json_number_value(sub);
                     } else {
                         fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
                         return false;
