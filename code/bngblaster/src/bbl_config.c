@@ -732,86 +732,135 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 static bool
 json_parse_network_interface(json_t *network_interface, bbl_network_config_s *network_config)
 {
+    const char *key;
     json_t *value = NULL;
     const char *s = NULL;
     ipv4addr_t ipv4 = {0};
+    uint16_t number;
 
-    if(json_unpack(network_interface, "{s:s}", "interface", &s) == 0) {
-        network_config->interface = strdup(s);
-        link_add(network_config->interface);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for network->interface\n");
-        return false;
-    }
-    if(json_unpack(network_interface, "{s:s}", "address", &s) == 0) {
-        if(!scan_ipv4_prefix(s, &network_config->ip)) {
-            fprintf(stderr, "JSON config error: Invalid value for network->address\n");
-            return false;
+    /*  Flag variables are declared */
+    bool net_int_absent = true;
+    bool ipv6_ra_absent = true;
+    bool mtu_absent = true;
+    bool gate_resv_wait_absent = true;
+
+    json_object_foreach(network_interface, key, value) {
+        
+        if (!strcmp(key, "interface")) {
+            network_config->interface = strdup(json_string_value(value));
+            link_add(network_config->interface);
+            net_int_absent = false;
+            continue;
         }
-    }
-    if(json_unpack(network_interface, "{s:s}", "gateway", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &ipv4)) {
-            fprintf(stderr, "JSON config error: Invalid value for network->gateway\n");
-            return false;
+
+        if (!strcmp(key, "address")) {
+            if (!scan_ipv4_prefix(json_string_value(value), &network_config->ip)) {
+                fprintf(stderr, "JSON config error: Invalid value for network->address\n");
+                return false;
+            }
+            continue;
         }
-        network_config->gateway = ipv4;
-    }
-    if(json_unpack(network_interface, "{s:s}", "address-ipv6", &s) == 0) {
-        if(!scan_ipv6_prefix(s, &network_config->ip6)) {
-            fprintf(stderr, "JSON config error: Invalid value for network->address-ipv6\n");
-            return false;
+
+        if (!strcmp(key, "gateway")) {
+            if(!inet_pton(AF_INET, json_string_value(value), &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for network->gateway\n");
+                return false;
+            }
+            network_config->gateway = ipv4;
+            continue;
         }
-    }
-    if(json_unpack(network_interface, "{s:s}", "gateway-ipv6", &s) == 0) {
-        if(!inet_pton(AF_INET6, s, &network_config->gateway6)) {
-            fprintf(stderr, "JSON config error: Invalid value for network->gateway-ipv6\n");
-            return false;
+
+        if (!strcmp(key, "address-ipv6")) {
+            if(!scan_ipv6_prefix(json_string_value(value), &network_config->ip6)) {
+                fprintf(stderr, "JSON config error: Invalid value for network->address-ipv6\n");
+                return false;
+            }
+            continue;              
+        }        
+
+        if (!strcmp(key, "gateway-ipv6")) {
+            if(!inet_pton(AF_INET6, json_string_value(value), &network_config->gateway6)) {
+                fprintf(stderr, "JSON config error: Invalid value for network->gateway-ipv6\n");
+                return false;
+            }
+            continue;
         }
-    }
-    value = json_object_get(network_interface, "ipv6-router-advertisement");
-    if(json_is_boolean(value)) {
-        network_config->ipv6_ra = json_boolean_value(value);
-    } else {
-        network_config->ipv6_ra = true;
+
+        if (!strcmp(key, "ipv6-router-advertisement")) {
+            if (json_is_boolean(value)) {
+                network_config->ipv6_ra = json_boolean_value(value);
+                ipv6_ra_absent = false;
+            }
+            continue;            
+        }
+
+        if (!strcmp(key, "gateway-mac")) {
+            s = json_string_value(value);
+            if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                    &network_config->gateway_mac[0],
+                    &network_config->gateway_mac[1],
+                    &network_config->gateway_mac[2],
+                    &network_config->gateway_mac[3],
+                    &network_config->gateway_mac[4],
+                    &network_config->gateway_mac[5]) < 6) {
+                fprintf(stderr, "JSON config error: Invalid value for network->gateway-mac\n");
+                return false;
+            }    
+            continue;        
+        }
+
+        if (!strcmp(key, "vlan")) {
+            if(json_is_number(value)) {
+                network_config->vlan = json_number_value(value);
+                network_config->vlan &= 4095;
+            }       
+            continue;     
+        }
+
+        if (!strcmp(key, "mtu")) {
+            if(json_is_number(value)) {
+                number = json_number_value(value);
+                if (number < 64 || number > 9000) {
+                    fprintf(stderr, "JSON config error: Invalid value for network->mtu\n");
+                    return false;
+                }
+                network_config->mtu = number;
+                mtu_absent = false;
+            }     
+            continue;       
+        }
+
+        if (!strcmp(key, "gateway-resolve-wait")) {
+            if (json_is_boolean(value)) {
+                network_config->gateway_resolve_wait = json_boolean_value(value);
+                gate_resv_wait_absent = false;
+            }
+            continue;
+        }
+
+    /* IS-IS interface configuration */
+
     }
 
-    if(json_unpack(network_interface, "{s:s}", "gateway-mac", &s) == 0) {
-        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                &network_config->gateway_mac[0],
-                &network_config->gateway_mac[1],
-                &network_config->gateway_mac[2],
-                &network_config->gateway_mac[3],
-                &network_config->gateway_mac[4],
-                &network_config->gateway_mac[5]) < 6)
-        {
-            fprintf(stderr, "JSON config error: Invalid value for network->gateway-mac\n");
-            return false;
-        }
-    }
-    value = json_object_get(network_interface, "vlan");
-    if(json_is_number(value)) {
-        network_config->vlan = json_number_value(value);
-        network_config->vlan &= 4095;
+    if (gate_resv_wait_absent) {
+        network_config->gateway_resolve_wait = true;
     }
 
-    value = json_object_get(network_interface, "mtu");
-    if(json_is_number(value)) {
-        network_config->mtu = json_number_value(value);
-    } else {
+    if (mtu_absent) {
         network_config->mtu = 1500;
     }
 
-    if(network_config->mtu < 64 || network_config->mtu > 9000) {
-        fprintf(stderr, "JSON config error: Invalid value for network->mtu\n");
+    if (ipv6_ra_absent) {
+        network_config->ipv6_ra = true;
+    }
+
+    if (net_int_absent) {
+        fprintf(stderr, "JSON config error: Missing value for network->interface\n");
         return false;
     }
 
-    value = json_object_get(network_interface, "gateway-resolve-wait");
-    if(json_is_boolean(value)) {
-        network_config->gateway_resolve_wait = json_boolean_value(value);
-    } else {
-        network_config->gateway_resolve_wait = true;
-    }
+    /*  code below is not refactored  */
+
 
     /* IS-IS interface configuration */
     value = json_object_get(network_interface, "isis-instance-id");
