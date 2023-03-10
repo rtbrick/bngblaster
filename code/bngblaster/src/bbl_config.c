@@ -1114,7 +1114,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         }
 
         if (!strcmp(key, "third-vlan") && json_is_number(value)) {
-            access_config->access_third_vlan = json_number_value(value) & 4095;
+            access_config->access_third_vlan = (int) json_number_value(value) & 4095;
             continue;
         }
 
