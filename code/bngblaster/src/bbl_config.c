@@ -848,10 +848,6 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         if (!strcmp(key, "isis-instance-id")) {
             if(json_is_number(value)) {
                 network_config->isis_instance_id = json_number_value(value);
-                // network_config->isis_level = 3;
-                // network_config->isis_p2p = true;
-                // network_config->isis_l1_metric = 10;
-                // network_config->isis_l2_metric = 10;
                 isis_instance_id_absent = false;
             }
             continue;
@@ -947,6 +943,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
 static bool
 json_parse_access_interface(json_t *access_interface, bbl_access_config_s *access_config)
 {
+    const char *key;
     json_t *value = NULL;
     const char *s = NULL;
     uint32_t ipv4;
@@ -955,244 +952,293 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     access_config->ipv4_enable = true;
     access_config->ipv6_enable = true;
 
-    if(json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
-        access_config->interface = strdup(s);
-        link_add(access_config->interface);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for interface->interface\n");
+    /* Flag variables are declared */
+    bool acc_int_absent = true;
+    bool acc_n_int_absent = true;
+    bool acc_a_int_absent = true;
+    bool acc_o_vlan_absent = true;
+    bool acc_i_vlan_absent = true;
+    bool acc_o_v_step_absent = true;
+    bool acc_i_v_step_absent = true;
+
+    /* Default values*/
+    access_config->i1 = 1;
+    access_config->i1_step = 1;
+    access_config->i2 = 1;
+    access_config->i2_step = 1;
+    access_config->ppp_mru = g_ctx->config.ppp_mru;
+    access_config->username = strdup(g_ctx->config.username);
+    access_config->password = strdup(g_ctx->config.password);
+    access_config->authentication_protocol = g_ctx->config.authentication_protocol;
+    if(g_ctx->config.agent_circuit_id) {
+        access_config->agent_circuit_id = strdup(g_ctx->config.agent_circuit_id);
+    }
+
+    if(g_ctx->config.agent_remote_id) {
+        access_config->agent_remote_id = strdup(g_ctx->config.agent_remote_id);
+    }
+    access_config->rate_up = g_ctx->config.rate_up;
+    access_config->rate_down = g_ctx->config.rate_down;
+    access_config->dsl_type = g_ctx->config.dsl_type;
+
+    json_object_foreach(access_interface, key, value) {
+        if (!strcmp(key, "interface") && json_is_string(value)) {
+            access_config->interface = strdup(json_string_value(value));
+            link_add(access_config->interface);
+            acc_int_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "network-interface") && json_is_string(value)) {
+            if (!acc_a_int_absent) {
+                fprintf(stderr, "JSON config error: You can't define access->network-interface and access->a10nsp-interface\n");
+                return false;
+            }
+            access_config->network_interface = strdup(json_string_value(value));
+            acc_n_int_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "a10nsp-interface") && json_is_string(value)) {
+            if (!acc_n_int_absent) {
+                fprintf(stderr, "JSON config error: You can't define access->network-interface and access->a10nsp-interface\n");
+                return false;
+            }
+            access_config->access_interface = strdup(json_string_value(value));
+            acc_a_int_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "i1-start") && json_is_number(value)) {
+            access_config->i1 = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "i1-step") && json_is_number(value)) {
+            access_config->i1_step = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "i2-start") && json_is_number(value)) {
+            access_config->i2 = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "i2-step") && json_is_number(value)) {
+            access_config->i2_step = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "type") && json_is_string(value)) {
+            s = json_string_value(value);
+            if (!strcmp(s, "pppoe")) {
+                access_config->access_type = ACCESS_TYPE_PPPOE;
+            } else if (!strcmp(s, "ipoe")) {
+                access_config->access_type = ACCESS_TYPE_IPOE;
+                access_config->ipv4_enable = g_ctx->config.ipoe_ipv4_enable;
+                access_config->ipv6_enable = g_ctx->config.ipoe_ipv6_enable;               
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for access->type\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "vlan-mode")) {
+            s = json_string_value(value);
+            if (!strcmp(s, "1:1")) {
+                access_config->vlan_mode = VLAN_MODE_11;
+            } else if (!strcmp(s, "N:1")) {
+                access_config->vlan_mode = VLAN_MODE_N1;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for access->vlan-mode\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "monkey") && json_is_boolean(value)) {
+            access_config->monkey = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "qinq") && json_is_boolean(value)) {
+            access_config->qinq = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "outer-vlan") && json_is_number(value)) {
+            access_config->access_outer_vlan_min = json_number_value(value) & 4095;
+            access_config->access_outer_vlan_max = access_config->access_outer_vlan_min;
+            acc_o_vlan_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "outer-vlan-min") && json_is_number(value) && acc_o_vlan_absent) {
+            access_config->access_outer_vlan_min = json_number_value(value) & 4095;
+            continue;
+        }
+
+        if (!strcmp(key, "outer-vlan-max") && json_is_number(value) && acc_o_vlan_absent) {
+            access_config->access_outer_vlan_max = json_number_value(value) & 4095;
+            continue;
+        }
+
+        if (!strcmp(key, "outer-vlan-step") && json_is_number(value) && acc_o_vlan_absent) {
+            access_config->access_outer_vlan_step = json_number_value(value);
+            acc_o_v_step_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "inner-vlan") && json_is_number(value)) {
+            access_config->access_inner_vlan_min = json_number_value(value) & 4095;
+            access_config->access_inner_vlan_max = access_config->access_inner_vlan_min;
+            acc_i_vlan_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "inner-vlan-min") && json_is_number(value) && acc_i_vlan_absent) {
+            access_config->access_inner_vlan_min = json_number_value(value) & 4095;
+            continue;
+        }
+
+        if (!strcmp(key, "inner-vlan-max") && json_is_number(value) && acc_i_vlan_absent) {
+            access_config->access_inner_vlan_max = json_number_value(value) & 4095;
+            continue;
+        }
+
+        if (!strcmp(key, "inner-vlan-step") && json_is_number(value) && acc_i_vlan_absent) {
+            access_config->access_inner_vlan_step = json_number_value(value);
+            acc_i_v_step_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "third-vlan") && json_is_number(value)) {
+            access_config->access_third_vlan = json_number_value(value) & 4095;
+            continue;
+        }
+
+        if (!strcmp(key, "ppp-mru") && json_is_number(value)) {
+            access_config->ppp_mru = json_number_value(value);
+            continue;
+        }
+
+        if(!strcmp(key, "address") && json_is_string(value)) {
+            s = json_string_value(value);
+            if(!inet_pton(AF_INET, s, &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for access->address\n");
+                return false;
+            }
+            access_config->static_ip = ipv4;
+            continue;
+        }
+
+        if(!strcmp(key, "address-iter") && json_is_string(value)) {
+            s = json_string_value(value);
+            if(!inet_pton(AF_INET, s, &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for access->address-iter\n");
+                return false;
+            }
+            access_config->static_ip_iter = ipv4;
+            continue;
+        }
+
+        if(!strcmp(key, "gateway") && json_is_string(value)) {
+            s = json_string_value(value);
+            if(!inet_pton(AF_INET, s, &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for access->gateway\n");
+                return false;
+            }
+            access_config->static_gateway = ipv4;
+            continue;
+        }
+
+        if(!strcmp(key, "gateway-iter") && json_is_string(value)) {
+            s = json_string_value(value);
+            if(!inet_pton(AF_INET, s, &ipv4)) {
+                fprintf(stderr, "JSON config error: Invalid value for access->gateway-iter\n");
+                return false;
+            }
+            access_config->static_gateway_iter = ipv4;
+            continue;
+        }
+
+        /* Optionally overload some settings per range */
+        if (!strcmp(key, "username") && json_is_string(value)) {
+            access_config->username = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "password") && json_is_string(value)) {
+            access_config->password = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "authentication-protocol") && json_is_string(value)) {
+            s = json_string_value(value);
+            if (!strcmp(s, "PAP")) {
+                access_config->authentication_protocol = PROTOCOL_PAP;
+            } else if(!strcmp(s, "CHAP")) {
+                access_config->authentication_protocol = PROTOCOL_CHAP;
+            } else {
+                fprintf(stderr, "Config error: Invalid value for access->authentication-protocol\n");
+                return false;
+            }
+            continue;
+        }
+
+        /* Access Line */
+        if (!strcmp(key, "agent-circuit-id") && json_is_string(value)) {
+            access_config->agent_circuit_id = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "agent-remote-id") && json_is_string(value)) {
+            access_config->agent_remote_id = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "rate-up") && json_is_number(value)) {
+            access_config->rate_up = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "rate-down") && json_is_number(value)) {
+            access_config->rate_down = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "dsl-type") && json_is_number(value)) {
+            access_config->dsl_type = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "access-line-profile-id") && json_is_number(value)) {
+            access_config->access_line_profile_id = json_number_value(value);
+            continue;
+        }
+    }
+
+    if (acc_int_absent) {
+        fprintf(stderr, "JSON config error: Missing value for access->interface\n");
         return false;
     }
-    if(json_unpack(access_interface, "{s:s}", "network-interface", &s) == 0) {
-        access_config->network_interface = strdup(s);
-    }
-    if(json_unpack(access_interface, "{s:s}", "a10nsp-interface", &s) == 0) {
-        if(access_config->network_interface) {
-            fprintf(stderr, "JSON config error: You can't define access->network-interface and access->a10nsp-interface\n");
-            return false;
-        }
-        access_config->a10nsp_interface = strdup(s);
+
+    if (acc_o_vlan_absent && acc_o_v_step_absent) {
+        access_config->access_outer_vlan_step = 1;
     }
 
-    value = json_object_get(access_interface, "i1-start");
-    if(value) {
-        access_config->i1 = json_number_value(value);
-    } else {
-        access_config->i1 = 1;
-    }
-    value = json_object_get(access_interface, "i1-step");
-    if(value) {
-        access_config->i1_step = json_number_value(value);
-    } else {
-        access_config->i1_step = 1;
-    }
-    value = json_object_get(access_interface, "i2-start");
-    if(value) {
-        access_config->i2 = json_number_value(value);
-    } else {
-        access_config->i2 = 1;
-    }
-    value = json_object_get(access_interface, "i2-step");
-    if(value) {
-        access_config->i2_step = json_number_value(value);
-    } else {
-        access_config->i2_step = 1;
+    if (acc_i_vlan_absent && acc_i_v_step_absent) {
+        access_config->access_inner_vlan_step = 1;
     }
 
-    if(json_unpack(access_interface, "{s:s}", "type", &s) == 0) {
-        if(strcmp(s, "pppoe") == 0) {
-            access_config->access_type = ACCESS_TYPE_PPPOE;
-        } else if(strcmp(s, "ipoe") == 0) {
-            access_config->access_type = ACCESS_TYPE_IPOE;
-            access_config->ipv4_enable = g_ctx->config.ipoe_ipv4_enable;
-            access_config->ipv6_enable = g_ctx->config.ipoe_ipv6_enable;
-        } else {
-            fprintf(stderr, "JSON config error: Invalid value for access->type\n");
-            return false;
-        }
-    }
-
-    if(json_unpack(access_interface, "{s:s}", "vlan-mode", &s) == 0) {
-        if(strcmp(s, "1:1") == 0) {
-            access_config->vlan_mode = VLAN_MODE_11;
-        } else if(strcmp(s, "N:1") == 0) {
-            access_config->vlan_mode = VLAN_MODE_N1;
-        } else {
-            fprintf(stderr, "JSON config error: Invalid value for access->vlan-mode\n");
-            return false;
-        }
-    }
-
-    value = json_object_get(access_interface, "monkey");
-    if(json_is_boolean(value)) {
-        access_config->monkey = json_boolean_value(value);
-    }
-
-    value = json_object_get(access_interface, "qinq");
-    if(json_is_boolean(value)) {
-        access_config->qinq = json_boolean_value(value);
-    }
-    value = json_object_get(access_interface, "outer-vlan");
-    if(json_is_number(value)) {
-        access_config->access_outer_vlan_min = json_number_value(value);
-        access_config->access_outer_vlan_min &= 4095;
-        access_config->access_outer_vlan_max = access_config->access_outer_vlan_min;
-    } else {
-        value = json_object_get(access_interface, "outer-vlan-min");
-        if(json_is_number(value)) {
-            access_config->access_outer_vlan_min = json_number_value(value);
-            access_config->access_outer_vlan_min &= 4095;
-        }
-        value = json_object_get(access_interface, "outer-vlan-max");
-        if(value) {
-            access_config->access_outer_vlan_max = json_number_value(value);
-            access_config->access_outer_vlan_max &= 4095;
-        }
-        value = json_object_get(access_interface, "outer-vlan-step");
-        if(value) {
-            access_config->access_outer_vlan_step = json_number_value(value);
-        } else {
-            access_config->access_outer_vlan_step = 1;
-        }
-    }
-    value = json_object_get(access_interface, "inner-vlan");
-    if(json_is_number(value)) {
-        access_config->access_inner_vlan_min = json_number_value(value);
-        access_config->access_inner_vlan_min &= 4095;
-        access_config->access_inner_vlan_max = access_config->access_inner_vlan_min;
-    } else {
-        value = json_object_get(access_interface, "inner-vlan-min");
-        if(value) {
-            access_config->access_inner_vlan_min = json_number_value(value);
-            access_config->access_inner_vlan_min &= 4095;
-        }
-        value = json_object_get(access_interface, "inner-vlan-max");
-        if(value) {
-            access_config->access_inner_vlan_max = json_number_value(value);
-            access_config->access_inner_vlan_max &= 4095;
-        }
-        value = json_object_get(access_interface, "inner-vlan-step");
-        if(value) {
-            access_config->access_inner_vlan_step = json_number_value(value);
-        } else {
-            access_config->access_inner_vlan_step = 1;
-        }
-    }
     if(access_config->access_outer_vlan_min > access_config->access_outer_vlan_max ||
        access_config->access_inner_vlan_min > access_config->access_inner_vlan_max) {
         fprintf(stderr, "JSON config error: Invalid value for access VLAN range (min > max)\n");
         return false;
     }
-    value = json_object_get(access_interface, "third-vlan");
-    if(value) {
-        access_config->access_third_vlan = json_number_value(value);
-        access_config->access_third_vlan &= 4095;
-    }
 
-    value = json_object_get(access_interface, "ppp-mru");
-    if(value) {
-        access_config->ppp_mru = json_number_value(value);
-    } else {
-        access_config->ppp_mru = g_ctx->config.ppp_mru;
-    }
-
-    if(json_unpack(access_interface, "{s:s}", "address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &ipv4)) {
-            fprintf(stderr, "JSON config error: Invalid value for access->address\n");
-            return false;
-        }
-        access_config->static_ip = ipv4;
-    }
-    if(json_unpack(access_interface, "{s:s}", "address-iter", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &ipv4)) {
-            fprintf(stderr, "JSON config error: Invalid value for access->address-iter\n");
-            return false;
-        }
-        access_config->static_ip_iter = ipv4;
-    }
-    if(json_unpack(access_interface, "{s:s}", "gateway", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &ipv4)) {
-            fprintf(stderr, "JSON config error: Invalid value for access->gateway\n");
-            return false;
-        }
-        access_config->static_gateway = ipv4;
-    }
-    if(json_unpack(access_interface, "{s:s}", "gateway-iter", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &ipv4)) {
-            fprintf(stderr, "JSON config error: Invalid value for access->gateway-iter\n");
-            return false;
-        }
-        access_config->static_gateway_iter = ipv4;
-    }
-
-    /* Optionally overload some settings per range */
-    if(json_unpack(access_interface, "{s:s}", "username", &s) == 0) {
-        access_config->username = strdup(s);
-    } else {
-        access_config->username = strdup(g_ctx->config.username);
-    }
-
-    if(json_unpack(access_interface, "{s:s}", "password", &s) == 0) {
-        access_config->password = strdup(s);
-    } else {
-        access_config->password = strdup(g_ctx->config.password);
-    }
-
-    if(json_unpack(access_interface, "{s:s}", "authentication-protocol", &s) == 0) {
-        if(strcmp(s, "PAP") == 0) {
-            access_config->authentication_protocol = PROTOCOL_PAP;
-        } else if(strcmp(s, "CHAP") == 0) {
-            access_config->authentication_protocol = PROTOCOL_CHAP;
-        } else {
-            fprintf(stderr, "Config error: Invalid value for access->authentication-protocol\n");
-            return false;
-        }
-    } else {
-        access_config->authentication_protocol = g_ctx->config.authentication_protocol;
-    }
-
-    /* Access Line */
-    if(json_unpack(access_interface, "{s:s}", "agent-circuit-id", &s) == 0) {
-        access_config->agent_circuit_id = strdup(s);
-    } else {
-        if(g_ctx->config.agent_circuit_id) {
-            access_config->agent_circuit_id = strdup(g_ctx->config.agent_circuit_id);
-        }
-    }
-
-    if(json_unpack(access_interface, "{s:s}", "agent-remote-id", &s) == 0) {
-        access_config->agent_remote_id = strdup(s);
-    } else {
-        if(g_ctx->config.agent_remote_id) {
-            access_config->agent_remote_id = strdup(g_ctx->config.agent_remote_id);
-        }
-    }
-
-    value = json_object_get(access_interface, "rate-up");
-    if(value) {
-        access_config->rate_up = json_number_value(value);
-    } else {
-        access_config->rate_up = g_ctx->config.rate_up;
-    }
-
-    value = json_object_get(access_interface, "rate-down");
-    if(value) {
-        access_config->rate_down = json_number_value(value);
-    } else {
-        access_config->rate_down = g_ctx->config.rate_down;
-    }
-
-    value = json_object_get(access_interface, "dsl-type");
-    if(value) {
-        access_config->dsl_type = json_number_value(value);
-    } else {
-        access_config->dsl_type = g_ctx->config.dsl_type;
-    }
-
-    value = json_object_get(access_interface, "access-line-profile-id");
-    if(value) {
-        access_config->access_line_profile_id = json_number_value(value);
-    }
-
+    /* Code to be refactored */
     /* IPv4 settings */
     value = json_object_get(access_interface, "ipcp");
     if(json_is_boolean(value)) {
