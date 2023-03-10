@@ -1004,7 +1004,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
                 fprintf(stderr, "JSON config error: You can't define access->network-interface and access->a10nsp-interface\n");
                 return false;
             }
-            access_config->access_interface = strdup(json_string_value(value));
+            access_config->a10nsp_interface = strdup(json_string_value(value));
             acc_a_int_absent = false;
             continue;
         }
@@ -1068,19 +1068,19 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         }
 
         if (!strcmp(key, "outer-vlan") && json_is_number(value)) {
-            access_config->access_outer_vlan_min = json_number_value(value) & 4095;
+            access_config->access_outer_vlan_min = (int) json_number_value(value) & 4095;
             access_config->access_outer_vlan_max = access_config->access_outer_vlan_min;
             acc_o_vlan_absent = false;
             continue;
         }
 
         if (!strcmp(key, "outer-vlan-min") && json_is_number(value) && acc_o_vlan_absent) {
-            access_config->access_outer_vlan_min = json_number_value(value) & 4095;
+            access_config->access_outer_vlan_min = (int) json_number_value(value) & 4095;
             continue;
         }
 
         if (!strcmp(key, "outer-vlan-max") && json_is_number(value) && acc_o_vlan_absent) {
-            access_config->access_outer_vlan_max = json_number_value(value) & 4095;
+            access_config->access_outer_vlan_max = (int) json_number_value(value) & 4095;
             continue;
         }
 
@@ -1091,19 +1091,19 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         }
 
         if (!strcmp(key, "inner-vlan") && json_is_number(value)) {
-            access_config->access_inner_vlan_min = json_number_value(value) & 4095;
+            access_config->access_inner_vlan_min = (int) json_number_value(value) & 4095;
             access_config->access_inner_vlan_max = access_config->access_inner_vlan_min;
             acc_i_vlan_absent = false;
             continue;
         }
 
         if (!strcmp(key, "inner-vlan-min") && json_is_number(value) && acc_i_vlan_absent) {
-            access_config->access_inner_vlan_min = json_number_value(value) & 4095;
+            access_config->access_inner_vlan_min = (int) json_number_value(value) & 4095;
             continue;
         }
 
         if (!strcmp(key, "inner-vlan-max") && json_is_number(value) && acc_i_vlan_absent) {
-            access_config->access_inner_vlan_max = json_number_value(value) & 4095;
+            access_config->access_inner_vlan_max = (int) json_number_value(value) & 4095;
             continue;
         }
 
