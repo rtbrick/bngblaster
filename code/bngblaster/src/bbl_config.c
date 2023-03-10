@@ -743,6 +743,11 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     bool ipv6_ra_absent = true;
     bool mtu_absent = true;
     bool gate_resv_wait_absent = true;
+    bool isis_instance_id_absent = true;
+    bool isis_level_absent = true;
+    bool isis_p2p_absent = true;
+    bool isis_l1_absent = true;
+    bool isis_l2_absent = true;
 
     json_object_foreach(network_interface, key, value) {
         
@@ -838,8 +843,85 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             continue;
         }
 
-    /* IS-IS interface configuration */
+        /* IS-IS interface configuration */
 
+        if (!strcmp(key, "isis-instance-id")) {
+            if(json_is_number(value)) {
+                network_config->isis_instance_id = json_number_value(value);
+                // network_config->isis_level = 3;
+                // network_config->isis_p2p = true;
+                // network_config->isis_l1_metric = 10;
+                // network_config->isis_l2_metric = 10;
+                isis_instance_id_absent = false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "isis-level") && json_is_number(value)) {
+            network_config->isis_level = json_number_value(value);
+            isis_level_absent = false;
+            if (network_config->isis_level < 1 || network_config->isis_level > 3) {
+                fprintf(stderr, "JSON config error: Invalid value for network->isis-level (1-3)\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "isis-p2p") && json_is_boolean(value)) {
+            network_config->isis_p2p = json_boolean_value(value);
+            isis_p2p_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "isis-l1-metric") && json_is_number(value)) {
+            network_config->isis_l1_metric = json_number_value(value);
+            isis_l1_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "isis-l2-metric") && json_is_number(value)) {
+            network_config->isis_l2_metric = json_number_value(value);
+            isis_l2_absent = false;
+            continue;
+        }
+
+        /* LDP interface configuration */
+        if (!strcmp(key, "ldp-instance-id") && json_is_number(value)) {
+            network_config->ldp_instance_id = json_number_value(value);
+            continue;
+        }
+
+        /* If any other keys are present */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces->network\n",key);
+        return false;
+
+    }
+
+    /*  Block works if isis instance id is present but level isnt  */
+    if (!isis_instance_id_absent && isis_level_absent) {
+        network_config->isis_level = 3;
+    }
+
+    if (!isis_instance_id_absent && isis_p2p_absent) {
+        network_config->isis_p2p = true;
+    }
+
+    if (!isis_instance_id_absent && isis_l1_absent) {
+        network_config->isis_l1_metric = 10;
+    }
+
+    if (!isis_instance_id_absent && isis_l2_absent) {
+        network_config->isis_l2_metric = 10;
+    }
+
+    /* If block gets executed when isis attributes are present 
+     * but isis instance id is not present
+    */
+    if (!(isis_level_absent && isis_p2p_absent && isis_l1_absent && isis_l2_absent) && isis_instance_id_absent ) {
+        fprintf(stderr, "Config error: Missing value for network->isis_instance_id\n");
+        return false;
     }
 
     if (gate_resv_wait_absent) {
@@ -857,47 +939,6 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     if (net_int_absent) {
         fprintf(stderr, "JSON config error: Missing value for network->interface\n");
         return false;
-    }
-
-    /*  code below is not refactored  */
-
-
-    /* IS-IS interface configuration */
-    value = json_object_get(network_interface, "isis-instance-id");
-    if(json_is_number(value)) {
-        network_config->isis_instance_id = json_number_value(value);
-        network_config->isis_level = 3;
-        value = json_object_get(network_interface, "isis-level");
-        if(json_is_number(value)) {
-            network_config->isis_level = json_number_value(value);
-            if(network_config->isis_level == 0 || 
-               network_config->isis_level > 3) {
-                fprintf(stderr, "JSON config error: Invalid value for network->isis-level (1-3)\n");
-            }
-        }
-        network_config->isis_p2p = true;
-        value = json_object_get(network_interface, "isis-p2p");
-        if(json_is_boolean(value)) {
-            network_config->isis_p2p = json_boolean_value(value);
-        }
-        value = json_object_get(network_interface, "isis-l1-metric");
-        if(json_is_number(value)) {
-            network_config->isis_l1_metric = json_number_value(value);
-        } else {
-            network_config->isis_l1_metric = 10;
-        }
-        value = json_object_get(network_interface, "isis-l2-metric");
-        if(json_is_number(value)) {
-            network_config->isis_l2_metric = json_number_value(value);
-        } else {
-            network_config->isis_l2_metric = 10;
-        }
-    }
-
-    /* LDP interface configuration */
-    value = json_object_get(network_interface, "ldp-instance-id");
-    if(json_is_number(value)) {
-        network_config->ldp_instance_id = json_number_value(value);
     }
 
     return true;
