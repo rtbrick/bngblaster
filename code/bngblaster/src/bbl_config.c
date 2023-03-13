@@ -270,7 +270,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
             continue;
         }
 
-        /* If none of the above key values are macthed */
+        /* If none of the above key values are matchhed */
         if (key[0] == '_')
             continue;
         fprintf( stderr, "Config error: Incorrect attribute name (%s) in access-line-profiles\n", key);
@@ -947,7 +947,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     json_t *value = NULL;
     const char *s = NULL;
     uint32_t ipv4;
-    double number;
 
     access_config->ipv4_enable = true;
     access_config->ipv6_enable = true;
@@ -980,6 +979,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     access_config->rate_up = g_ctx->config.rate_up;
     access_config->rate_down = g_ctx->config.rate_down;
     access_config->dsl_type = g_ctx->config.dsl_type;
+    access_config->ipcp_enable = g_ctx->config.ipcp_enable;
+    access_config->dhcp_enable = g_ctx->config.dhcp_enable;
+    access_config->ip6cp_enable = g_ctx->config.ip6cp_enable;
+    access_config->dhcpv6_enable = g_ctx->config.dhcpv6_enable;
+    access_config->igmp_autostart = g_ctx->config.igmp_autostart;
+    access_config->igmp_version = g_ctx->config.igmp_version;
+    access_config->session_traffic_autostart = g_ctx->config.session_traffic_autostart;
+
 
     json_object_foreach(access_interface, key, value) {
         if (!strcmp(key, "interface") && json_is_string(value)) {
@@ -1165,12 +1172,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
         /* Optionally overload some settings per range */
         if (!strcmp(key, "username") && json_is_string(value)) {
-            access_config->username = strdup(json_string_value(value));
+            access_config->username = json_string_value(value);
             continue;
         }
 
         if (!strcmp(key, "password") && json_is_string(value)) {
-            access_config->password = strdup(json_string_value(value));
+            access_config->password = json_string_value(value);
             continue;
         }
 
@@ -1217,6 +1224,107 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             access_config->access_line_profile_id = json_number_value(value);
             continue;
         }
+
+        /* IPv4 settings */
+
+        if (!strcmp(key,"ipcp") && json_is_boolean(value)) {
+            access_config->ipcp_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"dhcp") && json_is_boolean(value)) {
+            access_config->dhcp_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"ipv4") && json_is_boolean(value)) {
+            access_config->ipv4_enable = json_boolean_value(value);
+            continue;
+        }
+        
+        /* IPv6 settings */
+
+        if (!strcmp(key,"ip6cp") && json_is_boolean(value)) {
+            access_config->ip6cp_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"dhcpv6") && json_is_boolean(value)) {
+            access_config->dhcpv6_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"ipv6") && json_is_boolean(value)) {
+            access_config->ipv6_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"igmp-autostart") && json_is_boolean(value)) {
+            access_config->igmp_autostart = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"igmp-version") && json_is_number(value)) {
+            access_config->igmp_version = json_number_value(value);
+            if(access_config->igmp_version < 1 || access_config->igmp_version > 3) {
+                fprintf(stderr, "JSON config error: Invalid value for access->igmp-version (1-3)\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key,"session-traffic-autostart") && json_is_boolean(value)) {
+            access_config->session_traffic_autostart = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"session-group-id") && json_is_number(value)) {
+            access_config->session_group_id = json_number_value(value);
+            if(access_config->session_group_id >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for access->session-group-id\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key,"stream-group-id") && json_is_number(value)) {
+            access_config->stream_group_id = json_number_value(value);
+            if(access_config->stream_group_id >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for access->stream-group-id\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key,"cfm-cc") && json_is_boolean(value)) {
+            access_config->cfm_cc = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"cfm-level") && json_is_number(value)) {
+            access_config->cfm_level = json_number_value(value);
+            if(access_config->cfm_level > 7) {
+                fprintf(stderr, "JSON config error: Invalid value for access->cfm-level\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key,"cfm-ma-id") && json_is_number(value)) {
+            access_config->cfm_ma_id = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key,"cfm-ma-name") && json_is_string(value)) {
+            access_config->cfm_ma_name = strdup(json_string_value(value));
+            continue;
+        }
+
+        /* If none of the above key values are matched */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces->access\n", key);
+        return false;
     }
 
     if (acc_int_absent) {
@@ -1238,105 +1346,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         return false;
     }
 
-    /* Code to be refactored */
-    /* IPv4 settings */
-    value = json_object_get(access_interface, "ipcp");
-    if(json_is_boolean(value)) {
-        access_config->ipcp_enable = json_boolean_value(value);
-    } else {
-        access_config->ipcp_enable = g_ctx->config.ipcp_enable;
-    }
-    value = json_object_get(access_interface, "dhcp");
-    if(json_is_boolean(value)) {
-        access_config->dhcp_enable = json_boolean_value(value);
-    } else {
-        access_config->dhcp_enable = g_ctx->config.dhcp_enable;
-    }
-    value = json_object_get(access_interface, "ipv4");
-    if(json_is_boolean(value)) {
-        access_config->ipv4_enable = json_boolean_value(value);
-    }
+    /*  IMPORTANT
+    *   Previous commit: if (access_config->cfm_cc) {}
+    *   Instead of access_config->cfm_ma_name
+    */
 
-    /* IPv6 settings */
-    value = json_object_get(access_interface, "ip6cp");
-    if(json_is_boolean(value)) {
-        access_config->ip6cp_enable = json_boolean_value(value);
-    } else {
-        access_config->ip6cp_enable = g_ctx->config.ip6cp_enable;
-    }
-    value = json_object_get(access_interface, "dhcpv6");
-    if(json_is_boolean(value)) {
-        access_config->dhcpv6_enable = json_boolean_value(value);
-    } else {
-        access_config->dhcpv6_enable = g_ctx->config.dhcpv6_enable;
-    }
-    value = json_object_get(access_interface, "ipv6");
-    if(json_is_boolean(value)) {
-        access_config->ipv6_enable = json_boolean_value(value);
-    }
-
-    value = json_object_get(access_interface, "igmp-autostart");
-    if(json_is_boolean(value)) {
-        access_config->igmp_autostart = json_boolean_value(value);
-    } else {
-        access_config->igmp_autostart = g_ctx->config.igmp_autostart;
-    }
-    value = json_object_get(access_interface, "igmp-version");
-    if(json_is_number(value)) {
-        access_config->igmp_version = json_number_value(value);
-        if(access_config->igmp_version < 1 || access_config->igmp_version > 3) {
-            fprintf(stderr, "JSON config error: Invalid value for access->igmp-version\n");
-            return false;
-        }
-    } else {
-        access_config->igmp_version = g_ctx->config.igmp_version;
-    }
-    value = json_object_get(access_interface, "session-traffic-autostart");
-    if(json_is_boolean(value)) {
-        access_config->session_traffic_autostart = json_boolean_value(value);
-    } else {
-        access_config->session_traffic_autostart = g_ctx->config.session_traffic_autostart;
-    }
-
-    value = json_object_get(access_interface, "session-group-id");
-    if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for access->session-group-id\n");
-            return false;
-        }
-        access_config->session_group_id = number;
-    }
-
-    value = json_object_get(access_interface, "stream-group-id");
-    if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for access->stream-group-id\n");
-            return false;
-        }
-        access_config->stream_group_id = number;
-    }
-
-    value = json_object_get(access_interface, "cfm-cc");
-    if(json_is_boolean(value)) {
-        access_config->cfm_cc = json_boolean_value(value);
-    }
-    value = json_object_get(access_interface, "cfm-level");
-    if(value) {
-        access_config->cfm_level = json_number_value(value);
-        if(access_config->cfm_level > 7) {
-            fprintf(stderr, "JSON config error: Invalid value for access->cfm-level\n");
-            return false;
-        }
-    }
-    value = json_object_get(access_interface, "cfm-ma-id");
-    if(value) {
-        access_config->cfm_ma_id = json_number_value(value);
-    }
-    if(json_unpack(access_interface, "{s:s}", "cfm-ma-name", &s) == 0) {
-        access_config->cfm_ma_name = strdup(s);
-    } else if(access_config->cfm_cc) {
+    if(access_config->cfm_ma_name == NULL) {
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
@@ -1368,32 +1383,48 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
 {
     const char *s = NULL;
     json_t *value = NULL;
+    const char *key = NULL;
 
-    if(json_unpack(a10nsp_interface, "{s:s}", "interface", &s) == 0) {
-        a10nsp_config->interface = strdup(s);
-        link_add(a10nsp_config->interface);
-    } else {
+    json_object_foreach(a10nsp_interface, key, value) {
+
+        if (!strcmp(key, "interface") && json_is_string(value)) {
+            a10nsp_config->interface = strdup(json_string_value(value));
+            link_add(a10nsp_config->interface);
+            continue;
+        }
+
+        if (!strcmp(key, "qinq") && json_is_boolean(value)) {
+            a10nsp_config->qinq = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "mac") && json_is_string(value)) {
+            s = json_string_value(value);
+            if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                    &a10nsp_config->mac[0],
+                    &a10nsp_config->mac[1],
+                    &a10nsp_config->mac[2],
+                    &a10nsp_config->mac[3],
+                    &a10nsp_config->mac[4],
+                    &a10nsp_config->mac[5]) < 6)
+            {
+                fprintf(stderr, "JSON config error: Invalid value for a10nsp->mac\n");
+                return false;
+            }
+            continue;
+        }
+
+        /* If none of the above key values are matched */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces->a10nsp\n", key);
+        return false;
+
+    }
+
+    if (a10nsp_config->interface == NULL) {
         fprintf(stderr, "JSON config error: Missing value for a10nsp->interface\n");
         return false;
-    }
-
-    value = json_object_get(a10nsp_interface, "qinq");
-    if(json_is_boolean(value)) {
-        a10nsp_config->qinq = json_boolean_value(value);
-    }
-
-    if(json_unpack(a10nsp_interface, "{s:s}", "mac", &s) == 0) {
-        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
-                &a10nsp_config->mac[0],
-                &a10nsp_config->mac[1],
-                &a10nsp_config->mac[2],
-                &a10nsp_config->mac[3],
-                &a10nsp_config->mac[4],
-                &a10nsp_config->mac[5]) < 6)
-        {
-            fprintf(stderr, "JSON config error: Invalid value for a10nsp->mac\n");
-            return false;
-        }
     }
 
     return true;
@@ -1403,88 +1434,106 @@ static bool
 json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 {
     json_t *value = NULL;
-    const char *s = NULL;    
+    const char *key = NULL; 
     
     g_ctx->tcp = true;
 
-    if(json_unpack(bgp, "{s:s}", "network-interface", &s) == 0) {
-        bgp_config->network_interface = strdup(s);
+    /* Default values */
+    bgp_config->local_as = BGP_DEFAULT_AS;
+    bgp_config->peer_as = bgp_config->local_as;
+    bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
+    bgp_config->id = htobe32(0x01020304);
+    bgp_config->reconnect = true;
+    bgp_config->start_traffic = false;
+    bgp_config->teardown_time = BGP_DEFAULT_TEARDOWN_TIME;
+
+    /* Flag variables*/
+    bool bgp_ipv4_peer_absent = true;
+
+
+    json_object_foreach(bgp, key, value) {
+
+        if (!strcmp(key, "network-interface") && json_is_string(value)) {
+            bgp_config->network_interface = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "local-ipv4-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &bgp_config->ipv4_local_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for bgp->local-ipv4-address\n");
+                return false;
+            }
+            add_secondary_ipv4(bgp_config->ipv4_local_address);
+            continue;
+        }
+
+        if (!strcmp(key, "peer-ipv4-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &bgp_config->ipv4_peer_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for bgp->peer-ipv4-address\n");
+                return false;
+            }
+            bgp_ipv4_peer_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "local-as") && json_is_number(value)) {
+            bgp_config->local_as = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "peer-as") && json_is_number(value)) {
+            bgp_config->peer_as = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "hold-time") && json_is_number(value)) {
+            bgp_config->hold_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "id") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &bgp_config->id)) {
+                fprintf(stderr, "JSON config error: Invalid value for bgp->id\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "reconnect") && json_is_boolean(value)) {
+            bgp_config->reconnect = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "start-traffic") && json_is_boolean(value)) {
+            bgp_config->start_traffic = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "teardown-time") && json_is_number(value)) {
+            bgp_config->teardown_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "raw-update-file") && json_is_string(value)) {
+            bgp_config->raw_update_file = strdup(json_string_value(value));
+            if(!bgp_raw_update_load(bgp_config->raw_update_file, true)) {
+                return false;
+            }
+            continue;
+        }
+
+        /* If none of the above key values are matched */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in bgp\n", key);
+        return false;
     }
 
-    if(json_unpack(bgp, "{s:s}", "local-ipv4-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &bgp_config->ipv4_local_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for bgp->local-ipv4-address\n");
-            return false;
-        }
-        add_secondary_ipv4(bgp_config->ipv4_local_address);
-    }
-
-    if(json_unpack(bgp, "{s:s}", "peer-ipv4-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &bgp_config->ipv4_peer_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for bgp->peer-ipv4-address\n");
-            return false;
-        }
-    } else {
+    if (bgp_ipv4_peer_absent) {
         fprintf(stderr, "JSON config error: Missing value for bgp->peer-ipv4-address\n");
         return false;   
     }
 
-    value = json_object_get(bgp, "local-as");
-    if(value) {
-        bgp_config->local_as = json_number_value(value);
-    } else {
-        bgp_config->local_as = BGP_DEFAULT_AS;
-    }
-
-    value = json_object_get(bgp, "peer-as");
-    if(value) {
-        bgp_config->peer_as = json_number_value(value);
-    } else {
-        bgp_config->peer_as = bgp_config->local_as;
-    }
-
-    value = json_object_get(bgp, "hold-time");
-    if(value) {
-        bgp_config->hold_time = json_number_value(value);
-    } else {
-        bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
-    }
-
-    bgp_config->id = htobe32(0x01020304);
-    if(json_unpack(bgp, "{s:s}", "id", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &bgp_config->id)) {
-            fprintf(stderr, "JSON config error: Invalid value for bgp->id\n");
-            return false;
-        }
-    } 
-
-    value = json_object_get(bgp, "reconnect");
-    if(json_is_boolean(value)) {
-        bgp_config->reconnect = json_boolean_value(value);
-    } else {
-        bgp_config->reconnect = true;
-    }
-
-    value = json_object_get(bgp, "start-traffic");
-    if(json_is_boolean(value)) {
-        bgp_config->start_traffic = json_boolean_value(value);
-    } else {
-        bgp_config->start_traffic = false;
-    }
-
-    value = json_object_get(bgp, "teardown-time");
-    if(json_is_number(value)) {
-        bgp_config->teardown_time = json_number_value(value);
-    } else {
-        bgp_config->teardown_time = BGP_DEFAULT_TEARDOWN_TIME;
-    }
-
-    if(json_unpack(bgp, "{s:s}", "raw-update-file", &s) == 0) {
-        bgp_config->raw_update_file = strdup(s);
-        if(!bgp_raw_update_load(bgp_config->raw_update_file, true)) {
-            return false;
-        }
-    }
     return true;
 }
 
