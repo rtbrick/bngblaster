@@ -1351,7 +1351,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     *   Instead of access_config->cfm_ma_name
     */
 
-    if(access_config->cfm_ma_name == NULL) {
+    if(access_config->cfm_cc == NULL) {
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
@@ -1543,222 +1543,323 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     json_t *sub, *con, *c, *value = NULL;
     const char *s = NULL;
     int i, size;
+    const char *key = NULL;
+    const char *conn_key = NULL;
     
     isis_external_connection_s *connection = NULL;
 
-    value = json_object_get(isis, "instance-id");
-    if(value) {
-        isis_config->id = json_number_value(value);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for isis->instance-id\n");
-        return false;
-    }
+    /* Flag variables */
+    bool isis_id_absent = true;
+    bool isis_l1_auth_key_absent = true;
+    bool isis_l1_auth_type_absent = true;
+    bool isis_l1_auth_hello_absent = true;
+    bool isis_l1_auth_csnp_absent = true;
+    bool isis_l1_auth_psnp_absent = true;
+    bool isis_l2_auth_key_absent = true;
+    bool isis_l2_auth_type_absent = true;
+    bool isis_l2_auth_hello_absent = true;
+    bool isis_l2_auth_csnp_absent = true;
+    bool isis_l2_auth_psnp_absent = true;
+    bool isis_area_absent = true;
 
-    value = json_object_get(isis, "level");
-    if(json_is_number(value)) {
-        isis_config->level = json_number_value(value);
-    } else {
-        isis_config->level = 3;
-    }
-    if(isis_config->level == 0 || isis_config->level > 3) {
-        fprintf(stderr, "JSON config error: Invalid value for isis->level\n");
-        return false;
-    }
 
-    value = json_object_get(isis, "overload");
-    if(json_is_boolean(value)) {
-        isis_config->overload  = json_boolean_value(value);
-    }
+    /* Default values */
+    isis_config->level = 3;
+    isis_config->protocol_ipv4  = true;
+    isis_config->protocol_ipv6  = true;
+    isis_config->hello_interval = ISIS_DEFAULT_HELLO_INTERVAL;
+    isis_config->hold_time = ISIS_DEFAULT_HOLD_TIME;
+    isis_config->lsp_lifetime = ISIS_DEFAULT_LSP_LIFETIME;
+    isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
+    isis_config->lsp_retry_interval = ISIS_DEFAULT_LSP_RETRY_IVL;
+    isis_config->lsp_tx_interval = ISIS_DEFAULT_LSP_TX_IVL_MS;
+    isis_config->lsp_tx_window_size = ISIS_DEFAULT_LSP_WINDOWS_SIZE;
+    isis_config->csnp_interval = ISIS_DEFAULT_CSNP_INTERVAL;
+    isis_config->hostname = g_default_hostname;
+    isis_config->router_id_str = g_default_router_id;
+    isis_config->system_id_str = g_default_system_id;
+    isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
 
-    value = json_object_get(isis, "protocol-ipv4");
-    if(json_is_boolean(value)) {
-        isis_config->protocol_ipv4  = json_boolean_value(value);
-    } else {
-        isis_config->protocol_ipv4  = true;
-    }
 
-    value = json_object_get(isis, "protocol-ipv6");
-    if(json_is_boolean(value)) {
-        isis_config->protocol_ipv6  = json_boolean_value(value);
-    } else {
-        isis_config->protocol_ipv6  = true;
-    }
+    json_object_foreach(isis, key, value) {
 
-    if(json_unpack(isis, "{s:s}", "level1-auth-key", &s) == 0) {
-        isis_config->level1_key = strdup(s);
-        isis_config->level1_auth = ISIS_AUTH_NONE;
-        if(json_unpack(isis, "{s:s}", "level1-auth-type", &s) == 0) {
-            if(strcmp(s, "md5") == 0) {
+        if (!strcmp(key, "instance-id") && json_is_number(value)) {
+            isis_config->id = json_number_value(value);
+            isis_id_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "level") && json_is_number(value)) {
+            isis_config->level = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "overload") && json_is_boolean(value)) {
+            isis_config->overload = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "protocol-ipv4") && json_is_boolean(value)) {
+            isis_config->protocol_ipv4 = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "protocol-ipv6") && json_is_boolean(value)) {
+            isis_config->protocol_ipv6 = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "level1-auth-key") && json_is_string(value)) {
+            isis_config->level1_key = strdup(json_string_value(value));
+            isis_l1_auth_key_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "level1-auth-type") && json_is_string(value)) {
+            s = strdup(json_string_value(value));
+            if (!strcmp(s, "md5")) {
                 isis_config->level1_auth = ISIS_AUTH_HMAC_MD5;
-            } else if(strcmp(s, "simple") == 0) {
+            } else if (!strcmp(s, "simple")) {
                 isis_config->level1_auth = ISIS_AUTH_CLEARTEXT;
             } else {
                 fprintf(stderr, "JSON config error: Invalid value for isis->level1-auth-type\n");
                 return false;
             }
+            isis_l1_auth_type_absent = false;
+            continue;
         }
-        if(isis_config->level1_auth) {
-            value = json_object_get(isis, "level1-auth-hello");
-            if(json_is_boolean(value)) {
-                isis_config->level1_auth_hello  = json_boolean_value(value);
-            } else {
-                isis_config->level1_auth_hello  = true;
-            }
-            value = json_object_get(isis, "level1-auth-csnp");
-            if(json_is_boolean(value)) {
-                isis_config->level1_auth_csnp  = json_boolean_value(value);
-            } else {
-                isis_config->level1_auth_csnp  = true;
-            }
-            value = json_object_get(isis, "level1-auth-psnp");
-            if(json_is_boolean(value)) {
-                isis_config->level1_auth_psnp  = json_boolean_value(value);
-            } else {
-                isis_config->level1_auth_psnp  = true;
-            }
-        }
-    }
 
-    if(json_unpack(isis, "{s:s}", "level2-auth-key", &s) == 0) {
-        isis_config->level2_key = strdup(s);
-        isis_config->level2_auth = ISIS_AUTH_NONE;
-        if(json_unpack(isis, "{s:s}", "level2-auth-type", &s) == 0) {
-            if(strcmp(s, "md5") == 0) {
+        if (!strcmp(key, "level1-auth-hello") && json_is_boolean(value)) {
+            isis_config->level1_auth_hello = json_boolean_value(value);
+            isis_l1_auth_hello_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "level1-auth-psnp") && json_is_boolean(value)) {
+            isis_config->level1_auth_psnp = json_boolean_value(value);
+            isis_l1_auth_psnp_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "level1-auth-csnp") && json_is_boolean(value)) {
+            isis_config->level1_auth_csnp= json_boolean_value(value);
+            isis_l1_auth_csnp_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "level2-auth-key") && json_is_string(value)) {
+            isis_config->level2_key = strdup(json_string_value(value));
+            isis_l2_auth_key_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "level2-auth-type") && json_is_string(value)) {
+            s = strdup(json_string_value(value));
+            if (!strcmp(s, "md5")) {
                 isis_config->level2_auth = ISIS_AUTH_HMAC_MD5;
-            } else if(strcmp(s, "simple") == 0) {
+            } else if (!strcmp(s, "simple")) {
                 isis_config->level2_auth = ISIS_AUTH_CLEARTEXT;
             } else {
                 fprintf(stderr, "JSON config error: Invalid value for isis->level2-auth-type\n");
                 return false;
             }
+            isis_l2_auth_type_absent = false;
         }
-        if(isis_config->level2_auth) {
-            value = json_object_get(isis, "level2-auth-hello");
-            if(json_is_boolean(value)) {
-                isis_config->level2_auth_hello  = json_boolean_value(value);
-            } else {
-                isis_config->level2_auth_hello  = true;
-            }
-            value = json_object_get(isis, "level2-auth-csnp");
-            if(json_is_boolean(value)) {
-                isis_config->level2_auth_csnp  = json_boolean_value(value);
-            } else {
-                isis_config->level2_auth_csnp  = true;
-            }
-            value = json_object_get(isis, "level2-auth-psnp");
-            if(json_is_boolean(value)) {
-                isis_config->level2_auth_psnp  = json_boolean_value(value);
-            } else {
-                isis_config->level2_auth_psnp  = true;
-            }
+
+        if (!strcmp(key, "level2-auth-hello") && json_is_boolean(value)) {
+            isis_config->level2_auth_hello = json_boolean_value(value);
+            isis_l2_auth_hello_absent = false;
+            continue;
         }
-    }
 
-    value = json_object_get(isis, "hello-interval");
-    if(json_is_number(value)) {
-        isis_config->hello_interval = json_number_value(value);
-    } else {
-        isis_config->hello_interval = ISIS_DEFAULT_HELLO_INTERVAL;
-    }
+        if (!strcmp(key, "level2-auth-psnp") && json_is_boolean(value)) {
+            isis_config->level2_auth_psnp = json_boolean_value(value);
+            isis_l2_auth_psnp_absent = false;
+            continue;
+        }
 
-    value = json_object_get(isis, "hello-padding");
-    if(json_is_boolean(value)) {
-        isis_config->hello_padding  = json_boolean_value(value);
-    }
+        if (!strcmp(key, "level2-auth-csnp") && json_is_boolean(value)) {
+            isis_config->level2_auth_csnp= json_boolean_value(value);
+            isis_l2_auth_csnp_absent = false;
+            continue;
+        }
 
-    value = json_object_get(isis, "hold-time");
-    if(json_is_number(value)) {
-        isis_config->hold_time = json_number_value(value);
-    } else {
-        isis_config->hold_time = ISIS_DEFAULT_HOLD_TIME;
-    }
+        if (!strcmp(key, "hello-interval") && json_is_number(value)) {
+            isis_config->hello_interval = json_number_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "lsp-lifetime");
-    if(json_is_number(value)) {
-        isis_config->lsp_lifetime = json_number_value(value);
-    } else {
-        isis_config->lsp_lifetime = ISIS_DEFAULT_LSP_LIFETIME;
-    }
+        if (!strcmp(key, "hello-padding") && json_is_boolean(value)) {
+            isis_config->hello_padding = json_boolean_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "lsp-refresh-interval");
-    if(json_is_number(value)) {
-        isis_config->lsp_refresh_interval = json_number_value(value);
-    } else {
-        isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
-    }
+        if (!strcmp(key, "hold-time") && json_is_number(value)) {
+            isis_config->hold_time = json_number_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "lsp-retry-interval");
-    if(json_is_number(value)) {
-        isis_config->lsp_retry_interval = json_number_value(value);
-    } else {
-        isis_config->lsp_retry_interval = ISIS_DEFAULT_LSP_RETRY_IVL;
-    }
+        if (!strcmp(key, "lsp-lifetime") && json_is_number(value)) {
+            isis_config->lsp_lifetime = json_number_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "lsp-tx-interval");
-    if(json_is_number(value)) {
-        isis_config->lsp_tx_interval = json_number_value(value);
-    } else {
-        isis_config->lsp_tx_interval = ISIS_DEFAULT_LSP_TX_IVL_MS;
-    }
+        if (!strcmp(key, "lsp-refresh-interval") && json_is_number(value)) {
+            isis_config->lsp_refresh_interval = json_number_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "lsp-tx-window-size");
-    if(json_is_number(value)) {
-        isis_config->lsp_tx_window_size = json_number_value(value);
-    } else {
-        isis_config->lsp_tx_window_size = ISIS_DEFAULT_LSP_WINDOWS_SIZE;
-    }
+        if (!strcmp(key, "lsp-retry-interval") && json_is_number(value)) {
+            isis_config->lsp_retry_interval = json_number_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "csnp-interval");
-    if(json_is_number(value)) {
-        isis_config->csnp_interval = json_number_value(value);
-    } else {
-        isis_config->csnp_interval = ISIS_DEFAULT_CSNP_INTERVAL;
-    }
+        if (!strcmp(key, "lsp-tx-interval") && json_is_number(value)) {
+            isis_config->lsp_tx_interval = json_number_value(value);
+            continue;
+        }
 
-    if(json_unpack(isis, "{s:s}", "hostname", &s) == 0) {
-        isis_config->hostname = strdup(s);
-    } else {
-        isis_config->hostname = g_default_hostname;
-    }
+        if (!strcmp(key, "hostname") && json_is_string(value)) {
+            isis_config->hostname = json_string_value(value);
+            continue;
+        }
 
-    if(json_unpack(isis, "{s:s}", "router-id", &s) == 0) {
-        isis_config->router_id_str = strdup(s);
-    } else {
-        isis_config->router_id_str = g_default_router_id;
-    }
-    if(!inet_pton(AF_INET, isis_config->router_id_str, &isis_config->router_id)) {
-        fprintf(stderr, "JSON config error: Invalid value for isis->router-id\n");
-        return false;
-    }
+        if (!strcmp(key, "router-id") && json_is_string(value)) {
+            isis_config->router_id_str = json_string_value(value);
+            continue;
+        }
 
-    if(json_unpack(isis, "{s:s}", "system-id", &s) == 0) {
-        isis_config->system_id_str = strdup(s);
-    } else {
-        isis_config->system_id_str = g_default_system_id;
-    }
-    if(!isis_str_to_system_id(isis_config->system_id_str, isis_config->system_id)) {
-        fprintf(stderr, "JSON config error: Invalid value for isis->system-id\n");
-        return false;
-    }
+        if (!strcmp(key, "system-id") && json_is_string(value)) {
+            isis_config->system_id_str = json_string_value(value);
+            continue;
+        }
 
-    value = json_object_get(isis, "area");
-    if(json_is_array(value)) {
-        isis_config->area_count = json_array_size(value);
-        isis_config->area = calloc(isis_config->area_count, sizeof(isis_area_s));
-        for(i = 0; i < isis_config->area_count; i++) {
-            if(!isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
-                fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
+        if (!strcmp(key, "area")) {
+            if (json_is_array(value)) {
+                isis_config->area_count = json_array_size(value);
+                isis_config->area = calloc(isis_config->area_count, sizeof(isis_area_s));
+                for(i = 0; i < isis_config->area_count; i++) {
+                    if(!isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
+                        fprintf(stderr, "JSON config error: Invalid array value for isis->area\n");
+                        return false;
+                    }
+                }                
+            } else if(json_is_string(value)) {
+                isis_config->area = calloc(1, sizeof(isis_area_s));
+                isis_config->area_count = 1;
+                if(!isis_str_to_area(json_string_value(value), isis_config->area)) {
+                    fprintf(stderr, "JSON config error: Invalid string value for isis->area\n");
+                    return false;
+                }
+            }
+            isis_area_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "sr-base") && json_is_number(value)) {
+            isis_config->sr_base = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "sr-range") && json_is_number(value)) {
+            isis_config->sr_range = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "sr-node-sid") && json_is_number(value)) {
+            isis_config->sr_node_sid = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "teardown-time") && json_is_number(value)) {
+            isis_config->teardown_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "external") && json_is_object(value)) {
+            json_object_foreach(value, s, sub) {
+
+                if (!strcmp(s, "mrt-file") && json_is_string(sub)) {
+                    isis_config->external_mrt_file = strdup(json_string_value(sub));
+                    continue;
+                }
+
+                if (!strcmp(s, "connections") && json_is_array(sub)) {
+                    size = json_array_size(sub);
+                    for(i = 0; i < size; i++) {
+                        if(connection) {
+                            connection->next = calloc(1, sizeof(isis_external_connection_s));
+                            connection = connection->next;
+                        } else {
+                            connection = calloc(1, sizeof(isis_external_connection_s));
+                            isis_config->external_connection = connection;
+                        }
+                        con = json_array_get(sub, i);
+                        bool isis_conn_sys_id_absent = true;
+                        connection->level[ISIS_LEVEL_1_IDX].metric = 10;
+                        connection->level[ISIS_LEVEL_2_IDX].metric = 10;
+                        json_object_foreach(con, conn_key, c) {
+
+                            if (!strcmp(conn_key, "system-id")  && json_is_string(c)) {
+                                if(!isis_str_to_system_id(json_string_value(c), connection->system_id)) {
+                                    fprintf(stderr, "JSON config error: Invalid value for isis->external->connections->system-id\n");
+                                    return false;
+                                }
+                                isis_conn_sys_id_absent = false;
+                                continue;
+                            }
+
+                            if (!strcmp(conn_key, "l1-metric") && json_is_number(c)) {
+                                connection->level[ISIS_LEVEL_1_IDX].metric = json_number_value(c);
+                                continue;
+                            }
+
+                            if (!strcmp(conn_key, "l2-metric") && json_is_number(c)) {
+                                connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(c);
+                                continue;
+                            }
+
+                            /*  Any other keys are present  */
+                            if (conn_key[0] == '_')
+                                continue;
+                            fprintf( stderr, "Config error: Incorrect attribute name (%s) in isis->external->connections[%d]\n",conn_key,i);
+                            return false;
+                        }
+                        if (isis_conn_sys_id_absent) {
+                            fprintf(stderr, "JSON config error: Missing value for isis->external->connections->system-id\n");
+                            return false;
+                        }
+                    }
+                    continue;
+                }
+
+                /*  Any other keys are present  */
+                if (s[0] == '_')
+                    continue;
+                fprintf( stderr, "Config error: Incorrect attribute name (%s) in isis->external\n",s);
                 return false;
             }
+            continue;
         }
-    } else if(json_is_string(value)) {
-        isis_config->area = calloc(1, sizeof(isis_area_s));
-        isis_config->area_count = 1;
-        if(!isis_str_to_area(json_string_value(value), isis_config->area)) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
-            return false;
-        }
-    } else {
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in isis\n",key);
+        return false;
+    }
+
+    if (isis_id_absent) {
+        fprintf(stderr, "JSON config error: Missing value for isis->instance-id\n");
+        return false;
+    }
+
+    if (isis_config->level == 0 || isis_config->level > 3) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->level\n");
+        return false;
+    }
+
+    if (isis_area_absent) {
         isis_config->area = calloc(1, sizeof(isis_area_s));
         isis_config->area_count = 1;
         if(!isis_str_to_area(g_default_area, isis_config->area)) {
@@ -1767,69 +1868,53 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         }
     }
 
-    value = json_object_get(isis, "sr-base");
-    if(json_is_number(value)) {
-        isis_config->sr_base = json_number_value(value);
+    /* Level 1 */
+    if (!isis_l1_auth_key_absent && isis_l1_auth_type_absent) {
+        isis_config->level1_auth = ISIS_AUTH_NONE;
     }
 
-    value = json_object_get(isis, "sr-range");
-    if(json_is_number(value)) {
-        isis_config->sr_range = json_number_value(value);
+    if (!isis_l1_auth_type_absent && isis_l1_auth_hello_absent) {
+        isis_config->level1_auth_hello  = true;
     }
 
-    value = json_object_get(isis, "sr-node-sid");
-    if(json_is_number(value)) {
-        isis_config->sr_node_sid = json_number_value(value);
+    if (!isis_l1_auth_type_absent && isis_l1_auth_psnp_absent) {
+        isis_config->level1_auth_psnp  = true;
     }
 
-    value = json_object_get(isis, "teardown-time");
-    if(json_is_number(value)) {
-        isis_config->teardown_time = json_number_value(value);
-    } else {
-        isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
+    if (!isis_l1_auth_type_absent && isis_l1_auth_csnp_absent) {
+        isis_config->level1_auth_csnp  = true;
     }
 
-    sub = json_object_get(isis, "external");
-    if(json_is_object(sub)) {
-        if(json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
-            isis_config->external_mrt_file = strdup(s);
-        }
-        con = json_object_get(sub, "connections");
-        if(json_is_array(con)) {
-            size = json_array_size(con);
-            for(i = 0; i < size; i++) {
-                if(connection) {
-                    connection->next = calloc(1, sizeof(isis_external_connection_s));
-                    connection = connection->next;
-                } else {
-                    connection = calloc(1, sizeof(isis_external_connection_s));
-                    isis_config->external_connection = connection;
-                }
-                c = json_array_get(con, i);
-                if(json_unpack(c, "{s:s}", "system-id", &s) == 0) {
-                    if(!isis_str_to_system_id(s, connection->system_id)) {
-                        fprintf(stderr, "JSON config error: Invalid value for isis->external->connections->system-id\n");
-                        return false;
-                    }
-                } else {
-                    fprintf(stderr, "JSON config error: Missing value for isis->external->connections->system-id\n");
-                    return false;
-                }
-                value = json_object_get(c, "l1-metric");
-                if(json_is_number(value)) {
-                    connection->level[ISIS_LEVEL_1_IDX].metric = json_number_value(value);
-                } else {
-                    connection->level[ISIS_LEVEL_1_IDX].metric = 10;
-                }
-                value = json_object_get(c, "l2-metric");
-                if(json_is_number(value)) {
-                    connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
-                } else {
-                    connection->level[ISIS_LEVEL_2_IDX].metric = 10;
-                }
-            }
-        }
+    /* Level 2 */
+    if (!isis_l2_auth_key_absent && isis_l2_auth_type_absent) {
+        isis_config->level2_auth = ISIS_AUTH_NONE;
     }
+
+    if (!isis_l2_auth_type_absent && isis_l2_auth_hello_absent) {
+        isis_config->level2_auth_hello  = true;
+    }
+
+    if (!isis_l2_auth_type_absent && isis_l2_auth_psnp_absent) {
+        isis_config->level2_auth_psnp  = true;
+    }
+
+    if (!isis_l2_auth_type_absent && isis_l2_auth_csnp_absent) {
+        isis_config->level2_auth_csnp  = true;
+    }
+
+    /* ~~~Level 2~~~*/
+
+    if(!inet_pton(AF_INET, isis_config->router_id_str, &isis_config->router_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->router-id\n");
+        return false;
+    }
+
+    if(!isis_str_to_system_id(isis_config->system_id_str, isis_config->system_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->system-id\n");
+        return false;
+    }
+
+    /* Code to be refactored */
     return true;
 }
 
