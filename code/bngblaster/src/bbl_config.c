@@ -1917,8 +1917,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         fprintf(stderr, "JSON config error: Invalid value for isis->system-id\n");
         return false;
     }
-
-    /* Code to be refactored */
+    
     return true;
 }
 
@@ -1927,68 +1926,93 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
 {
     json_t *value = NULL;
     const char *s = NULL;
+    const char *key = NULL;
     
     g_ctx->tcp = true;
 
-    value = json_object_get(ldp, "instance-id");
-    if(value) {
-        ldp_config->id = json_number_value(value);
-    } else {
+    /* Flag variables */
+    bool ldp_inst_id_absent = true;
+    bool ldp_ipv4_trans_absent = true;
+
+    /* Default values */
+    ldp_config->keepalive_time = LDP_DEFAULT_KEEPALIVE_TIME;
+    ldp_config->hold_time = LDP_DEFAULT_HOLD_TIME;
+    ldp_config->teardown_time = LDP_DEFAULT_TEARDOWN_TIME;
+    ldp_config->hostname = g_default_hostname;
+    ldp_config->lsr_id_str = g_default_router_id;
+
+    json_object_foreach(ldp, key, value) {
+
+        if (!strcmp(key, "instance-id") && json_is_number(value)) {
+            ldp_config->id = json_number_value(value);
+            ldp_inst_id_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "keepalive-time") && json_is_number(value)) {
+            ldp_config->keepalive_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "hold-time") && json_is_number(value)) {
+            ldp_config->hold_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "teardown-time") && json_is_number(value)) {
+            ldp_config->teardown_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "hostname") && json_is_string(value)) {
+            ldp_config->hostname = json_string_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "lsr-id") && json_is_string(value)) {
+            ldp_config->lsr_id_str = json_string_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "ipv4-transport-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &ldp_config->ipv4_transport_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for ldp->ipv4-transport-address\n");
+                return false;
+            }
+            ldp_ipv4_trans_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "raw-update-file") && json_is_string(value)) {
+            ldp_config->raw_update_file = strdup(json_string_value(value));
+            if(!ldp_raw_update_load(ldp_config->raw_update_file, true)) {
+                return false;
+            }
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in ldp\n",key);
+        return false;
+
+    }
+
+    if (ldp_inst_id_absent) {
         fprintf(stderr, "JSON config error: Missing value for ldp->instance-id\n");
         return false;
     }
 
-    value = json_object_get(ldp, "keepalive-time");
-    if(json_is_number(value)) {
-        ldp_config->keepalive_time = json_number_value(value);
-    } else {
-        ldp_config->keepalive_time = LDP_DEFAULT_KEEPALIVE_TIME;
-    }
-
-    value = json_object_get(ldp, "hold-time");
-    if(json_is_number(value)) {
-        ldp_config->hold_time = json_number_value(value);
-    } else {
-        ldp_config->hold_time = LDP_DEFAULT_HOLD_TIME;
-    }
-
-    value = json_object_get(ldp, "teardown-time");
-    if(json_is_number(value)) {
-        ldp_config->teardown_time = json_number_value(value);
-    } else {
-        ldp_config->teardown_time = LDP_DEFAULT_TEARDOWN_TIME;
-    }
-
-    if(json_unpack(ldp, "{s:s}", "hostname", &s) == 0) {
-        ldp_config->hostname = strdup(s);
-    } else {
-        ldp_config->hostname = g_default_hostname;
-    }
-
-    if(json_unpack(ldp, "{s:s}", "lsr-id", &s) == 0) {
-        ldp_config->lsr_id_str = strdup(s);
-    } else {
-        ldp_config->lsr_id_str = g_default_router_id;
-    }
     if(!inet_pton(AF_INET, ldp_config->lsr_id_str, &ldp_config->lsr_id)) {
         fprintf(stderr, "JSON config error: Invalid value for ldp->lsr-id\n");
         return false;
     }
-    if(json_unpack(ldp, "{s:s}", "ipv4-transport-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &ldp_config->ipv4_transport_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for ldp->ipv4-transport-address\n");
-            return false;
-        }
-    } else {
+
+    if (ldp_ipv4_trans_absent) {
         ldp_config->ipv4_transport_address = ldp_config->lsr_id;
     }
-
-    if(json_unpack(ldp, "{s:s}", "raw-update-file", &s) == 0) {
-        ldp_config->raw_update_file = strdup(s);
-        if(!ldp_raw_update_load(ldp_config->raw_update_file, true)) {
-            return false;
-        }
-    }
+    
     return true;
 }
 
