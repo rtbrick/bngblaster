@@ -2020,40 +2020,94 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 {
     json_t *value = NULL;
     const char *s = NULL;
+    const char *key = NULL;
     double bps;
     double number;
 
-    if(json_unpack(stream, "{s:s}", "name", &s) == 0) {
-        stream_config->name = strdup(s);
-    } else {
+    /* Flag Variables */
+    bool stream_name_absent = true;
+    bool stream_group_id_absent = true;
+    bool stream_dir_absent = true;
+
+    /* Default Values */
+    stream_config->type = 0;
+
+
+    json_object_foreach(stream, key, value) {
+
+        if (!strcmp(key, "name") && json_is_string(value)) {
+            stream_config->name = strdup(json_string_value(value));
+            stream_name_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "stream-group-id") && json_is_number(value)) {
+            stream_config->stream_group_id = json_number_value(value);
+            if(stream_config->stream_group_id >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id\n");
+            }
+            stream_group_id_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "type") && json_is_string(value)) {
+            s = json_string_value(value);
+            if (strcmp(s, "ipv4") == 0) {
+                stream_config->type = BBL_SUB_TYPE_IPV4;
+            } else if(strcmp(s, "ipv6") == 0) {
+                stream_config->type = BBL_SUB_TYPE_IPV6;
+            } else if(strcmp(s, "ipv6pd") == 0) {
+                stream_config->type = BBL_SUB_TYPE_IPV6PD;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for stream->type\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "direction") && json_is_string(value)) {
+            s = json_string_value(value);
+            if (strcmp(s, "upstream") == 0) {
+                stream_config->direction = BBL_DIRECTION_UP;
+            } else if(strcmp(s, "downstream") == 0) {
+                stream_config->type = BBL_DIRECTION_DOWN;
+            } else if(strcmp(s, "both") == 0) {
+                stream_config->type = BBL_DIRECTION_BOTH;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for stream->direction\n");
+                return false;
+            }
+            stream_dir_absent = false;
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in streams\n",key);
+        return false;
+
+    }
+
+    if (stream_name_absent) {
         fprintf(stderr, "JSON config error: Missing value for stream->name\n");
         return false;
     }
 
-    value = json_object_get(stream, "stream-group-id");
-    if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id\n");
-        }
-        stream_config->stream_group_id = number;
-    }
-
-    if(json_unpack(stream, "{s:s}", "type", &s) == 0) {
-        if(strcmp(s, "ipv4") == 0) {
-            stream_config->type = BBL_SUB_TYPE_IPV4;
-        } else if(strcmp(s, "ipv6") == 0) {
-            stream_config->type = BBL_SUB_TYPE_IPV6;
-        } else if(strcmp(s, "ipv6pd") == 0) {
-            stream_config->type = BBL_SUB_TYPE_IPV6PD;
-        } else {
-            fprintf(stderr, "JSON config error: Invalid value for stream->type\n");
-            return false;
-        }
-    } else {
+    if (!stream_config->type) {
         fprintf(stderr, "JSON config error: Missing value for stream->type\n");
         return false;
     }
+
+    if (stream_dir_absent) {
+        if (!stream_group_id_absent) {
+            stream_config->direction = BBL_DIRECTION_BOTH;
+        } else {
+            stream_config->direction = BBL_DIRECTION_DOWN;
+        }
+    }
+
+    /* Code to be refactored */
 
     if(json_unpack(stream, "{s:s}", "direction", &s) == 0) {
         if(strcmp(s, "upstream") == 0) {
