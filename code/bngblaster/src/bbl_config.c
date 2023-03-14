@@ -1925,7 +1925,6 @@ static bool
 json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
 {
     json_t *value = NULL;
-    const char *s = NULL;
     const char *key = NULL;
     
     g_ctx->tcp = true;
@@ -2012,7 +2011,7 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     if (ldp_ipv4_trans_absent) {
         ldp_config->ipv4_transport_address = ldp_config->lsr_id;
     }
-    
+
     return true;
 }
 
