@@ -2022,7 +2022,6 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     const char *s = NULL;
     const char *key = NULL;
     double bps;
-    double number;
 
     /* Flag Variables */
     bool stream_name_absent = true;
