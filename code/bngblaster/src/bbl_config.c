@@ -2106,33 +2106,16 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             stream_config->direction = BBL_DIRECTION_DOWN;
         }
     }
-
-    /* Code to be refactored */
-
-    if(json_unpack(stream, "{s:s}", "direction", &s) == 0) {
-        if(strcmp(s, "upstream") == 0) {
-            stream_config->direction = BBL_DIRECTION_UP;
-        } else if(strcmp(s, "downstream") == 0) {
-            stream_config->direction = BBL_DIRECTION_DOWN;
-        } else if(strcmp(s, "both") == 0) {
-            stream_config->direction = BBL_DIRECTION_BOTH;
-        } else {
-            fprintf(stderr, "JSON config error: Invalid value for stream->direction\n");
-            return false;
-        }
-    } else {
-        if(stream_config->stream_group_id) {
-            stream_config->direction = BBL_DIRECTION_BOTH;
-        } else {
-            stream_config->direction = BBL_DIRECTION_DOWN;
-        }
-    }
-
+    
     if(stream_config->stream_group_id == 0 && 
        stream_config->direction != BBL_DIRECTION_DOWN) {
         fprintf(stderr, "JSON config error: Invalid value for stream->direction (must be downstream for RAW streams)\n");
         return false;
     }
+
+
+
+    /* Code to be refactored */
 
     if(json_unpack(stream, "{s:s}", "network-interface", &s) == 0) {
         stream_config->network_interface = strdup(s);
