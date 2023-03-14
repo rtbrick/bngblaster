@@ -959,6 +959,8 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     bool acc_i_vlan_absent = true;
     bool acc_o_v_step_absent = true;
     bool acc_i_v_step_absent = true;
+    bool acc_cfm_cc_absent = true;
+    bool acc_cfm_ma_absent = true;
 
     /* Default values*/
     access_config->i1 = 1;
@@ -1298,6 +1300,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
         if (!strcmp(key,"cfm-cc") && json_is_boolean(value)) {
             access_config->cfm_cc = json_boolean_value(value);
+            acc_cfm_cc_absent = false;
             continue;
         }
 
@@ -1317,6 +1320,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
         if (!strcmp(key,"cfm-ma-name") && json_is_string(value)) {
             access_config->cfm_ma_name = strdup(json_string_value(value));
+            acc_cfm_ma_absent = false;
             continue;
         }
 
@@ -1351,7 +1355,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     *   Instead of access_config->cfm_ma_name
     */
 
-    if(!access_config->cfm_cc) {
+    if(!acc_cfm_cc_absent && acc_cfm_ma_absent) {
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
