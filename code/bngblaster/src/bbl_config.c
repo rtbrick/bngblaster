@@ -1351,7 +1351,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     *   Instead of access_config->cfm_ma_name
     */
 
-    if(access_config->cfm_cc == NULL) {
+    if(!access_config->cfm_cc) {
         fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
         return false;
     }
