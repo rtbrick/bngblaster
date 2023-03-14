@@ -573,6 +573,10 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
 
     bbl_network_interface_s *network_interface = stream->network_interface;
 
+    if(!network_interface) {
+        return false;
+    }
+
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
