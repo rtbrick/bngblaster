@@ -2396,6 +2396,7 @@ json_parse_config(json_t *root)
 {
     json_t *section, *sub, *value = NULL;
     const char *s;
+    const char *key = NULL;
     uint32_t ipv4;
     int i, size;
     double number;
@@ -2418,7 +2419,66 @@ json_parse_config(json_t *root)
         return false;
     }
 
-    
+    /* Check keys in root config */
+    json_object_foreach(root, key, section) {
+
+        if (!strcmp(key, "sessions") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "ipoe") && json_is_object(section))
+            continue;
+        
+        if (!strcmp(key, "pppoe") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "ppp") && json_is_object(section))
+            continue;
+        
+        if (!strcmp(key, "dhcp") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "dhcpv6") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "igmp") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "access-line") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "access-line-profiles") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "traffic") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "session-traffic") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "interfaces") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "l2tp-server") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "streams") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "isis") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "ldp") && json_is_object(section))
+            continue;
+
+        if (!strcmp(key, "bgp") && json_is_object(section))
+            continue;
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s)\n",key);
+        return false;
+    }
 
     /* Sessions Configuration */
     section = json_object_get(root, "sessions");
