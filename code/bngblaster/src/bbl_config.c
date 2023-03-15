@@ -2021,15 +2021,23 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     json_t *value = NULL;
     const char *s = NULL;
     const char *key = NULL;
-    double bps;
+    double bps, pps;
 
     /* Flag Variables */
     bool stream_name_absent = true;
     bool stream_group_id_absent = true;
     bool stream_dir_absent = true;
+    bool stream_pps_absent = true;
 
     /* Default Values */
     stream_config->type = 0;
+    stream_config->src_port = BBL_UDP_PORT;
+    stream_config->dst_port = BBL_UDP_PORT;
+    stream_config->length = 128;
+    stream_config->pps = 1;
+    stream_config->ipv4_df = true;
+    stream_config->tx_mpls1_ttl = 255;
+    stream_config->tx_mpls2_ttl = 255;
 
 
     json_object_foreach(stream, key, value) {
@@ -2080,6 +2088,196 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             continue;
         }
 
+        if (!strcmp(key, "network-interface") && json_is_string(value)) {
+            stream_config->network_interface = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "a10nsp-interface") && json_is_string(value)) {
+            stream_config->a10nsp_interface = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "source-port") && json_is_number(value)) {
+            stream_config->src_port = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "destination-port") && json_is_number(value)) {
+            stream_config->dst_port = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "length") && json_is_number(value)) {
+            stream_config->length = json_number_value(value);
+            if(stream_config->length < 76 || 
+                stream_config->length > 9000 ||
+                stream_config->length > g_ctx->config.io_max_stream_len) {
+                    fprintf(stderr, "JSON config error: Invalid value for stream->length (must be between 76 and %u)\n", g_ctx->config.io_max_stream_len);
+                    return false;
+                }
+            continue;
+        }
+
+        if (!strcmp(key, "priority") && json_is_number(value)) {
+            stream_config->priority = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "vlan-priority") && json_is_number(value)) {
+            stream_config->vlan_priority = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "pps") && json_is_number(value)) {
+            stream_config->pps = json_number_value(value);
+            pps = stream_config->pps;
+            stream_pps_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "bps") && json_is_number(value)) {
+            bps = json_number_value(value);
+            stream_config->pps = bps / (stream_config->length * 8);
+            continue;
+        }
+
+        if (!strcmp(key, "Kbps") && json_is_number(value)) {
+            bps = json_number_value(value);
+            stream_config->pps = (bps * 1000) / (stream_config->length * 010);
+            continue;
+        }
+
+        if (!strcmp(key, "Mbps") && json_is_number(value)) {
+            bps = json_number_value(value);
+            stream_config->pps = (bps * 1000000) / (stream_config->length * 8);
+            continue;
+        }
+
+        if (!strcmp(key, "Gbps") && json_is_number(value)) {
+            bps = json_number_value(value);
+            stream_config->pps = (bps * 1000000000) / (stream_config->length * 8);
+            continue;
+        }
+
+        if (!strcmp(key, "max-packets") && json_is_number(value)) {
+            stream_config->max_packets = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "start-delay") && json_is_number(value)) {
+            stream_config->start_delay = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "ldp-ipv4-lookup-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv4_ldp_lookup_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->ldp-ipv4-lookup-address\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "access-ipv4-source-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv4_access_src_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->access-ipv4-source-address\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "access-ipv6-source-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv6_access_src_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->access-ipv6-source-address\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "network-ipv4-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv4_network_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->network-ipv4-address\n");
+                return false;
+            }
+            add_secondary_ipv4(stream_config->ipv4_network_address);
+            continue;
+        }
+
+        if (!strcmp(key, "network-ipv6-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv6_network_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->network-ipv4-address\n");
+                return false;
+            }
+            add_secondary_ipv6(stream_config->ipv6_network_address);
+            continue;
+        }
+
+        if (!strcmp(key, "destination-ipv4-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv4_destination_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->destination-ipv4-address\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "destination-ipv6-address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &stream_config->ipv6_destination_address)) {
+                fprintf(stderr, "JSON config error: Invalid value for streams->destination-ipv6-address\n");
+                return false;
+            }
+            continue;
+        }
+
+        if(!strcmp(key,"ipv4-df") && json_is_boolean(value)) {
+            stream_config->ipv4_df = json_is_boolean(value);
+            continue;
+        }
+
+        /* MPLS labels */
+        if (!strcmp(key, "tx-label1") && json_is_number(value)) {
+            stream_config->tx_mpls1 = true;
+            stream_config->tx_mpls1_label = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-label1-exp") && json_is_number(value)) {
+            stream_config->tx_mpls1_exp = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-label1-ttl") && json_is_number(value)) {
+            stream_config->tx_mpls1_ttl = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-label2") && json_is_number(value)) {
+            stream_config->tx_mpls2 = true;
+            stream_config->tx_mpls2_label = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-label2-exp") && json_is_number(value)) {
+            stream_config->tx_mpls2_exp = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-label2-ttl") && json_is_number(value)) {
+            stream_config->tx_mpls2_ttl = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "rx-label1") && json_is_number(value)) {
+            stream_config->rx_mpls1 = true;
+            stream_config->rx_mpls1_label = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "rx-label2") && json_is_number(value)) {
+            stream_config->rx_mpls2 = true;
+            stream_config->rx_mpls2_label = json_number_value(value);
+            continue;
+        }
+
         /*  Any other keys are present  */
         if (key[0] == '_')
             continue;
@@ -2105,223 +2303,20 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             stream_config->direction = BBL_DIRECTION_DOWN;
         }
     }
-    
-    if(stream_config->stream_group_id == 0 && 
-       stream_config->direction != BBL_DIRECTION_DOWN) {
+
+    if(stream_config->stream_group_id == 0 && stream_config->direction != BBL_DIRECTION_DOWN) {
         fprintf(stderr, "JSON config error: Invalid value for stream->direction (must be downstream for RAW streams)\n");
         return false;
     }
 
-
-
-    /* Code to be refactored */
-
-    if(json_unpack(stream, "{s:s}", "network-interface", &s) == 0) {
-        stream_config->network_interface = strdup(s);
-    }
-    if(json_unpack(stream, "{s:s}", "a10nsp-interface", &s) == 0) {
-        stream_config->a10nsp_interface = strdup(s);
-    }
     if(stream_config->network_interface && stream_config->a10nsp_interface) {
         fprintf(stderr, "JSON config error: Not allowed to set stream->network-interface and stream->a10nsp-interface\n");
         return false;
     }
 
-    value = json_object_get(stream, "source-port");
-    if(value) {
-        stream_config->src_port = json_number_value(value);
-    } else {
-        stream_config->src_port = BBL_UDP_PORT;
-    }
-
-    value = json_object_get(stream, "destination-port");
-    if(value) {
-        stream_config->dst_port = json_number_value(value);
-    } else {
-        stream_config->dst_port = BBL_UDP_PORT;
-    }
-
-    value = json_object_get(stream, "length");
-    if(value) {
-        stream_config->length = json_number_value(value);
-        if(stream_config->length < 76 || 
-           stream_config->length > 9000 ||
-           stream_config->length > g_ctx->config.io_max_stream_len) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->length (must be between 76 and %u)\n", g_ctx->config.io_max_stream_len);
-            return false;
-        }
-    } else {
-        stream_config->length = 128;
-    }
-
-    value = json_object_get(stream, "priority");
-    if(value) {
-        stream_config->priority = json_number_value(value);
-    }
-
-    value = json_object_get(stream, "vlan-priority");
-    if(value) {
-        stream_config->vlan_priority = json_number_value(value);
-    }
-
-    value = json_object_get(stream, "pps");
-    if(value) {
-        stream_config->pps = json_number_value(value);
-        if(stream_config->pps <= 0) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
-            return false;
-        }
-    } else {
-        /* pps config has priority over bps */
-        value = json_object_get(stream, "bps");
-        if(value) {
-            bps = json_number_value(value);
-            if(!bps) {
-                fprintf(stderr, "JSON config error: Invalid value for stream->bps\n");
-                return false;
-            }
-            stream_config->pps = bps / (stream_config->length * 8);
-        }
-        value = json_object_get(stream, "Kbps");
-        if(value) {
-            bps = json_number_value(value);
-            if(!bps) {
-                fprintf(stderr, "JSON config error: Invalid value for stream->Kbps\n");
-                return false;
-            }
-            stream_config->pps = (bps*1000) / (stream_config->length * 8);
-        }
-        value = json_object_get(stream, "Mbps");
-        if(value) {
-            bps = json_number_value(value);
-            if(!bps) {
-                fprintf(stderr, "JSON config error: Invalid value for stream->Mbps\n");
-                return false;
-            }
-            stream_config->pps = (bps*1000000) / (stream_config->length * 8);
-        }
-        value = json_object_get(stream, "Gbps");
-        if(value) {
-            bps = json_number_value(value);
-            if(!bps) {
-                fprintf(stderr, "JSON config error: Invalid value for stream->Gbps\n");
-                return false;
-            }
-            stream_config->pps = (bps*1000000000) / (stream_config->length * 8);
-        }
-    }
-    if(!stream_config->pps) stream_config->pps = 1;
-
-    value = json_object_get(stream, "max-packets");
-    if(value) {
-        stream_config->max_packets = json_number_value(value);
-    }
-
-    value = json_object_get(stream, "start-delay");
-    if(value) {
-        stream_config->start_delay = json_number_value(value);
-    }
-
-    if(json_unpack(stream, "{s:s}", "ldp-ipv4-lookup-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &stream_config->ipv4_ldp_lookup_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->ldp-ipv4-lookup-address\n");
-            return false;
-        }
-    }
-
-    if(json_unpack(stream, "{s:s}", "access-ipv4-source-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &stream_config->ipv4_access_src_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv4-source-address\n");
-            return false;
-        }
-    }
-
-    if(json_unpack(stream, "{s:s}", "access-ipv6-source-address", &s) == 0) {
-        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_access_src_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->access-ipv6-source-address\n");
-            return false;
-        }
-    }
-
-    if(json_unpack(stream, "{s:s}", "network-ipv4-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &stream_config->ipv4_network_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->network-ipv4-address\n");
-            return false;
-        }
-        add_secondary_ipv4(stream_config->ipv4_network_address);
-    }
-
-    if(json_unpack(stream, "{s:s}", "network-ipv6-address", &s) == 0) {
-        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_network_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->network-ipv6-address\n");
-            return false;
-        }
-        add_secondary_ipv6(stream_config->ipv6_network_address);
-    }
-
-    if(json_unpack(stream, "{s:s}", "destination-ipv4-address", &s) == 0) {
-        if(!inet_pton(AF_INET, s, &stream_config->ipv4_destination_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv4-address\n");
-            return false;
-        }
-    }
-
-    if(json_unpack(stream, "{s:s}", "destination-ipv6-address", &s) == 0) {
-        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_destination_address)) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv6-address\n");
-            return false;
-        }
-    }
-
-    /* Set DF bit for IPv4 traffic (default true) */
-    value = json_object_get(stream, "ipv4-df");
-    if(json_is_boolean(value)) {
-        stream_config->ipv4_df = json_boolean_value(value);
-    } else {
-        stream_config->ipv4_df = true;
-    }
-
-    /* MPLS labels */
-    value = json_object_get(stream, "tx-label1");
-    if(value) {
-        stream_config->tx_mpls1 = true;
-        stream_config->tx_mpls1_label = json_number_value(value);
-    }
-    value = json_object_get(stream, "tx-label1-exp");
-    if(value) {
-        stream_config->tx_mpls1_exp = json_number_value(value);
-    }
-    value = json_object_get(stream, "tx-label1-ttl");
-    if(value) {
-        stream_config->tx_mpls1_ttl = json_number_value(value);
-    } else {
-        stream_config->tx_mpls1_ttl = 255;
-    }
-    value = json_object_get(stream, "tx-label2");
-    if(value) {
-        stream_config->tx_mpls2 = true;
-        stream_config->tx_mpls2_label = json_number_value(value);
-    }
-    value = json_object_get(stream, "tx-label2-exp");
-    if(value) {
-        stream_config->tx_mpls2_exp = json_number_value(value);
-    }
-    value = json_object_get(stream, "tx-label2-ttl");
-    if(value) {
-        stream_config->tx_mpls2_ttl = json_number_value(value);
-    } else {
-        stream_config->tx_mpls2_ttl = 255;
-    }
-
-    value = json_object_get(stream, "rx-label1");
-    if(value) {
-        stream_config->rx_mpls1 = true;
-        stream_config->rx_mpls1_label = json_number_value(value);
-    }
-    value = json_object_get(stream, "rx-label2");
-    if(value) {
-        stream_config->rx_mpls2 = true;
-        stream_config->rx_mpls2_label = json_number_value(value);
+    /* PPS given prirority over BPS */
+    if (!stream_pps_absent) {
+        stream_config->pps = pps;
     }
 
     /* Validate configuration */
@@ -2391,6 +2386,11 @@ json_parse_config_streams(json_t *root)
     return true;
 }
 
+/*
+ *  Realised my changes to the code are unnecessary, instead I will just check if the correct
+ *  keys are present. Then execute the code as it is from this line onwards
+*/
+
 static bool
 json_parse_config(json_t *root)
 {
@@ -2417,6 +2417,8 @@ json_parse_config(json_t *root)
         fprintf(stderr, "JSON config error: Configuration root element must object\n");
         return false;
     }
+
+    
 
     /* Sessions Configuration */
     section = json_object_get(root, "sessions");
