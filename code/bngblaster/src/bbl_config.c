@@ -2392,6 +2392,187 @@ json_parse_config_streams(json_t *root)
 */
 
 static bool
+json_parse_sessions(json_t *sessions) 
+{
+    json_t *value = NULL;
+    const char *key = NULL;
+
+    json_object_foreach(sessions, key, value) {
+
+        if (!strcmp(key, "count") && json_is_number(value)) {
+            g_ctx->config.sessions = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "max-outstanding") && json_is_number(value)) {
+            g_ctx->config.sessions_max_outstanding = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "start-rate") && json_is_number(value)) {
+            g_ctx->config.sessions_start_rate = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "stop-rate") && json_is_number(value)) {
+            g_ctx->config.sessions_stop_rate = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "iterate-vlan-outer") && json_is_boolean(value)) {
+            g_ctx->config.iterate_outer_vlan = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "start-delay") && json_is_number(value)) {
+            g_ctx->config.sessions_start_delay = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "autostart") && json_is_boolean(value)) {
+            g_ctx->config.sessions_autostart = json_boolean_value(value);
+            continue;
+        }
+        
+        if (!strcmp(key, "reconnect") && json_is_boolean(value)) {
+            g_ctx->config.sessions_reconnect = json_boolean_value(value);
+            continue;
+        }
+        
+        if (!strcmp(key, "monkey-autostart") && json_is_boolean(value)) {
+            g_ctx->config.monkey_autostart = json_boolean_value(value);
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in sessions\n",key);
+        return false;
+    }
+    return true;
+}
+
+static bool
+json_parse_ipoe(json_t *ipoe)
+{
+    json_t *value = NULL;
+    const char *key = NULL;
+
+    json_object_foreach(ipoe, key, value) {
+
+        if (!strcmp(key, "ipv6") && json_is_boolean(value)){
+            g_ctx->config.ipoe_ipv6_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "ipv4") && json_is_boolean(value)){
+            g_ctx->config.ipoe_ipv4_enable = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "arp-timeout") && json_is_number(value)){
+            g_ctx->config.arp_timeout = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "arp-interval") && json_is_number(value)){
+            g_ctx->config.arp_interval = json_number_value(value);
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in ipoe\n",key);
+        return false;
+    }
+    return true;
+}
+
+static bool
+json_parse_pppoe(json_t *pppoe)
+{
+    json_t *value = NULL;
+    const char *key = NULL;
+
+    g_ctx->config.pppoe_reconnect = g_ctx->config.sessions_reconnect;
+
+    json_object_foreach(pppoe, key, value) {
+
+        if (!strcmp(key, "sessions") && json_is_number(value)){
+            g_ctx->config.sessions = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "max-outstanding") && json_is_number(value)){
+            g_ctx->config.sessions_max_outstanding = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "start-rate") && json_is_number(value)){
+            g_ctx->config.sessions_start_rate = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "stop-rate") && json_is_number(value)){
+            g_ctx->config.sessions_stop_rate = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "session-time") && json_is_number(value)){
+            g_ctx->config.pppoe_session_time = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "reconnect") && json_is_boolean(value)){
+            g_ctx->config.pppoe_reconnect = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "discovery-timeout") && json_is_number(value)){
+            g_ctx->config.pppoe_discovery_timeout = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "discovery-retry") && json_is_number(value)){
+            g_ctx->config.pppoe_discovery_retry = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "service-name") && json_is_string(value)){
+            g_ctx->config.pppoe_service_name = json_string_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "host-uniq") && json_is_boolean(value)){
+            g_ctx->config.pppoe_host_uniq = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "max-payload") && json_is_number(value)){
+            g_ctx->config.pppoe_max_payload = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "vlan-priority") && json_is_number(value)){
+            g_ctx->config.pppoe_vlan_priority = json_number_value(value);
+            if(g_ctx->config.pppoe_vlan_priority > 7) {
+                fprintf(stderr, "JSON config error: Invalid value for pppoe->vlan-priority\n");
+                return false;
+            }
+            continue;
+        }
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in pppoe\n",key);
+        return false;
+    }
+    return true;
+}
+
+static bool
 json_parse_config(json_t *root)
 {
     json_t *section, *sub, *value = NULL;
@@ -2422,14 +2603,30 @@ json_parse_config(json_t *root)
     /* Check keys in root config */
     json_object_foreach(root, key, section) {
 
-        if (!strcmp(key, "sessions") && json_is_object(section))
+        if (!strcmp(key, "sessions") && json_is_object(section)) {
+            if (!json_parse_sessions(section))
+                return false;
             continue;
+        }
 
-        if (!strcmp(key, "ipoe") && json_is_object(section))
+        if (!strcmp(key, "ipoe") && json_is_object(section)) {
+            if (!json_parse_ipoe(section))
+                return false;
             continue;
+        }
         
-        if (!strcmp(key, "pppoe") && json_is_object(section))
+        /* Deprecated ...
+         * PPPoE sessions, max-outstanding, start
+         * and stop rate was moved to section "sessions"
+         * as all those values apply to PPPoE and IPoE
+         * but for compatibility they are still supported
+         * here as well for some time.
+         */
+        if (!strcmp(key, "pppoe") && json_is_object(section)) {
+            if (!json_parse_pppoe(section))
+                return false;
             continue;
+        }
 
         if (!strcmp(key, "ppp") && json_is_object(section))
             continue;
@@ -2478,134 +2675,6 @@ json_parse_config(json_t *root)
             continue;
         fprintf( stderr, "Config error: Incorrect attribute name (%s)\n",key);
         return false;
-    }
-
-    /* Sessions Configuration */
-    section = json_object_get(root, "sessions");
-    if(json_is_object(section)) {
-        value = json_object_get(section, "count");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions = json_number_value(value);
-        }
-        value = json_object_get(section, "max-outstanding");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_max_outstanding = json_number_value(value);
-        }
-        value = json_object_get(section, "start-rate");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_start_rate = json_number_value(value);
-        }
-        value = json_object_get(section, "stop-rate");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_stop_rate = json_number_value(value);
-        }
-        value = json_object_get(section, "iterate-vlan-outer");
-        if(json_is_boolean(value)) {
-            g_ctx->config.iterate_outer_vlan = json_boolean_value(value);
-        }
-        value = json_object_get(section, "start-delay");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_start_delay = json_number_value(value);
-        }
-        value = json_object_get(section, "autostart");
-        if(json_is_boolean(value)) {
-            g_ctx->config.sessions_autostart = json_boolean_value(value);
-        }
-        value = json_object_get(section, "reconnect");
-        if(json_is_boolean(value)) {
-            g_ctx->config.sessions_reconnect = json_boolean_value(value);
-        }
-        value = json_object_get(section, "monkey-autostart");
-        if(json_is_boolean(value)) {
-            g_ctx->config.monkey_autostart = json_boolean_value(value);
-        }
-    }
-
-    /* IPoE Configuration */
-    section = json_object_get(root, "ipoe");
-    if(json_is_object(section)) {
-        value = json_object_get(section, "ipv6");
-        if(json_is_boolean(value)) {
-            g_ctx->config.ipoe_ipv6_enable = json_boolean_value(value);
-        }
-        value = json_object_get(section, "ipv4");
-        if(json_is_boolean(value)) {
-            g_ctx->config.ipoe_ipv4_enable = json_boolean_value(value);
-        }
-        value = json_object_get(section, "arp-timeout");
-        if(json_is_number(value)) {
-            g_ctx->config.arp_timeout = json_number_value(value);
-        }
-        value = json_object_get(section, "arp-interval");
-        if(json_is_number(value)) {
-            g_ctx->config.arp_interval = json_number_value(value);
-        }
-    }
-
-    /* PPPoE Configuration */
-    section = json_object_get(root, "pppoe");
-    if(json_is_object(section)) {
-        /* Deprecated ...
-         * PPPoE sessions, max-outstanding, start
-         * and stop rate was moved to section session
-         * as all those values apply to PPPoE and IPoE
-         * but for compatibility they are still supported
-         * here as well for some time.
-         */
-        value = json_object_get(section, "sessions");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions = json_number_value(value);
-        }
-        value = json_object_get(section, "max-outstanding");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_max_outstanding = json_number_value(value);
-        }
-        value = json_object_get(section, "start-rate");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_start_rate = json_number_value(value);
-        }
-        value = json_object_get(section, "stop-rate");
-        if(json_is_number(value)) {
-            g_ctx->config.sessions_stop_rate = json_number_value(value);
-        }
-        /* ... Deprecated */
-        value = json_object_get(section, "session-time");
-        if(json_is_number(value)) {
-            g_ctx->config.pppoe_session_time = json_number_value(value);
-        }
-        value = json_object_get(section, "reconnect");
-        if(json_is_boolean(value)) {
-            g_ctx->config.pppoe_reconnect = json_boolean_value(value);
-        } else {
-            g_ctx->config.pppoe_reconnect = g_ctx->config.sessions_reconnect;
-        }
-        value = json_object_get(section, "discovery-timeout");
-        if(json_is_number(value)) {
-            g_ctx->config.pppoe_discovery_timeout = json_number_value(value);
-        }
-        value = json_object_get(section, "discovery-retry");
-        if(json_is_number(value)) {
-            g_ctx->config.pppoe_discovery_retry = json_number_value(value);
-        }
-        if(json_unpack(section, "{s:s}", "service-name", &s) == 0) {
-            g_ctx->config.pppoe_service_name = strdup(s);
-        }
-        value = json_object_get(section, "host-uniq");
-        if(json_is_boolean(value)) {
-            g_ctx->config.pppoe_host_uniq = json_boolean_value(value);
-        }
-        value = json_object_get(section, "max-payload");
-        if(json_is_number(value)) {
-            g_ctx->config.pppoe_max_payload = json_number_value(value);
-        }
-        value = json_object_get(section, "vlan-priority");
-        if(json_is_number(value)) {
-            g_ctx->config.pppoe_vlan_priority = json_number_value(value);
-            if(g_ctx->config.pppoe_vlan_priority > 7) {
-                fprintf(stderr, "JSON config error: Invalid value for pppoe->vlan-priority\n");
-                return false;
-            }
-        }
     }
 
     /* PPP Configuration */
