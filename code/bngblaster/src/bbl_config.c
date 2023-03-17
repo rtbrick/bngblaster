@@ -2549,7 +2549,7 @@ json_parse_pppoe(json_t *pppoe)
         }
 
         if (!strcmp(key, "service-name") && json_is_string(value)){
-            g_ctx->config.pppoe_service_name = json_string_value(value);
+            g_ctx->config.pppoe_service_name = strdup(json_string_value(value));
             continue;
         }
 
@@ -2960,7 +2960,7 @@ json_parse_igmp(json_t *igmp)
 
         if (!strcmp(key, "start-delay") && json_is_number(value)){
             g_ctx->config.igmp_start_delay = json_number_value(value);
-            if(g_ctx->config.igmp_start_delay < 1 || g_ctx->config.igmp_start_delay > UINT16_MAX) {
+            if(g_ctx->config.igmp_start_delay < 1 || g_ctx->config.igmp_start_delay >= UINT16_MAX) {
                 fprintf(stderr, "JSON config error: Invalid value for igmp->start-delay\n");
                 return false;
             }
@@ -3126,7 +3126,7 @@ json_parse_traffic(json_t *traffic)
 
         if (!strcmp(key, "max-burst") && json_is_number(value)){
             g_ctx->config.stream_max_burst = json_number_value(value);
-            if(g_ctx->config.stream_max_burst < 1 || g_ctx->config.stream_max_burst > UINT8_MAX) {
+            if(g_ctx->config.stream_max_burst < 1 || g_ctx->config.stream_max_burst >= UINT8_MAX) {
                 fprintf(stderr, "JSON config error: Invalid value for traffic->max-burst\n");
                 return false;
             }
@@ -3211,14 +3211,324 @@ json_parse_session_traffic(json_t *sess_traffic)
 }
 
 static bool
+json_parse_interfaces(  json_t *interfaces , 
+                        bbl_lag_config_s *lag_config,
+                        bbl_link_config_s *link_config,
+                        bbl_network_config_s  *network_config,
+                        bbl_access_config_s *access_config,
+                        bbl_a10nsp_config_s *a10nsp_config)
+{
+    json_t *value;
+    const char *key = NULL;
+    const char *s = NULL;
+    int size;
+    int i;
+
+    /* Flag variables*/
+    bool int_io_mode_absent = true;
+
+    /* Default Values*/
+
+    json_object_foreach(interfaces, key, value) {
+
+        if (!strcmp(key, "io-mode") && json_is_string(value)) {
+            if (!strcmp(s, "packet_mmap_raw")) {
+                g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
+                io_packet_mmap_set_max_stream_len();
+            } else if(strcmp(s, "packet_mmap") == 0) {
+                g_ctx->config.io_mode = IO_MODE_PACKET_MMAP;
+                io_packet_mmap_set_max_stream_len();
+            } else if(strcmp(s, "raw") == 0) {
+                g_ctx->config.io_mode = IO_MODE_RAW;
+#if BNGBLASTER_DPDK
+            } else if(strcmp(s, "dpdk") == 0) {
+                g_ctx->config.io_mode = IO_MODE_DPDK;
+                g_ctx->dpdk = true;
+#endif
+            } else {
+                fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
+                return false;
+            }
+            int_io_mode_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "io-slots") && json_is_number(value)){
+            g_ctx->config.io_slots = json_number_value(value);
+            if(g_ctx->config.io_slots < 32 || g_ctx->config.io_slots >= UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for interfaces->io-slots\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "qdisc-bypass") && json_is_boolean(value)){
+            g_ctx->config.qdisc_bypass = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-interval") && json_is_number(value)){
+            g_ctx->config.tx_interval = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "rx-interval") && json_is_number(value)){
+            g_ctx->config.rx_interval = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "tx-threads") && json_is_number(value)){
+            g_ctx->config.tx_threads = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "rx-threads") && json_is_number(value)){
+            g_ctx->config.rx_threads = json_number_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "capture-include-streams") && json_is_boolean(value)){
+            g_ctx->pcap.include_streams = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "mac-modifier") && json_is_number(value)){
+            if(json_number_value(value) < 0 || json_number_value(value) > UINT8_MAX) {
+                fprintf(stderr, "Config error: Invalid value for interfaces->mac-modifier\n");
+                return false;
+            }
+            g_ctx->config.mac_modifier = json_number_value(value);
+            continue;
+        }
+
+        /* LAG Configuration Section */
+        if (!strcmp(key, "lag")) {
+            if(json_is_array(value)) {
+                /* Config is provided as array (multiple LAG) */
+                size = json_array_size(value);
+                for(i = 0; i < size; i++) {
+                    if(!lag_config) {
+                        g_ctx->config.lag_config = calloc(1, sizeof(bbl_lag_config_s));
+                        lag_config = g_ctx->config.lag_config;
+                    } else {
+                        lag_config->next = calloc(1, sizeof(bbl_lag_config_s));
+                        lag_config = lag_config->next;
+                    }
+                    if(!json_parse_lag(json_array_get(value, i), lag_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(value)) {
+                /* Config is provided as object (single LAG) */
+                lag_config = calloc(1, sizeof(bbl_lag_config_s));
+                if(!g_ctx->config.lag_config) {
+                    g_ctx->config.lag_config = lag_config;
+                }
+                if(!json_parse_lag(value, lag_config)) {
+                    return false;
+                }
+            }
+            continue;
+        }
+
+        /* Links Configuration Section */
+        if (!strcmp(key, "links")) {
+            if(json_is_array(value)) {
+                /* Config is provided as array (multiple links) */
+                size = json_array_size(value);
+                for(i = 0; i < size; i++) {
+                    if(!link_config) {
+                        g_ctx->config.link_config = calloc(1, sizeof(bbl_link_config_s));
+                        link_config = g_ctx->config.link_config;
+                    } else {
+                        link_config->next = calloc(1, sizeof(bbl_link_config_s));
+                        link_config = link_config->next;
+                    }
+                    if(!json_parse_link(json_array_get(value, i), link_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(value)) {
+                /* Config is provided as object (single network interface) */
+                link_config = calloc(1, sizeof(bbl_link_config_s));
+                if(!g_ctx->config.link_config) {
+                    g_ctx->config.link_config = link_config;
+                }
+                if(!json_parse_link(value, link_config)) {
+                    return false;
+                }
+            }
+            continue;
+        }
+
+        /* Network Interface Configuration Section */
+        if (!strcmp(key, "network")) {
+            if(json_is_array(value)) {
+                /* Config is provided as array (multiple network interfaces) */
+                size = json_array_size(value);
+                for(i = 0; i < size; i++) {
+                    if(!network_config) {
+                        g_ctx->config.network_config = calloc(1, sizeof(bbl_network_config_s));
+                        network_config = g_ctx->config.network_config;
+                    } else {
+                        network_config->next = calloc(1, sizeof(bbl_network_config_s));
+                        network_config = network_config->next;
+                    }
+                    if(!json_parse_network_interface(json_array_get(value, i), network_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(value)) {
+                /* Config is provided as object (single network interface) */
+                network_config = calloc(1, sizeof(bbl_network_config_s));
+                if(!g_ctx->config.network_config) {
+                    g_ctx->config.network_config = network_config;
+                }
+                if(!json_parse_network_interface(value, network_config)) {
+                    return false;
+                }
+            }
+            continue;
+        }
+
+        /* Access Interface Configuration Section */
+        if (!strcmp(key, "access")) {
+            if(json_is_array(value)) {
+                /* Config is provided as array (multiple access ranges) */
+                size = json_array_size(value);
+                for(i = 0; i < size; i++) {
+                    if(!access_config) {
+                        g_ctx->config.access_config = calloc(1, sizeof(bbl_access_config_s));
+                        access_config = g_ctx->config.access_config;
+                    } else {
+                        access_config->next = calloc(1, sizeof(bbl_access_config_s));
+                        access_config = access_config->next;
+                    }
+                    if(!json_parse_access_interface(json_array_get(value, i), access_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(value)) {
+                /* Config is provided as object (single access range) */
+                access_config = calloc(1, sizeof(bbl_access_config_s));
+                if(!g_ctx->config.access_config) {
+                    g_ctx->config.access_config = access_config;
+                }
+                if(!json_parse_access_interface(value, access_config)) {
+                    return false;
+                }
+            }
+            continue;
+        }
+
+        /* A10NSP Interface Configuration Section */
+        if (!strcmp(key, "a10nsp")) {
+            if(json_is_array(value)) {
+                /* Config is provided as array (multiple a10nsp interfaces) */
+                size = json_array_size(value);
+                for(i = 0; i < size; i++) {
+                    if(!a10nsp_config) {
+                        g_ctx->config.a10nsp_config = calloc(1, sizeof(bbl_a10nsp_config_s));
+                        a10nsp_config = g_ctx->config.a10nsp_config;
+                    } else {
+                        a10nsp_config->next = calloc(1, sizeof(bbl_a10nsp_config_s));
+                        a10nsp_config = a10nsp_config->next;
+                    }
+                    if(!json_parse_a10nsp_interface(json_array_get(value, i), a10nsp_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(value)) {
+                /* Config is provided as object (single a10nsp interface) */
+                a10nsp_config = calloc(1, sizeof(bbl_a10nsp_config_s));
+                if(!g_ctx->config.a10nsp_config) {
+                    g_ctx->config.a10nsp_config = a10nsp_config;
+                }
+                if(!json_parse_a10nsp_interface(value, a10nsp_config)) {
+                    return false;
+                }
+            }
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces\n",key);
+        return false;
+    }
+
+    if (int_io_mode_absent) {
+        g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
+        io_packet_mmap_set_max_stream_len();
+    }
+
+    return true;
+}
+
+static bool
+json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
+{
+    json_t *value;
+    const char *key = NULL;
+
+    /* Flag variables */
+    bool l2tp_name_absent = true;
+    bool l2tp_address_absent = true;
+
+    json_object_foreach(l2tp, key, value) {
+
+        if (!strcmp(key, "name") && json_is_string(value)) {
+            l2tp_server->host_name = strdup(json_string_value(value));
+            l2tp_name_absent = false;
+            continue;
+        }
+
+        if (!strcmp(key, "secret") && json_is_string(value)) {
+            l2tp_server->secret = strdup(json_string_value(value));
+            continue;
+        }
+
+        if (!strcmp(key, "address") && json_is_string(value)) {
+            if(!inet_pton(AF_INET, json_string_value(value), &l2tp_server->ip)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
+                    return false;
+            }
+            CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
+            add_secondary_ipv4(l2tp_server->ip);
+            l2tp_address_absent = false;
+            continue;
+        }
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in l2tp-server\n",key);
+        return false;
+    }
+
+    if (l2tp_name_absent) {
+        fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
+        return false;
+    }
+
+    if (l2tp_address_absent) {
+        fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
+        return false;
+    }
+    return true;
+}
+
+static bool
 json_parse_config(json_t *root)
 {
     json_t *section, *sub, *value = NULL;
     const char *s;
     const char *key = NULL;
-    uint32_t ipv4;
     int i, size;
     double number;
+
+    /* Flag variables */
+    bool conf_inter_absent = true;
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
@@ -3318,20 +3628,98 @@ json_parse_config(json_t *root)
             continue;
         }
 
-        if (!strcmp(key, "interfaces") && json_is_object(section))
+        if (!strcmp(key, "interfaces") && json_is_object(section)) {
+            if (!json_parse_interfaces( section, 
+                                        lag_config, 
+                                        link_config,
+                                        network_config,
+                                        access_config,
+                                        a10nsp_config))
+                return false;
+            conf_inter_absent = false;
             continue;
+        }
 
-        if (!strcmp(key, "l2tp-server") && json_is_object(section))
+        if (!strcmp(key, "l2tp-server")) {
+            if (!json_parse_session_traffic(section))
+                return false;
             continue;
+        }
 
         if (!strcmp(key, "streams") && json_is_object(section))
             continue;
 
-        if (!strcmp(key, "isis") && json_is_object(section))
+        if (!strcmp(key, "isis")) {
+            if(json_is_array(section)) {
+                /* Config is provided as array (multiple IS-IS instances) */
+                size = json_array_size(section);
+                for(i = 0; i < size; i++) {
+                    if(!isis_config) {
+                        g_ctx->config.isis_config = calloc(1, sizeof(isis_config_s));
+                        isis_config = g_ctx->config.isis_config;
+                    } else {
+                        isis_config->next = calloc(1, sizeof(isis_config_s));
+                        isis_config = isis_config->next;
+                    }
+                    if(!json_parse_isis_config(json_array_get(section, i), isis_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(section)) {
+                /* Config is provided as object (single IS-IS instance) */
+                isis_config = calloc(1, sizeof(isis_config_s));
+                if(!g_ctx->config.isis_config) {
+                    g_ctx->config.isis_config = isis_config;
+                }
+                if(!json_parse_isis_config(section, isis_config)) {
+                    return false;
+                }
+            }
             continue;
+        }
 
-        if (!strcmp(key, "ldp") && json_is_object(section))
+        /* Pre-Load LDP RAW update files */
+        if (!strcmp(key, "ldp-raw-update-files") && json_is_array(section)) {
+            size = json_array_size(section);
+            for(i = 0; i < size; i++) {
+                s = json_string_value(json_array_get(section, i));
+                if(s) {
+                    if(!ldp_raw_update_load(s, true)) {
+                        return false;
+                    }
+                }
+            }
             continue;
+        }
+
+        if (!strcmp(key, "ldp") && json_is_object(section)) {
+            if(json_is_array(section)) {
+                /* Config is provided as array (multiple LDP instances) */
+                size = json_array_size(section);
+                for(i = 0; i < size; i++) {
+                    if(!ldp_config) {
+                        g_ctx->config.ldp_config = calloc(1, sizeof(ldp_config_s));
+                        ldp_config = g_ctx->config.ldp_config;
+                    } else {
+                        ldp_config->next = calloc(1, sizeof(ldp_config_s));
+                        ldp_config = ldp_config->next;
+                    }
+                    if(!json_parse_ldp_config(json_array_get(section, i), ldp_config)) {
+                        return false;
+                    }
+                }
+            } else if(json_is_object(section)) {
+                /* Config is provided as object (single LDP instance) */
+                ldp_config = calloc(1, sizeof(ldp_config_s));
+                if(!g_ctx->config.ldp_config) {
+                    g_ctx->config.ldp_config = ldp_config;
+                }
+                if(!json_parse_ldp_config(section, ldp_config)) {
+                    return false;
+                }
+            }
+            continue;        
+        }
 
         if (!strcmp(key, "bgp")) {
             if(json_is_array(section)) {
@@ -3362,16 +3750,18 @@ json_parse_config(json_t *root)
             continue;
         }
 
+        /* Pre-Load BGP RAW update files */
         if (!strcmp(key, "bgp-raw-update-files") && json_is_array(section)) {
-            size = json_array_size(sub);
+            size = json_array_size(section);
             for(i = 0; i < size; i++) {
-                s = json_string_value(json_array_get(sub, i));
+                s = json_string_value(json_array_get(section, i));
                 if(s) {
                     if(!bgp_raw_update_load(s, true)) {
                         return false;
                     }
                 }
             }
+            continue;
         }
 
         /*  Any other keys are present  */
@@ -3381,305 +3771,12 @@ json_parse_config(json_t *root)
         return false;
     }
 
-    /* Code to be rfed*/
-
-    /* BGP Configuration */
-
-    /* Pre-Load BGP RAW update files */
-    sub = json_object_get(root, "bgp-raw-update-files");
-    if(json_is_array(sub)) {
-        size = json_array_size(sub);
-        for(i = 0; i < size; i++) {
-            s = json_string_value(json_array_get(sub, i));
-            if(s) {
-                if(!bgp_raw_update_load(s, true)) {
-                    return false;
-                }
-            }
-        }
-    }
-
-    /* IS-IS Configuration */
-    sub = json_object_get(root, "isis");
-    if(json_is_array(sub)) {
-        /* Config is provided as array (multiple IS-IS instances) */
-        size = json_array_size(sub);
-        for(i = 0; i < size; i++) {
-            if(!isis_config) {
-                g_ctx->config.isis_config = calloc(1, sizeof(isis_config_s));
-                isis_config = g_ctx->config.isis_config;
-            } else {
-                isis_config->next = calloc(1, sizeof(isis_config_s));
-                isis_config = isis_config->next;
-            }
-            if(!json_parse_isis_config(json_array_get(sub, i), isis_config)) {
-                return false;
-            }
-        }
-    } else if(json_is_object(sub)) {
-        /* Config is provided as object (single IS-IS instance) */
-        isis_config = calloc(1, sizeof(isis_config_s));
-        if(!g_ctx->config.isis_config) {
-            g_ctx->config.isis_config = isis_config;
-        }
-        if(!json_parse_isis_config(sub, isis_config)) {
-            return false;
-        }
-    }
-
-    /* LDP Configuration */
-    sub = json_object_get(root, "ldp");
-    if(json_is_array(sub)) {
-        /* Config is provided as array (multiple LDP instances) */
-        size = json_array_size(sub);
-        for(i = 0; i < size; i++) {
-            if(!ldp_config) {
-                g_ctx->config.ldp_config = calloc(1, sizeof(ldp_config_s));
-                ldp_config = g_ctx->config.ldp_config;
-            } else {
-                ldp_config->next = calloc(1, sizeof(ldp_config_s));
-                ldp_config = ldp_config->next;
-            }
-            if(!json_parse_ldp_config(json_array_get(sub, i), ldp_config)) {
-                return false;
-            }
-        }
-    } else if(json_is_object(sub)) {
-        /* Config is provided as object (single LDP instance) */
-        ldp_config = calloc(1, sizeof(ldp_config_s));
-        if(!g_ctx->config.ldp_config) {
-            g_ctx->config.ldp_config = ldp_config;
-        }
-        if(!json_parse_ldp_config(sub, ldp_config)) {
-            return false;
-        }
-    }
-
-    /* Pre-Load LDP RAW update files */
-    sub = json_object_get(root, "ldp-raw-update-files");
-    if(json_is_array(sub)) {
-        size = json_array_size(sub);
-        for(i = 0; i < size; i++) {
-            s = json_string_value(json_array_get(sub, i));
-            if(s) {
-                if(!ldp_raw_update_load(s, true)) {
-                    return false;
-                }
-            }
-        }
-    }
-
-    /* Interface Configuration */
-    section = json_object_get(root, "interfaces");
-    if(json_is_object(section)) {
-        if(json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
-            if(strcmp(s, "packet_mmap_raw") == 0) {
-                g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
-                io_packet_mmap_set_max_stream_len();
-            } else if(strcmp(s, "packet_mmap") == 0) {
-                g_ctx->config.io_mode = IO_MODE_PACKET_MMAP;
-                io_packet_mmap_set_max_stream_len();
-            } else if(strcmp(s, "raw") == 0) {
-                g_ctx->config.io_mode = IO_MODE_RAW;
-#if BNGBLASTER_DPDK
-            } else if(strcmp(s, "dpdk") == 0) {
-                g_ctx->config.io_mode = IO_MODE_DPDK;
-                g_ctx->dpdk = true;
-#endif
-            } else {
-                fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
-                return false;
-            }
-        } else {
-            g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
-            io_packet_mmap_set_max_stream_len();
-        }
-        value = json_object_get(section, "io-slots");
-        if(json_is_number(value)) {
-            number = json_number_value(value);
-            if(number < 32 || number >= UINT16_MAX) {
-                fprintf(stderr, "JSON config error: Invalid value for interfaces->io-slots\n");
-                return false;
-            }
-            g_ctx->config.io_slots = json_number_value(value);
-        }
-
-        value = json_object_get(section, "qdisc-bypass");
-        if(json_is_boolean(value)) {
-            g_ctx->config.qdisc_bypass = json_boolean_value(value);
-        }
-        value = json_object_get(section, "tx-interval");
-        if(json_is_number(value)) {
-            g_ctx->config.tx_interval = json_number_value(value) * MSEC;
-        }
-        value = json_object_get(section, "rx-interval");
-        if(json_is_number(value)) {
-            g_ctx->config.rx_interval = json_number_value(value) * MSEC;
-        }
-        value = json_object_get(section, "tx-threads");
-        if(value) {
-            g_ctx->config.tx_threads = json_number_value(value);
-        }
-        value = json_object_get(section, "rx-threads");
-        if(value) {
-            g_ctx->config.rx_threads = json_number_value(value);
-        }
-        value = json_object_get(section, "capture-include-streams");
-        if(json_is_boolean(value)) {
-            g_ctx->pcap.include_streams = json_boolean_value(value);
-        }
-        value = json_object_get(section, "mac-modifier");
-        if(json_is_number(value)) {
-            if(json_number_value(value) < 0 || json_number_value(value) > UINT8_MAX) {
-                fprintf(stderr, "Config error: Invalid value for interfaces->mac-modifier\n");
-                return false;
-            }
-            g_ctx->config.mac_modifier = json_number_value(value);
-        }
-
-        /* LAG Configuration Section */
-        sub = json_object_get(section, "lag");
-        if(json_is_array(sub)) {
-            /* Config is provided as array (multiple LAG) */
-            size = json_array_size(sub);
-            for(i = 0; i < size; i++) {
-                if(!lag_config) {
-                    g_ctx->config.lag_config = calloc(1, sizeof(bbl_lag_config_s));
-                    lag_config = g_ctx->config.lag_config;
-                } else {
-                    lag_config->next = calloc(1, sizeof(bbl_lag_config_s));
-                    lag_config = lag_config->next;
-                }
-                if(!json_parse_lag(json_array_get(sub, i), lag_config)) {
-                    return false;
-                }
-            }
-        } else if(json_is_object(sub)) {
-            /* Config is provided as object (single LAG) */
-            lag_config = calloc(1, sizeof(bbl_lag_config_s));
-            if(!g_ctx->config.lag_config) {
-                g_ctx->config.lag_config = lag_config;
-            }
-            if(!json_parse_lag(sub, lag_config)) {
-                return false;
-            }
-        }
-
-        /* Links Configuration Section */
-        sub = json_object_get(section, "links");
-        if(json_is_array(sub)) {
-            /* Config is provided as array (multiple links) */
-            size = json_array_size(sub);
-            for(i = 0; i < size; i++) {
-                if(!link_config) {
-                    g_ctx->config.link_config = calloc(1, sizeof(bbl_link_config_s));
-                    link_config = g_ctx->config.link_config;
-                } else {
-                    link_config->next = calloc(1, sizeof(bbl_link_config_s));
-                    link_config = link_config->next;
-                }
-                if(!json_parse_link(json_array_get(sub, i), link_config)) {
-                    return false;
-                }
-            }
-        } else if(json_is_object(sub)) {
-            /* Config is provided as object (single network interface) */
-            link_config = calloc(1, sizeof(bbl_link_config_s));
-            if(!g_ctx->config.link_config) {
-                g_ctx->config.link_config = link_config;
-            }
-            if(!json_parse_link(sub, link_config)) {
-                return false;
-            }
-        }
-
-        /* Network Interface Configuration Section */
-        sub = json_object_get(section, "network");
-        if(json_is_array(sub)) {
-            /* Config is provided as array (multiple network interfaces) */
-            size = json_array_size(sub);
-            for(i = 0; i < size; i++) {
-                if(!network_config) {
-                    g_ctx->config.network_config = calloc(1, sizeof(bbl_network_config_s));
-                    network_config = g_ctx->config.network_config;
-                } else {
-                    network_config->next = calloc(1, sizeof(bbl_network_config_s));
-                    network_config = network_config->next;
-                }
-                if(!json_parse_network_interface(json_array_get(sub, i), network_config)) {
-                    return false;
-                }
-            }
-        } else if(json_is_object(sub)) {
-            /* Config is provided as object (single network interface) */
-            network_config = calloc(1, sizeof(bbl_network_config_s));
-            if(!g_ctx->config.network_config) {
-                g_ctx->config.network_config = network_config;
-            }
-            if(!json_parse_network_interface(sub, network_config)) {
-                return false;
-            }
-        }
-
-        /* Access Interface Configuration Section */
-        sub = json_object_get(section, "access");
-        if(json_is_array(sub)) {
-            /* Config is provided as array (multiple access ranges) */
-            size = json_array_size(sub);
-            for(i = 0; i < size; i++) {
-                if(!access_config) {
-                    g_ctx->config.access_config = calloc(1, sizeof(bbl_access_config_s));
-                    access_config = g_ctx->config.access_config;
-                } else {
-                    access_config->next = calloc(1, sizeof(bbl_access_config_s));
-                    access_config = access_config->next;
-                }
-                if(!json_parse_access_interface(json_array_get(sub, i), access_config)) {
-                    return false;
-                }
-            }
-        } else if(json_is_object(sub)) {
-            /* Config is provided as object (single access range) */
-            access_config = calloc(1, sizeof(bbl_access_config_s));
-            if(!g_ctx->config.access_config) {
-                g_ctx->config.access_config = access_config;
-            }
-            if(!json_parse_access_interface(sub, access_config)) {
-                return false;
-            }
-        }
-
-        /* A10NSP Interface Configuration Section */
-        sub = json_object_get(section, "a10nsp");
-        if(json_is_array(sub)) {
-            /* Config is provided as array (multiple a10nsp interfaces) */
-            size = json_array_size(sub);
-            for(i = 0; i < size; i++) {
-                if(!a10nsp_config) {
-                    g_ctx->config.a10nsp_config = calloc(1, sizeof(bbl_a10nsp_config_s));
-                    a10nsp_config = g_ctx->config.a10nsp_config;
-                } else {
-                    a10nsp_config->next = calloc(1, sizeof(bbl_a10nsp_config_s));
-                    a10nsp_config = a10nsp_config->next;
-                }
-                if(!json_parse_a10nsp_interface(json_array_get(sub, i), a10nsp_config)) {
-                    return false;
-                }
-            }
-        } else if(json_is_object(sub)) {
-            /* Config is provided as object (single a10nsp interface) */
-            a10nsp_config = calloc(1, sizeof(bbl_a10nsp_config_s));
-            if(!g_ctx->config.a10nsp_config) {
-                g_ctx->config.a10nsp_config = a10nsp_config;
-            }
-            if(!json_parse_a10nsp_interface(sub, a10nsp_config)) {
-                return false;
-            }
-        }
-    } else {
+    if (conf_inter_absent) {
         fprintf(stderr, "JSON config error: Missing interfaces section\n");
         return false;
     }
+
+    /* Code to be rfed*/
 
     /* L2TP Server Configuration (LNS) */
     section = json_object_get(root, "l2tp-server");
@@ -3698,26 +3795,26 @@ json_parse_config(json_t *root)
                 l2tp_server->next = calloc(1, sizeof(bbl_l2tp_server_s));
                 l2tp_server = l2tp_server->next;
             }
-            if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
-                l2tp_server->host_name = strdup(s);
-            } else {
-                fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
-                return false;
-            }
-            if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
-                l2tp_server->secret = strdup(s);
-            }
-            if(json_unpack(sub, "{s:s}", "address", &s) == 0) {
-                if(!inet_pton(AF_INET, s, &ipv4)) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
-                    return false;
-                }
-                l2tp_server->ip = ipv4;
-                CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
-                add_secondary_ipv4(ipv4);
-            } else {
-                fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
-            }
+            // if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
+            //     l2tp_server->host_name = strdup(s);
+            // } else {
+            //     fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
+            //     return false;
+            // }
+            // if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
+            //     l2tp_server->secret = strdup(s);
+            // }
+            // if(json_unpack(sub, "{s:s}", "address", &s) == 0) {
+            //     if(!inet_pton(AF_INET, s, &ipv4)) {
+            //         fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
+            //         return false;
+            //     }
+            //     l2tp_server->ip = ipv4;
+            //     CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
+            //     add_secondary_ipv4(ipv4);
+            // } else {
+            //     fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
+            // }
             value = json_object_get(sub, "receive-window-size");
             if(json_is_number(value)) {
                 number = json_number_value(value);
