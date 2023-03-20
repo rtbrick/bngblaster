@@ -3496,7 +3496,7 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 
         if (!strcmp(key, "receive-window-size") && json_is_number(value)) {
             l2tp_server->receive_window = json_number_value(value);
-            if(l2tp_server->receive_window < 1 || l2tp_server->receive_window > UINT16_MAX) {
+            if(l2tp_server->receive_window < 1 || l2tp_server->receive_window >= UINT16_MAX) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->receive-window-size\n");
                     return false;
                 }
@@ -3505,7 +3505,7 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 
         if (!strcmp(key, "max-retry") && json_is_number(value)) {
             l2tp_server->max_retry = json_number_value(value);
-            if(l2tp_server->max_retry < 1 || l2tp_server->max_retry > UINT16_MAX) {
+            if(l2tp_server->max_retry < 1 || l2tp_server->max_retry >= UINT16_MAX) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->max-retry\n");
                     return false;
                 }
@@ -3544,7 +3544,7 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 
         if (!strcmp(key, "data-control-tos") && json_is_number(value)) {
             l2tp_server->data_control_tos = json_number_value(value);
-            if(l2tp_server->data_control_tos < 1 || l2tp_server->data_control_tos > UINT16_MAX) {
+            if(l2tp_server->data_control_tos < 1 || l2tp_server->data_control_tos >= UINT8_MAX) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->data-control-tos\n");
                     return false;
                 }
@@ -3553,7 +3553,7 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 
         if (!strcmp(key, "control-tos") && json_is_number(value)) {
             l2tp_server->control_tos = json_number_value(value);
-            if(l2tp_server->control_tos < 1 || l2tp_server->control_tos >= UINT16_MAX) {
+            if(l2tp_server->control_tos < 1 || l2tp_server->control_tos >= UINT8_MAX) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->control-tos\n");
                     return false;
                 }
@@ -3596,11 +3596,10 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 static bool
 json_parse_config(json_t *root)
 {
-    json_t *section, *sub, *value = NULL;
+    json_t *section, *sub;
     const char *s;
     const char *key = NULL;
     int i, size;
-    double number;
 
     /* Flag variables */
     bool conf_inter_absent = true;
