@@ -3216,7 +3216,6 @@ json_parse_interfaces(  json_t *interfaces ,
     const char *s = NULL;
     int size;
     int i;
-    double number;
 
     /* Flag variables*/
     bool int_io_mode_absent = true;
