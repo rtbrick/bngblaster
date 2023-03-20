@@ -2347,21 +2347,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 }
 
 static bool
-json_parse_config_streams(json_t *root)
+json_parse_config_streams(json_t *streams)
 {
-
-    json_t *section = NULL;
     int i, size;
 
     bbl_stream_config_s *stream_config = g_ctx->config.stream_config;
 
-    if(json_typeof(root) != JSON_OBJECT) {
-        fprintf(stderr, "JSON config error: Configuration root element must object\n");
-        return false;
-    }
-
-    section = json_object_get(root, "streams");
-    if(json_is_array(section)) {
+    if(json_is_array(streams)) {
         /* Get tail end of stream-config list. */
         if(stream_config) {
             while(stream_config->next) {
@@ -2369,7 +2361,7 @@ json_parse_config_streams(json_t *root)
             }
         }
         /* Config is provided as array (multiple streams) */
-        size = json_array_size(section);
+        size = json_array_size(streams);
         for(i = 0; i < size; i++) {
             if(!stream_config) {
                 g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
@@ -2378,18 +2370,13 @@ json_parse_config_streams(json_t *root)
                 stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
                 stream_config = stream_config->next;
             }
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
+            if(!json_parse_stream(json_array_get(streams, i), stream_config)) {
                 return false;
             }
         }
     }
     return true;
 }
-
-/*
- *  Realised my changes to the code are unnecessary, instead I will just check if the correct
- *  keys are present. Then execute the code as it is from this line onwards
-*/
 
 static bool
 json_parse_sessions(json_t *sessions) 
@@ -3471,10 +3458,17 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 {
     json_t *value;
     const char *key = NULL;
+    const char *s = NULL;
 
     /* Flag variables */
     bool l2tp_name_absent = true;
     bool l2tp_address_absent = true;
+
+    /* Default variables */
+    l2tp_server->receive_window = 16;
+    l2tp_server->max_retry = 5;
+    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+    l2tp_server->hello_interval = 30;
 
     json_object_foreach(l2tp, key, value) {
 
@@ -3499,6 +3493,87 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
             l2tp_address_absent = false;
             continue;
         }
+
+        if (!strcmp(key, "receive-window-size") && json_is_number(value)) {
+            l2tp_server->receive_window = json_number_value(value);
+            if(l2tp_server->receive_window < 1 || l2tp_server->receive_window > UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->receive-window-size\n");
+                    return false;
+                }
+            continue;
+        }
+
+        if (!strcmp(key, "max-retry") && json_is_number(value)) {
+            l2tp_server->max_retry = json_number_value(value);
+            if(l2tp_server->max_retry < 1 || l2tp_server->max_retry > UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->max-retry\n");
+                    return false;
+                }
+            continue;
+        }
+
+        if (!strcmp(key, "congestion-mode") && json_is_string(value)) {
+            s = json_string_value(value);
+            if (!strcmp(s, "default")) {
+                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+            } else if (!strcmp(s, "slow")) {
+                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
+            } else if (!strcmp(s, "aggressive")) {
+                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
+            } else {
+                fprintf(stderr, "Config error: Invalid value for l2tp-server->congestion-mode\n");
+                return false;
+            }
+            continue;
+        }
+
+        if (!strcmp(key, "data-control-priority") && json_is_boolean(value)){
+            l2tp_server->data_control_priority = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "data-length") && json_is_boolean(value)){
+            l2tp_server->data_length = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "data-offset") && json_is_boolean(value)){
+            l2tp_server->data_offset = json_boolean_value(value);
+            continue;
+        }
+
+        if (!strcmp(key, "data-control-tos") && json_is_number(value)) {
+            l2tp_server->data_control_tos = json_number_value(value);
+            if(l2tp_server->data_control_tos < 1 || l2tp_server->data_control_tos > UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->data-control-tos\n");
+                    return false;
+                }
+            continue;
+        }
+
+        if (!strcmp(key, "control-tos") && json_is_number(value)) {
+            l2tp_server->control_tos = json_number_value(value);
+            if(l2tp_server->control_tos < 1 || l2tp_server->control_tos >= UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->control-tos\n");
+                    return false;
+                }
+            continue;
+        }
+
+        if (!strcmp(key, "hello-interval") && json_is_number(value)) {
+            l2tp_server->hello_interval = json_number_value(value);
+            if(l2tp_server->hello_interval < 1 || l2tp_server->hello_interval >= UINT16_MAX) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->hello-interval\n");
+                    return false;
+                }
+            continue;
+        }
+
+        if (!strcmp(key, "lcp-padding") && json_is_number(value)){
+            l2tp_server->lcp_padding = json_number_value(value);
+            continue;
+        }
+
         /*  Any other keys are present  */
         if (key[0] == '_')
             continue;
@@ -3641,13 +3716,36 @@ json_parse_config(json_t *root)
         }
 
         if (!strcmp(key, "l2tp-server")) {
-            if (!json_parse_session_traffic(section))
-                return false;
+            if (json_is_array(section)) {
+                if(!g_ctx->config.network_config) {
+                    fprintf(stderr, "JSON config error: Failed to add L2TP server because of missing or incomplete network interface config\n");
+                    return false;
+                }
+                size = json_array_size(section);
+                for (i = 0; i < size; i++) {
+                    sub = json_array_get(section, i);
+                    if (!l2tp_server) {
+                        g_ctx->config.l2tp_server = calloc(1, sizeof(bbl_l2tp_server_s));
+                        l2tp_server = g_ctx->config.l2tp_server;
+                    } else {
+                        l2tp_server->next = calloc(1, sizeof(bbl_l2tp_server_s));
+                        l2tp_server = l2tp_server->next;
+                    }
+                    if (!json_parse_l2tp(sub, l2tp_server))
+                        return false;
+                }
+            } else if(json_is_object(section)) {
+                fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+            }
             continue;
         }
 
-        if (!strcmp(key, "streams") && json_is_object(section))
+        if (!strcmp(key, "streams")) {
+            if(!json_parse_config_streams(section)) {
+                return false;
+            }
             continue;
+        }
 
         if (!strcmp(key, "isis")) {
             if(json_is_array(section)) {
@@ -3776,135 +3874,6 @@ json_parse_config(json_t *root)
         return false;
     }
 
-    /* Code to be rfed*/
-
-    /* L2TP Server Configuration (LNS) */
-    section = json_object_get(root, "l2tp-server");
-    if(json_is_array(section)) {
-        if(!g_ctx->config.network_config) {
-            fprintf(stderr, "JSON config error: Failed to add L2TP server because of missing or incomplete network interface config\n");
-            return false;
-        }
-        size = json_array_size(section);
-        for(i = 0; i < size; i++) {
-            sub = json_array_get(section, i);
-            if(!l2tp_server) {
-                g_ctx->config.l2tp_server = calloc(1, sizeof(bbl_l2tp_server_s));
-                l2tp_server = g_ctx->config.l2tp_server;
-            } else {
-                l2tp_server->next = calloc(1, sizeof(bbl_l2tp_server_s));
-                l2tp_server = l2tp_server->next;
-            }
-            // if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
-            //     l2tp_server->host_name = strdup(s);
-            // } else {
-            //     fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
-            //     return false;
-            // }
-            // if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
-            //     l2tp_server->secret = strdup(s);
-            // }
-            // if(json_unpack(sub, "{s:s}", "address", &s) == 0) {
-            //     if(!inet_pton(AF_INET, s, &ipv4)) {
-            //         fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
-            //         return false;
-            //     }
-            //     l2tp_server->ip = ipv4;
-            //     CIRCLEQ_INIT(&l2tp_server->tunnel_qhead);
-            //     add_secondary_ipv4(ipv4);
-            // } else {
-            //     fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
-            // }
-            value = json_object_get(sub, "receive-window-size");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 1 || number > UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->receive-window-size\n");
-                    return false;
-                }
-                l2tp_server->receive_window = number;
-            } else {
-                l2tp_server->receive_window = 16;
-            }
-            value = json_object_get(sub, "max-retry");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 1 || number > UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->max-retry\n");
-                    return false;
-                }
-                l2tp_server->max_retry = number;
-            } else {
-                l2tp_server->max_retry = 5;
-            }
-            if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
-                if(strcmp(s, "default") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-                } else if(strcmp(s, "slow") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
-                } else if(strcmp(s, "aggressive") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
-                } else {
-                    fprintf(stderr, "Config error: Invalid value for l2tp-server->congestion-mode\n");
-                    return false;
-                }
-            } else {
-                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-            }
-            value = json_object_get(sub, "data-control-priority");
-            if(json_is_boolean(value)) {
-                l2tp_server->data_control_priority = json_boolean_value(value);
-            }
-            value = json_object_get(sub, "data-length");
-            if(json_is_boolean(value)) {
-                l2tp_server->data_length = json_boolean_value(value);
-            }
-            value = json_object_get(sub, "data-offset");
-            if(json_is_boolean(value)) {
-                l2tp_server->data_offset = json_boolean_value(value);
-            }
-            value = json_object_get(sub, "control-tos");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 0 || number > UINT8_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->control-tos\n");
-                    return false;
-                }
-                l2tp_server->control_tos = number;
-            }
-            value = json_object_get(sub, "data-control-tos");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 0 || number > UINT8_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->data-control-tos\n");
-                    return false;
-                }
-                l2tp_server->data_control_tos = number;
-            }
-            value = json_object_get(sub, "hello-interval");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 0 || number > UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->hello-interval\n");
-                    return false;
-                }
-                l2tp_server->hello_interval = number;
-            } else {
-                l2tp_server->hello_interval = 30;
-            }
-            value = json_object_get(sub, "lcp-padding");
-            if(json_is_number(value)) {
-                l2tp_server->lcp_padding = json_number_value(value);;
-            }
-        }
-    } else if(json_is_object(section)) {
-        fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
-    }
-
-    /* Traffic Streams Configuration */
-    if(!json_parse_config_streams(root)) {
-        return false;
-    }
     return true;
 }
 
@@ -3951,13 +3920,26 @@ bbl_config_streams_load_json(const char *filename)
     json_t *root = NULL;
     json_error_t error;
     bool result = false;
+    const char *key = NULL;
+    json_t *value;
 
     root = json_load_file(filename, 0, &error);
-    if(root) {
-        result = json_parse_config_streams(root);
-        json_decref(root);
-    } else {
+    if (!root) {
         fprintf(stderr, "JSON stream config error: File %s Line %d: %s\n", filename, error.line, error.text);
+    }
+    json_object_foreach(root, key, value) {
+        
+        if (!strcmp(key, "streams")) {
+            result = json_parse_config_streams(value);
+            continue;
+        }
+
+        /*  Any other keys are present  */
+        if (key[0] == '_')
+            continue;
+        fprintf( stderr, "Config error: Only attribute should be root->streams\n");
+        return false;
+
     }
     return result;
 }
