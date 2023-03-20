@@ -381,7 +381,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
         /* If none of the above key values are macthed*/
         if (key[0] == '_')
             continue;
-        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interface->lag\n",key);
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interface->lag[%d]\n",key, lag_id - 1);
         return false;
 
     }
@@ -737,6 +737,8 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     const char *s = NULL;
     ipv4addr_t ipv4 = {0};
     uint16_t number;
+    static int8_t net_id = -1;
+    ++net_id;
 
     /*  Flag variables are declared */
     bool net_int_absent = true;
@@ -890,7 +892,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         /* If any other keys are present */
         if (key[0] == '_')
             continue;
-        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces->network\n",key);
+        fprintf( stderr, "Config error: Incorrect attribute name (%s) in interfaces->network[%d]\n",key,net_id);
         return false;
 
     }
