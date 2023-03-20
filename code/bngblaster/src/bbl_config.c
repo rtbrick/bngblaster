@@ -2925,6 +2925,7 @@ json_parse_igmp(json_t *igmp)
 {
     json_t *value;
     const char *key = NULL;
+    double number;
 
     json_object_foreach(igmp, key, value) {
 
@@ -2948,11 +2949,12 @@ json_parse_igmp(json_t *igmp)
         }
 
         if (!strcmp(key, "start-delay") && json_is_number(value)){
-            g_ctx->config.igmp_start_delay = json_number_value(value);
-            if(g_ctx->config.igmp_start_delay < 1 || g_ctx->config.igmp_start_delay >= UINT16_MAX) {
+            number = json_number_value(value);
+            if(number < 1 || number > UINT16_MAX) {
                 fprintf(stderr, "JSON config error: Invalid value for igmp->start-delay\n");
                 return false;
             }
+            g_ctx->config.igmp_start_delay = number;
             continue;
         }
 
@@ -3100,6 +3102,7 @@ json_parse_traffic(json_t *traffic)
 {
     json_t *value;
     const char *key = NULL;
+    double number;
 
     json_object_foreach(traffic, key, value) {
 
@@ -3114,11 +3117,12 @@ json_parse_traffic(json_t *traffic)
         }
 
         if (!strcmp(key, "max-burst") && json_is_number(value)){
-            g_ctx->config.stream_max_burst = json_number_value(value);
-            if(g_ctx->config.stream_max_burst < 1 || g_ctx->config.stream_max_burst >= UINT8_MAX) {
+            number = json_number_value(value);
+            if(number < 1 || number > UINT8_MAX) {
                 fprintf(stderr, "JSON config error: Invalid value for traffic->max-burst\n");
                 return false;
             }
+            g_ctx->config.stream_max_burst = number;
             continue;
         }
 
@@ -3212,6 +3216,7 @@ json_parse_interfaces(  json_t *interfaces ,
     const char *s = NULL;
     int size;
     int i;
+    double number;
 
     /* Flag variables*/
     bool int_io_mode_absent = true;
@@ -3461,6 +3466,7 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
     json_t *value;
     const char *key = NULL;
     const char *s = NULL;
+    double number;
 
     /* Flag variables */
     bool l2tp_name_absent = true;
@@ -3497,20 +3503,21 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
         }
 
         if (!strcmp(key, "receive-window-size") && json_is_number(value)) {
-            l2tp_server->receive_window = json_number_value(value);
-            if(l2tp_server->receive_window < 1 || l2tp_server->receive_window >= UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->receive-window-size\n");
-                    return false;
-                }
+            number = json_number_value(value);
+            if(number < 1 || number > UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for l2tp-server->receive-window-size\n");
+                return false;
+            }
+            l2tp_server->receive_window = number;
             continue;
         }
 
         if (!strcmp(key, "max-retry") && json_is_number(value)) {
+            if(json_number_value(value) < 1 || json_number_value(value) > UINT16_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for l2tp-server->max-retry\n");
+                return false;
+            }
             l2tp_server->max_retry = json_number_value(value);
-            if(l2tp_server->max_retry < 1 || l2tp_server->max_retry >= UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->max-retry\n");
-                    return false;
-                }
             continue;
         }
 
@@ -3546,16 +3553,16 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 
         if (!strcmp(key, "data-control-tos") && json_is_number(value)) {
             l2tp_server->data_control_tos = json_number_value(value);
-            if(l2tp_server->data_control_tos < 1 || l2tp_server->data_control_tos >= UINT8_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->data-control-tos\n");
-                    return false;
-                }
+            if(json_number_value(value) < 1 || json_number_value(value) > UINT8_MAX) {
+                fprintf(stderr, "JSON config error: Invalid value for l2tp-server->data-control-tos\n");
+                return false;
+            }
             continue;
         }
 
         if (!strcmp(key, "control-tos") && json_is_number(value)) {
             l2tp_server->control_tos = json_number_value(value);
-            if(l2tp_server->control_tos < 1 || l2tp_server->control_tos >= UINT8_MAX) {
+            if(json_number_value(value) < 1 || json_number_value(value) > UINT8_MAX) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->control-tos\n");
                     return false;
                 }
@@ -3564,7 +3571,7 @@ json_parse_l2tp(json_t *l2tp, bbl_l2tp_server_s *l2tp_server)
 
         if (!strcmp(key, "hello-interval") && json_is_number(value)) {
             l2tp_server->hello_interval = json_number_value(value);
-            if(l2tp_server->hello_interval < 1 || l2tp_server->hello_interval >= UINT16_MAX) {
+            if(json_number_value(value) < 1 || json_number_value(value) > UINT16_MAX) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->hello-interval\n");
                     return false;
                 }
