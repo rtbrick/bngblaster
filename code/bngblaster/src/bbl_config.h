@@ -5,7 +5,7 @@
  *
  * Copyright (C) 2020-2023, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
- */
+*/
 #ifndef __BBL_CONFIG_H__
 #define __BBL_CONFIG_H__
 
