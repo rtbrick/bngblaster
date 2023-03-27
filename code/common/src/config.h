@@ -12,7 +12,7 @@
 #define GIT_REF ""
 #define GIT_SHA ""
 
-#define COMPILER_ID "GNU"
-#define COMPILER_VERSION "7.5.0"
+#define COMPILER_ID ""
+#define COMPILER_VERSION ""
 
 #endif
