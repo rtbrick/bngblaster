@@ -292,7 +292,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     }
     value = json_object_get(lag, "lacp-max-active-links");
     if(value) {
-        lag_config->lacp_min_active_links = json_number_value(value);
+        lag_config->lacp_max_active_links = json_number_value(value);
     } else {
         lag_config->lacp_max_active_links = UINT8_MAX;
     }
