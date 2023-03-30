@@ -19,6 +19,38 @@ const char g_default_router_id[] = "10.10.10.10";
 const char g_default_system_id[] = "0100.1001.0010";
 const char g_default_area[] = "49.0001/24";
 
+static bool
+schema_validate(json_t *config, const char *section, const char *const attributes[], size_t len)
+{
+    size_t i;
+    bool valid;
+
+    const char *key;
+    json_t *value = NULL;
+
+    /* Iterate over every key-value pair of object, running the block of code that follows 
+     * each time with the proper values set to variables key and value. */
+    json_object_foreach(config, key, value) {
+        valid = false;
+        for(i = 0; i < len; i++) {
+            if (!strcmp(key, attributes[i])) {
+                valid = true;
+                break;
+            }
+        }
+
+        /* Ignore unknown attributes starting with "_". */
+        if (valid || key[0] == '_') {
+            continue;
+        }
+
+        /* Invalid configuration attribute. */
+        fprintf(stderr, "JSON config error: Invalid attribute name '%s' in '%s'\n", key, section);
+        return false;
+    }
+    return true;
+}
+
 static void
 add_secondary_ipv4(uint32_t ipv4)
 {
@@ -1897,13 +1929,39 @@ json_parse_config(json_t *root)
     ldp_config_s                *ldp_config             = NULL;
 
     if(json_typeof(root) != JSON_OBJECT) {
-        fprintf(stderr, "JSON config error: Configuration root element must object\n");
+        fprintf(stderr, "JSON config error: Configuration root element must be an object\n");
+        return false;
+    }
+
+    const char *const root_schema[] = {
+        "interfaces", "sessions", 
+        "ipoe", "pppoe", "ppp", "dhcp", "dhcpv6", "igmp",
+        "access-line", "access-line-profiles", 
+        "traffic", "session-traffic", "streams",
+        "isis",
+        "bgp", "bgp-raw-update-files", 
+        "ldp", "ldp-raw-update-files",
+        "l2tp-server"
+    };
+    if(!schema_validate(root, "root", root_schema, 
+       sizeof(root_schema)/sizeof(root_schema[0]))) {
         return false;
     }
 
     /* Sessions Configuration */
     section = json_object_get(root, "sessions");
     if(json_is_object(section)) {
+
+        const char *sessions_schema[] = {
+            "count", "max-outstanding", "start-rate", "stop-rate", 
+            "iterate-vlan-outer", "start-delay", "autostart", 
+            "reconnect", "monkey-autostart"
+        };
+        if(!schema_validate(section, "sessions", sessions_schema, 
+           sizeof(sessions_schema)/sizeof(sessions_schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "count");
         if(json_is_number(value)) {
             g_ctx->config.sessions = json_number_value(value);
