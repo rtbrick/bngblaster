@@ -460,6 +460,122 @@ bbl_a10nsp_dhcp_handler(bbl_a10nsp_interface_s *interface,
 }
 
 static void
+bbl_a10nsp_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
+                        bbl_session_s *session,
+                        bbl_ethernet_header_s *eth)
+{
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    bbl_ipv6_s *ipv6 = (bbl_ipv6_s*)eth->next;
+    bbl_udp_s *udp = (bbl_udp_s*)ipv6->next;
+
+    bbl_dhcpv6_s *dhcpv6 = (bbl_dhcpv6_s*)udp->next;
+    bbl_dhcpv6_s *dhcpv6_outer = dhcpv6;
+
+    if(dhcpv6->type == DHCPV6_MESSAGE_RELAY_FORW) {
+        if(!dhcpv6->relay_message) {
+            /* Invalid request. */
+            return;
+        }
+        dhcpv6 = dhcpv6->relay_message;
+        dhcpv6_outer->type = DHCPV6_MESSAGE_RELAY_REPL;
+    }
+
+    switch(dhcpv6->type) {
+        case DHCPV6_MESSAGE_SOLICIT:
+            if(dhcpv6->rapid) {
+                dhcpv6->type = DHCPV6_MESSAGE_REPLY;
+            } else {
+                dhcpv6->type = DHCPV6_MESSAGE_ADVERTISE;
+            }
+            break;
+        case DHCPV6_MESSAGE_REQUEST:
+            dhcpv6->type = DHCPV6_MESSAGE_REPLY;
+            break;
+        case DHCPV6_MESSAGE_RELEASE:
+            dhcpv6->type = DHCPV6_MESSAGE_REPLY;
+            break;
+        default:
+            return;
+    }
+
+    if(dhcpv6_outer->access_line) {
+        if(dhcpv6_outer->access_line->aci) {
+            if(a10nsp_session->dhcpv6_aci) {
+                free(a10nsp_session->dhcpv6_aci);
+            }
+            a10nsp_session->dhcp_aci = strdup(dhcpv6_outer->access_line->aci);
+        }
+        if(dhcpv6_outer->access_line->ari) {
+            if(a10nsp_session->dhcpv6_ari) {
+                free(a10nsp_session->dhcpv6_ari);
+            }
+            a10nsp_session->dhcpv6_ari = strdup(dhcpv6_outer->access_line->ari);
+        }
+        dhcpv6_outer->access_line = NULL;
+    }
+
+    ipv6->dst = ipv6->src;
+    ipv6->src = (void*)ipv6_link_local_address;
+    ipv6->ttl = 255;
+    udp->src = DHCPV6_UDP_SERVER;
+    udp->dst = DHCPV6_UDP_CLIENT;
+
+    dhcpv6->server_duid = (void*)mock_dhcpv6_server_duid;
+    dhcpv6->server_duid_len = sizeof(mock_dhcpv6_server_duid);
+    dhcpv6->rapid = false;
+    dhcpv6->oro = false;
+    dhcpv6->dns1 = NULL;
+    dhcpv6->dns2 = NULL;
+    if(dhcpv6->ia_na_iaid) {
+        dhcpv6->ia_na_option_len = 0;
+        dhcpv6->ia_na_address = (void*)&mock_ipv6_ia_na;
+        dhcpv6->ia_na_t1 = 300;
+        dhcpv6->ia_na_t2 = 600;
+        dhcpv6->ia_na_preferred_lifetime = 900;
+        dhcpv6->ia_na_valid_lifetime = 1800;
+    }
+    if(dhcpv6->ia_pd_iaid) {
+        dhcpv6->ia_pd_option_len = 0;
+        dhcpv6->ia_pd_prefix = (void*)&mock_ipv6_ia_pd;
+        dhcpv6->ia_pd_t1 = 300;
+        dhcpv6->ia_pd_t2 = 600;
+        dhcpv6->ia_pd_preferred_lifetime = 900;
+        dhcpv6->ia_pd_valid_lifetime = 1800;
+    }
+
+    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+        a10nsp_session->stats.packets_tx++;
+    }
+}
+
+static void
+bbl_a10nsp_icmpv6_handler(bbl_a10nsp_interface_s *interface,
+                        bbl_session_s *session,
+                        bbl_ethernet_header_s *eth)
+{
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    bbl_ipv6_s *ipv6 = (bbl_ipv6_s*)eth->next;
+    bbl_icmpv6_s *icmpv6 = (bbl_icmpv6_s*)ipv6->next;
+
+    switch(icmpv6->type) {
+        case IPV6_ICMPV6_ROUTER_SOLICITATION:
+            icmpv6->type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
+            icmpv6->mac = interface->mac;
+            icmpv6->data_len = 0;
+            break;
+        default:
+            return;
+    }
+
+    ipv6->src = (void*)ipv6_link_local_address;
+    ipv6->dst = (void*)ipv6_multicast_all_nodes;
+    ipv6->ttl = 255;
+    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+        a10nsp_session->stats.packets_tx++;
+    }
+}
+
+static void
 bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
                         bbl_ethernet_header_s *eth)
@@ -473,6 +589,29 @@ bbl_a10nsp_ipv4_handler(bbl_a10nsp_interface_s *interface,
             if(udp->protocol == UDP_PROTOCOL_DHCP) {
                 bbl_a10nsp_dhcp_handler(interface, session, eth);
             }
+            break;
+        default:
+            break;
+    }
+}
+
+static void
+bbl_a10nsp_ipv6_handler(bbl_a10nsp_interface_s *interface,
+                        bbl_session_s *session,
+                        bbl_ethernet_header_s *eth)
+{
+    bbl_ipv6_s *ipv6 = (bbl_ipv6_s*)eth->next;
+    bbl_udp_s *udp;
+
+    switch(ipv6->protocol) {
+        case IPV6_NEXT_HEADER_UDP:
+            udp = (bbl_udp_s*)ipv6->next;
+            if(udp->protocol == UDP_PROTOCOL_DHCPV6) {
+                bbl_a10nsp_dhcpv6_handler(interface, session, eth);
+            }
+            break;
+        case IPV6_NEXT_HEADER_ICMPV6:
+            bbl_a10nsp_icmpv6_handler(interface, session, eth);
             break;
         default:
             break;
@@ -524,6 +663,9 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
             break;
         case ETH_TYPE_IPV4:
             bbl_a10nsp_ipv4_handler(interface, session, eth);
+            break;
+        case ETH_TYPE_IPV6:
+            bbl_a10nsp_ipv6_handler(interface, session, eth);
             break;
         default:
             break;

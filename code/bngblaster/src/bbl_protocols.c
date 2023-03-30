@@ -230,17 +230,53 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
 {
     uint16_t value_len;
 
-    /* Transaction ID */
-    *(uint32_t*)buf = htobe32(dhcpv6->xid);
-    *buf = dhcpv6->type;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-    /* Elapsed Time */
-    *(uint16_t*)buf = htobe16(DHCPV6_OPTION_ELAPSED_TIME);
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = htobe16(sizeof(uint16_t));
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = 0;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    if(dhcpv6->type == DHCPV6_MESSAGE_RELAY_FORW || 
+       dhcpv6->type == DHCPV6_MESSAGE_RELAY_REPL) {
+        /* Type */
+        *buf = dhcpv6->type;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        /* Hops */
+        *buf = dhcpv6->hops;
+        /* Link Address */
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        if(dhcpv6->link_address) {
+            memcpy(buf, dhcpv6->link_address, sizeof(ipv6addr_t));
+        } else {
+            memset(buf, 0x0, sizeof(ipv6addr_t));
+        }
+        BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6addr_t));
+        /* Peer Address */
+        if(dhcpv6->peer_address) {
+            memcpy(buf, dhcpv6->peer_address, sizeof(ipv6addr_t));
+        } else {
+            memset(buf, 0x0, sizeof(ipv6addr_t));
+        }
+        BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6addr_t));
+    } else {
+        /* Type/Transaction ID */
+        *(uint32_t*)buf = htobe32(dhcpv6->xid);
+        *buf = dhcpv6->type;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        /* Elapsed Time */
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_ELAPSED_TIME);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint16_t));
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = 0;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    }
+
+    /* Relay Message */
+    if(dhcpv6->relay_message) {
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_RELAY_MSG);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        value_len = 0;
+        if(encode_dhcpv6(buf+2, &value_len, dhcpv6->relay_message) != PROTOCOL_SUCCESS) {
+            return ENCODE_ERROR;
+        }
+        *(uint16_t*)buf = htobe16(value_len);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t)+value_len);
+    }
     /* Client Identifier */
     if(dhcpv6->client_duid_len) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_CLIENTID);
@@ -277,14 +313,31 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
     } else if(dhcpv6->ia_na_iaid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_NA);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint16_t*)buf = htobe16(12);
+        if(dhcpv6->ia_na_address) {
+            *(uint16_t*)buf = htobe16(40); /* length */
+        } else {
+            *(uint16_t*)buf = htobe16(12); /* length */
+        }
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_na_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; /* T1 */
+        *(uint32_t*)buf = dhcpv6->ia_na_t1; /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; /* T2 */
+        *(uint32_t*)buf = dhcpv6->ia_na_t2; /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        if(dhcpv6->ia_na_address) {
+            *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IAADDR);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(24); /* length */
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            memcpy(buf, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
+            BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6addr_t));
+            *(uint32_t*)buf = dhcpv6->ia_na_preferred_lifetime;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+            *(uint32_t*)buf = dhcpv6->ia_na_valid_lifetime;
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        }
+
     }
     /* IA_PD */
     if(dhcpv6->ia_pd_option_len) {
@@ -297,23 +350,27 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
     } else if(dhcpv6->ia_pd_iaid) {
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IA_PD);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint16_t*)buf = htobe16(41);
+        *(uint16_t*)buf = htobe16(41); /* length */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_pd_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; /* T1 */
+        *(uint32_t*)buf = dhcpv6->ia_pd_t1; /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; /* T2 */
+        *(uint32_t*)buf = dhcpv6->ia_pd_t2; /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IAPREFIX);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(25); /* length */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = 0; /* preferred lifetime */
+        *(uint32_t*)buf = dhcpv6->ia_pd_preferred_lifetime;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = 0; /* valid lifetime */
+        *(uint32_t*)buf = dhcpv6->ia_pd_valid_lifetime;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        memset(buf, 0x0, sizeof(ipv6_prefix));
+        if(dhcpv6->ia_pd_prefix) {
+            memcpy(buf, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
+        } else {
+            memset(buf, 0x0, sizeof(ipv6_prefix));
+        }
         BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6_prefix));
     }
     /* Option Request Option */
@@ -351,6 +408,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
             value_len = strnlen(dhcpv6->access_line->ari, UINT16_MAX);
              *(uint16_t*)buf = htobe16(value_len+4);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            /* See TR-177 chapter 5.6.1, R-11! */
             *(uint32_t*)buf = htobe32(BROADBAND_FORUM);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
             memcpy(buf, dhcpv6->access_line->ari, value_len);
@@ -2506,7 +2564,8 @@ decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
 static protocol_error_t
 decode_dhcpv6(uint8_t *buf, uint16_t len,
               uint8_t *sp, uint16_t sp_len,
-              bbl_dhcpv6_s **_dhcpv6)
+              bbl_dhcpv6_s **_dhcpv6,
+              bool relay)
 {
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
 
@@ -2522,10 +2581,23 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     dhcpv6 = (bbl_dhcpv6_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcpv6_s));
     memset(dhcpv6, 0x0, sizeof(bbl_dhcpv6_s));
 
-    dhcpv6->xid = be32toh(*(uint32_t*)buf);
-    dhcpv6->type = dhcpv6->xid >> 24;
-    dhcpv6->xid &= DHCPV6_TYPE_MASK;
-    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    dhcpv6->type = *buf;
+    if(dhcpv6->type == DHCPV6_MESSAGE_RELAY_FORW || 
+       dhcpv6->type == DHCPV6_MESSAGE_RELAY_REPL) {
+        if(relay || len < 34) {
+            return DECODE_ERROR;
+        }
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        dhcpv6->hops = *buf;
+        BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        dhcpv6->link_address = (ipv6addr_t*)(buf);
+        BUMP_BUFFER(buf, len, sizeof(ipv6addr_t));
+        dhcpv6->peer_address = (ipv6addr_t*)(buf);
+        BUMP_BUFFER(buf, len, sizeof(ipv6addr_t));
+    } else {
+        dhcpv6->xid = be32toh(*(uint32_t*)buf) & DHCPV6_TYPE_MASK;
+        BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    }
 
     while(len >= 4) {
         option = be16toh(*(uint16_t*)buf);
@@ -2564,6 +2636,17 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                     }
                 }
                 break;
+            case DHCPV6_OPTION_INTERFACE_ID:
+                dhcpv6->interface_id = buf;
+                dhcpv6->interface_id_len = option_len;
+                break;
+            case DHCPV6_OPTION_RELAY_MSG:
+                if(!(dhcpv6->type == DHCPV6_MESSAGE_RELAY_FORW || dhcpv6->type == DHCPV6_MESSAGE_RELAY_REPL)) {
+                    return DECODE_ERROR;
+                }
+                if(decode_dhcpv6(buf, option_len, sp, sp_len, (bbl_dhcpv6_s**)&dhcpv6->relay_message, true) != PROTOCOL_SUCCESS) {
+                    return DECODE_ERROR;
+                }
             default:
                 break;
         }
@@ -2975,7 +3058,7 @@ decode_udp(uint8_t *buf, uint16_t len,
         case DHCPV6_UDP_CLIENT:
         case DHCPV6_UDP_SERVER:
             udp->protocol = UDP_PROTOCOL_DHCPV6;
-            ret_val = decode_dhcpv6(buf, len, sp, sp_len, (bbl_dhcpv6_s**)&udp->next);
+            ret_val = decode_dhcpv6(buf, len, sp, sp_len, (bbl_dhcpv6_s**)&udp->next, false);
             break;
         case BBL_UDP_PORT:
             udp->protocol = UDP_PROTOCOL_BBL;
