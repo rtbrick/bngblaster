@@ -506,12 +506,6 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
 
     session->stats.icmpv6_rx++;
 
-    if(session->a10nsp_session) {
-        /* There is currently no IPv6 support
-         * for A10NSP terminated sessions today. */
-        return;
-    }
-
     if(session->access_type == ACCESS_TYPE_PPPOE &&
        session->ip6cp_state != BBL_PPP_OPENED) {
         return;

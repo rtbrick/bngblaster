@@ -109,6 +109,9 @@
    * - `dhcpv6`
      - De-/activate DHCPv6
      - 
+   * - `dhcpv6-ldra`
+     - De-/activate DHCPv6 LDRA
+     - 
    * - `igmp-autostart`
      - Overwrite IGMP autostart
      - 

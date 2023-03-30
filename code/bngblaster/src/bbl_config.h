@@ -65,6 +65,7 @@ typedef struct bbl_access_config_
     bool ipv6_enable;
     bool dhcp_enable;
     bool dhcpv6_enable;
+    bool dhcpv6_ldra;
     bool igmp_autostart;
     uint8_t igmp_version;
     bool session_traffic_autostart;
