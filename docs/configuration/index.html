@@ -558,59 +558,63 @@ for interface links referenced by interface functions.</p>
 <td><p>De-/activate DHCPv6</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>igmp-autostart</cite></p></td>
+<tr class="row-odd"><td><p><cite>dhcpv6-ldra</cite></p></td>
+<td><p>De-/activate DHCPv6 LDRA</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>igmp-autostart</cite></p></td>
 <td><p>Overwrite IGMP autostart</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>igmp-version</cite></p></td>
+<tr class="row-odd"><td><p><cite>igmp-version</cite></p></td>
 <td><p>Overwrite IGMP protocol version (1, 2 or 3)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>session-group-id</cite></p></td>
+<tr class="row-even"><td><p><cite>session-group-id</cite></p></td>
 <td><p>Session group identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>stream-group-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>stream-group-id</cite></p></td>
 <td><p>Stream group identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>access-line-profile-id</cite></p></td>
+<tr class="row-even"><td><p><cite>access-line-profile-id</cite></p></td>
 <td><p>Access-line-profile identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-cc</cite></p></td>
+<tr class="row-odd"><td><p><cite>cfm-cc</cite></p></td>
 <td><p>De-/activate EOAM CFM CC (IPoE only)</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-level</cite></p></td>
+<tr class="row-even"><td><p><cite>cfm-level</cite></p></td>
 <td><p>Set EOAM CFM maintenance domain level</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-ma-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>cfm-ma-id</cite></p></td>
 <td><p>Set EOAM CFM maintenance association identifier</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-ma-name</cite></p></td>
+<tr class="row-even"><td><p><cite>cfm-ma-name</cite></p></td>
 <td><p>Set EOAM CFM maintenance association short name</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>i1-start</cite></p></td>
+<tr class="row-odd"><td><p><cite>i1-start</cite></p></td>
 <td><p>Iterator for usage in strings <cite>{i1}</cite></p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>i1-step</cite></p></td>
+<tr class="row-even"><td><p><cite>i1-step</cite></p></td>
 <td><p>Iterator step per session</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>i2-start</cite></p></td>
+<tr class="row-odd"><td><p><cite>i2-start</cite></p></td>
 <td><p>Iterator for usage in strings <cite>{i2}</cite></p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>i2-step</cite></p></td>
+<tr class="row-even"><td><p><cite>i2-step</cite></p></td>
 <td><p>Iterator step per session</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>monkey</cite></p></td>
+<tr class="row-odd"><td><p><cite>monkey</cite></p></td>
 <td><p>Enable monkey testing</p></td>
 <td><p>false</p></td>
 </tr>
@@ -1080,32 +1084,40 @@ on the outer VLAN first and inner VLAN second.</p>
 <td><p>This option allows to enable or disable DHCPv6</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>ia-na</cite></p></td>
+<tr class="row-odd"><td><p><cite>ldra</cite></p></td>
+<td><p>This option allows to enable or disable LDRA</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>ia-na</cite></p></td>
 <td><p>This option allows to enable or disable DHCPv6 IA_NA</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>ia-pd</cite></p></td>
+<tr class="row-odd"><td><p><cite>ia-pd</cite></p></td>
 <td><p>This option allows to enable or disable DHCPv6 IA_PD</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>rapid-commit</cite></p></td>
+<tr class="row-even"><td><p><cite>rapid-commit</cite></p></td>
 <td><p>DHCPv6 rapid commit (2-way handshake)</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>timeout</cite></p></td>
+<tr class="row-odd"><td><p><cite>timeout</cite></p></td>
 <td><p>DHCPv6 timeout in seconds</p></td>
 <td><p>5</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>retry</cite></p></td>
+<tr class="row-even"><td><p><cite>retry</cite></p></td>
 <td><p>DHCPv6 retry</p></td>
 <td><p>10</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>access-line</cite></p></td>
+<tr class="row-odd"><td><p><cite>access-line</cite></p></td>
 <td><p>Add access-line attributes like Agent-Remote/Circuit-Id</p></td>
 <td><p>true</p></td>
 </tr>
 </tbody>
 </table>
+<p>DHCPv6 LDRA (Lightweight DHCPv6 Relay Agent) is defined in
+[RFC6221](<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6221">https://datatracker.ietf.org/doc/html/rfc6221</a>). Adding
+access-line information like Agent-Remote-Id or Agent-Circuit-Id
+is allowed with LDRA enabled only.</p>
 </section>
 <section id="igmp">
 <h2>IGMP<a class="headerlink" href="#igmp" title="Permalink to this headline"></a></h2>
