@@ -2003,6 +2003,15 @@ json_parse_config(json_t *root)
     /* IPoE Configuration */
     section = json_object_get(root, "ipoe");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "ipv6", "ipv4", "arp-timeout", "arp-interval"
+        };
+        if(!schema_validate(section, "ipoe", schema, 
+           sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "ipv6");
         if(json_is_boolean(value)) {
             g_ctx->config.ipoe_ipv6_enable = json_boolean_value(value);
@@ -2031,6 +2040,17 @@ json_parse_config(json_t *root)
          * but for compatibility they are still supported
          * here as well for some time.
          */
+
+        const char *schema[] = {
+            "sessions", "max-outstanding", "start-rate", "stop-rate",
+            "session-time", "reconnect", "discovery-timeout", "discovery-retry",
+            "service-name", "host-uniq", "max-payload", "vlan-priority"
+        };
+        if(!schema_validate(section, "pppoe", schema, 
+           sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "sessions");
         if(json_is_number(value)) {
             g_ctx->config.sessions = json_number_value(value);
@@ -2090,12 +2110,32 @@ json_parse_config(json_t *root)
     /* PPP Configuration */
     section = json_object_get(root, "ppp");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "mru", "authentication", "lcp", 
+            "ipcp", "ip6cp"
+        };
+        if(!schema_validate(section, "ppp", schema, 
+           sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "mru");
         if(json_is_number(value)) {
             g_ctx->config.ppp_mru = json_number_value(value);
         }
         sub = json_object_get(section, "authentication");
         if(json_is_object(sub)) {
+
+            const char *schema[] = {
+                "username", "password", "timeout",
+                "retry", "protocol"
+            };
+            if(!schema_validate(sub, "authentication", schema, 
+            sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+
             if(json_unpack(sub, "{s:s}", "username", &s) == 0) {
                 g_ctx->config.username = strdup(s);
             }
@@ -2123,6 +2163,17 @@ json_parse_config(json_t *root)
         }
         sub = json_object_get(section, "lcp");
         if(json_is_object(sub)) {
+
+            const char *schema[] = {
+                "conf-request-timeout", "conf-request-retry",
+                "keepalive-interval", "keepalive-retry", "start-delay",
+                "ignore-vendor-specific", "connection-status-message"
+            };
+            if(!schema_validate(sub, "lcp", schema, 
+            sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+
             value = json_object_get(sub, "conf-request-timeout");
             if(json_is_number(value)) {
                 g_ctx->config.lcp_conf_request_timeout = json_number_value(value);
@@ -2158,6 +2209,17 @@ json_parse_config(json_t *root)
         }
         sub = json_object_get(section, "ipcp");
         if(json_is_object(sub)) {
+
+            const char *schema[] = {
+                "enable", "request-ip", 
+                "request-dns1", "request-dns2",
+                "conf-request-timeout", "conf-request-retry"
+            };
+            if(!schema_validate(sub, "ipcp", schema, 
+            sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+
             value = json_object_get(sub, "enable");
             if(json_is_boolean(value)) {
                 g_ctx->config.ipcp_enable = json_boolean_value(value);
@@ -2185,6 +2247,15 @@ json_parse_config(json_t *root)
         }
         sub = json_object_get(section, "ip6cp");
         if(json_is_object(sub)) {
+
+            const char *schema[] = {
+                "enable", "conf-request-timeout", "conf-request-retry"
+            };
+            if(!schema_validate(sub, "ipcp", schema, 
+            sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+            
             value = json_object_get(sub, "enable");
             if(json_is_boolean(value)) {
                 g_ctx->config.ip6cp_enable = json_boolean_value(value);
