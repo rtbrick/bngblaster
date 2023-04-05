@@ -25,7 +25,7 @@ jobs:
     - uses: ncipollo/release-action@v1
       with:
         tag: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-        bodyFile: "RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }}"
+        body: "RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }}"
 
   build:
     name: Build Release ${{matrix.os}}
