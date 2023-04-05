@@ -36,7 +36,7 @@ typedef struct bbl_access_config_
     uint16_t access_third_vlan;
 
     bool monkey; /* enable monkey testing */
-    bool qinq; /* use ethertype 0x8818 */
+    bool qinq; /* use ethertype 0x88a8 */
 
     /* Static */
     uint32_t static_ip;
