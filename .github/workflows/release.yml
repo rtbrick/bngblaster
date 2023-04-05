@@ -14,22 +14,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Get Ref Names
-      id: ref_name
-      run: |
-          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
-          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1.1.4
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: "Create Release"
+      uses: "actions/github-script@v6"
       with:
-        tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-        release_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-        body: RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }}
+        github-token: "${{ secrets.GITHUB_TOKEN }}"
+        script: |
+          try {
+            const response = await github.rest.repos.createRelease({
+              draft: false,
+              generate_release_notes: true,
+              name: ${{ github.ref }},
+              owner: context.repo.owner,
+              prerelease: false,
+              repo: context.repo.repo,
+              tag_name: ${{ github.ref }},
+              body: RtBrick BNG Blaster Version ${{ github.ref }},
+            });
+
+            core.exportVariable('RELEASE_ID', response.data.id);
+            core.exportVariable('RELEASE_UPLOAD_URL', response.data.upload_url);
+          } catch (error) {
+            core.setFailed(error.message);
+          }
 
   build:
     name: Build Release ${{matrix.os}}
@@ -37,17 +43,10 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-22.04]
+        os: [ubuntu-20.04, ubuntu-22.04]
 
     steps:
     - uses: actions/checkout@v3
-
-    - name: Get Ref Names
-      id: ref_name
-      run: |
-          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
-          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: Download RtBrick libdict
       shell: bash
@@ -71,7 +70,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{ github.workspace }}/build
-      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_VERSION=${{ steps.ref_name.outputs.SOURCE_TAG }} -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_OS=${{matrix.os}}
+      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_VERSION=${{ github.ref }} -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_OS=${{matrix.os}}
 
     - name: Build
       working-directory: ${{ github.workspace }}/build
@@ -88,21 +87,10 @@ jobs:
       shell: bash
       run: cpack -G DEB
 
-    - name: Get Release
-      id: get_release
-      uses: bruceadams/get-release@v1.3.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-
     - name: Upload Debian Package
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: svenstaro/upload-release-action@v2
       with:
-        upload_url: ${{ steps.get_release.outputs.upload_url }}
-        asset_path: build/bngblaster_${{ steps.ref_name.outputs.SOURCE_TAG }}_amd64.deb
-        asset_name: bngblaster-${{ steps.ref_name.outputs.SOURCE_TAG }}-${{ matrix.os }}_amd64.deb
-        asset_content_type: application/gzip
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: build/bngblaster_${{ github.ref }}_amd64.deb
+        asset_name: bngblaster-${{ github.ref }}-${{ matrix.os }}_amd64.deb
+        tag: ${{ github.ref }}
