@@ -142,6 +142,23 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
 {
     json_t *value = NULL;
 
+    const char *schema[] = {
+        "access-line-profile-id", "act-up", "act-down",
+        "min-up", "min-down", "att-up",
+        "att-down", "min-up-low", "min-down-low",
+        "max-interl-delay-up", "act-interl-delay-up", "max-interl-delay-down",
+        "act-interl-delay-down", "data-link-encaps", "dsl-type",
+        "pon-type", "etr-up", "etr-down",
+        "attetr-up", "attetr-down", "gdr-up",
+        "gdr-down", "attgdr-up", "attgdr-down",
+        "ont-onu-avg-down", "ont-onu-peak-down", "ont-onu-max-up",
+        "ont-onu-ass-up", "pon-max-up", "pon-max-down"
+    };
+    if(!schema_validate(config, "access-line-profiles", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     value = json_object_get(config, "access-line-profile-id");
     if(value) {
         profile->access_line_profile_id = json_number_value(value);
@@ -1119,6 +1136,17 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
     
     g_ctx->tcp = true;
 
+    const char *schema[] = {
+        "network-interface", "local-ipv4-address", "peer-ipv4-address",
+        "local-as", "peer-as", "hold-time",
+        "id", "reconnect", "start-traffic",
+        "teardown-time", "raw-update-file"
+    };
+    if(!schema_validate(bgp, "bgp", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     if(json_unpack(bgp, "{s:s}", "network-interface", &s) == 0) {
         bgp_config->network_interface = strdup(s);
     }
@@ -1208,6 +1236,24 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     int i, size;
     
     isis_external_connection_s *connection = NULL;
+
+    const char *schema[] = {
+        "instance-id", "level", "overload",
+        "protocol-ipv4", "protocol-ipv6", "level1-auth-key",
+        "level1-auth-type", "level1-auth-hello", "level1-auth-csnp",
+        "level1-auth-psnp", "level2-auth-key", "level2-auth-type",
+        "level2-auth-hello", "level2-auth-csnp", "level2-auth-psnp",
+        "hello-interval", "hello-padding", "hold-time",
+        "lsp-lifetime", "lsp-refresh-interval", "lsp-retry-interval",
+        "lsp-tx-interval", "lsp-tx-window-size", "csnp-interval",
+        "hostname", "router-id", "system-id",
+        "area", "sr-base", "sr-range",
+        "sr-node-sid", "teardown-time", "external"
+    };
+    if(!schema_validate(isis, "isis", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
 
     value = json_object_get(isis, "instance-id");
     if(value) {
@@ -1454,6 +1500,15 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 
     sub = json_object_get(isis, "external");
     if(json_is_object(sub)) {
+
+        const char *schema[] = {
+            "mrt-file", "connections"
+        };
+        if(!schema_validate(sub, "external", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+        
         if(json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
             isis_config->external_mrt_file = strdup(s);
         }
@@ -1469,6 +1524,15 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                     isis_config->external_connection = connection;
                 }
                 c = json_array_get(con, i);
+
+                const char *schema[] = {
+                    "system-id", "l1-metric", "l2-metric"
+                };
+                if(!schema_validate(c, "connections", schema, 
+                sizeof(schema)/sizeof(schema[0]))) {
+                    return false;
+                }
+
                 if(json_unpack(c, "{s:s}", "system-id", &s) == 0) {
                     if(!isis_str_to_system_id(s, connection->system_id)) {
                         fprintf(stderr, "JSON config error: Invalid value for isis->external->connections->system-id\n");
@@ -2274,6 +2338,17 @@ json_parse_config(json_t *root)
     /* DHCP Configuration */
     section = json_object_get(root, "dhcp");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "enable", "broadcast", "timeout",
+            "retry", "release-interval", "release-retry",
+            "tos", "vlan-priority", "access-line"
+        };
+        if(!schema_validate(sub, "dhcp", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "enable");
         if(json_is_boolean(value)) {
             g_ctx->config.dhcp_enable = json_boolean_value(value);
@@ -2319,6 +2394,17 @@ json_parse_config(json_t *root)
     /* DHCPv6 Configuration */
     section = json_object_get(root, "dhcpv6");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "enable", "ia-na", "timeout",
+            "ia-pd", "rapid-commit",
+            "retry", "access-line"
+        };
+        if(!schema_validate(sub, "dhcpv6", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "enable");
         if(json_is_boolean(value)) {
             g_ctx->config.dhcpv6_enable = json_boolean_value(value);
@@ -2352,6 +2438,22 @@ json_parse_config(json_t *root)
     /* IGMP Configuration */
     section = json_object_get(root, "igmp");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "version", "combined-leave-join", "autostart",
+            "start-delay", "group", "group-iter", 
+            "source", "group-count", "zapping-interval",
+            "zapping-view-duration", "zapping-count", "zapping-wait",
+            "send-multicast-traffic", "multicast-traffic-autostart", "multicast-traffic-length",
+            "multicast-traffic-tos", "multicast-traffic-pps", "network-interface",
+            "max-join-delay", "robustness-interval"
+        };
+        if(!schema_validate(sub, "igmp", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
+
         value = json_object_get(section, "version");
         if(json_is_number(value)) {
             g_ctx->config.igmp_version = json_number_value(value);
@@ -2457,6 +2559,16 @@ json_parse_config(json_t *root)
     /* Access Line Configuration */
     section = json_object_get(root, "access-line");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+           "agent-circuit-id",  "agent-remote-id", "rate-up",
+           "rate-down", "dsl-type"
+        };
+        if(!schema_validate(sub, "access-line", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         if(json_unpack(section, "{s:s}", "agent-circuit-id", &s) == 0) {
             g_ctx->config.agent_circuit_id = strdup(s);
         }
@@ -2499,6 +2611,16 @@ json_parse_config(json_t *root)
     /* Global Traffic Configuration */
     section = json_object_get(root, "traffic");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "autostart", "stop-verified", "max-burst",
+            "stream-rate-calculation"
+        };
+        if(!schema_validate(section, "traffic", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+        
         value = json_object_get(section, "autostart");
         if(json_is_boolean(value)) {
             g_ctx->config.traffic_autostart = json_boolean_value(value);
@@ -2525,6 +2647,17 @@ json_parse_config(json_t *root)
     /* Session Traffic Configuration */
     section = json_object_get(root, "session-traffic");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "autostart", "ipv4-pps", "ipv6-pps",
+            "ipv6pd-pps", "ipv4-label", "ipv4-address",
+            "ipv6-label", "ipv6-address"
+        };
+        if(!schema_validate(section, "traffic", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+
         value = json_object_get(section, "autostart");
         if(json_is_boolean(value)) {
             g_ctx->config.session_traffic_autostart = json_boolean_value(value);

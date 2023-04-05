@@ -71,3 +71,4 @@ config
 # Misc
 code/common/src/config.h
 tmp
+automate.py
