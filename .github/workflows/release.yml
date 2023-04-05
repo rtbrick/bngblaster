@@ -14,6 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Get Ref Names
+      id: ref_name
+      run: |
+          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
     - name: "Create Release"
       uses: "actions/github-script@v6"
       with:
@@ -23,12 +30,12 @@ jobs:
             const response = await github.rest.repos.createRelease({
               draft: false,
               generate_release_notes: true,
-              name: ${{ github.ref }},
+              name: ${{ steps.ref_name.outputs.SOURCE_TAG }},
               owner: context.repo.owner,
               prerelease: false,
               repo: context.repo.repo,
-              tag_name: ${{ github.ref }},
-              body: RtBrick BNG Blaster Version ${{ github.ref }},
+              tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }},
+              body: RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }},
             });
 
             core.exportVariable('RELEASE_ID', response.data.id);
@@ -60,6 +67,13 @@ jobs:
       shell: bash
       run: sudo apt install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
 
+    - name: Get Ref Names
+      id: ref_name
+      run: |
+          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
     - name: Set export SOURCE_DATE_EPOCH to git commit time
       run: |
           echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> $GITHUB_ENV
@@ -70,7 +84,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{ github.workspace }}/build
-      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_VERSION=${{ github.ref }} -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_OS=${{matrix.os}}
+      run: cmake $GITHUB_WORKSPACE -DBNGBLASTER_VERSION=${{ steps.ref_name.outputs.SOURCE_TAG }} -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_OS=${{matrix.os}}
 
     - name: Build
       working-directory: ${{ github.workspace }}/build
@@ -91,6 +105,6 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: build/bngblaster_${{ github.ref }}_amd64.deb
-        asset_name: bngblaster-${{ github.ref }}-${{ matrix.os }}_amd64.deb
-        tag: ${{ github.ref }}
+        file: build/bngblaster_${{ steps.ref_name.outputs.SOURCE_TAG }}_amd64.deb
+        asset_name: bngblaster-${{ steps.ref_name.outputs.SOURCE_TAG }}-${{ matrix.os }}_amd64.deb
+        tag: ${{ steps.ref_name.outputs.SOURCE_TAG }}
