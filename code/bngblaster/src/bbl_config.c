@@ -294,6 +294,16 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     
     static uint8_t lag_id = 0;
 
+    const char *schema[] = {
+        "interface", "lacp", "lacp-timeout-short",
+        "lacp-system-priority", "lacp-system-id", "lacp-min-active-links",
+        "lacp-max-active-links", "mac"
+    };
+    if(!schema_validate(lag, "lag", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     lag_config->id = ++lag_id;
     if(json_unpack(lag, "{s:s}", "interface", &s) == 0) {
         lag_config->interface = strdup(s);
@@ -1568,6 +1578,16 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     
     g_ctx->tcp = true;
 
+    const char *schema[] = {
+        "instance-id", "keepalive-time", "hold-time",
+        "teardown-time", "hostname", "lsr-id",
+        "ipv4-transport-address", "raw-update-file"
+    };
+    if(!schema_validate(ldp, "ldp", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     value = json_object_get(ldp, "instance-id");
     if(value) {
         ldp_config->id = json_number_value(value);
@@ -2812,6 +2832,17 @@ json_parse_config(json_t *root)
     /* Interface Configuration */
     section = json_object_get(root, "interfaces");
     if(json_is_object(section)) {
+
+        const char *schema[] = {
+            "io-mode", "io-slots", "qdisc-bypass",
+            "tx-interval", "rx-interval", "tx-threads",
+            "rx-threads", "capture-include-streams", "mac-modifier"
+        };
+        if(!schema_validate(root, "interfaces", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+        
         if(json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if(strcmp(s, "packet_mmap_raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
