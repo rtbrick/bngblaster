@@ -830,7 +830,10 @@ typedef struct bbl_icmpv6_ {
 
 typedef struct bbl_dhcpv6_ {
     uint8_t        type;
+    uint8_t        hops;
     uint32_t       xid;
+    uint8_t       *interface_id;
+    uint8_t        interface_id_len;
     uint8_t       *client_duid;
     uint8_t        client_duid_len;
     uint8_t       *server_duid;
@@ -858,6 +861,12 @@ typedef struct bbl_dhcpv6_ {
     uint32_t       ia_pd_preferred_lifetime;
     uint32_t       ia_pd_valid_lifetime;
     access_line_s *access_line;
+
+    /* DHCPv6 Relay Attributes */
+
+    ipv6addr_t *link_address;
+    ipv6addr_t *peer_address;
+    struct bbl_dhcpv6_ *relay_message;
 } bbl_dhcpv6_s;
 
 struct dhcp_header {

@@ -97,32 +97,40 @@
 <td><p>This option allows to enable or disable DHCPv6</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>ia-na</cite></p></td>
+<tr class="row-odd"><td><p><cite>ldra</cite></p></td>
+<td><p>This option allows to enable or disable LDRA</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>ia-na</cite></p></td>
 <td><p>This option allows to enable or disable DHCPv6 IA_NA</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>ia-pd</cite></p></td>
+<tr class="row-odd"><td><p><cite>ia-pd</cite></p></td>
 <td><p>This option allows to enable or disable DHCPv6 IA_PD</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>rapid-commit</cite></p></td>
+<tr class="row-even"><td><p><cite>rapid-commit</cite></p></td>
 <td><p>DHCPv6 rapid commit (2-way handshake)</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>timeout</cite></p></td>
+<tr class="row-odd"><td><p><cite>timeout</cite></p></td>
 <td><p>DHCPv6 timeout in seconds</p></td>
 <td><p>5</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>retry</cite></p></td>
+<tr class="row-even"><td><p><cite>retry</cite></p></td>
 <td><p>DHCPv6 retry</p></td>
 <td><p>10</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>access-line</cite></p></td>
+<tr class="row-odd"><td><p><cite>access-line</cite></p></td>
 <td><p>Add access-line attributes like Agent-Remote/Circuit-Id</p></td>
 <td><p>true</p></td>
 </tr>
 </tbody>
 </table>
+<p>DHCPv6 LDRA (Lightweight DHCPv6 Relay Agent) is defined in
+[RFC6221](<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6221">https://datatracker.ietf.org/doc/html/rfc6221</a>). Adding
+access-line information like Agent-Remote-Id or Agent-Circuit-Id
+is allowed with LDRA enabled only.</p>
 
 
            </div>

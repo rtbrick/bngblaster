@@ -21,15 +21,11 @@ jobs:
           echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
           echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1.1.4
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v3
+    - uses: ncipollo/release-action@v1
       with:
-        tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-        release_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-        body: RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }}
+        tag: ${{ steps.ref_name.outputs.SOURCE_TAG }}
+        body: "RtBrick BNG Blaster Version ${{ steps.ref_name.outputs.SOURCE_TAG }}"
 
   build:
     name: Build Release ${{matrix.os}}
@@ -37,17 +33,10 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-18.04, ubuntu-20.04, ubuntu-22.04]
+        os: [ubuntu-20.04, ubuntu-22.04]
 
     steps:
     - uses: actions/checkout@v3
-
-    - name: Get Ref Names
-      id: ref_name
-      run: |
-          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
-          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
-          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: Download RtBrick libdict
       shell: bash
@@ -60,6 +49,13 @@ jobs:
     - name: Install Dependencies
       shell: bash
       run: sudo apt install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+
+    - name: Get Ref Names
+      id: ref_name
+      run: |
+          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: Set export SOURCE_DATE_EPOCH to git commit time
       run: |
@@ -88,21 +84,10 @@ jobs:
       shell: bash
       run: cpack -G DEB
 
-    - name: Get Release
-      id: get_release
-      uses: bruceadams/get-release@v1.3.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.ref_name.outputs.SOURCE_TAG }}
-
     - name: Upload Debian Package
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: svenstaro/upload-release-action@v2
       with:
-        upload_url: ${{ steps.get_release.outputs.upload_url }}
-        asset_path: build/bngblaster_${{ steps.ref_name.outputs.SOURCE_TAG }}_amd64.deb
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: build/bngblaster_${{ steps.ref_name.outputs.SOURCE_TAG }}_amd64.deb
         asset_name: bngblaster-${{ steps.ref_name.outputs.SOURCE_TAG }}-${{ matrix.os }}_amd64.deb
-        asset_content_type: application/gzip
+        tag: ${{ steps.ref_name.outputs.SOURCE_TAG }}

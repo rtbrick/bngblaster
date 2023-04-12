@@ -205,6 +205,14 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         return;
     }
 
+    if(dhcpv6->type == DHCPV6_MESSAGE_RELAY_REPL) {
+        if(!dhcpv6->relay_message) {
+            /* Invalid packet received */
+            return;
+        }
+        dhcpv6 = dhcpv6->relay_message;
+    }
+
     /* Ignore packets with wrong transaction identifier */
     if(dhcpv6->xid != session->dhcpv6_xid) {
         return;

@@ -288,6 +288,7 @@ typedef struct bbl_ctx_
 
         /* DHCPv6 */
         bool dhcpv6_enable;
+        bool dhcpv6_ldra;
         bool dhcpv6_ia_na;
         bool dhcpv6_ia_pd;
         bool dhcpv6_rapid_commit;

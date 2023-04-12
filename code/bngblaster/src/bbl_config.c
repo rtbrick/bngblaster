@@ -1009,6 +1009,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     } else {
         access_config->dhcpv6_enable = g_ctx->config.dhcpv6_enable;
     }
+    value = json_object_get(access_interface, "dhcpv6-ldra");
+    if(json_is_boolean(value)) {
+        access_config->dhcpv6_ldra = json_boolean_value(value);
+    } else {
+        access_config->dhcpv6_ldra = g_ctx->config.dhcpv6_ldra;
+    }
     value = json_object_get(access_interface, "ipv6");
     if(json_is_boolean(value)) {
         access_config->ipv6_enable = json_boolean_value(value);
@@ -2428,6 +2434,10 @@ json_parse_config(json_t *root)
         value = json_object_get(section, "enable");
         if(json_is_boolean(value)) {
             g_ctx->config.dhcpv6_enable = json_boolean_value(value);
+        }
+        value = json_object_get(section, "ldra");
+        if(json_is_boolean(value)) {
+            g_ctx->config.dhcpv6_ldra = json_boolean_value(value);
         }
         value = json_object_get(section, "ia-na");
         if(json_is_boolean(value)) {

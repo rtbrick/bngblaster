@@ -438,6 +438,7 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     bbl_ipv6_s ipv6 = {0};
     bbl_udp_s udp = {0};
     bbl_dhcpv6_s dhcpv6 = {0};
+    bbl_dhcpv6_s dhcpv6_relay = {0};
     access_line_s access_line = {0};
     uint8_t mac[ETH_ADDR_LEN];
 
@@ -446,15 +447,28 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         return IGNORED;
     }
 
-    if(g_ctx->config.dhcpv6_access_line && 
-       (session->agent_circuit_id || session->agent_remote_id) && 
-       session->dhcpv6_state != BBL_DHCP_RELEASE) {
-        access_line.aci = session->agent_circuit_id;
-        access_line.ari = session->agent_remote_id;
-        access_line.up = session->rate_up;
-        access_line.down = session->rate_down;
-        access_line.dsl_type = session->dsl_type;
-        dhcpv6.access_line = &access_line;
+    if(g_ctx->config.dhcpv6_ldra) {
+        dhcpv6_relay.type = DHCPV6_MESSAGE_RELAY_FORW;
+        dhcpv6_relay.peer_address = (void*)session->link_local_ipv6_address;
+        dhcpv6_relay.relay_message = &dhcpv6;
+        if(g_ctx->config.dhcpv6_access_line && 
+           (session->agent_circuit_id || session->agent_remote_id)) {
+            access_line.aci = session->agent_circuit_id;
+            access_line.ari = session->agent_remote_id;
+            access_line.up = session->rate_up;
+            access_line.down = session->rate_down;
+            access_line.dsl_type = session->dsl_type;
+            
+        }
+        if(!access_line.aci) {
+            /* The ACI is mapped to the Interface-Id option, 
+            * which is mandatory for relay forward messages. */
+            access_line.aci = format_mac_address(session->client_mac);
+        }
+        dhcpv6_relay.access_line = &access_line;
+        udp.next = &dhcpv6_relay;
+    } else {
+        udp.next = &dhcpv6;
     }
 
     eth.src = session->client_mac;
@@ -491,7 +505,6 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     udp.dst = DHCPV6_UDP_SERVER;
     udp.src = DHCPV6_UDP_CLIENT;
     udp.protocol = UDP_PROTOCOL_DHCPV6;
-    udp.next = &dhcpv6;
     dhcpv6.xid = session->dhcpv6_xid;
     dhcpv6.client_duid = session->dhcpv6_duid;
     dhcpv6.client_duid_len = DUID_LEN;
