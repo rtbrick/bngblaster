@@ -70,3 +70,4 @@ config
 
 # Misc
 code/common/src/config.h
+tmp
