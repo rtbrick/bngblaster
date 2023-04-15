@@ -434,6 +434,19 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     int i, size;
     double number;
 
+    const char *schema[] = {
+        "interface", "description", "mac",
+        "io-mode", "io-slots", "io-slots-tx",
+        "io-slots-rx", "qdisc-bypass", "tx-interval",
+        "rx-interval", "tx-threads", "rx-threads",
+        "rx-cpuset", "tx-cpuset", "lag-interface",
+        "lacp-priority"
+    };
+    if(!schema_validate(link, "links", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     if(json_unpack(link, "{s:s}", "interface", &s) == 0) {
         if(link_present(s) || lag_present(s)) {
             fprintf(stderr, "JSON config error: Duplicate link configuration for %s\n", s);
@@ -611,6 +624,19 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     const char *s = NULL;
     ipv4addr_t ipv4 = {0};
 
+    const char *schema[] = {
+        "interface", "address", "gateway",
+        "address-ipv6", "gateway-ipv6", "ipv6-router-advertisement",
+        "gateway-mac", "vlan", "mtu",
+        "gateway-resolve-wait", "isis-instance-id", "isis-level",
+        "isis-p2p", "isis-l1-metric", "isis-l2-metric",
+        "ldp-instance-id"
+    };
+    if(!schema_validate(network_interface, "network", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     if(json_unpack(network_interface, "{s:s}", "interface", &s) == 0) {
         network_config->interface = strdup(s);
         link_add(network_config->interface);
@@ -739,6 +765,30 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
     access_config->ipv4_enable = true;
     access_config->ipv6_enable = true;
+
+    const char *schema[] = {
+        "interface", "network-interface", "a10nsp-interface",
+        "i1-start", "i1-step", "i2-start",
+        "i2-step", "type", "vlan-mode",
+        "monkey", "qinq", "outer-vlan",
+        "outer-vlan-min", "outer-vlan-max", "outer-vlan-step",
+        "inner-vlan", "inner-vlan-min", "inner-vlan-max",
+        "inner-vlan-step", "third-vlan", "ppp-mru",
+        "address", "address-iter", "gateway",
+        "gateway-iter", "username", "password",
+        "authentication-protocol", "agent-circuit-id", "agent-remote-id",
+        "rate-up", "rate-down", "dsl-type",
+        "access-line-profile-id", "ipcp", "dhcp",
+        "ipv4", "ip6cp", "dhcpv6",
+        "dhcpv6-ldra", "ipv6", "igmp-autostart",
+        "igmp-version", "session-traffic-autostart", "session-group-id",
+        "stream-group-id", "cfm-cc", "cfm-level",
+        "cfm-ma-id", "cfm-ma-name"
+    };
+    if(!schema_validate(access_interface, "access", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
 
     if(json_unpack(access_interface, "{s:s}", "interface", &s) == 0) {
         access_config->interface = strdup(s);
@@ -1113,6 +1163,14 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
 {
     const char *s = NULL;
     json_t *value = NULL;
+
+    const char *schema[] = {
+        "interface", "qinq", "mac"
+    };
+    if(!schema_validate(a10nsp_interface, "a10nsp", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
 
     if(json_unpack(a10nsp_interface, "{s:s}", "interface", &s) == 0) {
         a10nsp_config->interface = strdup(s);
