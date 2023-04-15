@@ -1722,6 +1722,25 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     double bps;
     double number;
 
+    const char *schema[] = {
+        "name", "stream-group-id", "type",
+        "direction", "network-interface", "a10nsp-interface",
+        "source-port", "destination-port", "length",
+        "priority", "vlan-priority", "pps",
+        "bps", "Kbps", "Mbps",
+        "Gbps", "max-packets", "start-delay",
+        "ldp-ipv4-lookup-address", "access-ipv4-source-address", "access-ipv6-source-address",
+        "network-ipv4-address", "network-ipv6-address", "destination-ipv4-address",
+        "destination-ipv6-address", "ipv4-df", "tx-label1",
+        "tx-label1-exp", "tx-label1-ttl", "tx-label2",
+        "tx-label2-exp", "tx-label2-ttl", "rx-label1",
+        "rx-label2"
+    };
+    if(!schema_validate(stream, "streams", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
     if(json_unpack(stream, "{s:s}", "name", &s) == 0) {
         stream_config->name = strdup(s);
     } else {
@@ -3131,6 +3150,19 @@ json_parse_config(json_t *root)
         size = json_array_size(section);
         for(i = 0; i < size; i++) {
             sub = json_array_get(section, i);
+
+            const char *schema[] = {
+                "name", "secret", "address",
+                "receive-window-size", "max-retry", "congestion-mode",
+                "data-control-priority", "data-length", "data-offset",
+                "control-tos", "data-control-tos", "hello-interval",
+                "lcp-padding"
+            };
+            if(!schema_validate(sub, "l2tp-server", schema, 
+            sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+
             if(!l2tp_server) {
                 g_ctx->config.l2tp_server = calloc(1, sizeof(bbl_l2tp_server_s));
                 l2tp_server = g_ctx->config.l2tp_server;
