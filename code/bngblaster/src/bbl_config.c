@@ -144,7 +144,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
 
     const char *schema[] = {
         "access-line-profile-id", "act-up", "act-down",
-        "min-up", "min-down", "att-up", "max-up", "max-down"
+        "min-up", "min-down", "att-up", "max-up", "max-down",
         "att-down", "min-up-low", "min-down-low",
         "max-interl-delay-up", "act-interl-delay-up", "max-interl-delay-down",
         "act-interl-delay-down", "data-link-encaps", "dsl-type",
