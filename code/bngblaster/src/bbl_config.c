@@ -2455,7 +2455,7 @@ json_parse_config(json_t *root)
             "retry", "release-interval", "release-retry",
             "tos", "vlan-priority", "access-line"
         };
-        if(!schema_validate(sub, "dhcp", schema, 
+        if(!schema_validate(section, "dhcp", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
