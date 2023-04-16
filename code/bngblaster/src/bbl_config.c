@@ -2511,7 +2511,7 @@ json_parse_config(json_t *root)
             "ia-pd", "rapid-commit",
             "retry", "access-line"
         };
-        if(!schema_validate(sub, "dhcpv6", schema, 
+        if(!schema_validate(section, "dhcpv6", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
@@ -2563,7 +2563,7 @@ json_parse_config(json_t *root)
             "multicast-traffic-tos", "multicast-traffic-pps", "network-interface",
             "max-join-delay", "robustness-interval"
         };
-        if(!schema_validate(sub, "igmp", schema, 
+        if(!schema_validate(section, "igmp", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
@@ -2679,7 +2679,7 @@ json_parse_config(json_t *root)
            "agent-circuit-id",  "agent-remote-id", "rate-up",
            "rate-down", "dsl-type"
         };
-        if(!schema_validate(sub, "access-line", schema, 
+        if(!schema_validate(section, "access-line", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
