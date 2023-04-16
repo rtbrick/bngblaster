@@ -191,6 +191,14 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     if(value) {
         profile->att_down = json_number_value(value);
     }
+    value = json_object_get(config, "max-up");
+    if(value) {
+        profile->max_up = json_number_value(value);
+    }
+    value = json_object_get(config, "max-down");
+    if(value) {
+        profile->max_down = json_number_value(value);
+    }
     value = json_object_get(config, "min-up-low");
     if(value) {
         profile->min_up_low = json_number_value(value);
