@@ -2924,7 +2924,7 @@ json_parse_config(json_t *root)
             "io-mode", "io-slots", "qdisc-bypass",
             "tx-interval", "rx-interval", "tx-threads",
             "rx-threads", "capture-include-streams", "mac-modifier",
-            "lag", "network", "access", "a10nsp"
+            "lag", "network", "access", "a10nsp", "links"
         };
         if(!schema_validate(section, "interfaces", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
