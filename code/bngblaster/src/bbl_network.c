@@ -419,7 +419,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 /* LDP hello is send to all routers multicast address and therefore 
                  * processed before check on local MAC address. */
                 if(udp->protocol == UDP_PROTOCOL_LDP) {
-                    ldp_hello_rx(interface, eth, ipv4, (bbl_ldp_hello_s*)udp->next);
+                    ldp_hello_ipv4_rx(interface, eth, ipv4, (bbl_ldp_hello_s*)udp->next);
                     return;
                 }
                 if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
@@ -455,6 +455,22 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
             ipv6 = (bbl_ipv6_s*)eth->next;
             if(ipv6->protocol == IPV6_NEXT_HEADER_ICMPV6) {
                 bbl_network_rx_icmpv6(interface, eth);
+                return;
+            } else if(ipv6->protocol == IPV6_NEXT_HEADER_UDP) {
+                udp = (bbl_udp_s*)ipv6->next;
+                /* LDP hello is send to all routers multicast address and therefore 
+                 * processed before check on local MAC address. */
+                if(udp->protocol == UDP_PROTOCOL_LDP) {
+                    ldp_hello_ipv6_rx(interface, eth, ipv6, (bbl_ldp_hello_s*)udp->next);
+                    return;
+                }
+            } else if(ipv6->protocol == IPV6_NEXT_HEADER_TCP) {
+                if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                   /* Drop wrong MAC */
+                    return;
+                }
+                interface->stats.tcp_rx++;
+                bbl_tcp_ipv6_rx(interface, eth, ipv6);
                 return;
             }
             break;

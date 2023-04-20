@@ -86,6 +86,8 @@ ldp_ctrl_session_json(ldp_session_s *session)
     json_t *stats = NULL;
     
     const char *raw_update_file = NULL;
+    char *local_address;
+    char *peer_address;
 
     if(!session) {
         return NULL;
@@ -107,12 +109,20 @@ ldp_ctrl_session_json(ldp_session_s *session)
         return NULL;
     }
 
+    if(session->ipv6) {
+        local_address = format_ipv6_address(&session->local.ipv6_address);
+        peer_address = format_ipv6_address(&session->peer.ipv6_address);
+    } else {
+        local_address = format_ipv4_address(&session->local.ipv4_address);
+        peer_address = format_ipv4_address(&session->peer.ipv4_address);
+    }
+
     root = json_pack("{si ss ss ss ss ss ss si ss* ss* so*}",
                      "ldp-instance-id", session->instance->config->id,
                      "interface", session->interface->name,
-                     "local-address", format_ipv4_address(&session->local.ipv4_address),
+                     "local-address", local_address,
                      "local-identifier", ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
-                     "peer-address", format_ipv4_address(&session->peer.ipv4_address),
+                     "peer-address", peer_address,
                      "peer-identifier", ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
                      "state", ldp_session_state_string(session->state),
                      "state-transitions", session->state_transitions,

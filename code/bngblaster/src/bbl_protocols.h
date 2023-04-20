@@ -552,11 +552,13 @@ typedef struct bbl_isis_ {
 } bbl_isis_s;
 
 typedef struct bbl_ldp_hello_ {
-    uint32_t lsr_id;
-    uint16_t label_space_id;
-    uint32_t msg_id;
-    uint32_t ipv4_transport_address;
-    uint16_t hold_time;
+    uint32_t    lsr_id;
+    uint16_t    label_space_id;
+    uint16_t    hold_time;
+    uint32_t    msg_id;
+    uint32_t    ipv4_transport_address;
+    ipv6addr_t *ipv6_transport_address;
+    uint8_t     dual_stack_capability;
 } bbl_ldp_hello_s;
 
 typedef struct bbl_bbl_ {

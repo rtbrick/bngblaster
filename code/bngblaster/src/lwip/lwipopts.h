@@ -54,8 +54,11 @@ extern unsigned char debug_flags;
 #define LWIP_IPV4                  1
 #define LWIP_IPV6                  1
 
-#define LWIP_IPV6_REASS            0
+#define LWIP_IPV6_FRAG             1
+#define LWIP_IPV6_REASS            1
 #define LWIP_IPV6_AUTOCONFIG       0
+
+#define IPV6_FRAG_COPYHEADER       1
 
 /* ---------- Memory options ---------- */
 /* MEM_ALIGNMENT: should be set to the alignment of the CPU for which
@@ -168,8 +171,8 @@ a lot of data that needs to be copied, this should be set high. */
 
 /* IP reassembly and segmentation.These are orthogonal even
  * if they both deal with IP fragments */
-#define IP_REASSEMBLY           0
-#define IP_FRAG                 0
+#define IP_REASSEMBLY           1
+#define IP_FRAG                 1
 
 /* ---------- ICMP options ---------- */
 #define ICMP_TTL                255

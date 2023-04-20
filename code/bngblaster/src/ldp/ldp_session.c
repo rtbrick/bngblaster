@@ -317,11 +317,19 @@ ldp_session_connect_job(timer_s *timer)
         timeout = 1;
     } else if(session->state == LDP_IDLE) {
         /* Connect TCP session */
-        session->tcpc = bbl_tcp_ipv4_connect(
-            session->interface,
-            &session->local.ipv4_address,
-            &session->peer.ipv4_address,
-            LDP_PORT);
+        if(session->ipv6) {
+            session->tcpc = bbl_tcp_ipv6_connect(
+                session->interface,
+                &session->local.ipv6_address,
+                &session->peer.ipv6_address,
+                LDP_PORT);
+        } else {
+            session->tcpc = bbl_tcp_ipv4_connect(
+                session->interface,
+                &session->local.ipv4_address,
+                &session->peer.ipv4_address,
+                LDP_PORT);
+        }
 
         if(session->tcpc) {
             session->tcpc->arg = session;
@@ -357,10 +365,18 @@ ldp_session_connect_job(timer_s *timer)
 static void
 ldp_session_listen(ldp_session_s *session)
 {
-    session->listen_tcpc = bbl_tcp_ipv4_listen(
-        session->interface,
-        &session->local.ipv4_address,
-        LDP_PORT);
+
+    if(session->ipv6) {
+        session->listen_tcpc = bbl_tcp_ipv6_listen(
+            session->interface,
+            &session->local.ipv6_address,
+            LDP_PORT);
+    } else {
+        session->listen_tcpc = bbl_tcp_ipv4_listen(
+            session->interface,
+            &session->local.ipv4_address,
+            LDP_PORT);
+    }
 
     if(session->listen_tcpc) {
         session->listen_tcpc->arg = session;
@@ -437,7 +453,7 @@ ldp_session_connect(ldp_session_s *session, time_t delay)
 }
 
 /**
- * ldp_session_init
+ * ldp_session_ipv4_init
  * 
  * @param session LDP session (optional)
  * @param adjacency LDP adjacency
@@ -445,7 +461,7 @@ ldp_session_connect(ldp_session_s *session, time_t delay)
  * @param ldp received LDP hello PDU
  */
 void
-ldp_session_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
+ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
                  bbl_ipv4_s *ipv4, bbl_ldp_hello_s *ldp)
 {
     ldp_instance_s *instance = adjacency->instance;
@@ -493,6 +509,67 @@ ldp_session_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
 
     ldp_session_connect(session, 0);
 }
+
+/**
+ * ldp_session_ipv4_init
+ * 
+ * @param session LDP session (optional)
+ * @param adjacency LDP adjacency
+ * @param ipv6 received IPv6 header
+ * @param ldp received LDP hello PDU
+ */
+void
+ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
+                      bbl_ipv6_s *ipv6, bbl_ldp_hello_s *ldp)
+{
+    ldp_instance_s *instance = adjacency->instance;
+    ldp_config_s *config = instance->config;
+
+    if(!session) {
+        session = calloc(1, sizeof(ldp_session_s));
+        session->instance = instance;
+        session->ipv6 = true;
+        memcpy(&session->local.ipv6_address, &config->ipv6_transport_address, sizeof(ipv6addr_t));
+        session->local.lsr_id = config->lsr_id;
+        session->local.label_space_id = 0;
+        session->local.keepalive_time = config->keepalive_time;
+        session->local.max_pdu_len = LDP_MAX_PDU_LEN_INIT;
+        if(config->raw_update_file) {
+            session->raw_update_start = ldp_raw_update_load(config->raw_update_file, true);
+        }
+        session->next = instance->sessions;
+        instance->sessions = session;
+    }
+    session->interface = adjacency->interface;
+    session->max_pdu_len = session->local.max_pdu_len;
+    session->keepalive_time = session->local.keepalive_time;
+
+    if(ldp->ipv6_transport_address) {
+        memcpy(&session->peer.ipv6_address, ldp->ipv6_transport_address, sizeof(ipv6addr_t));
+    } else {
+        memcpy(&session->peer.ipv6_address, ipv6->src, sizeof(ipv6addr_t));
+    }
+    session->peer.lsr_id = ldp->lsr_id;
+    session->peer.label_space_id = ldp->label_space_id;
+    session->peer.keepalive_time = 0;
+    session->peer.max_pdu_len = 0;
+
+    /* Init read/write buffer */
+    session->read_buf.data = malloc(LDP_BUF_SIZE);
+    session->read_buf.size = LDP_BUF_SIZE;
+    session->write_buf.data = malloc(LDP_BUF_SIZE);
+    session->write_buf.size = LDP_BUF_SIZE;
+
+    if(memcmp(&session->local.ipv6_address, &session->peer.ipv6_address, sizeof(ipv6addr_t)) > 0) {
+        session->active = true;
+    } else {
+        session->active = false;
+    }
+
+    ldp_session_connect(session, 0);
+}
+
+
 
 void
 ldp_session_close_job(timer_s *timer)

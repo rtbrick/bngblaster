@@ -59,7 +59,7 @@ _checksum(void *buf, ssize_t len)
 static uint32_t
 _fold(uint32_t sum)
 {
-    while (sum>>16) {
+    while (sum >> 16) {
         sum = (sum & 0xffff) + (sum >> 16);
     }
     return sum;
@@ -616,11 +616,16 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
 static protocol_error_t
 encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
 {
+    uint8_t *start = buf;
+    uint16_t pdu_len;
+    uint16_t msg_len;
+
     /* PDU version and length */
     *(uint16_t*)buf = htobe16(1); 
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = htobe16(30); 
+    *(uint16_t*)buf = 0; 
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    pdu_len = *len;
 
     /* LDP identifier (LSR ID + label space) */
     *(uint32_t*)buf = ldp->lsr_id;
@@ -631,8 +636,9 @@ encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
     /* LDP message type and length */
     *(uint16_t*)buf = htobe16(LDP_MESSAGE_TYPE_HELLO);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = htobe16(20);
+    *(uint16_t*)buf = 0;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    msg_len = *len;
 
     /* LDP message ID */
     *(uint32_t*)buf = htobe32(ldp->msg_id);
@@ -649,12 +655,42 @@ encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
     /* IPv4 transport address TLV */
-    *(uint16_t*)buf = htobe16(LDP_TLV_TYPE_IPV4_TRANSPORT_ADDRESS);
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = htobe16(4);
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint32_t*)buf = ldp->ipv4_transport_address;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    if(ldp->ipv4_transport_address) {
+        *(uint16_t*)buf = htobe16(LDP_TLV_TYPE_IPV4_TRANSPORT_ADDRESS);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint32_t*)buf = ldp->ipv4_transport_address;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+
+    /* IPv6 transport address TLV */
+    if(ldp->ipv6_transport_address) {
+        *(uint16_t*)buf = htobe16(LDP_TLV_TYPE_IPV6_TRANSPORT_ADDRESS);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(ipv6addr_t));
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        memcpy(buf, ldp->ipv6_transport_address, sizeof(ipv6addr_t));
+        BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6addr_t));
+    }
+
+    /* Dual-Stack capability TLV */
+    if(ldp->dual_stack_capability) {
+        *(uint16_t*)buf = htobe16(LDP_TLV_TYPE_DUAL_STACK_CAPABILITY);
+        *buf |= 0x80;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(sizeof(uint32_t));
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint32_t*)buf = 0;
+        *buf = (ldp->dual_stack_capability << 4) & 0xF0;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    }
+
+    /* Update total length */
+    pdu_len = *len - pdu_len;
+    msg_len = *len - msg_len;
+    *(uint16_t*)(start + 2) = htobe16(pdu_len);
+    *(uint16_t*)(start + 12) = htobe16(msg_len);
 
     return PROTOCOL_SUCCESS;
 }
@@ -825,7 +861,6 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
 
     /* Update checksum */
     *(uint16_t*)(start + 2) = bbl_checksum(start, icmp_len);
-
 
     return PROTOCOL_SUCCESS;
 }
@@ -2991,7 +3026,7 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
 
     /* LDP TLV's */
     while(len >= LDP_TLV_LEN_MIN) {
-        tlv_type = be16toh(*(uint16_t*)buf);
+        tlv_type = be16toh(*(uint16_t*)buf) & LDP_TLV_TYPE_MASK;
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
         tlv_len = be16toh(*(uint16_t*)buf);
         BUMP_BUFFER(buf, len, sizeof(uint16_t));
@@ -3006,10 +3041,22 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
                 ldp->hold_time = be16toh(*(uint16_t*)buf);
                 break;
             case LDP_TLV_TYPE_IPV4_TRANSPORT_ADDRESS:
-                if(tlv_len != 4) {
+                if(tlv_len != sizeof(uint32_t)) {
                     return DECODE_ERROR;
                 }
                 ldp->ipv4_transport_address = *(uint32_t*)buf;
+                break;
+            case LDP_TLV_TYPE_IPV6_TRANSPORT_ADDRESS:
+                if(tlv_len != sizeof(ipv6addr_t)) {
+                    return DECODE_ERROR;
+                }
+                ldp->ipv6_transport_address = (ipv6addr_t*)buf;
+                break;
+            case LDP_TLV_TYPE_DUAL_STACK_CAPABILITY:
+                if(tlv_len != 4) {
+                    return DECODE_ERROR;
+                }
+                ldp->dual_stack_capability = (*buf >> 4) & 0x0F;
                 break;
             default:
                 break;
@@ -3182,6 +3229,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     ipv6->dst = buf;
     BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
 
+    ipv6->payload = buf;
     if(ipv6->payload_len > len) {
         return DECODE_ERROR;
     }

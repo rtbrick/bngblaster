@@ -1653,7 +1653,10 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     const char *schema[] = {
         "instance-id", "keepalive-time", "hold-time",
         "teardown-time", "hostname", "lsr-id",
-        "ipv4-transport-address", "raw-update-file"
+        "ipv4-transport", "ipv4-transport-address",
+        "ipv6-transport", "ipv6-transport-address",
+        "prefer-ipv4-transport"
+        "raw-update-file"
     };
     if(!schema_validate(ldp, "ldp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1704,6 +1707,14 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         fprintf(stderr, "JSON config error: Invalid value for ldp->lsr-id\n");
         return false;
     }
+
+    if(json_unpack(ldp, "{s:s}", "ipv6-transport-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ldp_config->ipv6_transport_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for ldp->ipv6-transport-address\n");
+            return false;
+        }
+    }
+
     if(json_unpack(ldp, "{s:s}", "ipv4-transport-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ldp_config->ipv4_transport_address)) {
             fprintf(stderr, "JSON config error: Invalid value for ldp->ipv4-transport-address\n");
@@ -1711,6 +1722,16 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         }
     } else {
         ldp_config->ipv4_transport_address = ldp_config->lsr_id;
+    }
+
+    value = json_object_get(ldp, "no-ipv4-transport");
+    if(json_is_boolean(value)) {
+        ldp_config->no_ipv4_transport = json_boolean_value(value);
+    }
+
+    value = json_object_get(ldp, "prefer-ipv4-transport");
+    if(json_is_boolean(value)) {
+        ldp_config->prefer_ipv4_transport = json_boolean_value(value);
     }
 
     if(json_unpack(ldp, "{s:s}", "raw-update-file", &s) == 0) {

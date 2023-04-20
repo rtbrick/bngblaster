@@ -39,12 +39,10 @@ typedef struct bbl_tcp_ctx_
     uint8_t af; /* AF_INET or AF_INET6 */
 
     uint16_t   local_port;
-    ipv4addr_t local_ipv4;
-    ipv6addr_t local_ipv6;
+    ip_addr_t  local_addr;
 
     uint16_t   remote_port;
-    ipv4addr_t remote_ipv4;
-    ipv6addr_t remote_ipv6;
+    ip_addr_t  remote_addr;
     
     struct tcp_pcb *pcb;
 
@@ -90,13 +88,16 @@ bbl_tcp_ctx_s *
 bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uint16_t port);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
+bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uint16_t port);
 
-void
-bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
+bbl_tcp_ctx_s *
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
 
 bbl_tcp_ctx_s *
 bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
+
+void
+bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
 
 void
 bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6);

@@ -35,7 +35,15 @@ ldp_interface_init(bbl_network_interface_s *interface,
     adjacency->interface = interface;
     adjacency->hold_time = config->hold_time;
     interface->ldp_adjacency = adjacency;
-    
+
+    if(!config->no_ipv4_transport) {
+        adjacency->hello_ipv4 = true;
+        adjacency->prefer_ipv4_transport = config->prefer_ipv4_transport;
+    }
+    if(ipv6_addr_not_zero(&config->ipv6_transport_address)) {
+        adjacency->hello_ipv6 = true;
+    }
+
     ldp_hello_start(adjacency);
     return true;
 }

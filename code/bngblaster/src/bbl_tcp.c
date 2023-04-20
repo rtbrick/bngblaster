@@ -188,14 +188,14 @@ bbl_tcp_error_cb(void *arg, err_t err)
     if(tcpc->af == AF_INET) {
         LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
             tcpc->interface->name,
-            format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
-            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port,
+            format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr), tcpc->remote_port,
             err, tcp_err_string(err));
     } else {
         LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
             tcpc->interface->name,
-            format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
-            format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->remote_port,
             err, tcp_err_string(err));
     }
 
@@ -240,13 +240,13 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     if(tcpc->af == AF_INET) {
         LOG(TCP, "TCP (%s %s:%u - %s:%u) session connected\n",
             tcpc->interface->name,
-            format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
-            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
+            format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr), tcpc->remote_port);
     } else {
         LOG(TCP, "TCP (%s %s:%u - %s:%u) session connected\n",
             tcpc->interface->name,
-            format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
-            format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port);
+            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr), tcpc->remote_port);
     }
 
     tcpc->state = BBL_TCP_STATE_IDLE;
@@ -260,7 +260,7 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 }
 
 err_t
-bbl_tcp_ipv4_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
+bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     bbl_tcp_ctx_s *listen = arg;
     bbl_tcp_ctx_s *tcpc;
@@ -297,25 +297,24 @@ bbl_tcp_ipv4_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     tcp_err(tpcb, bbl_tcp_error_cb);
 
     if(tcpc->af == AF_INET) {
-        tcpc->local_ipv4 = tpcb->local_ip.u_addr.ip4.addr;
-        tcpc->remote_ipv4 = tpcb->remote_ip.u_addr.ip4.addr;
+        tcpc->local_addr.u_addr.ip4.addr = tpcb->local_ip.u_addr.ip4.addr;
+        tcpc->remote_addr.u_addr.ip4.addr = tpcb->remote_ip.u_addr.ip4.addr;
         LOG(TCP, "TCP (%s %s:%u - %s:%u) session accepted\n",
             tcpc->interface->name,
-            format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
-            format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
+            format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr), tcpc->remote_port);
     } else {
-        memcpy(tcpc->local_ipv6, tpcb->local_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
-        memcpy(tcpc->remote_ipv6, tpcb->remote_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
+        memcpy(&tcpc->local_addr.u_addr.ip6.addr, &tpcb->local_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
+        memcpy(&tcpc->remote_addr.u_addr.ip6.addr, &tpcb->remote_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
         LOG(TCP, "TCP (%s %s:%u - %s:%u) session accepted\n",
             tcpc->interface->name,
-            format_ipv6_address(&tcpc->local_ipv6), tcpc->local_port,
-            format_ipv6_address(&tcpc->remote_ipv6), tcpc->remote_port);
+            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr), tcpc->remote_port);
     }
 
     /* Call application TCP accepted callback function. */
     if(listen->accepted_cb) {
         if((listen->accepted_cb)(tcpc, listen->arg) != ERR_OK) {
-            free(tcpc);
             tcp_abort(tpcb);
             return ERR_ABRT;
         };
@@ -355,23 +354,72 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uin
     }
 
     /* Bind local IP address and port */
-    if(tcp_bind(tcpc->pcb, (const ip_addr_t*)address, port) != ERR_OK) {
+    tcpc->local_addr.u_addr.ip4.addr = *address;
+    if(tcp_bind(tcpc->pcb, &tcpc->local_addr, port) != ERR_OK) {
         bbl_tcp_ctx_free(tcpc);
     }
 
     tcpc->pcb = tcp_listen(tcpc->pcb);
-    tcp_accept(tcpc->pcb, bbl_tcp_ipv4_listen_accepted);
+    tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
 
     tcpc->listen = true;
     tcpc->af = AF_INET;
     tcpc->local_port = port;
-    tcpc->local_ipv4 = *address;
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V4;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V4;
     tcpc->state = BBL_TCP_STATE_LISTEN;
     LOG(TCP, "TCP (%s %s:%u) listen\n",
         interface->name,
-        format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port);
+        format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), 
+        tcpc->local_port);
+
+    return tcpc;
+}
+
+/**
+ * bbl_tcp_ipv6_listen 
+ * 
+ * @param interface interface
+ * @param address local address
+ * @param port local port
+ * @return TCP context
+ */
+bbl_tcp_ctx_s *
+bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uint16_t port)
+{
+    bbl_tcp_ctx_s *tcpc;
+
+    if(!g_ctx->tcp) {
+        /* TCP not enabled! */
+        return NULL;
+    }
+
+    tcpc = bbl_tcp_ctx_new(interface);
+    if(!tcpc) {
+        return NULL;
+    }
+
+    /* Bind local IP address and port */
+    memcpy(&tcpc->local_addr.u_addr.ip6.addr, address, sizeof(ip6_addr_t));
+    tcpc->local_addr.type = IPADDR_TYPE_V6;
+    if(tcp_bind(tcpc->pcb, &tcpc->local_addr, port) != ERR_OK) {
+        bbl_tcp_ctx_free(tcpc);
+    }
+
+    tcpc->pcb = tcp_listen(tcpc->pcb);
+    tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
+
+    tcpc->listen = true;
+    tcpc->af = AF_INET6;
+    tcpc->local_port = port;
+    tcpc->remote_addr.type = IPADDR_TYPE_V6;
+    tcpc->pcb->local_ip.type = IPADDR_TYPE_V6;
+    tcpc->pcb->remote_ip.type = IPADDR_TYPE_V6;
+    tcpc->state = BBL_TCP_STATE_LISTEN;
+    LOG(TCP, "TCP (%s %s:%u) listen\n",
+        interface->name,
+        format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
+        tcpc->local_port);
 
     return tcpc;
 }
@@ -401,13 +449,15 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
     }
 
     /* Bind local IP address and port */
-    tcp_bind(tcpc->pcb, (const ip_addr_t*)src, 0);
+    tcpc->local_addr.u_addr.ip4.addr = *src;
+    tcp_bind(tcpc->pcb, &tcpc->local_addr, 0);
 
     /* Disable nagle algorithm */
     tcp_nagle_disable(tcpc->pcb);
 
     /* Connect session */
-    if(tcp_connect(tcpc->pcb, (const ip_addr_t*)dst, port, bbl_tcp_connected) != ERR_OK) {
+    tcpc->remote_addr.u_addr.ip4.addr = *dst;
+    if(tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected) != ERR_OK) {
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
@@ -416,15 +466,72 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
     tcpc->af = AF_INET;
     tcpc->local_port = tcpc->pcb->local_port;
     tcpc->remote_port = port;
-    tcpc->local_ipv4 = *src;
-    tcpc->remote_ipv4 = *dst;
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V4;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V4;
     tcpc->state = BBL_TCP_STATE_CONNECTING;
     LOG(TCP, "TCP (%s %s:%u - %s:%u) connect\n",
         interface->name,
-        format_ipv4_address(&tcpc->local_ipv4), tcpc->local_port,
-        format_ipv4_address(&tcpc->remote_ipv4), tcpc->remote_port);
+        format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), 
+        tcpc->local_port,
+        format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr),
+        tcpc->remote_port);
+
+    return tcpc;
+}
+
+/**
+ * bbl_tcp_ipv6_connect 
+ * 
+ * @param interface interface
+ * @param src source address
+ * @param dst destination address
+ * @param port destination port
+ * @return TCP context
+ */
+bbl_tcp_ctx_s *
+bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port)
+{
+    bbl_tcp_ctx_s *tcpc;
+
+    if(!g_ctx->tcp) {
+        /* TCP not enabled! */
+        return NULL;
+    }
+
+    tcpc = bbl_tcp_ctx_new(interface);
+    if(!tcpc) {
+        return NULL;
+    }
+
+    /* Bind local IP address and port */
+    memcpy(&tcpc->local_addr.u_addr.ip6.addr, src, sizeof(ip6_addr_t));
+    tcpc->local_addr.type = IPADDR_TYPE_V6;
+    tcp_bind(tcpc->pcb, &tcpc->local_addr, 0);
+
+    /* Disable nagle algorithm */
+    tcp_nagle_disable(tcpc->pcb);
+
+    /* Connect session */
+    memcpy(&tcpc->remote_addr.u_addr.ip6.addr, dst, sizeof(ip6_addr_t));
+    tcpc->remote_addr.type = IPADDR_TYPE_V6;
+    if(tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected) != ERR_OK) {
+        bbl_tcp_ctx_free(tcpc);
+        return NULL;
+    }
+    tcp_err(tcpc->pcb, bbl_tcp_error_cb);
+
+    tcpc->af = AF_INET;
+    tcpc->local_port = tcpc->pcb->local_port;
+    tcpc->remote_port = port;
+    tcpc->pcb->local_ip.type = IPADDR_TYPE_V6;
+    tcpc->pcb->remote_ip.type = IPADDR_TYPE_V6;
+    tcpc->state = BBL_TCP_STATE_CONNECTING;
+    LOG(TCP, "TCP (%s %s:%u - %s:%u) connect\n",
+        interface->name,
+        format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
+        tcpc->local_port,
+        format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr),
+        tcpc->remote_port);
 
     return tcpc;
 }
@@ -466,30 +573,6 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 }
 
 /**
- * bbl_tcp_ipv6_connect 
- * 
- * @param interface interface
- * @param src source address
- * @param dst destination address
- * @param port destination port
- * @return TCP context
- */
-bbl_tcp_ctx_s *
-bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port)
-{
-    if(!g_ctx->tcp) {
-        /* TCP not enabled! */
-        return NULL;
-    }
-
-    UNUSED(interface);
-    UNUSED(src);
-    UNUSED(dst);
-    UNUSED(port);
-    return NULL;
-}
-
-/**
  * bbl_tcp_ipv6_rx 
  * 
  * @param eth ethernet packet received
@@ -517,6 +600,18 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 
     pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
     interface->netif.input(pbuf, &interface->netif);
+
+    ip_data.current_netif = &interface->netif;
+    ip_data.current_input_netif = &interface->netif;
+    memcpy(&ip_data.current_iphdr_dest.u_addr.ip6.addr, ipv6->dst, sizeof(ip6_addr_t));
+    ip_data.current_iphdr_dest.u_addr.ip6.zone = 0;
+    ip_data.current_iphdr_dest.type = IPADDR_TYPE_V6;
+    memcpy(&ip_data.current_iphdr_src.u_addr.ip6.addr, ipv6->src, sizeof(ip6_addr_t));
+    ip_data.current_iphdr_src.u_addr.ip6.zone = 0;
+    ip_data.current_iphdr_src.type = IPADDR_TYPE_V6;
+
+    pbuf = pbuf_alloc_reference(ipv6->payload, ipv6->payload_len, PBUF_ROM);
+    tcp_input(pbuf, &interface->netif);
 }
 
 /**
@@ -625,7 +720,7 @@ bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_c
 }
 
 void
-bbl_tcp_simer(timer_s *timer)
+bbl_tcp_timer(timer_s *timer)
 {
     UNUSED(timer);
     sys_check_timeouts();
@@ -648,5 +743,5 @@ bbl_tcp_init()
 
     /* Start TCP timer */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->tcp_timer, "TCP",
-                       0, BBL_TCP_INTERVAL, g_ctx, &bbl_tcp_simer);
+                       0, BBL_TCP_INTERVAL, g_ctx, &bbl_tcp_timer);
 }

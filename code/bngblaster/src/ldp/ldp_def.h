@@ -33,6 +33,7 @@
 #define LDP_MESSAGE_TYPE_LABEL_RELEASE              0x0403
 #define LDP_MESSAGE_TYPE_ABORT_REQUEST              0x0404
 
+#define LDP_TLV_TYPE_MASK                           0x3FFF
 #define LDP_TLV_TYPE_FEC                            0x0100
 #define LDP_TLV_TYPE_ADDRESS_LIST                   0x0101
 #define LDP_TLV_TYPE_HOP_COUNT                      0x0103
@@ -48,6 +49,7 @@
 #define LDP_TLV_TYPE_IPV6_TRANSPORT_ADDRESS         0x0403
 #define LDP_TLV_TYPE_COMMON_SESSION_PARAMETERS      0x0500
 #define LDP_TLV_TYPE_LABEL_REQUEST_ID               0x0600
+#define LDP_TLV_TYPE_DUAL_STACK_CAPABILITY          0x0701
 
 #define LDP_TLV_LEN_MIN                             4
 #define LDP_FEC_LEN_MIN                             4
@@ -141,7 +143,13 @@ typedef struct ldp_config_ {
 
     uint16_t id; /* LDP instance identifier */
     uint32_t lsr_id;
-    uint32_t ipv4_transport_address;
+
+    bool prefer_ipv4_transport;
+    bool no_ipv4_transport;
+
+    uint32_t   ipv4_transport_address;
+    ipv6addr_t ipv6_transport_address;
+
     const char *lsr_id_str;
     const char *hostname;
 
@@ -188,7 +196,9 @@ typedef struct ldp_session_ {
     uint16_t max_pdu_len;
     uint16_t keepalive_time;
 
+    bool ipv6; /* True for IPv6 transport session. */
     struct {
+        ipv6addr_t ipv6_address;
         uint32_t ipv4_address;
         uint32_t lsr_id;
         uint16_t label_space_id;
@@ -197,6 +207,7 @@ typedef struct ldp_session_ {
     } local;
 
     struct {
+        ipv6addr_t ipv6_address;
         uint32_t ipv4_address;
         uint32_t lsr_id;
         uint16_t label_space_id;
@@ -234,6 +245,10 @@ typedef struct ldp_session_ {
 typedef struct ldp_adjacency_ {
     bbl_network_interface_s *interface;
     ldp_instance_s *instance;
+
+    bool hello_ipv4;
+    bool hello_ipv6;
+    bool prefer_ipv4_transport;
 
     struct timer_ *hello_timer;
     struct timer_ *hold_timer;
