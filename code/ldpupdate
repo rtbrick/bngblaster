@@ -7,6 +7,7 @@ Christian Giese, December 2022
 Copyright (C) 2020-2023, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+from socket import inet_aton
 import argparse
 import ipaddress
 import logging
@@ -28,7 +29,7 @@ except:
 
 # Monkey patch scapy LDP FecTLVField
 
-def _monkey_i2m(self, pkt, x):
+def _monkey_i2m_fec(self, pkt, x):
     if not x:
         return b""
     if isinstance(x, bytes):
@@ -37,19 +38,54 @@ def _monkey_i2m(self, pkt, x):
     tmp_len = 0
     fec = b""
     for o in x:
-        fec += b"\x02\x00\x01"
-        # mask length
-        fec += struct.pack("!B", o[1])
-        # Prefix
-        l = o[1]+7>>3
-        p = inet_aton(o[0])
-        fec += p[:l]
-        tmp_len += 4+l
+        a = ipaddress.ip_address(o[0])
+        if a.version == 4:
+            fec += b"\x02\x00\x01"
+            # mask length
+            fec += struct.pack("!B", o[1])
+            # Prefix
+            l = o[1]+7>>3
+            p = ipaddress.v4_int_to_packed(int(a))
+            fec += p[:l]
+            tmp_len += 4+l
+        else:
+            fec += b"\x02\x00\x02"
+            # mask length
+            fec += struct.pack("!B", o[1])
+            # Prefix
+            l = o[1]+7>>3
+            p = ipaddress.v6_int_to_packed(int(a))
+            fec += p[:l]
+            tmp_len += 4+l
     s += struct.pack("!H", tmp_len)
     s += fec
     return s
 
-scapy.contrib.ldp.FecTLVField.i2m = _monkey_i2m
+scapy.contrib.ldp.FecTLVField.i2m = _monkey_i2m_fec
+
+
+def _monkey_i2m_address(self, pkt, x):
+    if not x:
+        return b""
+    if isinstance(x, bytes):
+        return x
+    
+    a = ipaddress.ip_address(x[0])
+    if a.version == 4:
+        tmp_len = 2 + len(x) * 4
+        s = b"\x01\x01" + struct.pack("!H", tmp_len) + b"\x00\x01"
+        for o in x:
+            s += inet_aton(o)
+    else:
+        tmp_len = 2 + len(x) * 16
+        s = b"\x01\x01" + struct.pack("!H", tmp_len) + b"\x00\x02"
+        for o in x:
+            a = ipaddress.ip_address(o)
+            s += ipaddress.v6_int_to_packed(int(a))
+    return s
+
+scapy.contrib.ldp.AddressTLVField.i2m = _monkey_i2m_address
+
 
 # ==============================================================
 # DEFINITIONS
@@ -133,15 +169,13 @@ def main():
 
         address = args.address_base
         for _ in range(args.address_num):
+            log.debug("add address %s" % (address))
             addresses.append(address)
             address += 1
 
     prefixes = []
     if args.prefix_base and args.prefix_num > 0:
-        if args.prefix_base.version != 4:
-            log.error("prefix must be IPv4")
-            exit(1)
-        log.info("init %s labeled IPv4 prefixes" % (args.prefix_num))
+        log.info("init %s labeled prefixes" % (args.prefix_num))
 
         prefix = args.prefix_base
         label_index = 0
