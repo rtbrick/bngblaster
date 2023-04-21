@@ -42,11 +42,12 @@ struct keyval_ ldp_status_names[] = {
 };
 
 static void 
-ldp_decode_error(ldp_session_s *session)
+ldp_fatal_error(ldp_session_s *session, const char* message)
 {
-    LOG(LDP, "LDP (%s - %s) invalid PDU received\n",
+    LOG(LDP, "LDP (%s - %s) %s\n",
         ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
-        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+        message);
 
     session->decode_error = true;
     if(!session->error_code) {
@@ -115,6 +116,7 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
     uint32_t label;
 
     ipv4_prefix ipv4prefix;
+    ipv6_prefix ipv6prefix;
 
     /* Read all TLV's. */
     while(length >= LDP_TLV_LEN_MIN) {
@@ -153,18 +155,34 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
         prefix_length = *(fec_element+3);
         prefix_bytes = BITS_TO_BYTES(prefix_length);
         if(prefix_bytes+LDP_FEC_LEN_MIN > fec_length) {
+            LOG_NOARG(DEBUG, "ldp_label_mapping E5\n");
             return false;
         }
-        if(fec_afi == IANA_AFI_IPV4) {
-            ipv4prefix.len = prefix_length;
-            ipv4prefix.address = 0;
-            memcpy((uint8_t*)&ipv4prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
-            LOG(DEBUG, "LDP (%s - %s) add %s via label %u\n",
-                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
-                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
-                format_ipv4_prefix(&ipv4prefix), label);
+        switch(fec_afi) {
+            case IANA_AFI_IPV4:
+                ipv4prefix.len = prefix_length;
+                ipv4prefix.address = 0;
+                memcpy((uint8_t*)&ipv4prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
+                LOG(DEBUG, "LDP (%s - %s) add %s via label %u\n",
+                    ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                    ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+                    format_ipv4_prefix(&ipv4prefix), label);
 
-            ldb_db_add_ipv4(session, &ipv4prefix, label);
+                ldb_db_add_ipv4(session, &ipv4prefix, label);
+                break;
+            case IANA_AFI_IPV6:
+                ipv6prefix.len = prefix_length;
+                memset(&ipv6prefix.address, 0x0, sizeof(ipv6addr_t));
+                memcpy((uint8_t*)&ipv6prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
+                LOG(DEBUG, "LDP (%s - %s) add %s via label %u\n",
+                    ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                    ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+                    format_ipv6_prefix(&ipv6prefix), label);
+
+                ldb_db_add_ipv6(session, &ipv6prefix, label);
+                break;
+            default:
+                break;
         }
         fec_length -= (prefix_bytes+LDP_FEC_LEN_MIN);
         fec_element += (prefix_bytes+LDP_FEC_LEN_MIN);
@@ -262,7 +280,7 @@ ldp_read(ldp_session_s *session)
         if(pdu_version != 1 || 
            pdu_length < LDP_IDENTIFIER_LEN || 
            pdu_length > session->max_pdu_len) {
-            ldp_decode_error(session);
+            ldp_fatal_error(session, "invalid PDU received");
             return;
         }
 
@@ -279,7 +297,7 @@ ldp_read(ldp_session_s *session)
 
         if(lsr_id != session->peer.lsr_id || 
            label_space_id != session->peer.label_space_id) {
-            ldp_decode_error(session);
+            ldp_fatal_error(session, "invalid PDU received (wrong label space)");
             return;
         }
 
@@ -292,7 +310,7 @@ ldp_read(ldp_session_s *session)
             msg_length = read_be_uint(msg_start+2, 2);
             msg_id = read_be_uint(msg_start+4, 4);
             if(msg_length+4 > pdu_length) {
-                ldp_decode_error(session);
+                ldp_fatal_error(session, "invalid PDU received");
                 return;
             }
 
@@ -306,13 +324,13 @@ ldp_read(ldp_session_s *session)
             switch(msg_type) {
                 case LDP_MESSAGE_TYPE_NOTIFICATION:
                     if(!ldp_notification(session, msg_start+8, msg_length-4)) {
-                        ldp_decode_error(session);
+                        ldp_fatal_error(session, "invalid PDU received (notification message)");
                         return;
                     }
                     break;
                 case LDP_MESSAGE_TYPE_INITIALIZATION:
                     if(!ldp_initialization(session, msg_start+8, msg_length-4)) {
-                        ldp_decode_error(session);
+                        ldp_fatal_error(session, "invalid PDU received (initialization message)");
                         return;
                     }
                     break;
@@ -322,7 +340,7 @@ ldp_read(ldp_session_s *session)
                     break;
                 case LDP_MESSAGE_TYPE_LABEL_MAPPING:
                     if(!ldp_label_mapping(session, msg_start+8, msg_length-4)) {
-                        ldp_decode_error(session);
+                        ldp_fatal_error(session, "invalid PDU received (label mapping message)");
                         return;
                     }
                     break;

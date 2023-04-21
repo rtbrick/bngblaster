@@ -28,9 +28,17 @@
    * - `teardown-time`
      - LDP teardown time in seconds
      - 5
+   * - `ipv6-transport-address`
+     - LDP transport IPv6 address
+     - 
    * - `ipv4-transport-address`
-     - LDP transport address
+     - LDP transport IPv6 address
      - `lsr-id`
+   * - `no-ipv4-transport`
+     - Disable/discard IPv4 LDP hello messages
+   * - `prefer-ipv4-transport`
+     - Prefer IPv4 transport even if IPv6 is enabled
+     - `false`
    * - `raw-update-file`
      - LDP RAW update file
      - 
@@ -46,3 +54,7 @@ send keepalive messages at an interval calculated by using the
 effective keepalive time divided by 3. Assuming an effective
 keepalive time of 15 seconds results in a keepalive interval
 of 5 seconds. 
+
+Setting a valid `ipv6-transport-address` enables LDP IPv6 
+hello and transport. According to RFC7552, IPv6 is preferred
+over IPv4 which can be changed with `prefer-ipv4-transport`.

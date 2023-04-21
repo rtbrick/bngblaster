@@ -1159,6 +1159,10 @@ bbl_stream_ldp_lookup(bbl_stream_s *stream)
             stream->ldp_entry = ldb_db_lookup_ipv4(
                 stream->network_interface->ldp_adjacency->instance, 
                 stream->config->ipv4_ldp_lookup_address);
+        } else if (*(uint64_t*)stream->config->ipv6_ldp_lookup_address) {
+            stream->ldp_entry = ldb_db_lookup_ipv6(
+                stream->network_interface->ldp_adjacency->instance, 
+                &stream->config->ipv6_ldp_lookup_address);
         }
     }
 
@@ -1631,7 +1635,9 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(network_interface) {
             stream->network_interface = network_interface;
             stream->tx_interface = network_interface->interface;
-            if(config->ipv4_ldp_lookup_address && network_interface->ldp_adjacency) {
+            if(network_interface->ldp_adjacency && 
+               (config->ipv4_ldp_lookup_address || 
+                *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
                 stream->ldp_lookup = true;
             }
             bbl_stream_add(stream);
@@ -1772,7 +1778,9 @@ bbl_stream_init() {
                 stream->network_interface = network_interface;
                 stream->tx_interface = network_interface->interface;
                 stream->tx_interval = tx_interval;
-                if(config->ipv4_ldp_lookup_address && network_interface->ldp_adjacency) {
+                if(network_interface->ldp_adjacency && 
+                   (config->ipv4_ldp_lookup_address || 
+                    *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
                     stream->ldp_lookup = true;
                 }
                 result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);

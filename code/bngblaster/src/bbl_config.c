@@ -1653,9 +1653,8 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     const char *schema[] = {
         "instance-id", "keepalive-time", "hold-time",
         "teardown-time", "hostname", "lsr-id",
-        "ipv4-transport", "ipv4-transport-address",
-        "ipv6-transport", "ipv6-transport-address",
-        "prefer-ipv4-transport"
+        "ipv6-transport-address", "ipv4-transport-address",
+        "no-ipv4-transport", "prefer-ipv4-transport",
         "raw-update-file"
     };
     if(!schema_validate(ldp, "ldp", schema, 
@@ -1758,7 +1757,8 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "priority", "vlan-priority", "pps",
         "bps", "Kbps", "Mbps",
         "Gbps", "max-packets", "start-delay",
-        "ldp-ipv4-lookup-address", "access-ipv4-source-address", "access-ipv6-source-address",
+        "ldp-ipv4-lookup-address", "ldp-ipv6-lookup-address", 
+        "access-ipv4-source-address", "access-ipv6-source-address",
         "network-ipv4-address", "network-ipv6-address", "destination-ipv4-address",
         "destination-ipv6-address", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
@@ -1936,6 +1936,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(json_unpack(stream, "{s:s}", "ldp-ipv4-lookup-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &stream_config->ipv4_ldp_lookup_address)) {
             fprintf(stderr, "JSON config error: Invalid value for stream->ldp-ipv4-lookup-address\n");
+            return false;
+        }
+    }
+
+    if(json_unpack(stream, "{s:s}", "ldp-ipv6-lookup-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &stream_config->ipv6_ldp_lookup_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->ldp-ipv6-lookup-address\n");
             return false;
         }
     }
