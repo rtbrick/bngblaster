@@ -319,12 +319,15 @@ timer_smear_all_buckets(timer_root_s *root)
 
             /* Now walk all timers and space them <step> apart. */
             CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
-                timespec_add(&timer->expire, &now, &step);
-                now = timer->expire;
+                if(timer->periodic) {
+                    /* Smear only periodic timers. */
+                    timespec_add(&timer->expire, &now, &step);
+                    now = timer->expire;
 #ifdef BNGBLASTER_TIMER_LOGGING
-                LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
-                    last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000);
+                    LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
+                        last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000);
 #endif
+                }
             }
         }
     }
