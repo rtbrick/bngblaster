@@ -59,6 +59,7 @@ typedef struct timer_
     bool reset; /* reset reference/start time */
     bool delete; /* timer has been deleted */
     bool on_change_list; /* node is on change list */
+    bool no_smear; /* do not smear this timer */
     char name[32];
 } timer_s;
 
@@ -79,8 +80,11 @@ timer_smear_bucket(timer_root_s *, time_t, long);
 void 
 timer_smear_all_buckets(timer_root_s *root);
 
+void
+timer_no_smear(timer_s *timer);
+
 void 
-timer_del(timer_s *);
+timer_del(timer_s *timer);
 
 void
 timer_add(timer_root_s *root, timer_s **ptimer, char *name,

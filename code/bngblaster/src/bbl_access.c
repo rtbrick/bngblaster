@@ -947,7 +947,7 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
             bbl_session_update_state(session, BBL_ESTABLISHED);
             if(g_ctx->config.lcp_keepalive_interval) {
                 /* Start LCP echo request / keep alive */
-                timer_add_periodic(&g_ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", g_ctx->config.lcp_keepalive_interval, 0, session, &bbl_access_lcp_echo);
+                timer_add_periodic(&g_ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", g_ctx->config.lcp_keepalive_interval, 1, session, &bbl_access_lcp_echo);
             }
             if(g_ctx->config.pppoe_session_time) {
                 /* Start Session Timer */

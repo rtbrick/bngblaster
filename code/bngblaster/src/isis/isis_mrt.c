@@ -60,7 +60,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path)
             fclose(mrt_file);
             return false;
         }
-        switch (pdu.pdu_type) {
+        switch(pdu.pdu_type) {
             case ISIS_PDU_L1_LSP:
                 level = ISIS_LEVEL_1;
                 break;
@@ -121,6 +121,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path)
                   &lsp->timer_lifetime, 
                   "ISIS LIFETIME", lsp->lifetime, 0, lsp,
                   &isis_lsp_lifetime_job);
+        timer_no_smear(lsp->timer_lifetime);
     }
     fclose(mrt_file);
     return true;

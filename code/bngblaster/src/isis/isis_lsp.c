@@ -222,7 +222,7 @@ isis_lsp_lifetime_job(timer_s *timer)
 {
     isis_lsp_s *lsp = timer->data;
 
-    LOG(ISIS, "ISIS %s-LSP %s (seq %u) lifetime expired \n", 
+    LOG(ISIS, "ISIS %s-LSP %s (seq %u) lifetime expired\n", 
         isis_level_string(lsp->level), 
         isis_lsp_id_to_str(&lsp->id), 
         lsp->seq);
@@ -628,6 +628,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
               &lsp->timer_lifetime, 
               "ISIS LIFETIME", lsp->lifetime, 0, lsp,
               &isis_lsp_lifetime_job);
+    timer_no_smear(lsp->timer_lifetime);
 
     isis_lsp_flood(lsp);
 
@@ -787,6 +788,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
               &lsp->timer_lifetime, 
               "ISIS LIFETIME", lsp->lifetime, 0, lsp,
               &isis_lsp_lifetime_job);
+    timer_no_smear(lsp->timer_lifetime);
 
     isis_lsp_flood(lsp);
     return true;
