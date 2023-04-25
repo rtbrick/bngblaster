@@ -43,6 +43,7 @@ enum {
     LSP,
     LAG,
     DPDK,
+    PACKET,
     TIMER,
     TIMER_DETAIL,
     LOG_ID_MAX
