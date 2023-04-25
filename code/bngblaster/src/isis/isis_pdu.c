@@ -82,7 +82,7 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
         if(tlv->len > PDU_CURSOR_LEN(pdu)) {
             return DECODE_ERROR;
         }
-        switch (tlv->type) {
+        switch(tlv->type) {
             case ISIS_TLV_AUTH:
                 if(tlv->len < sizeof(pdu->auth_type)) {
                     return DECODE_ERROR;
@@ -205,11 +205,12 @@ isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
         *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = 0;
     }
 
-    switch (pdu->auth_type) {
+    switch(pdu->auth_type) {
         case ISIS_AUTH_HMAC_MD5:
             if(pdu->auth_data_len != ISIS_MD5_DIGEST_LEN) {
                 return;
             }
+            memset(PDU_OFFSET(pdu, pdu->auth_data_offset), 0x0, ISIS_MD5_DIGEST_LEN);
             HMAC_CTX *hmac = HMAC_CTX_new();
             HMAC_Init_ex(hmac, key, strlen(key), EVP_md5(), NULL);
             HMAC_Update(hmac, pdu->pdu, pdu->pdu_len);
@@ -279,7 +280,6 @@ isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
                 return false;
             }
             memcpy(auth_data, PDU_OFFSET(pdu, pdu->auth_data_offset), ISIS_MD5_DIGEST_LEN);
-            memset(PDU_OFFSET(pdu, pdu->auth_data_offset), 0x0, ISIS_MD5_DIGEST_LEN);
             isis_pdu_update_auth(pdu, key);
             if(memcmp(PDU_OFFSET(pdu, pdu->auth_data_offset), auth_data, ISIS_MD5_DIGEST_LEN) == 0) {
                 return true;

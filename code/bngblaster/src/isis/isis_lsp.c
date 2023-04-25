@@ -206,15 +206,25 @@ isis_lsp_retry_job(timer_s *timer)
 }
 
 void
-isis_lsp_refresh_job(timer_s *timer) {
-    isis_lsp_s *lsp = timer->data;
+isis_lsp_refresh(isis_lsp_s *lsp)
+{
+    isis_pdu_s *pdu = &lsp->pdu;
+
     lsp->seq++;
     *(uint32_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(lsp->seq);
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
-    isis_pdu_update_auth(&lsp->pdu, lsp->auth_key);
-    isis_pdu_update_lifetime(&lsp->pdu, lsp->lifetime);
-    isis_pdu_update_checksum(&lsp->pdu);
+    isis_pdu_update_len(pdu);
+    isis_pdu_update_auth(pdu, lsp->auth_key);
+    isis_pdu_update_lifetime(pdu, lsp->lifetime);
+    isis_pdu_update_checksum(pdu);
     isis_lsp_flood(lsp);
+}
+
+void
+isis_lsp_refresh_job(timer_s *timer)
+{
+    isis_lsp_s *lsp = timer->data;
+    isis_lsp_refresh(lsp);
 }
 
 void
