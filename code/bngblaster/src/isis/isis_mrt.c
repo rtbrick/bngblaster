@@ -117,6 +117,20 @@ isis_mrt_load(isis_instance_s *instance, char *file_path)
         PDU_CURSOR_RST(&pdu);
         memcpy(&lsp->pdu, &pdu, sizeof(isis_pdu_s));
 
+        if(instance->config->external_auto_refresh) {
+            if(level == ISIS_LEVEL_1) {
+                lsp->auth_key = instance->config->level1_key;
+            } else {
+                lsp->auth_key = instance->config->level2_key;
+            }
+            if(lsp->lifetime < 330) {
+                lsp->lifetime = 300;
+            }
+            timer_add_periodic(&g_ctx->timer_root, &lsp->timer_refresh, 
+                               "ISIS LSP refresh", lsp->lifetime - 300, 0, lsp, 
+                               &isis_lsp_refresh_job);
+        }
+
         timer_add(&g_ctx->timer_root, 
                   &lsp->timer_lifetime, 
                   "ISIS LIFETIME", lsp->lifetime, 0, lsp,

@@ -599,6 +599,10 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
         if(lsp->source.type == ISIS_SOURCE_EXTERNAL) {
             /* Per default we will not overwrite 
              * external LSP. */
+            if(config->external_auto_refresh) {
+                lsp->seq = seq;
+                isis_lsp_refresh(lsp);
+            }
             goto ACK;
         }
         if(lsp->source.type == ISIS_SOURCE_SELF) {

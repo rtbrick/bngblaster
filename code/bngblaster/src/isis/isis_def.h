@@ -235,6 +235,7 @@ typedef struct isis_config_ {
     uint32_t            sr_range;
     uint32_t            sr_node_sid;
     
+    bool external_auto_refresh;
     char *external_mrt_file;
     struct isis_external_connection_ *external_connection;
 

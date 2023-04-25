@@ -1330,7 +1330,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "lsp-tx-interval", "lsp-tx-window-size", "csnp-interval",
         "hostname", "router-id", "system-id",
         "area", "sr-base", "sr-range",
-        "sr-node-sid", "teardown-time", "external"
+        "sr-node-sid", "teardown-time", "external",
+        "external-auto-refresh"
     };
     if(!schema_validate(isis, "isis", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1638,6 +1639,11 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                 }
             }
         }
+    }
+
+    value = json_object_get(isis, "external-auto-refresh");
+    if(json_is_boolean(value)) {
+        isis_config->external_auto_refresh  = json_boolean_value(value);
     }
     return true;
 }
