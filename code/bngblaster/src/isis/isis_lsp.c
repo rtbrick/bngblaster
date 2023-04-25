@@ -163,6 +163,8 @@ isis_lsp_gc_job(timer_s *timer)
                 lsp = *hb_itor_datum(itor);
                 next = hb_itor_next(itor);
                 if(lsp && lsp->expired && lsp->refcount == 0) {
+                    timer_del(lsp->timer_lifetime);
+                    timer_del(lsp->timer_refresh);
                     removed = hb_tree_remove(instance->level[i].lsdb, &lsp->id);
                     if(removed.removed) {
                         free(lsp);
@@ -211,6 +213,13 @@ isis_lsp_refresh(isis_lsp_s *lsp)
     isis_pdu_s *pdu = &lsp->pdu;
 
     lsp->seq++;
+    lsp->expired = false;
+    timer_add(&g_ctx->timer_root, 
+              &lsp->timer_lifetime, 
+              "ISIS LIFETIME", lsp->lifetime, 0, lsp,
+              &isis_lsp_lifetime_job);
+    timer_no_smear(lsp->timer_lifetime);
+
     *(uint32_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(lsp->seq);
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
     isis_pdu_update_len(pdu);
