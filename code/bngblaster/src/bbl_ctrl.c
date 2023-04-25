@@ -290,7 +290,7 @@ bbl_ctrl_socket_thread(void *thread_data)
     static int fd = 0;
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 100 * MSEC;
+    sleep.tv_nsec = 200 * MSEC;
 
     ctrl->active = true;
     while(ctrl->active) {
