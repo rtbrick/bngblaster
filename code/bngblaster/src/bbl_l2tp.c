@@ -553,9 +553,9 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
 
     while(l2tp_server) {
         if(l2tp_server->ip == ipv4->dst) {
-            LOG(DEBUG, "L2TP Debug (%s) SCCRQ received from %s\n",
-                       l2tp_server->host_name,
-                       format_ipv4_address(&ipv4->src));
+            LOG(PACKET, "L2TP (%s) SCCRQ received from %s\n",
+                l2tp_server->host_name,
+                format_ipv4_address(&ipv4->src));
             /* Init tunnel ... */
             l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
             g_ctx->l2tp_tunnels++;
@@ -1072,7 +1072,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
         }
         if(l2tp_tunnel->nr == l2tp->ns) {
             /* In-Order packet received */
-            LOG(DEBUG, "L2TP Debug (%s) %s received from %s\n",
+            LOG(PACKET, "L2TP (%s) %s received from %s\n",
                        l2tp_tunnel->server->host_name,
                        l2tp_message_string(l2tp->type),
                        format_ipv4_address(&ipv4->src));

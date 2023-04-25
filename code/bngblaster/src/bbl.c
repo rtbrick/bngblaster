@@ -154,6 +154,7 @@ struct keyval_ log_names[] = {
     { TCP,           "tcp" },
     { LAG,           "lag" },
     { DPDK,          "dpdk" },
+    { PACKET,        "packet" },
 #ifdef BNGBLASTER_TIMER_LOGGING
     { TIMER,         "timer" },
     { TIMER_DETAIL,  "timer-detail" },

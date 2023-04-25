@@ -57,7 +57,7 @@ ldp_hello_ipv4_encode(bbl_network_interface_s *interface,
     }
     result = encode_ethernet(buf, len, eth);
     if(result == PROTOCOL_SUCCESS) {
-        LOG(DEBUG, "LDP TX IPv4 hello on interface %s\n", interface->name);
+        LOG(PACKET, "LDP TX IPv4 hello on interface %s\n", interface->name);
             adjacency->interface->stats.ldp_udp_tx++;
     }
     return result;
@@ -105,7 +105,7 @@ ldp_hello_ipv6_encode(bbl_network_interface_s *interface,
     }
     result = encode_ethernet(buf, len, eth);
     if(result == PROTOCOL_SUCCESS) {
-        LOG(DEBUG, "LDP TX IPv6 hello on interface %s\n", interface->name);
+        LOG(PACKET, "LDP TX IPv6 hello on interface %s\n", interface->name);
             adjacency->interface->stats.ldp_udp_tx++;
     }
     return result;
@@ -201,7 +201,7 @@ ldp_hello_ipv4_rx(bbl_network_interface_s *interface,
         return;
     }
 
-    LOG(DEBUG, "LDP RX IPv4 hello on interface %s\n", interface->name);
+    LOG(PACKET, "LDP RX IPv4 hello on interface %s\n", interface->name);
 
     instance = adjacency->instance;
     session = instance->sessions;
@@ -262,7 +262,7 @@ ldp_hello_ipv6_rx(bbl_network_interface_s *interface,
         return;
     }
 
-    LOG(DEBUG, "LDP RX IPv6 hello on interface %s\n", interface->name);
+    LOG(PACKET, "LDP RX IPv6 hello on interface %s\n", interface->name);
 
     instance = adjacency->instance;
     session = instance->sessions;

@@ -268,7 +268,7 @@ isis_lsp_sx_job(timer_s *timer)
         if(!entry->wait_ack) {
             lsp = entry->lsp;
 
-            LOG(DEBUG, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
+            LOG(PACKET, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
                 isis_level_string(adjacency->level), 
                 isis_lsp_id_to_str(&lsp->id), 
                 lsp->seq,
@@ -556,7 +556,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     lsp_id = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
     seq = be32toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
 
-    LOG(DEBUG, "ISIS RX %s-LSP %s (seq %u) on interface %s\n", 
+    LOG(PACKET, "ISIS RX %s-LSP %s (seq %u) on interface %s\n", 
         isis_level_string(level), 
         isis_lsp_id_to_str(&lsp_id), 
         seq, interface->name);

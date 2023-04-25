@@ -123,7 +123,7 @@ isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) 
         return;
     }
 
-    LOG(DEBUG, "ISIS RX %s on interface %s\n",
+    LOG(PACKET, "ISIS RX %s on interface %s\n",
         isis_pdu_type_string(pdu.pdu_type), interface->name);
 
     switch (pdu.pdu_type) {

@@ -299,7 +299,7 @@ bbl_ctrl_socket_thread(void *thread_data)
             /* New connection. */
             root = json_loadfd(fd, flags, &error);
             if(!root) {
-                LOG(DEBUG, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
+                LOG(ERROR, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
                 bbl_ctrl_status(fd, "error", 400, "invalid json");
             } else {
                     /* Each command request should be formatted as shown in the example below
@@ -319,7 +319,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                 key.inner_vlan_id = 0;
                 key.outer_vlan_id = 0;
                 if(json_unpack(root, "{s:s, s?o}", "command", &command, "arguments", &arguments) != 0) {
-                    LOG_NOARG(DEBUG, "Invalid command via ctrl socket\n");
+                    LOG_NOARG(ERROR, "Invalid command via ctrl socket\n");
                     bbl_ctrl_status(fd, "error", 400, "invalid request");
                 } else {
                     if(arguments) {
@@ -332,10 +332,10 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 goto CLOSE;
                             }
                         } else {
-                                /* Deprecated!
-                                * For backward compatibility with version 0.4.X, we still
-                                * support per session commands using VLAN index instead of
-                                * new session-id. */
+                            /* Deprecated!
+                             * For backward compatibility with version 0.4.X, we still
+                             * support per session commands using VLAN index instead of
+                             * new session-id. */
                             value = json_object_get(arguments, "ifindex");
                             if(value) {
                                 if(json_is_number(value)) {

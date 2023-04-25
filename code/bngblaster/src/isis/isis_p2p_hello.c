@@ -121,7 +121,7 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     isis.pdu_len = pdu.pdu_len;
     result = encode_ethernet(buf, len, eth);
     if(result == PROTOCOL_SUCCESS) {
-        LOG(DEBUG, "ISIS TX %s on interface %s\n",
+        LOG(PACKET, "ISIS TX %s on interface %s\n",
             isis_pdu_type_string(isis.type), interface->name);
         adjacency->stats.hello_tx++;
         adjacency->interface->stats.isis_tx++;
