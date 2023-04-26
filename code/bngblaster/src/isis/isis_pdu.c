@@ -18,7 +18,7 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
     uint8_t  system_id_len;
     isis_tlv_s *tlv;
 
-    if(len < ISIS_HDR_LEN_COMMON || len > ISIS_MAX_PDU_LEN) {
+    if(len < ISIS_HDR_LEN_COMMON || len > ISIS_MAX_PDU_LEN_RX) {
         return DECODE_ERROR;
     }
     memset(pdu, 0x0, sizeof(isis_pdu_s));

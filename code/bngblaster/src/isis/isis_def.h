@@ -82,7 +82,9 @@
 
 #define ISIS_LSP_OVERLOAD_BIT           0x04
 
-#define ISIS_MAX_PDU_LEN                1492 /* 1500-3 byte LLC */
+#define ISIS_MAX_PDU_LEN_RX             1497 /* 1500-3 byte LLC */
+#define ISIS_MAX_PDU_LEN                1492
+
 #define ISIS_MD5_DIGEST_LEN             16
 
 typedef struct isis_config_ isis_config_s;
