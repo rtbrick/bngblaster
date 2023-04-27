@@ -52,8 +52,6 @@ not supported:
 
 + Targeted LDP
 + LDP TCP authentication
-+ LDP sessions between IPv6 addresses 
-+ Learn IPv6 label mappings
 + Multiple links between LDP instance and DUT (ECMP)
 
 LDP Adjacencies
@@ -130,10 +128,10 @@ Traffic streams send from network interface functions (downstream)
 can be configured to dynamically resolve the outer MPLS 
 label using the learned label mappings.
 
-The traffic stream configuration option `ldp-ipv4-lookup-address`
-specifies the lookup IPv4 address. This means that traffic
-will not start until this address is found in the corresponding
-label database of the sending network interface function. 
+The traffic stream configuration options `ldp-ipv4-lookup-address`
+and `ldp-ipv6-lookup-address` specifies the lookup IPv4 or IPv6 address. 
+This means that traffic will not start until this address is found in the 
+corresponding label database of the sending network interface function. 
 
 .. code-block:: json
 
@@ -181,8 +179,9 @@ label database of the sending network interface function.
         ]
     }
 
-The `ldp-ipv4-lookup-address` must exactly match the prefix address
-as shown in the LDP database. 
+The `ldp-ipv4-lookup-address` and `ldp-ipv6-lookup-address` are mutually exclusive 
+and must exactly match the prefix address as shown in the LDP database. This means
+that if the prefix is `10.0.0.0/24`, the lookup address should be `10.0.0.0`.
 
 .. note::
 
@@ -250,12 +249,9 @@ streams for use with the BNG Blaster.
 .. code-block:: none
 
     $ ldpupdate --help
-    usage: ldpupdate [-h] -l ADDRESS [-i N] -p PREFIX [-P N] [-m LABEL] [-M N]
-                    [-f FILE] [--append] [--pcap FILE]
-                    [--log-level {warning,info,debug}]
+    usage: ldpupdate [-h] -l ADDRESS [-i N] [-w] [-a ADDRESS] [-A N] [-p PREFIX] [-P N] [-m LABEL] [-M N] [-f FILE] [--append] [--pcap FILE] [--log-level {warning,info,debug}]
 
-    The LDP RAW update generator is a simple tool to generate LDP RAW update
-    streams for use with the BNG Blaster.
+    The LDP RAW update generator is a simple tool to generate LDP RAW update streams for use with the BNG Blaster.
 
     optional arguments:
     -h, --help            show this help message and exit

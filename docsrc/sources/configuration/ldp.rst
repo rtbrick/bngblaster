@@ -36,6 +36,7 @@
      - `lsr-id`
    * - `no-ipv4-transport`
      - Disable/discard IPv4 LDP hello messages
+     -
    * - `prefer-ipv4-transport`
      - Prefer IPv4 transport even if IPv6 is enabled
      - `false`
