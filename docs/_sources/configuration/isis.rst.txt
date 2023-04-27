@@ -106,3 +106,6 @@
    * - `teardown-time`
      - ISIS teardown time in seconds
      - 5
+   * - `external-auto-refresh`
+     - Automatically refresh external LSP from MRT files
+     - false

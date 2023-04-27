@@ -117,11 +117,23 @@
 <td><p>LDP teardown time in seconds</p></td>
 <td><p>5</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv4-transport-address</cite></p></td>
-<td><p>LDP transport address</p></td>
+<tr class="row-even"><td><p><cite>ipv6-transport-address</cite></p></td>
+<td><p>LDP transport IPv6 address</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv4-transport-address</cite></p></td>
+<td><p>LDP transport IPv6 address</p></td>
 <td><p><cite>lsr-id</cite></p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>raw-update-file</cite></p></td>
+<tr class="row-even"><td><p><cite>no-ipv4-transport</cite></p></td>
+<td><p>Disable/discard IPv4 LDP hello messages</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>prefer-ipv4-transport</cite></p></td>
+<td><p>Prefer IPv4 transport even if IPv6 is enabled</p></td>
+<td><p><cite>false</cite></p></td>
+</tr>
+<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
 <td><p>LDP RAW update file</p></td>
 <td></td>
 </tr>
@@ -138,6 +150,9 @@ send keepalive messages at an interval calculated by using the
 effective keepalive time divided by 3. Assuming an effective
 keepalive time of 15 seconds results in a keepalive interval
 of 5 seconds.</p>
+<p>Setting a valid <cite>ipv6-transport-address</cite> enables LDP IPv6
+hello and transport. According to RFC7552, IPv6 is preferred
+over IPv4 which can be changed with <cite>prefer-ipv4-transport</cite>.</p>
 
 
            </div>

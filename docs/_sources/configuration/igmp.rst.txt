@@ -40,6 +40,9 @@
    * - `zapping-count`
      - Define the number of channel changes before starting the view duration
      - 0 (disabled)
+   * - `zapping-wait`
+     - Wait for multicast traffic before zapping to the next channel
+     - false
    * - `view-duration`
      - Define the view duration in seconds
      - 0 (disabled)

@@ -170,11 +170,23 @@ attached to a network interface function.</p>
 <td><p>LDP teardown time in seconds</p></td>
 <td><p>5</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv4-transport-address</cite></p></td>
-<td><p>LDP transport address</p></td>
+<tr class="row-even"><td><p><cite>ipv6-transport-address</cite></p></td>
+<td><p>LDP transport IPv6 address</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv4-transport-address</cite></p></td>
+<td><p>LDP transport IPv6 address</p></td>
 <td><p><cite>lsr-id</cite></p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>raw-update-file</cite></p></td>
+<tr class="row-even"><td><p><cite>no-ipv4-transport</cite></p></td>
+<td><p>Disable/discard IPv4 LDP hello messages</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>prefer-ipv4-transport</cite></p></td>
+<td><p>Prefer IPv4 transport even if IPv6 is enabled</p></td>
+<td><p><cite>false</cite></p></td>
+</tr>
+<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
 <td><p>LDP RAW update file</p></td>
 <td></td>
 </tr>
@@ -191,6 +203,9 @@ send keepalive messages at an interval calculated by using the
 effective keepalive time divided by 3. Assuming an effective
 keepalive time of 15 seconds results in a keepalive interval
 of 5 seconds.</p>
+<p>Setting a valid <cite>ipv6-transport-address</cite> enables LDP IPv6
+hello and transport. According to RFC7552, IPv6 is preferred
+over IPv4 which can be changed with <cite>prefer-ipv4-transport</cite>.</p>
 </section>
 <section id="limitations">
 <h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline"></a></h2>
@@ -199,8 +214,6 @@ not supported:</p>
 <ul class="simple">
 <li><p>Targeted LDP</p></li>
 <li><p>LDP TCP authentication</p></li>
-<li><p>LDP sessions between IPv6 addresses</p></li>
-<li><p>Learn IPv6 label mappings</p></li>
 <li><p>Multiple links between LDP instance and DUT (ECMP)</p></li>
 </ul>
 </section>
@@ -269,10 +282,10 @@ a single LDP instance and the device under test (ECMP).</p>
 <p>Traffic streams send from network interface functions (downstream)
 can be configured to dynamically resolve the outer MPLS
 label using the learned label mappings.</p>
-<p>The traffic stream configuration option <cite>ldp-ipv4-lookup-address</cite>
-specifies the lookup IPv4 address. This means that traffic
-will not start until this address is found in the corresponding
-label database of the sending network interface function.</p>
+<p>The traffic stream configuration options <cite>ldp-ipv4-lookup-address</cite>
+and <cite>ldp-ipv6-lookup-address</cite> specifies the lookup IPv4 or IPv6 address.
+This means that traffic will not start until this address is found in the
+corresponding label database of the sending network interface function.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
@@ -316,8 +329,9 @@ label database of the sending network interface function.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>The <cite>ldp-ipv4-lookup-address</cite> must exactly match the prefix address
-as shown in the LDP database.</p>
+<p>The <cite>ldp-ipv4-lookup-address</cite> and <cite>ldp-ipv6-lookup-address</cite> are mutually exclusive
+and must exactly match the prefix address as shown in the LDP database. This means
+that if the prefix is <cite>10.0.0.0/24</cite>, the lookup address should be <cite>10.0.0.0</cite>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>There is currently no longest prefix match supported,
@@ -373,12 +387,9 @@ memory and used by multiple sessions.</p>
 <p>The LDP RAW update generator is a simple tool to generate LDP RAW update
 streams for use with the BNG Blaster.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ ldpupdate --help
-usage: ldpupdate [-h] -l ADDRESS [-i N] -p PREFIX [-P N] [-m LABEL] [-M N]
-                [-f FILE] [--append] [--pcap FILE]
-                [--log-level {warning,info,debug}]
+usage: ldpupdate [-h] -l ADDRESS [-i N] [-w] [-a ADDRESS] [-A N] [-p PREFIX] [-P N] [-m LABEL] [-M N] [-f FILE] [--append] [--pcap FILE] [--log-level {warning,info,debug}]
 
-The LDP RAW update generator is a simple tool to generate LDP RAW update
-streams for use with the BNG Blaster.
+The LDP RAW update generator is a simple tool to generate LDP RAW update streams for use with the BNG Blaster.
 
 optional arguments:
 -h, --help            show this help message and exit

@@ -1177,35 +1177,39 @@ is allowed with LDRA enabled only.</p>
 <td><p>Define the number of channel changes before starting the view duration</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>view-duration</cite></p></td>
+<tr class="row-even"><td><p><cite>zapping-wait</cite></p></td>
+<td><p>Wait for multicast traffic before zapping to the next channel</p></td>
+<td><p>false</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>view-duration</cite></p></td>
 <td><p>Define the view duration in seconds</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>send-multicast-traffic</cite></p></td>
+<tr class="row-even"><td><p><cite>send-multicast-traffic</cite></p></td>
 <td><p>Generate multicast traffic</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>multicast-traffic-autostart</cite></p></td>
+<tr class="row-odd"><td><p><cite>multicast-traffic-autostart</cite></p></td>
 <td><p>Automatically start multicast traffic</p></td>
 <td><p>true</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>multicast-traffic-length</cite></p></td>
+<tr class="row-even"><td><p><cite>multicast-traffic-length</cite></p></td>
 <td><p>Multicast traffic IP length</p></td>
 <td><p>76</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>multicast-traffic-tos</cite></p></td>
+<tr class="row-odd"><td><p><cite>multicast-traffic-tos</cite></p></td>
 <td><p>Multicast traffic TOS priority</p></td>
 <td><p>0</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>multicast-traffic-pps</cite></p></td>
+<tr class="row-even"><td><p><cite>multicast-traffic-pps</cite></p></td>
 <td><p>Multicast traffic PPS per group</p></td>
 <td><p>1000</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
+<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
 <td><p>Multicast traffic source interface</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>max-join-delay</cite></p></td>
+<tr class="row-even"><td><p><cite>max-join-delay</cite></p></td>
 <td><p>Maximum join delay in milliseconds</p></td>
 <td><p>0 (disabled)</p></td>
 </tr>
@@ -1486,6 +1490,10 @@ live rate statistics are not required.</p>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>ldp-ipv4-lookup-address</cite></p></td>
+<td><p>Dynamically resolve outer label</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ldp-ipv6-lookup-address</cite></p></td>
 <td><p>Dynamically resolve outer label</p></td>
 <td></td>
 </tr>
@@ -1896,6 +1904,10 @@ access-line or interface section has priority over those defined here.</p>
 <td><p>ISIS teardown time in seconds</p></td>
 <td><p>5</p></td>
 </tr>
+<tr class="row-even"><td><p><cite>external-auto-refresh</cite></p></td>
+<td><p>Automatically refresh external LSP from MRT files</p></td>
+<td><p>false</p></td>
+</tr>
 </tbody>
 </table>
 <section id="isis-external">
@@ -2064,11 +2076,23 @@ access-line or interface section has priority over those defined here.</p>
 <td><p>LDP teardown time in seconds</p></td>
 <td><p>5</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv4-transport-address</cite></p></td>
-<td><p>LDP transport address</p></td>
+<tr class="row-even"><td><p><cite>ipv6-transport-address</cite></p></td>
+<td><p>LDP transport IPv6 address</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv4-transport-address</cite></p></td>
+<td><p>LDP transport IPv6 address</p></td>
 <td><p><cite>lsr-id</cite></p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>raw-update-file</cite></p></td>
+<tr class="row-even"><td><p><cite>no-ipv4-transport</cite></p></td>
+<td><p>Disable/discard IPv4 LDP hello messages</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>prefer-ipv4-transport</cite></p></td>
+<td><p>Prefer IPv4 transport even if IPv6 is enabled</p></td>
+<td><p><cite>false</cite></p></td>
+</tr>
+<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
 <td><p>LDP RAW update file</p></td>
 <td></td>
 </tr>
@@ -2085,6 +2109,9 @@ send keepalive messages at an interval calculated by using the
 effective keepalive time divided by 3. Assuming an effective
 keepalive time of 15 seconds results in a keepalive interval
 of 5 seconds.</p>
+<p>Setting a valid <cite>ipv6-transport-address</cite> enables LDP IPv6
+hello and transport. According to RFC7552, IPv6 is preferred
+over IPv4 which can be changed with <cite>prefer-ipv4-transport</cite>.</p>
 </section>
 </section>
 

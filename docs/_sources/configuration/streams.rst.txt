@@ -103,6 +103,9 @@
    * - `ldp-ipv4-lookup-address`
      - Dynamically resolve outer label 
      - 
+   * - `ldp-ipv6-lookup-address`
+     - Dynamically resolve outer label 
+     - 
 
 For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4 
 and inner IPv4 header.
