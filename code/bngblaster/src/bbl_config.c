@@ -2540,7 +2540,7 @@ json_parse_config(json_t *root)
     if(json_is_object(section)) {
 
         const char *schema[] = {
-            "enable", "ia-na", "timeout",
+            "enable", "ldra", "ia-na", "timeout",
             "ia-pd", "rapid-commit",
             "retry", "access-line"
         };
