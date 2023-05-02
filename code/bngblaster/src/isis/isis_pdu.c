@@ -231,17 +231,19 @@ isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
 bool
 isis_pdu_validate_checksum(isis_pdu_s *pdu)
 {
-    uint16_t checksum;
-    uint16_t checksum_orig;
+    uint16_t checksum = 0;
+    uint16_t checksum_orig = 0;
 
-    switch (pdu->pdu_type) {
+    switch(pdu->pdu_type) {
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
             checksum_orig = *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM);
-            checksum = isis_checksum_fletcher16(
-                pdu->pdu+ISIS_OFFSET_LSP_ID, 
-                pdu->pdu_len-ISIS_OFFSET_LSP_ID, 
-                ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID);
+            if(checksum_orig > 0) {
+                checksum = isis_checksum_fletcher16(
+                    pdu->pdu+ISIS_OFFSET_LSP_ID, 
+                    pdu->pdu_len-ISIS_OFFSET_LSP_ID, 
+                    ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID);
+            }
             break;
         default:
             return true;

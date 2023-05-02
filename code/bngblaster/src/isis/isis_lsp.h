@@ -25,10 +25,13 @@ void
 isis_lsp_retry_job(timer_s *timer);
 
 void
+isis_lsp_refresh(isis_lsp_s *lsp);
+
+void
 isis_lsp_refresh_job(timer_s *timer);
 
 void
-isis_lsp_lifetime_job(timer_s *timer);
+isis_lsp_lifetime(isis_lsp_s *lsp);
 
 void
 isis_lsp_sx_job(timer_s *timer);

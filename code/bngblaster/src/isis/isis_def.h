@@ -63,6 +63,7 @@
 #define ISIS_DEFAULT_HELLO_INTERVAL     10
 #define ISIS_DEFAULT_CSNP_INTERVAL      30
 #define ISIS_DEFAULT_HOLD_TIME          30
+#define ISIS_DEFAULT_LSP_LIFETIME_MIN   330
 #define ISIS_DEFAULT_LSP_LIFETIME       65535
 #define ISIS_DEFAULT_LSP_RETRY_IVL      5
 #define ISIS_DEFAULT_LSP_REFRESH_IVL    300
@@ -70,7 +71,6 @@
 #define ISIS_DEFAULT_LSP_WINDOWS_SIZE   1
 
 #define ISIS_DEFAULT_TEARDOWN_TIME      5
-#define ISIS_DEFAULT_PURGE_LIFETIME     0
 
 #define ISIS_LSP_GC_INTERVAL            30
 
@@ -364,6 +364,7 @@ typedef struct isis_lsp_ {
 
     uint32_t refcount;
     bool expired;
+    bool deleted;
 
     uint32_t seq;           /* Sequence number */
     uint16_t lifetime;      /* Remaining lifetime */

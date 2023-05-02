@@ -410,12 +410,12 @@ bbl_access_igmp_initial_join(timer_s *timer)
             session->zapping_count = rand() % g_ctx->config.igmp_zap_count;
         }
 
-        /* Adding 1 nanosecond to enforce a dedicated timer bucket for zapping. */
-        timer_add_periodic(&g_ctx->timer_root, &session->timer_zapping, "IGMP Zapping", g_ctx->config.igmp_zap_interval, 1, session, &bbl_access_igmp_zapping);
+        /* Adding 2 nanoseconds to enforce a dedicated timer bucket for zapping. */
+        timer_add_periodic(&g_ctx->timer_root, &session->timer_zapping, "IGMP Zapping", g_ctx->config.igmp_zap_interval, 2, session, &bbl_access_igmp_zapping);
         LOG(IGMP, "IGMP (ID: %u) ZAPPING start zapping with interval %u\n",
             session->session_id, g_ctx->config.igmp_zap_interval);
 
-        timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.igmp_zap_interval, 1);
+        timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.igmp_zap_interval, 2);
     }
 }
 
