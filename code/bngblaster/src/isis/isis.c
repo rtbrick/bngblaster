@@ -76,7 +76,7 @@ isis_init() {
         }
 
         if(config->external_mrt_file) {
-            if(!isis_mrt_load(instance, config->external_mrt_file)) {
+            if(!isis_mrt_load(instance, config->external_mrt_file, true)) {
                 LOG(ISIS, "Failed to load MRT file %s\n", config->external_mrt_file);
                 return false;
             }

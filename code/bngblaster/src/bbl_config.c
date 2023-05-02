@@ -1315,7 +1315,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     json_t *sub, *con, *c, *value = NULL;
     const char *s = NULL;
     int i, size;
-    
+    double number;
+
     isis_external_connection_s *connection = NULL;
 
     const char *schema[] = {
@@ -1447,7 +1448,12 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 
     value = json_object_get(isis, "hello-interval");
     if(json_is_number(value)) {
-        isis_config->hello_interval = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->hello-interval (1 - 65535)\n");
+            return false;
+        }
+        isis_config->hello_interval = number;
     } else {
         isis_config->hello_interval = ISIS_DEFAULT_HELLO_INTERVAL;
     }
@@ -1459,49 +1465,84 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 
     value = json_object_get(isis, "hold-time");
     if(json_is_number(value)) {
-        isis_config->hold_time = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->hold-time (1 - 65535)\n");
+            return false;
+        }
+        isis_config->hold_time = number;
     } else {
         isis_config->hold_time = ISIS_DEFAULT_HOLD_TIME;
     }
 
     value = json_object_get(isis, "lsp-lifetime");
     if(json_is_number(value)) {
-        isis_config->lsp_lifetime = json_number_value(value);
+        number = json_number_value(value);
+        if(number < ISIS_DEFAULT_LSP_LIFETIME_MIN || number > ISIS_DEFAULT_LSP_LIFETIME) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-lifetime (330 - 65535)\n");
+            return false;
+        }
+        isis_config->lsp_lifetime = number;
     } else {
         isis_config->lsp_lifetime = ISIS_DEFAULT_LSP_LIFETIME;
     }
 
     value = json_object_get(isis, "lsp-refresh-interval");
     if(json_is_number(value)) {
-        isis_config->lsp_refresh_interval = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-refresh-interval (1 - 65535)\n");
+            return false;
+        }
+        isis_config->lsp_refresh_interval = number;
     } else {
         isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
     }
 
     value = json_object_get(isis, "lsp-retry-interval");
     if(json_is_number(value)) {
-        isis_config->lsp_retry_interval = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-retry-interval (1 - 65535)\n");
+            return false;
+        }
+        isis_config->lsp_retry_interval = number;
     } else {
         isis_config->lsp_retry_interval = ISIS_DEFAULT_LSP_RETRY_IVL;
     }
 
     value = json_object_get(isis, "lsp-tx-interval");
     if(json_is_number(value)) {
-        isis_config->lsp_tx_interval = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-tx-interval (1 - 65535)\n");
+            return false;
+        }
+        isis_config->lsp_tx_interval = number;
     } else {
         isis_config->lsp_tx_interval = ISIS_DEFAULT_LSP_TX_IVL_MS;
     }
 
     value = json_object_get(isis, "lsp-tx-window-size");
     if(json_is_number(value)) {
-        isis_config->lsp_tx_window_size = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-tx-window-size (1 - 65535)\n");
+            return false;
+        }
+        isis_config->lsp_tx_window_size = number;
     } else {
         isis_config->lsp_tx_window_size = ISIS_DEFAULT_LSP_WINDOWS_SIZE;
     }
 
     value = json_object_get(isis, "csnp-interval");
     if(json_is_number(value)) {
-        isis_config->csnp_interval = json_number_value(value);
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->csnp-interval (1 - 65535)\n");
+            return false;
+        }
+        isis_config->csnp_interval = number;
     } else {
         isis_config->csnp_interval = ISIS_DEFAULT_CSNP_INTERVAL;
     }

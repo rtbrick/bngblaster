@@ -135,11 +135,18 @@ isis_ctrl_database_entries(hb_tree *lsdb)
     database = json_array();
     while(next) {
         lsp = *hb_itor_datum(itor);
+
+        if(lsp->deleted) {
+            /* Ignore deleted LSP. */
+            next = hb_itor_next(itor);
+            continue;
+        }
+
         timespec_sub(&ago, &now, &lsp->timestamp);
-        if(ago.tv_sec < lsp->lifetime) {
-            remaining_lifetime = lsp->lifetime - ago.tv_sec;
-        } else {
+        if(lsp->expired || ago.tv_sec >= lsp->lifetime) {
             remaining_lifetime = 0;
+        } else {
+            remaining_lifetime = lsp->lifetime - ago.tv_sec;
         }
 
         if(lsp->source.adjacency) {
@@ -253,7 +260,7 @@ isis_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *
         return bbl_ctrl_status(fd, "error", 404, "ISIS instance not found");
     }
 
-    if(!isis_mrt_load(instance, file_path)) {
+    if(!isis_mrt_load(instance, file_path, false)) {
         return bbl_ctrl_status(fd, "error", 500, "failed to load ISIS MRT file");
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);

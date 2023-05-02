@@ -207,13 +207,16 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
         }
     }
 
-    if(adjacency->state != new_state && new_state == ISIS_P2P_ADJACENCY_STATE_UP) {
-        for(int i=0; i<ISIS_LEVELS; i++) {
-            if(interface->isis_adjacency[i]) {
-                isis_adjacency_up(interface->isis_adjacency[i]);
-                isis_lsp_self_update(adjacency->instance, i+1);
+    if(adjacency->state != new_state) {
+        interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
+        if(new_state == ISIS_P2P_ADJACENCY_STATE_UP) {
+            for(int i=0; i<ISIS_LEVELS; i++) {
+                if(interface->isis_adjacency[i]) {
+                    isis_adjacency_up(interface->isis_adjacency[i]);
+                    isis_lsp_self_update(adjacency->instance, i+1);
+                }
             }
         }
+        adjacency->state = new_state;
     }
-    adjacency->state = new_state;
 }

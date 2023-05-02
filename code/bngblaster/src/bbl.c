@@ -221,6 +221,7 @@ bbl_smear_job(timer_s *timer)
     UNUSED(timer);
     /* LCP Keepalive Interval */
     if(g_ctx->config.lcp_keepalive_interval) {
+        /* Adding 1 nanoseconds to enforce a dedicated timer bucket. */
         timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 1);
     }
 }
