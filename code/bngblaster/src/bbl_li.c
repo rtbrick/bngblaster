@@ -154,7 +154,7 @@ bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
         if(li_flow) {
-            flow = json_pack("{ss si ss si ss ss ss si si si si si si si si si si si si}",
+            flow = json_pack("{ss si ss si ss ss ss si sI sI sI sI sI sI sI sI sI sI sI}",
                                 "source-address", format_ipv4_address(&li_flow->src_ipv4),
                                 "source-port", li_flow->src_port,
                                 "destination-address", format_ipv4_address(&li_flow->dst_ipv4),

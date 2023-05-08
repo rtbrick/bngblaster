@@ -2113,7 +2113,7 @@ bbl_stream_summary_json()
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         stream = (bbl_stream_s*)*dict_itor_datum(itor);
         if(stream) {
-            jobj = json_pack("{si ss* ss ss ss si si si si si }",
+            jobj = json_pack("{si ss* ss ss ss sI sI sI sI sI }",
                 "flow-id", stream->flow_id,
                 "name", stream->config->name,
                 "type", stream_type_string(stream),
@@ -2160,7 +2160,7 @@ bbl_stream_json(bbl_stream_s *stream)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{ss* ss ss ss ss* ss* ss* sb si si si si si si si si si si si si si si si si si si si si si sf sf sf}",
+        root = json_pack("{ss* ss ss ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf}",
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
@@ -2215,7 +2215,7 @@ bbl_stream_json(bbl_stream_s *stream)
             json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
         }
     } else {
-        root = json_pack("{ss* ss ss ss ss* si si si si si sf}",
+        root = json_pack("{ss* ss ss ss ss* sI sI sI sI sI sf}",
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
@@ -2332,7 +2332,7 @@ bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribu
             json_array_append(json_streams, json_stream);
             stream = stream->session_next;
         }
-        root = json_pack("{ss si s{si si si si si si si si si sf sf so*}}",
+        root = json_pack("{ss si s{si sI sI sI sI sI sI sI sI sf sf so*}}",
                          "status", "ok",
                          "code", 200,
                          "session-streams",

@@ -1229,7 +1229,7 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
         }
     }
 
-    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss si si si si}",
+    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss sI sI sI sI}",
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
@@ -1501,7 +1501,7 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
     while(l2tp_server) {
         CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
 
-            tunnel = json_pack("{ss ss ss si si ss ss ss ss si si si si si si si}",
+            tunnel = json_pack("{ss ss ss si si ss ss ss ss si si si si si sI sI}",
                                 "state", l2tp_tunnel_state_string(l2tp_tunnel->state),
                                 "server-name", l2tp_server->host_name,
                                 "server-address", format_ipv4_address(&l2tp_server->ip),

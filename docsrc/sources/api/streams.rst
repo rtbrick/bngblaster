@@ -13,6 +13,10 @@
      - Display stream/flow information
      - 
      - `flow-id`
+   * - `stream-summary`
+     - Display stream/flow summary information
+     - 
+     - 
    * - `stream-traffic-start`
      - Enable/start traffic streams
      - 

@@ -369,7 +369,7 @@ bbl_igmp_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__(
                         json_array_append(sources, json_string(format_ipv4_address(&group->source[i2])));
                     }
                 }
-                record = json_pack("{ss so si si}",
+                record = json_pack("{ss so sI sI}",
                                    "group", format_ipv4_address(&group->group),
                                    "sources", sources,
                                    "packets", group->packets,

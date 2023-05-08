@@ -302,7 +302,7 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
             io = io->next;
         }
 
-        jobj = json_pack("{ss si ss* ss* si si si si si }",
+        jobj = json_pack("{ss si ss* ss* si sI sI sI sI }",
             "name", interface->name,
             "ifindex", interface->ifindex,
             "type", interface_type_string(interface->type),

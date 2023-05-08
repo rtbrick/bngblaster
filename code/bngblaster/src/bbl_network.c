@@ -486,7 +486,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
 static json_t *
 bbl_network_interface_json(bbl_network_interface_s *interface)
 {
-    return json_pack("{ss si ss si si si si si si si si si si si si si si si si si si si si si si si si si si si si si si}",
+    return json_pack("{ss si ss sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI}",
                      "name", interface->name,
                      "ifindex", interface->ifindex,
                      "type", "Network",

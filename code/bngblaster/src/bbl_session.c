@@ -1181,7 +1181,7 @@ bbl_session_json(bbl_session_s *session)
         }
     }
     if(session->a10nsp_session) {
-        a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* si si}",
+        a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* sI sI}",
             "interface", session->a10nsp_session->a10nsp_interface->name,
             "s-vlan", session->a10nsp_session->s_vlan,
             "qinq-send", session->a10nsp_session->a10nsp_interface->qinq,
@@ -1197,7 +1197,7 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si so* so*}",
+        root = json_pack("{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1245,7 +1245,7 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* si si si so* so*}",
+        root = json_pack("{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
