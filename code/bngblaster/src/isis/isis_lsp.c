@@ -211,7 +211,6 @@ void
 isis_lsp_purge_job(timer_s *timer)
 {
     isis_lsp_s *lsp = timer->data;
-    lsp->expired = true;
     lsp->deleted = true;
 }
 
@@ -219,13 +218,19 @@ void
 isis_lsp_lifetime_job(timer_s *timer)
 {
     isis_lsp_s *lsp = timer->data;
-    lsp->expired = true;
 
     LOG(ISIS, "ISIS %s-LSP %s (source %s seq %u) lifetime expired (%us)\n", 
         isis_level_string(lsp->level), 
         isis_lsp_id_to_str(&lsp->id),
         isis_source_string(lsp->source.type),
         lsp->seq, lsp->lifetime);
+
+    lsp->expired = true;
+    timer_add(&g_ctx->timer_root, 
+              &lsp->timer_lifetime, 
+              "ISIS PURGE", 30, 0, lsp,
+              &isis_lsp_purge_job);
+    timer_no_smear(lsp->timer_lifetime);
 }
 
 void
@@ -238,9 +243,10 @@ isis_lsp_lifetime(isis_lsp_s *lsp)
                   "ISIS LIFETIME", lsp->lifetime, 0, lsp,
                   &isis_lsp_lifetime_job);
     } else {
+        lsp->expired = true;
         timer_add(&g_ctx->timer_root, 
                   &lsp->timer_lifetime, 
-                  "ISIS PURGE", 60, 0, lsp,
+                  "ISIS PURGE", 30, 0, lsp,
                   &isis_lsp_purge_job);
     }
     timer_no_smear(lsp->timer_lifetime);
@@ -734,7 +740,6 @@ isis_lsp_purge_external(isis_instance_s *instance, uint8_t level)
             lsp->timestamp.tv_nsec = now.tv_nsec;
 
             lsp->lifetime = 0;
-            lsp->expired = true;
             isis_lsp_lifetime(lsp);
 
             /* Build PDU */

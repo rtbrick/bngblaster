@@ -112,15 +112,10 @@ isis_csnp_job(timer_s *timer)
         }
         tlv->len+=sizeof(isis_lsp_entry_s);
         entry = (isis_lsp_entry_s *)PDU_CURSOR(&pdu);
+        entry->lifetime = htobe16(remaining_lifetime);
         entry->lsp_id = htobe64(lsp->id);
         entry->seq = htobe32(lsp->seq);
-        if(remaining_lifetime) {
-            entry->lifetime = htobe16(remaining_lifetime);
-            entry->checksum = *(uint16_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
-        } else {
-            entry->lifetime = 0;
-            entry->checksum = 0;
-        }
+        entry->checksum = *(uint16_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
         PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
 
