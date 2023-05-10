@@ -622,9 +622,9 @@ bbl_session_clear(bbl_session_s *session)
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         switch(session->session_state) {
             case BBL_IDLE:
+            case BBL_PPPOE_INIT:
                 bbl_session_update_state(session, BBL_TERMINATED);
                 break;
-            case BBL_PPPOE_INIT:
             case BBL_PPPOE_REQUEST:
             case BBL_PPP_LINK:
                 bbl_session_update_state(session, BBL_TERMINATING);
