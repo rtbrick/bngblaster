@@ -47,6 +47,7 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* pull in pthread_setname_np() on Linux */
 #endif
+
 #include "lwip/debug.h"
 
 #include <string.h>

@@ -26,6 +26,8 @@ if(NOT DEFINED WPDPACK_DIR)
 endif()
 find_library(WPCAP  wpcap  HINTS ${WPDPACK_DIR}/lib)
 find_library(PACKET packet HINTS ${WPDPACK_DIR}/lib)
+message(STATUS "WPCAP library: ${WPCAP}")
+message(STATUS "PACKET library: ${PACKET}")
 
 add_library(lwipcontribportwindows EXCLUDE_FROM_ALL ${lwipcontribportwindows_SRCS})
 target_include_directories(lwipcontribportwindows PRIVATE ${LWIP_INCLUDE_DIRS} "${WPDPACK_DIR}/include" ${LWIP_MBEDTLS_INCLUDE_DIRS})
