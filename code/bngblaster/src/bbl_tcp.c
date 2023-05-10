@@ -520,7 +520,7 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
     }
     tcp_err(tcpc->pcb, bbl_tcp_error_cb);
 
-    tcpc->af = AF_INET;
+    tcpc->af = AF_INET6;
     tcpc->local_port = tcpc->pcb->local_port;
     tcpc->remote_port = port;
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V6;
