@@ -1403,6 +1403,7 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
     bbl_ipv6_s ipv6 = {0};
     bbl_icmpv6_s icmpv6 = {0};
     uint8_t mac[ETH_ADDR_LEN];
+    ipv6addr_t ipv6_dst;
 
     *len = 0;
 
@@ -1426,12 +1427,16 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ICMPV6_NS) {
         interface->send_requests &= ~BBL_IF_SEND_ICMPV6_NS;
-        ipv6_multicast_mac(interface->gateway6_solicited_node_multicast, mac);
+        memcpy(ipv6_dst, interface->gateway6_solicited_node_multicast, IPV6_ADDR_LEN);
+        ((uint8_t*)ipv6_dst)[13] = ((uint8_t*)interface->gateway6)[13];
+        ((uint8_t*)ipv6_dst)[14] = ((uint8_t*)interface->gateway6)[14];
+        ((uint8_t*)ipv6_dst)[15] = ((uint8_t*)interface->gateway6)[15];
+        ipv6_multicast_mac(ipv6_dst, mac);
         eth.dst = mac;
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
         ipv6.src = interface->ip6.address;
-        ipv6.dst = interface->gateway6_solicited_node_multicast;
+        ipv6.dst = ipv6_dst;
         ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
         ipv6.next = &icmpv6;
         ipv6.ttl = 255;
