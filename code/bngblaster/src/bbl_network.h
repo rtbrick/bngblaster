@@ -47,6 +47,7 @@ typedef struct bbl_network_interface_
 
     struct timer_ *timer_arp;
     struct timer_ *timer_nd;
+    struct timer_ *timer_ra;
     struct timer_ *timer_isis_hello;
 
     uint8_t *mc_packets;

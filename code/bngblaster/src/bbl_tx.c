@@ -1459,7 +1459,7 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
         ipv6.ttl = 255;
         icmpv6.type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
         icmpv6.mac = interface->mac;
-        timer_add(&g_ctx->timer_root, &interface->timer_nd, "RA timer", 
+        timer_add(&g_ctx->timer_root, &interface->timer_ra, "RA timer", 
                   10, 0, interface, &bbl_tx_network_ra_timeout);
         result = encode_ethernet(buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_ISIS_P2P_HELLO) {
