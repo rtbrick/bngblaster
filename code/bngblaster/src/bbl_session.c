@@ -307,6 +307,10 @@ bbl_session_free(bbl_session_s *session)
         free(session->agent_remote_id);
         session->agent_remote_id = NULL;
     }
+    if(session->access_aggregation_circuit_id) {
+        free(session->access_aggregation_circuit_id);
+        session->access_aggregation_circuit_id = NULL;
+    }
     if(session->cfm_ma_name) {
         free(session->cfm_ma_name);
         session->cfm_ma_name = NULL;
@@ -855,6 +859,9 @@ bbl_sessions_init()
 
         /* Update ARI */
         update_strings(&session->agent_remote_id, access_config->agent_remote_id, NULL, NULL);
+
+        /* Update Access-Aggregation-Circuit-ID */
+        update_strings(&session->access_aggregation_circuit_id, access_config->access_aggregation_circuit_id, NULL, NULL);
 
         /* Update CFM */
         if(access_config->cfm_cc) {

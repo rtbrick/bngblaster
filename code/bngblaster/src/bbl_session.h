@@ -105,6 +105,7 @@ typedef struct bbl_session_
     /* Access Line */
     char *agent_circuit_id;
     char *agent_remote_id;
+    char *access_aggregation_circuit_id;
     uint32_t rate_up;
     uint32_t rate_down;
     uint32_t dsl_type;

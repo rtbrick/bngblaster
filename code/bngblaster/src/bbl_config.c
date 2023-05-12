@@ -784,7 +784,9 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "inner-vlan-step", "third-vlan", "ppp-mru",
         "address", "address-iter", "gateway",
         "gateway-iter", "username", "password",
-        "authentication-protocol", "agent-circuit-id", "agent-remote-id",
+        "authentication-protocol", 
+        "agent-circuit-id", "agent-remote-id",
+        "access-aggregation-circuit-id",
         "rate-up", "rate-down", "dsl-type",
         "access-line-profile-id", "ipcp", "dhcp",
         "ipv4", "ip6cp", "dhcpv6",
@@ -1006,6 +1008,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     } else {
         if(g_ctx->config.agent_remote_id) {
             access_config->agent_remote_id = strdup(g_ctx->config.agent_remote_id);
+        }
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "access-aggregation-circuit-id", &s) == 0) {
+        access_config->access_aggregation_circuit_id = strdup(s);
+    } else {
+        if(g_ctx->config.access_aggregation_circuit_id) {
+            access_config->access_aggregation_circuit_id = strdup(g_ctx->config.access_aggregation_circuit_id);
         }
     }
 
@@ -2750,8 +2760,8 @@ json_parse_config(json_t *root)
     if(json_is_object(section)) {
 
         const char *schema[] = {
-           "agent-circuit-id",  "agent-remote-id", "rate-up",
-           "rate-down", "dsl-type"
+           "agent-circuit-id",  "agent-remote-id", "access-aggregation-circuit-id",
+           "rate-up", "rate-down", "dsl-type"
         };
         if(!schema_validate(section, "access-line", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -2763,6 +2773,9 @@ json_parse_config(json_t *root)
         }
         if(json_unpack(section, "{s:s}", "agent-remote-id", &s) == 0) {
             g_ctx->config.agent_remote_id = strdup(s);
+        }
+        if(json_unpack(section, "{s:s}", "access-aggregation-circuit-id", &s) == 0) {
+            g_ctx->config.access_aggregation_circuit_id = strdup(s);
         }
         value = json_object_get(section, "rate-up");
         if(json_is_number(value)) {
