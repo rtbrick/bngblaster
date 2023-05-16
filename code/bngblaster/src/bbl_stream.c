@@ -1239,8 +1239,13 @@ bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len)
             *len = stream->tx_len;
             memcpy(buf, stream->tx_buf, *len);
             stream->token_bucket--;
-            stream->flow_seq++;
             stream->tx_packets++;
+
+            if(stream->flow_seq == 1) {
+                stream->tx_first_epoch = io->timestamp.tv_sec;
+            }
+            stream->flow_seq++;
+
             /* Remove only from TX queue if all tokens are consumed! */
             bbl_stream_tx_qnode_remove(io, stream);
             if(stream->token_bucket) {
@@ -2088,9 +2093,11 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
                 }
             }
             stream->rx_first_seq = bbl->flow_seq;
+            stream->rx_first_epoch = eth->timestamp.tv_sec;
         }
         stream->rx_packets++;
         stream->rx_last_seq = bbl->flow_seq;
+        stream->rx_last_epoch = eth->timestamp.tv_sec;
         bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
         return stream;
     } else {
@@ -2160,7 +2167,7 @@ bbl_stream_json(bbl_stream_s *stream)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{ss* ss ss ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf}",
+        root = json_pack("{ss* ss ss ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI}",
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
@@ -2192,7 +2199,10 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
             "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0,
             "rx-mbps-l2", (double)(stream->rate_packets_rx.avg * stream->rx_len * 8) / 1000000.0,
-            "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0);
+            "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0,
+            "tx-first-epoch", stream->tx_first_epoch,
+            "rx-first-epoch", stream->rx_first_epoch,
+            "rx-last-epoch", stream->rx_last_epoch);
 
         if(stream->config->rx_mpls1) { 
             json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));

@@ -99,6 +99,7 @@ typedef struct bbl_stream_
     uint8_t *tx_buf; /* TX buffer */
     uint16_t tx_len; /* TX length */
     uint64_t tx_interval; /* TX interval in nsec */
+    __time_t tx_first_epoch;
 
     bool threaded;
     bool session_traffic;
@@ -137,6 +138,9 @@ typedef struct bbl_stream_
     uint16_t rx_len;
     uint64_t rx_first_seq;
     uint64_t rx_last_seq;
+
+    __time_t rx_first_epoch;
+    __time_t rx_last_epoch;
 
     uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  rx_outer_vlan_pbit;
