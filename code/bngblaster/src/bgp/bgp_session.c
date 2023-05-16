@@ -112,6 +112,10 @@ bgp_raw_update_stop_cb(void *arg)
         time_diff.tv_sec);
 
     if(session->config->start_traffic) {
+        LOG(BGP, "BGP (%s %s - %s) start traffic streams\n",
+            session->interface->name,
+            format_ipv4_address(&session->ipv4_local_address),
+            format_ipv4_address(&session->ipv4_peer_address));
         enable_disable_traffic(true);
     }
 }
