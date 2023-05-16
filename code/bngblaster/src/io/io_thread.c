@@ -66,6 +66,9 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
+            eth->timestamp.tv_sec = io->timestamp.tv_sec;
+            eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
+
             vlan = io->vlan_tci & BBL_ETH_VLAN_ID_MAX;
             if(eth->vlan_outer != vlan) {
                 /* The outer VLAN is stripped from header */
@@ -77,6 +80,7 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
                     eth->qinq = true;
                 }
             }
+
             if(bbl_rx_thread(io->interface, eth)) {
                 return IO_SUCCESS;
             }
