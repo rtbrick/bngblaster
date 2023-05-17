@@ -14,9 +14,9 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
     FILE *mrt_file;
 
     isis_mrt_hdr_t mrt = {0};
-    isis_pdu_s pdu = {0};
+    bbl_pdu_s pdu = {0};
     uint8_t level;
-    uint8_t pdu_buf[ISIS_MAX_PDU_LEN];
+    uint8_t pdu_buf[ISIS_MAX_PDU_LEN_RX];
 
     isis_lsp_s *lsp = NULL;
     uint64_t lsp_id;
@@ -46,7 +46,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
         if(!(mrt.type == ISIS_MRT_TYPE && 
              mrt.subtype == 0 &&
              mrt.length >= ISIS_HDR_LEN_COMMON &&
-             mrt.length <= ISIS_MAX_PDU_LEN)) {
+             mrt.length <= ISIS_MAX_PDU_LEN_RX)) {
             LOG(ERROR, "Invalid MRT file %s\n", file_path);
             fclose(mrt_file);
             return false;
@@ -61,7 +61,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
             fclose(mrt_file);
             return false;
         }
-        switch(pdu.pdu_type) {
+        switch(pdu.type) {
             case ISIS_PDU_L1_LSP:
                 level = ISIS_LEVEL_1;
                 break;
@@ -116,7 +116,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
         lsp->timestamp.tv_nsec = now.tv_nsec;
 
         PDU_CURSOR_RST(&pdu);
-        memcpy(&lsp->pdu, &pdu, sizeof(isis_pdu_s));
+        memcpy(&lsp->pdu, &pdu, sizeof(bbl_pdu_s));
 
         if(lsp->lifetime > 0 && instance->config->external_auto_refresh) {
             if(level == ISIS_LEVEL_1) {

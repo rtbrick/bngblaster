@@ -277,7 +277,7 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
     int instance_id = 0;
     isis_instance_s *instance = NULL;
 
-    isis_pdu_s pdu = {0};
+    bbl_pdu_s pdu = {0};
 
     const char *pdu_string;
     uint16_t pdu_string_len;

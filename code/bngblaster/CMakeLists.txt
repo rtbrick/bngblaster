@@ -1,4 +1,4 @@
-FILE(GLOB BBL_SOURCES src/*.c src/io/*.c src/isis/*.c src/ldp/*.c src/bgp/*.c)
+FILE(GLOB BBL_SOURCES src/*.c src/io/*.c src/isis/*.c src/ospf/*.c src/ldp/*.c src/bgp/*.c)
 list(SORT BBL_SOURCES)
 
 # Deterministic randomness for symbol name creation

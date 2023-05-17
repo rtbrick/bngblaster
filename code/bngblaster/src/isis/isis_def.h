@@ -83,7 +83,8 @@
 #define ISIS_LSP_OVERLOAD_BIT           0x04
 
 #define ISIS_MAX_PDU_LEN_RX             1497 /* 1500-3 byte LLC */
-#define ISIS_MAX_PDU_LEN                1492
+#define ISIS_MAX_PDU_LEN_TX             1492
+#define ISIS_MAX_PDU_LEN                1497
 
 #define ISIS_MD5_DIGEST_LEN             16
 
@@ -326,22 +327,6 @@ typedef struct isis_instance_ {
     struct isis_instance_ *next; /* pointer to next instance */
 } isis_instance_s;
 
-/*
- * IS-IS PDU context
- */
-typedef struct isis_pdu_ {
-    uint8_t  pdu_type;
-    uint8_t  auth_type;
-    uint8_t  auth_data_len;
-    uint16_t auth_data_offset;
-    uint16_t tlv_offset;
-
-    uint16_t cur; /* current position */
-
-    uint8_t  pdu[ISIS_MAX_PDU_LEN];
-    uint16_t pdu_len;
-} isis_pdu_s;
-
 typedef struct isis_lsp_ {
 
     uint64_t id; /* LSP-ID */
@@ -371,7 +356,8 @@ typedef struct isis_lsp_ {
 
     char *auth_key;
 
-    struct isis_pdu_ pdu;
+    uint8_t pdu_buf[ISIS_MAX_PDU_LEN];
+    bbl_pdu_s pdu;
 } isis_lsp_s;
 
 /* IS-IS LSP flood entry */

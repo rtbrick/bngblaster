@@ -100,7 +100,7 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
      * Blocked ?
      */
     if (res == -1) {
-        switch (errno) {
+        switch(errno) {
             case EAGAIN:
                 return;
             case EPIPE:

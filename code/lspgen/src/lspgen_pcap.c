@@ -28,7 +28,7 @@
 static uint32_t
 calc_pad(uint32_t length)
 {
-    switch (length % 4) {
+    switch(length % 4) {
         case 3:
             return 1;
         case 2:

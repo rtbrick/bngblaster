@@ -27,7 +27,9 @@ isis_csnp_job(timer_s *timer)
 
     int entries = 0;
 
-    isis_pdu_s pdu = {0};
+    bbl_pdu_s pdu = {0};
+    uint8_t   pdu_buf[ISIS_MAX_PDU_LEN];
+
     uint8_t level = adjacency->level;
     uint16_t remaining_lifetime;
 
@@ -42,24 +44,25 @@ isis_csnp_job(timer_s *timer)
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     /* Build PDU */
+    bbl_pdu_init(&pdu, BBL_PDU_ISIS, pdu_buf, sizeof(pdu_buf));
     if(level == ISIS_LEVEL_1) {
-        isis_pdu_init(&pdu, ISIS_PDU_L1_CSNP);
+        isis_pdu_hdr(&pdu, ISIS_PDU_L1_CSNP);
         if(config->level1_auth_csnp) {
             auth = config->level1_auth;
             key = config->level1_key;
         }
     } else {
-        isis_pdu_init(&pdu, ISIS_PDU_L2_CSNP);
+        isis_pdu_hdr(&pdu, ISIS_PDU_L2_CSNP);
         if(config->level2_auth_csnp) {
             auth = config->level2_auth;
             key = config->level2_key;
         }
     }
-    isis_pdu_add_u16(&pdu, 0); /* PDU length */
-    isis_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
-    isis_pdu_add_u8(&pdu, 0x0);
-    isis_pdu_add_u64(&pdu, adjacency->csnp_start);
-    isis_pdu_add_u64(&pdu, UINT64_MAX);
+    bbl_pdu_add_u16(&pdu, 0); /* PDU length */
+    bbl_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
+    bbl_pdu_add_u8(&pdu, 0x0);
+    bbl_pdu_add_u64(&pdu, adjacency->csnp_start);
+    bbl_pdu_add_u64(&pdu, UINT64_MAX);
     /* TLV section */
     isis_pdu_add_tlv_auth(&pdu, auth, key);
 
@@ -95,7 +98,7 @@ isis_csnp_job(timer_s *timer)
 
         if(tlv->len > UINT8_MAX-ISIS_LSP_ENTRY_LEN) {
             /* Open next LSP entry TLV. */
-            if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
+            if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN_TX) {
                 adjacency->csnp_start = lsp->id;
                 break;
             }
@@ -104,7 +107,7 @@ isis_csnp_job(timer_s *timer)
             tlv->len = 0;
             PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
         } else {
-            if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
+            if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN_TX) {
                 /* All entries do not fit into single CSNP. */
                 adjacency->csnp_start = lsp->id;
                 break;
@@ -176,7 +179,7 @@ isis_csnp_job(timer_s *timer)
  * @param level ISIS level
  */
 void
-isis_csnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level)
+isis_csnp_handler_rx(bbl_network_interface_s *interface, bbl_pdu_s *pdu, uint8_t level)
 {
     isis_adjacency_s *adjacency = interface->isis_adjacency[level-1];
     isis_instance_s *instance = NULL;

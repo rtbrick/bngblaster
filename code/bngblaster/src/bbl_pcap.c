@@ -32,7 +32,7 @@ pcapng_open()
      */
     g_ctx->pcap.fd = open(g_ctx->pcap.filename, O_WRONLY | O_CREAT | O_TRUNC | O_NONBLOCK, PCAPNG_PERMS);
     if(g_ctx->pcap.fd == -1) {
-        switch (errno) {
+        switch(errno) {
             default:
                 LOG(ERROR, "failed to open pcap file %s with error %s (%d)\n", 
                     g_ctx->pcap.filename, strerror(errno), errno);
@@ -186,7 +186,7 @@ bbl_pcap_push_le_uint(uint32_t length, uint64_t value)
 static uint32_t
 calc_pad(uint32_t length)
 {
-    switch (length % 4) {
+    switch(length % 4) {
         case 3:
             return 1;
         case 2:

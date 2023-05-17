@@ -226,7 +226,7 @@ lspgen_write_node_config(__attribute__((unused))lsdb_ctx_t *ctx,
     do {
         attr = *dict_itor_datum(itor);
 
-        switch (attr->key.attr_type) {
+        switch(attr->key.attr_type) {
         case ISIS_TLV_AREA:
             if (!area_arr) {
                 area_arr = json_array();

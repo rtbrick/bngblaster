@@ -63,7 +63,7 @@ lspgen_gen_stream_node(__attribute__((unused))lsdb_ctx_t *ctx,
 
     do {
         attr = *dict_itor_datum(itor);
-        switch (attr->key.attr_type) {
+        switch(attr->key.attr_type) {
             case ISIS_TLV_EXTD_IPV4_REACH:
                 lspgen_dump_ipv4_stream(dest_arr, &attr->key.prefix.ipv4_prefix);
                 break;

@@ -168,7 +168,7 @@ bbl_interactive_read_key_job(timer_s *timer)
     UNUSED(timer);
 
     ch = getch();
-    switch (ch) {
+    switch(ch) {
         case KEY_F(1):
             stats_win_postion = 0;
             g_view_selected++;

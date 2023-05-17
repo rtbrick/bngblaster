@@ -1194,7 +1194,7 @@ bbl_access_rx_lcp_conf_reject(bbl_session_s *session, bbl_lcp_s *lcp)
         if(lcp->option[i]) {
             type = lcp->option[i][0];
             len = lcp->option[i][1];
-            switch (type) {
+            switch(type) {
                 case PPP_LCP_OPTION_MRU:
                 case PPP_LCP_OPTION_AUTH:
                 case PPP_LCP_OPTION_MAGIC:
@@ -1788,7 +1788,7 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
            session->session_state != BBL_IDLE) {
             session->stats.packets_rx++;
             session->stats.bytes_rx += eth->length;
-            switch (session->access_type) {
+            switch(session->access_type) {
                 case ACCESS_TYPE_PPPOE:
                     switch(eth->type) {
                         case ETH_TYPE_PPPOE_DISCOVERY:

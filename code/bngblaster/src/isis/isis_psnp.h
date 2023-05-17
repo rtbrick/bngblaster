@@ -13,6 +13,6 @@ void
 isis_psnp_job (timer_s *timer);
 
 void
-isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level);
+isis_psnp_handler_rx(bbl_network_interface_s *interface, bbl_pdu_s *pdu, uint8_t level);
 
 #endif

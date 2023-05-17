@@ -610,7 +610,7 @@ timer_walk(timer_root_s *root)
 #endif
         res = nanosleep(&sleep, &rem);
         if(res == -1) {
-            switch (errno) {
+            switch(errno) {
                 case EINTR: /* Ctrl-C */
                     break;
                 default:

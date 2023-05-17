@@ -65,8 +65,11 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
                       bbl_ethernet_header_s *eth)
 {
     protocol_error_t result;
-    isis_pdu_s pdu = {0};
+
     bbl_isis_s isis = {0};
+
+    bbl_pdu_s pdu = {0};
+    uint8_t   pdu_buf[ISIS_MAX_PDU_LEN];
 
     isis_adjacency_p2p_s *adjacency = interface->isis_adjacency_p2p;
     isis_instance_s      *instance  = adjacency->instance;
@@ -89,13 +92,14 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     }
 
     /* Build PDU */
-    isis_pdu_init(&pdu, ISIS_PDU_P2P_HELLO);
+    bbl_pdu_init(&pdu, BBL_PDU_ISIS, pdu_buf, ISIS_MAX_PDU_LEN);
+    isis_pdu_hdr(&pdu, ISIS_PDU_P2P_HELLO);
     /* PDU header */
-    isis_pdu_add_u8(&pdu, adjacency->level);
-    isis_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
-    isis_pdu_add_u16(&pdu, config->hold_time);
-    isis_pdu_add_u16(&pdu, 0);
-    isis_pdu_add_u8(&pdu, 0x1);
+    bbl_pdu_add_u8(&pdu, adjacency->level);
+    bbl_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
+    bbl_pdu_add_u16(&pdu, config->hold_time);
+    bbl_pdu_add_u16(&pdu, 0);
+    bbl_pdu_add_u8(&pdu, 0x1);
     /* TLV section */
     isis_pdu_add_tlv_auth(&pdu, auth, key);
     isis_pdu_add_tlv_area(&pdu, config->area, config->area_count);
@@ -116,7 +120,7 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     eth->type = ISIS_PROTOCOL_IDENTIFIER;
     eth->next = &isis;
     eth->dst = g_isis_mac_p2p_hello;
-    isis.type = pdu.pdu_type;
+    isis.type = pdu.type;
     isis.pdu = pdu.pdu;
     isis.pdu_len = pdu.pdu_len;
     result = encode_ethernet(buf, len, eth);
@@ -136,7 +140,7 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
  * @param pdu received ISIS PDU
  */
 void
-isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
+isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, bbl_pdu_s *pdu)
 {
     isis_adjacency_p2p_s *adjacency = interface->isis_adjacency_p2p;
     isis_instance_s *instance  = NULL;
@@ -181,7 +185,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
 
     tlv = isis_pdu_first_tlv(pdu);
     while(tlv) {
-        switch (tlv->type) {
+        switch(tlv->type) {
             case ISIS_TLV_P2P_ADJACENCY_STATE:
                 state = tlv->value;
                 break;

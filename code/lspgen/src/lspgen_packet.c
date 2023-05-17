@@ -208,7 +208,7 @@ lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node,
 bool
 lsdb_attr_subtlvs_present(struct lsdb_attr_ *attr)
 {
-    switch (attr->key.attr_type) {
+    switch(attr->key.attr_type) {
         case ISIS_TLV_EXTD_IPV4_REACH:
             if (attr->key.prefix.adv_sid || attr->key.prefix.adv_tag) {
                 return true;
@@ -335,7 +335,7 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
 
     subtlv_present = lsdb_attr_subtlvs_present(attr);
 
-    switch (attr->key.attr_type) {
+    switch(attr->key.attr_type) {
         case ISIS_TLV_AREA:
             attr_len = (attr->key.area.len+7)/8;
             push_be_uint(buf, 1, attr_len); /* Area Length in bytes */

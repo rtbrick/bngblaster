@@ -517,7 +517,7 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     dhcpv6.ia_pd_option = session->dhcpv6_ia_pd_option;
     dhcpv6.ia_pd_option_len = session->dhcpv6_ia_pd_option_len;
     dhcpv6.oro = true;
-    switch (session->dhcpv6_state) {
+    switch(session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
             session->stats.dhcpv6_tx_solicit++;

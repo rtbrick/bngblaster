@@ -735,7 +735,7 @@ lspgen_sig_handler (int signum)
 {
     LOG(NORMAL, "Received %s signal\n", strsignal(signum));
 
-    switch (signum) {
+    switch(signum) {
         case SIGINT:
             lspgen_quit_loop();
             break;
@@ -768,7 +768,7 @@ main(int argc, char *argv[])
     idx = 0;
     while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:q:Qr:s:S:t:T:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
-        switch (opt) {
+        switch(opt) {
             case 'v':
                 lspgen_print_version();
                 exit(0);

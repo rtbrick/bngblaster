@@ -680,7 +680,7 @@ lsdb_reset_attr_template(lsdb_attr_t *attr_template)
 bool
 lsdb_is_ipv4_attr(lsdb_attr_t *attr)
 {
-    switch (attr->key.attr_type) {
+    switch(attr->key.attr_type) {
         case ISIS_TLV_IPV4_ADDR:
         case ISIS_TLV_EXTD_IPV4_REACH:
             return true;
@@ -698,7 +698,7 @@ lsdb_is_ipv4_attr(lsdb_attr_t *attr)
 bool
 lsdb_is_ipv6_attr(lsdb_attr_t *attr)
 {
-    switch (attr->key.attr_type) {
+    switch(attr->key.attr_type) {
         case ISIS_TLV_IPV6_ADDR:
         case ISIS_TLV_EXTD_IPV6_REACH:
             return true;

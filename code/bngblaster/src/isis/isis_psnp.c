@@ -24,7 +24,9 @@ isis_psnp_job (timer_s *timer)
     uint64_t lsp_id_zero = 0;
     int entries = 0;
 
-    isis_pdu_s pdu = {0};
+    bbl_pdu_s pdu = {0};
+    uint8_t   pdu_buf[ISIS_MAX_PDU_LEN];
+
     uint8_t level = adjacency->level;
     uint16_t remaining_lifetime;
 
@@ -41,22 +43,23 @@ isis_psnp_job (timer_s *timer)
     adjacency->timer_psnp_started = false;
     
     /* Build PDU */
+    bbl_pdu_init(&pdu, BBL_PDU_ISIS, pdu_buf, ISIS_MAX_PDU_LEN);
     if(level == ISIS_LEVEL_1) {
-        isis_pdu_init(&pdu, ISIS_PDU_L1_PSNP);
+        isis_pdu_hdr(&pdu, ISIS_PDU_L1_PSNP);
         if(config->level1_auth_psnp) {
             auth = config->level1_auth;
             key = config->level1_key;
         }
     } else {
-        isis_pdu_init(&pdu, ISIS_PDU_L2_PSNP);
+        isis_pdu_hdr(&pdu, ISIS_PDU_L2_PSNP);
         if(config->level2_auth_psnp) {
             auth = config->level2_auth;
             key = config->level2_key;
         }
     }
-    isis_pdu_add_u16(&pdu, 0); /* PDU length */
-    isis_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
-    isis_pdu_add_u8(&pdu, 0x0);
+    bbl_pdu_add_u16(&pdu, 0); /* PDU length */
+    bbl_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
+    bbl_pdu_add_u8(&pdu, 0x0);
     /* TLV section */
     isis_pdu_add_tlv_auth(&pdu, auth, key);
 
@@ -154,7 +157,7 @@ isis_psnp_job (timer_s *timer)
  * @param level ISIS level
  */
 void
-isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level) {
+isis_psnp_handler_rx(bbl_network_interface_s *interface, bbl_pdu_s *pdu, uint8_t level) {
 
     isis_adjacency_s *adjacency = interface->isis_adjacency[level-1];
     isis_instance_s  *instance  = NULL;

@@ -71,7 +71,7 @@ bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp)
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint16_t*)buf = htobe16(avp->type);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    switch (avp->value_type) {
+    switch(avp->value_type) {
         case L2TP_AVP_VALUE_UINT64:
             *(uint64_t*)buf = htobe64(*(uint64_t*)avp->value);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
@@ -735,7 +735,7 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
     avp.value = (void*)&v16;
     bbl_l2tp_avp_encode(&buf, len, &avp);
 
-    switch (l2tp_type) {
+    switch(l2tp_type) {
         case L2TP_MESSAGE_SCCRP:
             /* Protocol Version */
             v16 = 256;

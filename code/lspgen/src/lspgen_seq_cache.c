@@ -154,7 +154,7 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
 
     LOG(NORMAL, "Reading sequence cache file %s\n", seq_cache_filename);
 
-    switch (ctx->topology_id.level) {
+    switch(ctx->topology_id.level) {
     case 1:
 	level = json_object_get(root_obj, "level1");
 	if (level && json_is_array(level)) {

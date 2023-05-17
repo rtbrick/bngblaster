@@ -10,18 +10,39 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
-protocol_error_t
-isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
+void
+isis_pdu_hdr(bbl_pdu_s *pdu, uint8_t type)
 {
+    assert(pdu->pdu);
+    assert(pdu->pdu_buf_len);
+
+    pdu->type = type;
+
+    /* Build ISIS common header. */
+    *pdu->pdu = ISIS_PROTOCOL_IDENTIFIER;
+    *(pdu->pdu+2) = 0x01;
+    *(pdu->pdu+4) = type;
+    *(pdu->pdu+5) = 0x01;
+
+    pdu->cur = ISIS_HDR_LEN_COMMON;
+    pdu->pdu_len = ISIS_HDR_LEN_COMMON;
+}
+
+protocol_error_t
+isis_pdu_load(bbl_pdu_s *pdu, uint8_t *buf, uint16_t len)
+{
+    assert(pdu->pdu);
+    assert(pdu->pdu_buf_len);
+
     uint16_t pdu_len;
     uint8_t  hdr_len;
     uint8_t  system_id_len;
     isis_tlv_s *tlv;
 
-    if(len < ISIS_HDR_LEN_COMMON || len > ISIS_MAX_PDU_LEN_RX) {
+    if(len < ISIS_HDR_LEN_COMMON || len > ISIS_MAX_PDU_LEN) {
         return DECODE_ERROR;
     }
-    memset(pdu, 0x0, sizeof(isis_pdu_s));
+    bbl_pdu_reset(pdu);
     memcpy(pdu->pdu, buf, len);
     pdu->pdu_len = len;
     
@@ -30,16 +51,16 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
     if(hdr_len > len) {
         return DECODE_ERROR;
     }
-    pdu->tlv_offset = hdr_len;
+    pdu->data_offset = hdr_len;
     system_id_len = *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_SYSTEM_ID_LEN);
     if(!(system_id_len == 0 || system_id_len == ISIS_SYSTEM_ID_LEN)) {
         /* We do not support system-id lengths != 6 */
         return DECODE_ERROR;
     }
-    pdu->pdu_type = *(buf+4) & 0x1f;
+    pdu->type = *(buf+4) & 0x1f;
     
     /* Decode PDU type specific headers */
-    switch (pdu->pdu_type) {
+    switch(pdu->type) {
         case ISIS_PDU_P2P_HELLO:
             if(hdr_len != ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO) {
                 return DECODE_ERROR;
@@ -103,11 +124,11 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
 }
 
 isis_tlv_s *
-isis_pdu_next_tlv(isis_pdu_s *pdu)
+isis_pdu_next_tlv(bbl_pdu_s *pdu)
 {
     isis_tlv_s *tlv;
-    if(pdu->cur < pdu->tlv_offset) {
-        pdu->cur = pdu->tlv_offset;
+    if(pdu->cur < pdu->data_offset) {
+        pdu->cur = pdu->data_offset;
     }
     if(pdu->cur + sizeof(isis_tlv_s) > pdu->pdu_len) {
         return NULL;
@@ -118,37 +139,37 @@ isis_pdu_next_tlv(isis_pdu_s *pdu)
 }
 
 isis_tlv_s *
-isis_pdu_first_tlv(isis_pdu_s *pdu)
+isis_pdu_first_tlv(bbl_pdu_s *pdu)
 {
-    pdu->cur = pdu->tlv_offset;
+    pdu->cur = pdu->data_offset;
     return isis_pdu_next_tlv(pdu);
 }
 
 void
-isis_pdu_update_len(isis_pdu_s *pdu)
+isis_pdu_update_len(bbl_pdu_s *pdu)
 {
-    switch (pdu->pdu_type) {
+    switch(pdu->type) {
         case ISIS_PDU_P2P_HELLO:
-            pdu->tlv_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO;
+            pdu->data_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO;
             *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO;
             *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEN) = htobe16(pdu->pdu_len);
             break;
         case ISIS_PDU_L1_CSNP:
         case ISIS_PDU_L2_CSNP:
-            pdu->tlv_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_CSNP;
-            *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = pdu->tlv_offset;
+            pdu->data_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_CSNP;
+            *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = pdu->data_offset;
             *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LEN) = htobe16(pdu->pdu_len);
             break;
         case ISIS_PDU_L1_PSNP:
         case ISIS_PDU_L2_PSNP:
-            pdu->tlv_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_PSNP;
-            *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = pdu->tlv_offset;
+            pdu->data_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_PSNP;
+            *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = pdu->data_offset;
             *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_PSNP_LEN) = htobe16(pdu->pdu_len);
             break;
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
-            pdu->tlv_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_LSP;
-            *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = pdu->tlv_offset;
+            pdu->data_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_LSP;
+            *PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = pdu->data_offset;
             *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LEN) = htobe16(pdu->pdu_len);
             break;
         default:
@@ -157,9 +178,9 @@ isis_pdu_update_len(isis_pdu_s *pdu)
 }
 
 void
-isis_pdu_update_lifetime(isis_pdu_s *pdu, uint16_t lifetime)
+isis_pdu_update_lifetime(bbl_pdu_s *pdu, uint16_t lifetime)
 {
-    switch (pdu->pdu_type) {
+    switch(pdu->type) {
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
             *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = htobe16(lifetime);
@@ -170,9 +191,9 @@ isis_pdu_update_lifetime(isis_pdu_s *pdu, uint16_t lifetime)
 }
 
 void
-isis_pdu_update_checksum(isis_pdu_s *pdu)
+isis_pdu_update_checksum(bbl_pdu_s *pdu)
 {
-    switch (pdu->pdu_type) {
+    switch(pdu->type) {
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
             isis_checksum_fletcher16(
@@ -186,7 +207,7 @@ isis_pdu_update_checksum(isis_pdu_s *pdu)
 }
 
 void
-isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
+isis_pdu_update_auth(bbl_pdu_s *pdu, char *key)
 {
     uint16_t checksum;
     uint16_t lifetime;
@@ -197,7 +218,7 @@ isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
         return;
     }
 
-    if(pdu->pdu_type == ISIS_PDU_L1_LSP || pdu->pdu_type == ISIS_PDU_L2_LSP) {
+    if(pdu->type == ISIS_PDU_L1_LSP || pdu->type == ISIS_PDU_L2_LSP) {
         /* Set checksum and lifetime to zero. */
         lifetime = *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME);
         *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = 0;
@@ -221,7 +242,7 @@ isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
             break;
     }
 
-    if(pdu->pdu_type == ISIS_PDU_L1_LSP || pdu->pdu_type == ISIS_PDU_L2_LSP) {
+    if(pdu->type == ISIS_PDU_L1_LSP || pdu->type == ISIS_PDU_L2_LSP) {
         /* Restore checksum and lifetime. */
         *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = lifetime;
         *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = checksum;
@@ -229,12 +250,12 @@ isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
 }
 
 bool
-isis_pdu_validate_checksum(isis_pdu_s *pdu)
+isis_pdu_validate_checksum(bbl_pdu_s *pdu)
 {
     uint16_t checksum = 0;
     uint16_t checksum_orig = 0;
 
-    switch(pdu->pdu_type) {
+    switch(pdu->type) {
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
             checksum_orig = *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM);
@@ -255,7 +276,7 @@ isis_pdu_validate_checksum(isis_pdu_s *pdu)
 }
 
 bool
-isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
+isis_pdu_validate_auth(bbl_pdu_s *pdu, isis_auth_type auth, char *key)
 {
     uint8_t auth_data[ISIS_MD5_DIGEST_LEN];
 
@@ -271,7 +292,7 @@ isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
         return false;
     }
 
-    switch (pdu->auth_type) {
+    switch(pdu->auth_type) {
         case ISIS_AUTH_CLEARTEXT:
             if(strncmp((char*)PDU_OFFSET(pdu, pdu->auth_data_offset), key, pdu->auth_data_len) == 0) {
                 return true;
@@ -297,62 +318,14 @@ isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 }
 
 void
-isis_pdu_init(isis_pdu_s *pdu, uint8_t pdu_type)
-{
-    memset(pdu, 0x0, sizeof(isis_pdu_s));
-    pdu->pdu_type = pdu_type;
-    *pdu->pdu = ISIS_PROTOCOL_IDENTIFIER;
-    *(pdu->pdu+2) = 0x01;
-    *(pdu->pdu+4) = pdu_type;
-    *(pdu->pdu+5) = 0x01;
-    pdu->cur = ISIS_HDR_LEN_COMMON;
-    pdu->pdu_len = ISIS_HDR_LEN_COMMON;
-}
-
-void
-isis_pdu_add_u8(isis_pdu_s *pdu, uint8_t value)
-{
-    *PDU_CURSOR(pdu) = value;
-    PDU_BUMP_WRITE_BUFFER(pdu, sizeof(uint8_t));
-}
-
-void
-isis_pdu_add_u16(isis_pdu_s *pdu, uint16_t value)
-{
-    *(uint16_t*)PDU_CURSOR(pdu) = htobe16(value);
-    PDU_BUMP_WRITE_BUFFER(pdu, sizeof(uint16_t));
-}
-
-void
-isis_pdu_add_u32(isis_pdu_s *pdu, uint32_t value)
-{
-    *(uint32_t*)PDU_CURSOR(pdu) = htobe32(value);
-    PDU_BUMP_WRITE_BUFFER(pdu, sizeof(uint32_t));
-}
-
-void
-isis_pdu_add_u64(isis_pdu_s *pdu, uint64_t value)
-{
-    *(uint64_t*)PDU_CURSOR(pdu) = htobe64(value);
-    PDU_BUMP_WRITE_BUFFER(pdu, sizeof(uint64_t));
-}
-
-void
-isis_pdu_add_bytes(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
-{
-    memcpy(PDU_CURSOR(pdu), buf, len);
-    PDU_BUMP_WRITE_BUFFER(pdu, len);
-}
-
-void
-isis_pdu_add_tlv(isis_pdu_s *pdu, isis_tlv_s *tlv)
+isis_pdu_add_tlv(bbl_pdu_s *pdu, isis_tlv_s *tlv)
 {
     uint16_t len = sizeof(isis_tlv_s) + tlv->len;
-    isis_pdu_add_bytes(pdu, (uint8_t*)tlv, len);
+    bbl_pdu_add_bytes(pdu, (uint8_t*)tlv, len);
 }
 
 void
-isis_pdu_add_tlv_area(isis_pdu_s *pdu, isis_area_s *area, uint8_t area_count)
+isis_pdu_add_tlv_area(bbl_pdu_s *pdu, isis_area_s *area, uint8_t area_count)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -370,7 +343,7 @@ isis_pdu_add_tlv_area(isis_pdu_s *pdu, isis_area_s *area, uint8_t area_count)
 }
 
 void
-isis_pdu_add_tlv_protocols(isis_pdu_s *pdu, bool ipv4, bool ipv6)
+isis_pdu_add_tlv_protocols(bbl_pdu_s *pdu, bool ipv4, bool ipv6)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -388,7 +361,7 @@ isis_pdu_add_tlv_protocols(isis_pdu_s *pdu, bool ipv4, bool ipv6)
 }
 
 void
-isis_pdu_add_tlv_ipv4_int_address(isis_pdu_s *pdu, ipv4addr_t addr)
+isis_pdu_add_tlv_ipv4_int_address(bbl_pdu_s *pdu, ipv4addr_t addr)
 {
     isis_tlv_s *tlv =  (isis_tlv_s *)PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_IPV4_INT_ADDRESS;
@@ -398,7 +371,7 @@ isis_pdu_add_tlv_ipv4_int_address(isis_pdu_s *pdu, ipv4addr_t addr)
 }
 
 void
-isis_pdu_add_tlv_te_router_id(isis_pdu_s *pdu, ipv4addr_t addr) {
+isis_pdu_add_tlv_te_router_id(bbl_pdu_s *pdu, ipv4addr_t addr) {
     isis_tlv_s *tlv =  (isis_tlv_s *)PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_TE_ROUTER_ID;
     tlv->len = sizeof(ipv4addr_t);
@@ -407,7 +380,7 @@ isis_pdu_add_tlv_te_router_id(isis_pdu_s *pdu, ipv4addr_t addr) {
 }
 
 void
-isis_pdu_add_tlv_hostname(isis_pdu_s *pdu, char *hostname)
+isis_pdu_add_tlv_hostname(bbl_pdu_s *pdu, char *hostname)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_HOSTNAME;
@@ -417,7 +390,7 @@ isis_pdu_add_tlv_hostname(isis_pdu_s *pdu, char *hostname)
 }
 
 void
-isis_pdu_add_tlv_ipv6_int_address(isis_pdu_s *pdu, ipv6addr_t *addr)
+isis_pdu_add_tlv_ipv6_int_address(bbl_pdu_s *pdu, ipv6addr_t *addr)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_IPV6_INT_ADDRESS;
@@ -427,7 +400,7 @@ isis_pdu_add_tlv_ipv6_int_address(isis_pdu_s *pdu, ipv6addr_t *addr)
 }
 
 void
-isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state) 
+isis_pdu_add_tlv_p2p_adjacency_state(bbl_pdu_s *pdu, uint8_t state) 
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_P2P_ADJACENCY_STATE;
@@ -437,7 +410,7 @@ isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state)
 }
 
 void
-isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uint32_t metric, isis_sub_tlv_t *stlv)
+isis_pdu_add_tlv_ext_ipv4_reachability(bbl_pdu_s *pdu, ipv4_prefix *prefix, uint32_t metric, isis_sub_tlv_t *stlv)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -473,7 +446,7 @@ isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uin
 }
 
 void
-isis_pdu_add_tlv_ipv6_reachability(isis_pdu_s *pdu, ipv6_prefix *prefix, uint32_t metric)
+isis_pdu_add_tlv_ipv6_reachability(bbl_pdu_s *pdu, ipv6_prefix *prefix, uint32_t metric)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -489,7 +462,7 @@ isis_pdu_add_tlv_ipv6_reachability(isis_pdu_s *pdu, ipv6_prefix *prefix, uint32_
 }
 
 void
-isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
+isis_pdu_add_tlv_auth(bbl_pdu_s *pdu, isis_auth_type auth, char *key)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -497,7 +470,7 @@ isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
     tlv->type = ISIS_TLV_AUTH;
     *tlv_cur = auth;
     tlv_cur++;
-    switch (auth) {
+    switch(auth) {
         case ISIS_AUTH_CLEARTEXT:
             slen = strnlen(key, UINT8_MAX-1);
             memcpy(tlv_cur, key, slen);
@@ -518,7 +491,7 @@ isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 }
 
 void
-isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint32_t metric)
+isis_pdu_add_tlv_ext_reachability(bbl_pdu_s *pdu, uint8_t *system_id, uint32_t metric)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -533,7 +506,7 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint32_t 
 }
 
 void
-isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id, 
+isis_pdu_add_tlv_router_cap(bbl_pdu_s *pdu, ipv4addr_t router_id, 
                             bool ipv4, bool ipv6, 
                             uint32_t sr_base, uint32_t sr_range)
 {
@@ -558,7 +531,7 @@ isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id,
 }
 
 void
-isis_pdu_padding(isis_pdu_s *pdu)
+isis_pdu_padding(bbl_pdu_s *pdu)
 {
     uint16_t remaining = ISIS_MAX_PDU_LEN - pdu->pdu_len;
     memset(PDU_CURSOR(pdu), 0x0, remaining);

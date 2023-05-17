@@ -103,7 +103,7 @@ isis_init() {
 void
 isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) {
     protocol_error_t result;
-    isis_pdu_s pdu = {0};
+    bbl_pdu_s pdu = {0};
 
     bbl_isis_s *isis = eth->next;
 
@@ -111,22 +111,22 @@ isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) 
     result = isis_pdu_load(&pdu, isis->pdu, isis->pdu_len);
     if(result != PROTOCOL_SUCCESS) {
         LOG(ISIS, "ISIS RX %s PDU decode error on interface %s\n", 
-            isis_pdu_type_string(pdu.pdu_type), interface->name);
+            isis_pdu_type_string(pdu.type), interface->name);
         interface->stats.isis_rx_error++;
         return;
     }
 
     if(!isis_pdu_validate_checksum(&pdu)) {
         LOG(ISIS, "ISIS RX %s PDU checksum error on interface %s\n", 
-            isis_pdu_type_string(pdu.pdu_type), interface->name);
+            isis_pdu_type_string(pdu.type), interface->name);
         interface->stats.isis_rx_error++;
         return;
     }
 
     LOG(PACKET, "ISIS RX %s on interface %s\n",
-        isis_pdu_type_string(pdu.pdu_type), interface->name);
+        isis_pdu_type_string(pdu.type), interface->name);
 
-    switch (pdu.pdu_type) {
+    switch(pdu.type) {
         case ISIS_PDU_P2P_HELLO:
             isis_p2p_hello_handler_rx(interface, &pdu);
             break;

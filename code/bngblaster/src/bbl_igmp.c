@@ -375,7 +375,7 @@ bbl_igmp_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__(
                                    "packets", group->packets,
                                    "loss", group->loss);
 
-                switch (group->state) {
+                switch(group->state) {
                     case IGMP_GROUP_IDLE:
                         json_object_set(record, "state", json_string("idle"));
                         if(group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
