@@ -60,10 +60,10 @@ isis_psnp_job (timer_s *timer)
     /* TLV section */
     isis_pdu_add_tlv_auth(&pdu, auth, key);
 
-    tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
+    tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(&pdu);
     tlv->type = ISIS_TLV_LSP_ENTRIES;
     tlv->len = 0;
-    PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
+    ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
 
     search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
     while(search) {
@@ -91,10 +91,10 @@ isis_psnp_job (timer_s *timer)
                 adjacency->csnp_start = lsp->id;
                 break;
             }
-            tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
+            tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(&pdu);
             tlv->type = ISIS_TLV_LSP_ENTRIES;
             tlv->len = 0;
-            PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
+            ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
         } else {
             if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
                 /* All entries do not fit into single PSNP. */
@@ -105,12 +105,12 @@ isis_psnp_job (timer_s *timer)
             }
         }
         tlv->len+=sizeof(isis_lsp_entry_s);
-        entry = (isis_lsp_entry_s *)PDU_CURSOR(&pdu);
+        entry = (isis_lsp_entry_s *)ISIS_PDU_CURSOR(&pdu);
         entry->lifetime = htobe16(remaining_lifetime);
         entry->lsp_id = htobe64(lsp->id);
         entry->seq = htobe32(lsp->seq);
-        entry->checksum = *(uint16_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
-        PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
+        entry->checksum = *(uint16_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
+        ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
 
         search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);

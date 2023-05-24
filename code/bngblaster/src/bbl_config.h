@@ -111,6 +111,14 @@ typedef struct bbl_network_config_
     uint32_t isis_l1_metric;
     uint32_t isis_l2_metric;
 
+    uint16_t ospfv2_instance_id;
+    uint32_t ospfv2_metric;
+    uint8_t  ospfv2_type;
+
+    uint16_t ospfv3_instance_id;
+    uint32_t ospfv3_metric;
+    uint8_t  ospfv3_type;
+
     uint16_t ldp_instance_id;
 
     void *next; /* pointer to next network config element */

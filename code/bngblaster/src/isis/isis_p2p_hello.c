@@ -173,9 +173,9 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
     }
     
     peer = adjacency->peer;
-    peer->level = *PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEVEL) & 0x03;
-    memcpy(peer->system_id, PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN);
-    peer->hold_time = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_HOLD_TIME));
+    peer->level = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEVEL) & 0x03;
+    memcpy(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN);
+    peer->hold_time = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_HOLD_TIME));
 
     isis_p2p_restart_hold_timers(interface);
 

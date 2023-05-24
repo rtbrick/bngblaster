@@ -10,6 +10,7 @@
 #include "bbl_protocols.h"
 #include "bbl_access_line.h"
 #include "isis/isis_def.h"
+#include "ospf/ospf_def.h"
 #include "ldp/ldp_def.h"
 
 static protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_ethernet_header_s *eth, bbl_l2tp_s **_l2tp);
@@ -1005,6 +1006,18 @@ encode_igmp(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_ospf
+ */
+static protocol_error_t
+encode_ospf(uint8_t *buf, uint16_t *len, bbl_ospf_s *ospf)
+{
+    /* OSPF PDU */
+    memcpy(buf, ospf->pdu, ospf->pdu_len);
+    BUMP_WRITE_BUFFER(buf, len, ospf->pdu_len);
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * encode_ipv6
  */
 static protocol_error_t
@@ -1052,6 +1065,10 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
                 /* Update UDP checksum */
                 *(uint16_t*)(buf + 6) = bbl_ipv6_udp_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
             }
+            break;
+        case IPV6_NEXT_HEADER_OSPF:
+            result = encode_ospf(buf, len, (bbl_ospf_s*)ipv6->next);
+            ipv6_len = *len - ipv6_len;
             break;
         default:
             ipv6_len = 0;
@@ -1143,6 +1160,9 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
                 /* Update UDP checksum */
                 *(uint16_t*)(buf + 6) = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
             }
+            break;
+        case PROTOCOL_IPV4_OSPF:
+            result = encode_ospf(buf, len, (bbl_ospf_s*)ipv4->next);
             break;
         default:
             result = PROTOCOL_SUCCESS;
@@ -3190,6 +3210,42 @@ decode_tcp(uint8_t *buf, uint16_t len,
 }
 
 /*
+ * decode_ospf
+ */
+static protocol_error_t
+decode_ospf(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
+            bbl_ospf_s **_ospf)
+{
+    bbl_ospf_s *ospf;
+    uint16_t hdr_len;
+
+    if(len < OSPF_PDU_LEN_MIN || sp_len < sizeof(bbl_ospf_s)) {
+        return DECODE_ERROR;
+    }
+
+    /* Init OSPF */
+    ospf = (bbl_ospf_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_isis_s));
+    ospf->pdu = buf;
+    ospf->pdu_len = len;
+
+    /* Get OSPF version and type */
+    ospf->version = *buf;
+    BUMP_BUFFER(buf, len, sizeof(uint8_t));
+    ospf->type = *buf;
+    BUMP_BUFFER(buf, len, sizeof(uint8_t));
+
+    /* Check length */
+    hdr_len = be16toh(*(uint16_t*)buf);
+    if(hdr_len > ospf->pdu_len) {
+        return DECODE_ERROR;
+    }
+
+    *_ospf = ospf;
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * decode_ipv6
  */
 static protocol_error_t
@@ -3246,6 +3302,9 @@ decode_ipv6(uint8_t *buf, uint16_t len,
             break;
         case IPV6_NEXT_HEADER_TCP:
             ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_s**)&ipv6->next);
+            break;
+        case IPV6_NEXT_HEADER_OSPF:
+            ret_val = decode_ospf(buf, len, sp, sp_len, (bbl_ospf_s**)&ipv6->next);
             break;
         default:
             ipv6->next = NULL;
@@ -3353,7 +3412,9 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         case PROTOCOL_IPV4_TCP:
             ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_s**)&ipv4->next);
             break;
-
+        case PROTOCOL_IPV4_OSPF:
+            ret_val = decode_ospf(buf, len, sp, sp_len, (bbl_ospf_s**)&ipv4->next);
+            break;
         default:
             ipv4->next = NULL;
             break;

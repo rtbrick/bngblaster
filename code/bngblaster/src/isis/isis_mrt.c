@@ -73,8 +73,8 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
                 continue;
         }
 
-        lsp_id = be64toh(*(uint64_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_ID));
-        seq = be32toh(*(uint32_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_SEQ));
+        lsp_id = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_ID));
+        seq = be32toh(*(uint32_t*)ISIS_PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_SEQ));
 
         LOG(DEBUG, "ISIS ADD %s-LSP %s (seq %u) from MRT file to instance %u\n", 
             isis_level_string(level), 
@@ -109,13 +109,13 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
         lsp->source.type = ISIS_SOURCE_EXTERNAL;
         lsp->source.adjacency = NULL;
         lsp->seq = seq;
-        lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_LIFETIME));
+        lsp->lifetime = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_LIFETIME));
         lsp->expired = false;
         lsp->instance = instance;
         lsp->timestamp.tv_sec = now.tv_sec;
         lsp->timestamp.tv_nsec = now.tv_nsec;
 
-        PDU_CURSOR_RST(&pdu);
+        ISIS_PDU_CURSOR_RST(&pdu);
         memcpy(&lsp->pdu, &pdu, sizeof(isis_pdu_s));
 
         if(lsp->lifetime > 0 && instance->config->external_auto_refresh) {

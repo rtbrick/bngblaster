@@ -60,6 +60,7 @@ typedef struct bbl_network_interface_
     isis_adjacency_p2p_s *isis_adjacency_p2p;
     isis_adjacency_s     *isis_adjacency[ISIS_LEVELS];
     ldp_adjacency_s      *ldp_adjacency;
+    ospf_interface_s     *ospf_interface;
 
     struct {
         uint64_t packets_tx;
@@ -111,6 +112,10 @@ typedef struct bbl_network_interface_
         uint32_t isis_rx;
         uint32_t isis_tx;
         uint32_t isis_rx_error;
+
+        uint32_t ospf_tx;
+        uint32_t ospf_rx;
+        uint32_t ospf_rx_error;
 
         uint32_t ldp_udp_rx;
         uint32_t ldp_udp_tx;

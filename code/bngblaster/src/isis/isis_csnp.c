@@ -71,10 +71,10 @@ isis_csnp_job(timer_s *timer)
         next = hb_itor_first(itor);
     }
     adjacency->csnp_start = 0;
-    tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
+    tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(&pdu);
     tlv->type = ISIS_TLV_LSP_ENTRIES;
     tlv->len = 0;
-    PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
+    ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
     while(next) {
         lsp = *hb_itor_datum(itor);
 
@@ -99,10 +99,10 @@ isis_csnp_job(timer_s *timer)
                 adjacency->csnp_start = lsp->id;
                 break;
             }
-            tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
+            tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(&pdu);
             tlv->type = ISIS_TLV_LSP_ENTRIES;
             tlv->len = 0;
-            PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
+            ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
         } else {
             if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
                 /* All entries do not fit into single CSNP. */
@@ -111,12 +111,12 @@ isis_csnp_job(timer_s *timer)
             }
         }
         tlv->len+=sizeof(isis_lsp_entry_s);
-        entry = (isis_lsp_entry_s *)PDU_CURSOR(&pdu);
+        entry = (isis_lsp_entry_s *)ISIS_PDU_CURSOR(&pdu);
         entry->lifetime = htobe16(remaining_lifetime);
         entry->lsp_id = htobe64(lsp->id);
         entry->seq = htobe32(lsp->seq);
-        entry->checksum = *(uint16_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
-        PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
+        entry->checksum = *(uint16_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
+        ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
 
         next = hb_itor_next(itor);
@@ -129,7 +129,7 @@ isis_csnp_job(timer_s *timer)
         /* Seems that not all LSP entries fitted into a single CSNP PDU,
          * therefore remember where we stopped and send next CSNP 
          * fragment in 10ms ... */
-        *(uint64_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_CSNP_LSP_END) = htobe64(adjacency->csnp_start++);
+        *(uint64_t*)ISIS_PDU_OFFSET(&pdu, ISIS_OFFSET_CSNP_LSP_END) = htobe64(adjacency->csnp_start++);
         timer_add(&g_ctx->timer_root, &adjacency->timer_csnp_next, 
                   "ISIS CSNP", 
                    0, 10 * MSEC, adjacency,
@@ -203,8 +203,8 @@ isis_csnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
 
     adjacency->stats.csnp_rx++;
     
-    lsp_start = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_START));
-    lsp_end = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_END));
+    lsp_start = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_START));
+    lsp_end = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_END));
 
     if(level == ISIS_LEVEL_1 && config->level1_auth_csnp) {
         auth = config->level1_auth;

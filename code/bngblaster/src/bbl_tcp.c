@@ -552,6 +552,7 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
         /* TCP not enabled! */
         return;
     }
+    interface->stats.tcp_rx++;
 
 #if BNGBLASTER_TCP_DEBUG
     bbl_tcp_s *tcp = (bbl_tcp_s*)ipv4->next;
@@ -589,6 +590,7 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
         /* TCP not enabled! */
         return;
     }
+    interface->stats.tcp_rx++;
 
 #if BNGBLASTER_TCP_DEBUG
     bbl_tcp_s *tcp = (bbl_tcp_s*)ipv6->next;
