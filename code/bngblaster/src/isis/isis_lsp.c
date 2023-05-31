@@ -148,7 +148,6 @@ void
 isis_lsp_gc_job(timer_s *timer)
 {
     isis_instance_s *instance = timer->data;
-
     isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
@@ -277,7 +276,7 @@ isis_lsp_refresh_job(timer_s *timer)
 }
 
 void
-isis_lsp_sx_job(timer_s *timer)
+isis_lsp_tx_job(timer_s *timer)
 {
     isis_adjacency_s *adjacency = timer->data;
     isis_flood_entry_s *entry;
@@ -703,31 +702,79 @@ ACK:
 }
 
 /**
- * isis_lsp_purge_external 
+ * isis_lsp_purge
+ * 
+ * @param lsp  ISIS LSP
+ */
+void
+isis_lsp_purge(isis_lsp_s *lsp)
+{
+    isis_pdu_s *pdu;
+    isis_auth_type auth_type = ISIS_AUTH_NONE;
+
+    isis_config_s *config = lsp->instance->config;
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    lsp->seq++;
+    lsp->timestamp.tv_sec = now.tv_sec;
+    lsp->timestamp.tv_nsec = now.tv_nsec;
+
+    lsp->lifetime = 0;
+    isis_lsp_lifetime(lsp);
+
+    /* Build PDU */
+    pdu = &lsp->pdu;
+    if(lsp->level == ISIS_LEVEL_1) {
+        isis_pdu_init(pdu, ISIS_PDU_L1_LSP);
+        auth_type = config->level1_auth;
+        lsp->auth_key = config->level1_key;
+    } else {
+        isis_pdu_init(pdu, ISIS_PDU_L2_LSP);
+        auth_type = config->level2_auth;
+        lsp->auth_key = config->level2_key;
+    }
+
+    /* PDU header. */
+    isis_pdu_add_u16(pdu, 0);
+    isis_pdu_add_u16(pdu, 0);
+    isis_pdu_add_u64(pdu, lsp->id);
+    isis_pdu_add_u32(pdu, lsp->seq);
+    isis_pdu_add_u16(pdu, 0);
+    isis_pdu_add_u8(pdu, 0x03); 
+
+    /* TLV section. */
+    isis_pdu_add_tlv_auth(pdu, auth_type, lsp->auth_key);
+
+    /* Update length and authentication. */
+    isis_pdu_update_len(pdu);
+    isis_pdu_update_auth(pdu, lsp->auth_key);
+
+    /* Set checksum and lifetime to zero. */
+    *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = 0;
+    *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = 0;
+
+    isis_lsp_flood(lsp);
+}
+
+/**
+ * isis_lsp_purge_all_external 
  * 
  * @param instance  ISIS instance
  * @param level ISIS level
  */
 void
-isis_lsp_purge_external(isis_instance_s *instance, uint8_t level)
+isis_lsp_purge_all_external(isis_instance_s *instance, uint8_t level)
 {
-    isis_config_s *config = instance->config;
     hb_tree *lsdb = instance->level[level-1].lsdb;
 
     isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
 
-    isis_pdu_s *pdu;
-    isis_auth_type auth_type = ISIS_AUTH_NONE;
-
-    struct timespec now;
-
     if(!lsdb) {
         return;
     }
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
 
     itor = hb_itor_new(lsdb);
     next = hb_itor_first(itor);
@@ -735,45 +782,7 @@ isis_lsp_purge_external(isis_instance_s *instance, uint8_t level)
     while(next) {
         lsp = *hb_itor_datum(itor);
         if(lsp && lsp->source.type == ISIS_SOURCE_EXTERNAL) {
-            lsp->seq++;
-            lsp->timestamp.tv_sec = now.tv_sec;
-            lsp->timestamp.tv_nsec = now.tv_nsec;
-
-            lsp->lifetime = 0;
-            isis_lsp_lifetime(lsp);
-
-            /* Build PDU */
-            pdu = &lsp->pdu;
-            if(level == ISIS_LEVEL_1) {
-                isis_pdu_init(pdu, ISIS_PDU_L1_LSP);
-                auth_type = config->level1_auth;
-                lsp->auth_key = config->level1_key;
-            } else {
-                isis_pdu_init(pdu, ISIS_PDU_L2_LSP);
-                auth_type = config->level2_auth;
-                lsp->auth_key = config->level2_key;
-            }
-        
-            /* PDU header. */
-            isis_pdu_add_u16(pdu, 0);
-            isis_pdu_add_u16(pdu, 0);
-            isis_pdu_add_u64(pdu, lsp->id);
-            isis_pdu_add_u32(pdu, lsp->seq);
-            isis_pdu_add_u16(pdu, 0);
-            isis_pdu_add_u8(pdu, 0x03); 
-
-            /* TLV section. */
-            isis_pdu_add_tlv_auth(pdu, auth_type, lsp->auth_key);
-
-            /* Update length and authentication. */
-            isis_pdu_update_len(pdu);
-            isis_pdu_update_auth(pdu, lsp->auth_key);
-
-            /* Set checksum and lifetime to zero. */
-            *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = 0;
-            *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = 0;
-
-            isis_lsp_flood(lsp);
+            isis_lsp_purge(lsp);
         }
         next = hb_itor_next(itor);
     }
@@ -784,9 +793,10 @@ isis_lsp_purge_external(isis_instance_s *instance, uint8_t level)
  * 
  * @param instance ISIS instance
  * @param pdu received ISIS PDU
+ * @param refresh automatically refresh LSP
  */
 bool
-isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
+isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refresh)
 {
     uint8_t level;
 
@@ -854,7 +864,8 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
         if(lsp->lifetime < ISIS_DEFAULT_LSP_LIFETIME_MIN) {
             /* Increase ISIS lifetime. */
             lsp->lifetime = ISIS_DEFAULT_LSP_LIFETIME_MIN;
-            isis_lsp_refresh(lsp); 
+            isis_lsp_refresh(lsp);
+            refresh = false;
         }
         refresh_interval = lsp->lifetime - 300;
         timer_add_periodic(&g_ctx->timer_root, &lsp->timer_refresh, 
@@ -864,6 +875,10 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu)
         isis_lsp_lifetime(lsp);
     }
 
-    isis_lsp_flood(lsp);
+    if(refresh) {
+        isis_lsp_refresh(lsp); 
+    } else { 
+        isis_lsp_flood(lsp);
+    }
     return true;
 }

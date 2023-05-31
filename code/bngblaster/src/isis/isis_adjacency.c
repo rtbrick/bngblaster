@@ -102,7 +102,7 @@ isis_adjacency_up(isis_adjacency_s *adjacency)
     adjacency->state = ISIS_ADJACENCY_STATE_UP;
 
     timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_tx, 
-        "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_sx_job);
+        "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_tx_job);
 
     timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_retry, 
         "ISIS RETRY", config->lsp_retry_interval, 0, adjacency, &isis_lsp_retry_job);

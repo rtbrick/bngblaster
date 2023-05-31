@@ -36,6 +36,9 @@ isis_str_to_system_id(const char *str, uint8_t *system_id);
 char *
 isis_system_id_to_str(uint8_t *system_id);
 
+bool
+isis_str_to_lsp_id(const char *str, uint64_t *lsp_id);
+
 char *
 isis_lsp_id_to_str(uint64_t *lsp_id);
 

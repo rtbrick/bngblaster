@@ -198,6 +198,30 @@ isis_system_id_to_str(uint8_t *system_id)
 }
 
 /**
+ * isis_str_to_lsp_id
+ *
+ * @param str IS-IS lsp-id string
+ * @param lsp_id IS-IS lsp-id (8 bytes)
+ * @return true if successful
+ */
+bool
+isis_str_to_lsp_id(const char *str, uint64_t *lsp_id)
+{
+    sscanf(str, "%hx.%hx.%hx.%hhx-%hhx", 
+           &((uint16_t*)lsp_id)[3], 
+           &((uint16_t*)lsp_id)[2], 
+           &((uint16_t*)lsp_id)[1], 
+           &((uint8_t*)lsp_id)[1],
+           &((uint8_t*)lsp_id)[0]);
+
+    ((uint16_t*)lsp_id)[3] = ((uint16_t*)lsp_id)[3];
+    ((uint16_t*)lsp_id)[2] = ((uint16_t*)lsp_id)[2];
+    ((uint16_t*)lsp_id)[1] = ((uint16_t*)lsp_id)[1];
+
+    return true;
+}
+
+/**
  * isis_lsp_id_to_str
  *
  * Format an IS-IS lsp-id as string 

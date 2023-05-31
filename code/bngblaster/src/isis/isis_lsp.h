@@ -34,7 +34,7 @@ void
 isis_lsp_lifetime(isis_lsp_s *lsp);
 
 void
-isis_lsp_sx_job(timer_s *timer);
+isis_lsp_tx_job(timer_s *timer);
 
 isis_lsp_s *
 isis_lsp_new(uint64_t id, uint8_t level, isis_instance_s *instance);
@@ -46,9 +46,12 @@ void
 isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t level);
 
 void
-isis_lsp_purge_external(isis_instance_s *instance, uint8_t level);
+isis_lsp_purge(isis_lsp_s *lsp);
+
+void
+isis_lsp_purge_all_external(isis_instance_s *instance, uint8_t level);
 
 bool
-isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu);
+isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refresh);
 
 #endif

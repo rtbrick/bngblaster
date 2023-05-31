@@ -382,4 +382,16 @@ typedef struct isis_flood_entry_ {
     struct timespec tx_timestamp;
 } isis_flood_entry_s;
 
+typedef struct isis_lsp_flap_ {
+    uint64_t id; /* LSP-ID */
+
+    isis_instance_s *instance;
+    isis_pdu_s pdu;
+
+    bool free;
+    struct timer_ *timer;
+
+    struct isis_lsp_flap_ *next;
+} isis_lsp_flap_s;
+
 #endif

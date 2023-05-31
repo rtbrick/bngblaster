@@ -22,6 +22,12 @@ int
 isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int
+isis_ctrl_lsp_purge(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
 isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif
