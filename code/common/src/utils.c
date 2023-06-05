@@ -187,7 +187,7 @@ keyval_get_key (struct keyval_ *keyval, uint32_t val)
  *
  * Format an MAC address as string in one of 16 static buffers.
  *
- * @param mac IPv4 address bytes
+ * @param mac MAC address bytes
  * @return MAC address string
  */
 char *
@@ -642,4 +642,23 @@ string_or_na(char *string)
     } else {
         return "N/A";
     }
+}
+
+uint8_t
+ipv4_mask_to_len(uint32_t mask)
+{
+    uint8_t l = 0;
+
+    while(mask) {
+        mask = mask >> 1;
+        l++;
+    }
+    return l;
+}
+
+uint32_t
+ipv4_len_to_mask(uint8_t len)
+{
+    if(len > 32) return UINT32_MAX;
+    return UINT32_MAX >> (32 - len);
 }

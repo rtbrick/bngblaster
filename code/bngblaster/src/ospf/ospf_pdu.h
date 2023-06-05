@@ -28,9 +28,6 @@ void
 ospf_pdu_update_len(ospf_pdu_s *pdu);
 
 void
-ospf_pdu_update_lifetime(ospf_pdu_s *pdu, uint16_t lifetime);
-
-void
 ospf_pdu_update_checksum(ospf_pdu_s *pdu);
 
 void
@@ -58,6 +55,12 @@ void
 ospf_pdu_add_u64(ospf_pdu_s *pdu, uint64_t value);
 
 void
+ospf_pdu_add_ipv4(ospf_pdu_s *pdu, uint32_t ipv4);
+
+void
 ospf_pdu_add_bytes(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len);
+
+void
+ospf_pdu_zero_bytes(ospf_pdu_s *pdu, uint16_t len);
 
 #endif

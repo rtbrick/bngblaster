@@ -75,6 +75,13 @@ ospf_interface_init(bbl_network_interface_s *interface,
                 ospf_interface->next = ospf->interfaces;
                 ospf->interfaces = ospf_interface;
 
+                if(interface_type == OSPF_INTERFACE_P2P ||
+                   interface_type == OSPF_INTERFACE_VIRTUAL) {
+                    ospf_interface->state = OSPF_IFSTATE_P2P;
+                } else {
+                    ospf_interface->state = OSPF_IFSTATE_WAITING;
+                }
+
                 timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_hello, 
                                    "OSPF HELLO", 
                                    ospf->config->hello_interval, 0,

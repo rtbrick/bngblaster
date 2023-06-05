@@ -41,6 +41,22 @@ ospf_adjacency_state_string(uint8_t state)
 }
 
 const char *
+ospf_neighbor_state_string(uint8_t state)
+{
+    switch(state) {
+        case OSPF_NBSTATE_DOWN: return "Down";
+        case OSPF_NBSTATE_ATTEMPT: return "Attempt";
+        case OSPF_NBSTATE_INIT: return "Init";
+        case OSPF_NBSTATE_2WAY: return "2-Way";
+        case OSPF_NBSTATE_EXSTART: return "ExStart";
+        case OSPF_NBSTATE_EXCHANGE: return "Exchange";
+        case OSPF_NBSTATE_LOADING: return "Loading";
+        case OSPF_NBSTATE_FULL: return "Full";
+        default: return "INVALID";
+    }
+}
+
+const char *
 ospf_pdu_type_string(uint8_t type)
 {
 
@@ -52,4 +68,14 @@ ospf_pdu_type_string(uint8_t type)
         case OSPF_PDU_LS_ACK: return "Link State Acknowledgment";
         default: return "UNKNOWN";
     }
+}
+
+void
+ospf_rx_error(bbl_network_interface_s *interface, ospf_pdu_s *pdu, const char *error)
+{
+    LOG(OSPF, "OSPFv%u RX %s PDU %s error on interface %s\n", 
+        pdu->pdu_version, ospf_pdu_type_string(pdu->pdu_type), 
+        error, interface->name);
+
+    interface->stats.ospf_rx_error++;
 }

@@ -19,6 +19,12 @@ const char *
 ospf_adjacency_state_string(uint8_t state);
 
 const char *
+ospf_neighbor_state_string(uint8_t state);
+
+const char *
 ospf_pdu_type_string(uint8_t type);
+
+void
+ospf_rx_error(bbl_network_interface_s *interface, ospf_pdu_s *pdu, const char *error);
 
 #endif

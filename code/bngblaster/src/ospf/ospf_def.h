@@ -23,6 +23,12 @@
 
 #define OSPF_PDU_LEN_MIN                16
 #define OSPF_PDU_LEN_MAX                UINT16_MAX
+#define OSPF_HELLO_LEN_MIN              44
+#define OSPF_HELLO_TX_BUF_LEN           1500
+
+#define OSPF_OPTION_E_BIT               0x02
+#define OSPF_OPTION_LLS_BIT             0x10
+
 
 #define OSPF_DEFAULT_TEARDOWN_TIME      5
 
@@ -38,6 +44,14 @@
 #define OSPFV2_OFFSET_AUTH_TYPE         14
 #define OSPFV2_OFFSET_AUTH_DATA         16
 #define OSPFV2_OFFSET_PACKET            24
+
+#define OSPF_OFFSET_HELLO_NETMASK       24
+#define OSPF_OFFSET_HELLO_INTERVAL      28
+#define OSPF_OFFSET_HELLO_OPTIONS       30
+#define OSPF_OFFSET_HELLO_PRIORITY      31
+#define OSPF_OFFSET_HELLO_DEAD_INTERVAL 32
+#define OSPF_OFFSET_HELLO_DR            36
+#define OSPF_OFFSET_HELLO_BDR           40
 
 #define OSPFV2_AUTH_DATA_LEN            8
 
@@ -148,11 +162,12 @@ typedef struct ospf_pdu_ {
     uint8_t  auth_type;
     uint8_t  auth_data_len;
     uint16_t auth_data_offset;
-    uint16_t packet_offset;
+    uint16_t packet_len;
+
+    void    *source; /* souce IPv4/v6 address*/
 
     uint16_t cur; /* current position */
-
-    uint8_t *pdu;
+    uint8_t *pdu; /* whole PDU inlcuding trailer */
     uint16_t pdu_len;
     uint16_t pdu_buf_len;
 } ospf_pdu_s;
@@ -209,9 +224,15 @@ typedef struct ospf_neighbor_ {
     ospf_interface_s *interface;
     ospf_neighbor_s *next;
 
-    uint32_t id;
+    uint32_t router_id;
+
+    uint8_t  priority;
+    uint32_t dr;
+    uint32_t bdr;
+
     uint8_t state;
 
+    struct timer_  *timer_inactivity;
 } ospf_neighbor_s;
 
 typedef struct ospf_interface_ {
@@ -222,7 +243,10 @@ typedef struct ospf_interface_ {
     
     uint8_t version;    /* OSPF version */
     uint8_t type;       /* OSPF inteface type (P2P, broadcast, ...) */
+    uint8_t state;       /* OSPF inteface type (P2P, broadcast, ...) */
 
+    uint32_t dr;
+    uint32_t bdr;
     struct {
         uint32_t hello_rx;
         uint32_t hello_tx;

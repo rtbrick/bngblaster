@@ -20,7 +20,7 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
                      bbl_ethernet_header_s *eth);
 
 void
-ospf_hello_handler_rx(bbl_network_interface_s *interface,
-                      ospf_pdu_s *pdu);
+ospf_hello_v2_handler_rx(bbl_network_interface_s *interface,
+                         ospf_pdu_s *pdu);
                     
 #endif

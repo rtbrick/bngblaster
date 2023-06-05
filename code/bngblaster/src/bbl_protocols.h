@@ -195,6 +195,8 @@
 #define IPV4_MC_ALL_HOSTS               0x010000e0 /* 224.0.0.1 */
 #define IPV4_MC_ALL_ROUTERS             0x020000e0 /* 224.0.0.2 */
 #define IPV4_MC_IGMP                    0x160000e0 /* 224.0.0.22 */
+#define IPV4_MC_ALL_OSPF_ROUTERS        0x050000e0 /* 224.0.0.5 */
+#define IPV4_MC_ALL_DR_ROUTERS          0x060000e0 /* 224.0.0.6 */
 
 #define ARP_REQUEST                     1
 #define ARP_REPLY                       2
@@ -290,6 +292,8 @@ static const uint8_t broadcast_mac[ETH_ADDR_LEN] =  { 0xff, 0xff, 0xff, 0xff, 0x
 static const uint8_t slow_mac[ETH_ADDR_LEN] =  { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x02};
 static const uint8_t all_hosts_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x01};
 static const uint8_t all_routers_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x02};
+static const uint8_t all_ospf_routers_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x05};
+static const uint8_t all_dr_routers_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00, 0x00, 0x06};
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
@@ -1012,6 +1016,9 @@ typedef struct bbl_lacp_ {
 
 bool
 packet_is_bbl(uint8_t *buf, uint16_t len);
+
+uint16_t
+bbl_checksum(uint8_t *buf, uint16_t len);
 
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,

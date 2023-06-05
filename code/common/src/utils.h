@@ -47,4 +47,6 @@ bool  ipv6_prefix_not_zero(ipv6_prefix *prefix);
 char *replace_substring(const char* s, const char* old, const char* new);
 char *string_or_na(char *string);
 
+uint8_t ipv4_mask_to_len(uint32_t mask);
+uint32_t ipv4_len_to_mask(uint8_t len);
 #endif

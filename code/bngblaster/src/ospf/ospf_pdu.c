@@ -30,7 +30,6 @@ protocol_error_t
 ospf_pdu_load(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len)
 {
     protocol_error_t result;
-    uint16_t pdu_len;
 
     if(len < OSPF_PDU_LEN_MIN) {
         return DECODE_ERROR;
@@ -52,8 +51,8 @@ ospf_pdu_load(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len)
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-*/
     pdu->pdu_version = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_VERSION);
     pdu->pdu_type = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_TYPE);
-    pdu_len = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_PACKET_LEN));
-    if(pdu_len > len) {
+    pdu->packet_len = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_PACKET_LEN));
+    if(pdu->packet_len > len) {
         return DECODE_ERROR;
     }
     pdu->router_id = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_ROUTER_ID);
@@ -80,20 +79,38 @@ ospf_pdu_load(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len)
 void
 ospf_pdu_update_len(ospf_pdu_s *pdu)
 {
-    UNUSED(pdu);
+    pdu->packet_len = pdu->cur;
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_PACKET_LEN) = htobe16(pdu->packet_len);
 }
 
-void
-ospf_pdu_update_lifetime(ospf_pdu_s *pdu, uint16_t lifetime)
+static uint16_t
+ospf_pdu_checksum(ospf_pdu_s *pdu)
 {
-    UNUSED(pdu);
-    UNUSED(lifetime);
+    uint16_t checksum = 0;
+    uint16_t checksum_orig = 0;
+
+    uint64_t auth_data_orig;
+
+    /* reset checkum/auth */
+    checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
+    auth_data_orig = *(uint64_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_DATA);
+    *(uint64_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_DATA) = 0;
+
+    /* calculate checksum */
+    checksum = bbl_checksum(pdu->pdu, pdu->packet_len);
+
+    /* restore checksum/auth*/
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = checksum_orig;
+    *(uint64_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_DATA) = auth_data_orig;
+
+    return checksum;
 }
 
 void
 ospf_pdu_update_checksum(ospf_pdu_s *pdu)
 {
-    UNUSED(pdu);
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = ospf_pdu_checksum(pdu);
 }
 
 void
@@ -106,7 +123,15 @@ ospf_pdu_update_auth(ospf_pdu_s *pdu, char *key)
 bool
 ospf_pdu_validate_checksum(ospf_pdu_s *pdu)
 {
-    UNUSED(pdu);
+    uint16_t checksum = 0;
+    uint16_t checksum_orig = 0;
+
+    checksum = ospf_pdu_checksum(pdu);
+    checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
+
+    if(checksum == checksum_orig) {
+        return true;
+    }
     return false;
 }
 
@@ -155,8 +180,22 @@ ospf_pdu_add_u64(ospf_pdu_s *pdu, uint64_t value)
 }
 
 void
+ospf_pdu_add_ipv4(ospf_pdu_s *pdu, uint32_t ipv4)
+{
+    *(uint32_t*)OSPF_PDU_CURSOR(pdu) = ipv4;
+    OSPF_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(uint32_t));
+}
+
+void
 ospf_pdu_add_bytes(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len)
 {
     memcpy(OSPF_PDU_CURSOR(pdu), buf, len);
+    OSPF_PDU_BUMP_WRITE_BUFFER(pdu, len);
+}
+
+void
+ospf_pdu_zero_bytes(ospf_pdu_s *pdu, uint16_t len)
+{
+    memset(OSPF_PDU_CURSOR(pdu), 0x0, len);
     OSPF_PDU_BUMP_WRITE_BUFFER(pdu, len);
 }

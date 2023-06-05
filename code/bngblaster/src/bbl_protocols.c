@@ -66,7 +66,7 @@ _fold(uint32_t sum)
     return sum;
 }
 
-static uint16_t
+uint16_t
 bbl_checksum(uint8_t *buf, uint16_t len)
 {
     return ~_fold(_checksum(buf, len));
