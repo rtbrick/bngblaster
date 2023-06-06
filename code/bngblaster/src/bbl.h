@@ -20,6 +20,7 @@
 
 #include <stdatomic.h>
 #include <common_include.h>
+#include "picohttpparser.h"
 
 #include "bbl_def.h"
 
