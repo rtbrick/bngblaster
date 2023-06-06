@@ -16,6 +16,9 @@
    * - `network-interface`
      - Select the corresponding network interface for this session
      - 
+   * - `a10nsp-interface`
+     - Select the corresponding A10NSP interface for this session
+     - 
    * - `type`
      - Set access type (`pppoe` or `ipoe`)
      - pppoe
