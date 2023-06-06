@@ -50,6 +50,15 @@ typedef struct bbl_http_client_
     char    *request;
     char    *response;
     uint32_t response_idx;
+    struct {
+        int minor_version;
+        int status;
+        const char *msg;
+        size_t msg_len;
+        struct phr_header headers[8];
+        size_t num_headers;
+    } http;
+
     uint32_t timeout;
 
     bbl_tcp_ctx_s *tcpc;
@@ -61,5 +70,8 @@ typedef struct bbl_http_client_
 
 bool
 bbl_http_client_session_init(bbl_session_s *session);
+
+int
+bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
 
 #endif

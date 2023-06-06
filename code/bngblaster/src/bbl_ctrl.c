@@ -240,6 +240,7 @@ struct action actions[] = {
     {"lag-info", bbl_lag_ctrl_info, true},
     {"test-info", bbl_ctrl_test_info, true},
     {"test-stop", bbl_ctrl_test_stop, true},
+    {"http-clients", bbl_http_client_ctrl, true},
     {NULL, NULL, false},
 };
 

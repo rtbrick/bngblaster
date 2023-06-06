@@ -35,6 +35,23 @@ bbl_http_client_connected_cb(void *arg)
 
 }
 
+bool
+bbl_http_client_parse_response(bbl_http_client_s *client)
+{
+    client->http.num_headers = sizeof(client->http.headers) / sizeof(client->http.headers[0]);
+    if(phr_parse_response(client->response, client->response_idx, 
+        &client->http.minor_version, &client->http.status, 
+        &client->http.msg, &client->http.msg_len, 
+        client->http.headers, &client->http.num_headers, 0)) {
+        LOG(HTTP, "HTTP (ID: %u) RESPONSE CODE: %d\n", 
+            client->session->session_id, 
+            client->http.status);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void 
 bbl_http_client_receive_cb(void *arg, uint8_t *buf, uint16_t len)
 {
@@ -50,7 +67,8 @@ bbl_http_client_receive_cb(void *arg, uint8_t *buf, uint16_t len)
         memcpy(client->response+client->response_idx, buf, len);
         client->response_idx+=len;
 
-        LOG(HTTP, "HTTP (ID: %u) RESPONSE: %s\n", 
+        bbl_http_client_parse_response(client);
+        LOG(DEBUG, "HTTP (ID: %u) RESPONSE: %s\n", 
             client->session->session_id, 
             client->response);
     }
@@ -117,7 +135,8 @@ bbl_http_client_job(timer_s *timer)
             bbl_http_client_connect(client);
             break;
         case HTTP_CLIENT_CONNECTING:
-            if(--client->timeout == 0) {
+            if(client->timeout) client->timeout--;
+            if(client->timeout == 0) {
                 bbl_http_client_close(client);
                 client->state = HTTP_CLIENT_IDLE;
             }
@@ -125,10 +144,12 @@ bbl_http_client_job(timer_s *timer)
         case HTTP_CLIENT_CONNECTED:
         case HTTP_CLIENT_REQUEST_SEND:
         case HTTP_CLIENT_RESPONSE_RECEIVED:
-            if(--client->timeout == 0) {
+            if(client->timeout) client->timeout--;
+            if(client->timeout == 0) {
                 bbl_http_client_close(client);
                 client->state = HTTP_CLIENT_CLOSED;
             }
+            break;
         default:
             break;
     }
@@ -179,4 +200,112 @@ bbl_http_client_session_init(bbl_session_s *session)
         }
     }
     return true;
+}
+
+static json_t *
+bbl_http_client_json(bbl_http_client_s *client)
+{
+    json_t *root = NULL;
+    json_t *headers = NULL;
+
+    bbl_http_client_config_s *config;
+    char *destination;
+
+    char header_name[256];
+    char header_value[256];
+
+    if(!client) {
+        return NULL;
+    }
+    config = client->config;
+
+    if(config->ipv4_destination_address) {
+        destination = format_ipv4_address(&config->ipv4_destination_address);
+    } else {
+        destination = format_ipv6_address(&config->ipv6_destination_address);
+    }
+
+    headers = json_array();
+    for(size_t i=0; i < client->http.num_headers; i++) {
+        if(!client->http.headers[i].name_len) break;
+        if(!client->http.headers[i].value_len) break;
+
+        memset(header_name, 0x0, sizeof(header_name));
+        if(client->http.headers[i].name_len < sizeof(header_name)) {
+            strncpy(header_name, client->http.headers[i].name, client->http.headers[i].name_len);
+        } else {
+            strncpy(header_name, client->http.headers[i].name, sizeof(header_name)-1);
+        }
+
+        memset(header_value, 0x0, sizeof(header_value));
+        if(client->http.headers[i].value_len < sizeof(header_value)) {
+            strncpy(header_value, client->http.headers[i].value, client->http.headers[i].value_len);
+        } else {
+            strncpy(header_value, client->http.headers[i].value, sizeof(header_value)-1);
+        }
+
+        json_array_append(headers, json_pack("{ss* ss*}",
+            "name", header_name,
+            "value", header_value));
+    }
+
+    root = json_pack("{sI sI ss* ss* ss* sI ss* s{sI, sI, ss* so*}}",
+        "session-id", client->session->session_id,
+        "http-client-group-id", config->http_client_group_id,
+        "name", config->name,
+        "url", config->url,
+        "destination-address", destination,
+        "destination-port", config->dst_port,
+        "state", bbl_http_client_state_string(client->state),
+        "response",
+        "minor-version", client->http.minor_version,
+        "status", client->http.status,
+        "msg", client->http.msg,
+        "headers", headers);
+
+    return root;
+}
+
+int
+bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *root;
+    json_t *json_clients = NULL;
+    json_t *json_client = NULL;
+
+    bbl_session_s *session;
+    bbl_http_client_s *client;
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        client = session->http_client;
+
+        json_clients = json_array();
+        while(client) {
+            json_client = bbl_http_client_json(client);
+            json_array_append(json_clients, json_client);
+            client = client->next;
+        }
+        root = json_pack("{ss si so*}",
+                         "status", "ok",
+                         "code", 200,
+                         "http-clients", json_clients);
+
+        if(root) {
+            result = json_dumpfd(root, fd, 0);
+            json_decref(root);
+        } else {
+            result = bbl_ctrl_status(fd, "error", 500, "internal error");
+            json_decref(json_clients);
+        }
+        return result;
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
 }
