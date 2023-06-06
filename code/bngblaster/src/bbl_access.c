@@ -647,6 +647,9 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
                 return;
             }
             break;
+        case PROTOCOL_IPV4_TCP:
+            bbl_tcp_ipv4_rx_session(session, eth, ipv4);
+            break;
         default:
             break;
     }
@@ -676,6 +679,9 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
         case IPV6_NEXT_HEADER_UDP:
             bbl_access_rx_udp_ipv6(interface, session, eth, ipv6);
             return;
+        case IPV6_NEXT_HEADER_TCP:
+            bbl_tcp_ipv6_rx_session(session, eth, ipv6);
+            break;
         default:
             break;
     }

@@ -792,8 +792,8 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "ipv4", "ip6cp", "dhcpv6",
         "dhcpv6-ldra", "ipv6", "igmp-autostart",
         "igmp-version", "session-traffic-autostart", "session-group-id",
-        "stream-group-id", "cfm-cc", "cfm-level",
-        "cfm-ma-id", "cfm-ma-name"
+        "stream-group-id",  "http-client-group-id",
+        "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name"
     };
     if(!schema_validate(access_interface, "access", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1128,6 +1128,16 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             return false;
         }
         access_config->stream_group_id = number;
+    }
+
+    value = json_object_get(access_interface, "http-client-group-id");
+    if(value) {
+        number = json_number_value(value);
+        if(number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for access->http-client-group-id\n");
+            return false;
+        }
+        access_config->http_client_group_id = number;
     }
 
     value = json_object_get(access_interface, "cfm-cc");
@@ -2166,6 +2176,94 @@ json_parse_config_streams(json_t *root)
 }
 
 static bool
+json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_client_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    double number;
+
+    g_ctx->tcp = true;
+
+    const char *schema[] = {
+        "name", "http-client-group-id", 
+        "url", "destination-port",
+        "priority", "vlan-priority", 
+        "start-delay",
+        "destination-ipv4-address",
+        "destination-ipv6-address",
+    };
+    if(!schema_validate(http, "http-client", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    if(json_unpack(http, "{s:s}", "name", &s) == 0) {
+        http_client_config->name = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for http-client->name\n");
+        return false;
+    }
+
+    if(json_unpack(http, "{s:s}", "url", &s) == 0) {
+        http_client_config->url = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for http-client->url\n");
+        return false;
+    }
+
+    value = json_object_get(http, "http-client-group-id");
+    if(value) {
+        number = json_number_value(value);
+        if(number >= UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for http-client->http-client-group-id\n");
+        }
+        http_client_config->http_client_group_id = number;
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for http-client->http-client-group-id\n");
+        return false;
+    }
+
+    value = json_object_get(http, "destination-port");
+    if(value) {
+        http_client_config->dst_port = json_number_value(value);
+    } else {
+        http_client_config->dst_port = 80;
+    }
+
+    value = json_object_get(http, "priority");
+    if(value) {
+        http_client_config->priority = json_number_value(value);
+    }
+
+    value = json_object_get(http, "vlan-priority");
+    if(value) {
+        http_client_config->vlan_priority = json_number_value(value);
+    }
+
+    value = json_object_get(http, "start-delay");
+    if(value) {
+        http_client_config->start_delay = json_number_value(value);
+    }
+
+    if(json_unpack(http, "{s:s}", "destination-ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &http_client_config->ipv4_destination_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for http-client->destination-ipv4-address\n");
+            return false;
+        }
+    } else if(json_unpack(http, "{s:s}", "destination-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &http_client_config->ipv6_destination_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for http-client->destination-ipv6-address\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Invalid value for http-client->destination-ipv4/ipv6-address\n");
+        return false;
+    }
+
+    return true;
+}
+
+static bool
 json_parse_config(json_t *root)
 {
     json_t *section, *sub, *value = NULL;
@@ -2187,6 +2285,8 @@ json_parse_config(json_t *root)
     isis_config_s               *isis_config            = NULL;
     ldp_config_s                *ldp_config             = NULL;
 
+    bbl_http_client_config_s    *http_client_config     = NULL;
+
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must be an object\n");
         return false;
@@ -2200,7 +2300,7 @@ json_parse_config(json_t *root)
         "isis",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
-        "l2tp-server"
+        "l2tp-server", "http-client"
     };
     if(!schema_validate(root, "root", root_schema, 
        sizeof(root_schema)/sizeof(root_schema[0]))) {
@@ -3370,6 +3470,35 @@ json_parse_config(json_t *root)
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
     }
+
+    /* HTTP Client Configuration */
+    sub = json_object_get(root, "http-client");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple HTTP sessions) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!http_client_config) {
+                g_ctx->config.http_client_config = calloc(1, sizeof(bbl_http_client_config_s));
+                http_client_config = g_ctx->config.http_client_config;
+            } else {
+                http_client_config->next = calloc(1, sizeof(bbl_http_client_config_s));
+                http_client_config = http_client_config->next;
+            }
+            if(!json_parse_http_client_config(json_array_get(sub, i), http_client_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single BGP session) */
+        bgp_config = calloc(1, sizeof(bgp_config_s));
+        if(!g_ctx->config.bgp_config) {
+            g_ctx->config.bgp_config = bgp_config;
+        }
+        if(!json_parse_bgp_config(sub, bgp_config)) {
+            return false;
+        }
+    }
+
 
     /* Traffic Streams Configuration */
     if(!json_parse_config_streams(root)) {

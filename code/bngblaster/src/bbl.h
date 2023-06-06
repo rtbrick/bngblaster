@@ -46,6 +46,7 @@
 #include "bbl_li.h"
 #include "bbl_cfm.h"
 #include "bbl_tcp.h"
+#include "bbl_http.h"
 
 #include "io/io.h"
 #include "bgp/bgp.h"

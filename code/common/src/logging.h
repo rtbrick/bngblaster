@@ -44,6 +44,7 @@ enum {
     LAG,
     DPDK,
     PACKET,
+    HTTP,
     TIMER,
     TIMER_DETAIL,
     LOG_ID_MAX

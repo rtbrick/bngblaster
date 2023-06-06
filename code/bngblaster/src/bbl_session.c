@@ -983,6 +983,11 @@ bbl_sessions_init()
             return false;
         }
 
+        if(!bbl_http_client_session_init(session)) {
+            LOG_NOARG(ERROR, "Failed to create session HTTP client!\n");
+            return false;
+        }
+
         timer_add_periodic(&g_ctx->timer_root, &session->timer_rate, "Rate Computation", 1, 0, session, &bbl_session_rate_job);
 
         if(access_config->monkey) {

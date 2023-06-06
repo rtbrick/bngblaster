@@ -33,7 +33,9 @@ typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
 
 typedef struct bbl_tcp_ctx_
 {
+    char* ifname;
     bbl_network_interface_s *interface;
+    bbl_session_s *session;
 
     bool listen;
     uint8_t af; /* AF_INET or AF_INET6 */
@@ -94,19 +96,34 @@ bbl_tcp_ctx_s *
 bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
 
 bbl_tcp_ctx_s *
+bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
+
+bbl_tcp_ctx_s *
 bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
+
+bbl_tcp_ctx_s *
+bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
 
 void
 bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
 
 void
+bbl_tcp_ipv4_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
+
+void
 bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6);
+
+void
+bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6);
 
 bool
 bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len);
 
 bool
 bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_config_s *config);
+
+bool
+bbl_tcp_session_init(bbl_session_s *session);
 
 void
 bbl_tcp_init();

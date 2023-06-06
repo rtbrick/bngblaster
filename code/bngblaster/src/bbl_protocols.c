@@ -1946,33 +1946,47 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
     pppoe_len = *len;
-    /* Add protocol */
-    switch(pppoe->protocol) {
-        case PROTOCOL_LCP:
-            result = encode_ppp_lcp(buf, len, (bbl_lcp_s*)pppoe->next);
-            break;
-        case PROTOCOL_IPCP:
-            result = encode_ppp_ipcp(buf, len, (bbl_ipcp_s*)pppoe->next);
-            break;
-        case PROTOCOL_IP6CP:
-            result = encode_ppp_ip6cp(buf, len, (bbl_ip6cp_s*)pppoe->next);
-            break;
-        case PROTOCOL_PAP:
-            result = encode_ppp_pap(buf, len, (bbl_pap_s*)pppoe->next);
-            break;
-        case PROTOCOL_CHAP:
-            result = encode_ppp_chap(buf, len, (bbl_chap_s*)pppoe->next);
-            break;
-        case PROTOCOL_IPV4:
-            result = encode_ipv4(buf, len, (bbl_ipv4_s*)pppoe->next);
-            break;
-        case PROTOCOL_IPV6:
-            result = encode_ipv6(buf, len, (bbl_ipv6_s*)pppoe->next);
-            break;
-        default:
-            result = UNKNOWN_PROTOCOL;
-            break;
+
+#ifdef BNGBLASTER_LWIP
+    if(pppoe->lwip) {
+        struct pbuf *p = pppoe->next; 
+        while(p) {
+            memcpy(buf, p->payload, p->len);
+            BUMP_WRITE_BUFFER(buf, len, p->len);
+            p = p->next;
+        }
+    } else {
+#endif
+        /* Add protocol */
+        switch(pppoe->protocol) {
+            case PROTOCOL_LCP:
+                result = encode_ppp_lcp(buf, len, (bbl_lcp_s*)pppoe->next);
+                break;
+            case PROTOCOL_IPCP:
+                result = encode_ppp_ipcp(buf, len, (bbl_ipcp_s*)pppoe->next);
+                break;
+            case PROTOCOL_IP6CP:
+                result = encode_ppp_ip6cp(buf, len, (bbl_ip6cp_s*)pppoe->next);
+                break;
+            case PROTOCOL_PAP:
+                result = encode_ppp_pap(buf, len, (bbl_pap_s*)pppoe->next);
+                break;
+            case PROTOCOL_CHAP:
+                result = encode_ppp_chap(buf, len, (bbl_chap_s*)pppoe->next);
+                break;
+            case PROTOCOL_IPV4:
+                result = encode_ipv4(buf, len, (bbl_ipv4_s*)pppoe->next);
+                break;
+            case PROTOCOL_IPV6:
+                result = encode_ipv6(buf, len, (bbl_ipv6_s*)pppoe->next);
+                break;
+            default:
+                result = UNKNOWN_PROTOCOL;
+                break;
+        }
+#ifdef BNGBLASTER_LWIP
     }
+#endif
 
     pppoe_len = *len - pppoe_len;
     pppoe_len += 2; /* PPP header */

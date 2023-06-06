@@ -569,8 +569,6 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     ldp_session_connect(session, 0);
 }
 
-
-
 void
 ldp_session_close_job(timer_s *timer)
 {

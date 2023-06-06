@@ -112,6 +112,10 @@ typedef struct bbl_session_
 
     void *access_line_profile;
 
+    /* TCP */
+    bbl_http_client_s *http_client;
+    struct netif netif; /* LwIP network interface */
+    
     /* Ethernet */
     uint8_t server_mac[ETH_ADDR_LEN];
     uint8_t client_mac[ETH_ADDR_LEN];

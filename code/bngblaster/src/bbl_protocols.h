@@ -631,6 +631,7 @@ typedef struct bbl_pppoe_discovery_ {
 typedef struct bbl_pppoe_session_ {
     uint16_t  session_id;
     uint16_t  protocol;
+    bool      lwip;
     void     *next; /* next header */
     void     *payload; /* PPP payload */
     uint16_t  payload_len; /* PPP payload length */
