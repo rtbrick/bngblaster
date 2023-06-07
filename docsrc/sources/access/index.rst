@@ -12,3 +12,4 @@ Access Protocols
    multicast.rst
    li.rst
    monkey.rst
+   http.rst

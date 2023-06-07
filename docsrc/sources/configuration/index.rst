@@ -119,3 +119,7 @@ BGP
 LDP
 ---
 .. include:: ldp.rst
+
+HTTP-Client
+-----------
+.. include:: http_client.rst
