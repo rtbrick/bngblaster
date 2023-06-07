@@ -241,6 +241,8 @@ struct action actions[] = {
     {"test-info", bbl_ctrl_test_info, true},
     {"test-stop", bbl_ctrl_test_stop, true},
     {"http-clients", bbl_http_client_ctrl, true},
+    {"http-clients-start", bbl_http_client_ctrl_start, false},
+    {"http-clients-stop", bbl_http_client_ctrl_stop, false},
     {NULL, NULL, false},
 };
 

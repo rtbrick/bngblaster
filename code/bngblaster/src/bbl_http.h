@@ -12,14 +12,16 @@
 
 #define HTTP_REQUEST_STRING     "GET / HTTP/1.1\r\nHost: %s\r\n\r\n"
 #define HTTP_RESPONSE_LIMIT     2048
+#define HTTP_RESPONSE_TIMEOUT   30
+#define HTTP_CONNECT_TIMEOUT    10
 
 typedef enum {
     HTTP_CLIENT_IDLE = 0,
     HTTP_CLIENT_CONNECTING,
     HTTP_CLIENT_CONNECTED,
-    HTTP_CLIENT_REQUEST_SEND,
-    HTTP_CLIENT_RESPONSE_RECEIVED,
+    HTTP_CLIENT_CLOSING,
     HTTP_CLIENT_CLOSED,
+    HTTP_CLIENT_SESSION_DOWN,
 } __attribute__ ((__packed__)) http_client_state_t;
 
 typedef struct bbl_http_client_config_
@@ -30,9 +32,7 @@ typedef struct bbl_http_client_config_
     uint16_t http_client_group_id;
     uint16_t dst_port;
 
-    uint8_t priority; /* IPv4 TOS or IPv6 TC */
-    uint8_t vlan_priority;
-
+    bool autostart;
     uint32_t start_delay;
     uint32_t ipv4_destination_address; /* set IPv4 destination address */
     ipv6addr_t ipv6_destination_address; /* set IPv6 destination address */
@@ -50,6 +50,7 @@ typedef struct bbl_http_client_
     char    *request;
     char    *response;
     uint32_t response_idx;
+
     struct {
         int minor_version;
         int status;
@@ -59,13 +60,13 @@ typedef struct bbl_http_client_
         size_t num_headers;
     } http;
 
-    uint32_t timeout;
-
     bbl_tcp_ctx_s *tcpc;
     const char *error_string;
 
     uint8_t state;
     struct timer_ *state_timer;
+    uint32_t timeout;
+
 } bbl_http_client_s;
 
 bool
@@ -73,5 +74,11 @@ bbl_http_client_session_init(bbl_session_s *session);
 
 int
 bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_http_client_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+int
+bbl_http_client_ctrl_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
 
 #endif

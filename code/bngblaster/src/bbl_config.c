@@ -2187,8 +2187,7 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
     const char *schema[] = {
         "name", "http-client-group-id", 
         "url", "destination-port",
-        "priority", "vlan-priority", 
-        "start-delay",
+        "autostart", "start-delay",
         "destination-ipv4-address",
         "destination-ipv6-address",
     };
@@ -2212,7 +2211,7 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
     }
 
     value = json_object_get(http, "http-client-group-id");
-    if(value) {
+    if(json_is_number(value)) {
         number = json_number_value(value);
         if(number >= UINT16_MAX) {
             fprintf(stderr, "JSON config error: Invalid value for http-client->http-client-group-id\n");
@@ -2224,25 +2223,30 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
     }
 
     value = json_object_get(http, "destination-port");
-    if(value) {
-        http_client_config->dst_port = json_number_value(value);
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for http-client->destination-port\n");
+        }
+        http_client_config->dst_port = number;
     } else {
         http_client_config->dst_port = 80;
     }
 
-    value = json_object_get(http, "priority");
-    if(value) {
-        http_client_config->priority = json_number_value(value);
-    }
-
-    value = json_object_get(http, "vlan-priority");
-    if(value) {
-        http_client_config->vlan_priority = json_number_value(value);
+    value = json_object_get(http, "autostart");
+    if(json_is_boolean(value)) {
+        http_client_config->autostart = json_boolean_value(value);
+    } else {
+        http_client_config->autostart = true;
     }
 
     value = json_object_get(http, "start-delay");
-    if(value) {
-        http_client_config->start_delay = json_number_value(value);
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number > UINT32_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for http-client->start-delay\n");
+        }
+        http_client_config->start_delay = number;
     }
 
     if(json_unpack(http, "{s:s}", "destination-ipv4-address", &s) == 0) {
