@@ -23,7 +23,35 @@ test_val2key(void **unused) {
     };
     assert_string_equal(val2key(numbers, 1), "one");
     assert_string_equal(val2key(numbers, 2), "two");
-    assert_string_equal(val2key(numbers, 3), "Unknown");
+    assert_string_equal(val2key(numbers, 0), "Unknown");
+}
+
+static void
+test_key2val(void **unused) {
+    (void) unused;
+
+    struct keyval_ numbers[] = {
+        { 1, "one" },
+        { 2, "two" },
+        { 0, NULL}
+    };
+    assert_int_equal(key2val(numbers, "one"), 1);
+    assert_int_equal(key2val(numbers, "two"), 2);
+    assert_int_equal(key2val(numbers, "Unknown"), 0);
+}
+
+static void
+test_keyval_get_key(void **unused) {
+    (void) unused;
+
+    struct keyval_ numbers[] = {
+        { 1, "one" },
+        { 2, "two" },
+        { 0, NULL}
+    };
+    assert_string_equal(keyval_get_key(numbers, 1), "one");
+    assert_string_equal(keyval_get_key(numbers, 2), "two");
+    assert_string_equal(keyval_get_key(numbers, 0), "unknown");
 }
 
 static void
@@ -43,15 +71,64 @@ test_format_ipv4_address(void **unused) {
 }
 
 static void
+test_scan_ipv4_address(void **unused) {
+    (void) unused;
+
+    uint32_t ipv4 = htobe32(0x01020304);
+    uint32_t ipv4_test = htobe32(0x00000000);
+    scan_ipv4_address("1.2.3.4", &ipv4_test);
+
+    assert_memory_equal(&ipv4_test,&ipv4,sizeof(uint32_t));
+}
+
+static void
 test_format_ipv6_address(void **unused) {
     (void) unused;
 
     ipv6addr_t ipv6 = {0};
     ipv6[0] = 0xfe;
     ipv6[1] = 0x80;
-    ipv6[15] = 0x01;
+    ipv6[15] = 0x04;
 
-    assert_string_equal(format_ipv6_address(&ipv6), "fe80::1");
+    assert_string_equal(format_ipv6_address(&ipv6), "fe80::4");
+}
+
+static void
+test_scan_ipv6_address(void **unused) {
+    (void) unused;
+
+    ipv6addr_t ipv6 = {0};
+    ipv6[0] = 0xfe;
+    ipv6[1] = 0x80;
+    ipv6[15] = 0x01;
+    ipv6addr_t ipv6_test = {0};
+    scan_ipv6_address("fe80::1", &ipv6_test);
+
+    assert_memory_equal(ipv6_test,ipv6,sizeof(ipv6addr_t));
+}
+
+static void
+test_format_ipv4_prefix(void **unused) {
+    (void) unused;
+
+    ipv4_prefix ipv4;
+    ipv4.address = htobe32(0x01020304); 
+    ipv4.len = 16;
+
+    assert_string_equal(format_ipv4_prefix(&ipv4), "1.2.3.4/16");
+}
+
+static void
+test_scan_ipv4_prefix(void **unused) {
+    (void) unused;
+
+    ipv4_prefix ipv4 = {0};
+    ipv4.address = htobe32(0x01020304); 
+    ipv4.len = 16;  
+    ipv4_prefix ipv4_test = {0};
+    scan_ipv4_prefix("1.2.3.4/16", &ipv4_test);
+
+    assert_memory_equal(&ipv4_test,&ipv4,sizeof(ipv4_prefix));
 }
 
 static void
@@ -62,9 +139,53 @@ test_format_ipv6_prefix(void **unused) {
     ipv6.len = 64;
     ipv6.address[0] = 0xfe;
     ipv6.address[1] = 0x80;
-    ipv6.address[15] = 0x01;
+    ipv6.address[15] = 0x02;
 
-    assert_string_equal(format_ipv6_prefix(&ipv6), "fe80::1/64");
+    assert_string_equal(format_ipv6_prefix(&ipv6), "fe80::2/64");
+}
+
+static void
+test_scan_ipv6_prefix(void **unused) {
+    (void) unused;
+
+    ipv6_prefix ipv6 = {0};
+    ipv6.len = 64;
+    ipv6.address[0] = 0xfe;
+    ipv6.address[1] = 0x80;
+    ipv6.address[15] = 0x02;
+    ipv6_prefix ipv6_test = {0};
+    scan_ipv6_prefix("fe80::2/64", &ipv6_test);
+
+    assert_memory_equal(&ipv6_test,&ipv6,sizeof(ipv6_prefix));
+}
+
+static void
+test_format_iso_prefix(void **unused) {
+    (void) unused;
+
+    iso_prefix iso = {0};
+    iso.len = 24;
+    iso.address[0] = 73;
+    iso.address[1] = 73;
+    iso.address[2] = 1;
+
+    assert_string_equal(format_iso_prefix(&iso), "49.4901/24");
+}
+
+static void
+test_scan_iso_prefix(void **unused) {
+    (void) unused;
+
+    iso_prefix iso = {0};
+    iso.len = 24;
+    iso.address[0] = 73;
+    iso.address[1] = 73;
+    iso.address[2] = 2;
+    iso_prefix iso_test = {0};
+
+    scan_iso_prefix("49.4902/24", &iso_test);
+
+    assert_memory_equal(&iso_test,&iso,sizeof(iso_prefix));
 }
 
 static void
@@ -74,6 +195,15 @@ test_replace_substring(void **unused) {
     assert_string_equal(replace_substring("1234{i}90", "{i}", "5678"), "1234567890");
     assert_string_equal(replace_substring("{i1}{i2}{i2}", "{i2}", "2"), "{i1}22");
     assert_string_equal(replace_substring("1234{long-variable-name}567890", "{long-variable-name}", ""), "1234567890");
+}
+
+static void
+test_string_or_na(void **unused) {
+    (void) unused;
+
+    assert_string_equal(string_or_na("hello"), "hello");
+    assert_string_equal(string_or_na("{i1}22"), "{i1}22");
+    assert_string_equal(string_or_na("123"), "123");
 }
 
 static void
@@ -107,13 +237,24 @@ test_ipv6_multicast_mac(void **unused) {
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_val2key),
+        cmocka_unit_test(test_key2val),
+        cmocka_unit_test(test_keyval_get_key),
         cmocka_unit_test(test_format_mac_address),
         cmocka_unit_test(test_format_ipv4_address),
+        cmocka_unit_test(test_format_ipv4_prefix),
+        cmocka_unit_test(test_scan_ipv4_prefix),
         cmocka_unit_test(test_format_ipv6_address),
+        cmocka_unit_test(test_scan_ipv6_address),
+        cmocka_unit_test(test_scan_ipv4_address),
         cmocka_unit_test(test_format_ipv6_prefix),
+        cmocka_unit_test(test_scan_ipv6_prefix),
+        cmocka_unit_test(test_format_iso_prefix),
+        cmocka_unit_test(test_scan_iso_prefix),
         cmocka_unit_test(test_replace_substring),
+        cmocka_unit_test(test_string_or_na),
         cmocka_unit_test(test_ipv4_multicast_mac),
         cmocka_unit_test(test_ipv6_multicast_mac),
+
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
