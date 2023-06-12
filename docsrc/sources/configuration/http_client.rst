@@ -20,7 +20,7 @@
      - Mandatory HTTP request URL
      - 
    * - `destination-port`
-     - TSP destination port
+     - TCP destination port
      - 80
    * - `autostart`
      - Autostart HTTP client

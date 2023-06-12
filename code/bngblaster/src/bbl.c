@@ -549,14 +549,14 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
+    /* Init TCP. */
+    bbl_tcp_init();
+
     /* Init interfaces. */
     if(!bbl_interface_init()) {
         fprintf(stderr, "Error: Failed to init interfaces\n");
         goto CLEANUP;
     }
-
-    /* Init TCP. */
-    bbl_tcp_init();
 
     /* Init BGP sessions. */
     if(!bgp_init()) {

@@ -236,5 +236,8 @@ typedef struct bbl_tcp_ctx_ bbl_tcp_ctx_s;
 typedef struct bbl_ctrl_thread_ bbl_ctrl_thread_s;
 typedef struct bbl_http_client_config_ bbl_http_client_config_s;
 typedef struct bbl_http_client_ bbl_http_client_s;
+typedef struct bbl_http_server_config_ bbl_http_server_config_s;
+typedef struct bbl_http_server_ bbl_http_server_s;
+typedef struct bbl_http_server_connection_ bbl_http_server_connection_s;
 
 #endif

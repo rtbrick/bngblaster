@@ -114,7 +114,7 @@ typedef struct bbl_session_
 
     /* TCP */
     bbl_http_client_s *http_client;
-    struct netif netif; /* LwIP network interface */
+    struct netif netif; /* LwIP interface */
     
     /* Ethernet */
     uint8_t server_mac[ETH_ADDR_LEN];

@@ -2260,10 +2260,72 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
             return false;
         }
     } else {
-        fprintf(stderr, "JSON config error: Invalid value for http-client->destination-ipv4/ipv6-address\n");
+        fprintf(stderr, "JSON config error: Missing value for http-client->destination-ipv4/ipv6-address\n");
         return false;
     }
 
+    return true;
+}
+
+static bool
+json_parse_http_server_config(json_t *http, bbl_http_server_config_s *http_server_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    double number;
+
+    g_ctx->tcp = true;
+
+    const char *schema[] = {
+        "name", "network-interface", "port",
+        "ipv4-address", "ipv6-address",
+    };
+    if(!schema_validate(http, "http-server", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    if(json_unpack(http, "{s:s}", "name", &s) == 0) {
+        http_server_config->name = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for http-server->name\n");
+        return false;
+    }
+
+    if(json_unpack(http, "{s:s}", "network-interface", &s) == 0) {
+        http_server_config->network_interface = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for http-server->network-interface\n");
+        return false;
+    }
+
+    value = json_object_get(http, "port");
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for http-server->port\n");
+        }
+        http_server_config->port = number;
+    } else {
+        http_server_config->port = 80;
+    }
+
+    if(json_unpack(http, "{s:s}", "ipv4-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &http_server_config->ipv4_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for http-server->ipv4-address\n");
+            return false;
+        }
+        add_secondary_ipv4(http_server_config->ipv4_address);
+    } else if(json_unpack(http, "{s:s}", "ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &http_server_config->ipv6_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for http-server->ipv6-address\n");
+            return false;
+        }
+        add_secondary_ipv6(http_server_config->ipv6_address);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for http-server->ipv4/ipv6-address\n");
+        return false;
+    }
     return true;
 }
 
@@ -2290,6 +2352,7 @@ json_parse_config(json_t *root)
     ldp_config_s                *ldp_config             = NULL;
 
     bbl_http_client_config_s    *http_client_config     = NULL;
+    bbl_http_server_config_s    *http_server_config     = NULL;
 
     if(json_typeof(root) != JSON_OBJECT) {
         fprintf(stderr, "JSON config error: Configuration root element must be an object\n");
@@ -2304,7 +2367,8 @@ json_parse_config(json_t *root)
         "isis",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
-        "l2tp-server", "http-client"
+        "l2tp-server", 
+        "http-client", "http-server"
     };
     if(!schema_validate(root, "root", root_schema, 
        sizeof(root_schema)/sizeof(root_schema[0]))) {
@@ -3478,7 +3542,7 @@ json_parse_config(json_t *root)
     /* HTTP Client Configuration */
     sub = json_object_get(root, "http-client");
     if(json_is_array(sub)) {
-        /* Config is provided as array (multiple HTTP sessions) */
+        /* Config is provided as array (multiple HTTP clients) */
         size = json_array_size(sub);
         for(i = 0; i < size; i++) {
             if(!http_client_config) {
@@ -3493,16 +3557,43 @@ json_parse_config(json_t *root)
             }
         }
     } else if(json_is_object(sub)) {
-        /* Config is provided as object (single BGP session) */
-        bgp_config = calloc(1, sizeof(bgp_config_s));
-        if(!g_ctx->config.bgp_config) {
-            g_ctx->config.bgp_config = bgp_config;
+        /* Config is provided as object (single HTTP client) */
+        http_client_config = calloc(1, sizeof(bbl_http_client_config_s));
+        if(!g_ctx->config.http_client_config) {
+            g_ctx->config.http_client_config = http_client_config;
         }
-        if(!json_parse_bgp_config(sub, bgp_config)) {
+        if(!json_parse_http_client_config(sub, http_client_config)) {
             return false;
         }
     }
 
+    /* HTTP Server Configuration */
+    sub = json_object_get(root, "http-server");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple HTTP servers) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!http_server_config) {
+                g_ctx->config.http_server_config = calloc(1, sizeof(bbl_http_server_config_s));
+                http_server_config = g_ctx->config.http_server_config;
+            } else {
+                http_server_config->next = calloc(1, sizeof(bbl_http_server_config_s));
+                http_server_config = http_server_config->next;
+            }
+            if(!json_parse_http_server_config(json_array_get(sub, i), http_server_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single HTTP server) */
+        http_server_config = calloc(1, sizeof(bbl_http_server_config_s));
+        if(!g_ctx->config.http_server_config) {
+            g_ctx->config.http_server_config = http_server_config;
+        }
+        if(!json_parse_http_server_config(sub, http_server_config)) {
+            return false;
+        }
+    }
 
     /* Traffic Streams Configuration */
     if(!json_parse_config_streams(root)) {

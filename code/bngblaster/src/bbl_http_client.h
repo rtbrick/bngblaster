@@ -1,5 +1,5 @@
 /*
- * BNG Blaster (BBL) - HTTP
+ * BNG Blaster (BBL) - HTTP Client
  *
  * Christian Giese, June 2023
  *
@@ -7,13 +7,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef __BBL_HTTP_H__
-#define __BBL_HTTP_H__
+#ifndef __BBL_HTTP_CLIENT_H__
+#define __BBL_HTTP_CLIENT_H__
 
-#define HTTP_REQUEST_STRING     "GET / HTTP/1.1\r\nHost: %s\r\n\r\n"
-#define HTTP_RESPONSE_LIMIT     2048
-#define HTTP_RESPONSE_TIMEOUT   30
-#define HTTP_CONNECT_TIMEOUT    10
+#define HTTP_CLIENT_REQUEST_STRING     "GET / HTTP/1.1\r\nHost: %s\r\n\r\n"
+#define HTTP_CLIENT_RESPONSE_LIMIT     2048
+#define HTTP_CLIENT_RESPONSE_TIMEOUT   30
+#define HTTP_CLIENT_CONNECT_TIMEOUT    10
 
 typedef enum {
     HTTP_CLIENT_IDLE = 0,
@@ -22,7 +22,7 @@ typedef enum {
     HTTP_CLIENT_CLOSING,
     HTTP_CLIENT_CLOSED,
     HTTP_CLIENT_SESSION_DOWN,
-} __attribute__ ((__packed__)) http_client_state_t;
+} __attribute__ ((__packed__)) http_state_t;
 
 typedef struct bbl_http_client_config_
 {
@@ -66,11 +66,13 @@ typedef struct bbl_http_client_
     uint8_t state;
     struct timer_ *state_timer;
     uint32_t timeout;
-
 } bbl_http_client_s;
 
 bool
 bbl_http_client_session_init(bbl_session_s *session);
+
+bool
+bbl_http_server_init(bbl_network_interface_s *network_interface);
 
 int
 bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
@@ -80,5 +82,8 @@ bbl_http_client_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attr
 
 int
 bbl_http_client_ctrl_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
+bool
+bbl_http_server_init(bbl_network_interface_s *network_interface);
 
 #endif

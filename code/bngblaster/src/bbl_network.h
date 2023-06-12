@@ -55,7 +55,9 @@ typedef struct bbl_network_interface_
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
 
-    struct netif netif; /* LwIP network interface */
+    /* TCP */
+    bbl_http_server_s *http_server;
+    struct netif netif; /* LwIP interface */
 
     isis_adjacency_p2p_s *isis_adjacency_p2p;
     isis_adjacency_s     *isis_adjacency[ISIS_LEVELS];

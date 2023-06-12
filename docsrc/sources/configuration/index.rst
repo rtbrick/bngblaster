@@ -123,3 +123,7 @@ LDP
 HTTP-Client
 -----------
 .. include:: http_client.rst
+
+HTTP-Server
+-----------
+.. include:: http_server.rst

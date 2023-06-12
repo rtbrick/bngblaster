@@ -197,8 +197,9 @@ typedef struct bbl_ctx_
         /* LDP Instances */
         ldp_config_s *ldp_config;
 
-        /* HTTP Client Instances */
+        /* HTTP Client/Server Instances */
         bbl_http_client_config_s *http_client_config;
+        bbl_http_server_config_s *http_server_config;
 
         /* Global Session Settings */
         uint32_t sessions;

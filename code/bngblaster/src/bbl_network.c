@@ -145,6 +145,12 @@ bbl_network_interfaces_add()
             return false;
         }
 
+        /* Init HTTP server */
+        if(!bbl_http_server_init(network_interface)) {
+            LOG(ERROR, "Failed to init HTTP server for network interface %s\n", ifname);
+            return false;
+        }
+
         /* Init routing protocols */ 
         if(network_config->isis_instance_id) {
             result = false;

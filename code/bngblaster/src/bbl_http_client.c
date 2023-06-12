@@ -1,5 +1,5 @@
 /*
- * BNG Blaster (BBL) - HTTP
+ * BNG Blaster (BBL) - HTTP Client
  *
  * Christian Giese, June 2023
  *
@@ -11,7 +11,7 @@
 extern volatile bool g_teardown;
 
 const char *
-bbl_http_client_state_string(http_client_state_t state)
+bbl_http_client_state_string(http_state_t state)
 {
     switch(state) {
         case HTTP_CLIENT_IDLE: return "idle";
@@ -38,6 +38,7 @@ bbl_http_client_start(bbl_http_client_s *client)
     if(client->state == HTTP_CLIENT_CLOSED) {
         client->state = HTTP_CLIENT_IDLE;
         client->error_string = NULL;
+        client->response_idx = 0;
     }
 }
 
@@ -49,7 +50,7 @@ bbl_http_client_connected_cb(void *arg)
 {
     bbl_http_client_s *client = (bbl_http_client_s*)arg;
     client->state = HTTP_CLIENT_CONNECTED;
-    client->timeout = HTTP_RESPONSE_TIMEOUT;
+    client->timeout = HTTP_CLIENT_RESPONSE_TIMEOUT;
     if(client->request) {
         bbl_tcp_send(client->tcpc, (uint8_t*)client->request, strlen(client->request));
         LOG(HTTP, "HTTP (ID: %u Name: %s) request send\n", 
@@ -92,8 +93,8 @@ bbl_http_client_receive_cb(void *arg, uint8_t *buf, uint16_t len)
     bool close = false;
 
     if(buf) {
-        if(client->response_idx+len > HTTP_RESPONSE_LIMIT) {
-            len = HTTP_RESPONSE_LIMIT - client->response_idx;
+        if(client->response_idx+len > HTTP_CLIENT_RESPONSE_LIMIT) {
+            len = HTTP_CLIENT_RESPONSE_LIMIT - client->response_idx;
             /* Close TCP session after response buffer is full. */
             close = true;
         }
@@ -155,7 +156,7 @@ bbl_http_client_connect(bbl_http_client_s *client)
         client->tcpc->error_cb = bbl_http_client_error_cb;
 
         client->state = HTTP_CLIENT_CONNECTING;
-        client->timeout = HTTP_CONNECT_TIMEOUT; /* connect timeout */
+        client->timeout = HTTP_CLIENT_CONNECT_TIMEOUT; /* connect timeout */
     } else {
         LOG(HTTP, "HTTP (ID: %u Name: %s) connect failed\n", 
             client->session->session_id, config->name);
@@ -254,10 +255,10 @@ bbl_http_client_add(bbl_http_client_config_s *config, bbl_session_s *session)
     client->session = session;
     client->config = config;
 
-    client->request = calloc(1, strlen(client->config->url)+sizeof(HTTP_REQUEST_STRING));
-    sprintf(client->request, HTTP_REQUEST_STRING, client->config->url);
+    client->request = calloc(1, strlen(client->config->url)+sizeof(HTTP_CLIENT_REQUEST_STRING));
+    sprintf(client->request, HTTP_CLIENT_REQUEST_STRING, client->config->url);
     
-    client->response = calloc(1, HTTP_RESPONSE_LIMIT);
+    client->response = calloc(1, HTTP_CLIENT_RESPONSE_LIMIT);
 
     client->next = session->http_client;
     session->http_client = client;
