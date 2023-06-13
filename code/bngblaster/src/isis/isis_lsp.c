@@ -820,7 +820,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
     lsp_id = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
     seq = be32toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
 
-    LOG(ISIS, "ISIS UPDATE %s-LSP %s (seq %u) from command\n", 
+    LOG(ISIS, "ISIS UPDATE EXTERNAL %s-LSP %s (seq %u)\n", 
         isis_level_string(level), 
         isis_lsp_id_to_str(&lsp_id), 
         seq);

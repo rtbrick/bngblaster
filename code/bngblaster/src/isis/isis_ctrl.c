@@ -441,6 +441,11 @@ isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *
         if(search) {
             lsp = *search;
             if(lsp && lsp->source.type == ISIS_SOURCE_EXTERNAL) {
+                LOG(ISIS, "ISIS FLAP %s-LSP %s in %lus\n", 
+                    isis_level_string(lsp->level), 
+                    isis_lsp_id_to_str(&lsp->id),
+                    timer);
+
                 flap = isis_ctrl_lsp_flap_new(lsp);
                 timer_add(&g_ctx->timer_root, &flap->timer, "ISIS FLAP", timer, 0, flap, &isis_ctrl_lsp_flap_job);
                 isis_lsp_purge(lsp);
