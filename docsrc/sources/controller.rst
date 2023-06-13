@@ -3,9 +3,27 @@
 Controller
 ==========
 
-The BNG Blaster controller provides a REST API to start and stop multiple test instances. 
-It exposes the BNG Blaster :ref:`JSON RPC API <api>` as REST API and provides endpoints 
-to download logs and reports.
+The BNG Blaster controller offers a convenient REST API that allows users to start and stop 
+multiple test instances with ease. The REST API serves as an interface to the BNG Blaster's 
+underlying functionality, providing a simplified way to interact with the controller and 
+manage test instances.
+
+By exposing the BNG Blaster :ref:`JSON RPC API <api>` as a REST API, the controller enables 
+users to perform various operations programmatically. This includes initiating test instances, 
+configuring test parameters, monitoring test progress, and terminating test executions. 
+The REST API provides a standardized and intuitive way to control the BNG Blaster, making it 
+accessible to automation scripts, external applications, or custom integrations.
+
+Furthermore, the BNG Blaster controller's REST API also offers endpoints to download logs and reports. 
+These endpoints enable users to retrieve detailed information about the test execution, such as 
+test results, performance metrics, and any encountered errors or issues. By accessing logs and reports 
+through the REST API, users can analyze the outcomes of their tests, troubleshoot problems, and generate 
+comprehensive documentation for further analysis or reporting purposes.
+
+The REST API provided by the BNG Blaster controller simplifies the management of test instances and 
+enhances the overall usability and integration capabilities of the BNG Blaster. Whether it's starting 
+and stopping tests, retrieving logs and reports, or integrating with other systems, the REST API streamlines 
+the testing process and facilitates seamless interaction with the BNG Blaster's functionalities.
 
 https://github.com/rtbrick/bngblaster-controller
 
@@ -13,7 +31,8 @@ Installation
 ------------
 
 The BNG Blaster controller should run on any modern Linux distribution
-but is primarily tested on Ubuntu 18.04 LTS and Ubuntu 20.04 LTS.
+but is primarily tested on Ubuntu 18.04 LTS, Ubuntu 20.04 LTS and 
+Ubuntu 22.04 LTS (recommended).
 
 Download and install Debian package: https://github.com/rtbrick/bngblaster-controller/releases
 

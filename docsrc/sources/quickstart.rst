@@ -7,7 +7,7 @@ examples here work standalone without having network devices.
 First, you need to :ref:`install <install>` the BNG Blaster on your machine.
 
 In the next step, you create a virtual ethernet interface pair. This can be 
-used by the BNG Blaster to send and received traffic.
+used by the BNG Blaster to send and receive traffic.
 
 .. code-block:: none
 

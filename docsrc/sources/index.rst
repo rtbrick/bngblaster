@@ -98,6 +98,7 @@ Contents
    access/index
    routing/index
    streams
+   http
    reports
    configuration/index
    api/index
