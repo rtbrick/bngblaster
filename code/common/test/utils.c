@@ -75,10 +75,10 @@ test_scan_ipv4_address(void **unused) {
     (void) unused;
 
     uint32_t ipv4 = htobe32(0x01020304);
-    uint32_t ipv4_test = htobe32(0x00000000);
+    uint32_t ipv4_test = 0;
     scan_ipv4_address("1.2.3.4", &ipv4_test);
 
-    assert_memory_equal(&ipv4_test,&ipv4,sizeof(uint32_t));
+    assert_int_equal(ipv4,ipv4_test);
 }
 
 static void
