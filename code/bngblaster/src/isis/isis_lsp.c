@@ -210,7 +210,9 @@ void
 isis_lsp_purge_job(timer_s *timer)
 {
     isis_lsp_s *lsp = timer->data;
-    lsp->deleted = true;
+    if(lsp->expired) {
+        lsp->deleted = true;
+    }
 }
 
 void

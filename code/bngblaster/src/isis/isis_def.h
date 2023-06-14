@@ -371,7 +371,7 @@ typedef struct isis_lsp_ {
 
     char *auth_key;
 
-    struct isis_pdu_ pdu;
+    isis_pdu_s pdu;
 } isis_lsp_s;
 
 /* IS-IS LSP flood entry */
