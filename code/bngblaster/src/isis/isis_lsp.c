@@ -833,6 +833,9 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
     if(search) {
         /* Update existing LSP. */
         lsp = *search;
+        if(lsp->seq >= seq) {
+            return false;
+        }
     } else {
         /* Create new LSP. */
         lsp = isis_lsp_new(lsp_id, level, instance);
@@ -840,7 +843,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
         if(result.inserted) {
             *result.datum_ptr = lsp;
         } else {
-            LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
+            LOG_NOARG(ERROR, "Failed to add ISIS LSP to LSDB\n");
             return false;
         }
     }
