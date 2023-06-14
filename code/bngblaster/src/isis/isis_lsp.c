@@ -260,6 +260,7 @@ isis_lsp_refresh(isis_lsp_s *lsp)
 
     lsp->seq++;
     lsp->expired = false;
+    lsp->deleted = false;
 
     *(uint32_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(lsp->seq);
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
@@ -642,15 +643,13 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
             goto ACK;
         }
         if(lsp->source.type == ISIS_SOURCE_EXTERNAL) {
-            /* Per default we will not overwrite 
-             * external LSP. */
             if(config->external_auto_refresh) {
                 /* With external-auto-refresh enabled, 
                  * the sequence number will be increased. */
                 lsp->seq = seq;
                 isis_lsp_refresh(lsp);
+                goto ACK;
             }
-            goto ACK;
         }
         if(lsp->source.type == ISIS_SOURCE_SELF) {
             /* We received a newer version of our own
@@ -679,6 +678,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     lsp->seq = seq;
     lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;
+    lsp->deleted = false;
     lsp->instance = adjacency->instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 

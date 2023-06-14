@@ -111,6 +111,7 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
         lsp->seq = seq;
         lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(&pdu, ISIS_OFFSET_LSP_LIFETIME));
         lsp->expired = false;
+        lsp->deleted = false;
         lsp->instance = instance;
         lsp->timestamp.tv_sec = now.tv_sec;
         lsp->timestamp.tv_nsec = now.tv_nsec;
