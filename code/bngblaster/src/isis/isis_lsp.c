@@ -161,7 +161,7 @@ isis_lsp_gc_job(timer_s *timer)
             while(next) {
                 lsp = *hb_itor_datum(itor);
                 next = hb_itor_next(itor);
-                if(lsp && lsp->expired && lsp->refcount == 0) {
+                if(lsp && lsp->deleted && lsp->refcount == 0) {
                     timer_del(lsp->timer_lifetime);
                     timer_del(lsp->timer_refresh);
                     removed = hb_tree_remove(instance->level[i].lsdb, &lsp->id);
@@ -849,6 +849,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
     lsp->seq = seq;
     lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;
+    lsp->deleted = false;
     lsp->instance = instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
@@ -880,5 +881,73 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
     } else { 
         isis_lsp_flood(lsp);
     }
+    return true;
+}
+
+void
+isis_lsp_flap_job(timer_s *timer)
+{
+    isis_lsp_flap_s *flap = timer->data;
+    uint32_t seq;
+
+    if(flap) {
+        seq = be32toh(*(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ));
+        *(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(++seq);
+
+        if(!isis_lsp_update_external(flap->instance, &flap->pdu, true)) {
+            LOG(ISIS, "Failed to flap ISIS LSP %s\n", isis_lsp_id_to_str(&flap->id));
+        }
+        flap->free = true;
+    }
+}
+
+/**
+ * isis_lsp_flap 
+ * 
+ * This function flaps (purge, wait, add) 
+ * the given LSP.
+ * 
+ * @param lsp LSP
+ * @param timer flap timer in seconds
+ */
+bool
+isis_lsp_flap(isis_lsp_s *lsp, time_t timer)
+{
+    static isis_lsp_flap_s *isis_lsp_flap = NULL;
+
+    isis_lsp_flap_s *flap = isis_lsp_flap;
+
+    if(lsp->lifetime == 0 || 
+       lsp->expired ||
+       lsp->deleted) {
+        return false;
+    }
+
+    LOG(ISIS, "ISIS FLAP %s-LSP %s in %lus\n", 
+        isis_level_string(lsp->level), 
+        isis_lsp_id_to_str(&lsp->id),
+        timer);
+
+    while(flap) {
+        if(flap->free) {
+            break;
+        }
+        flap = flap->next;
+    }
+    if(!flap) {
+        flap = calloc(1, sizeof(isis_lsp_flap_s));
+        flap->next = isis_lsp_flap;
+        isis_lsp_flap = flap;
+    }
+
+    flap->free = false;
+    flap->timer = NULL;
+    flap->id = lsp->id;
+    flap->instance = lsp->instance;
+    memcpy(&flap->pdu, &lsp->pdu, sizeof(isis_pdu_s));
+
+    timer_add(&g_ctx->timer_root, &flap->timer, "ISIS FLAP", timer, 0, flap, &isis_lsp_flap_job);
+    isis_lsp_purge(lsp);
+
     return true;
 }

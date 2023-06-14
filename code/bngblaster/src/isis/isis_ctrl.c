@@ -9,9 +9,6 @@
 #include "isis.h"
 #include "../bbl_ctrl.h"
 
-isis_lsp_flap_s *g_isis_lsp_flap = NULL;
-
-
 #define ISIS_CTRL_ARG_INSTANCE(_arguments, _fd, _instance_id, _instance) \
     do { \
         if(json_unpack(_arguments, "{s:i}", "instance", &_instance_id) != 0) { \
@@ -357,49 +354,6 @@ isis_ctrl_lsp_purge(int fd, uint32_t session_id __attribute__((unused)), json_t 
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
-void
-isis_ctrl_lsp_flap_job(timer_s *timer)
-{
-    isis_lsp_flap_s *flap = timer->data;
-    uint32_t seq;
-
-    if(flap) {
-        seq = be32toh(*(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ));
-        *(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(++seq);
-
-        if(!isis_lsp_update_external(flap->instance, &flap->pdu, true)) {
-            LOG(ISIS, "Failed to flap ISIS LSP %s\n", isis_lsp_id_to_str(&flap->id));
-        }
-        flap->free = true;
-    }
-}
-
-static isis_lsp_flap_s *
-isis_ctrl_lsp_flap_new(isis_lsp_s *lsp)
-{
-    isis_lsp_flap_s *flap = g_isis_lsp_flap;
-
-    while(flap) {
-        if(flap->free) {
-            break;
-        }
-        flap = flap->next;
-    }
-    if(!flap) {
-        flap = calloc(1, sizeof(isis_lsp_flap_s));
-        flap->next = g_isis_lsp_flap;
-        g_isis_lsp_flap = flap;
-    }
-
-    flap->free = false;
-    flap->timer = NULL;
-    flap->id = lsp->id;
-    flap->instance = lsp->instance;
-    memcpy(&flap->pdu, &lsp->pdu, sizeof(isis_pdu_s));
-
-    return flap;
-}
-
 int
 isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
@@ -411,8 +365,6 @@ isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *
     time_t timer = 30;
     hb_tree *lsdb;
     void **search = NULL;
-
-    isis_lsp_flap_s *flap;
 
     isis_instance_s *instance = NULL;
     int instance_id = 0;
@@ -441,16 +393,9 @@ isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *
         if(search) {
             lsp = *search;
             if(lsp && lsp->source.type == ISIS_SOURCE_EXTERNAL) {
-                LOG(ISIS, "ISIS FLAP %s-LSP %s in %lus\n", 
-                    isis_level_string(lsp->level), 
-                    isis_lsp_id_to_str(&lsp->id),
-                    timer);
-
-                flap = isis_ctrl_lsp_flap_new(lsp);
-                timer_add(&g_ctx->timer_root, &flap->timer, "ISIS FLAP", timer, 0, flap, &isis_ctrl_lsp_flap_job);
-                isis_lsp_purge(lsp);
-            } else {
-                return bbl_ctrl_status(fd, "error", 500, "failed to flap ISIS LSP");
+                if(isis_lsp_flap(lsp, timer)) {
+                    return bbl_ctrl_status(fd, "ok", 200, NULL);
+                }
             }
         } else {
             return bbl_ctrl_status(fd, "error", 404, "ISIS LSP not found");
@@ -458,7 +403,7 @@ isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *
     } else {
         return bbl_ctrl_status(fd, "error", 400, "missing ISIS LSP identifier");
     }
-    return bbl_ctrl_status(fd, "ok", 200, NULL);
+    return bbl_ctrl_status(fd, "error", 500, "failed to flap ISIS LSP");
 }
 
 int

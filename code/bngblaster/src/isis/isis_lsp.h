@@ -54,4 +54,7 @@ isis_lsp_purge_all_external(isis_instance_s *instance, uint8_t level);
 bool
 isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refresh);
 
+bool
+isis_lsp_flap(isis_lsp_s *lsp, time_t timer);
+
 #endif
