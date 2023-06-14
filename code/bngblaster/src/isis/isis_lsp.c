@@ -897,7 +897,8 @@ isis_lsp_flap_job(timer_s *timer)
 
     if(flap) {
         seq = be32toh(*(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ));
-        *(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(++seq);
+        seq += 2;
+        *(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(seq);
 
         if(!isis_lsp_update_external(flap->instance, &flap->pdu, true)) {
             LOG(ISIS, "Failed to flap ISIS LSP %s\n", isis_lsp_id_to_str(&flap->id));
