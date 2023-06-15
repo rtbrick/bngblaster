@@ -85,6 +85,9 @@
    * - `agent-remote-id`
      - Overwrite the agent-remote-id from the access-line section
      - 
+   * - `access-aggregation-circuit-id`
+     - Overwrite the access-aggregation-circuit-id from the access-line section
+     - 
    * - `rate-up`
      - Overwrite the rate-up from the access-line section
      - 
