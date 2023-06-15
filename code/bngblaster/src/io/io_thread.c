@@ -141,7 +141,7 @@ io_thread_main_rx_job(timer_s *timer)
                 /* Dump the packet into pcap file. */
                 if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                     pcap = true;
-                    pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                    pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
                                               interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
                 }
                 bbl_txq_read_next(thread->txq);
