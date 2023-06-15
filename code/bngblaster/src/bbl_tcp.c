@@ -393,9 +393,15 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uin
     tcpc->local_addr.u_addr.ip4.addr = *address;
     if(tcp_bind(tcpc->pcb, &tcpc->local_addr, port) != ERR_OK) {
         bbl_tcp_ctx_free(tcpc);
+        return NULL;
     }
 
     tcpc->pcb = tcp_listen(tcpc->pcb);
+    if(!tcpc->pcb) {
+        bbl_tcp_ctx_free(tcpc);
+        return NULL;
+    }
+
     tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
 
     tcpc->listen = true;
@@ -440,9 +446,15 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uin
     tcpc->local_addr.type = IPADDR_TYPE_V6;
     if(tcp_bind(tcpc->pcb, &tcpc->local_addr, port) != ERR_OK) {
         bbl_tcp_ctx_free(tcpc);
+        return NULL;
     }
 
     tcpc->pcb = tcp_listen(tcpc->pcb);
+    if(!tcpc->pcb) {
+        bbl_tcp_ctx_free(tcpc);
+        return NULL;
+    }
+
     tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
 
     tcpc->listen = true;
