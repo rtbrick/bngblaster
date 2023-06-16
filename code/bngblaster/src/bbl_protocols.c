@@ -59,7 +59,7 @@ _checksum(void *buf, ssize_t len)
 static uint32_t
 _fold(uint32_t sum)
 {
-    while (sum >> 16) {
+    while(sum >> 16) {
         sum = (sum & 0xffff) + (sum >> 16);
     }
     return sum;

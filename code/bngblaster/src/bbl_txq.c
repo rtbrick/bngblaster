@@ -13,7 +13,7 @@
 bool
 bbl_txq_init(bbl_txq_s *txq, uint16_t size)
 {
-    txq->ring = malloc(size * sizeof(bbl_txq_slot_t));
+    txq->ring = calloc(1, size * sizeof(bbl_txq_slot_t));
     if(!txq->ring) {
         return false;
     }
