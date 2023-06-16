@@ -982,6 +982,11 @@ bbl_sessions_init()
             LOG_NOARG(ERROR, "Failed to create session traffic stream!\n");
             return false;
         }
+        
+        if(!bbl_tcp_session_init(session)) {
+            LOG_NOARG(ERROR, "Failed to create session TCP interface!\n");
+            return false;
+        }
 
         if(!bbl_http_client_session_init(session)) {
             LOG_NOARG(ERROR, "Failed to create session HTTP client!\n");

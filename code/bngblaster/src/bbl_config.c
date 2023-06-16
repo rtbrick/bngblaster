@@ -1138,6 +1138,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             return false;
         }
         access_config->http_client_group_id = number;
+        access_config->tcp = true;
     }
 
     value = json_object_get(access_interface, "cfm-cc");

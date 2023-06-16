@@ -255,6 +255,10 @@ bbl_http_client_add(bbl_http_client_config_s *config, bbl_session_s *session)
     client->session = session;
     client->config = config;
 
+    if(!session->netif.state) {
+        return false;
+    }
+
     client->request = calloc(1, strlen(client->config->url)+sizeof(HTTP_CLIENT_REQUEST_STRING));
     sprintf(client->request, HTTP_CLIENT_REQUEST_STRING, client->config->url);
     
@@ -275,10 +279,6 @@ bbl_http_client_session_init(bbl_session_s *session)
 {
     bbl_http_client_config_s *config;
     uint16_t http_client_group_id = session->access_config->http_client_group_id;
-
-    if(!bbl_tcp_session_init(session)) {
-        return false;
-    }
 
     /** Add clients of corresponding http-client-group-id */
     if(http_client_group_id) {

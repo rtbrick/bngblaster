@@ -57,8 +57,10 @@ bbl_http_server_job(timer_s *timer)
     bbl_http_server_connection_s *connection_next = connection;
     bbl_tcp_ctx_s *tcpc;
 
-    while(connection) {
+    while(connection_next) {
+        connection = connection_next;
         connection_next = connection->next;
+
         tcpc = connection->tcpc;
         if(tcpc->pcb->state == CLOSE_WAIT || tcpc->pcb->state == CLOSED) {
             if(connection->tcpc->af == AF_INET) {
@@ -71,16 +73,17 @@ bbl_http_server_job(timer_s *timer)
                     format_ipv6_address((ipv6addr_t*)&connection->tcpc->local_addr.u_addr.ip6.addr));
             }
             bbl_tcp_ctx_free(connection->tcpc);
-            if(connection_prev) {
-                connection_prev->next = connection->next;
-            } else {
-                server->connections = connection->next;
-            }
+            connection->tcpc = NULL;
             free(connection);
+            connection = NULL;
+            if(connection_prev) {
+                connection_prev->next = connection_next;
+            } else {
+                server->connections = connection_next;
+            }
         } else {
             connection_prev = connection;
         }
-        connection = connection_next;
     }
 }
 
@@ -91,8 +94,7 @@ bbl_http_server_start(bbl_network_interface_s *network_interface,
     bbl_http_server_s *server = calloc(1, sizeof(bbl_http_server_s));
     server->config = config;
     server->next = network_interface->http_server;
-    network_interface->http_server = server;
-
+    
     if(config->ipv4_address) {
         server->listen_tcpc = bbl_tcp_ipv4_listen(
             network_interface,
@@ -105,6 +107,7 @@ bbl_http_server_start(bbl_network_interface_s *network_interface,
             config->port);
     }
     if(!server->listen_tcpc) {
+        free(server);
         return false;
     }
 
@@ -114,7 +117,8 @@ bbl_http_server_start(bbl_network_interface_s *network_interface,
     timer_add_periodic(&g_ctx->timer_root, &server->gc_timer, 
                        "HTTP", 5, 0, server, 
                        &bbl_http_server_job);
-    
+
+    network_interface->http_server = server;
     return true;
 }
 

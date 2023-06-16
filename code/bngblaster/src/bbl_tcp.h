@@ -16,6 +16,7 @@
 #define BBL_TCP_BUF_SIZE 65000
 #define BBL_TCP_INTERVAL 250*MSEC
 #define BBL_TCP_HASHTABLE_SIZE 32771
+#define BBL_TCP_NETIF_MAX 255
 
 typedef enum bbl_tcp_state_ {
     BBL_TCP_STATE_CLOSED,

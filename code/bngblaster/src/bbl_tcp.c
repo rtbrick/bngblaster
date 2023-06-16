@@ -11,6 +11,8 @@
 #define BNGBLASTER_TCP_DEBUG 0
 #endif
 
+size_t g_netif_count = 0;
+
 const char *
 tcp_err_string(err_t err)
 {
@@ -73,11 +75,11 @@ bbl_tcp_close(bbl_tcp_ctx_s *tcpc)
 void
 bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc) {
     if(tcpc) {
-        bbl_tcp_close(tcpc);
         if(tcpc->ifname) {
             free(tcpc->ifname);
             tcpc->ifname = NULL;
         }
+        bbl_tcp_close(tcpc);
         free(tcpc);
     }
 }
@@ -115,7 +117,7 @@ static bbl_tcp_ctx_s *
 bbl_tcp_ctx_new_session(bbl_session_s *session)
 {
     bbl_tcp_ctx_s *tcpc;
-    char s[sizeof("ID: 999999999")] = {0};
+    static char s[sizeof("ID: 999999999")] = {0};
 
     /* Init TCP context */
     tcpc = calloc(1, sizeof(bbl_tcp_ctx_s));
@@ -301,12 +303,29 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     bbl_tcp_ctx_s *listen = arg;
     bbl_tcp_ctx_s *tcpc;
 
-    UNUSED(err); /* TODO!!! */
+    if(tpcb == NULL || err != ERR_OK) {
+        if(listen->af == AF_INET) {
+            LOG(TCP, "TCP (%s %s:%u) listen accepted failed with error %d (%s)\n",
+                listen->ifname,
+                format_ipv4_address(&listen->local_addr.u_addr.ip4.addr), 
+                listen->local_port,
+                err, tcp_err_string(err));
+
+        } else {
+            LOG(TCP, "TCP (%s %s:%u) listen accepted failed with error %d (%s)\n",
+                listen->ifname,
+                format_ipv6_address((ipv6addr_t*)&listen->local_addr.u_addr.ip6.addr),
+                listen->local_port,
+                err, tcp_err_string(err));
+        }
+        return ERR_RST;
+    }
 
     tcpc = calloc(1, sizeof(bbl_tcp_ctx_s));
     if(!tcpc) {
         return ERR_MEM;
     }
+    tcpc->ifname = strdup(listen->ifname);
     tcpc->interface = listen->interface;
     tcpc->af = listen->af;
     tcpc->local_port = listen->local_port;
@@ -1062,9 +1081,15 @@ bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_c
         return true;
     }
 
+    if(!(g_netif_count < BBL_TCP_NETIF_MAX)) {
+        LOG(ERROR, "Failed to init TCP for network interface %s (max 255 TCP interfaces supported)\n", interface->name);
+        return false;
+    }
     if(!netif_add(&interface->netif, NULL, NULL, NULL, interface, bbl_tcp_netif_init, ip_input))  {
         return false;
     }
+    g_netif_count++;
+
     interface->netif.state = interface;
     interface->netif.mtu = config->mtu;
     interface->netif.mtu6 = config->mtu;
@@ -1082,7 +1107,7 @@ bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_c
 bool
 bbl_tcp_session_init(bbl_session_s *session)
 {
-    if(!g_ctx->tcp) {
+    if(!(g_ctx->tcp && session->access_config->tcp)) {
         /* TCP not enabled! */
         return true;
     }
@@ -1092,12 +1117,18 @@ bbl_tcp_session_init(bbl_session_s *session)
         return true;
     }
 
+    if(!(g_netif_count < BBL_TCP_NETIF_MAX)) {
+        LOG(ERROR, "Failed to init TCP for session %u (max 255 TCP interfaces supported)\n", session->session_id);
+        return false;
+    }
     if(!netif_add(&session->netif, NULL, NULL, NULL, session, bbl_tcp_netif_init_session, ip_input))  {
         return false;
     }
+    g_netif_count++;
+
     session->netif.state = session;
-    session->netif.mtu = 1400;
-    session->netif.mtu6 = 1400;
+    session->netif.mtu = 1280;
+    session->netif.mtu6 = 1280;
     return true;
 }
 
