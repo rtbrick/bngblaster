@@ -40,7 +40,7 @@ bool
 ospf_pdu_validate_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key);
 
 void
-ospf_pdu_init(ospf_pdu_s *pdu, uint8_t pdu_type);
+ospf_pdu_init(ospf_pdu_s *pdu, uint8_t pdu_type, uint8_t pdu_version);
 
 void
 ospf_pdu_add_u8(ospf_pdu_s *pdu, uint8_t value);

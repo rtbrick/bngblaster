@@ -14,7 +14,7 @@
 #include "ospf_utils.h"
 #include "ospf_pdu.h"
 #include "ospf_interface.h"
-#include "ospf_adjacency.h"
+#include "ospf_neighbor.h"
 #include "ospf_hello.h"
 #include "ospf_lsa.h"
 #include "ospf_ctrl.h"

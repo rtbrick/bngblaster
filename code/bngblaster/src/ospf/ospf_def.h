@@ -24,7 +24,7 @@
 #define OSPF_PDU_LEN_MIN                16
 #define OSPF_PDU_LEN_MAX                UINT16_MAX
 #define OSPF_HELLO_LEN_MIN              44
-#define OSPF_HELLO_TX_BUF_LEN           1500
+#define OSPF_TX_BUF_LEN                 1500
 
 #define OSPF_OPTION_E_BIT               0x02
 #define OSPF_OPTION_LLS_BIT             0x10
@@ -52,6 +52,25 @@
 #define OSPF_OFFSET_HELLO_DEAD_INTERVAL 32
 #define OSPF_OFFSET_HELLO_DR            36
 #define OSPF_OFFSET_HELLO_BDR           40
+
+#define OSPF_DBD_FLAG_MS                0x01
+#define OSPF_DBD_FLAG_M                 0x02
+#define OSPF_DBD_FLAG_I                 0x04
+
+#define OSPF_DBD_OPTION_MT              0x01
+#define OSPF_DBD_OPTION_E               0x02
+#define OSPF_DBD_OPTION_MC              0x04
+#define OSPF_DBD_OPTION_N               0x08
+#define OSPF_DBD_OPTION_L               0x10
+#define OSPF_DBD_OPTION_DC              0x20
+#define OSPF_DBD_OPTION_O               0x40
+#define OSPF_DBD_OPTION_DN              0x80
+
+#define OSPF_EXTENDED_OPTION_TLV        1
+#define OSPF_EXTENDED_OPTION_TLV_LEN    4
+
+#define OSPF_EXT_OPTION_LSDB_RESYNC     0x01
+#define OSPF_EXT_OPTION_RESTART         0x02
 
 #define OSPFV2_AUTH_DATA_LEN            8
 
@@ -165,6 +184,7 @@ typedef struct ospf_pdu_ {
     uint16_t packet_len;
 
     void    *source; /* souce IPv4/v6 address*/
+    void    *destination; /* destination IPv4/v6 address*/
 
     uint16_t cur; /* current position */
     uint8_t *pdu; /* whole PDU inlcuding trailer */
@@ -226,13 +246,18 @@ typedef struct ospf_neighbor_ {
 
     uint32_t router_id;
 
+    uint8_t  version; /* OSPF version */
     uint8_t  priority;
+    bool     master;
+    uint32_t dd;
     uint32_t dr;
     uint32_t bdr;
 
     uint8_t state;
 
+    struct timer_  *timer_retry;
     struct timer_  *timer_inactivity;
+
 } ospf_neighbor_s;
 
 typedef struct ospf_interface_ {
@@ -243,7 +268,7 @@ typedef struct ospf_interface_ {
     
     uint8_t version;    /* OSPF version */
     uint8_t type;       /* OSPF inteface type (P2P, broadcast, ...) */
-    uint8_t state;       /* OSPF inteface type (P2P, broadcast, ...) */
+    uint8_t state;
 
     uint32_t dr;
     uint32_t bdr;

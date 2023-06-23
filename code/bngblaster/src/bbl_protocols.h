@@ -1020,6 +1020,9 @@ packet_is_bbl(uint8_t *buf, uint16_t len);
 uint16_t
 bbl_checksum(uint8_t *buf, uint16_t len);
 
+uint16_t
+bbl_ipv6_ospf_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *ospf, uint16_t ospf_len);
+
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,
                 uint8_t *sp, uint16_t sp_len,

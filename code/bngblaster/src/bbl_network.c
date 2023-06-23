@@ -89,6 +89,8 @@ bbl_network_interfaces_add()
 
         /* Init ethernet */
         network_interface->vlan = network_config->vlan;
+        network_interface->mtu = network_config->mtu;
+
         if(*(uint32_t*)network_config->mac) {
             memcpy(network_interface->mac, network_config->mac, ETH_ADDR_LEN);
         } else {

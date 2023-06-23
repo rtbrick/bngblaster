@@ -111,6 +111,18 @@ bbl_ipv6_icmpv6_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *icmp, uint16_t
     return ~_fold(result);
 }
 
+uint16_t
+bbl_ipv6_ospf_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *ospf, uint16_t ospf_len)
+{
+    uint32_t result;
+    result  = htobe16(IPV6_NEXT_HEADER_OSPF);
+    result += htobe16(ospf_len);
+    result += _checksum(src, sizeof(ipv6addr_t));
+    result += _checksum(dst, sizeof(ipv6addr_t));
+    result += _checksum(ospf, ospf_len);
+    return ~_fold(result);
+}
+
 /*
  * ENCODE
  * ------------------------------------------------------------------------*/

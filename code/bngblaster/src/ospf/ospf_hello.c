@@ -28,7 +28,7 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
     bbl_ospf_s ospf = {0};
 
     ospf_pdu_s pdu = {0};
-    uint8_t pdu_buf[OSPF_HELLO_TX_BUF_LEN];
+    uint8_t pdu_buf[OSPF_TX_BUF_LEN];
 
     ospf_interface_s *ospf_interface = interface->ospf_interface;
     ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
@@ -36,9 +36,9 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
 
     uint8_t options = 0;
 
-    ospf_pdu_init(&pdu, OSPF_PDU_HELLO);
+    ospf_pdu_init(&pdu, OSPF_PDU_HELLO, OSPF_VERSION_2);
     pdu.pdu = pdu_buf;
-    pdu.pdu_buf_len = OSPF_HELLO_TX_BUF_LEN;
+    pdu.pdu_buf_len = OSPF_TX_BUF_LEN;
 
     /* OSPFv2 header */
     ospf_pdu_add_u8(&pdu, OSPF_VERSION_2);
@@ -125,29 +125,10 @@ ospf_hello_timeout(timer_s *timer)
 {
     ospf_neighbor_s *ospf_neighbor = timer->data;
 
-    LOG(OSPF, "OSPFv2 neighbor %s timeout on interface %s\n",
+    LOG(OSPF, "OSPFv%u neighbor %s timeout on interface %s\n",
+        ospf_neighbor->version,
         format_ipv4_address(&ospf_neighbor->router_id), 
         ospf_neighbor->interface->interface->name);
-}
-
-static void
-ospf_hello_v2_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
-{
-    if(ospf_neighbor->state == state) return;
-
-    LOG(OSPF, "OSPFv2 neighbor %s state %s -> %s on interface %s\n",
-        format_ipv4_address(&ospf_neighbor->router_id), 
-        ospf_neighbor_state_string(ospf_neighbor->state),
-        ospf_neighbor_state_string(state),
-        ospf_neighbor->interface->interface->name);
-
-    ospf_neighbor->state = state;
-}
-
-void
-ospf_hello_v2_exstart(ospf_neighbor_s *ospf_neighbor)
-{
-    ospf_hello_v2_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
 }
 
 /**
@@ -157,8 +138,7 @@ ospf_hello_v2_exstart(ospf_neighbor_s *ospf_neighbor)
  * @param pdu received OSPF PDU
  */
 void
-ospf_hello_v2_handler_rx(bbl_network_interface_s *interface,
-                         ospf_pdu_s *pdu)
+ospf_hello_v2_handler_rx(bbl_network_interface_s *interface, ospf_pdu_s *pdu)
 {
     ospf_interface_s *ospf_interface = interface->ospf_interface;
     ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
@@ -216,21 +196,9 @@ ospf_hello_v2_handler_rx(bbl_network_interface_s *interface,
     }
 
     if(!ospf_neighbor) {
-        ospf_neighbor = calloc(1, sizeof(ospf_neighbor_s));
-        ospf_neighbor->router_id = pdu->router_id;
-        ospf_neighbor->priority = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_PRIORITY);
-        ospf_neighbor->dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_DR);
-        ospf_neighbor->bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_BDR);
-        ospf_neighbor->state = OSPF_NBSTATE_DOWN;
-        ospf_neighbor->interface = ospf_interface;
+        ospf_neighbor = ospf_neigbor_new(ospf_interface, pdu);
         ospf_neighbor->next = ospf_interface->neighbors;
         ospf_interface->neighbors = ospf_neighbor;
-
-        LOG(OSPF, "OSPFv2 new neighbor %s on interface %s\n",
-            format_ipv4_address(&ospf_neighbor->router_id), 
-            interface->name);
-
-        ospf_hello_v2_state(ospf_neighbor, OSPF_NBSTATE_INIT);
         ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
     } 
 
@@ -245,14 +213,14 @@ ospf_hello_v2_handler_rx(bbl_network_interface_s *interface,
                 case OSPF_IFSTATE_P2P:
                 case OSPF_IFSTATE_BACKUP:
                 case OSPF_IFSTATE_DR:
-                    ospf_hello_v2_exstart(ospf_neighbor);
+                    ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
                     break;
                 case OSPF_IFSTATE_DR_OTHER:
                     if(pdu->router_id == ospf_interface->dr ||
                     pdu->router_id == ospf_interface->bdr) {
-                        ospf_hello_v2_exstart(ospf_neighbor);
+                        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
                     } else {
-                        ospf_hello_v2_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
+                        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
                     }
                     break;
                 default:
@@ -260,7 +228,7 @@ ospf_hello_v2_handler_rx(bbl_network_interface_s *interface,
             }
         }
     } else {
-        ospf_hello_v2_state(ospf_neighbor, OSPF_NBSTATE_INIT);
+        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     }
 
     UNUSED(options);

@@ -84,7 +84,7 @@ ospf_pdu_update_len(ospf_pdu_s *pdu)
 }
 
 static uint16_t
-ospf_pdu_checksum(ospf_pdu_s *pdu)
+ospf_pdu_checksum_v2(ospf_pdu_s *pdu)
 {
     uint16_t checksum = 0;
     uint16_t checksum_orig = 0;
@@ -107,10 +107,33 @@ ospf_pdu_checksum(ospf_pdu_s *pdu)
     return checksum;
 }
 
+static uint16_t
+ospf_pdu_checksum_v3(ospf_pdu_s *pdu)
+{
+    uint16_t checksum = 0;
+    uint16_t checksum_orig = 0;
+
+    /* reset checkum */
+    checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
+
+    /* calculate checksum */
+    checksum = bbl_ipv6_ospf_checksum(pdu->source, pdu->destination, pdu->pdu, pdu->packet_len);
+
+    /* restore checksum/auth*/
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = checksum_orig;
+
+    return checksum;
+}
+
 void
 ospf_pdu_update_checksum(ospf_pdu_s *pdu)
 {
-    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = ospf_pdu_checksum(pdu);
+    if(pdu->pdu_version == OSPF_VERSION_2) {
+        *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = ospf_pdu_checksum_v2(pdu);
+    } else {
+        *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = ospf_pdu_checksum_v3(pdu);
+    }
 }
 
 void
@@ -126,7 +149,11 @@ ospf_pdu_validate_checksum(ospf_pdu_s *pdu)
     uint16_t checksum = 0;
     uint16_t checksum_orig = 0;
 
-    checksum = ospf_pdu_checksum(pdu);
+    if(pdu->pdu_version == OSPF_VERSION_2) {
+        checksum = ospf_pdu_checksum_v2(pdu);
+    } else {
+        checksum = ospf_pdu_checksum_v3(pdu);
+    }
     checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
 
     if(checksum == checksum_orig) {
@@ -145,10 +172,11 @@ ospf_pdu_validate_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
 }
 
 void
-ospf_pdu_init(ospf_pdu_s *pdu, uint8_t pdu_type)
+ospf_pdu_init(ospf_pdu_s *pdu, uint8_t pdu_type, uint8_t pdu_version)
 {
     memset(pdu, 0x0, sizeof(ospf_pdu_s));
     pdu->pdu_type = pdu_type;
+    pdu->pdu_version = pdu_version;
 }
 
 void

@@ -77,6 +77,7 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
     interface->stats.ospf_rx++;
     result = ospf_pdu_load(&pdu, ospf->pdu, ospf->pdu_len);
     pdu.source = (void*)&ipv4->src;
+    pdu.destination = (void*)&ipv4->dst;
     if(pdu.pdu_version != OSPF_VERSION_2) {
         LOG(OSPF, "OSPFv2 RX PDU version error on interface %s\n", interface->name);
         interface->stats.ospf_rx_error++;
@@ -140,6 +141,7 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
     interface->stats.ospf_rx++;
     result = ospf_pdu_load(&pdu, ospf->pdu, ospf->pdu_len);
     pdu.source = (void*)ipv6->src;
+    pdu.destination = (void*)ipv6->dst;
     if(pdu.pdu_version != 3) {
         LOG(OSPF, "OSPFv3 RX PDU version error on interface %s\n", interface->name);
         interface->stats.ospf_rx_error++;
@@ -147,6 +149,12 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
     }
     if(result != PROTOCOL_SUCCESS) {
         LOG(OSPF, "OSPFv3 RX %s PDU decode error on interface %s\n", 
+            ospf_pdu_type_string(pdu.pdu_type), interface->name);
+        interface->stats.ospf_rx_error++;
+        return;
+    }
+    if(!ospf_pdu_validate_checksum(&pdu)) {
+        LOG(OSPF, "OSPFv3 RX %s PDU checksum error on interface %s\n", 
             ospf_pdu_type_string(pdu.pdu_type), interface->name);
         interface->stats.ospf_rx_error++;
         return;

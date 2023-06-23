@@ -23,6 +23,7 @@ typedef struct bbl_network_interface_
 
     bbl_txq_s *txq;
 
+    uint16_t mtu;
     uint16_t vlan;
     bbl_mpls_s tx_label;
     
