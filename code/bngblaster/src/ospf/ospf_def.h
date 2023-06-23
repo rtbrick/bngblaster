@@ -11,71 +11,98 @@
 
 /* DEFINITIONS ... */
 
-#define OSPF_DEFAULT_HELLO_INTERVAL     10
-#define OSPF_DEFAULT_DEAD_INTERVAL      40
-#define OSPF_DEFAULT_ROUTER_PRIORITY    64
-#define OSPF_DEFAULT_METRIC             10
+#define OSPF_DEFAULT_HELLO_INTERVAL         10
+#define OSPF_DEFAULT_DEAD_INTERVAL          40
+#define OSPF_DEFAULT_ROUTER_PRIORITY        64
+#define OSPF_DEFAULT_METRIC                 10
 
-#define OSPF_LSA_TYPES                  12
+#define OSPF_LSA_TYPES                      12
 
-#define OSPF_VERSION_2                  2
-#define OSPF_VERSION_3                  3
+#define OSPF_VERSION_2                      2
+#define OSPF_VERSION_3                      3
 
-#define OSPF_PDU_LEN_MIN                16
-#define OSPF_PDU_LEN_MAX                UINT16_MAX
-#define OSPF_HELLO_LEN_MIN              44
-#define OSPF_TX_BUF_LEN                 1500
+#define OSPF_PDU_LEN_MIN                    16
+#define OSPF_PDU_LEN_MAX                    UINT16_MAX
 
-#define OSPF_OPTION_E_BIT               0x02
-#define OSPF_OPTION_LLS_BIT             0x10
+#define OSPFV2_HELLO_LEN_MIN                44
+#define OSPFV3_HELLO_LEN_MIN                36
+#define OSPFV2_DBD_LEN_MIN                  32
+#define OSPFV3_DBD_LEN_MIN                  28
 
+#define OSPF_TX_BUF_LEN                     1500
 
-#define OSPF_DEFAULT_TEARDOWN_TIME      5
+#define OSPF_OPTION_E_BIT                   0x02
+#define OSPF_OPTION_LLS_BIT                 0x10
 
-#define OSPF_LSA_GC_INTERVAL            30
+#define OSPF_DEFAULT_TEARDOWN_TIME          5
 
-#define OSPF_OFFSET_VERSION             0
-#define OSPF_OFFSET_TYPE                1
-#define OSPF_OFFSET_PACKET_LEN          2
-#define OSPF_OFFSET_ROUTER_ID           4
-#define OSPF_OFFSET_AREA_ID             8
-#define OSPF_OFFSET_CHECKSUM            12
+#define OSPF_LSA_GC_INTERVAL                30
 
-#define OSPFV2_OFFSET_AUTH_TYPE         14
-#define OSPFV2_OFFSET_AUTH_DATA         16
-#define OSPFV2_OFFSET_PACKET            24
+#define OSPF_OFFSET_VERSION                 0
+#define OSPF_OFFSET_TYPE                    1
+#define OSPF_OFFSET_PACKET_LEN              2
+#define OSPF_OFFSET_ROUTER_ID               4
+#define OSPF_OFFSET_AREA_ID                 8
+#define OSPF_OFFSET_CHECKSUM                12
 
-#define OSPF_OFFSET_HELLO_NETMASK       24
-#define OSPF_OFFSET_HELLO_INTERVAL      28
-#define OSPF_OFFSET_HELLO_OPTIONS       30
-#define OSPF_OFFSET_HELLO_PRIORITY      31
-#define OSPF_OFFSET_HELLO_DEAD_INTERVAL 32
-#define OSPF_OFFSET_HELLO_DR            36
-#define OSPF_OFFSET_HELLO_BDR           40
+#define OSPFV2_OFFSET_AUTH_TYPE             14
+#define OSPFV2_OFFSET_AUTH_DATA             16
+#define OSPFV2_OFFSET_PACKET                24
 
-#define OSPF_DBD_FLAG_MS                0x01
-#define OSPF_DBD_FLAG_M                 0x02
-#define OSPF_DBD_FLAG_I                 0x04
+#define OSPFV3_OFFSET_INSTANCE_ID           14
+#define OSPFV3_OFFSET_PACKET                16
 
-#define OSPF_DBD_OPTION_MT              0x01
-#define OSPF_DBD_OPTION_E               0x02
-#define OSPF_DBD_OPTION_MC              0x04
-#define OSPF_DBD_OPTION_N               0x08
-#define OSPF_DBD_OPTION_L               0x10
-#define OSPF_DBD_OPTION_DC              0x20
-#define OSPF_DBD_OPTION_O               0x40
-#define OSPF_DBD_OPTION_DN              0x80
+#define OSPFV2_OFFSET_HELLO_NETMASK         24
+#define OSPFV2_OFFSET_HELLO_INTERVAL        28
+#define OSPFV2_OFFSET_HELLO_OPTIONS         30
+#define OSPFV2_OFFSET_HELLO_PRIORITY        31
+#define OSPFV2_OFFSET_HELLO_DEAD_INTERVAL   32
+#define OSPFV2_OFFSET_HELLO_DR              36
+#define OSPFV2_OFFSET_HELLO_BDR             40
+#define OSPFV2_OFFSET_HELLO_NBR             44
 
-#define OSPF_EXTENDED_OPTION_TLV        1
-#define OSPF_EXTENDED_OPTION_TLV_LEN    4
+#define OSPFV3_OFFSET_HELLO_INTERFACE_ID    16
+#define OSPFV3_OFFSET_HELLO_PRIORITY        20
+#define OSPFV3_OFFSET_HELLO_OPTIONS         21
+#define OSPFV3_OFFSET_HELLO_INTERVAL        24
+#define OSPFV3_OFFSET_HELLO_DEAD_INTERVAL   26
+#define OSPFV3_OFFSET_HELLO_DR              28
+#define OSPFV3_OFFSET_HELLO_BDR             32
+#define OSPFV3_OFFSET_HELLO_NBR             36
 
-#define OSPF_EXT_OPTION_LSDB_RESYNC     0x01
-#define OSPF_EXT_OPTION_RESTART         0x02
+#define OSPFV2_OFFSET_DBD_MTU               24
+#define OSPFV2_OFFSET_DBD_OPTIONS           26
+#define OSPFV2_OFFSET_DBD_FLAGS             27
+#define OSPFV2_OFFSET_DBD_DD_SEQ            28
+#define OSPFV2_OFFSET_DBD_LSA               32
 
-#define OSPFV2_AUTH_DATA_LEN            8
+#define OSPFV3_OFFSET_DBD_OPTIONS           17
+#define OSPFV3_OFFSET_DBD_MTU               20
+#define OSPFV3_OFFSET_DBD_FLAGS             23
+#define OSPFV3_OFFSET_DBD_DD_SEQ            24
+#define OSPFV3_OFFSET_DBD_LSA               28
 
-#define OSPFV3_OFFSET_INSTANCE_ID       14
-#define OSPFV3_OFFSET_PACKET            16
+#define OSPF_DBD_FLAG_MS                    0x01
+#define OSPF_DBD_FLAG_M                     0x02
+#define OSPF_DBD_FLAG_I                     0x04
+
+#define OSPF_DBD_OPTION_MT                  0x01
+#define OSPF_DBD_OPTION_E                   0x02
+#define OSPF_DBD_OPTION_MC                  0x04
+#define OSPF_DBD_OPTION_N                   0x08
+#define OSPF_DBD_OPTION_L                   0x10
+#define OSPF_DBD_OPTION_DC                  0x20
+#define OSPF_DBD_OPTION_O                   0x40
+#define OSPF_DBD_OPTION_DN                  0x80
+
+#define OSPF_EXTENDED_OPTION_TLV            1
+#define OSPF_EXTENDED_OPTION_TLV_LEN        4
+
+#define OSPF_EXT_OPTION_LSDB_RESYNC         0x01
+#define OSPF_EXT_OPTION_RESTART             0x02
+
+#define OSPFV2_AUTH_DATA_LEN                8
+
 
 typedef struct ospf_config_ ospf_config_s;
 typedef struct ospf_instance_ ospf_instance_s;

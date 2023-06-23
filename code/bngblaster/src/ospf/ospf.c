@@ -70,6 +70,9 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
     protocol_error_t result;
     ospf_pdu_s pdu = {0};
 
+    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
+
     bbl_ospf_s *ospf = ipv4->next;
 
     UNUSED(eth);
@@ -99,11 +102,19 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
     LOG(PACKET, "OSPFv2 RX %s on interface %s\n",
         ospf_pdu_type_string(pdu.pdu_type), interface->name);
 
+    while(ospf_neighbor) {
+        if(ospf_neighbor->router_id == pdu.router_id) {
+            break;
+        }
+        ospf_neighbor = ospf_neighbor->next;
+    }
+
     switch(pdu.pdu_type) {
         case OSPF_PDU_HELLO:
-            ospf_hello_v2_handler_rx(interface, &pdu);
+            ospf_hello_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         case OSPF_PDU_DB_DESC:
+            ospf_neighbor_dbd_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         case OSPF_PDU_LS_UPDATE:
             break;
@@ -134,6 +145,9 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
     protocol_error_t result;
     ospf_pdu_s pdu = {0};
 
+    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
+
     bbl_ospf_s *ospf = ipv6->next;
 
     UNUSED(eth);
@@ -163,6 +177,28 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
     LOG(PACKET, "OSPFv3 RX %s on interface %s\n",
         ospf_pdu_type_string(pdu.pdu_type), interface->name);
 
+    while(ospf_neighbor) {
+        if(ospf_neighbor->router_id == pdu.router_id) {
+            break;
+        }
+        ospf_neighbor = ospf_neighbor->next;
+    }
+
+    switch(pdu.pdu_type) {
+        case OSPF_PDU_HELLO:
+            ospf_hello_rx(ospf_interface, ospf_neighbor, &pdu);
+            break;
+        case OSPF_PDU_DB_DESC:
+            ospf_neighbor_dbd_rx(ospf_interface, ospf_neighbor, &pdu);
+            break;
+        case OSPF_PDU_LS_UPDATE:
+            break;
+        case OSPF_PDU_LS_ACK:
+            break;
+        default:
+            interface->stats.ospf_rx_error++;
+            break;
+    }
     return;
 }
 

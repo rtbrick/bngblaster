@@ -132,61 +132,68 @@ ospf_hello_timeout(timer_s *timer)
 }
 
 /**
- * ospf_hello_v2_handler_rx
+ * ospf_hello_rx
  *
- * @param interface receive interface
+ * @param ospf_interface receive interface
+ * @param ospf_neighbor receive OSPF neighbor
  * @param pdu received OSPF PDU
  */
 void
-ospf_hello_v2_handler_rx(bbl_network_interface_s *interface, ospf_pdu_s *pdu)
+ospf_hello_rx(ospf_interface_s *ospf_interface, 
+              ospf_neighbor_s *ospf_neighbor, 
+              ospf_pdu_s *pdu)
 {
-    ospf_interface_s *ospf_interface = interface->ospf_interface;
-    ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
+    bbl_network_interface_s *interface = ospf_interface->interface;
     ospf_instance_s  *ospf_instance = ospf_interface->instance;
 
     uint32_t ip;
 
     bool is2way = false;
 
-    uint8_t  options;
+    uint32_t options;
 
     uint16_t hello_interval;
     uint32_t dead_interval;
 
     ospf_interface->stats.hello_rx++;
 
-    if(pdu->pdu_len < OSPF_HELLO_LEN_MIN) {
-        ospf_rx_error(interface, pdu, "decode");
-        return;
-    }
-    if(!(ospf_interface->type == OSPF_INTERFACE_P2P ||
-         ospf_interface->type == OSPF_INTERFACE_VIRTUAL)) {
-        ip = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_NETMASK);
-        if(ipv4_mask_to_len(ip) != interface->ip.len) {
-            ospf_rx_error(interface, pdu, "netmask");
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        if(pdu->pdu_len < OSPFV2_HELLO_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
             return;
         }
+        if(!(ospf_interface->type == OSPF_INTERFACE_P2P ||
+             ospf_interface->type == OSPF_INTERFACE_VIRTUAL)) {
+            ip = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_NETMASK);
+            if(ipv4_mask_to_len(ip) != interface->ip.len) {
+                ospf_rx_error(interface, pdu, "netmask");
+                return;
+            }
+        }
+        hello_interval = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_INTERVAL));
+        options = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_OPTIONS);
+        dead_interval = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DEAD_INTERVAL));
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_HELLO_NBR);
+    } else {
+        if(pdu->pdu_len < OSPFV3_HELLO_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
+        }
+        options = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_OPTIONS-1) & 0xFFFFFF);
+        hello_interval = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_INTERVAL));
+        dead_interval = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DEAD_INTERVAL));
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV3_OFFSET_HELLO_NBR);
     }
-    hello_interval = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_INTERVAL));
+
     if(hello_interval != ospf_instance->config->hello_interval) {
         ospf_rx_error(interface, pdu, "hello-interval");
         return;
     }
-    options = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_OPTIONS);
-    dead_interval = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_DEAD_INTERVAL));
     if(dead_interval != ospf_instance->config->dead_interval) {
         ospf_rx_error(interface, pdu, "dead-interval");
         return;
     }
-
-    while(ospf_neighbor) {
-        if(ospf_neighbor->router_id == pdu->router_id) {
-            break;
-        }
-        ospf_neighbor = ospf_neighbor->next;
-    }
-
-    OSPF_PDU_CURSOR_SET(pdu, OSPF_HELLO_LEN_MIN);
+    
     while((OSPF_PDU_CURSOR_GET(pdu)+IPV4_ADDR_LEN) <= pdu->packet_len) {
         ip = *(uint32_t*)OSPF_PDU_CURSOR(pdu);
         if(ip == ospf_instance->config->router_id) {
@@ -199,8 +206,12 @@ ospf_hello_v2_handler_rx(bbl_network_interface_s *interface, ospf_pdu_s *pdu)
         ospf_neighbor = ospf_neigbor_new(ospf_interface, pdu);
         ospf_neighbor->next = ospf_interface->neighbors;
         ospf_interface->neighbors = ospf_neighbor;
-        ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
-    } 
+        if(ospf_interface->version == OSPF_VERSION_2) {
+            ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
+        } else {
+            ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
+        }
+    }
 
     /* Reset inactivity timer */
     timer_add(&g_ctx->timer_root, &ospf_neighbor->timer_inactivity, "OSPF",

@@ -8,14 +8,8 @@
  */
 #include "ospf.h"
 
-void
-ospf_neighbor_db_description_retry(timer_s *timer)
-{
-    ospf_neighbor_db_description(timer->data);
-}
-
 protocol_error_t
-ospf_neighbor_db_description(ospf_neighbor_s *ospf_neighbor)
+ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
 {
     ospf_interface_s *ospf_interface = ospf_neighbor->interface;
     ospf_instance_s  *ospf_instance = ospf_interface->instance;
@@ -120,7 +114,7 @@ ospf_neigbor_retry_job(timer_s *timer)
     ospf_neighbor_s *ospf_neighbor = timer->data;
     switch(ospf_neighbor->state) {
         case OSPF_NBSTATE_EXSTART:
-            ospf_neighbor_db_description(ospf_neighbor);
+            ospf_neighbor_dbd_tx(ospf_neighbor);
             break;
         default:
             break;
@@ -136,8 +130,8 @@ ospf_neigbor_exstart(ospf_neighbor_s *ospf_neighbor)
     ospf_neighbor->master = true;
     ospf_neighbor->dd = now.tv_sec;
 
-    ospf_neighbor_db_description(ospf_neighbor);
-    timer_add_periodic(&g_ctx->timer_root, &ospf_neighbor->timer_retry, "OSPF NBH RTR", 
+    ospf_neighbor_dbd_tx(ospf_neighbor);
+    timer_add_periodic(&g_ctx->timer_root, &ospf_neighbor->timer_retry, "OSPF RETRY", 
                        5, 0, ospf_neighbor, &ospf_neigbor_retry_job);
 }
 
@@ -174,11 +168,14 @@ ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
 
     if(pdu->pdu_version == OSPF_VERSION_2) {
         ospf_neighbor->version = OSPF_VERSION_2;
-        ospf_neighbor->priority = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_PRIORITY);
-        ospf_neighbor->dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_DR);
-        ospf_neighbor->bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_HELLO_BDR);
+        ospf_neighbor->priority = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_PRIORITY);
+        ospf_neighbor->dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DR);
+        ospf_neighbor->bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_BDR);
     } else {
         ospf_neighbor->version = OSPF_VERSION_3;
+        ospf_neighbor->priority = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_PRIORITY);
+        ospf_neighbor->dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DR);
+        ospf_neighbor->bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_BDR);
     }
 
     ospf_neighbor->state = OSPF_NBSTATE_DOWN;
@@ -192,3 +189,83 @@ ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
     ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     return ospf_neighbor;
 }
+
+/**
+ * ospf_neighbor_dbd_rx
+ *
+ * @param ospf_interface receive interface
+ * @param ospf_neighbor receive OSPF neighbor
+ * @param pdu received OSPF PDU
+ */
+void
+ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface, 
+                     ospf_neighbor_s *ospf_neighbor, 
+                     ospf_pdu_s *pdu)
+{
+    bbl_network_interface_s *interface = ospf_interface->interface;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+
+    uint32_t dd;
+    uint16_t mtu;
+
+    uint8_t options;
+    uint8_t flags;
+
+    ospf_interface->stats.db_des_rx++;
+
+    if(!ospf_neighbor) {
+        ospf_rx_error(interface, pdu, "no neighbor");
+        return;
+    }
+
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        if(pdu->pdu_len < OSPFV2_DBD_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
+        }
+        mtu = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_DBD_MTU));
+        options = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_DBD_OPTIONS);
+        flags = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_DBD_FLAGS);
+        dd = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_DBD_DD_SEQ));
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_DBD_LSA);
+    } else {
+        if(pdu->pdu_len < OSPFV3_DBD_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
+        }
+        mtu = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_DBD_MTU));
+        options = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_DBD_OPTIONS);
+        flags = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_DBD_FLAGS);
+        dd = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_DBD_DD_SEQ));
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV3_OFFSET_DBD_LSA);
+    }
+
+    if(mtu > interface->mtu) {
+        ospf_rx_error(interface, pdu, "MTU");
+        return;
+    }
+
+    if(ospf_neighbor->state == OSPF_NBSTATE_EXSTART) {
+        if(flags & OSPF_DBD_FLAG_I && 
+           flags & OSPF_DBD_FLAG_M && 
+           flags & OSPF_DBD_FLAG_MS && 
+           be32toh(ospf_neighbor->router_id) > 
+           be32toh(ospf_instance->config->router_id)) {
+            /* SLAVE */
+            ospf_neighbor->master = false;
+            ospf_neighbor->dd = dd;
+            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
+        } else if(!(flags & (OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_MS)) &&
+                  dd == ospf_neighbor->dd && 
+                  be32toh(ospf_neighbor->router_id) < 
+                  be32toh(ospf_instance->config->router_id)) {
+            /* MASTER */
+            ospf_neighbor->master = true;
+            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
+        }
+        return;
+    }
+
+    UNUSED(options);
+}
+
