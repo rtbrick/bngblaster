@@ -9,7 +9,7 @@
 #include "isis.h"
 
 /**
- * isis_lsp_flood 
+ * isis_lsp_flood_adjacency 
  * 
  * This function adds an LSP to the 
  * given adjacency flood tree. 

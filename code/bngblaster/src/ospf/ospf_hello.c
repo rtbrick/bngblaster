@@ -129,6 +129,8 @@ ospf_hello_timeout(timer_s *timer)
         ospf_neighbor->version,
         format_ipv4_address(&ospf_neighbor->router_id), 
         ospf_neighbor->interface->interface->name);
+
+    ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
 }
 
 /**
@@ -211,6 +213,10 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
         } else {
             ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
         }
+    } 
+
+    if(ospf_neighbor->state == OSPF_NBSTATE_DOWN) {
+        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     }
 
     /* Reset inactivity timer */

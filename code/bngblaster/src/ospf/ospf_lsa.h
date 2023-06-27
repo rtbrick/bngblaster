@@ -12,4 +12,7 @@
 void
 ospf_lsa_gc_job(timer_s *timer);
 
+void
+ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now);
+
 #endif

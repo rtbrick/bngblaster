@@ -20,6 +20,9 @@
 #include "ospf_ctrl.h"
 #include "ospf_mrt.h"
 
+int
+ospf_lsa_id_compare(void *id1, void *id2);
+
 bool
 ospf_init();
 

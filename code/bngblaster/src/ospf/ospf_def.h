@@ -38,6 +38,12 @@
 
 #define OSPF_LSA_GC_INTERVAL                30
 
+#define OSPF_LSA_REFRESH_TIME               1800 /* 30 minutes */
+#define OSPF_LSA_MAX_AGE                    3600 /* 1 hour */
+#define OSPF_LSA_MAX_AGE_DIFF               900 /* 15 minutes */
+#define OSPF_LSA_SEQ_INIT                   0x80000001
+#define OSPF_LSA_SEQ_MAX                    0x7fffffff
+
 #define OSPF_OFFSET_VERSION                 0
 #define OSPF_OFFSET_TYPE                    1
 #define OSPF_OFFSET_PACKET_LEN              2
@@ -85,6 +91,7 @@
 #define OSPF_DBD_FLAG_MS                    0x01
 #define OSPF_DBD_FLAG_M                     0x02
 #define OSPF_DBD_FLAG_I                     0x04
+#define OSPF_DBD_FLAG_R                     0x08
 
 #define OSPF_DBD_OPTION_MT                  0x01
 #define OSPF_DBD_OPTION_E                   0x02
@@ -102,6 +109,9 @@
 #define OSPF_EXT_OPTION_RESTART             0x02
 
 #define OSPFV2_AUTH_DATA_LEN                8
+
+#define OSPF_LSA_HDR_LEN                    20
+#define OSPF_LLS_HDR_LEN                    12
 
 
 typedef struct ospf_config_ ospf_config_s;
@@ -157,11 +167,11 @@ typedef enum ospf_auth_type_ {
     OSPF_AUTH_MD5               = 2
 } __attribute__ ((__packed__)) ospf_auth_type;
 
-typedef enum ospf_lsp_source_ {
+typedef enum ospf_lsa_source_ {
     OSPF_SOURCE_SELF,       /* Self originated LSA */
     OSPF_SOURCE_ADJACENCY,  /* LSA learned from neighbors */
     OSPF_SOURCE_EXTERNAL    /* LSA injected externally (e.g. MRT file, ...) */
-} ospf_lsp_source;
+} ospf_lsa_source;
 
 typedef enum ospf_pdu_type_ {
     OSPF_PDU_HELLO      = 1,
@@ -194,37 +204,11 @@ typedef enum ospf_lsa_scope_ {
 
 /* STRUCTURES ... */
 
-/*
- * OSPF PDU context
- */
-typedef struct ospf_pdu_ {
-    uint8_t  pdu_type;
-    uint8_t  pdu_version;
-
-    uint32_t router_id;
-    uint32_t area_id;
-    uint16_t checksum;
-
-    uint8_t  auth_type;
-    uint8_t  auth_data_len;
-    uint16_t auth_data_offset;
-    uint16_t packet_len;
-
-    void    *source; /* souce IPv4/v6 address*/
-    void    *destination; /* destination IPv4/v6 address*/
-
-    uint16_t cur; /* current position */
-    uint8_t *pdu; /* whole PDU inlcuding trailer */
-    uint16_t pdu_len;
-    uint16_t pdu_buf_len;
-} ospf_pdu_s;
-
-typedef struct ospf_lsa_entry_ {
-    uint16_t  lifetime;
-    uint64_t  lsp_id;
-    uint32_t  seq;
-    uint16_t  checksum;
-} __attribute__ ((__packed__)) isis_lsa_entry_s;
+typedef struct ospf_lsa_key_ {
+    uint8_t     type; /* LS Type */
+    uint32_t    id; /* Link State ID */
+    uint32_t    router; /* Advertising Router */
+} __attribute__ ((__packed__)) ospf_lsa_key_s;
 
 typedef struct ospf_external_connection_ {
     const char         *router_id_str;
@@ -275,15 +259,31 @@ typedef struct ospf_neighbor_ {
 
     uint8_t  version; /* OSPF version */
     uint8_t  priority;
+    uint8_t  options;
+
     bool     master;
+    bool     oob_resync;
+
     uint32_t dd;
     uint32_t dr;
     uint32_t bdr;
 
     uint8_t state;
 
-    struct timer_  *timer_retry;
-    struct timer_  *timer_inactivity;
+    ospf_lsa_key_s dbd_lsa_start; /* DBD LSA cursor */
+    ospf_lsa_key_s dbd_lsa_next; /* DBD LSA cursor */
+
+    bool dbd_more; /* DBD LSA cursor */
+
+    hb_tree *flood_tree; /* Send LS Update */
+    hb_tree *request_tree; /* Send LS Request */
+    hb_tree *ack_tree;
+
+    struct timer_   *timer_tx;
+    struct timer_   *timer_retry;
+    struct timer_   *timer_request;
+    struct timer_   *timer_ack;
+    struct timer_   *timer_inactivity;
 
 } ospf_neighbor_s;
 
@@ -296,6 +296,9 @@ typedef struct ospf_interface_ {
     uint8_t version;    /* OSPF version */
     uint8_t type;       /* OSPF inteface type (P2P, broadcast, ...) */
     uint8_t state;
+
+    uint16_t max_len; /* max OSPF payload len without fragmentation */
+    uint16_t max_fragment_len; /* max OSPF payload len with fragmentation */
 
     uint32_t dr;
     uint32_t bdr;
@@ -324,13 +327,85 @@ typedef struct ospf_instance_ {
     struct timer_  *timer_teardown;
     struct timer_  *timer_lsa_gc;
 
-    struct {
-        hb_tree *db;
-    } lsdb[OSPF_LSA_TYPES];
+    hb_tree *lsdb;
 
     ospf_interface_s *interfaces;
 
     struct ospf_instance_ *next; /* pointer to next instance */
 } ospf_instance_s;
+
+/*
+ * OSPF PDU context
+ */
+typedef struct ospf_pdu_ {
+    uint8_t  pdu_type;
+    uint8_t  pdu_version;
+
+    uint32_t router_id;
+    uint32_t area_id;
+    uint16_t checksum;
+
+    uint8_t  auth_type;
+    uint8_t  auth_data_len;
+    uint16_t auth_data_offset;
+    uint16_t packet_len;
+
+    void    *source; /* souce IPv4/v6 address*/
+    void    *destination; /* destination IPv4/v6 address*/
+
+    uint16_t cur; /* current position */
+    uint8_t *pdu; /* whole PDU inlcuding trailer */
+    uint16_t pdu_len;
+    uint16_t pdu_buf_len;
+} ospf_pdu_s;
+
+typedef struct ospf_lsa_header_ {
+    uint16_t    age; /* LS Age */
+    uint8_t     options; /* Options */
+    uint8_t     type; /* LS Type */
+    uint32_t    id; /* Link State ID */
+    uint32_t    router; /* Advertising Router */
+    uint32_t    seq; /* Sequence Number */
+    uint16_t    checksum; /* Checksum */
+    uint16_t    length; /* Length */
+} __attribute__ ((__packed__)) ospf_lsa_header_s;
+
+typedef struct ospf_lsa_ {
+    ospf_instance_s *instance;
+
+    ospf_lsa_key_s key;
+    struct {
+        ospf_lsa_source type;
+        uint32_t router_id;
+    } source;
+
+    /* LSA receive timestamp and age */
+    struct timespec timestamp;
+    uint16_t age;
+
+    struct timer_ *timer_lifetime;
+    struct timer_ *timer_refresh;
+
+    uint32_t seq; /* Sequence Number */
+    uint32_t refcount;
+    bool expired;
+    bool deleted;
+
+    char *auth_key;
+
+    uint8_t *lsa;
+    uint16_t lsa_len;
+} ospf_lsa_s;
+
+typedef struct ospf_flood_entry_ {
+    ospf_lsa_s     *lsa;
+    bool            wait_ack;
+    uint32_t        tx_count;
+    struct timespec tx_timestamp;
+} ospf_flood_entry_s;
+
+typedef struct ospf_request_entry_ {
+    ospf_lsa_key_s key;
+} ospf_request_entry_s;
 
 #endif

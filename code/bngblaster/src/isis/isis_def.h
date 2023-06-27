@@ -367,8 +367,8 @@ typedef struct isis_lsp_ {
     bool expired;
     bool deleted;
 
-    uint32_t seq;           /* Sequence number */
-    uint16_t lifetime;      /* Remaining lifetime */
+    uint32_t seq; /* Sequence number */
+    uint16_t lifetime; /* Remaining lifetime */
 
     char *auth_key;
 

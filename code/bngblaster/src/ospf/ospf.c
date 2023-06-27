@@ -8,6 +8,33 @@
  */
 #include "ospf.h"
 
+int
+ospf_lsa_id_compare(void *id1, void *id2)
+{
+    const uint8_t  t1 = *(const uint8_t*)id1;
+    const uint8_t  t2 = *(const uint8_t*)id2;
+    const uint64_t k1 = *(const uint64_t*)((uint8_t*)id1+1);
+    const uint64_t k2 = *(const uint64_t*)((uint8_t*)id2+1);
+
+    if(t1 == t2) {
+        return (k1 > k2) - (k1 < k2);
+    } else {
+        return (t1 > t2) - (t1 < t2);
+    }
+}
+
+
+void
+ospf_retry_list_free(void *key, void *ptr)
+{
+    ospf_lsa_s *lsa = ptr;
+
+    UNUSED(key);
+    if(lsa->refcount) {
+        lsa->refcount--;
+    }
+}
+
 /**
  * ospf_init
  * 
@@ -28,14 +55,14 @@ ospf_init() {
             g_ctx->ospf_instances = instance;
         }
         instance->config = config;
+        instance->lsdb = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
+
         // TODO: ...
-        //for(int i=0; i<OSPF_LSA_TYPES; i++) {
-        //    instance->lsdb[i].db = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
-        //}
         //if(!ospf_lsa_self_update(instance, level)) {
         //    LOG(OSPF, "Failed to generate self originated LSA for OSPFv%u instance %u\n", config->version, config->id);
         //    return false;
         //}
+
         if(config->external_mrt_file) {
             if(!ospf_mrt_load(instance, config->external_mrt_file)) {
                 LOG(OSPF, "Failed to load MRT file %s\n", config->external_mrt_file);
