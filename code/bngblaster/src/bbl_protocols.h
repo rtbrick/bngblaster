@@ -1008,28 +1008,6 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 bbl_ethernet_header_s **ethernet);
 
 protocol_error_t
-decode_arp(uint8_t *buf, uint16_t len,
-           uint8_t *sp, uint16_t sp_len,
-           bbl_arp_s **_arp);
-
-protocol_error_t
-decode_isis(uint8_t *buf, uint16_t len,
-            uint8_t *sp, uint16_t sp_len,
-            bbl_isis_s **_isis);
-
-protocol_error_t
-decode_ipv4(uint8_t *buf, uint16_t len,
-            uint8_t *sp, uint16_t sp_len,
-            bbl_ethernet_header_s *eth,
-            bbl_ipv4_s **_ipv4);
-
-protocol_error_t
-decode_ipv6(uint8_t *buf, uint16_t len,
-            uint8_t *sp, uint16_t sp_len,
-            bbl_ethernet_header_s *eth,
-            bbl_ipv6_s **_ipv6);    
-
-protocol_error_t
 encode_ethernet(uint8_t *buf, uint16_t *len,
                 bbl_ethernet_header_s *eth);
 
