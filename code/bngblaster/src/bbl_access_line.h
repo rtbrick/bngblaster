@@ -12,7 +12,7 @@
 typedef struct bbl_access_line_profile_
 {
     uint16_t access_line_profile_id;
-
+    uint16_t draft_lihawi;
     /* broadband forum tr101 */
 
     uint32_t act_up; /* Actual Data Rate Upstream */

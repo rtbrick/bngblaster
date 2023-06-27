@@ -143,7 +143,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     json_t *value = NULL;
 
     const char *schema[] = {
-        "access-line-profile-id", "act-up", "act-down",
+        "access-line-profile-id", "draft-lihawi", "act-up", "act-down",
         "min-up", "min-down", "att-up", "max-up", "max-down",
         "att-down", "min-up-low", "min-down-low",
         "max-interl-delay-up", "act-interl-delay-up", "max-interl-delay-down",
@@ -158,7 +158,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     sizeof(schema)/sizeof(schema[0]))) {
         return false;
     }
-
+    
     value = json_object_get(config, "access-line-profile-id");
     if(value) {
         profile->access_line_profile_id = json_number_value(value);
@@ -167,6 +167,18 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         return false;
     }
 
+    value = json_object_get(config, "draft-lihawi");
+    if(value) {
+        if(json_number_value(value) == 0 || json_number_value(value) == 4){
+           profile->draft_lihawi = json_number_value(value);
+        }
+        else{
+            fprintf(stderr, "Draft-lihawi version %1.f not supported\n(Supported Versions for draft-lihawi are 0 and 4)\n" , json_number_value(value));
+            return false;
+        }
+    }else{
+        profile->draft_lihawi = 4;
+    }
     value = json_object_get(config, "act-up");
     if(value) {
         profile->act_up = json_number_value(value);
@@ -1367,7 +1379,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->protocol_ipv4  = json_boolean_value(value);
     } else {
         isis_config->protocol_ipv4  = true;
-    }
+    }   
 
     value = json_object_get(isis, "protocol-ipv6");
     if(json_is_boolean(value)) {
@@ -1495,7 +1507,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
             return false;
         }
         isis_config->lsp_refresh_interval = number;
-    } else {
+    } else {    
         isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
     }
 

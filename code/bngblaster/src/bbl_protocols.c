@@ -1767,6 +1767,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->pon_type) {
                     *buf = ACCESS_LINE_PON_TYPE;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_PON_TYPE_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1776,6 +1779,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->etr_up) {
                     *buf = ACCESS_LINE_ETR_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ETR_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1785,6 +1791,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->etr_down) {
                     *buf = ACCESS_LINE_ETR_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ETR_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1794,6 +1803,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->attetr_up) {
                     *buf = ACCESS_LINE_ATTETR_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ATTETR_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1803,6 +1815,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->attetr_down) {
                     *buf = ACCESS_LINE_ATTETR_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ATTETR_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1812,6 +1827,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->gdr_up) {
                     *buf = ACCESS_LINE_GDR_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_GDR_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1821,6 +1839,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->gdr_down) {
                     *buf = ACCESS_LINE_GDR_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_GDR_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1830,6 +1851,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->attgdr_up) {
                     *buf = ACCESS_LINE_ATTGDR_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ATTGDR_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1839,6 +1863,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->attgdr_down) {
                     *buf = ACCESS_LINE_ATTGDR_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ATTGDR_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1848,6 +1875,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->ont_onu_avg_down) {
                     *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1857,6 +1887,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->ont_onu_peak_down) {
                     *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1866,6 +1899,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->ont_onu_max_up) {
                     *buf = ACCESS_LINE_ONT_ONU_MAX_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ONT_ONU_MAX_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1875,6 +1911,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->ont_onu_ass_up) {
                     *buf = ACCESS_LINE_ONT_ONU_ASS_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_ONT_ONU_ASS_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1884,6 +1923,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->pon_max_up) {
                     *buf = ACCESS_LINE_PON_MAX_UP;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_PON_MAX_UP_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1893,6 +1935,9 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 }
                 if(access_line_profile->pon_max_down) {
                     *buf = ACCESS_LINE_PON_MAX_DOWN;
+                    if(access_line_profile->draft_lihawi == 0){
+                        *buf = ACCESS_LINE_PON_MAX_DOWN_v00;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -3192,7 +3237,7 @@ decode_tcp(uint8_t *buf, uint16_t len,
 /*
  * decode_ipv6
  */
-static protocol_error_t
+protocol_error_t
 decode_ipv6(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_ethernet_header_s *eth,
@@ -3275,7 +3320,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
  * |                    Options                    |    Padding    |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-static protocol_error_t
+protocol_error_t
 decode_ipv4(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_ethernet_header_s *eth,
@@ -4189,7 +4234,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
             break;
         default:
             pppoe->next = NULL;
-            break;
+            break;  
     }
 
     *pppoe_session = pppoe;
@@ -4199,7 +4244,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
 /*
  * decode_arp
  */
-static protocol_error_t
+protocol_error_t
 decode_arp(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
            bbl_arp_s **_arp)
@@ -4232,7 +4277,7 @@ decode_arp(uint8_t *buf, uint16_t len,
 /*
  * decode_isis
  */
-static protocol_error_t
+protocol_error_t
 decode_isis(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_isis_s **_isis)

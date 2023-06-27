@@ -504,6 +504,24 @@ typedef enum access_line_attr_ {
     ACCESS_LINE_DATA_LINK_ENCAPS         = 0x90,  /* Data Link Encapsulation */
     ACCESS_LINE_DSL_TYPE                 = 0x91,  /* DSL Type */
 
+    /* draft-lihawi-ancp-protocol-access-extension-00 */
+
+    ACCESS_LINE_PON_TYPE_v00             = 0x92,  /* PON-Access-Type */
+    ACCESS_LINE_ETR_UP_v00               = 0x9b,  /* Expected Throughput (ETR) Upstream */
+    ACCESS_LINE_ETR_DOWN_v00             = 0x9c,  /* Expected Throughput (ETR) Downstream */
+    ACCESS_LINE_ATTETR_UP_v00            = 0x9d,  /* Attainable Expected Throughput (ATTETR) Upstream */
+    ACCESS_LINE_ATTETR_DOWN_v00          = 0x9e,  /* Attainable Expected Throughput (ATTETR) Downstream */
+    ACCESS_LINE_GDR_UP_v00               = 0x9f,  /* Gamma Data Rate (GDR) Upstream */
+    ACCESS_LINE_GDR_DOWN_v00             = 0xa0,  /* Gamma Data Rate (GDR) Downstream */
+    ACCESS_LINE_ATTGDR_UP_v00            = 0xa1,  /* Attainable Gamma Data Rate (ATTGDR) Upstream */
+    ACCESS_LINE_ATTGDR_DOWN_v00          = 0xa2,  /* Attainable Gamma Data Rate (ATTGDR) Downstream */
+    ACCESS_LINE_ONT_ONU_AVG_DOWN_v00     = 0x93,  /* ONT/ONU-Average-Data-Rate-Downstream */
+    ACCESS_LINE_ONT_ONU_PEAK_DOWN_v00    = 0x94,  /* ONT/ONU-Peak-Data-Rate-Downstream */
+    ACCESS_LINE_ONT_ONU_MAX_UP_v00       = 0x95,  /* ONT/ONU-Maximum-Data-Rate-Upstream */
+    ACCESS_LINE_ONT_ONU_ASS_UP_v00       = 0x96,  /* ONT/ONU-Assured-Data-Rate-Upstream */
+    ACCESS_LINE_PON_MAX_UP_v00           = 0x97,  /* PON-Tree-Maximum-Data-Rate-Upstream */
+    ACCESS_LINE_PON_MAX_DOWN_v00         = 0x98,  /* PON-Tree-Maximum-Data-Rate-Downstream */
+
     /* draft-lihawi-ancp-protocol-access-extension-04 */
 
     ACCESS_LINE_PON_TYPE                 = 0x97,  /* PON-Access-Type */
