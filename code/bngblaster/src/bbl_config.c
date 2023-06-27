@@ -143,7 +143,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     json_t *value = NULL;
 
     const char *schema[] = {
-        "access-line-profile-id", "draft-lihawi", "act-up", "act-down",
+        "access-line-profile-id", "pon-access-line-version", "act-up", "act-down",
         "min-up", "min-down", "att-up", "max-up", "max-down",
         "att-down", "min-up-low", "min-down-low",
         "max-interl-delay-up", "act-interl-delay-up", "max-interl-delay-down",
@@ -167,17 +167,21 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         return false;
     }
 
-    value = json_object_get(config, "draft-lihawi");
+    value = json_object_get(config, "pon-access-line-version");
     if(value) {
-        if(json_number_value(value) == 0 || json_number_value(value) == 4){
-           profile->draft_lihawi = json_number_value(value);
+        if(!strcmp(json_string_value(value) , "DRAFT-LIHAWI-00")){
+           profile->pon_access_line_version = DRAFT_LIHAWI_00;
+        }
+        else if(!strcmp(json_string_value(value) ,"DRAFT-LIHAWI-04")){
+            profile->pon_access_line_version = DRAFT_LIHAWI_04;
         }
         else{
-            fprintf(stderr, "Draft-lihawi version %1.f not supported\n(Supported Versions for draft-lihawi are 0 and 4)\n" , json_number_value(value));
+            fprintf(stderr, "JSON config error: Invalid value for pon-access-line-version\n");
             return false;
         }
-    }else{
-        profile->draft_lihawi = 4;
+    }
+    else{
+        profile->pon_access_line_version = DRAFT_LIHAWI_04;
     }
     value = json_object_get(config, "act-up");
     if(value) {
