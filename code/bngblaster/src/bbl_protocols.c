@@ -3241,7 +3241,7 @@ decode_tcp(uint8_t *buf, uint16_t len,
 /*
  * decode_ipv6
  */
-protocol_error_t
+static protocol_error_t
 decode_ipv6(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_ethernet_header_s *eth,
@@ -3324,7 +3324,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
  * |                    Options                    |    Padding    |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-protocol_error_t
+static protocol_error_t
 decode_ipv4(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_ethernet_header_s *eth,
@@ -4238,7 +4238,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
             break;
         default:
             pppoe->next = NULL;
-            break;  
+            break;
     }
 
     *pppoe_session = pppoe;
@@ -4248,7 +4248,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
 /*
  * decode_arp
  */
-protocol_error_t
+static protocol_error_t
 decode_arp(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
            bbl_arp_s **_arp)
@@ -4281,7 +4281,7 @@ decode_arp(uint8_t *buf, uint16_t len,
 /*
  * decode_isis
  */
-protocol_error_t
+static protocol_error_t
 decode_isis(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_isis_s **_isis)

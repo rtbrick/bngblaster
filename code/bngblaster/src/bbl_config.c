@@ -158,7 +158,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     sizeof(schema)/sizeof(schema[0]))) {
         return false;
     }
-    
+
     value = json_object_get(config, "access-line-profile-id");
     if(value) {
         profile->access_line_profile_id = json_number_value(value);
@@ -169,18 +169,15 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
 
     value = json_object_get(config, "pon-access-line-version");
     if(value) {
-        if(!strcmp(json_string_value(value) , "DRAFT-LIHAWI-00")){
+        if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-00")){
            profile->pon_access_line_version = DRAFT_LIHAWI_00;
-        }
-        else if(!strcmp(json_string_value(value) ,"DRAFT-LIHAWI-04")){
+        } else if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-04")){
             profile->pon_access_line_version = DRAFT_LIHAWI_04;
-        }
-        else{
+        } else{
             fprintf(stderr, "JSON config error: Invalid value for pon-access-line-version\n");
             return false;
         }
-    }
-    else{
+    } else{
         profile->pon_access_line_version = DRAFT_LIHAWI_04;
     }
     value = json_object_get(config, "act-up");
@@ -1383,7 +1380,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->protocol_ipv4  = json_boolean_value(value);
     } else {
         isis_config->protocol_ipv4  = true;
-    }   
+    }
 
     value = json_object_get(isis, "protocol-ipv6");
     if(json_is_boolean(value)) {
@@ -1511,7 +1508,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
             return false;
         }
         isis_config->lsp_refresh_interval = number;
-    } else {    
+    } else {
         isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
     }
 
