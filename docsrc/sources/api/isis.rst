@@ -21,6 +21,14 @@
      - Update ISIS LSP
      - `instance`, `pdu`
      - 
+   * - `isis-lsp-purge`
+     - Purge ISIS LSP based on LSP identifier
+     - `instance`, `level`, `id`
+     - 
+   * - `isis-lsp-flap`
+     - Flap ISIS LSP based on LSP identifier
+     - `instance`, `level`, `id`
+     - `timer`
    * - `isis-teardown`
      - Teardown ISIS
      - 

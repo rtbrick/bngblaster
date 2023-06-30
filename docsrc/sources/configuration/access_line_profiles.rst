@@ -106,6 +106,9 @@
    * - `pon-max-down`
      - PON Tree Maximum Data Rate Downstream
      - 0
+   * - `pon-access-line-version`
+     - DRAFT-LIHAWI-00 or DRAFT-LIHAWI-04 
+     - DRAFT-LIHAWI-04
 
 Attributes with values set to 0 will not be sent.
 

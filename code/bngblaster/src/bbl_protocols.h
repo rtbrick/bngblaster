@@ -523,10 +523,8 @@ typedef enum access_line_attr_ {
     ACCESS_LINE_PON_MAX_DOWN             = 0xb5,  /* PON-Tree-Maximum-Data-Rate-Downstream */
 } access_line_attr_t;
 
+/* draft-lihawi-ancp-protocol-access-extension-00 */
 typedef enum access_line_attr_lihawi_00_ {
-
-        /* draft-lihawi-ancp-protocol-access-extension-00 */
-
     ACCESS_LINE_PON_TYPE_LIHAWI_00             = 0x92,  /* PON-Access-Type */
     ACCESS_LINE_ONT_ONU_AVG_DOWN_LIHAWI_00     = 0x93,  /* ONT/ONU-Average-Data-Rate-Downstream */
     ACCESS_LINE_ONT_ONU_PEAK_DOWN_LIHAWI_00    = 0x94,  /* ONT/ONU-Peak-Data-Rate-Downstream */
