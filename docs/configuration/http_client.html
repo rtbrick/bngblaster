@@ -46,8 +46,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -70,7 +70,7 @@
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
       <li>&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/api/igmp.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/configuration/http_client.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -78,60 +78,53 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <table class="docutils align-default">
+  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
 <colgroup>
 <col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 50%" />
 <col style="width: 25%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Mandatory Arguments</p></th>
-<th class="head"><p>Optional Arguments</p></th>
+<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>igmp-join</cite></p></td>
-<td><p>Join group</p></td>
-<td><p><cite>session-id</cite>, <cite>group</cite></p></td>
-<td><p><cite>source1</cite>, <cite>source2</cite>, <cite>source3</cite></p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>igmp-join-iter</cite></p></td>
-<td><p>Join multiple groups over all sessions</p></td>
-<td><p><cite>group</cite></p></td>
-<td><p><cite>group-iter</cite>, <cite>group-count</cite>, <cite>source1</cite>, <cite>source2</cite>, <cite>source3</cite></p></td>
-</tr>
-<tr class="row-even"><td><p><cite>igmp-leave</cite></p></td>
-<td><p>Leave group</p></td>
-<td><p><cite>session-id</cite>, <cite>group</cite></p></td>
+<tr class="row-even"><td><p><cite>name</cite></p></td>
+<td><p>Mandatory HTTP client name</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>igmp-leave-all</cite></p></td>
-<td><p>Leave all groups from all sessions</p></td>
-<td></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><cite>igmp-info</cite></p></td>
-<td><p>Display group information</p></td>
-<td><p><cite>session-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>http-client-group-id</cite></p></td>
+<td><p>Mandatory HTTP client identifier</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>zapping-start</cite></p></td>
-<td><p>Start IGMP zapping test</p></td>
-<td></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><cite>zapping-stop</cite></p></td>
-<td><p>Stop IGMP zapping test</p></td>
-<td></td>
+<tr class="row-even"><td><p><cite>url</cite></p></td>
+<td><p>Mandatory HTTP request URL</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>zapping-stats</cite></p></td>
-<td><p>Return IGMP zapping stats</p></td>
+<tr class="row-odd"><td><p><cite>destination-port</cite></p></td>
+<td><p>TCP destination port</p></td>
+<td><p>80</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>autostart</cite></p></td>
+<td><p>Autostart HTTP client</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
+<td><p>Delay start of HTTP client</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>destination-ipv4-address</cite></p></td>
+<td><p>Destination IPv4 address</p></td>
 <td></td>
-<td><p><cite>reset</cite></p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>destination-ipv6-address</cite></p></td>
+<td><p>Destination IPv6 address</p></td>
+<td></td>
 </tr>
 </tbody>
 </table>

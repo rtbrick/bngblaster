@@ -44,6 +44,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -101,92 +102,100 @@
 <td><p>Select the corresponding network interface for this session</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>type</cite></p></td>
+<tr class="row-even"><td><p><cite>a10nsp-interface</cite></p></td>
+<td><p>Select the corresponding A10NSP interface for this session</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>type</cite></p></td>
 <td><p>Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>)</p></td>
 <td><p>pppoe</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>vlan-mode</cite></p></td>
+<tr class="row-even"><td><p><cite>vlan-mode</cite></p></td>
 <td><p>Set VLAN mode <cite>1:1</cite> or <cite>N:1</cite></p></td>
 <td><p>1:1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>qinq</cite></p></td>
+<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
 <td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan-min</cite></p></td>
+<tr class="row-even"><td><p><cite>outer-vlan-min</cite></p></td>
 <td><p>Outer VLAN minimum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan-max</cite></p></td>
+<tr class="row-odd"><td><p><cite>outer-vlan-max</cite></p></td>
 <td><p>Outer VLAN maximum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan-step</cite></p></td>
+<tr class="row-even"><td><p><cite>outer-vlan-step</cite></p></td>
 <td><p>Outer VLAN step (iterator)</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan</cite></p></td>
+<tr class="row-odd"><td><p><cite>outer-vlan</cite></p></td>
 <td><p>Set outer-vlan-min/max equally</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan-min</cite></p></td>
+<tr class="row-even"><td><p><cite>inner-vlan-min</cite></p></td>
 <td><p>Inner VLAN minimum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan-max</cite></p></td>
+<tr class="row-odd"><td><p><cite>inner-vlan-max</cite></p></td>
 <td><p>Inner VLAN maximum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan-step</cite></p></td>
+<tr class="row-even"><td><p><cite>inner-vlan-step</cite></p></td>
 <td><p>Inner VLAN step (iterator)</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan</cite></p></td>
+<tr class="row-odd"><td><p><cite>inner-vlan</cite></p></td>
 <td><p>Set inner-vlan-min/max equally</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>third-vlan</cite></p></td>
+<tr class="row-even"><td><p><cite>third-vlan</cite></p></td>
 <td><p>Add a fixed third VLAN (most inner VLAN)</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>address</cite></p></td>
+<tr class="row-odd"><td><p><cite>address</cite></p></td>
 <td><p>Static IPv4 base address (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>ppp-mru</cite></p></td>
+<tr class="row-even"><td><p><cite>ppp-mru</cite></p></td>
 <td><p>Overwrite PPP MRU (PPPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>address-iter</cite></p></td>
+<tr class="row-odd"><td><p><cite>address-iter</cite></p></td>
 <td><p>Static IPv4 base address iterator (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>gateway</cite></p></td>
+<tr class="row-even"><td><p><cite>gateway</cite></p></td>
 <td><p>Static IPv4 gateway address (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway-iter</cite></p></td>
+<tr class="row-odd"><td><p><cite>gateway-iter</cite></p></td>
 <td><p>Static IPv4 gateway address iterator (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>username</cite></p></td>
+<tr class="row-even"><td><p><cite>username</cite></p></td>
 <td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>password</cite></p></td>
+<tr class="row-odd"><td><p><cite>password</cite></p></td>
 <td><p>Overwrite the password from the authentication section</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>authentication-protocol</cite></p></td>
+<tr class="row-even"><td><p><cite>authentication-protocol</cite></p></td>
 <td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>agent-circuit-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>agent-circuit-id</cite></p></td>
 <td><p>Overwrite the agent-circuit-id from the access-line section</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>agent-remote-id</cite></p></td>
+<tr class="row-even"><td><p><cite>agent-remote-id</cite></p></td>
 <td><p>Overwrite the agent-remote-id from the access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>access-aggregation-circuit-id</cite></p></td>
+<td><p>Overwrite the access-aggregation-circuit-id from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>rate-up</cite></p></td>

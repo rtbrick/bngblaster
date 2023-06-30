@@ -212,3 +212,11 @@ This is explained detailed in the
 :ref:`Legal Interception (LI) <li>` section.
 
 .. include:: li.rst
+
+HTTP
+----
+
+This is explained detailed in the 
+:ref:`HTTP <http>` section.
+
+.. include:: http.rst

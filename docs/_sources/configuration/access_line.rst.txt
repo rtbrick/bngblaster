@@ -16,6 +16,9 @@
    * - `agent-remote-id`
      - Agent-Remote-Id
      - 
+   * - `access-aggregation-circuit-id`
+     - Access-Aggregation-Circuit-ID-ASCII
+     - 
    * - `rate-up`
      - Actual Data Rate Upstream
      - 

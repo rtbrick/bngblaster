@@ -16,6 +16,9 @@
    * - `network-interface`
      - Select the corresponding network interface for this session
      - 
+   * - `a10nsp-interface`
+     - Select the corresponding A10NSP interface for this session
+     - 
    * - `type`
      - Set access type (`pppoe` or `ipoe`)
      - pppoe
@@ -81,6 +84,9 @@
      - 
    * - `agent-remote-id`
      - Overwrite the agent-remote-id from the access-line section
+     - 
+   * - `access-aggregation-circuit-id`
+     - Overwrite the access-aggregation-circuit-id from the access-line section
      - 
    * - `rate-up`
      - Overwrite the rate-up from the access-line section

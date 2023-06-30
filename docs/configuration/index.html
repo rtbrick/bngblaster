@@ -46,6 +46,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a><ul>
@@ -82,6 +83,8 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#bgp">BGP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ldp">LDP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#http-client">HTTP-Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#http-server">HTTP-Server</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -434,92 +437,100 @@ for interface links referenced by interface functions.</p>
 <td><p>Select the corresponding network interface for this session</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>type</cite></p></td>
+<tr class="row-even"><td><p><cite>a10nsp-interface</cite></p></td>
+<td><p>Select the corresponding A10NSP interface for this session</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>type</cite></p></td>
 <td><p>Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>)</p></td>
 <td><p>pppoe</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>vlan-mode</cite></p></td>
+<tr class="row-even"><td><p><cite>vlan-mode</cite></p></td>
 <td><p>Set VLAN mode <cite>1:1</cite> or <cite>N:1</cite></p></td>
 <td><p>1:1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>qinq</cite></p></td>
+<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
 <td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
 <td><p>false</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan-min</cite></p></td>
+<tr class="row-even"><td><p><cite>outer-vlan-min</cite></p></td>
 <td><p>Outer VLAN minimum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan-max</cite></p></td>
+<tr class="row-odd"><td><p><cite>outer-vlan-max</cite></p></td>
 <td><p>Outer VLAN maximum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan-step</cite></p></td>
+<tr class="row-even"><td><p><cite>outer-vlan-step</cite></p></td>
 <td><p>Outer VLAN step (iterator)</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan</cite></p></td>
+<tr class="row-odd"><td><p><cite>outer-vlan</cite></p></td>
 <td><p>Set outer-vlan-min/max equally</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan-min</cite></p></td>
+<tr class="row-even"><td><p><cite>inner-vlan-min</cite></p></td>
 <td><p>Inner VLAN minimum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan-max</cite></p></td>
+<tr class="row-odd"><td><p><cite>inner-vlan-max</cite></p></td>
 <td><p>Inner VLAN maximum value</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan-step</cite></p></td>
+<tr class="row-even"><td><p><cite>inner-vlan-step</cite></p></td>
 <td><p>Inner VLAN step (iterator)</p></td>
 <td><p>1</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan</cite></p></td>
+<tr class="row-odd"><td><p><cite>inner-vlan</cite></p></td>
 <td><p>Set inner-vlan-min/max equally</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>third-vlan</cite></p></td>
+<tr class="row-even"><td><p><cite>third-vlan</cite></p></td>
 <td><p>Add a fixed third VLAN (most inner VLAN)</p></td>
 <td><p>0 (untagged)</p></td>
 </tr>
-<tr class="row-even"><td><p><cite>address</cite></p></td>
+<tr class="row-odd"><td><p><cite>address</cite></p></td>
 <td><p>Static IPv4 base address (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>ppp-mru</cite></p></td>
+<tr class="row-even"><td><p><cite>ppp-mru</cite></p></td>
 <td><p>Overwrite PPP MRU (PPPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>address-iter</cite></p></td>
+<tr class="row-odd"><td><p><cite>address-iter</cite></p></td>
 <td><p>Static IPv4 base address iterator (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>gateway</cite></p></td>
+<tr class="row-even"><td><p><cite>gateway</cite></p></td>
 <td><p>Static IPv4 gateway address (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway-iter</cite></p></td>
+<tr class="row-odd"><td><p><cite>gateway-iter</cite></p></td>
 <td><p>Static IPv4 gateway address iterator (IPoE only)</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>username</cite></p></td>
+<tr class="row-even"><td><p><cite>username</cite></p></td>
 <td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>password</cite></p></td>
+<tr class="row-odd"><td><p><cite>password</cite></p></td>
 <td><p>Overwrite the password from the authentication section</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>authentication-protocol</cite></p></td>
+<tr class="row-even"><td><p><cite>authentication-protocol</cite></p></td>
 <td><p>Overwrite the username from the authentication section</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>agent-circuit-id</cite></p></td>
+<tr class="row-odd"><td><p><cite>agent-circuit-id</cite></p></td>
 <td><p>Overwrite the agent-circuit-id from the access-line section</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>agent-remote-id</cite></p></td>
+<tr class="row-even"><td><p><cite>agent-remote-id</cite></p></td>
 <td><p>Overwrite the agent-remote-id from the access-line section</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>access-aggregation-circuit-id</cite></p></td>
+<td><p>Overwrite the access-aggregation-circuit-id from the access-line section</p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><cite>rate-up</cite></p></td>
@@ -1591,15 +1602,19 @@ different than those assigned to the client.</p>
 <td><p>Agent-Remote-Id</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>rate-up</cite></p></td>
+<tr class="row-even"><td><p><cite>access-aggregation-circuit-id</cite></p></td>
+<td><p>Access-Aggregation-Circuit-ID-ASCII</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>rate-up</cite></p></td>
 <td><p>Actual Data Rate Upstream</p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><cite>rate-down</cite></p></td>
+<tr class="row-even"><td><p><cite>rate-down</cite></p></td>
 <td><p>Actual Data Rate Downstream</p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><cite>dsl-type</cite></p></td>
+<tr class="row-odd"><td><p><cite>dsl-type</cite></p></td>
 <td><p>DSL-Type</p></td>
 <td></td>
 </tr>
@@ -1751,6 +1766,10 @@ different than those assigned to the client.</p>
 <tr class="row-odd"><td><p><cite>pon-max-down</cite></p></td>
 <td><p>PON Tree Maximum Data Rate Downstream</p></td>
 <td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>pon-access-line-version</cite></p></td>
+<td><p>DRAFT-LIHAWI-00 or DRAFT-LIHAWI-04</p></td>
+<td><p>DRAFT-LIHAWI-04</p></td>
 </tr>
 </tbody>
 </table>
@@ -2112,6 +2131,100 @@ of 5 seconds.</p>
 <p>Setting a valid <cite>ipv6-transport-address</cite> enables LDP IPv6
 hello and transport. According to RFC7552, IPv6 is preferred
 over IPv4 which can be changed with <cite>prefer-ipv4-transport</cite>.</p>
+</section>
+<section id="http-client">
+<h2>HTTP-Client<a class="headerlink" href="#http-client" title="Permalink to this headline"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>name</cite></p></td>
+<td><p>Mandatory HTTP client name</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>http-client-group-id</cite></p></td>
+<td><p>Mandatory HTTP client identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>url</cite></p></td>
+<td><p>Mandatory HTTP request URL</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>destination-port</cite></p></td>
+<td><p>TCP destination port</p></td>
+<td><p>80</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>autostart</cite></p></td>
+<td><p>Autostart HTTP client</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
+<td><p>Delay start of HTTP client</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>destination-ipv4-address</cite></p></td>
+<td><p>Destination IPv4 address</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>destination-ipv6-address</cite></p></td>
+<td><p>Destination IPv6 address</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="http-server">
+<h2>HTTP-Server<a class="headerlink" href="#http-server" title="Permalink to this headline"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>name</cite></p></td>
+<td><p>Mandatory HTTP server name</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
+<td><p>Mandatory HTTP server network-interface</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>port</cite></p></td>
+<td><p>Local TCP port</p></td>
+<td><p>80</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv4-address</cite></p></td>
+<td><p>Local IPv4 address</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipv6-address</cite></p></td>
+<td><p>Local IPv6 address</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 
