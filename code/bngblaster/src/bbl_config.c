@@ -143,7 +143,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     json_t *value = NULL;
 
     const char *schema[] = {
-        "access-line-profile-id", "act-up", "act-down",
+        "access-line-profile-id", "pon-access-line-version", "act-up", "act-down",
         "min-up", "min-down", "att-up", "max-up", "max-down",
         "att-down", "min-up-low", "min-down-low",
         "max-interl-delay-up", "act-interl-delay-up", "max-interl-delay-down",
@@ -167,6 +167,19 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         return false;
     }
 
+    value = json_object_get(config, "pon-access-line-version");
+    if(value) {
+        if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-00")){
+           profile->pon_access_line_version = DRAFT_LIHAWI_00;
+        } else if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-04")){
+            profile->pon_access_line_version = DRAFT_LIHAWI_04;
+        } else{
+            fprintf(stderr, "JSON config error: Invalid value for pon-access-line-version\n");
+            return false;
+        }
+    } else{
+        profile->pon_access_line_version = DRAFT_LIHAWI_04;
+    }
     value = json_object_get(config, "act-up");
     if(value) {
         profile->act_up = json_number_value(value);

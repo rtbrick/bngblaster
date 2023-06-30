@@ -1776,7 +1776,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->pon_type) {
-                    *buf = ACCESS_LINE_PON_TYPE;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_PON_TYPE_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_PON_TYPE;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1857,7 +1864,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->ont_onu_avg_down) {
-                    *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1866,7 +1880,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->ont_onu_peak_down) {
-                    *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1875,7 +1896,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->ont_onu_max_up) {
-                    *buf = ACCESS_LINE_ONT_ONU_MAX_UP;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_ONT_ONU_MAX_UP_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_ONT_ONU_MAX_UP;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1884,7 +1912,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->ont_onu_ass_up) {
-                    *buf = ACCESS_LINE_ONT_ONU_ASS_UP;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_ONT_ONU_ASS_UP_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_ONT_ONU_ASS_UP;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1893,7 +1928,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->pon_max_up) {
-                    *buf = ACCESS_LINE_PON_MAX_UP;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_PON_MAX_UP_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_PON_MAX_UP;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1902,7 +1944,14 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                     vendor_len += 6;
                 }
                 if(access_line_profile->pon_max_down) {
-                    *buf = ACCESS_LINE_PON_MAX_DOWN;
+                    switch(access_line_profile->pon_access_line_version) {
+                      case DRAFT_LIHAWI_00:
+                          *buf = ACCESS_LINE_PON_MAX_DOWN_LIHAWI_00;
+                           break;
+                      default:
+                          *buf = ACCESS_LINE_PON_MAX_DOWN;
+                           break;
+                    }
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));

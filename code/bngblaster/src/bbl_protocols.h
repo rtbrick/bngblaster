@@ -523,6 +523,24 @@ typedef enum access_line_attr_ {
     ACCESS_LINE_PON_MAX_DOWN             = 0xb5,  /* PON-Tree-Maximum-Data-Rate-Downstream */
 } access_line_attr_t;
 
+typedef enum access_line_attr_lihawi_00_ {
+
+        /* draft-lihawi-ancp-protocol-access-extension-00 */
+
+    ACCESS_LINE_PON_TYPE_LIHAWI_00             = 0x92,  /* PON-Access-Type */
+    ACCESS_LINE_ONT_ONU_AVG_DOWN_LIHAWI_00     = 0x93,  /* ONT/ONU-Average-Data-Rate-Downstream */
+    ACCESS_LINE_ONT_ONU_PEAK_DOWN_LIHAWI_00    = 0x94,  /* ONT/ONU-Peak-Data-Rate-Downstream */
+    ACCESS_LINE_ONT_ONU_MAX_UP_LIHAWI_00       = 0x95,  /* ONT/ONU-Maximum-Data-Rate-Upstream */
+    ACCESS_LINE_ONT_ONU_ASS_UP_LIHAWI_00       = 0x96,  /* ONT/ONU-Assured-Data-Rate-Upstream */
+    ACCESS_LINE_PON_MAX_UP_LIHAWI_00           = 0x97,  /* PON-Tree-Maximum-Data-Rate-Upstream */
+    ACCESS_LINE_PON_MAX_DOWN_LIHAWI_00         = 0x98,  /* PON-Tree-Maximum-Data-Rate-Downstream */
+}access_line_attr_lihawi_00_t;
+
+typedef enum pon_access_line_version{
+    DRAFT_LIHAWI_00 = 0,
+    DRAFT_LIHAWI_04 = 4,
+} __attribute__ ((__packed__)) pon_access_line_version_t;
+
 typedef struct access_line_ {
     char    *aci;       /* Agent Circuit ID */
     char    *ari;       /* Agent Remote ID */
