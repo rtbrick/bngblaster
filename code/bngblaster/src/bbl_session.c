@@ -211,7 +211,9 @@ bbl_session_monkey_ipoe(bbl_session_s *session) {
             break;
         case 20:
             /* Release DHCP */
-            if(session->dhcp_state != BBL_DHCP_RELEASE) {
+            if(!(session->dhcp_state == BBL_DHCP_DISABLED || 
+                 session->dhcp_state == BBL_DHCP_RELEASE)) {
+
                 session->dhcp_state = BBL_DHCP_RELEASE;
                 session->dhcp_xid = rand();
                 session->dhcp_request_timestamp.tv_sec = 0;
@@ -223,7 +225,9 @@ bbl_session_monkey_ipoe(bbl_session_s *session) {
             break;
         case 30:
             /* Release DHCPv6 */
-            if(session->dhcpv6_state != BBL_DHCP_RELEASE) {
+            if(!(session->dhcpv6_state == BBL_DHCP_DISABLED || 
+                 session->dhcpv6_state == BBL_DHCP_RELEASE)) {
+
                 session->dhcpv6_state = BBL_DHCP_RELEASE;
                 session->dhcpv6_xid = rand() & 0xffffff;
                 session->dhcpv6_request_timestamp.tv_sec = 0;
@@ -235,11 +239,15 @@ bbl_session_monkey_ipoe(bbl_session_s *session) {
             break;
         case 40:
             /* Restart DHCPv4 */
-            bbl_dhcp_restart(session);
+            if(session->dhcp_state != BBL_DHCP_DISABLED) {
+                bbl_dhcp_restart(session);
+            }
             break;
         case 50:
             /* Restart DHCPv6 */
-            bbl_dhcpv6_restart(session);
+            if(session->dhcpv6_state != BBL_DHCP_DISABLED) {
+                bbl_dhcpv6_restart(session);
+            }
             break;
         default:
             break;
