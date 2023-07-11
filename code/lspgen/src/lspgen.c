@@ -324,7 +324,7 @@ lspgen_get_prefix_inc(uint32_t afi, uint32_t prefix_len)
  * Walk the graph of the LSDB and add the required node/link attributes for LSP generation.
  */
 void
-lspgen_gen_attr(struct lsdb_ctx_ *ctx)
+lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
 {
     struct lsdb_node_ *node;
     struct lsdb_link_ *link;
@@ -937,6 +937,10 @@ main(int argc, char *argv[])
                 break;
             case 'V':
                 /* level */
+                if (ctx->protocol_id != PROTO_ISIS) {
+                    LOG(ERROR, "Level may not be set for protocol %s\n", lsdb_format_proto(ctx));
+                    exit(EXIT_FAILURE);
+		}
                 ctx->topology_id.level = atoi(optarg);
                 if (ctx->topology_id.level < 1 || ctx->topology_id.level > 2) {
                     LOG(ERROR, "Level %u is not supported\n", ctx->topology_id.level);
@@ -968,7 +972,9 @@ main(int argc, char *argv[])
         /*
          * Generate the node and link attributes.
          */
-        lspgen_gen_attr(ctx);
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    lspgen_gen_isis_attr(ctx);
+	}
     }
 
     /*

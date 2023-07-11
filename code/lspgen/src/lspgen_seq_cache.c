@@ -30,6 +30,26 @@ lspgen_write_node_seq_cache(lsdb_node_t *node, json_t *level_arr)
     json_decref(node_obj);
 }
 
+char *
+lspgen_seq_cache_filename(lsdb_ctx_t *ctx)
+{
+    static char seq_cache_filename[64];
+
+    if (ctx->protocol_id == PROTO_ISIS) {
+	snprintf(seq_cache_filename, sizeof(seq_cache_filename),
+		 "isis-level%u-sequence-cache.json", ctx->topology_id.level);
+	return seq_cache_filename;
+    }
+
+    if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+	snprintf(seq_cache_filename, sizeof(seq_cache_filename),
+		 "ospf-area%s-sequence-cache.json", format_ipv4_address(&ctx->topology_id.area));
+	return seq_cache_filename;
+    }
+
+    return NULL;
+}
+
 void
 lspgen_write_seq_cache(lsdb_ctx_t *ctx)
 {
@@ -38,10 +58,13 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
     json_t *root_obj, *arr;
     int res;
     uint32_t num_nodes;
-    char seq_cache_filename[32];
+    char *seq_cache_filename;
 
-    snprintf(seq_cache_filename, sizeof(seq_cache_filename),
-	     "level%u-sequence-cache.json", ctx->topology_id.level);
+    seq_cache_filename = lspgen_seq_cache_filename(ctx);
+    if (!seq_cache_filename) {
+	LOG(ERROR, "Error building sequence cache file\n");
+        return;
+    }
 
     ctx->seq_cache_file = fopen(seq_cache_filename, "w");
     if (!ctx->seq_cache_file) {
@@ -133,11 +156,13 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
     json_t *root_obj;
     json_error_t error;
     json_t *level;
+    char *seq_cache_filename;
 
-    char seq_cache_filename[32];
-
-    snprintf(seq_cache_filename, sizeof(seq_cache_filename),
-	     "level%u-sequence-cache.json", ctx->topology_id.level);
+    seq_cache_filename = lspgen_seq_cache_filename(ctx);
+    if (!seq_cache_filename) {
+	LOG(ERROR, "Error building sequence cache file\n");
+        return;
+    }
 
     root_obj = json_load_file(seq_cache_filename, 0, &error);
     if (!root_obj) {
