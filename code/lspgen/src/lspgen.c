@@ -630,6 +630,8 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 	}
 	LOG(NORMAL, " Level %u, sequence 0x%x, lsp-lifetime %u\n",
 	    ctx->topology_id.level, ctx->sequence, ctx->lsp_lifetime);
+    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+	    LOG(NORMAL, " Area %s\n", format_ipv4_address(&ctx->topology_id.area));
     }
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
@@ -798,6 +800,7 @@ main(int argc, char *argv[])
                 exit(0);
 	    case 'P':
 		ctx->protocol_id = key2val(proto_names, optarg);
+		ctx->topology_id.area = 0; /* reset area */
 		break;
             case 'r':
                 if (ctx->config_filename) {
@@ -816,9 +819,14 @@ main(int argc, char *argv[])
                 ctx->config_write = true;
                 break;
             case 'a':
-                if (ctx->num_area < 3) {
-                    scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
-                }
+		if (ctx->protocol_id == PROTO_ISIS) {
+		    if (ctx->num_area < 3) {
+			scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
+		    }
+		} else {
+		    /* ospf2 and ospf3 */
+		    scan_ipv4_address(optarg, &ctx->topology_id.area);
+		}
                 break;
             case 'M':
                 ctx->lsp_lifetime = atoi(optarg);
