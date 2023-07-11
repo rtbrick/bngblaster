@@ -236,6 +236,56 @@ lsdb_free_link(void *key, void *datum)
 }
 
 /*
+ * FNV-1a hash function.
+ */
+unsigned int
+lsdb_hash_node(const void* k)
+{
+    const uint32_t *pos = (const uint32_t *)k;
+    const uint32_t m = 16777619U;
+
+    uint32_t h = 2166136261U;
+
+    /* 64-bit node_id */
+    h ^= *pos++;
+    h *= m;
+    h ^= *pos++;
+    h *= m;
+
+    return h;
+}
+
+/*
+ * FNV-1a hash function with 64 to 32 Bit XOR diffusion at the end.
+ */
+unsigned int
+lsdb_hash_link(const void* k)
+{
+    const uint64_t *pos = (const uint64_t *)k;
+    const uint64_t m = 0x100000001B3ULL;
+
+    uint64_t h = 0xcbf29ce484222325ULL;
+
+    h ^= *pos++; /* 64-bit local_node_id */
+    h *= m;
+
+    h ^= *pos++; /* 64-bit remote_node_id */
+    h *= m;
+
+    h ^= *pos++; /* 128-bit local_link_id */
+    h *= m;
+    h ^= *pos++;
+    h *= m;
+
+    h ^= *pos++; /* 128-bit remote_link_id */
+    h *= m;
+    h ^= *pos++;
+    h *= m;
+
+    return (h >> 32) ^ h;
+}
+
+/*
  * Called by dict destructor.
  */
 void
@@ -309,12 +359,14 @@ lsdb_alloc_ctx(char *instance)
     /*
      * Initialize node DB.
      */
-    ctx->node_dict = hashtable2_dict_new((dict_compare_func) lsdb_compare_node, dict_str_hash, LSDB_NODE_HSIZE);
+    ctx->node_dict = hashtable2_dict_new((dict_compare_func)lsdb_compare_node,
+					 lsdb_hash_node, LSDB_NODE_HSIZE);
 
     /*
      * Initialize link DB.
      */
-    ctx->link_dict = hashtable2_dict_new((dict_compare_func) lsdb_compare_link, dict_str_hash, LSDB_LINK_HSIZE);
+    ctx->link_dict = hashtable2_dict_new((dict_compare_func)lsdb_compare_link,
+					 lsdb_hash_link, LSDB_LINK_HSIZE);
 
     LOG(NORMAL, "Add context for instance %s\n", ctx->instance_name);
 
