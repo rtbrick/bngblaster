@@ -11,8 +11,8 @@
 #include <strings.h>
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  * @param text pointer to data stream
  * @param text_len length of data stream
  * @param key pointer to authentication key
@@ -20,8 +20,8 @@
  * @param digest caller digest to be filled in
  */
 void
-hmac_md5(unsigned char* text, int text_len, 
-         unsigned char* key, int key_len, 
+hmac_md5(unsigned char* text, int text_len,
+         unsigned char* key, int key_len,
          uint8_t* digest)
 {
     HMAC_CTX *hmac = HMAC_CTX_new();

@@ -22,6 +22,13 @@
 #define LSDB_NODE_HSIZE 997    /* hash table initial bucket size */
 #define LSDB_LINK_HSIZE 9973   /* hash table initial bucket size */
 
+typedef enum {
+    PROTO_UNKNOWN = 0,
+    PROTO_ISIS = 1,
+    PROTO_OSPF2 = 2,
+    PROTO_OSPF3 = 3
+} lsdb_proto_id_t;
+
 typedef struct lsdb_node_id_ {
     uint8_t node_id[LSDB_MAX_NODE_ID_SIZE];
 } lsdb_node_id_t;
@@ -45,10 +52,10 @@ typedef struct lsdb_ctx_
     uint8_t root_node_id[LSDB_MAX_NODE_ID_SIZE];
 
     char *instance_name;    /* Name for this instance e.g. "default" */
-    char *protocol_name;    /* Name for this protocol e.g. "isis, ospf" */
-    char *topology_name;    /* Name for this topology e.g. "level-1", "area 51" */
+    lsdb_proto_id_t protocol_id; /* e.g. "isis, ospf2, ospf3" */
     union {
         uint8_t level;      /* IS-IS */
+	uint32_t area;      /* OSPF */
     } topology_id;
 
     /*
@@ -305,6 +312,7 @@ char *lsdb_format_node(lsdb_node_t *);
 char *lsdb_format_node_id(unsigned char *);
 char *lsdb_format_link(lsdb_link_t *);
 void lsdb_scan_node_id(uint8_t *, char *);
+const char *lsdb_format_proto(struct lsdb_ctx_ *);
 
 lsdb_link_t *lsdb_add_link(lsdb_ctx_t *, lsdb_node_t *, lsdb_link_t *);
 lsdb_link_t *lsdb_get_link(lsdb_ctx_t *, lsdb_link_t *);
@@ -314,7 +322,7 @@ lsdb_attr_t *lsdb_add_node_attr(lsdb_node_t *, lsdb_attr_t *);
 void lsdb_reset_attr_template(lsdb_attr_t *);
 void lsdb_delete_link(lsdb_ctx_t *, lsdb_link_t *);
 void lsdb_delete_node(lsdb_ctx_t *, lsdb_node_t *);
-lsdb_ctx_t *lsdb_alloc_ctx(char *, char *, char *);
+lsdb_ctx_t *lsdb_alloc_ctx(char *);
 void lsdb_delete_ctx(lsdb_ctx_t *);
 void lsdb_dump_graphviz(lsdb_ctx_t *);
 int lsdb_compare_node(void *, void *);

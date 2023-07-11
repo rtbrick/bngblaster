@@ -94,7 +94,7 @@ lsdb_format_link(lsdb_link_t *link)
         remote_node = NULL;
     }
 
-    if (!strcmp(ctx->protocol_name, "isis")) {
+    if (ctx->protocol_id == PROTO_ISIS) {
         if (node->node_name) {
             idx = snprintf(buffer, sizeof(buffer), "%s", node->node_name);
         } else {
@@ -107,7 +107,7 @@ lsdb_format_link(lsdb_link_t *link)
             idx += snprintf(buffer + idx, sizeof(buffer) - idx, " -> %s",
             lsdb_format_node_id(link->key.remote_node_id));
         }
-    } else if (!strcmp(ctx->protocol_name, "ospf")) {
+    } else if (ctx->protocol_id == PROTO_OSPF2) {
         if (node->node_name) {
             idx = snprintf(buffer, sizeof(buffer), "%s", node->node_name);
         } else {
@@ -167,13 +167,13 @@ lsdb_format_node(lsdb_node_t *node)
 
     ctx = node->ctx;
 
-    if (!strcmp(ctx->protocol_name, "isis")) {
+    if (ctx->protocol_id == PROTO_ISIS) {
         if (node->node_name) {
             snprintf(buffer, sizeof(buffer), "%s", node->node_name);
         } else {
             snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
         }
-    } else if (!strcmp(ctx->protocol_name, "ospf")) {
+    } else if (ctx->protocol_id == PROTO_OSPF2) {
         if (node->node_name) {
             snprintf(buffer, sizeof(buffer), "%s", node->node_name);
         } else {
@@ -290,7 +290,7 @@ lsdb_compare_packet(void *key1, void *key2)
 
 
 struct lsdb_ctx_ *
-lsdb_alloc_ctx(char *instance, char *protocol, char *topology)
+lsdb_alloc_ctx(char *instance)
 {
     struct lsdb_ctx_ *ctx;
 
@@ -305,12 +305,6 @@ lsdb_alloc_ctx(char *instance, char *protocol, char *topology)
     if (instance) {
         ctx->instance_name = strdup(instance);
     }
-    if (instance) {
-        ctx->protocol_name = strdup(protocol);
-    }
-    if (instance) {
-        ctx->topology_name = strdup(topology);
-    }
 
     /*
      * Initialize node DB.
@@ -322,8 +316,7 @@ lsdb_alloc_ctx(char *instance, char *protocol, char *topology)
      */
     ctx->link_dict = hashtable2_dict_new((dict_compare_func) lsdb_compare_link, dict_str_hash, LSDB_LINK_HSIZE);
 
-    LOG(NORMAL, "Add context for instance %s, protocol %s, topology %s\n",
-    ctx->instance_name, ctx->protocol_name, ctx->topology_name);
+    LOG(NORMAL, "Add context for instance %s\n", ctx->instance_name);
 
     return ctx;
 }
@@ -832,8 +825,6 @@ lsdb_delete_ctx(struct lsdb_ctx_ *ctx)
     ctx->node_dict = NULL;
 
     lsdb_free_name(&ctx->instance_name);
-    lsdb_free_name(&ctx->protocol_name);
-    lsdb_free_name(&ctx->topology_name);
     lsdb_free_name(&ctx->graphviz_filename);
     lsdb_free_name(&ctx->pcap_filename);
     lsdb_free_name(&ctx->mrt_filename);
@@ -895,7 +886,7 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
         return;
     }
 
-    fprintf(graphviz, "digraph \"%s.%s.%s\" {\n", ctx->instance_name, ctx->protocol_name, ctx->topology_name);
+    fprintf(graphviz, "digraph \"%s.%s\" {\n", ctx->instance_name, lsdb_format_proto(ctx));
 
     /*
      * First lookup the root node.

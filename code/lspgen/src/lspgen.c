@@ -39,6 +39,7 @@ const char banner[] = "\n"
 static struct option long_options[] = {
     {"version", no_argument, NULL, 'v'},
     {"area", required_argument, NULL, 'a'},
+    {"protocol", required_argument, NULL, 'P'},
     {"authentication-key", required_argument, NULL, 'K'},
     {"authentication-type", required_argument, NULL, 'T'},
     {"read-config-file", required_argument, NULL, 'r'},
@@ -86,6 +87,23 @@ struct keyval_ log_names[] = {
 #endif
     { 0, NULL}
 };
+
+/*
+ * Protocool / name translation table.
+ */
+struct keyval_ proto_names[] = {
+    { PROTO_ISIS, "isis" },
+    { PROTO_OSPF2, "ospf2" },
+    { PROTO_OSPF2, "ospf" }, /* "ospf" is an alias for ospf2 */
+    { PROTO_OSPF3, "ospf3" },
+    { 0, NULL}
+};
+
+const char *
+lsdb_format_proto (struct lsdb_ctx_ *ctx)
+{
+    return val2key(proto_names, ctx->protocol_id);
+}
 
 /*
  * IS-IS authentication type / name translation table.
@@ -501,6 +519,8 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     CIRCLEQ_INIT(&ctx->packet_change_qhead);
     timer_init_root(&ctx->timer_root);
 
+    ctx->protocol_id = PROTO_ISIS;
+
     ctx->num_nodes = 10; /* Number of nodes */
 
     /* IS-IS area */
@@ -595,6 +615,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     uint32_t idx;
 
     LOG_NOARG(NORMAL, "LSP generation parameters\n");
+    LOG(NORMAL, " Protocol %s\n", lsdb_format_proto(ctx));
 
     /*
      * No Area specified ? SHow at least the default
@@ -602,11 +623,14 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     if (!ctx->num_area) {
         ctx->num_area = 1;
     }
-    for (idx = 0; idx < ctx->num_area; idx++) {
-        LOG(NORMAL, " Area %s\n", format_iso_prefix(&ctx->area[idx]));
+
+    if (ctx->protocol_id == PROTO_ISIS) {
+	for (idx = 0; idx < ctx->num_area; idx++) {
+	    LOG(NORMAL, " Area %s\n", format_iso_prefix(&ctx->area[idx]));
+	}
+	LOG(NORMAL, " Level %u, sequence 0x%x, lsp-lifetime %u\n",
+	    ctx->topology_id.level, ctx->sequence, ctx->lsp_lifetime);
     }
-    LOG(NORMAL, " Level %u, sequence 0x%x, lsp-lifetime %u\n",
-    ctx->topology_id.level, ctx->sequence, ctx->lsp_lifetime);
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
             ctx->authentication_key, val2key(isis_auth_names, ctx->authentication_type));
@@ -756,7 +780,7 @@ main(int argc, char *argv[])
     log_id[NORMAL].enable = true;
     log_id[ERROR].enable = true;
 
-    ctx = lsdb_alloc_ctx("default", "isis", "unicast");
+    ctx = lsdb_alloc_ctx("default");
     if (!ctx) {
         exit(EXIT_FAILURE);
     }
@@ -766,12 +790,15 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:q:Qr:s:S:t:T:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
                 lspgen_print_version();
                 exit(0);
+	    case 'P':
+		ctx->protocol_id = key2val(proto_names, optarg);
+		break;
             case 'r':
                 if (ctx->config_filename) {
                     ctx->config_write = false;

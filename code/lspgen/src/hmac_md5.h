@@ -10,8 +10,8 @@
 #define __HMAC_MD5_H__
 
 void
-hmac_md5(unsigned char* text, int text_len, 
-         unsigned char*key, int key_len, 
+hmac_md5(unsigned char* text, int text_len,
+         unsigned char*key, int key_len,
          uint8_t* digest);
 
 #endif
