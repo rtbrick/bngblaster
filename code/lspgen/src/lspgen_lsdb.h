@@ -309,6 +309,7 @@ typedef struct lsdb_packet_ {
  * lspgen_lsdb.c - Prototypes for manipulating the LSDB
  */
 char *lsdb_format_node(lsdb_node_t *);
+char *lsdb_format_node_no_name(lsdb_node_t *);
 char *lsdb_format_node_id(unsigned char *);
 char *lsdb_format_link(lsdb_link_t *);
 void lsdb_scan_node_id(uint8_t *, char *);

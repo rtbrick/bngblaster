@@ -17,7 +17,7 @@ lspgen_write_node_seq_cache(lsdb_node_t *node, json_t *level_arr)
     json_t *node_obj, *str;
 
     node_obj = json_object();
-    str = json_string(lsdb_format_node_id(node->key.node_id));
+    str = json_string(lsdb_format_node_no_name(node));
     json_object_set_new(node_obj, "node_id", str);
     json_object_set_new(node_obj, "hostname", json_string(node->node_name));
     if (node->sequence) {
@@ -50,6 +50,26 @@ lspgen_seq_cache_filename(lsdb_ctx_t *ctx)
     return NULL;
 }
 
+char *
+lspgen_format_topology_id(lsdb_ctx_t *ctx)
+{
+    static char topology_id_name[32];
+
+    if (ctx->protocol_id == PROTO_ISIS) {
+	snprintf(topology_id_name, sizeof(topology_id_name),
+		 "level%u", ctx->topology_id.level);
+	return topology_id_name;
+    }
+
+    if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+	snprintf(topology_id_name, sizeof(topology_id_name),
+		 "area%s", format_ipv4_address(&ctx->topology_id.area));
+	return topology_id_name;
+    }
+
+    return NULL;
+}
+
 void
 lspgen_write_seq_cache(lsdb_ctx_t *ctx)
 {
@@ -58,7 +78,7 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
     json_t *root_obj, *arr;
     int res;
     uint32_t num_nodes;
-    char *seq_cache_filename;
+    char *seq_cache_filename, *topology_id_name;
 
     seq_cache_filename = lspgen_seq_cache_filename(ctx);
     if (!seq_cache_filename) {
@@ -87,7 +107,12 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
 
     root_obj = json_object();
     arr = json_array();
-    json_object_set_new(root_obj, val2key(isis_level_names, ctx->topology_id.level), arr);
+    topology_id_name = lspgen_format_topology_id(ctx);
+    if (!topology_id_name) {
+	LOG(ERROR, "Error building topology-id name\n");
+	return;
+    }
+    json_object_set_new(root_obj, topology_id_name, arr);
 
     num_nodes = 0;
     do {

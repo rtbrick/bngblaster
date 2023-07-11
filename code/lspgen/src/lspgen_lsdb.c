@@ -63,7 +63,8 @@ lsdb_format_node_id(unsigned char *node_id)
     idx = (idx + 1) & 3;
 
     snprintf(ret, 32, "%02x%02x.%02x%02x.%02x%02x.%02x",
-    *node_id, *(node_id + 1), *(node_id + 2), *(node_id + 3), *(node_id + 4), *(node_id + 5), *(node_id + 6));
+	     *node_id, *(node_id + 1), *(node_id + 2), *(node_id + 3),
+	     *(node_id + 4), *(node_id + 5), *(node_id + 6));
 
     return ret;
 }
@@ -173,7 +174,7 @@ lsdb_format_node(lsdb_node_t *node)
         } else {
             snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
         }
-    } else if (ctx->protocol_id == PROTO_OSPF2) {
+    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
         if (node->node_name) {
             snprintf(buffer, sizeof(buffer), "%s", node->node_name);
         } else {
@@ -182,6 +183,32 @@ lsdb_format_node(lsdb_node_t *node)
         }
     } else {
         snprintf(buffer, sizeof(buffer), "0x%08x%08x", ntohl(node->key.node_id[0]), ntohl(node->key.node_id[4]));
+    }
+
+    return buffer;
+}
+
+/*
+ * Format a node without substituting it by a hostname that may be set.
+ */
+char *
+lsdb_format_node_no_name(lsdb_node_t *node)
+{
+    struct lsdb_ctx_ *ctx;
+    static char buffer[64];
+
+    ctx = node->ctx;
+
+    if (ctx->protocol_id == PROTO_ISIS) {
+	snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
+    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+	snprintf(buffer, sizeof(buffer), "%u.%u.%u.%u",
+		 node->key.node_id[0], node->key.node_id[1],
+		 node->key.node_id[2], node->key.node_id[3]);
+    } else {
+        snprintf(buffer, sizeof(buffer), "0x%08x%08x",
+		 ntohl(node->key.node_id[0]),
+		 ntohl(node->key.node_id[4]));
     }
 
     return buffer;
