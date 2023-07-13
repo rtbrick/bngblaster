@@ -550,13 +550,13 @@ timer_walk(timer_root_s *root)
                 LOG(TIMER_DETAIL, "  Firing %s timer\n", timer->name);
 #endif
             }
-
             if(timer->periodic) {
                 /* Periodic timers are simple de-queued and
                  * re-inserted at the tail of this buckets queue. */
                 timer_change(timer);
-            } else {
-                /* Everything else gets deleted. */
+            } else if(timer->expired) {
+                /* Timers restarted in callback will not be expired anymore.
+                 * Those timer gets deleted. */
                 timer_del(timer);
             }
         }
