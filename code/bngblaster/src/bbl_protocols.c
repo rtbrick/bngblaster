@@ -4221,6 +4221,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
 
     /* Init PPPoE header */
     pppoe = (bbl_pppoe_session_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_pppoe_session_s));
+    pppoe->lwip = false;
 
     header = (struct pppoe_ppp_session_header*)buf;
     BUMP_BUFFER(buf, len, sizeof(struct pppoe_ppp_session_header));
