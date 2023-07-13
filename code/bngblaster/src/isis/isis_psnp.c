@@ -39,7 +39,7 @@ isis_psnp_job (timer_s *timer)
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     adjacency->timer_psnp_started = false;
-    
+
     /* Build PDU */
     if(level == ISIS_LEVEL_1) {
         isis_pdu_init(&pdu, ISIS_PDU_L1_PSNP);
@@ -68,10 +68,12 @@ isis_psnp_job (timer_s *timer)
     search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
     while(search) {
         lsp = *search;
-        hb_tree_remove(adjacency->psnp_tree, &lsp->id);
 
         if(lsp->deleted) {
             /* Ignore deleted LSP. */
+            assert(lsp->refcount);
+            if(lsp->refcount) lsp->refcount--;
+            hb_tree_remove(adjacency->psnp_tree, &lsp->id);
             search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
             continue;
         }
@@ -88,7 +90,10 @@ isis_psnp_job (timer_s *timer)
         if(tlv->len > UINT8_MAX-ISIS_LSP_ENTRY_LEN) {
             /* Open next LSP entry TLV. */
             if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
-                adjacency->csnp_start = lsp->id;
+                /* All entries do not fit into single PSNP. */
+                adjacency->timer_psnp_started = true;
+                timer_add(&g_ctx->timer_root, &adjacency->timer_psnp_next, 
+                          "ISIS PSNP", 0, 10*MSEC, adjacency, &isis_psnp_job);
                 break;
             }
             tlv = (isis_tlv_s *)PDU_CURSOR(&pdu);
@@ -113,6 +118,9 @@ isis_psnp_job (timer_s *timer)
         PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
 
+        assert(lsp->refcount);
+        if(lsp->refcount) lsp->refcount--;
+        hb_tree_remove(adjacency->psnp_tree, &lsp->id);
         search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
     }
     isis_pdu_update_len(&pdu);
@@ -142,6 +150,9 @@ isis_psnp_job (timer_s *timer)
             isis_pdu_type_string(isis.type), adjacency->interface->name);
         adjacency->stats.psnp_tx++;
         adjacency->interface->stats.isis_tx++;
+    } else {
+        LOG(ERROR, "Failed to send ISIS %s on interface %s\n",
+            isis_pdu_type_string(isis.type), adjacency->interface->name);
     }
     return;
 }

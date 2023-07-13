@@ -133,6 +133,7 @@ isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s 
                         /* Ack LSP by removing them from flood tree. */
                         removed = hb_tree_remove(adjacency->flood_tree, &lsp->id);
                         if(removed.removed) {
+                            assert(lsp->refcount);
                             if(lsp->refcount) lsp->refcount--;
                             free(removed.datum);
                         }
@@ -646,12 +647,21 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
             if(config->external_auto_refresh) {
                 /* With external-auto-refresh enabled, 
                  * the sequence number will be increased. */
+                LOG(ISIS, "ISIS RX %s-LSP %s (seq %u) refresh external LSP with seq %u on interface %s\n",
+                    isis_level_string(level), 
+                    isis_lsp_id_to_str(&lsp_id), 
+                    seq, lsp->seq, interface->name);
+
                 lsp->seq = seq;
                 isis_lsp_refresh(lsp);
                 goto ACK;
+            } else {
+                LOG(ISIS, "ISIS RX %s-LSP %s (seq %u) overwrite external LSP with seq %u on interface %s\n",
+                    isis_level_string(level), 
+                    isis_lsp_id_to_str(&lsp_id), 
+                    seq, lsp->seq, interface->name);
             }
-        }
-        if(lsp->source.type == ISIS_SOURCE_SELF) {
+        } else if(lsp->source.type == ISIS_SOURCE_SELF) {
             /* We received a newer version of our own
              * self originated LSP. Therfore re-generate 
              * them with a sequence number higher than 
@@ -690,7 +700,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
 
 ACK:
     /* Add LSP to adjacency PSNP tree for acknowledgement. */
-    result = hb_tree_insert(adjacency->psnp_tree,  &lsp->id);
+    result = hb_tree_insert(adjacency->psnp_tree, &lsp->id);
     if(result.inserted) {
         *result.datum_ptr = lsp;
         lsp->refcount++;

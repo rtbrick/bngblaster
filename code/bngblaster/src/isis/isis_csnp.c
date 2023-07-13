@@ -25,6 +25,8 @@ isis_csnp_job(timer_s *timer)
     hb_itor *itor;
     bool next;
 
+    dict_remove_result removed;
+
     int entries = 0;
 
     isis_pdu_s pdu = {0};
@@ -119,6 +121,13 @@ isis_csnp_job(timer_s *timer)
         PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
 
+        /* Remove LSP included in CSNP from PSNP tree! */
+        removed = hb_tree_remove(adjacency->psnp_tree, &lsp->id);
+        if(removed.removed) {
+            assert(lsp->refcount);
+            if(lsp->refcount) lsp->refcount--;
+        }
+
         next = hb_itor_next(itor);
     }
     hb_itor_free(itor);
@@ -136,7 +145,7 @@ isis_csnp_job(timer_s *timer)
                    &isis_csnp_job);
     }    
 
-    if(!entries) {
+    if(entries == 0) {
         /* Do not send empty CSNP. */
         return;
     }
@@ -160,10 +169,9 @@ isis_csnp_job(timer_s *timer)
             isis_pdu_type_string(isis.type), adjacency->interface->name);
         adjacency->stats.csnp_tx++;
         adjacency->interface->stats.isis_tx++;
-        /* Clear PSNP tree after CSNP was send */
-        hb_tree_clear(adjacency->psnp_tree, isis_psnp_free);
-        timer_del(adjacency->timer_psnp_next);
-        adjacency->timer_psnp_started = false;
+    } else {
+        LOG(ERROR, "Failed to send ISIS %s on interface %s\n",
+            isis_pdu_type_string(isis.type), adjacency->interface->name);
     }
     return;
 }

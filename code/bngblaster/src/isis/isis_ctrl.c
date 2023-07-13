@@ -42,22 +42,44 @@ isis_ctrl_adjacency(isis_adjacency_s *adjacency)
 {
     json_t *root = NULL;
     json_t *peer = NULL;
-
+    json_t *stats = NULL;
     if(!adjacency) {
         return NULL;
+    }
+
+    stats = json_object();
+    if(adjacency->level == ISIS_LEVEL_1) {
+        json_object_set(stats, "l1-hello-rx", json_integer(adjacency->stats.hello_rx));
+        json_object_set(stats, "l1-hello-tx", json_integer(adjacency->stats.hello_tx));
+        json_object_set(stats, "l1-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set(stats, "l1-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set(stats, "l1-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set(stats, "l1-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set(stats, "l1-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set(stats, "l1-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+    } else {
+        json_object_set(stats, "l2-hello-rx", json_integer(adjacency->stats.hello_rx));
+        json_object_set(stats, "l2-hello-tx", json_integer(adjacency->stats.hello_tx));
+        json_object_set(stats, "l2-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set(stats, "l2-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set(stats, "l2-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set(stats, "l2-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set(stats, "l2-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     }
 
     peer = json_pack("{ss si}",
                      "system-id", isis_system_id_to_str(adjacency->peer->system_id),
                      "hold-timer", adjacency->peer->hold_time);
 
-    root = json_pack("{ss ss ss si ss so}",
+    root = json_pack("{ss ss ss si ss so so}",
                 "interface", adjacency->interface->name,
                 "type", "LAN",
                 "level", isis_level_string(adjacency->level),
                 "instance-id", adjacency->instance->config->id,
                 "adjacency-state", isis_adjacency_state_string(adjacency->state),
-                "peer", peer);
+                "peer", peer,
+                "stats", stats);
 
     if(!root) {
         if(peer) json_decref(peer);
@@ -67,26 +89,53 @@ isis_ctrl_adjacency(isis_adjacency_s *adjacency)
 }
 
 static json_t *
-isis_ctrl_adjacency_p2p(isis_adjacency_p2p_s *adjacency)
+isis_ctrl_adjacency_p2p(bbl_network_interface_s *network_interface)
 {
     json_t *root = NULL;
     json_t *peer = NULL;
+    json_t *stats = NULL;
 
-    if(!adjacency) {
+    isis_adjacency_p2p_s *p2p_adjacency = network_interface->isis_adjacency_p2p;
+    isis_adjacency_s *adjacency = NULL;
+
+    if(!p2p_adjacency) {
         return NULL;
     }
 
-    peer = json_pack("{ss si}",
-                     "system-id", isis_system_id_to_str(adjacency->peer->system_id),
-                     "hold-timer", adjacency->peer->hold_time);
+    stats = json_object();
+    json_object_set(stats, "p2p-hello-rx", json_integer(p2p_adjacency->stats.hello_rx));
+    json_object_set(stats, "p2p-hello-tx", json_integer(p2p_adjacency->stats.hello_tx));
+    if(p2p_adjacency->level & ISIS_LEVEL_1) {
+        adjacency = network_interface->isis_adjacency[ISIS_LEVEL_1_IDX];
+        json_object_set(stats, "l1-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set(stats, "l1-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set(stats, "l1-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set(stats, "l1-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set(stats, "l1-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set(stats, "l1-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+    } 
+    if(p2p_adjacency->level & ISIS_LEVEL_2) {
+        adjacency = network_interface->isis_adjacency[ISIS_LEVEL_2_IDX];
+        json_object_set(stats, "l2-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set(stats, "l2-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set(stats, "l2-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set(stats, "l2-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set(stats, "l2-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+    }
 
-    root = json_pack("{ss ss, ss si ss so}",
-                     "interface", adjacency->interface->name,
+    peer = json_pack("{ss si}",
+                     "system-id", isis_system_id_to_str(p2p_adjacency->peer->system_id),
+                     "hold-timer", p2p_adjacency->peer->hold_time);
+
+    root = json_pack("{ss ss, ss si ss so so}",
+                     "interface", p2p_adjacency->interface->name,
                      "type", "P2P",
-                     "level", isis_level_string(adjacency->level),
-                     "instance-id", adjacency->instance->config->id,
-                     "adjacency-state", isis_p2p_adjacency_state_string(adjacency->state),
-                     "peer", peer);
+                     "level", isis_level_string(p2p_adjacency->level),
+                     "instance-id", p2p_adjacency->instance->config->id,
+                     "adjacency-state", isis_p2p_adjacency_state_string(p2p_adjacency->state),
+                     "peer", peer,
+                     "stats", stats);
 
     if(!root) {
         if(peer) json_decref(peer);
@@ -108,7 +157,7 @@ isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_
         network_interface = interface->network;
         while(network_interface) {
             if(network_interface->isis_adjacency_p2p) {
-                adjacency = isis_ctrl_adjacency_p2p(network_interface->isis_adjacency_p2p);
+                adjacency = isis_ctrl_adjacency_p2p(network_interface);
                 if(adjacency) {
                     json_array_append(adjacencies, adjacency);
                 }

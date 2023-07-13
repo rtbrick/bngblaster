@@ -38,9 +38,9 @@ isis_psnp_free(void *key, void *ptr)
     isis_lsp_s *lsp = ptr;
 
     UNUSED(key);
-    if(lsp->refcount) {
-        lsp->refcount--;
-    }
+
+    assert(lsp->refcount);
+    if(lsp->refcount) lsp->refcount--;
 }
 
 /**
