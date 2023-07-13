@@ -124,6 +124,144 @@ NEXT:
     }
 }
 
+ospf_lsa_s *
+ospf_lsa_new(ospf_lsa_key_s *key, ospf_instance_s *ospf_instance)
+{
+    ospf_lsa_s *lsa = calloc(1, sizeof(ospf_lsa_s));
+    lsa->instance = ospf_instance;
+    memcpy(&lsa->key, key, sizeof(ospf_lsa_key_s));
+    return lsa;
+}
+
+static bool
+ospf_lsa_add_interface(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
+{
+    ospf_neighbor_s *neighbor = ospf_interface->neighbors;
+    ospf_lsa_link_s *link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+    if(ospf_interface->type == OSPF_INTERFACE_P2P) {
+        if(!(neighbor && neighbor->state == OSPF_NBSTATE_FULL)) {
+            return false;
+        }
+        link->link_id = neighbor->router_id;
+        link->link_data = ospf_interface->interface->ip.address;
+        link->type = OSPF_LSA_LINK_P2P;
+    } else if(ospf_interface->type == OSPF_INTERFACE_BROADCAST) {
+        while(neighbor) {
+            if(neighbor->state == OSPF_NBSTATE_FULL && 
+               (ospf_interface->state == OSPF_IFSTATE_DR || 
+                ospf_interface->dr == neighbor->router_id)) {
+                break;
+            }
+            neighbor = neighbor->next;
+        }
+        if(neighbor) {
+            link->link_id = ospf_interface->dr;
+            link->link_data = ospf_interface->interface->ip.address;
+            link->type = OSPF_LSA_LINK_TRANSIT;
+        } else {
+            link->link_id = ospf_interface->interface->ip.address & ipv4_len_to_mask(ospf_interface->interface->ip.len);
+            link->link_data = ipv4_len_to_mask(ospf_interface->interface->ip.len);
+            link->type = OSPF_LSA_LINK_STUB;
+        }
+    } else {
+        return false;
+    }
+    link->tos = 0;
+    link->metric = htobe16(ospf_interface->metric);
+    lsa->lsa_len += sizeof(ospf_lsa_link_s);
+    return true;
+}
+
+/**
+ * This function adds/updates 
+ * the self originated Type 1 Router. 
+ *
+ * @param ospf_instance  OSPF instance
+ * @return true (success) / false (error)
+ */
+bool
+ospf_lsa_self_update(ospf_instance_s *ospf_instance)
+{
+    ospf_interface_s *ospf_interface = ospf_instance->interfaces;
+
+    void **search = NULL;
+    dict_insert_result result;
+
+    uint8_t options = 0;
+    uint16_t *links;
+
+    ospf_lsa_s *lsa;
+    ospf_lsa_header_s *hdr;
+    ospf_lsa_link_s *link;
+
+    ospf_lsa_key_s key = { 
+        .type = OSPF_LSA_TYPE_1, 
+        .id = ospf_instance->config->router_id, 
+        .router = ospf_instance->config->router_id
+    };
+
+    search = hb_tree_search(ospf_instance->lsdb, &key);
+    if(search) {
+        /* Update existing LSA. */
+        lsa = *search;
+    } else {
+        /* Create new LSA. */
+        lsa = ospf_lsa_new(&key, ospf_instance);
+        result = hb_tree_insert(ospf_instance->lsdb, &key);
+        if(result.inserted) {
+            *result.datum_ptr = lsa;
+        } else {
+            LOG_NOARG(OSPF, "Failed to add LSA to LSDB\n");
+            return NULL;
+        }
+    }
+
+    if(lsa->lsa_buf_len < OSPF_MAX_SELF_LSA_LEN) {
+        if(lsa->lsa) free(lsa->lsa);
+        lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+        lsa->lsa_len = 0;
+        lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
+    if(ospf_instance->teardown) {
+        lsa->age = OSPF_LSA_MAX_AGE;
+    }
+
+    hdr = (ospf_lsa_header_s*)lsa->lsa;
+    hdr->age = htobe16(lsa->age);
+    hdr->options = options;
+    hdr->type = OSPF_LSA_TYPE_1;
+    hdr->id = ospf_instance->config->router_id;
+    hdr->router = ospf_instance->config->router_id;
+    hdr->seq = htobe32(lsa->seq);
+    hdr->checksum = 0;
+    hdr->length = 0;
+    lsa->lsa_len = OSPF_LSA_HDR_LEN;
+
+    *(lsa->lsa+lsa->lsa_len++) = OSPF_LSA_BORDER_ROUTER|OSPF_LSA_EXTERNAL_ROUTER;
+    *(lsa->lsa+lsa->lsa_len++) = 0;
+    links = (uint16_t*)(lsa->lsa+lsa->lsa_len);
+
+    /* Add loopback */
+    link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+    lsa->lsa_len += sizeof(ospf_lsa_link_s);
+    link->link_id = ospf_instance->config->router_id;
+    link->link_data = 0xffffffff;
+    link->type = OSPF_LSA_LINK_STUB;
+    link->tos = 0;
+    link->metric = 0;
+    links++;
+
+    while(ospf_interface && lsa->lsa_len+sizeof(ospf_lsa_link_s)<=lsa->lsa_buf_len) {
+        if(ospf_lsa_add_interface(lsa, ospf_interface)) {
+            links++;
+        }
+        ospf_interface = ospf_interface->next;
+    }
+    return true;
+}
+
 #if 0
 /**
  * ospf_lsa_process_entries 

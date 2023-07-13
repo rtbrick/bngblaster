@@ -18,6 +18,11 @@
 
 #define OSPF_LSA_TYPES                      12
 
+#define OSPF_LSA_LINK_P2P                   1
+#define OSPF_LSA_LINK_TRANSIT               2
+#define OSPF_LSA_LINK_STUB                  3
+#define OSPF_LSA_LINK_VIRTUAL               4
+
 #define OSPF_VERSION_2                      2
 #define OSPF_VERSION_3                      3
 
@@ -30,6 +35,7 @@
 #define OSPFV3_DBD_LEN_MIN                  28
 
 #define OSPF_TX_BUF_LEN                     1500
+#define OSPF_MAX_SELF_LSA_LEN               1024
 
 #define OSPF_OPTION_E_BIT                   0x02
 #define OSPF_OPTION_LLS_BIT                 0x10
@@ -43,6 +49,9 @@
 #define OSPF_LSA_MAX_AGE_DIFF               900 /* 15 minutes */
 #define OSPF_LSA_SEQ_INIT                   0x80000001
 #define OSPF_LSA_SEQ_MAX                    0x7fffffff
+
+#define OSPF_LSA_BORDER_ROUTER              0x01
+#define OSPF_LSA_EXTERNAL_ROUTER            0x02
 
 #define OSPF_OFFSET_VERSION                 0
 #define OSPF_OFFSET_TYPE                    1
@@ -264,10 +273,9 @@ typedef struct ospf_neighbor_ {
     bool     master;
     bool     oob_resync;
 
-    uint32_t dd;
     uint32_t dr;
     uint32_t bdr;
-
+    uint32_t dd;
     uint8_t state;
 
     ospf_lsa_key_s dbd_lsa_start; /* DBD LSA cursor */
@@ -299,6 +307,8 @@ typedef struct ospf_interface_ {
 
     uint16_t max_len; /* max OSPF payload len without fragmentation */
     uint16_t max_fragment_len; /* max OSPF payload len with fragmentation */
+
+    uint16_t metric;
 
     uint32_t dr;
     uint32_t bdr;
@@ -370,6 +380,14 @@ typedef struct ospf_lsa_header_ {
     uint16_t    length; /* Length */
 } __attribute__ ((__packed__)) ospf_lsa_header_s;
 
+typedef struct ospf_lsa_link_s {
+    uint32_t    link_id; /* Link ID */
+    uint32_t    link_data; /* Link Data */
+    uint8_t     type; /* Type */
+    uint8_t     tos; /* Tos */
+    uint16_t    metric; /* Metric */
+} __attribute__ ((__packed__)) ospf_lsa_link_s;
+
 typedef struct ospf_lsa_ {
     ospf_instance_s *instance;
 
@@ -395,6 +413,7 @@ typedef struct ospf_lsa_ {
 
     uint8_t *lsa;
     uint16_t lsa_len;
+    uint16_t lsa_buf_len;
 } ospf_lsa_s;
 
 typedef struct ospf_flood_entry_ {

@@ -359,7 +359,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     bbl_network_interface_s *interface = ospf_interface->interface;
     ospf_instance_s *ospf_instance = ospf_interface->instance;
 
-    ospf_lsa_header_s *lsa_hdr;
+    ospf_lsa_header_s *hdr;
     ospf_lsa_s *lsa;
 
     void **search = NULL;
@@ -483,17 +483,17 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     while(OSPF_PDU_CURSOR_LEN(pdu) >= OSPF_LSA_HDR_LEN) {
-        lsa_hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
+        hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
 
-        search = hb_tree_search(ospf_instance->lsdb, &lsa_hdr->type);
+        search = hb_tree_search(ospf_instance->lsdb, &hdr->type);
         if(search) {
             lsa = *search;
-            if(be32toh(lsa_hdr->seq) <= lsa->seq) {
+            if(be32toh(hdr->seq) <= lsa->seq) {
                 continue;
             }
         }
-        hb_tree_insert(ospf_neighbor->request_tree, &lsa_hdr->type);
+        hb_tree_insert(ospf_neighbor->request_tree, &hdr->type);
     }
 
     if(!(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M)) {
