@@ -150,14 +150,19 @@ isis_lsp_gc_job(timer_s *timer)
 {
     isis_instance_s *instance = timer->data;
     isis_lsp_s *lsp;
-    hb_itor *itor;
+    hb_tree *lsdb;
+    hb_itor *itor = NULL;
     bool next;
+
+    uint64_t delete_list[ISIS_LSP_GC_DELETE_MAX];
+    size_t delete_list_len = 0;
 
     dict_remove_result removed;
 
-    for(int i=0; i<ISIS_LEVELS; i++) {
-        if(instance->level[i].lsdb) {
-            itor = hb_itor_new(instance->level[i].lsdb);
+    for(int l=0; l < ISIS_LEVELS; l++) {
+        lsdb = instance->level[l].lsdb;
+        if(lsdb) {
+            itor = hb_itor_new(lsdb);
             next = hb_itor_first(itor);
             while(next) {
                 lsp = *hb_itor_datum(itor);
@@ -165,13 +170,21 @@ isis_lsp_gc_job(timer_s *timer)
                 if(lsp && lsp->deleted && lsp->refcount == 0) {
                     timer_del(lsp->timer_lifetime);
                     timer_del(lsp->timer_refresh);
-                    removed = hb_tree_remove(instance->level[i].lsdb, &lsp->id);
-                    if(removed.removed) {
-                        free(lsp);
+                    delete_list[delete_list_len++] = lsp->id;
+                    if(delete_list_len == ISIS_LSP_GC_DELETE_MAX) {
+                        next = NULL;
                     }
                 }
             }
             hb_itor_free(itor);
+
+            /* Finally delete from LSDB! */
+            for(size_t i=0; i < delete_list_len; i++) {
+                removed = hb_tree_remove(lsdb, &delete_list[i]);
+                if(removed.removed) {
+                    free(removed.datum);
+                }
+            }
         }
     }
 }

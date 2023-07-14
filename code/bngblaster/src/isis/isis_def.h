@@ -73,6 +73,7 @@
 #define ISIS_DEFAULT_TEARDOWN_TIME      5
 
 #define ISIS_LSP_GC_INTERVAL            30
+#define ISIS_LSP_GC_DELETE_MAX          256
 
 #define ISIS_PROTOCOLS_MAX              2
 #define ISIS_PROTOCOL_IPV4              0xcc
