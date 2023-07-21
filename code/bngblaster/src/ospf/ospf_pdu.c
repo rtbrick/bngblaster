@@ -227,3 +227,88 @@ ospf_pdu_zero_bytes(ospf_pdu_s *pdu, uint16_t len)
     memset(OSPF_PDU_CURSOR(pdu), 0x0, len);
     OSPF_PDU_BUMP_WRITE_BUFFER(pdu, len);
 }
+
+/**
+ * ospf_pdu_tx
+ * 
+ * This function serves as a universal mechanism for sending 
+ * OSPFv2 and v3 Protocol Data Units (PDU) via a specified 
+ * OSPF interface. In the presence of an optional OSPF neighbor, 
+ * the PDU is transmitted as a direct unicast message.
+ * 
+ * @param pdu OSPF PDU
+ * @param ospf_interface OSPF interface 
+ * @param ospf_neighbor OSPF neighbor (optional)
+ * @return protocol_error_t (PROTOCOL_SUCCESS or SEND_ERROR)
+ */
+protocol_error_t
+ospf_pdu_tx(ospf_pdu_s *pdu,
+            ospf_interface_s *ospf_interface, 
+            ospf_neighbor_s *ospf_neighbor)
+{
+    bbl_network_interface_s *interface = ospf_interface->interface;
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_ospf_s ospf = {0};
+    uint8_t mac[ETH_ADDR_LEN];
+
+    eth.src = interface->mac;
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        eth.type = ETH_TYPE_IPV4;
+        eth.next = &ipv4;
+        if(pdu->pdu_type == OSPF_PDU_HELLO) {
+            eth.dst = (uint8_t*)all_ospf_routers_mac;
+            ipv4.dst = IPV4_MC_ALL_OSPF_ROUTERS;
+        } else if(ospf_interface->state != OSPF_IFSTATE_P2P && ospf_neighbor) {
+            eth.dst = ospf_neighbor->mac;
+            ipv4.dst = ospf_neighbor->ipv4;
+        } else if(ospf_interface->state == OSPF_IFSTATE_DR_OTHER) {
+            eth.dst = (uint8_t*)all_dr_routers_mac;
+            ipv4.dst = IPV4_MC_ALL_DR_ROUTERS;
+        } else {
+            eth.dst = (uint8_t*)all_ospf_routers_mac;
+            ipv4.dst = IPV4_MC_ALL_OSPF_ROUTERS;
+        }
+        ipv4.src = interface->ip.address;
+        ipv4.ttl = 1;
+        ipv4.protocol = PROTOCOL_IPV4_OSPF;
+        ipv4.next = &ospf;
+    } else {
+        eth.type = ETH_TYPE_IPV6;
+        eth.next = &ipv6;
+        if(pdu->pdu_type == OSPF_PDU_HELLO) {
+            ipv6_multicast_mac(ipv6_multicast_ospf_routers, mac);
+            eth.dst = (uint8_t*)mac;
+            ipv6.dst = (void*)ipv6_multicast_ospf_routers;
+        } else if(ospf_interface->state != OSPF_IFSTATE_P2P && ospf_neighbor) {
+            eth.dst = ospf_neighbor->mac;
+            ipv6.dst = ospf_neighbor->ipv6;
+        } else if(ospf_interface->state == OSPF_IFSTATE_DR_OTHER) {
+            ipv6_multicast_mac(ipv6_multicast_dr_routers, mac);
+            eth.dst = (uint8_t*)mac;
+            ipv6.dst = (void*)ipv6_multicast_dr_routers;
+        } else {
+            ipv6_multicast_mac(ipv6_multicast_ospf_routers, mac);
+            eth.dst = (uint8_t*)mac;
+            ipv6.dst = (void*)ipv6_multicast_ospf_routers;
+        }
+        ipv6.src = interface->ip6_ll;
+        ipv6.ttl = 1;
+        ipv6.protocol = IPV6_NEXT_HEADER_OSPF;
+        ipv6.next = &ospf;
+    }
+    ospf.version = pdu->pdu_version;
+    ospf.type = pdu->pdu_type;
+    ospf.pdu = pdu->pdu;
+    ospf.pdu_len = pdu->pdu_len;
+    if(bbl_txq_to_buffer(interface->txq, &eth) == BBL_TXQ_OK) {
+        LOG(PACKET, "OSPFv%u TX %s on interface %s\n",
+            ospf_interface->version,
+            ospf_pdu_type_string(ospf.type), interface->name);
+        return PROTOCOL_SUCCESS;
+    } else {
+        return SEND_ERROR;
+    }
+}

@@ -1,13 +1,131 @@
 /*
  * BNG Blaster (BBL) - OSPF LSA
  *
- * Christian Giese, May 2023
+ * Christian Giese, July 2023
  *
  * Copyright (C) 2020-2023, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "ospf.h"
 
+uint8_t g_pdu_buf[OSPF_GLOBAL_PDU_BUF_LEN] = {0};
+ospf_lsa_key_s g_lsa_key_zero = {0};
+
+int
+ospf_lsa_id_compare(void *id1, void *id2)
+{
+    const uint8_t  t1 = *(const uint8_t*)id1;
+    const uint8_t  t2 = *(const uint8_t*)id2;
+    const uint64_t k1 = *(const uint64_t*)((uint8_t*)id1+1);
+    const uint64_t k2 = *(const uint64_t*)((uint8_t*)id2+1);
+
+    if(t1 == t2) {
+        return (k1 > k2) - (k1 < k2);
+    } else {
+        return (t1 > t2) - (t1 < t2);
+    }
+}
+
+void
+ospf_lsa_tree_entry_free(ospf_lsa_tree_entry_s *entry)
+{
+    if(entry) {
+        if(entry->lsa && entry->lsa->refcount) {
+            entry->lsa->refcount--;
+        }
+        free(entry);
+    }
+}
+
+void
+ospf_lsa_tree_entry_clear(void *key, void *ptr)
+{
+    UNUSED(key);
+    ospf_lsa_tree_entry_free(ptr);
+}
+
+ospf_lsa_tree_entry_s *
+ospf_lsa_tree_add(ospf_lsa_s *lsa, ospf_lsa_header_s *hdr, hb_tree *tree)
+{
+    ospf_lsa_tree_entry_s *entry;
+    dict_insert_result result; 
+
+    entry = calloc(1, sizeof(ospf_lsa_tree_entry_s));
+    if(entry) {
+        if (hdr) {
+            memcpy(&entry->hdr, hdr, sizeof(ospf_lsa_header_s));
+        } else if(lsa) {
+            memcpy(&entry->hdr, lsa->lsa, sizeof(ospf_lsa_header_s));
+        } else {
+            free(entry);
+            return NULL;
+        }
+        result = hb_tree_insert(tree, &entry->hdr);
+        if(result.inserted) {
+            if(lsa) {
+                entry->lsa = lsa; lsa->refcount++;
+            }
+            *result.datum_ptr = entry;
+        } else {
+            free(entry);
+            if(result.datum_ptr && *result.datum_ptr) {
+                entry = *result.datum_ptr;
+            } else {
+                entry = NULL;
+            }
+        }
+    }
+    return entry;
+}
+
+/** 
+ * Determining which LSA is newer as 
+ * described in RFC2328 section 13.1.
+ * 
+ * @param hdr_a LSA A header (network byte order)
+ * @param hdr_b LSA B header (network byte order)
+ * @return  1 if A is more recent
+ * @return  0 if A and B are identical
+ * @return -1 if B is more recent
+ */
+int
+ospf_lsa_compare(ospf_lsa_header_s *hdr_a, ospf_lsa_header_s *hdr_b)
+{
+    uint32_t a;
+    uint32_t b;
+
+    /* Compare sequence number. */
+    a = be32toh(hdr_a->seq);
+    b = be32toh(hdr_b->seq);
+    if(a > b) return 1;
+    if(b > a) return -1;
+
+    /* Compare checksum. */
+    a = be16toh(hdr_a->checksum);
+    b = be16toh(hdr_b->checksum);
+    if(a > b) return 1;
+    if(b > a) return -1;
+
+    /* Compare age. */
+    a = be16toh(hdr_a->age);
+    b = be16toh(hdr_b->age);
+    if(a > OSPF_LSA_MAX_AGE) a = OSPF_LSA_MAX_AGE;
+    if(b > OSPF_LSA_MAX_AGE) b = OSPF_LSA_MAX_AGE;
+    if(a == b) return 0;
+    if(a == OSPF_LSA_MAX_AGE) return 1;
+    if(b == OSPF_LSA_MAX_AGE) return -1;
+    if(a > b + OSPF_LSA_MAX_AGE_DIFF) return 1;
+    if(b > a + OSPF_LSA_MAX_AGE_DIFF) return -1;
+    return 0;
+}
+
+/**
+ * ospf_lsa_gc_job 
+ * 
+ * OSPF LSDB/LSA garbage collection job.
+ * 
+ * @param timer time
+ */
 void
 ospf_lsa_gc_job(timer_s *timer)
 {
@@ -15,6 +133,13 @@ ospf_lsa_gc_job(timer_s *timer)
     ospf_lsa_s *lsa;
     hb_itor *itor;
     bool next;
+
+    /* Deleting objects from a tree while iterating is unsafe, 
+     * so instead, a list of objects is created during the iteration 
+     * process to mark them for deletion. Once the iteration is complete, 
+     * the objects in the delete list can be safely removed from the tree. */
+    ospf_lsa_s *delete_list[OSPF_LSA_GC_DELETE_MAX];
+    size_t delete_list_len = 0;
 
     dict_remove_result removed;
 
@@ -28,69 +153,48 @@ ospf_lsa_gc_job(timer_s *timer)
         if(lsa && lsa->deleted && lsa->refcount == 0) {
             timer_del(lsa->timer_lifetime);
             timer_del(lsa->timer_refresh);
-            removed = hb_tree_remove(ospf_instance->lsdb, &lsa->key);
-            if(removed.removed) {
-                free(lsa);
+            delete_list[delete_list_len++] = lsa;
+            if(delete_list_len == OSPF_LSA_GC_DELETE_MAX) {
+                next = NULL;
             }
         }
     }
     hb_itor_free(itor);
-}
 
-void
-ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now)
-{
-    struct timespec ago;
-    uint16_t age;
-
-    timespec_sub(&ago, now, &lsa->timestamp);
-    age = lsa->age + ago.tv_sec;
-    if(lsa->expired || age >= OSPF_LSA_MAX_AGE) {
-        /* Expired! */
-        age = OSPF_LSA_MAX_AGE;
+    /* Finally delete from LSDB! */
+    for(size_t i=0; i < delete_list_len; i++) {
+        removed = hb_tree_remove(ospf_instance->lsdb, &delete_list[i]->key);
+        if(removed.removed) {
+            free(removed.datum);
+        }
     }
-    *(uint16_t*)lsa->lsa = htobe16(age);
 }
 
 /**
- * ospf_lsa_flood_neighbor 
+ * ospf_lsa_retry_stop: 
  * 
- * This function adds an LSA to the 
- * given neighbor flood tree. 
+ * Remove LSA from neighbor retransmission tree.
  * 
- * @param lsa lsa
- * @param neighbor OSPF neighbor
+ * @param lsa OSPF LSA
+ * @param neighbor OSPF neihjbor
+ * @return true if LSA was removed from neighbor retry tree
  */
-void
-ospf_lsa_flood_neighbor(ospf_lsa_s *lsa, ospf_neighbor_s *neighbor)
+static bool
+ospf_lsa_retry_stop(ospf_lsa_s *lsa, ospf_neighbor_s *neighbor)
 {
-    void **search = NULL;
-    dict_insert_result result; 
-    ospf_flood_entry_s *flood;
-
-    /* Add to flood tree if not already present. */
-    search = hb_tree_search(neighbor->flood_tree, &lsa->key);
-    if(search) {
-        flood = *search;
-        flood->wait_ack = false;
-        flood->tx_count = 0;
-    } else {
-        result = hb_tree_insert(neighbor->flood_tree, &lsa->key);
-        if(result.inserted) {
-            flood = calloc(1, sizeof(ospf_flood_entry_s));
-            flood->lsa = lsa;
-            *result.datum_ptr = flood;
-            lsa->refcount++;
-        } else {
-            LOG_NOARG(OSPF, "Failed to add LSA to flood-tree\n");
-        }
+    dict_remove_result removed; 
+    removed = hb_tree_remove(neighbor->lsa_retry_tree, &lsa->key);
+    if(removed.removed) {
+        ospf_lsa_tree_entry_free(removed.datum);
+        return true;
     }
+    return false;
 }
 
 /**
  * ospf_lsa_flood 
  * 
- * This function adds an lsa to all
+ * This function adds an LSA to all
  * flood trees of the same instance
  * where neighbor router-id is different 
  * to source router-id. 
@@ -100,15 +204,26 @@ ospf_lsa_flood_neighbor(ospf_lsa_s *lsa, ospf_neighbor_s *neighbor)
 void
 ospf_lsa_flood(ospf_lsa_s *lsa)
 {
+
     ospf_interface_s *interface;
     ospf_neighbor_s *neighbor;
+    ospf_lsa_tree_entry_s *entry;
 
-    /* Iterate over all adjacencies of the corresponding 
-     * instance and with the same level. */
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    assert(lsa);
+    assert(lsa->lsa);
+    assert(lsa->lsa_len >= sizeof(ospf_lsa_header_s));
+    assert(lsa->lsa_buf_len >= lsa->lsa_len);
+
     interface = lsa->instance->interfaces;
     while(interface) {
-        neighbor = interface->neighbors;
+        /* Add to interface flood tree. */
+        ospf_lsa_tree_add(lsa, NULL, interface->lsa_flood_tree);
 
+        /* Add to neighbors retry list. */
+        neighbor = interface->neighbors;
         while(neighbor) {
             if(neighbor->state < OSPF_NBSTATE_EXCHANGE) {
                 goto NEXT;
@@ -117,14 +232,82 @@ ospf_lsa_flood(ospf_lsa_s *lsa)
                 /* Do not flood over the neighbor from where LSA was received. */
                 goto NEXT;
             }
-            ospf_lsa_flood_neighbor(lsa, neighbor);
+            entry = ospf_lsa_tree_add(lsa, NULL, neighbor->lsa_retry_tree);
+            if(entry) {
+                entry->timestamp.tv_sec = now.tv_sec;
+                entry->timestamp.tv_nsec = now.tv_nsec;
+            }
 NEXT:
             neighbor = neighbor->next;
         }
     }
 }
 
-ospf_lsa_s *
+void
+ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now)
+{
+    struct timespec ago;
+    uint16_t age;
+
+    timespec_sub(&ago, now, &lsa->timestamp);
+    lsa->timestamp.tv_sec = now->tv_sec;
+    lsa->timestamp.tv_nsec = now->tv_nsec;
+
+    age = lsa->age + ago.tv_sec;
+    if(lsa->expired || age >= OSPF_LSA_MAX_AGE) {
+        /* Expired! */
+        age = OSPF_LSA_MAX_AGE;
+        lsa->expired = true;
+    }
+    lsa->age = age;
+    /* First two bytes of LSA HDR is age which is also exlcuded 
+     * from checksum. Therefore updating age is that simple! */
+    *(uint16_t*)lsa->lsa = htobe16(age);
+}
+
+static void
+ospf_lsa_update_hdr(ospf_lsa_s *lsa)
+{
+    ospf_lsa_header_s *hdr;
+
+    assert(lsa->lsa_len >= sizeof(ospf_lsa_header_s));
+    if(lsa->lsa_len < sizeof(ospf_lsa_header_s)) {
+        return;
+    }
+
+    hdr = (ospf_lsa_header_s*)lsa->lsa;
+    hdr->age = htobe16(lsa->age);
+    hdr->seq = htobe32(lsa->seq);
+    hdr->checksum = 0;
+    hdr->checksum = bbl_checksum(lsa->lsa+OSPF_LSA_AGE_LEN, lsa->lsa_len-OSPF_LSA_AGE_LEN);
+}
+
+static void
+ospf_lsa_refresh(ospf_lsa_s *lsa)
+{
+    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
+    
+    lsa->seq++;
+    lsa->deleted = false;
+    if(lsa->instance->teardown) {
+        lsa->age = OSPF_LSA_MAX_AGE;
+        lsa->expired = true;
+    } else {
+        lsa->age = 0;
+        lsa->expired = false;
+    }
+    ospf_lsa_update_hdr(lsa);
+    ospf_lsa_flood(lsa);
+}
+
+void
+ospf_lsa_refresh_job(timer_s *timer)
+{
+    ospf_lsa_s *lsa = timer->data;
+    ospf_lsa_refresh(lsa);
+}
+
+static ospf_lsa_s *
 ospf_lsa_new(ospf_lsa_key_s *key, ospf_instance_s *ospf_instance)
 {
     ospf_lsa_s *lsa = calloc(1, sizeof(ospf_lsa_s));
@@ -133,11 +316,62 @@ ospf_lsa_new(ospf_lsa_key_s *key, ospf_instance_s *ospf_instance)
     return lsa;
 }
 
+/**
+ * ospf_lsa_purge
+ * 
+ * @param lsa  OSPF LSA
+ */
+static void
+ospf_lsa_purge(ospf_lsa_s *lsa)
+{
+    lsa->seq++;
+    lsa->age = OSPF_LSA_MAX_AGE;
+    lsa->expired = true;
+    ospf_lsa_update_hdr(lsa);
+    ospf_lsa_flood(lsa);
+}
+
+/**
+ * ospf_lsa_purge_all_external 
+ * 
+ * @param instance  OSPF instance
+ */
+void
+ospf_lsa_purge_all_external(ospf_instance_s *instance)
+{
+    hb_tree *lsdb = instance->lsdb;
+
+    ospf_lsa_s *lsa;
+    hb_itor *itor;
+    bool next;
+
+    if(!lsdb) {
+        return;
+    }
+
+    itor = hb_itor_new(lsdb);
+    next = hb_itor_first(itor);
+
+    while(next) {
+        lsa = *hb_itor_datum(itor);
+        if(lsa && lsa->source.type == OSPF_SOURCE_EXTERNAL) {
+            ospf_lsa_purge(lsa);
+        }
+        next = hb_itor_next(itor);
+    }
+}
+
 static bool
 ospf_lsa_add_interface(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
 {
     ospf_neighbor_s *neighbor = ospf_interface->neighbors;
-    ospf_lsa_link_s *link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+    ospf_lsa_link_s *link;
+ 
+    if(lsa->lsa_len + sizeof(ospf_lsa_link_s) > lsa->lsa_buf_len) {
+        return false;
+    }
+    link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+
     if(ospf_interface->type == OSPF_INTERFACE_P2P) {
         if(!(neighbor && neighbor->state == OSPF_NBSTATE_FULL)) {
             return false;
@@ -169,12 +403,13 @@ ospf_lsa_add_interface(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
     link->tos = 0;
     link->metric = htobe16(ospf_interface->metric);
     lsa->lsa_len += sizeof(ospf_lsa_link_s);
+
     return true;
 }
 
 /**
  * This function adds/updates 
- * the self originated Type 1 Router. 
+ * the self originated Type 1 Router LSA. 
  *
  * @param ospf_instance  OSPF instance
  * @return true (success) / false (error)
@@ -183,6 +418,7 @@ bool
 ospf_lsa_self_update(ospf_instance_s *ospf_instance)
 {
     ospf_interface_s *ospf_interface = ospf_instance->interfaces;
+    ospf_config_s *config = ospf_instance->config;
 
     void **search = NULL;
     dict_insert_result result;
@@ -194,10 +430,12 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
     ospf_lsa_header_s *hdr;
     ospf_lsa_link_s *link;
 
+    ospf_external_connection_s *external_connection = NULL;
+
     ospf_lsa_key_s key = { 
         .type = OSPF_LSA_TYPE_1, 
-        .id = ospf_instance->config->router_id, 
-        .router = ospf_instance->config->router_id
+        .id = config->router_id, 
+        .router = config->router_id
     };
 
     search = hb_tree_search(ospf_instance->lsdb, &key);
@@ -223,17 +461,17 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
         lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
-    if(ospf_instance->teardown) {
-        lsa->age = OSPF_LSA_MAX_AGE;
-    }
-
+    lsa->source.type = OSPF_SOURCE_SELF;
+    lsa->seq++;
+    lsa->instance = ospf_instance;
+    lsa->deleted = false;
+    
     hdr = (ospf_lsa_header_s*)lsa->lsa;
     hdr->age = htobe16(lsa->age);
     hdr->options = options;
     hdr->type = OSPF_LSA_TYPE_1;
-    hdr->id = ospf_instance->config->router_id;
-    hdr->router = ospf_instance->config->router_id;
+    hdr->id = config->router_id;
+    hdr->router = config->router_id;
     hdr->seq = htobe32(lsa->seq);
     hdr->checksum = 0;
     hdr->length = 0;
@@ -246,864 +484,557 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
     /* Add loopback */
     link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
     lsa->lsa_len += sizeof(ospf_lsa_link_s);
-    link->link_id = ospf_instance->config->router_id;
+    link->link_id = config->router_id;
     link->link_data = 0xffffffff;
     link->type = OSPF_LSA_LINK_STUB;
     link->tos = 0;
     link->metric = 0;
     links++;
 
-    while(ospf_interface && lsa->lsa_len+sizeof(ospf_lsa_link_s)<=lsa->lsa_buf_len) {
+    /* Add OSPF neighbor interfaces */
+    while(ospf_interface && lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
         if(ospf_lsa_add_interface(lsa, ospf_interface)) {
             links++;
         }
         ospf_interface = ospf_interface->next;
     }
-    return true;
-}
 
-#if 0
-/**
- * ospf_lsa_process_entries 
- * 
- * This function iterate of all LSA entries
- * of the given LS request and compares
- * them with the LSA database. 
- * 
- * @param neighbor OSPF neighbor
- * @param lsdb OSPF LSA database
- * @param pdu received OSPF PDU
- * @param csnp_scan CSNP scan/job identifier
- */
-void
-ospf_lsa_process_request(ospf_neighbor_s *neighbor, ospf_pdu_s *pdu, uint64_t csnp_scan)
-{
-    ospf_lsa_header_s *hdr;
-    ospf_lsa_s *lsa;
-    ospf_lsa_entry_s *lsa_entry;
-
-    dict_remove_result removed;
-    void **search = NULL;
-
-    uint64_t lsa_id;
-    uint32_t seq;
-    uint8_t  offset;
-
-    /* Iterate over all lsa entry TLV's. */
-    hdr = isis_pdu_first_lsa_header(pdu);
-    while(hdr) {
-        if(tlv->type == ospf_TLV_lsa_ENTRIES) {
-            /* Each TLV can contain multiple lsa entries. */
-            offset = 0;
-            while(offset + ospf_lsa_ENTRY_LEN <= tlv->len) {
-                lsa_entry = (ospf_lsa_entry_s *)(tlv->value+offset);
-                offset += ospf_lsa_ENTRY_LEN;
-                lsa_id = be64toh(lsa_entry->lsa_id);
-                search = hb_tree_search(lsdb, &lsa_id);
-                if(search) {
-                    lsa = *search;
-                    lsa->csnp_scan = csnp_scan;
-                    seq = be32toh(lsa_entry->seq);
-                    if(seq < lsa->seq) {
-                        /* Peer has older version of lsa, let's send
-                         * them an update. */
-                        ospf_lsa_flood_neighbor(lsa, neighbor);
-                    } else {
-                        /* Ack lsa by removing them from flood tree. */
-                        removed = hb_tree_remove(neighbor->flood_tree, &lsa->id);
-                        if(removed.removed) {
-                            if(lsa->refcount) lsa->refcount--;
-                            free(removed.datum);
-                        }
-                    }
-                }
-            }
-        }
-        tlv = ospf_pdu_next_tlv(pdu);
-    }
-}
-
-void
-ospf_lsa_retry_job(timer_s *timer)
-{
-    ospf_neighbor_s *neighbor = timer->data;
-
-    ospf_flood_entry_s *entry;
-    hb_itor *itor;
-    bool next;
-
-    uint16_t lsa_retry_interval = neighbor->instance->config->lsa_retry_interval;
-
-    struct timespec now;
-    struct timespec ago;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    itor = hb_itor_new(neighbor->flood_tree);
-    next = hb_itor_first(itor);
-    while(next) {
-        entry = *hb_itor_datum(itor);
-        if(entry->wait_ack) {
-            timespec_sub(&ago, &now, &entry->tx_timestamp);
-            if(ago.tv_sec > lsa_retry_interval) {
-                entry->wait_ack = false;
-            }
-        } else {
-            break;
-        }
-        next = hb_itor_next(itor);
-    }
-}
-
-void
-ospf_lsa_purge_job(timer_s *timer)
-{
-    ospf_lsa_s *lsa = timer->data;
-    if(lsa->expired) {
-        lsa->deleted = true;
-    }
-}
-
-void
-ospf_lsa_lifetime_job(timer_s *timer)
-{
-    ospf_lsa_s *lsa = timer->data;
-
-    LOG(OSPF, "ISIS %s-lsa %s (source %s seq %u) lifetime expired (%us)\n", 
-        ospf_level_string(lsa->level), 
-        ospf_lsa_id_to_str(&lsa->id),
-        ospf_source_string(lsa->source.type),
-        lsa->seq, lsa->lifetime);
-
-    lsa->expired = true;
-    timer_add(&g_ctx->timer_root, 
-              &lsa->timer_lifetime, 
-              "ISIS PURGE", 30, 0, lsa,
-              &ospf_lsa_purge_job);
-    timer_no_smear(lsa->timer_lifetime);
-}
-
-void
-ospf_lsa_lifetime(ospf_lsa_s *lsa)
-{
-    timer_del(lsa->timer_refresh);
-    if(lsa->lifetime > 0) {
-        timer_add(&g_ctx->timer_root, 
-                  &lsa->timer_lifetime, 
-                  "ISIS LIFETIME", lsa->lifetime, 0, lsa,
-                  &ospf_lsa_lifetime_job);
-    } else {
-        lsa->expired = true;
-        timer_add(&g_ctx->timer_root, 
-                  &lsa->timer_lifetime, 
-                  "ISIS PURGE", 30, 0, lsa,
-                  &ospf_lsa_purge_job);
-    }
-    timer_no_smear(lsa->timer_lifetime);
-}
-
-void
-ospf_lsa_refresh(ospf_lsa_s *lsa)
-{
-    ospf_pdu_s *pdu = &lsa->pdu;
-
-    lsa->seq++;
-    lsa->expired = false;
-    lsa->deleted = false;
-
-    *(uint32_t*)ospf_PDU_OFFSET(&lsa->pdu, ospf_OFFSET_lsa_SEQ) = htobe32(lsa->seq);
-    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
-    ospf_pdu_update_len(pdu);
-    ospf_pdu_update_auth(pdu, lsa->auth_key);
-    ospf_pdu_update_lifetime(pdu, lsa->lifetime);
-    ospf_pdu_update_checksum(pdu);
-    ospf_lsa_flood(lsa);
-}
-
-void
-ospf_lsa_refresh_job(timer_s *timer)
-{
-    ospf_lsa_s *lsa = timer->data;
-    ospf_lsa_refresh(lsa);
-}
-
-void
-ospf_lsa_tx_job(timer_s *timer)
-{
-    ospf_neighbor_s *neighbor = timer->data;
-    ospf_flood_entry_s *entry;
-    ospf_lsa_s *lsa;
-    hb_itor *itor;
-    bool next;
-    uint16_t window = neighbor->window_size;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_ospf_s isis = {0};
-
-    struct timespec now;
-    struct timespec ago;
-    uint16_t remaining_lifetime = 0;
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    eth.type = ospf_PROTOCOL_IDENTIFIER;
-    eth.next = &isis;
-    eth.src = neighbor->interface->mac;
-    eth.vlan_outer = neighbor->interface->vlan;
-    if(neighbor->level == ospf_LEVEL_1) {
-        eth.dst = g_ospf_mac_all_l1;
-        isis.type = ospf_PDU_L1_lsa;
-    } else {
-        eth.dst = g_ospf_mac_all_l2;
-        isis.type = ospf_PDU_L2_lsa;
-    }
-    
-    itor = hb_itor_new(neighbor->flood_tree);
-    next = hb_itor_first(itor);
-    while(next) {
-        entry = *hb_itor_datum(itor);
-        if(!entry->wait_ack) {
-            lsa = entry->lsa;
-
-            LOG(PACKET, "ISIS TX %s-lsa %s (seq %u) on interface %s\n", 
-                ospf_level_string(neighbor->level), 
-                ospf_lsa_id_to_str(&lsa->id), 
-                lsa->seq,
-                neighbor->interface->name);
-
-            /* Update lifetime */
-            timespec_sub(&ago, &now, &lsa->timestamp);
-            if(ago.tv_sec < lsa->lifetime) {
-                remaining_lifetime = lsa->lifetime - ago.tv_sec;
-            }
-            ospf_pdu_update_lifetime(&lsa->pdu, remaining_lifetime);
-
-            isis.pdu = lsa->pdu.pdu;
-            isis.pdu_len = lsa->pdu.pdu_len;
-            if(bbl_txq_to_buffer(neighbor->interface->txq, &eth) != BBL_TXQ_OK) {
-                break;
-            }
-            entry->wait_ack = true;
-            entry->tx_count++;
-            entry->tx_timestamp.tv_sec = now.tv_sec;
-            entry->tx_timestamp.tv_nsec = now.tv_nsec;
-            neighbor->stats.lsa_tx++;
-            neighbor->interface->stats.ospf_tx++;
-            if(window) window--;
-            if(window == 0) break;
-        }
-        next = hb_itor_next(itor);
-    }
-    hb_itor_free(itor);
-}
-
-ospf_lsa_s *
-ospf_lsa_new(uint64_t id, uint8_t level, ospf_instance_s *instance)
-{
-    ospf_lsa_s *lsa = calloc(1, sizeof(ospf_lsa_s));
-    lsa->id = id;
-    lsa->level = level;
-    lsa->instance = instance;
-    return lsa;
-}
-
-static void
-ospf_lsa_final(ospf_lsa_s *lsa)
-{
-    ospf_pdu_s *pdu = &lsa->pdu;
-    ospf_pdu_update_len(pdu);
-    ospf_pdu_update_auth(pdu, lsa->auth_key);
-    ospf_pdu_update_lifetime(pdu, lsa->lifetime);
-    if(lsa->lifetime > 0) {
-        ospf_pdu_update_checksum(pdu);
-    }
-}
-
-static ospf_lsa_s *
-ospf_lsa_fragment(ospf_instance_s *instance, uint8_t level, uint8_t fragment, bool purge)
-{
-    ospf_config_s *config = instance->config;
-
-    ospf_lsa_s *lsa = NULL;
-    ospf_pdu_s *pdu = NULL;
-
-    uint64_t lsa_id = htobe64(fragment);
-    uint16_t refresh_interval = 0;
-
-    hb_tree *lsdb;
-    void **search = NULL;
-    dict_insert_result result;
-
-    ospf_auth_type auth_type = ospf_AUTH_NONE;
-
-    /* Create lsa-ID */
-    memcpy(&lsa_id, &config->system_id, ospf_SYSTEM_ID_LEN);
-    lsa_id = be64toh(lsa_id);
-
-    /* Get LSDB */
-    lsdb = instance->level[level-1].lsdb;
-    search = hb_tree_search(lsdb, &lsa_id);
-    if(search) {
-        /* Update existing lsa. */
-        lsa = *search;
-    } else {
-        /* Create new lsa. */
-        lsa = ospf_lsa_new(lsa_id, level, instance);
-        result = hb_tree_insert(lsdb,  &lsa->id);
-        if(result.inserted) {
-            *result.datum_ptr = lsa;
-        } else {
-            LOG_NOARG(OSPF, "Failed to add lsa to LSDB\n");
-            return NULL;
-        }
-    }
-
-    lsa->level = level;
-    lsa->source.type = ospf_SOURCE_SELF;
-    lsa->seq++;
-    lsa->instance = instance;
-
-    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
-    if(purge || instance->teardown) {
-        lsa->lifetime = 0;
-        ospf_lsa_lifetime(lsa);
-    } else {
-        lsa->lifetime = config->lsa_lifetime;
-        refresh_interval = lsa->lifetime - 300;
-        if(config->lsa_refresh_interval < refresh_interval) {
-            refresh_interval = config->lsa_refresh_interval;
-        }
-        timer_del(lsa->timer_lifetime);
-        timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
-                           "ISIS lsa REFRESH", refresh_interval, 3, lsa, 
-                           &ospf_lsa_refresh_job);
-    }
-
-    /* Build PDU */
-    pdu = &lsa->pdu;
-    if(level == ospf_LEVEL_1) {
-        ospf_pdu_init(pdu, ospf_PDU_L1_lsa);
-        auth_type = config->level1_auth;
-        lsa->auth_key = config->level1_key;
-    } else {
-        ospf_pdu_init(pdu, ospf_PDU_L2_lsa);
-        auth_type = config->level2_auth;
-        lsa->auth_key = config->level2_key;
-    }
-    
-    /* PDU header */
-    ospf_pdu_add_u16(pdu, 0);
-    ospf_pdu_add_u16(pdu, 0);
-    ospf_pdu_add_u64(pdu, lsa_id);
-    ospf_pdu_add_u32(pdu, lsa->seq);
-    ospf_pdu_add_u16(pdu, 0);
-    ospf_pdu_add_u8(pdu, 0x03); 
-
-    /* Add authentication TLV */
-    ospf_pdu_add_tlv_auth(pdu, auth_type, lsa->auth_key);
-
-    return lsa;
-}
-
-/**
- * This function adds/updates 
- * the self originated lsa entries. 
- *
- * @param instance  ISIS instance
- * @param level ISIS level
- * @return true (success) / false (error)
- */
-bool
-ospf_lsa_self_update(ospf_instance_s *instance, uint8_t level)
-{
-    ospf_config_s    *config    = instance->config;
-    ospf_neighbor_s *neighbor = NULL;
-
-    ospf_lsa_s *lsa;
-    ospf_pdu_s *pdu;
-
-    uint8_t  fragment = 0;
-    
-    ipv4_prefix loopback_prefix;
-
-    ospf_external_connection_s *external_connection = NULL;
-
-    lsa = ospf_lsa_fragment(instance, level, fragment, false);
-    if(!lsa) return false;
-    pdu = &lsa->pdu;
-
-    /* TLV section */
-    ospf_pdu_add_tlv_area(pdu, config->area, config->area_count);
-    ospf_pdu_add_tlv_protocols(pdu, config->protocol_ipv4, config->protocol_ipv6);
-    ospf_pdu_add_tlv_hostname(pdu, (char*)config->hostname);
-    ospf_pdu_add_tlv_ipv4_int_address(pdu, config->router_id);
-    ospf_pdu_add_tlv_te_router_id(pdu, config->router_id);
-
-    loopback_prefix.address = config->router_id;
-    loopback_prefix.len = 32;
-    if(config->sr_node_sid) {
-        /* Add Prefix-SID sub-TLV */
-        ospf_sub_tlv_t stlv = {0};
-        uint8_t prefix_sid[6] = {0};
-        stlv.type = 3;
-        stlv.len = 6;
-        stlv.value = prefix_sid;
-        prefix_sid[0] = 64; /* N-Flag */
-        prefix_sid[1] = 0;  /* SPF */
-        *(uint32_t*)&prefix_sid[2] = htobe32(config->sr_node_sid);
-        ospf_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, &stlv);
-    } else {
-        ospf_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, NULL);
-    }
-
-    if(config->sr_base && config->sr_range) {
-        ospf_pdu_add_tlv_router_cap(pdu, config->router_id, 
-            config->protocol_ipv4, config->protocol_ipv6, 
-            config->sr_base, config->sr_range);
-    }
-
-    /* Add link networks */
-    neighbor = instance->level[level-1].neighbor;
-    while(neighbor) {
-        if(neighbor->state != ospf_ADJACENCY_STATE_UP) {
-            goto NEXT;
-        }
-
-        if(ospf_PDU_REMAINING(pdu) < 48) {
-            ospf_lsa_final(lsa);
-            ospf_lsa_flood(lsa);
-            if(fragment == UINT8_MAX) return false;
-            lsa = ospf_lsa_fragment(instance, level, ++fragment, false);
-            if(!lsa) return false;
-            pdu = &lsa->pdu;
-        }
-
-        if(config->protocol_ipv4 && neighbor->interface->ip.len) {
-            ospf_pdu_add_tlv_ext_ipv4_reachability(pdu, 
-                &neighbor->interface->ip, 
-                neighbor->metric, NULL);
-        }
-        if(config->protocol_ipv6 && neighbor->interface->ip6.len) {
-            ospf_pdu_add_tlv_ipv6_reachability(pdu, 
-                &neighbor->interface->ip6, 
-                neighbor->metric);
-        }
-        ospf_pdu_add_tlv_ext_reachability(pdu, 
-            neighbor->peer->system_id, 
-            neighbor->metric);
-NEXT:
-        neighbor = neighbor->next;
-    }
-    
+    /* Add external connections */
     external_connection = config->external_connection;
-    while(external_connection) {
-        if(ospf_PDU_REMAINING(pdu) < 16) {
-            ospf_lsa_final(lsa);
-            ospf_lsa_flood(lsa);
-            if(fragment == UINT8_MAX) return false;
-            lsa = ospf_lsa_fragment(instance, level, ++fragment, false);
-            if(!lsa) return false;
-            pdu = &lsa->pdu;
-        }
+    while(external_connection && lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
+        link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+        lsa->lsa_len += sizeof(ospf_lsa_link_s);
+        link->link_id = external_connection->router_id;
+        link->link_data = external_connection->ipv4.address;
+        link->type = OSPF_LSA_LINK_P2P;
+        link->tos = 0;
+        link->metric = external_connection->metric;
+        links++;
 
-        ospf_pdu_add_tlv_ext_reachability(pdu, 
-            external_connection->system_id, 
-            external_connection->level[level-1].metric);
         external_connection = external_connection->next;
     }
 
-    ospf_lsa_final(lsa);
-    ospf_lsa_flood(lsa);
-
-    /* Purge remaining fragments if number of fragments has reduced. */
-    while(fragment < instance->level[level-1].self_lsa_fragment) {
-        lsa = ospf_lsa_fragment(instance, level, ++fragment, true);
-        ospf_lsa_final(lsa);
-        ospf_lsa_flood(lsa);
-    }
-    instance->level[level-1].self_lsa_fragment = fragment;
+    hdr->length = htobe16(lsa->lsa_len);
+    ospf_lsa_refresh(lsa);
     return true;
 }
 
-/**
- * ospf_lsa_handler_rx 
- * 
- * @param interface receive interface
- * @param pdu received ISIS PDU
- * @param level ISIS level
- */
-void
-ospf_lsa_handler_rx(bbl_network_interface_s *interface, ospf_pdu_s *pdu, uint8_t level) {
+protocol_error_t
+ospf_lsa_update_tx(ospf_interface_s *ospf_interface, 
+                   ospf_neighbor_s *ospf_neighbor, 
+                   bool retry)
+{
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    bbl_network_interface_s *interface = ospf_interface->interface;
 
-    ospf_neighbor_s *neighbor = interface->ospf_neighbor[level-1];
-    ospf_instance_s  *instance  = NULL;
-    ospf_config_s    *config    = NULL;
-
-    ospf_lsa_s *lsa = NULL;
-    uint64_t    lsa_id;
-    uint32_t    seq;
-
-    hb_tree *lsdb;
+    ospf_lsa_tree_entry_s *entry;
+    ospf_lsa_s *lsa;
+    hb_tree *tree;
+    hb_itor *itor;
+    bool next;
     void **search = NULL;
-    dict_insert_result result;
+    uint16_t l3_hdr_len;
+    uint16_t lsa_count = 0;
+    uint16_t lsa_retry_interval;
 
-    ospf_auth_type auth = ospf_AUTH_NONE;
-    char *key = NULL;
+    struct timespec now;
+    struct timespec ago;
+    clock_gettime(CLOCK_MONOTONIC, &now);
 
-    if(!neighbor) {
-        return;
+    ospf_pdu_s pdu;
+    ospf_pdu_init(&pdu, OSPF_PDU_LS_UPDATE, ospf_interface->version);
+    pdu.pdu = g_pdu_buf;
+    pdu.pdu_buf_len = OSPF_GLOBAL_PDU_BUF_LEN;
+
+    /* OSPF header */
+    ospf_pdu_add_u8(&pdu, ospf_interface->version);
+    ospf_pdu_add_u8(&pdu, pdu.pdu_type);
+    ospf_pdu_add_u16(&pdu, 0); /* skip length */
+    ospf_pdu_add_u32(&pdu, ospf_instance->config->router_id); /* Router ID */
+    ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
+    ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        l3_hdr_len = 20;
+        /* Authentication */
+        ospf_pdu_add_u16(&pdu, OSPF_AUTH_NONE);
+        ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_DATA_LEN);
+    } else {
+        l3_hdr_len = 40;
+        ospf_pdu_add_u16(&pdu, 0);
     }
-    instance = neighbor->instance;
-    config = instance->config;
+    ospf_pdu_add_u32(&pdu, 0); /* skip lsa_count */
 
-    neighbor->stats.lsa_rx++;
+    if(ospf_neighbor && retry) {
+        /* Retry. */
+        lsa_retry_interval = ospf_instance->config->lsa_retry_interval;
 
-    lsa_id = be64toh(*(uint64_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_ID));
-    seq = be32toh(*(uint32_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_SEQ));
-
-    LOG(PACKET, "ISIS RX %s-lsa %s (seq %u) on interface %s\n", 
-        ospf_level_string(level), 
-        ospf_lsa_id_to_str(&lsa_id), 
-        seq, interface->name);
-
-    if(level == ospf_LEVEL_1 && config->level1_auth) {
-        auth = config->level1_auth;
-        key = config->level1_key;
-    } else if(level == ospf_LEVEL_2 && config->level2_auth) {
-        auth = config->level2_auth;
-        key = config->level2_key;
-    }
-
-    if(!ospf_pdu_validate_auth(pdu, auth, key)) {
-        LOG(OSPF, "ISIS RX %s-lsa %s (seq %u) authentication failed on interface %s\n",
-        ospf_level_string(level), 
-        ospf_lsa_id_to_str(&lsa_id), 
-        seq, interface->name);
-        return;
-    }
-
-    /* Get LSDB */
-    lsdb = neighbor->instance->level[level-1].lsdb;
-    search = hb_tree_search(lsdb, &lsa_id);
-    if(search) {
-        /* Update existing lsa. */
-        lsa = *search;
-        if(lsa->seq >= seq) {
-            goto ACK;
-        }
-        if(lsa->source.type == ospf_SOURCE_EXTERNAL) {
-            if(config->external_auto_refresh) {
-                /* With external-auto-refresh enabled, 
-                 * the sequence number will be increased. */
-                lsa->seq = seq;
-                ospf_lsa_refresh(lsa);
-                goto ACK;
+        tree = ospf_neighbor->lsa_retry_tree;
+        itor = hb_itor_new(ospf_instance->lsdb);
+        next = hb_itor_first(itor);
+        while(next) {
+            entry = *hb_itor_datum(itor);
+            next = hb_itor_next(itor);
+            timespec_sub(&ago, &now, &entry->timestamp);
+            if(ago.tv_sec < lsa_retry_interval) {
+                continue;
+            }
+            lsa = entry->lsa;
+            if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
+                if(lsa_count > 0 && (l3_hdr_len + pdu.pdu_len + lsa->lsa_len) > interface->mtu) {
+                    next = NULL;
+                }
+                ospf_lsa_update_age(entry->lsa, &now);
+                ospf_pdu_add_bytes(&pdu, lsa->lsa, lsa->lsa_len);
+                entry->timestamp.tv_sec = now.tv_sec;
+                entry->timestamp.tv_nsec = now.tv_nsec;
+                lsa_count++;
             }
         }
-        if(lsa->source.type == ospf_SOURCE_SELF) {
-            /* We received a newer version of our own
-             * self originated lsa. Therfore re-generate 
-             * them with a sequence number higher than 
-             * the received one. */
-            lsa->seq = seq;
-            ospf_lsa_self_update(neighbor->instance, neighbor->level);
-            goto ACK;
-        }
+        hb_itor_free(itor);
     } else {
-        /* Create new lsa. */
-        lsa = ospf_lsa_new(lsa_id, level, neighbor->instance);
-        result = hb_tree_insert(lsdb,  &lsa->id);
-        if(result.inserted) {
-            *result.datum_ptr = lsa;
+        /* Flooding and direct updates. */
+        if(ospf_neighbor) {
+            tree = ospf_neighbor->lsa_update_tree;
         } else {
-            LOG_NOARG(OSPF, "Failed to add lsa to LSDB\n");
-            return;
+            tree = ospf_interface->lsa_flood_tree;
+        }
+        search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+        while(search) {
+            entry = *search;
+            lsa = entry->lsa;
+            if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
+                if(lsa_count > 0 && (l3_hdr_len + pdu.pdu_len + lsa->lsa_len) > interface->mtu) {
+                    break;
+                }
+                ospf_lsa_update_age(entry->lsa, &now);
+                ospf_pdu_add_bytes(&pdu, lsa->lsa, lsa->lsa_len);
+                lsa_count++;
+            }
+            hb_tree_remove(tree, &lsa->key);
+            ospf_lsa_tree_entry_free(entry);
+            search = hb_tree_search_gt(tree, &g_lsa_key_zero);
         }
     }
 
-    lsa->level = level;
-    lsa->source.type = ospf_SOURCE_ADJACENCY;
-    lsa->source.neighbor = neighbor;
-    lsa->seq = seq;
-    lsa->lifetime = be16toh(*(uint16_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_LIFETIME));
-    lsa->expired = false;
-    lsa->deleted = false;
-    lsa->instance = neighbor->instance;
-    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
-
-    ospf_PDU_CURSOR_RST(pdu);
-    memcpy(&lsa->pdu, pdu, sizeof(ospf_pdu_s));
-
-    ospf_lsa_lifetime(lsa);
-    ospf_lsa_flood(lsa);
-
-ACK:
-    /* Add lsa to neighbor PSNP tree for acknowledgement. */
-    result = hb_tree_insert(neighbor->psnp_tree,  &lsa->id);
-    if(result.inserted) {
-        *result.datum_ptr = lsa;
-        lsa->refcount++;
-        if(!neighbor->timer_psnp_started) {
-            neighbor->timer_psnp_started = true;
-            timer_add(&g_ctx->timer_root, &neighbor->timer_psnp_next, 
-                      "ISIS PSNP", 1, 0, neighbor, &ospf_psnp_job);
-        }
+    /* Update LSA count */
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        *(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV2_OFFSET_LS_UPDATE_COUNT) = htobe32(lsa_count);
+    } else {
+        *(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV3_OFFSET_LS_UPDATE_COUNT) = htobe32(lsa_count);
     }
-    return;
+
+    /* Update length and checksum. */
+    ospf_pdu_update_len(&pdu);
+    ospf_pdu_update_checksum(&pdu);
+
+    if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
+        ospf_interface->stats.ls_ack_tx++;
+        return PROTOCOL_SUCCESS;
+    } else {
+        return SEND_ERROR;
+    }
 }
 
-/**
- * ospf_lsa_purge
- * 
- * @param lsa  ISIS lsa
- */
-void
-ospf_lsa_purge(ospf_lsa_s *lsa)
+protocol_error_t
+ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor)
 {
-    ospf_pdu_s *pdu;
-    ospf_auth_type auth_type = ospf_AUTH_NONE;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    bbl_network_interface_s *interface = ospf_interface->interface;
 
-    ospf_config_s *config = lsa->instance->config;
+    ospf_lsa_tree_entry_s *entry;
+    ospf_lsa_s *lsa;
+    hb_tree *tree;
+    void **search = NULL;
+    uint16_t l3_hdr_len;
+
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    lsa->seq++;
-    lsa->timestamp.tv_sec = now.tv_sec;
-    lsa->timestamp.tv_nsec = now.tv_nsec;
+    ospf_pdu_s pdu;
+    ospf_pdu_init(&pdu, OSPF_PDU_LS_REQUEST, ospf_interface->version);
+    pdu.pdu = g_pdu_buf;
+    pdu.pdu_buf_len = OSPF_GLOBAL_PDU_BUF_LEN;
 
-    lsa->lifetime = 0;
-    ospf_lsa_lifetime(lsa);
-
-    /* Build PDU */
-    pdu = &lsa->pdu;
-    if(lsa->level == ospf_LEVEL_1) {
-        ospf_pdu_init(pdu, ospf_PDU_L1_lsa);
-        auth_type = config->level1_auth;
-        lsa->auth_key = config->level1_key;
+    /* OSPF header */
+    ospf_pdu_add_u8(&pdu, ospf_interface->version);
+    ospf_pdu_add_u8(&pdu, pdu.pdu_type);
+    ospf_pdu_add_u16(&pdu, 0); /* skip length */
+    ospf_pdu_add_u32(&pdu, ospf_instance->config->router_id); /* Router ID */
+    ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
+    ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        l3_hdr_len = 20;
+        /* Authentication */
+        ospf_pdu_add_u16(&pdu, OSPF_AUTH_NONE);
+        ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_DATA_LEN);
     } else {
-        ospf_pdu_init(pdu, ospf_PDU_L2_lsa);
-        auth_type = config->level2_auth;
-        lsa->auth_key = config->level2_key;
+        l3_hdr_len = 40;
+        ospf_pdu_add_u32(&pdu, 0);
+    }
+    if(ospf_neighbor) {
+        /* Direct LS ack */
+        tree = ospf_neighbor->lsa_ack_tree;
+    } else {
+        /* Delayed LS ack */
+        tree = ospf_interface->lsa_ack_tree;
+    }
+    search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+    while(search) {
+        entry = *search;
+        lsa = entry->lsa;
+        if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
+            ospf_lsa_update_age(entry->lsa, &now);
+            ospf_pdu_add_bytes(&pdu, lsa->lsa, OSPF_LSA_HDR_LEN);
+        } else {
+            ospf_pdu_add_bytes(&pdu, (uint8_t*)&entry->hdr, OSPF_LSA_HDR_LEN);
+        }
+        hb_tree_remove(tree, &entry->hdr.type);
+        ospf_lsa_tree_entry_free(entry);
+        if((l3_hdr_len + pdu.pdu_len + OSPF_LSA_HDR_LEN) > interface->mtu) {
+            break;
+        }
+        search = hb_tree_search_gt(tree, &g_lsa_key_zero);
     }
 
-    /* PDU header. */
-    ospf_pdu_add_u16(pdu, 0);
-    ospf_pdu_add_u16(pdu, 0);
-    ospf_pdu_add_u64(pdu, lsa->id);
-    ospf_pdu_add_u32(pdu, lsa->seq);
-    ospf_pdu_add_u16(pdu, 0);
-    ospf_pdu_add_u8(pdu, 0x03); 
+    /* Update length and checksum */
+    ospf_pdu_update_len(&pdu);
+    ospf_pdu_update_checksum(&pdu);
 
-    /* TLV section. */
-    ospf_pdu_add_tlv_auth(pdu, auth_type, lsa->auth_key);
+    if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
+        ospf_interface->stats.ls_ack_tx++;
+        return PROTOCOL_SUCCESS;
+    } else {
+        return SEND_ERROR;
+    }
+}
 
-    /* Update length and authentication. */
-    ospf_pdu_update_len(pdu);
-    ospf_pdu_update_auth(pdu, lsa->auth_key);
 
-    /* Set checksum and lifetime to zero. */
-    *(uint16_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_LIFETIME) = 0;
-    *(uint16_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_CHECKSUM) = 0;
+protocol_error_t
+ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor)
+{
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    bbl_network_interface_s *interface = ospf_interface->interface;
 
-    ospf_lsa_flood(lsa);
+    ospf_lsa_tree_entry_s *entry;
+    ospf_lsa_s *lsa;
+    hb_tree *tree;
+    void **search = NULL;
+    uint16_t l3_hdr_len;
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    ospf_pdu_s pdu;
+    ospf_pdu_init(&pdu, OSPF_PDU_LS_ACK, ospf_interface->version);
+    pdu.pdu = g_pdu_buf;
+    pdu.pdu_buf_len = OSPF_GLOBAL_PDU_BUF_LEN;
+
+    /* OSPF header */
+    ospf_pdu_add_u8(&pdu, ospf_interface->version);
+    ospf_pdu_add_u8(&pdu, pdu.pdu_type);
+    ospf_pdu_add_u16(&pdu, 0); /* skip length */
+    ospf_pdu_add_u32(&pdu, ospf_instance->config->router_id); /* Router ID */
+    ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
+    ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        l3_hdr_len = 20;
+        /* Authentication */
+        ospf_pdu_add_u16(&pdu, OSPF_AUTH_NONE);
+        ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_DATA_LEN);
+    } else {
+        l3_hdr_len = 40;
+        ospf_pdu_add_u16(&pdu, 0);
+    }
+    if(ospf_neighbor) {
+        /* Direct LS ack */
+        tree = ospf_neighbor->lsa_ack_tree;
+    } else {
+        /* Delayed LS ack */
+        tree = ospf_interface->lsa_ack_tree;
+    }
+    search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+    while(search) {
+        entry = *search;
+        lsa = entry->lsa;
+        if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
+            ospf_lsa_update_age(entry->lsa, &now);
+            ospf_pdu_add_bytes(&pdu, lsa->lsa, OSPF_LSA_HDR_LEN);
+        } else {
+            ospf_pdu_add_bytes(&pdu, (uint8_t*)&entry->hdr, OSPF_LSA_HDR_LEN);
+        }
+        hb_tree_remove(tree, &entry->hdr.type);
+        ospf_lsa_tree_entry_free(entry);
+        if((l3_hdr_len + pdu.pdu_len + OSPF_LSA_HDR_LEN) > interface->mtu) {
+            break;
+        }
+        search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+    }
+
+    /* Update length and checksum */
+    ospf_pdu_update_len(&pdu);
+    ospf_pdu_update_checksum(&pdu);
+
+    if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
+        ospf_interface->stats.ls_ack_tx++;
+        return PROTOCOL_SUCCESS;
+    } else {
+        return SEND_ERROR;
+    }
 }
 
 /**
- * ospf_lsa_purge_all_external 
- * 
- * @param instance  ISIS instance
- * @param level ISIS level
+ * ospf_lsa_update_handler_rx
+ *
+ * @param ospf_interface receive interface
+ * @param ospf_neighbor receive OSPF neighbor
+ * @param pdu received OSPF PDU
  */
 void
-ospf_lsa_purge_all_external(ospf_instance_s *instance, uint8_t level)
+ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface, 
+                           ospf_neighbor_s *ospf_neighbor, 
+                           ospf_pdu_s *pdu)
 {
-    hb_tree *lsdb = instance->level[level-1].lsdb;
+    bbl_network_interface_s *interface = ospf_interface->interface;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
 
+    ospf_lsa_header_s *hdr;
+    ospf_lsa_key_s *key;
     ospf_lsa_s *lsa;
-    hb_itor *itor;
-    bool next;
 
-    if(!lsdb) {
+    void **search = NULL;
+
+    uint32_t lsa_count;
+    uint16_t lsa_len;
+
+    struct timespec now;
+
+    ospf_interface->stats.ls_upd_rx++;
+
+    if(!ospf_neighbor) {
+        ospf_rx_error(interface, pdu, "no neighbor");
+        return;
+    }
+    if(ospf_neighbor->state < OSPF_NBSTATE_EXSTART) {
+        ospf_rx_error(interface, pdu, "wrong state");
         return;
     }
 
-    itor = hb_itor_new(lsdb);
-    next = hb_itor_first(itor);
-
-    while(next) {
-        lsa = *hb_itor_datum(itor);
-        if(lsa && lsa->source.type == ospf_SOURCE_EXTERNAL) {
-            ospf_lsa_purge(lsa);
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        if(pdu->pdu_len < OSPFV2_LS_UPDATE_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
         }
-        next = hb_itor_next(itor);
-    }
-}
-
-/**
- * ospf_lsa_update_external 
- * 
- * @param instance ISIS instance
- * @param pdu received ISIS PDU
- * @param refresh automatically refresh lsa
- */
-bool
-ospf_lsa_update_external(ospf_instance_s *instance, ospf_pdu_s *pdu, bool refresh)
-{
-    uint8_t level;
-
-    ospf_lsa_s *lsa = NULL;
-    uint64_t lsa_id;
-    uint32_t seq;
-    uint16_t refresh_interval = 0;
-
-    hb_tree *lsdb;
-    void **search = NULL;
-    dict_insert_result result;
-
-    if(pdu->pdu_type == ospf_PDU_L1_lsa) {
-        level = ospf_LEVEL_1;
-    } else if(pdu->pdu_type == ospf_PDU_L2_lsa) {
-        level = ospf_LEVEL_2;
+        lsa_count = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_LS_UPDATE_COUNT));
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_LS_UPDATE_LSA);
     } else {
-        return false;
+        if(pdu->pdu_len < OSPFV3_LS_UPDATE_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
+        }
+        lsa_count = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_LS_UPDATE_COUNT));
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV3_OFFSET_LS_UPDATE_LSA);
     }
 
-    lsa_id = be64toh(*(uint64_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_ID));
-    seq = be32toh(*(uint32_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_SEQ));
-
-    LOG(OSPF, "ISIS UPDATE EXTERNAL %s-lsa %s (seq %u)\n", 
-        ospf_level_string(level), 
-        ospf_lsa_id_to_str(&lsa_id), 
-        seq);
-
-    lsdb = instance->level[level-1].lsdb;
-    search = hb_tree_search(lsdb, &lsa_id);
-
-    if(search) {
-        /* Update existing lsa. */
-        lsa = *search;
-        if(lsa->seq >= seq) {
-            return false;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    while(OSPF_PDU_CURSOR_LEN(pdu) >= OSPF_LSA_HDR_LEN && lsa_count) {
+        hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
+        key = (ospf_lsa_key_s*)&hdr->type;
+        lsa_len = be16toh(hdr->length);
+        if(lsa->lsa_len > OSPF_PDU_CURSOR_LEN(pdu)) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
         }
-    } else {
-        /* Create new lsa. */
-        lsa = ospf_lsa_new(lsa_id, level, instance);
-        result = hb_tree_insert(lsdb,  &lsa->id);
-        if(result.inserted) {
-            *result.datum_ptr = lsa;
+        OSPF_PDU_CURSOR_INC(pdu, lsa_len);
+        lsa_count--;
+
+        search = hb_tree_search(ospf_instance->lsdb, key);
+        if(search) {
+            lsa = *search;
+            ospf_lsa_update_age(lsa, &now);
+            switch(ospf_lsa_compare((ospf_lsa_header_s*)lsa->lsa, hdr)) {
+                case  1: /* LOCAL IS NEWER */
+                    if(!(lsa->seq == OSPF_LSA_SEQ_MAX && lsa->age >= OSPF_LSA_MAX_AGE)) {
+                        /* Send direct LSA update. */
+                        ospf_lsa_tree_add(lsa, NULL, ospf_neighbor->lsa_update_tree);
+                    }
+                    continue;
+                case  0: /* EQUAL */
+                    if(ospf_lsa_retry_stop(lsa, ospf_neighbor)) {
+                        /* Implied acknowledgment (see RFC2328 section 13, step 7a). */
+                        if(ospf_interface->state == OSPF_IFSTATE_BACKUP && 
+                           ospf_interface->dr == pdu->router_id) {
+                            /* Send delayed LSA ack. */
+                            ospf_lsa_tree_add(lsa, NULL, ospf_interface->lsa_ack_tree);
+                        }
+                    } else {
+                        /* Send direct LSA ack. */
+                        ospf_lsa_tree_add(lsa, NULL, ospf_neighbor->lsa_ack_tree);
+                    }
+                    continue;
+                case -1: /* RECEIVED IS NEWER */
+                    break;
+            }            
         } else {
-            LOG_NOARG(ERROR, "Failed to add ISIS lsa to LSDB\n");
-            return false;
+            lsa = ospf_lsa_new(key, ospf_instance);
         }
-    }
-
-    lsa->level = level;
-    lsa->source.type = ospf_SOURCE_EXTERNAL;
-    lsa->source.neighbor = NULL;
-    lsa->seq = seq;
-    lsa->lifetime = be16toh(*(uint16_t*)ospf_PDU_OFFSET(pdu, ospf_OFFSET_lsa_LIFETIME));
-    lsa->expired = false;
-    lsa->deleted = false;
-    lsa->instance = instance;
-    clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
-
-    ospf_PDU_CURSOR_RST(pdu);
-    memcpy(&lsa->pdu, pdu, sizeof(ospf_pdu_s));
-
-    if(lsa->lifetime > 0 && instance->config->external_auto_refresh) {
-        if(level == ospf_LEVEL_1) {
-            lsa->auth_key = instance->config->level1_key;
-        } else {
-            lsa->auth_key = instance->config->level2_key;
+        
+        if(lsa->lsa_buf_len < lsa_len) {
+            if(lsa->lsa) free(lsa->lsa);
+            lsa->lsa = malloc(lsa_len);
         }
-        if(lsa->lifetime < ospf_DEFAULT_lsa_LIFETIME_MIN) {
-            /* Increase ISIS lifetime. */
-            lsa->lifetime = ospf_DEFAULT_lsa_LIFETIME_MIN;
-            ospf_lsa_refresh(lsa);
-            refresh = false;
-        }
-        refresh_interval = lsa->lifetime - 300;
-        timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
-                            "ISIS lsa REFRESH", refresh_interval, 3, lsa, 
-                            &ospf_lsa_refresh_job);
-    } else {
-        ospf_lsa_lifetime(lsa);
-    }
+        memcpy(lsa->lsa, hdr, lsa_len);
+        lsa->lsa_len = lsa_len;
 
-    if(refresh) {
-        ospf_lsa_refresh(lsa); 
-    } else { 
+        lsa->source.type = OSPF_SOURCE_ADJACENCY;
+        lsa->source.router_id = ospf_neighbor->router_id;
+        lsa->seq = be32toh(hdr->seq);
+        lsa->age = be16toh(hdr->age)+1;
+        lsa->timestamp.tv_sec = now.tv_sec;
+        lsa->timestamp.tv_nsec = now.tv_sec;
+        ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
     }
-    return true;
 }
 
+/**
+ * ospf_lsa_req_handler_rx
+ *
+ * @param ospf_interface receive interface
+ * @param ospf_neighbor receive OSPF neighbor
+ * @param pdu received OSPF PDU
+ */
 void
-ospf_lsa_flap_job(timer_s *timer)
+ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface, 
+                        ospf_neighbor_s *ospf_neighbor, 
+                        ospf_pdu_s *pdu)
 {
-    ospf_lsa_flap_s *flap = timer->data;
-    uint32_t seq;
+    bbl_network_interface_s *interface = ospf_interface->interface;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
 
-    if(flap) {
-        seq = be32toh(*(uint32_t*)ospf_PDU_OFFSET(&flap->pdu, ospf_OFFSET_lsa_SEQ));
-        seq += 2;
-        *(uint32_t*)ospf_PDU_OFFSET(&flap->pdu, ospf_OFFSET_lsa_SEQ) = htobe32(seq);
+    ospf_lsa_key_s *key;
+    ospf_lsa_s *lsa;
 
-        if(!ospf_lsa_update_external(flap->instance, &flap->pdu, true)) {
-            LOG(OSPF, "Failed to flap ISIS lsa %s\n", ospf_lsa_id_to_str(&flap->id));
+    void **search = NULL;
+
+    ospf_interface->stats.ls_req_rx++;
+
+    if(!ospf_neighbor) {
+        ospf_rx_error(interface, pdu, "no neighbor");
+        return;
+    }
+    if(ospf_neighbor->state < OSPF_NBSTATE_EXSTART) {
+        ospf_rx_error(interface, pdu, "wrong state");
+        return;
+    }
+
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        if(pdu->pdu_len < OSPFV2_LS_REQ_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
         }
-        flap->free = true;
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_LS_REQ_LSA);
+    } else {
+        if(pdu->pdu_len < OSPFV3_LS_REQ_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
+        }
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV3_OFFSET_LS_REQ_LSA);
+    }
+
+    while(OSPF_PDU_CURSOR_LEN(pdu)) {
+        if(ospf_interface->version == OSPF_VERSION_2) {
+            if(OSPF_PDU_CURSOR_LEN(pdu) < OSPFV2_LSA_REQ_HDR_LEN) {
+                break;
+            }
+            OSPF_PDU_CURSOR_INC(pdu, 3);
+        } else {
+            if(OSPF_PDU_CURSOR_LEN(pdu) < OSPFV3_LSA_REQ_HDR_LEN) {
+                break;
+            }
+            OSPF_PDU_CURSOR_INC(pdu, 1);
+        }
+        key = (ospf_lsa_key_s*)OSPF_PDU_CURSOR(pdu);
+        OSPF_PDU_CURSOR_INC(pdu, sizeof(ospf_lsa_key_s));
+
+        search = hb_tree_search(ospf_instance->lsdb, key);
+        if(search) {
+            lsa = *search;
+            if(!(lsa->seq == OSPF_LSA_SEQ_MAX && lsa->age >= OSPF_LSA_MAX_AGE)) {
+                /* Send direct LSA update. */
+                ospf_lsa_tree_add(lsa, NULL, ospf_neighbor->lsa_update_tree);
+            }
+        } 
     }
 }
 
 /**
- * ospf_lsa_flap 
- * 
- * This function flaps (purge, wait, add) 
- * the given lsa.
- * 
- * @param lsa lsa
- * @param timer flap timer in seconds
+ * ospf_lsa_ack_handler_rx
+ *
+ * @param ospf_interface receive interface
+ * @param ospf_neighbor receive OSPF neighbor
+ * @param pdu received OSPF PDU
  */
-bool
-ospf_lsa_flap(ospf_lsa_s *lsa, time_t timer)
+void
+ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface, 
+                        ospf_neighbor_s *ospf_neighbor, 
+                        ospf_pdu_s *pdu)
 {
-    static ospf_lsa_flap_s *ospf_lsa_flap = NULL;
+    bbl_network_interface_s *interface = ospf_interface->interface;
 
-    ospf_lsa_flap_s *flap = ospf_lsa_flap;
+    ospf_lsa_tree_entry_s *entry;
+    ospf_lsa_header_s *hdr_a;
+    ospf_lsa_header_s *hdr_b;
 
-    if(lsa->lifetime == 0 || 
-       lsa->expired ||
-       lsa->deleted) {
-        return false;
+    ospf_lsa_key_s *key;
+    ospf_lsa_s *lsa;
+
+    void **search = NULL;
+
+    struct timespec now;
+
+    ospf_interface->stats.ls_ack_rx++;
+
+    if(!ospf_neighbor) {
+        ospf_rx_error(interface, pdu, "no neighbor");
+        return;
+    }
+    if(ospf_neighbor->state < OSPF_NBSTATE_EXSTART) {
+        ospf_rx_error(interface, pdu, "wrong state");
+        return;
     }
 
-    LOG(OSPF, "ISIS FLAP %s-lsa %s in %lus\n", 
-        ospf_level_string(lsa->level), 
-        ospf_lsa_id_to_str(&lsa->id),
-        timer);
-
-    while(flap) {
-        if(flap->free) {
-            break;
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        if(pdu->pdu_len < OSPFV2_LS_ACK_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
         }
-        flap = flap->next;
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_LS_ACK_LSA);
+    } else {
+        if(pdu->pdu_len < OSPFV3_LS_ACK_LEN_MIN) {
+            ospf_rx_error(interface, pdu, "decode");
+            return;
+        }
+        OSPF_PDU_CURSOR_SET(pdu, OSPFV3_OFFSET_LS_ACK_LSA);
     }
-    if(!flap) {
-        flap = calloc(1, sizeof(ospf_lsa_flap_s));
-        flap->next = ospf_lsa_flap;
-        ospf_lsa_flap = flap;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    while(OSPF_PDU_CURSOR_LEN(pdu) >= OSPF_LSA_HDR_LEN) {
+        hdr_a = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
+        key = (ospf_lsa_key_s*)&hdr_a->type;
+        OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
+        search = hb_tree_search(ospf_neighbor->lsa_retry_tree, key);
+        if(search) {
+            entry = *search;
+            if(entry->lsa) {
+                lsa = entry->lsa;
+                ospf_lsa_update_age(lsa, &now);
+                hdr_b = (ospf_lsa_header_s*)lsa->lsa;
+            } else {
+                hdr_b = &entry->hdr;
+            }
+            if(ospf_lsa_compare(hdr_a, hdr_b) != -1) {
+                ospf_lsa_tree_entry_free(entry);
+            }
+        } 
     }
-
-    flap->free = false;
-    flap->timer = NULL;
-    flap->id = lsa->id;
-    flap->instance = lsa->instance;
-    memcpy(&flap->pdu, &lsa->pdu, sizeof(ospf_pdu_s));
-
-    timer_add(&g_ctx->timer_root, &flap->timer, "ISIS FLAP", timer, 0, flap, &ospf_lsa_flap_job);
-    ospf_lsa_purge(lsa);
-
-    return true;
 }
-
-#endif

@@ -57,6 +57,21 @@ ospf_neighbor_state_string(uint8_t state)
 }
 
 const char *
+ospf_interface_state_string(uint8_t state)
+{
+    switch(state) {
+        case OSPF_IFSTATE_DOWN: return "Down";
+        case OSPF_IFSTATE_LOOPBACK: return "Loopback";
+        case OSPF_IFSTATE_WAITING: return "Waiting";
+        case OSPF_IFSTATE_P2P: return "P2P";
+        case OSPF_IFSTATE_DR_OTHER: return "DROTHER";
+        case OSPF_IFSTATE_BACKUP: return "BACKUP";
+        case OSPF_IFSTATE_DR: return "DR";
+        default: return "INVALID";
+    }
+}
+
+const char *
 ospf_pdu_type_string(uint8_t type)
 {
 

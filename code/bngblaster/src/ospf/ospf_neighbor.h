@@ -16,6 +16,12 @@ ospf_neighbor_s *
 ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu);
 
 void
+ospf_neigbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu);
+
+void
+ospf_neigbor_adjok(ospf_neighbor_s *ospf_neighbor);
+
+void
 ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface, 
                      ospf_neighbor_s *ospf_neighbor, 
                      ospf_pdu_s *pdu);

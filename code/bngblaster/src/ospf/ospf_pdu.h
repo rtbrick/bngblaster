@@ -63,4 +63,9 @@ ospf_pdu_add_bytes(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len);
 void
 ospf_pdu_zero_bytes(ospf_pdu_s *pdu, uint16_t len);
 
+protocol_error_t
+ospf_pdu_tx(ospf_pdu_s *pdu,
+            ospf_interface_s *ospf_interface, 
+            ospf_neighbor_s *ospf_neighbor);
+
 #endif

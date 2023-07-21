@@ -97,6 +97,7 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
         if(result.inserted) {
             *result.datum_ptr = entry;
         } else {
+            free(entry);
             LOG(ERROR, "LDP (%s - %s) failed to add IPv6 entry to database\n",
                 ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
                 ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));

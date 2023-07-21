@@ -1784,7 +1784,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
     const char *schema[] = {
         "instance-id", "version", "overload"
         "auth-key", "auth-type", 
-        "hello-interval", "dead-interval",
+        "hello-interval", "dead-interval", "lsa-retry-interval",
         "hostname", "area",
         "router-id", "router-priority",
         "teardown-time", "external"
@@ -1862,6 +1862,19 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         fprintf(stderr, "JSON config error: Invalid value for ospf->dead-interval which must be greater than the hello-interval\n");
         return false;
     }
+
+    value = json_object_get(ospf, "lsa-retry-interval");
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for ospf->lsa-retry-interval (1 - 65535)\n");
+            return false;
+        }
+        ospf_config->lsa_retry_interval = number;
+    } else {
+        ospf_config->lsa_retry_interval = OSPF_DEFAULT_LSA_RETRY_IVL;
+    }
+
 
     if(json_unpack(ospf, "{s:s}", "hostname", &s) == 0) {
         ospf_config->hostname = strdup(s);

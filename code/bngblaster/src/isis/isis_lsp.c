@@ -9,6 +9,61 @@
 #include "isis.h"
 
 /**
+ * isis_lsp_gc_job 
+ * 
+ * ISIS LSDB/LSP garbage collection job.
+ * 
+ * @param timer time
+ */
+void
+isis_lsp_gc_job(timer_s *timer)
+{
+    isis_instance_s *instance = timer->data;
+    isis_lsp_s *lsp;
+    hb_tree *lsdb;
+    hb_itor *itor = NULL;
+    bool next;
+
+    /* Deleting objects from a tree while iterating is unsafe, 
+     * so instead, a list of objects is created during the iteration 
+     * process to mark them for deletion. Once the iteration is complete, 
+     * the objects in the delete list can be safely removed from the tree. */
+    uint64_t delete_list[ISIS_LSP_GC_DELETE_MAX];
+    size_t delete_list_len = 0;
+
+    dict_remove_result removed;
+
+    for(int l=0; l < ISIS_LEVELS; l++) {
+        lsdb = instance->level[l].lsdb;
+        if(lsdb) {
+            itor = hb_itor_new(lsdb);
+            next = hb_itor_first(itor);
+            while(next) {
+                lsp = *hb_itor_datum(itor);
+                next = hb_itor_next(itor);
+                if(lsp && lsp->deleted && lsp->refcount == 0) {
+                    timer_del(lsp->timer_lifetime);
+                    timer_del(lsp->timer_refresh);
+                    delete_list[delete_list_len++] = lsp->id;
+                    if(delete_list_len == ISIS_LSP_GC_DELETE_MAX) {
+                        next = NULL;
+                    }
+                }
+            }
+            hb_itor_free(itor);
+
+            /* Finally delete from LSDB! */
+            for(size_t i=0; i < delete_list_len; i++) {
+                removed = hb_tree_remove(lsdb, &delete_list[i]);
+                if(removed.removed) {
+                    free(removed.datum);
+                }
+            }
+        }
+    }
+}
+
+/**
  * isis_lsp_flood_adjacency 
  * 
  * This function adds an LSP to the 
@@ -145,49 +200,6 @@ isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s 
     }
 }
 
-void
-isis_lsp_gc_job(timer_s *timer)
-{
-    isis_instance_s *instance = timer->data;
-    isis_lsp_s *lsp;
-    hb_tree *lsdb;
-    hb_itor *itor = NULL;
-    bool next;
-
-    uint64_t delete_list[ISIS_LSP_GC_DELETE_MAX];
-    size_t delete_list_len = 0;
-
-    dict_remove_result removed;
-
-    for(int l=0; l < ISIS_LEVELS; l++) {
-        lsdb = instance->level[l].lsdb;
-        if(lsdb) {
-            itor = hb_itor_new(lsdb);
-            next = hb_itor_first(itor);
-            while(next) {
-                lsp = *hb_itor_datum(itor);
-                next = hb_itor_next(itor);
-                if(lsp && lsp->deleted && lsp->refcount == 0) {
-                    timer_del(lsp->timer_lifetime);
-                    timer_del(lsp->timer_refresh);
-                    delete_list[delete_list_len++] = lsp->id;
-                    if(delete_list_len == ISIS_LSP_GC_DELETE_MAX) {
-                        next = NULL;
-                    }
-                }
-            }
-            hb_itor_free(itor);
-
-            /* Finally delete from LSDB! */
-            for(size_t i=0; i < delete_list_len; i++) {
-                removed = hb_tree_remove(lsdb, &delete_list[i]);
-                if(removed.removed) {
-                    free(removed.datum);
-                }
-            }
-        }
-    }
-}
 
 void
 isis_lsp_retry_job(timer_s *timer)

@@ -8,33 +8,6 @@
  */
 #include "ospf.h"
 
-int
-ospf_lsa_id_compare(void *id1, void *id2)
-{
-    const uint8_t  t1 = *(const uint8_t*)id1;
-    const uint8_t  t2 = *(const uint8_t*)id2;
-    const uint64_t k1 = *(const uint64_t*)((uint8_t*)id1+1);
-    const uint64_t k2 = *(const uint64_t*)((uint8_t*)id2+1);
-
-    if(t1 == t2) {
-        return (k1 > k2) - (k1 < k2);
-    } else {
-        return (t1 > t2) - (t1 < t2);
-    }
-}
-
-
-void
-ospf_retry_list_free(void *key, void *ptr)
-{
-    ospf_lsa_s *lsa = ptr;
-
-    UNUSED(key);
-    if(lsa->refcount) {
-        lsa->refcount--;
-    }
-}
-
 /**
  * ospf_init
  * 
@@ -57,15 +30,16 @@ ospf_init() {
         instance->config = config;
         instance->lsdb = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
 
-        // TODO: ...
-        //if(!ospf_lsa_self_update(instance, level)) {
-        //    LOG(OSPF, "Failed to generate self originated LSA for OSPFv%u instance %u\n", config->version, config->id);
-        //    return false;
-        //}
+        if(!ospf_lsa_self_update(instance)) {
+            LOG(OSPF, "Failed to generate self originated LSA for OSPFv%u instance %u\n", 
+                config->version, config->id);
+            return false;
+        }
 
         if(config->external_mrt_file) {
             if(!ospf_mrt_load(instance, config->external_mrt_file)) {
-                LOG(OSPF, "Failed to load MRT file %s\n", config->external_mrt_file);
+                LOG(OSPF, "Failed to load MRT file %s\n", 
+                    config->external_mrt_file);
                 return false;
             }
         }
@@ -104,8 +78,17 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
 
     UNUSED(eth);
 
+    if(ipv4->dst == IPV4_MC_ALL_DR_ROUTERS) {
+        if(!(ospf_interface->state == OSPF_IFSTATE_DR || ospf_interface->state == OSPF_IFSTATE_BACKUP)) {
+            return;
+        }
+    } else if(!(ipv4->dst == IPV4_MC_ALL_OSPF_ROUTERS || ipv4->dst == interface->ip.address)) {
+        return;
+    }
+
     interface->stats.ospf_rx++;
     result = ospf_pdu_load(&pdu, ospf->pdu, ospf->pdu_len);
+    pdu.mac = eth->src;
     pdu.source = (void*)&ipv4->src;
     pdu.destination = (void*)&ipv4->dst;
     if(pdu.pdu_version != OSPF_VERSION_2) {
@@ -144,8 +127,13 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
             ospf_neighbor_dbd_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         case OSPF_PDU_LS_UPDATE:
+            ospf_lsa_update_handler_rx(ospf_interface, ospf_neighbor, &pdu);
+            break;
+        case OSPF_PDU_LS_REQUEST:
+            ospf_lsa_req_handler_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         case OSPF_PDU_LS_ACK:
+            ospf_lsa_ack_handler_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         default:
             interface->stats.ospf_rx_error++;
@@ -181,6 +169,7 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
 
     interface->stats.ospf_rx++;
     result = ospf_pdu_load(&pdu, ospf->pdu, ospf->pdu_len);
+    pdu.mac = eth->src;
     pdu.source = (void*)ipv6->src;
     pdu.destination = (void*)ipv6->dst;
     if(pdu.pdu_version != 3) {
@@ -219,8 +208,13 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
             ospf_neighbor_dbd_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         case OSPF_PDU_LS_UPDATE:
+            ospf_lsa_update_handler_rx(ospf_interface, ospf_neighbor, &pdu);
+            break;
+        case OSPF_PDU_LS_REQUEST:
+            ospf_lsa_req_handler_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         case OSPF_PDU_LS_ACK:
+            ospf_lsa_ack_handler_rx(ospf_interface, ospf_neighbor, &pdu);
             break;
         default:
             interface->stats.ospf_rx_error++;
@@ -248,10 +242,8 @@ ospf_teardown()
         if(!instance->teardown) {
             LOG(ISIS, "Teardown OSPFv%u instance %u\n", instance->config->version, instance->config->id);
             instance->teardown = true;
-            //if(instance->adjacency) {
-            //    ospf_lsa_self_update(instance, i+1);
-            //    ospf_lsa_purge_external(instance, i+1);
-            //}
+            ospf_lsa_self_update(instance);
+            ospf_lsa_purge_all_external(instance);
             timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
                       "OSPF TEARDOWN", instance->config->teardown_time, 0, instance,
                       &ospf_teardown_job);

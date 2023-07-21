@@ -213,7 +213,9 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
         } else {
             ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
         }
-    } 
+    } else {
+        ospf_neigbor_update(ospf_neighbor, pdu);
+    }
 
     if(ospf_neighbor->state == OSPF_NBSTATE_DOWN) {
         ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
@@ -234,7 +236,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
                     break;
                 case OSPF_IFSTATE_DR_OTHER:
                     if(pdu->router_id == ospf_interface->dr ||
-                    pdu->router_id == ospf_interface->bdr) {
+                       pdu->router_id == ospf_interface->bdr) {
                         ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
                     } else {
                         ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_2WAY);

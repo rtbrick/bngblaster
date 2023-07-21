@@ -8,6 +8,153 @@
  */
 #include "ospf.h"
 
+static bool
+ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
+{
+    uint32_t dr = 0;
+    uint32_t bdr = 0;
+
+    ospf_config_s   *config = ospf_interface->instance->config;
+    ospf_neighbor_s *dr_canditate = NULL;
+    ospf_neighbor_s *bdr_canditate = NULL;
+    ospf_neighbor_s *bdr_alternate = NULL; /* alternate BDR if no neighbor is declaring BDR */
+    ospf_neighbor_s *neighbor;
+
+    /* Create a neighbor structure for the local interface. */
+    ospf_neighbor_s self = {0};
+    self.router_id = config->router_id;
+    self.priority = config->router_priority;
+    self.state = OSPF_NBSTATE_2WAY;
+    self.dr = ospf_interface->dr;
+    self.bdr = ospf_interface->bdr;
+    self.next = ospf_interface->neighbors;
+
+    neighbor = &self;
+    while(neighbor) {
+        /* Iterate over all neighbors with staet >= 2WAY ... */
+        if(neighbor->state >= OSPF_NBSTATE_2WAY && neighbor->priority > 0) {
+            if(neighbor->dr == neighbor->router_id) {
+                if(!dr_canditate) {
+                    dr_canditate = neighbor;
+                } else if(neighbor->priority > dr_canditate->priority) {
+                    dr_canditate = neighbor;
+                } else if(neighbor->priority == dr_canditate->priority && 
+                          be32toh(neighbor->router_id) > be32toh(dr_canditate->router_id)) {
+                    dr_canditate = neighbor;
+                }
+            } else {
+                if(neighbor->bdr == neighbor->router_id) {
+                    if(!bdr_canditate) {
+                        bdr_canditate = neighbor;
+                    } else if(neighbor->priority > bdr_canditate->priority) {
+                        bdr_canditate = neighbor;
+                    } else if(neighbor->priority == bdr_canditate->priority && 
+                              be32toh(neighbor->router_id) > be32toh(bdr_canditate->router_id)) {
+                        bdr_canditate = neighbor;
+                    }
+                } else if(!bdr_canditate) {
+                    if(!bdr_alternate) {
+                        bdr_alternate = neighbor;
+                    } else if(neighbor->priority > bdr_alternate->priority) {
+                        bdr_alternate = neighbor;
+                    } else if(neighbor->priority == bdr_alternate->priority && 
+                              be32toh(neighbor->router_id) > be32toh(bdr_alternate->router_id)) {
+                        bdr_alternate = neighbor;
+                    }
+                }
+            }
+        }
+        neighbor = neighbor->next;
+    }
+    if(!bdr_canditate) {
+        bdr_canditate = bdr_alternate;
+    }
+    if(bdr_canditate) {
+        bdr = bdr_canditate->router_id;
+    }
+    if(!dr_canditate) {
+        dr_canditate = bdr_canditate;
+    }
+    if(dr_canditate) {
+        dr = dr_canditate->router_id;
+    }
+
+    if(dr != ospf_interface->dr || bdr != ospf_interface->bdr) {
+        ospf_interface->dr = dr;
+        ospf_interface->bdr = bdr;
+        return true;
+    }
+
+    return false;
+}
+
+void
+ospf_interface_flood_job(timer_s *timer)
+{
+    ospf_interface_s *ospf_interface = timer->data;
+    ospf_lsa_update_tx(ospf_interface, NULL, false);
+}
+
+void
+ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
+{
+    ospf_neighbor_s *neighbor = ospf_interface->neighbors;
+
+    if(ospf_interface->state == state) return;
+    
+    LOG(OSPF, "OSPFv%u interface %s state %s -> %s on interface %s\n",
+        ospf_interface->version,
+        format_ipv4_address(&ospf_interface->instance->config->router_id), 
+        ospf_interface_state_string(ospf_interface->state),
+        ospf_interface_state_string(state),
+        ospf_interface->interface->name);
+
+    if(state > OSPF_IFSTATE_WAITING) {
+        timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_lsa_flood, "OSPF LSA FLOODING", 
+                           0, 10 * MSEC, ospf_interface, &ospf_interface_flood_job);
+
+    }
+
+    if(ospf_interface->state > OSPF_IFSTATE_P2P) {
+        ospf_interface->state = state;
+        /* This refers to the event "AdjOK?" as described in RFC2328 */
+        while(neighbor) {
+            ospf_neigbor_adjok(neighbor);
+            neighbor = neighbor->next;
+        }
+    } else {
+        ospf_interface->state = state;
+    }
+}
+
+void
+ospf_interface_neighbor_change(ospf_interface_s *ospf_interface)
+{
+    ospf_config_s *config = ospf_interface->instance->config;
+
+    switch (ospf_interface->state) {
+        case OSPF_IFSTATE_DOWN:
+        case OSPF_IFSTATE_LOOPBACK:
+        case OSPF_IFSTATE_P2P:
+            return;
+        default:
+            break;
+    }
+
+    if(ospf_interface_elect_dr_bdr(ospf_interface)) {
+        ospf_interface_elect_dr_bdr(ospf_interface);
+        if(ospf_interface->dr == config->router_id) {
+            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR);
+        } else if(ospf_interface->dr && ospf_interface->bdr == config->router_id) {
+            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_BACKUP);
+        } else if(ospf_interface->dr) {
+            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR_OTHER);
+        } else {
+            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_WAITING);
+        }
+    }
+}
+
 void
 ospf_interface_hello_job(timer_s *timer)
 {
@@ -81,6 +228,9 @@ ospf_interface_init(bbl_network_interface_s *interface,
                 } else {
                     ospf_interface->state = OSPF_IFSTATE_WAITING;
                 }
+
+                ospf_interface->lsa_flood_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
+                ospf_interface->lsa_ack_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
 
                 timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_hello, 
                                    "OSPF HELLO", 
