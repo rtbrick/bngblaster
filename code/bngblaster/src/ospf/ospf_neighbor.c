@@ -138,24 +138,17 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
 }
 
 void
+ospf_neigbor_req_job(timer_s *timer)
+{
+    ospf_neighbor_s *ospf_neighbor = timer->data;
+    ospf_lsa_req_tx(ospf_neighbor->interface, ospf_neighbor);
+}
+
+void
 ospf_neigbor_retry_job(timer_s *timer)
 {
     ospf_neighbor_s *ospf_neighbor = timer->data;
     ospf_lsa_update_tx(ospf_neighbor->interface, ospf_neighbor, true);
-}
-
-void
-ospf_neighbor_ack_entry_free(void *key, void *ptr)
-{
-    UNUSED(key);
-    free(ptr);
-}
-
-void
-ospf_neighbor_request_entry_free(void *key, void *ptr)
-{
-    UNUSED(key);
-    free(ptr);
 }
 
 static void
@@ -180,9 +173,11 @@ ospf_neigbor_exstart(ospf_neighbor_s *ospf_neighbor)
 
     ospf_neighbor_dbd_tx(ospf_neighbor);
 
+    timer_add_periodic(&g_ctx->timer_root, &ospf_neighbor->timer_lsa_request, "OSPF LSA REQ", 
+                       1, 0, ospf_neighbor, &ospf_neigbor_req_job);
+
     timer_add_periodic(&g_ctx->timer_root, &ospf_neighbor->timer_lsa_retry, "OSPF LSA RETRY", 
                        1, 0, ospf_neighbor, &ospf_neigbor_retry_job);
-
 }
 
 static void

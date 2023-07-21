@@ -89,6 +89,13 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
 }
 
 void
+ospf_interface_ack_job(timer_s *timer)
+{
+    ospf_interface_s *ospf_interface = timer->data;
+    ospf_lsa_ack_tx(ospf_interface, NULL);
+}
+
+void
 ospf_interface_flood_job(timer_s *timer)
 {
     ospf_interface_s *ospf_interface = timer->data;
@@ -110,9 +117,11 @@ ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
         ospf_interface->interface->name);
 
     if(state > OSPF_IFSTATE_WAITING) {
+        timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_lsa_ack, "OSPF LSA ACK", 
+                           0, 100 * MSEC, ospf_interface, &ospf_interface_ack_job);
+
         timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_lsa_flood, "OSPF LSA FLOODING", 
                            0, 10 * MSEC, ospf_interface, &ospf_interface_flood_job);
-
     }
 
     if(ospf_interface->state > OSPF_IFSTATE_P2P) {

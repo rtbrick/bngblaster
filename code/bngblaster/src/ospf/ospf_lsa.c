@@ -70,6 +70,14 @@ ospf_lsa_tree_add(ospf_lsa_s *lsa, ospf_lsa_header_s *hdr, hb_tree *tree)
             free(entry);
             if(result.datum_ptr && *result.datum_ptr) {
                 entry = *result.datum_ptr;
+                if(entry) {
+                    if(hdr) {
+                        memcpy(&entry->hdr, hdr, sizeof(ospf_lsa_header_s));
+                    }
+                    if(!entry->lsa && lsa) {
+                        entry->lsa = lsa; lsa->refcount++;
+                    }
+                }
             } else {
                 entry = NULL;
             }
@@ -569,7 +577,7 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
         lsa_retry_interval = ospf_instance->config->lsa_retry_interval;
 
         tree = ospf_neighbor->lsa_retry_tree;
-        itor = hb_itor_new(ospf_instance->lsdb);
+        itor = hb_itor_new(tree);
         next = hb_itor_first(itor);
         while(next) {
             entry = *hb_itor_datum(itor);
@@ -615,6 +623,9 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
             search = hb_tree_search_gt(tree, &g_lsa_key_zero);
         }
     }
+    if(lsa_count == 0) {
+        return EMPTY;
+    }
 
     /* Update LSA count */
     if(ospf_interface->version == OSPF_VERSION_2) {
@@ -628,7 +639,7 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
     ospf_pdu_update_checksum(&pdu);
 
     if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
-        ospf_interface->stats.ls_ack_tx++;
+        ospf_interface->stats.ls_upd_tx++;
         return PROTOCOL_SUCCESS;
     } else {
         return SEND_ERROR;
@@ -642,10 +653,10 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
     bbl_network_interface_s *interface = ospf_interface->interface;
 
     ospf_lsa_tree_entry_s *entry;
-    ospf_lsa_s *lsa;
     hb_tree *tree;
     void **search = NULL;
     uint16_t l3_hdr_len;
+    uint16_t lsa_count = 0;
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -671,29 +682,19 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
         l3_hdr_len = 40;
         ospf_pdu_add_u32(&pdu, 0);
     }
-    if(ospf_neighbor) {
-        /* Direct LS ack */
-        tree = ospf_neighbor->lsa_ack_tree;
-    } else {
-        /* Delayed LS ack */
-        tree = ospf_interface->lsa_ack_tree;
-    }
+    tree = ospf_neighbor->lsa_request_tree;
     search = hb_tree_search_gt(tree, &g_lsa_key_zero);
     while(search) {
         entry = *search;
-        lsa = entry->lsa;
-        if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
-            ospf_lsa_update_age(entry->lsa, &now);
-            ospf_pdu_add_bytes(&pdu, lsa->lsa, OSPF_LSA_HDR_LEN);
-        } else {
-            ospf_pdu_add_bytes(&pdu, (uint8_t*)&entry->hdr, OSPF_LSA_HDR_LEN);
-        }
-        hb_tree_remove(tree, &entry->hdr.type);
-        ospf_lsa_tree_entry_free(entry);
+        ospf_pdu_add_bytes(&pdu, (uint8_t*)&entry->hdr, OSPF_LSA_HDR_LEN);
+        lsa_count++;
         if((l3_hdr_len + pdu.pdu_len + OSPF_LSA_HDR_LEN) > interface->mtu) {
             break;
         }
         search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+    }
+    if(lsa_count == 0) {
+        return EMPTY;
     }
 
     /* Update length and checksum */
@@ -701,7 +702,7 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
     ospf_pdu_update_checksum(&pdu);
 
     if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
-        ospf_interface->stats.ls_ack_tx++;
+        ospf_interface->stats.ls_req_tx++;
         return PROTOCOL_SUCCESS;
     } else {
         return SEND_ERROR;
@@ -720,6 +721,7 @@ ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
     hb_tree *tree;
     void **search = NULL;
     uint16_t l3_hdr_len;
+    uint16_t lsa_count = 0;
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -762,12 +764,16 @@ ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
         } else {
             ospf_pdu_add_bytes(&pdu, (uint8_t*)&entry->hdr, OSPF_LSA_HDR_LEN);
         }
+        lsa_count++;
         hb_tree_remove(tree, &entry->hdr.type);
         ospf_lsa_tree_entry_free(entry);
         if((l3_hdr_len + pdu.pdu_len + OSPF_LSA_HDR_LEN) > interface->mtu) {
             break;
         }
         search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+    }
+    if(lsa_count == 0) {
+        return EMPTY;
     }
 
     /* Update length and checksum */
@@ -797,10 +803,12 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
     bbl_network_interface_s *interface = ospf_interface->interface;
     ospf_instance_s *ospf_instance = ospf_interface->instance;
 
+    ospf_lsa_tree_entry_s *entry;
     ospf_lsa_header_s *hdr;
     ospf_lsa_key_s *key;
     ospf_lsa_s *lsa;
 
+    dict_remove_result removed; 
     void **search = NULL;
 
     uint32_t lsa_count;
@@ -846,6 +854,17 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         }
         OSPF_PDU_CURSOR_INC(pdu, lsa_len);
         lsa_count--;
+
+        search = hb_tree_search(ospf_neighbor->lsa_request_tree, key);
+        if(search) {
+            entry = *search;
+            if(ospf_lsa_compare((ospf_lsa_header_s*)&entry->hdr, hdr) != 1) {
+                removed = hb_tree_remove(ospf_neighbor->lsa_request_tree, &lsa->key);
+                if(removed.removed) {
+                    ospf_lsa_tree_entry_free(removed.datum);
+                }
+            }
+        }
 
         search = hb_tree_search(ospf_instance->lsdb, key);
         if(search) {
@@ -893,6 +912,12 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         lsa->timestamp.tv_nsec = now.tv_sec;
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
+    }
+    if(hb_tree_count(ospf_neighbor->lsa_ack_tree) > 0) {
+        ospf_lsa_ack_tx(ospf_interface, ospf_neighbor);
+    }
+    if(hb_tree_count(ospf_neighbor->lsa_update_tree) > 0) {
+        ospf_lsa_update_tx(ospf_interface, ospf_neighbor, false);
     }
 }
 
@@ -1033,6 +1058,7 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
                 hdr_b = &entry->hdr;
             }
             if(ospf_lsa_compare(hdr_a, hdr_b) != -1) {
+                hb_tree_remove(ospf_neighbor->lsa_retry_tree, key);
                 ospf_lsa_tree_entry_free(entry);
             }
         } 
