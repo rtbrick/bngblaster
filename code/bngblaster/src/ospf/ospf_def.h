@@ -17,7 +17,7 @@
 #define OSPF_DEFAULT_ROUTER_PRIORITY        64
 #define OSPF_DEFAULT_METRIC                 10
 
-#define OSPF_LSA_TYPES                      12
+#define OSPF_LSA_TYPES                      11
 
 #define OSPF_LSA_LINK_P2P                   1
 #define OSPF_LSA_LINK_TRANSIT               2
@@ -42,7 +42,7 @@
 #define OSPFV3_LS_ACK_LEN_MIN               16
 
 #define OSPF_TX_BUF_LEN                     1500
-#define OSPF_MAX_SELF_LSA_LEN               1024
+#define OSPF_MAX_SELF_LSA_LEN               UINT16_MAX
 
 #define OSPF_GLOBAL_PDU_BUF_LEN             UINT16_MAX
 
@@ -225,7 +225,7 @@ typedef enum ospf_lsa_type_ {
     OSPF_LSA_TYPE_9     = 9,
     OSPF_LSA_TYPE_10    = 10,
     OSPF_LSA_TYPE_11    = 11,
-    OSPF_LSA_TYPE_MAX,
+    OSPF_LSA_TYPE_MAX   = 12,
 } ospf_lsa_type;
 
 typedef enum ospf_lsa_scope_ {
@@ -256,8 +256,7 @@ typedef struct ospf_lsa_link_s {
 } __attribute__ ((__packed__)) ospf_lsa_link_s;
 
 typedef struct ospf_lsa_key_ {
-    uint8_t     type; /* LS Type */
-    uint32_t    id; /* Link State ID */
+    uint32_t    id;     /* Link State ID */
     uint32_t    router; /* Advertising Router */
 } __attribute__ ((__packed__)) ospf_lsa_key_s;
 
@@ -327,15 +326,25 @@ typedef struct ospf_neighbor_ {
     uint32_t dd;
     uint8_t state;
 
+    struct {
+        uint32_t dd;
+        uint8_t flags;
+        uint8_t options;
+    } rx;
+
+
+    uint8_t dbd_lsa_type_start;
+    uint8_t dbd_lsa_type_next;
+
     ospf_lsa_key_s dbd_lsa_start; /* DBD LSA cursor */
     ospf_lsa_key_s dbd_lsa_next; /* DBD LSA cursor */
 
     bool dbd_more; /* DBD LSA cursor */
 
-    hb_tree *lsa_update_tree; /* Send LS Update (unicast) */
-    hb_tree *lsa_retry_tree; /* Send LS Update (unicast) */
-    hb_tree *lsa_request_tree; /* Send LS Request (unicast) */
-    hb_tree *lsa_ack_tree; /* Send LS Ack (direct unicast) */
+    hb_tree *lsa_update_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Direct Update (unicast) */
+    hb_tree *lsa_retry_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Retry Update (unicast) */
+    hb_tree *lsa_request_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Request (unicast) */
+    hb_tree *lsa_ack_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Ack (direct unicast) */
 
     struct timer_ *timer_dbd_retry;
     struct timer_ *timer_lsa_retry;
@@ -354,16 +363,13 @@ typedef struct ospf_interface_ {
     uint8_t type;       /* OSPF inteface type (P2P, broadcast, ...) */
     uint8_t state;
 
-    uint16_t max_len; /* max OSPF payload len without fragmentation */
-    uint16_t max_fragment_len; /* max OSPF payload len with fragmentation */
-
     uint16_t metric;
 
     uint32_t dr;
     uint32_t bdr;
 
-    hb_tree *lsa_flood_tree; /* Send LS Update (multicast) */
-    hb_tree *lsa_ack_tree; /* Send LS Ack (delayed multicast) */
+    hb_tree *lsa_flood_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Update (multicast) */
+    hb_tree *lsa_ack_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Ack (delayed multicast) */
 
     struct timer_ *timer_lsa_flood;
     struct timer_ *timer_lsa_ack;
@@ -388,12 +394,12 @@ typedef struct ospf_interface_ {
 typedef struct ospf_instance_ {
     ospf_config_s  *config;
     bool            overload;
-
     bool            teardown;
+
     struct timer_  *timer_teardown;
     struct timer_  *timer_lsa_gc;
 
-    hb_tree *lsdb;
+    hb_tree *lsdb[OSPF_LSA_TYPE_MAX];
 
     ospf_interface_s *interfaces;
 
@@ -427,9 +433,11 @@ typedef struct ospf_pdu_ {
 } ospf_pdu_s;
 
 typedef struct ospf_lsa_ {
+    /* LSA KEY */
+    uint8_t type;
+    ospf_lsa_key_s key;
     ospf_instance_s *instance;
 
-    ospf_lsa_key_s key;
     struct {
         ospf_lsa_source type;
         uint32_t router_id;
@@ -442,10 +450,11 @@ typedef struct ospf_lsa_ {
     struct timer_ *timer_lifetime;
     struct timer_ *timer_refresh;
 
-    uint32_t seq; /* Sequence Number */
     uint32_t refcount;
     bool expired;
     bool deleted;
+
+    uint32_t seq; /* Sequence Number */
 
     uint8_t *lsa;
     uint16_t lsa_len;
@@ -453,6 +462,7 @@ typedef struct ospf_lsa_ {
 } ospf_lsa_s;
 
 typedef struct ospf_lsa_tree_entry_ {
+    ospf_lsa_key_s key;
     ospf_lsa_header_s hdr;
     struct timespec timestamp;
     ospf_lsa_s *lsa;

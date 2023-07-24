@@ -225,6 +225,7 @@ struct action actions[] = {
     {"isis-lsp-purge", isis_ctrl_lsp_purge, false},
     {"isis-lsp-flap", isis_ctrl_lsp_flap, false},
     {"isis-teardown", isis_ctrl_teardown, false},
+    {"ospf-database", ospf_ctrl_database, true},
     {"bgp-sessions", bgp_ctrl_sessions, true},
     {"bgp-disconnect", bgp_ctrl_disconnect, false},
     {"bgp-teardown", bgp_ctrl_teardown, true},

@@ -94,3 +94,4 @@ ospf_rx_error(bbl_network_interface_s *interface, ospf_pdu_s *pdu, const char *e
 
     interface->stats.ospf_rx_error++;
 }
+

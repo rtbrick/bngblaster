@@ -255,6 +255,7 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
     uint8_t mac[ETH_ADDR_LEN];
 
     eth.src = interface->mac;
+    eth.vlan_outer = interface->vlan;
     if(ospf_interface->version == OSPF_VERSION_2) {
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ipv4;

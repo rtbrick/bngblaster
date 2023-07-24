@@ -352,7 +352,7 @@ typedef struct isis_lsp_ {
     isis_instance_s *instance;
 
     struct {
-        isis_lsp_source   type;
+        isis_lsp_source type;
         isis_adjacency_s *adjacency;
     } source;
 

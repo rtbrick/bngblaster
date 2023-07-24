@@ -8,6 +8,9 @@
  */
 #include "ospf.h"
 
+uint8_t g_pdu_buf[OSPF_GLOBAL_PDU_BUF_LEN] = {0};
+ospf_lsa_key_s g_lsa_key_zero = {0};
+
 /**
  * ospf_init
  * 
@@ -28,7 +31,10 @@ ospf_init() {
             g_ctx->ospf_instances = instance;
         }
         instance->config = config;
-        instance->lsdb = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
+
+        for(uint8_t type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+            instance->lsdb[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+        }
 
         if(!ospf_lsa_self_update(instance)) {
             LOG(OSPF, "Failed to generate self originated LSA for OSPFv%u instance %u\n", 

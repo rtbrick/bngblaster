@@ -10,10 +10,7 @@
 #define __BBL_OSPF_LSA_H__
 
 int
-ospf_lsa_id_compare(void *id1, void *id2);
-
-void
-ospf_lsa_tree_entry_free(ospf_lsa_tree_entry_s *entry);
+ospf_lsa_key_compare(void *id1, void *id2);
 
 void
 ospf_lsa_tree_entry_clear(void *key, void *ptr);

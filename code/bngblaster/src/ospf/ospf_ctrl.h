@@ -9,4 +9,7 @@
 #ifndef __BBL_OSPF_CTRL_H__
 #define __BBL_OSPF_CTRL_H__
 
+int
+ospf_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
 #endif

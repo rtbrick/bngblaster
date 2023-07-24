@@ -8,6 +8,9 @@
  */
 #include "ospf.h"
 
+extern uint8_t g_pdu_buf[];
+extern ospf_lsa_key_s g_lsa_key_zero;
+
 protocol_error_t
 ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor);
 
@@ -33,21 +36,21 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
     bbl_network_interface_s *interface = ospf_interface->interface;
 
     ospf_lsa_s *lsa; 
-    ospf_pdu_s pdu = {0};
-    uint8_t pdu_buf[OSPF_TX_BUF_LEN];
-
-    uint8_t options = OSPF_DBD_OPTION_E|OSPF_DBD_OPTION_L|OSPF_DBD_OPTION_O;
-    uint8_t flags = 0;
-
     hb_itor *itor;
     bool next;
+
+    uint16_t l3_hdr_len;
+    uint8_t options = OSPF_DBD_OPTION_E|OSPF_DBD_OPTION_L|OSPF_DBD_OPTION_O;
+    uint8_t flags = 0;
+    uint8_t type = 0;
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
+    ospf_pdu_s pdu;
     ospf_pdu_init(&pdu, OSPF_PDU_DB_DESC, ospf_neighbor->version);
-    pdu.pdu = pdu_buf;
-    pdu.pdu_buf_len = OSPF_TX_BUF_LEN;
+    pdu.pdu = g_pdu_buf;
+    pdu.pdu_buf_len = OSPF_GLOBAL_PDU_BUF_LEN;
 
     /* OSPF header */
     ospf_pdu_add_u8(&pdu, ospf_neighbor->version);
@@ -57,10 +60,12 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
     ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
     ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
     if(ospf_neighbor->version == OSPF_VERSION_2) {
+        l3_hdr_len = 20;
         /* Authentication */
         ospf_pdu_add_u16(&pdu, OSPF_AUTH_NONE);
         ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_DATA_LEN);
     } else {
+        l3_hdr_len = 40;
         ospf_pdu_add_u16(&pdu, 0);
         ospf_pdu_add_u32(&pdu, 0);
     }
@@ -73,34 +78,33 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
         flags |= OSPF_DBD_FLAG_I;
     } else {
         /* Add LSA header */
-        itor = hb_itor_new(ospf_instance->lsdb);
-        if(ospf_neighbor->dbd_lsa_start.type) {
+        for(type = ospf_neighbor->dbd_lsa_type_start; type < OSPF_LSA_TYPE_MAX; type++) {
+            itor = hb_itor_new(ospf_instance->lsdb[type]);
             next = hb_itor_search_ge(itor, &ospf_neighbor->dbd_lsa_start);
-        } else {
-            next = hb_itor_first(itor);
-        }
+            while(true) {
+                if(!next) {
+                    ospf_neighbor->dbd_more = false;
+                    break;
+                }
+                lsa = *hb_itor_datum(itor);
+                if(lsa->deleted) {
+                    /* Ignore deleted LSA. */
+                    next = hb_itor_next(itor);
+                    continue;
+                }
+                if((l3_hdr_len + pdu.pdu_len + OSPF_LLS_HDR_LEN + OSPF_LSA_HDR_LEN) > interface->mtu) {
+                    memcpy(&ospf_neighbor->dbd_lsa_next, &lsa->key, sizeof(ospf_lsa_key_s));
+                    ospf_neighbor->dbd_lsa_type_next = type;
+                    break;
+                }
 
-        while(true) {
-            if(!next) {
-                ospf_neighbor->dbd_more = false;
-                break;
-            }
-            lsa = *hb_itor_datum(itor);
-            if(lsa->deleted) {
-                /* Ignore deleted LSA. */
+                ospf_lsa_update_age(lsa, &now);
+                ospf_pdu_add_bytes(&pdu, lsa->lsa, OSPF_LSA_HDR_LEN);
+
                 next = hb_itor_next(itor);
-                continue;
             }
-            if((pdu.cur + OSPF_LLS_HDR_LEN + OSPF_LSA_HDR_LEN) 
-                > ospf_interface->max_len) {
-                memcpy(&ospf_neighbor->dbd_lsa_next, &lsa->key, sizeof(ospf_lsa_key_s));
-                break;
-            }
+            hb_itor_free(itor);
 
-            ospf_lsa_update_age(lsa, &now);
-            ospf_pdu_add_bytes(&pdu, lsa->lsa, OSPF_LSA_HDR_LEN);
-
-            next = hb_itor_next(itor);
         }
     }
 
@@ -154,11 +158,12 @@ ospf_neigbor_retry_job(timer_s *timer)
 static void
 ospf_neighbor_clear(ospf_neighbor_s *ospf_neighbor)
 {
-    hb_tree_clear(ospf_neighbor->lsa_update_tree, ospf_lsa_tree_entry_clear);
-    hb_tree_clear(ospf_neighbor->lsa_retry_tree, ospf_lsa_tree_entry_clear);
-    hb_tree_clear(ospf_neighbor->lsa_request_tree, ospf_lsa_tree_entry_clear);
-    hb_tree_clear(ospf_neighbor->lsa_ack_tree, ospf_lsa_tree_entry_clear);
-
+    for(uint8_t type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+        hb_tree_clear(ospf_neighbor->lsa_update_tree[type], ospf_lsa_tree_entry_clear);
+        hb_tree_clear(ospf_neighbor->lsa_retry_tree[type], ospf_lsa_tree_entry_clear);
+        hb_tree_clear(ospf_neighbor->lsa_request_tree[type], ospf_lsa_tree_entry_clear);
+        hb_tree_clear(ospf_neighbor->lsa_ack_tree[type], ospf_lsa_tree_entry_clear);
+    }
     timer_del(ospf_neighbor->timer_lsa_retry);
 }
 
@@ -169,7 +174,9 @@ ospf_neigbor_exstart(ospf_neighbor_s *ospf_neighbor)
     ospf_neighbor->dd = (rand() & 0xffff)+1;
     ospf_neighbor->dbd_more = true;
     memset(&ospf_neighbor->dbd_lsa_start, 0x0, sizeof(ospf_lsa_key_s));
-    memset(&ospf_neighbor->dbd_lsa_next, 0x0, sizeof(ospf_lsa_key_s));
+    ospf_neighbor->dbd_lsa_type_start = OSPF_LSA_TYPE_1;
+    memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
+    ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
 
     ospf_neighbor_dbd_tx(ospf_neighbor);
 
@@ -245,10 +252,12 @@ ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
     ospf_neighbor->state = OSPF_NBSTATE_DOWN;
     ospf_neighbor->interface = ospf_interface;
 
-    ospf_neighbor->lsa_update_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
-    ospf_neighbor->lsa_retry_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
-    ospf_neighbor->lsa_request_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
-    ospf_neighbor->lsa_ack_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
+    for(uint8_t type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+        ospf_neighbor->lsa_update_tree[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+        ospf_neighbor->lsa_retry_tree[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+        ospf_neighbor->lsa_request_tree[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+        ospf_neighbor->lsa_ack_tree[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+    }
 
     LOG(OSPF, "OSPFv%u new neighbor %s on interface %s\n",
         ospf_neighbor->version,
@@ -375,6 +384,19 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         return;
     }
 
+    if((dd == ospf_neighbor->rx.dd) && (options == ospf_neighbor->rx.options) && 
+       (((OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_M|OSPF_DBD_FLAG_MS) && flags) ==
+        ((OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_M|OSPF_DBD_FLAG_MS) && ospf_neighbor->rx.flags))) {
+        /* Duplicate received! */
+        if(!ospf_neighbor->master) {
+            ospf_neighbor_dbd_tx(ospf_neighbor);
+        }
+        return;
+    }
+    ospf_neighbor->rx.dd = dd;
+    ospf_neighbor->rx.flags = flags;
+    ospf_neighbor->rx.options = options;
+
     if(ospf_neighbor->state == OSPF_NBSTATE_EXSTART) {
         ospf_neighbor->options = options;
         if(flags & OSPF_DBD_FLAG_I && 
@@ -424,7 +446,10 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
             /* Next */
             ospf_neighbor->dd++;
             memcpy(&ospf_neighbor->dbd_lsa_start, &ospf_neighbor->dbd_lsa_next, sizeof(ospf_lsa_key_s));
+            ospf_neighbor->dbd_lsa_type_start = ospf_neighbor->dbd_lsa_type_next;
             memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
+            ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
+
             ospf_neighbor_dbd_tx(ospf_neighbor);
         }
     } else {
@@ -454,14 +479,20 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
 
-        search = hb_tree_search(ospf_instance->lsdb, &hdr->type);
+        if(hdr->type < OSPF_LSA_TYPE_1 || hdr->type > OSPF_LSA_TYPE_11) {
+            ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
+            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            return;
+        }
+
+        search = hb_tree_search(ospf_instance->lsdb[hdr->type], &hdr->id);
         if(search) {
             lsa = *search;
             if(ospf_lsa_compare(hdr, (ospf_lsa_header_s*)lsa->lsa) != 1) {
                 continue;
             }
         }
-        ospf_lsa_tree_add(NULL, hdr, ospf_neighbor->lsa_request_tree);
+        ospf_lsa_tree_add(NULL, hdr, ospf_neighbor->lsa_request_tree[hdr->type]);
     }
 
     /* Change state to loading if all DBD messages have been exchanged. */

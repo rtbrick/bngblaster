@@ -233,13 +233,15 @@ ospf_interface_init(bbl_network_interface_s *interface,
 
                 if(interface_type == OSPF_INTERFACE_P2P ||
                    interface_type == OSPF_INTERFACE_VIRTUAL) {
-                    ospf_interface->state = OSPF_IFSTATE_P2P;
+                    ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_P2P);
                 } else {
-                    ospf_interface->state = OSPF_IFSTATE_WAITING;
+                    ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_WAITING);
                 }
 
-                ospf_interface->lsa_flood_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
-                ospf_interface->lsa_ack_tree = hb_tree_new((dict_compare_func)ospf_lsa_id_compare);
+                for(uint8_t type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+                    ospf_interface->lsa_flood_tree[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+                    ospf_interface->lsa_ack_tree[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);
+                }
 
                 timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_hello, 
                                    "OSPF HELLO", 
