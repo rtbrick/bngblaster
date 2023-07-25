@@ -611,6 +611,7 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
         lsa = ospf_lsa_new(OSPF_LSA_TYPE_1, &key, ospf_instance);
         lsa->seq = OSPF_LSA_SEQ_INIT;
         lsa->source.type = OSPF_SOURCE_SELF;
+        lsa->source.router_id = config->router_id;
         lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
         lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
         result = hb_tree_insert(ospf_instance->lsdb[OSPF_LSA_TYPE_1], &lsa->key);
