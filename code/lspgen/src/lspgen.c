@@ -321,7 +321,7 @@ lspgen_get_prefix_inc(uint32_t afi, uint32_t prefix_len)
 }
 
 /*
- * Walk the graph of the LSDB and add the required node/link attributes for LSP generation.
+ * Walk the graph of the LSDB and add the required node/link attributes for IS-IS LSP generation.
  */
 void
 lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
@@ -513,6 +513,125 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
     dict_itor_free(itor);
 }
 
+/*
+ * Walk the graph of the LSDB and add the required node/link attributes for OSPFv2 LSP generation.
+ */
+void
+lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
+{
+    struct lsdb_node_ *node;
+    struct lsdb_link_ *link;
+    struct lsdb_attr_ attr_template;
+    dict_itor *itor;
+    __uint128_t addr, inc, ext_addr4, ext_incr4;
+    uint32_t ext_per_node;
+
+    /*
+     * Walk the node DB.
+     */
+    itor = dict_itor_new(ctx->node_dict);
+    if (!itor) {
+        return;
+    }
+
+    /*
+     * Node DB empty ?
+     */
+    if (!dict_itor_first(itor)) {
+        dict_itor_free(itor);
+        LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    /*
+     * For external routes load the first address of the pool.
+     */
+    ext_addr4 = lspgen_load_addr((uint8_t*)&ctx->ipv4_ext_prefix.address, sizeof(ipv4addr_t));
+    ext_incr4 = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_ext_prefix.len);
+
+    do {
+        node = *dict_itor_datum(itor);
+
+        /* Host name */
+        if (node->node_name) {
+            lsdb_reset_attr_template(&attr_template);
+            attr_template.key.ordinal = 1;
+            attr_template.key.attr_type = ISIS_TLV_HOSTNAME;
+            strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
+            lsdb_add_node_attr(node, &attr_template);
+        }
+
+        /* IPv4 loopback prefix */
+        lsdb_reset_attr_template(&attr_template);
+        lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
+        attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
+        if (!ctx->no_sr) {
+            attr_template.key.prefix.sid = node->node_index;
+            attr_template.key.prefix.adv_sid = true;
+        }
+        attr_template.key.prefix.node_flag = true;
+        attr_template.key.ordinal = 1;
+        attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+        lsdb_add_node_attr(node, &attr_template);
+
+        /* external prefixes */
+        ext_per_node = ctx->num_ext / ctx->num_nodes;
+        while (ext_per_node--) {
+            /* ipv4 external prefix */
+            lsdb_reset_attr_template(&attr_template);
+            lspgen_store_addr(ext_addr4, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, 4);
+            attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_ext_prefix.len;
+            attr_template.key.prefix.metric = 100;
+            attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+            lsdb_add_node_attr(node, &attr_template);
+            ext_addr4 += ext_incr4;
+        }
+
+        if (!ctx->no_sr) {
+            /* SR capability */
+            lsdb_reset_attr_template(&attr_template);
+            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
+            addr += node->node_index;
+            lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
+            attr_template.key.cap.srgb_base = ctx->srgb_base;
+            attr_template.key.cap.srgb_range = ctx->srgb_range;
+            if (!ctx->no_ipv4) {
+                attr_template.key.cap.mpls_ipv4_flag = true; /* mpls ipv4 */
+            }
+            attr_template.key.attr_type = ISIS_TLV_CAP;
+            attr_template.key.ordinal = 1;
+            lsdb_add_node_attr(node, &attr_template);
+        }
+
+        /*
+         * Walk all of our neighbors.
+         */
+        CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
+
+            /* Generate an IS reach for each link */
+            lsdb_reset_attr_template(&attr_template);
+            attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
+            memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 7);
+            attr_template.key.link.metric = link->link_metric;
+            lsdb_add_node_attr(node, &attr_template);
+
+            /* Generate an IPv4 prefix for each link */
+            lsdb_reset_attr_template(&attr_template);
+            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
+            inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
+            addr += link->link_index * inc;
+            lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
+            attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_link_prefix.len;
+            attr_template.key.prefix.metric = link->link_metric;
+            attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+            lsdb_add_node_attr(node, &attr_template);
+        }
+
+    } while (dict_itor_next(itor));
+
+    dict_itor_free(itor);
+}
+
 void
 lspgen_init_ctx(struct lsdb_ctx_ *ctx)
 {
@@ -618,7 +737,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     LOG(NORMAL, " Protocol %s\n", lsdb_format_proto(ctx));
 
     /*
-     * No Area specified ? SHow at least the default
+     * No Area specified ? Show at least the default.
      */
     if (!ctx->num_area) {
         ctx->num_area = 1;
@@ -800,7 +919,14 @@ main(int argc, char *argv[])
                 exit(0);
 	    case 'P':
 		ctx->protocol_id = key2val(proto_names, optarg);
-		ctx->topology_id.area = 0; /* reset area */
+		if (ctx->protocol_id == PROTO_OSPF2) {
+		    ctx->topology_id.area = 0; /* reset area */
+		    ctx->no_ipv6 = true;
+		}
+		if (ctx->protocol_id == PROTO_OSPF3) {
+		    ctx->topology_id.area = 0; /* reset area */
+		    ctx->no_ipv4 = true;
+		}
 		break;
             case 'r':
                 if (ctx->config_filename) {
@@ -969,12 +1095,16 @@ main(int argc, char *argv[])
          * Generate a random graph.
          */
         lsdb_init_graph(ctx);
+
         /*
          * Generate the node and link attributes.
          */
 	if (ctx->protocol_id == PROTO_ISIS) {
 	    lspgen_gen_isis_attr(ctx);
+	} else if (ctx->protocol_id == PROTO_OSPF2) {
+	    lspgen_gen_ospf2_attr(ctx);
 	}
+
     }
 
     /*
