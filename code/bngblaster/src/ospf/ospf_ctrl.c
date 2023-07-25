@@ -85,7 +85,7 @@ ospf_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
     int result = 0;
     json_t *root = NULL;
     json_t *database = NULL;
-    ospf_instance_s *instance = NULL;
+    ospf_instance_s *ospf_instance = NULL;
     int instance_id = 0;
     uint8_t type;
 
@@ -93,11 +93,11 @@ ospf_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     /* Unpack further arguments */
-    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, instance);
+    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, ospf_instance);
 
     database = json_array();
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
-        ospf_ctrl_append_database_entries(instance->lsdb[type], database, &now);
+        ospf_ctrl_append_database_entries(ospf_instance->lsdb[type], database, &now);
     }
     root = json_pack("{ss si so}",
                      "status", "ok",
@@ -109,6 +109,120 @@ ospf_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
         json_decref(database);
+    }
+    return result;
+}
+
+int
+ospf_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+    json_t *root = NULL;
+    json_t *interface = NULL;
+    json_t *interfaces = NULL;
+    ospf_instance_s *ospf_instance = NULL;
+    ospf_interface_s *ospf_interface = NULL;
+
+    int instance_id = 0;
+
+    /* Unpack further arguments */
+    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, ospf_instance);
+
+    interfaces = json_array();
+    ospf_interface = ospf_instance->interfaces;
+    while(ospf_interface) {
+        interface = json_pack("{ss ss ss ss ss si si s{sI sI sI sI sI sI sI sI sI sI}}", 
+            "name", ospf_interface->interface->name,
+            "type", ospf_interface_type_string(ospf_interface->type),
+            "state", ospf_interface_state_string(ospf_interface->state),
+            "dr", format_ipv4_address(&ospf_interface->dr),
+            "bdr", format_ipv4_address(&ospf_interface->bdr),
+            "neighbors", ospf_interface->neighbors_count,
+            "neighbors-full", ospf_interface->neighbors_full,
+            "stats", 
+            "hello-rx",  ospf_interface->stats.hello_rx,
+            "hello-tx", ospf_interface->stats.hello_tx,
+            "dbd-rx", ospf_interface->stats.db_des_rx,
+            "dbd-tx", ospf_interface->stats.db_des_tx,
+            "ls-req-rx", ospf_interface->stats.ls_req_rx,
+            "ls-req-tx", ospf_interface->stats.ls_req_tx,
+            "ls-update-rx", ospf_interface->stats.ls_upd_rx,
+            "ls-update-tx", ospf_interface->stats.ls_upd_tx,
+            "ls-ack-rx", ospf_interface->stats.ls_ack_rx,
+            "ls-ack-tx", ospf_interface->stats.ls_ack_tx);
+        if(interface) {
+            json_array_append(interfaces, interface);
+        }
+        ospf_interface = ospf_interface->next;
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "ospf-interfaces", interfaces);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(interfaces);
+    }
+    return result;
+}
+
+int
+ospf_ctrl_neighbors(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+    json_t *root = NULL;
+    json_t *neighbor = NULL;
+    json_t *neighbors = NULL;
+    ospf_instance_s *ospf_instance = NULL;
+    ospf_interface_s *ospf_interface = NULL;
+    ospf_neighbor_s *ospf_neighbor = NULL;
+
+    uint8_t type;
+    uint32_t retries, requests;
+
+    int instance_id = 0;
+
+    /* Unpack further arguments */
+    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, ospf_instance);
+
+    neighbors = json_array();
+    ospf_interface = ospf_instance->interfaces;
+    while(ospf_interface) {
+        ospf_neighbor = ospf_interface->neighbors;
+        while(ospf_neighbor) {
+            retries = 0; requests = 0;
+            for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+                retries += hb_tree_count(ospf_neighbor->lsa_retry_tree[type]);
+                requests += hb_tree_count(ospf_neighbor->lsa_request_tree[type]);
+            }
+            neighbor = json_pack("{ss ss ss si si}", 
+                "interface", ospf_interface->interface->name,
+                "router-id", format_ipv4_address(&ospf_neighbor->router_id),
+                "state", ospf_neighbor_state_string(ospf_neighbor->state),
+                "retry-tree-entries", retries,
+                "request-tree-entries", requests);
+            if(neighbor) {
+                json_array_append(neighbors, neighbor);
+            }
+            ospf_neighbor = ospf_neighbor->next;
+        }
+        ospf_interface = ospf_interface->next;
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "ospf-neighbors", neighbors);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(neighbors);
     }
     return result;
 }

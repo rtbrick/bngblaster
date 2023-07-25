@@ -25,6 +25,9 @@ const char *
 ospf_interface_state_string(uint8_t state);
 
 const char *
+ospf_interface_type_string(uint8_t state);
+
+const char *
 ospf_pdu_type_string(uint8_t type);
 
 void

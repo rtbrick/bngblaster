@@ -72,6 +72,19 @@ ospf_interface_state_string(uint8_t state)
 }
 
 const char *
+ospf_interface_type_string(uint8_t state)
+{
+    switch(state) {
+        case OSPF_INTERFACE_P2P: return "P2P";
+        case OSPF_INTERFACE_BROADCAST: return "Broadcast";
+        case OSPF_INTERFACE_VIRTUAL: return "Virtual";
+        case OSPF_INTERFACE_NBMA: return "NBMA";
+        case OSPF_INTERFACE_P2M: return "P2M";
+        default: return "INVALID";
+    }
+}
+
+const char *
 ospf_pdu_type_string(uint8_t type)
 {
 
