@@ -421,7 +421,7 @@ ospf_lsa_refresh_job(timer_s *timer)
     ospf_lsa_refresh(lsa);
 }
 
-static ospf_lsa_s *
+ospf_lsa_s *
 ospf_lsa_new(uint8_t type, ospf_lsa_key_s *key, ospf_instance_s *ospf_instance)
 {
     ospf_lsa_s *lsa = calloc(1, sizeof(ospf_lsa_s));

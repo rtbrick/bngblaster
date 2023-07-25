@@ -25,6 +25,9 @@ void
 ospf_lsa_gc_job(timer_s *timer);
 
 void
+ospf_lsa_lifetime(ospf_lsa_s *lsa);
+
+void
 ospf_lsa_flood(ospf_lsa_s *lsa);
 
 void
@@ -38,6 +41,9 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance);
 
 void
 ospf_lsa_self_update_request(ospf_instance_s *ospf_instance);
+
+ospf_lsa_s *
+ospf_lsa_new(uint8_t type, ospf_lsa_key_s *key, ospf_instance_s *ospf_instance);
 
 protocol_error_t
 ospf_lsa_update_tx(ospf_interface_s *ospf_interface, 
