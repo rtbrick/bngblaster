@@ -105,14 +105,16 @@ ospf_interface_flood_job(timer_s *timer)
 void
 ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
 {
-    ospf_neighbor_s *neighbor = ospf_interface->neighbors;
-
     if(ospf_interface->state == state) return;
-    
+ 
+    ospf_neighbor_s *neighbor = ospf_interface->neighbors;
+    uint8_t old = ospf_interface->state;
+
+    ospf_interface->state = state;
     LOG(OSPF, "OSPFv%u interface %s state %s -> %s on interface %s\n",
         ospf_interface->version,
         format_ipv4_address(&ospf_interface->instance->config->router_id), 
-        ospf_interface_state_string(ospf_interface->state),
+        ospf_interface_state_string(old),
         ospf_interface_state_string(state),
         ospf_interface->interface->name);
 
@@ -124,16 +126,14 @@ ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
                            0, 10 * MSEC, ospf_interface, &ospf_interface_flood_job);
     }
 
-    if(ospf_interface->state > OSPF_IFSTATE_P2P) {
-        ospf_interface->state = state;
+    if(old > OSPF_IFSTATE_P2P) {
         /* This refers to the event "AdjOK?" as described in RFC2328 */
         while(neighbor) {
             ospf_neigbor_adjok(neighbor);
             neighbor = neighbor->next;
         }
-    } else {
-        ospf_interface->state = state;
     }
+    ospf_lsa_self_update_request(ospf_interface->instance);
 }
 
 void

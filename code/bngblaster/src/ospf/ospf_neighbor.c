@@ -198,14 +198,17 @@ ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
 {
     if(ospf_neighbor->state == state) return;
 
+    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+    uint8_t old = ospf_neighbor->state;
+
+    ospf_neighbor->state = state;
     LOG(OSPF, "OSPFv%u neighbor %s state %s -> %s on interface %s\n",
         ospf_neighbor->version,
         format_ipv4_address(&ospf_neighbor->router_id), 
-        ospf_neighbor_state_string(ospf_neighbor->state),
+        ospf_neighbor_state_string(old),
         ospf_neighbor_state_string(state),
-        ospf_neighbor->interface->interface->name);
+        ospf_interface->interface->name);
 
-    ospf_neighbor->state = state;
 
     switch(state) {
         case OSPF_NBSTATE_DOWN:
@@ -221,8 +224,20 @@ ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
         case OSPF_NBSTATE_LOADING:
             ospf_neigbor_loading(ospf_neighbor);
             break;
+        case OSPF_NBSTATE_FULL:
+            break;
         default:
             break;
+    }
+
+    /* Update router LSA if neighbor state changes to or from FULL. */
+    if(state == OSPF_NBSTATE_FULL) {
+        ospf_interface->neighbors_full++;
+        ospf_lsa_self_update_request(ospf_interface->instance);
+    } else if (old == OSPF_NBSTATE_FULL) {
+        assert(ospf_interface->neighbors_full);
+        ospf_interface->neighbors_full--;
+        ospf_lsa_self_update_request(ospf_interface->instance);
     }
 }
 
@@ -264,7 +279,9 @@ ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
         format_ipv4_address(&ospf_neighbor->router_id), 
         ospf_interface->interface->name);
 
+    ospf_interface->neighbors_count++;
     ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
+
     return ospf_neighbor;
 }
 

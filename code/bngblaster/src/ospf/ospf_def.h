@@ -247,7 +247,7 @@ typedef struct ospf_lsa_header_ {
     uint16_t    length; /* Length */
 } __attribute__ ((__packed__)) ospf_lsa_header_s;
 
-typedef struct ospf_lsa_link_s {
+typedef struct ospf_lsa_link_ {
     uint32_t    link_id; /* Link ID */
     uint32_t    link_data; /* Link Data */
     uint8_t     type; /* Type */
@@ -332,7 +332,6 @@ typedef struct ospf_neighbor_ {
         uint8_t options;
     } rx;
 
-
     uint8_t dbd_lsa_type_start;
     uint8_t dbd_lsa_type_next;
 
@@ -364,6 +363,8 @@ typedef struct ospf_interface_ {
     uint8_t state;
 
     uint16_t metric;
+    uint16_t neighbors_count;
+    uint16_t neighbors_full;
 
     uint32_t dr;
     uint32_t bdr;
@@ -398,6 +399,8 @@ typedef struct ospf_instance_ {
 
     struct timer_  *timer_teardown;
     struct timer_  *timer_lsa_gc;
+    struct timer_  *timer_lsa_self;
+    bool lsa_self_requested;
 
     hb_tree *lsdb[OSPF_LSA_TYPE_MAX];
 

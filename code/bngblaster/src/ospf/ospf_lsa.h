@@ -36,6 +36,8 @@ ospf_lsa_purge_all_external(ospf_instance_s *instance);
 bool
 ospf_lsa_self_update(ospf_instance_s *ospf_instance);
 
+void
+ospf_lsa_self_update_request(ospf_instance_s *ospf_instance);
 
 protocol_error_t
 ospf_lsa_update_tx(ospf_interface_s *ospf_interface, 

@@ -424,6 +424,18 @@ ospf_lsa_add_interface(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
     link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
 
     if(ospf_interface->type == OSPF_INTERFACE_P2P) {
+        link->link_id = ospf_interface->interface->ip.address & ipv4_len_to_mask(ospf_interface->interface->ip.len);
+        link->link_data = ipv4_len_to_mask(ospf_interface->interface->ip.len);
+        link->type = OSPF_LSA_LINK_STUB;
+    } else if(ospf_interface->type == OSPF_INTERFACE_BROADCAST) {
+
+    } else {
+        return false;
+    }
+
+
+
+    if(ospf_interface->type == OSPF_INTERFACE_P2P) {
         if(!(neighbor && neighbor->state == OSPF_NBSTATE_FULL)) {
             return false;
         }
@@ -475,11 +487,12 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
     dict_insert_result result;
 
     uint8_t options = OSPF_OPTION_E_BIT;
-    uint16_t *links;
 
     ospf_lsa_s *lsa;
     ospf_lsa_header_s *hdr;
     ospf_lsa_link_s *link;
+    uint16_t links = 0;
+    uint16_t links_cur = 0;
 
     ospf_external_connection_s *external_connection = NULL;
 
@@ -500,7 +513,7 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
         if(result.inserted) {
             *result.datum_ptr = lsa;
         } else {
-            LOG_NOARG(OSPF, "Failed to add self generated OSPF LSA to LSDB\n");
+            LOG_NOARG(OSPF, "Failed to add self generated OSPF Type 1 LSA to LSDB\n");
             return false;
         }
     }
@@ -526,9 +539,13 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
     hdr->checksum = 0;
     hdr->length = 0;
 
+    /* Set external and border router bits. */
     *(lsa->lsa+lsa->lsa_len++) = OSPF_LSA_BORDER_ROUTER|OSPF_LSA_EXTERNAL_ROUTER;
+    /* Reserved */
     *(lsa->lsa+lsa->lsa_len++) = 0;
-    links = (uint16_t*)(lsa->lsa+lsa->lsa_len);
+    /* # links */
+    links_cur = lsa->lsa_len;
+    lsa->lsa_len += sizeof(uint16_t);
 
     /* Add loopback */
     link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
@@ -563,9 +580,29 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
         external_connection = external_connection->next;
     }
 
+    *(uint16_t*)(lsa->lsa+links_cur) = htobe16(links); 
     hdr->length = htobe16(lsa->lsa_len);
     ospf_lsa_refresh(lsa);
     return true;
+}
+
+void
+ospf_lsa_self_update_job(timer_s *timer)
+{
+    ospf_instance_s *ospf_instance = timer->data;
+    ospf_lsa_self_update(ospf_instance);
+    ospf_instance->lsa_self_requested = false;
+}
+
+void
+ospf_lsa_self_update_request(ospf_instance_s *ospf_instance)
+{
+    if(!ospf_instance->lsa_self_requested) {
+        ospf_instance->lsa_self_requested = true;
+        timer_add(&g_ctx->timer_root, &ospf_instance->timer_lsa_self, 
+                  "OSPF LSA GC", 0, 10 * MSEC, ospf_instance,
+                  &ospf_lsa_self_update_job);
+    }
 }
 
 protocol_error_t
@@ -659,7 +696,7 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
                     ospf_pdu_add_bytes(&pdu, lsa->lsa, lsa->lsa_len);
                     lsa_count++;
                 }
-                ospf_lsa_tree_remove((ospf_lsa_key_s*)&entry->key, tree);
+                ospf_lsa_tree_remove(&entry->key, tree);
                 search = hb_tree_search_gt(tree, &g_lsa_key_zero);
             }
         }
@@ -861,6 +898,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
     ospf_lsa_s *lsa;
 
     void **search = NULL;
+    dict_insert_result result;
 
     uint32_t lsa_count;
     uint16_t lsa_len;
@@ -954,6 +992,14 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         } else {
             /* NEW LSA */
             lsa = ospf_lsa_new(hdr->type, key, ospf_instance);
+            result = hb_tree_insert(ospf_instance->lsdb[hdr->type], &lsa->key);
+            assert(result.inserted);
+            if(result.inserted) {
+                *result.datum_ptr = lsa;
+            } else {
+                LOG_NOARG(OSPF, "Failed to add received OSPF LSA to LSDB\n");
+                return;
+            }
         }
 
         if(lsa->lsa_buf_len < lsa_len) {
@@ -1060,6 +1106,8 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
             ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
         }
     }
+    /* Send direct LSA update. */
+    ospf_lsa_update_tx(ospf_interface, ospf_neighbor, false);
 }
 
 /**
