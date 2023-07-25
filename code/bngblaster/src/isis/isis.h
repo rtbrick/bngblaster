@@ -12,7 +12,6 @@
 #include "../bbl.h"
 #include "isis_def.h"
 #include "isis_utils.h"
-#include "isis_checksum.h"
 #include "isis_pdu.h"
 #include "isis_adjacency.h"
 #include "isis_p2p_hello.h"

@@ -10,6 +10,6 @@
 #define __BBL_ISIS_CHECKSUM_H__
 
 uint16_t 
-isis_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset);
+bbl_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset);
 
 #endif

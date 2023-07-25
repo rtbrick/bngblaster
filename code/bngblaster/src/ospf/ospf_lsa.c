@@ -330,7 +330,7 @@ ospf_lsa_update_hdr(ospf_lsa_s *lsa)
     hdr = (ospf_lsa_header_s*)lsa->lsa;
     hdr->age = htobe16(lsa->age);
     hdr->seq = htobe32(lsa->seq);
-    checksum = ospf_checksum_fletcher16(lsa->lsa+OSPF_LSA_AGE_LEN, lsa->lsa_len-OSPF_LSA_AGE_LEN, 14);
+    checksum = bbl_checksum_fletcher16(lsa->lsa+OSPF_LSA_AGE_LEN, lsa->lsa_len-OSPF_LSA_AGE_LEN, 14);
     hdr->checksum = checksum;
 }
 
@@ -343,7 +343,7 @@ ospf_lsa_verify_checksum(ospf_lsa_header_s *hdr)
  
     if(len < sizeof(ospf_lsa_header_s)) return false;
 
-    checksum = ospf_checksum_fletcher16(&hdr->options, len-OSPF_LSA_AGE_LEN, 14);
+    checksum = bbl_checksum_fletcher16(&hdr->options, len-OSPF_LSA_AGE_LEN, 14);
     hdr->checksum = checksum_orig;
 
     if(checksum == checksum_orig) {

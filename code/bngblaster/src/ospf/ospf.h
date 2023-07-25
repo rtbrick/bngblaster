@@ -12,7 +12,6 @@
 #include "../bbl.h"
 #include "ospf_def.h"
 #include "ospf_utils.h"
-#include "ospf_checksum.h"
 #include "ospf_pdu.h"
 #include "ospf_interface.h"
 #include "ospf_neighbor.h"

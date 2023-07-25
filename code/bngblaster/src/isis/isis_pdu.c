@@ -178,7 +178,7 @@ isis_pdu_update_checksum(isis_pdu_s *pdu)
     switch (pdu->pdu_type) {
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
-            isis_checksum_fletcher16(
+            bbl_checksum_fletcher16(
                 pdu->pdu+ISIS_OFFSET_LSP_ID, 
                 pdu->pdu_len-ISIS_OFFSET_LSP_ID, 
                 ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID);
@@ -242,7 +242,7 @@ isis_pdu_validate_checksum(isis_pdu_s *pdu)
         case ISIS_PDU_L2_LSP:
             checksum_orig = *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM);
             if(checksum_orig > 0) {
-                checksum = isis_checksum_fletcher16(
+                checksum = bbl_checksum_fletcher16(
                     pdu->pdu+ISIS_OFFSET_LSP_ID, 
                     pdu->pdu_len-ISIS_OFFSET_LSP_ID, 
                     ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID);

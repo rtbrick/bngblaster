@@ -1,18 +1,18 @@
 /*
- * BNG Blaster (BBL) - IS-IS Checksum
+ * BNG Blaster (BBL) - Checksum Functions
  * 
  * Christian Giese, February 2022
  *
  * Copyright (C) 2020-2023, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
-#include "isis.h"
+#include "bbl.h"
 
 /* Fletcher Checksum -- Refer to RFC1008. */
 #define MODX    4102 /* 5802 should be fine */
 
 /**
- * isis_checksum_fletcher16
+ * bbl_checksum_fletcher16
  *
  * This function is based on the implementation from 
  * the famous FRR project (https://github.com/FRRouting/frr).
@@ -21,7 +21,7 @@
  * index required in the specification ISO 8473, Annex C.1.
  */
 uint16_t 
-isis_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset)
+bbl_checksum_fletcher16(uint8_t *buf, uint16_t len, uint16_t offset)
 {
     uint8_t *p;
     uint16_t *csum;
