@@ -247,6 +247,49 @@ ospf_lsa_gc_job(timer_s *timer)
 
 }
 
+void
+ospf_lsa_purge_job(timer_s *timer)
+{
+    ospf_lsa_s *lsa = timer->data;
+    if(lsa->expired) {
+        lsa->deleted = true;
+    }
+}
+
+void
+ospf_lsa_lifetime_job(timer_s *timer)
+{
+    ospf_lsa_s *lsa = timer->data;
+    uint32_t lsa_id = lsa->key.id;
+    uint32_t lsa_router = lsa->key.router;
+
+    LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) lifetime expired (max age)\n",
+        lsa->type, format_ipv4_address(&lsa_id), lsa->seq, format_ipv4_address(&lsa_router));
+
+    lsa->expired = true;
+    timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
+              "OSPF PURGE", 30, 0, 
+              lsa, &ospf_lsa_purge_job);
+    timer_no_smear(lsa->timer_lifetime);
+}
+
+void
+ospf_lsa_lifetime(ospf_lsa_s *lsa)
+{
+    timer_del(lsa->timer_refresh);
+    if(lsa->age < OSPF_LSA_MAX_AGE) {
+        timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
+                  "OSPF LIFETIME", OSPF_LSA_MAX_AGE-lsa->age, 0, 
+                  lsa, &ospf_lsa_lifetime_job);
+    } else {
+        lsa->expired = true;
+        timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
+                "OSPF PURGE", 30, 0, 
+                lsa, &ospf_lsa_purge_job);
+    }
+    timer_no_smear(lsa->timer_lifetime);
+}
+
 /**
  * ospf_lsa_flood 
  * 
@@ -629,6 +672,10 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
     *(uint16_t*)(lsa->lsa+links_cur) = htobe16(links); 
     hdr->length = htobe16(lsa->lsa_len);
     ospf_lsa_refresh(lsa);
+
+    timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
+                        "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
+                        &ospf_lsa_refresh_job);
     return true;
 }
 
@@ -1084,6 +1131,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
         ospf_lsa_tree_add(lsa, NULL, ospf_interface->lsa_ack_tree[lsa->type]);
+        ospf_lsa_lifetime(lsa);
     }
 
     /* Send direct LSA ack. */
