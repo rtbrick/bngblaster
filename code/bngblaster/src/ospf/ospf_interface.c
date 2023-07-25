@@ -228,9 +228,15 @@ ospf_interface_init(bbl_network_interface_s *interface,
                 ospf_interface->instance = ospf;
                 ospf_interface->version = version;
                 ospf_interface->type = interface_type;
+
+                if(version == OSPF_VERSION_2) {
+                    ospf_interface->metric = network_config->ospfv2_metric;
+                } else {
+                    ospf_interface->metric = network_config->ospfv3_metric;
+                }
+
                 ospf_interface->next = ospf->interfaces;
                 ospf->interfaces = ospf_interface;
-
                 if(interface_type == OSPF_INTERFACE_P2P ||
                    interface_type == OSPF_INTERFACE_VIRTUAL) {
                     ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_P2P);

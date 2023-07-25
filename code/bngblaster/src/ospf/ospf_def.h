@@ -15,7 +15,7 @@
 #define OSPF_DEFAULT_DEAD_INTERVAL          40
 #define OSPF_DEFAULT_LSA_RETRY_IVL          5
 #define OSPF_DEFAULT_ROUTER_PRIORITY        64
-#define OSPF_DEFAULT_METRIC                 10
+#define OSPF_DEFAULT_METRIC                 1
 
 #define OSPF_LSA_TYPES                      11
 
@@ -58,7 +58,7 @@
 #define OSPF_LSA_REFRESH_TIME               1800 /* 30 minutes */
 #define OSPF_LSA_MAX_AGE                    3600 /* 1 hour */
 #define OSPF_LSA_MAX_AGE_DIFF               900 /* 15 minutes */
-#define OSPF_LSA_SEQ_INIT                   0x80000001
+#define OSPF_LSA_SEQ_INIT                   0x80000000
 #define OSPF_LSA_SEQ_MAX                    0x7fffffff
 
 #define OSPF_LSA_BORDER_ROUTER              0x01
