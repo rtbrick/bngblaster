@@ -258,8 +258,8 @@ lspgen_ctrl_write_cb(timer_s *timer)
 		"\"arguments\": {\n\"instance\": 1,\n\"pdu\": [";
 	}
 	if (!json_header) {
-            LOG(ERROR, "Unknown protocol\n",
-	    return;
+        LOG_NOARG(ERROR, "Unknown protocol\n");
+        return;
 	}
         push_data(&ctx->ctrl_io_buf, (uint8_t *)json_header, strlen(json_header));
     }
