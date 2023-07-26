@@ -563,6 +563,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 
         /* IPv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
+        addr += node->node_index;
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
         attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
         if (!ctx->no_sr) {

@@ -527,8 +527,8 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
 	 */
 	node->sequence = ctx->sequence;
 
-        LOG(LSDB, "  Add node %s (%s) node-ptr %p\n", lsdb_format_node(node),
-            lsdb_format_node_id(node->key.node_id), (void *)node);
+        LOG(LSDB, "  Add node %s (%s)\n", lsdb_format_node(node),
+            lsdb_format_node_id(node->key.node_id));
 
         return node;
     }

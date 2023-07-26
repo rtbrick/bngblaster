@@ -247,10 +247,20 @@ lspgen_ctrl_write_cb(timer_s *timer)
 
     if (ctx->ctrl_packet_first) {
         /*
-        * Write JSON header.
-        */
-        json_header = "{\n\"command\": \"isis-lsp-update\",\n"
-            "\"arguments\": {\n\"instance\": 1,\n\"pdu\": [";
+	 * Write JSON header.
+	 */
+	json_header = NULL;
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    json_header = "{\n\"command\": \"isis-lsp-update\",\n"
+		"\"arguments\": {\n\"instance\": 1,\n\"pdu\": [";
+	} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+	    json_header = "{\n\"command\": \"ospf-ls-update\",\n"
+		"\"arguments\": {\n\"instance\": 1,\n\"pdu\": [";
+	}
+	if (!json_header) {
+            LOG(ERROR, "Unknown protocol\n",
+	    return;
+	}
         push_data(&ctx->ctrl_io_buf, (uint8_t *)json_header, strlen(json_header));
     }
 
