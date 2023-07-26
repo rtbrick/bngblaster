@@ -1313,3 +1313,76 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
         } 
     }
 }
+
+bool
+ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8_t *buf, uint16_t len)
+{
+    ospf_lsa_header_s *hdr;
+    ospf_lsa_key_s *key;
+    ospf_lsa_s *lsa;
+
+    void **search = NULL;
+    dict_insert_result result;
+    uint16_t lsa_len;
+    uint8_t  lsa_type;
+
+     struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    while(len >= OSPF_LSA_HDR_LEN && lsa_count) {
+        hdr = (ospf_lsa_header_s*)buf;
+        key = (ospf_lsa_key_s*)&hdr->id;
+
+        lsa_type = hdr->type;
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_11) {
+            LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA type)\n");
+            return false;
+        }
+        lsa_len = be16toh(hdr->length);
+        if(lsa_len > len) {
+            LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA len)\n");
+            return false;
+        }
+        len -= lsa_len;
+        lsa_count--;
+
+        if(!ospf_lsa_verify_checksum(hdr)) {
+            LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA checksum)\n"); 
+            return false;
+        }
+
+        search = hb_tree_search(ospf_instance->lsdb[lsa_type], key);
+        if(search) {
+            lsa = *search;
+        } else {
+            /* NEW LSA */
+            lsa = ospf_lsa_new(lsa_type, key, ospf_instance);
+            result = hb_tree_insert(ospf_instance->lsdb[lsa_type], &lsa->key);
+            assert(result.inserted);
+            if(result.inserted) {
+                *result.datum_ptr = lsa;
+            } else {
+                LOG_NOARG(OSPF, "Failed to add external OSPF LSA to LSDB\n");
+                return false;
+            }
+        }
+
+        if(lsa->lsa_buf_len < lsa_len) {
+            if(lsa->lsa) free(lsa->lsa);
+            lsa->lsa = malloc(lsa_len);
+            lsa->lsa_buf_len = lsa_len;
+        }
+        memcpy(lsa->lsa, hdr, lsa_len);
+        lsa->lsa_len = lsa_len;
+        lsa->source.type = OSPF_SOURCE_EXTERNAL;
+        lsa->source.router_id = 0;
+        lsa->seq = be32toh(hdr->seq);
+        lsa->age = be16toh(hdr->age);
+        lsa->timestamp.tv_sec = now.tv_sec;
+        lsa->timestamp.tv_nsec = now.tv_sec;
+        ospf_lsa_update_age(lsa, &now);
+        ospf_lsa_flood(lsa);
+        ospf_lsa_lifetime(lsa);
+    }
+    return true;
+}

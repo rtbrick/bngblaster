@@ -73,4 +73,7 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
                         ospf_neighbor_s *ospf_neighbor, 
                         ospf_pdu_s *pdu);
 
+bool
+ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8_t *buf, uint16_t len);
+
 #endif

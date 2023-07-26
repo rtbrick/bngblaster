@@ -9,6 +9,8 @@
 #include "ospf.h"
 #include "../bbl_ctrl.h"
 
+extern uint8_t g_pdu_buf[];
+
 #define OSPF_CTRL_ARG_INSTANCE(_arguments, _fd, _instance_id, _instance) \
     do { \
         if(json_unpack(_arguments, "{s:i}", "instance", &_instance_id) != 0) { \
@@ -225,4 +227,130 @@ ospf_ctrl_neighbors(int fd, uint32_t session_id __attribute__((unused)), json_t 
         json_decref(neighbors);
     }
     return result;
+}
+
+int
+ospf_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    char *file_path;
+
+    ospf_instance_s *ospf_instance = NULL;
+    int instance_id = 0;
+
+    /* Unpack further arguments */
+    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, ospf_instance);
+
+    if(json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing MRT file");
+    }
+    if(!ospf_mrt_load(ospf_instance, file_path)) {
+        return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF MRT file");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+ospf_ctrl_lsa_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    json_t *value;
+    size_t lsa_count;
+
+    const char *lsa_string;
+    uint16_t lsa_string_len;
+
+    uint16_t len;
+
+    ospf_instance_s *ospf_instance = NULL;
+    int instance_id = 0;
+
+    /* Unpack further arguments */
+    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, ospf_instance);
+
+    /* Process LSA array */
+    value = json_object_get(arguments, "lsa");
+    if(json_is_array(value)) {
+        lsa_count = json_array_size(value);
+        for(size_t i = 0; i < lsa_count; i++) {
+            lsa_string = json_string_value(json_array_get(value, i));
+            if(!lsa_string) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to read OSPF LSA");
+            }
+            lsa_string_len = strlen(lsa_string);
+            /* Load LSA from hexstring */
+            for (len = 0; len < (lsa_string_len/2); len++) {
+                sscanf(lsa_string + len*2, "%02hhx", &g_pdu_buf[len]);
+            }
+            if(!ospf_lsa_load_external(ospf_instance, 1, (uint8_t*)g_pdu_buf, len)) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF LSA");
+            }
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing OSPF LSA list");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    json_t *value;
+    size_t lsa_count;
+
+    ospf_pdu_s pdu = {0};
+    const char *lsa_string;
+    uint16_t lsa_string_len;
+
+    uint16_t len;
+
+    ospf_instance_s *ospf_instance = NULL;
+    int instance_id = 0;
+
+    /* Unpack further arguments */
+    OSPF_CTRL_ARG_INSTANCE(arguments, fd, instance_id, ospf_instance);
+
+    /* Process LSA array */
+    value = json_object_get(arguments, "pdu");
+    if(json_is_array(value)) {
+        lsa_count = json_array_size(value);
+        for (size_t i = 0; i < lsa_count; i++) {
+            lsa_string = json_string_value(json_array_get(value, i));
+            if(!lsa_string) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to read OSPF PDU");
+            }
+            lsa_string_len = strlen(lsa_string);
+            /* Load LSA from hexstring */
+            for (len = 0; len < (lsa_string_len/2); len++) {
+                sscanf(lsa_string + len*2, "%02hhx", &g_pdu_buf[len]);
+            }
+
+            if(ospf_pdu_load(&pdu, g_pdu_buf, len) != PROTOCOL_SUCCESS) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU");
+            }
+            if(pdu.pdu_type != OSPF_PDU_LS_UPDATE) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU (wrong PDU type)");
+            }
+            if(pdu.pdu_version != ospf_instance->config->version) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU (wrong version)");
+            }
+            if(pdu.pdu_version == OSPF_VERSION_2) {
+                if(pdu.pdu_len < OSPFV2_LS_UPDATE_LEN_MIN) {
+                    return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU (wrong PDU len)");
+                }
+                lsa_count = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV2_OFFSET_LS_UPDATE_COUNT));
+                OSPF_PDU_CURSOR_SET(&pdu, OSPFV2_OFFSET_LS_UPDATE_LSA);
+            } else {
+                if(pdu.pdu_len < OSPFV3_LS_UPDATE_LEN_MIN) {
+                    return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU (wrong PDU len)");
+                }
+                lsa_count = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV3_OFFSET_LS_UPDATE_COUNT));
+                OSPF_PDU_CURSOR_SET(&pdu, OSPFV3_OFFSET_LS_UPDATE_LSA);
+            }
+            if(!ospf_lsa_load_external(ospf_instance, lsa_count, OSPF_PDU_CURSOR(&pdu), OSPF_PDU_CURSOR_LEN(&pdu))) {
+                return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU (LSA load error)");
+            }
+        }
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "missing OSPF PDU list");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
