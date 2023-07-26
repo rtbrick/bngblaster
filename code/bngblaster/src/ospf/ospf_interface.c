@@ -13,6 +13,7 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
 {
     uint32_t dr = 0;
     uint32_t bdr = 0;
+    uint32_t neighbor_id;
 
     ospf_config_s   *config = ospf_interface->instance->config;
     ospf_neighbor_s *dr_canditate = NULL;
@@ -24,6 +25,7 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
     ospf_neighbor_s self = {0};
     self.router_id = config->router_id;
     self.priority = config->router_priority;
+    self.ipv4 = ospf_interface->interface->ip.address;
     self.state = OSPF_NBSTATE_2WAY;
     self.dr = ospf_interface->dr;
     self.bdr = ospf_interface->bdr;
@@ -33,7 +35,12 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
     while(neighbor) {
         /* Iterate over all neighbors with staet >= 2WAY ... */
         if(neighbor->state >= OSPF_NBSTATE_2WAY && neighbor->priority > 0) {
-            if(neighbor->dr == neighbor->router_id) {
+            if(ospf_interface->version == OSPF_VERSION_2) {
+                neighbor_id = neighbor->ipv4;
+            } else {
+                neighbor_id = neighbor->router_id;
+            }
+            if(neighbor->dr == neighbor_id) {
                 if(!dr_canditate) {
                     dr_canditate = neighbor;
                 } else if(neighbor->priority > dr_canditate->priority) {
@@ -43,7 +50,7 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
                     dr_canditate = neighbor;
                 }
             } else {
-                if(neighbor->bdr == neighbor->router_id) {
+                if(neighbor->bdr == neighbor_id) {
                     if(!bdr_canditate) {
                         bdr_canditate = neighbor;
                     } else if(neighbor->priority > bdr_canditate->priority) {
@@ -69,14 +76,24 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
     if(!bdr_canditate) {
         bdr_canditate = bdr_alternate;
     }
-    if(bdr_canditate) {
-        bdr = bdr_canditate->router_id;
-    }
     if(!dr_canditate) {
         dr_canditate = bdr_canditate;
     }
-    if(dr_canditate) {
-        dr = dr_canditate->router_id;
+
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        if(bdr_canditate) {
+            bdr = bdr_canditate->ipv4;
+        }
+        if(dr_canditate) {
+            dr = dr_canditate->ipv4;
+        }
+    } else {
+        if(bdr_canditate) {
+            bdr = bdr_canditate->router_id;
+        }
+        if(dr_canditate) {
+            dr = dr_canditate->router_id;
+        }
     }
 
     if(dr != ospf_interface->dr || bdr != ospf_interface->bdr) {
@@ -111,12 +128,11 @@ ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
     uint8_t old = ospf_interface->state;
 
     ospf_interface->state = state;
-    LOG(OSPF, "OSPFv%u interface %s state %s -> %s on interface %s\n",
+    LOG(OSPF, "OSPFv%u interface %s state %s -> %s\n",
         ospf_interface->version,
-        format_ipv4_address(&ospf_interface->instance->config->router_id), 
+        ospf_interface->interface->name, 
         ospf_interface_state_string(old),
-        ospf_interface_state_string(state),
-        ospf_interface->interface->name);
+        ospf_interface_state_string(state));
 
     if(state > OSPF_IFSTATE_WAITING) {
         timer_add_periodic(&g_ctx->timer_root, &ospf_interface->timer_lsa_ack, "OSPF LSA ACK", 
@@ -140,6 +156,7 @@ void
 ospf_interface_neighbor_change(ospf_interface_s *ospf_interface)
 {
     ospf_config_s *config = ospf_interface->instance->config;
+    uint32_t id;
 
     switch (ospf_interface->state) {
         case OSPF_IFSTATE_DOWN:
@@ -150,11 +167,19 @@ ospf_interface_neighbor_change(ospf_interface_s *ospf_interface)
             break;
     }
 
+
     if(ospf_interface_elect_dr_bdr(ospf_interface)) {
         ospf_interface_elect_dr_bdr(ospf_interface);
-        if(ospf_interface->dr == config->router_id) {
+
+        if(ospf_interface->version == OSPF_VERSION_2) {
+            id = ospf_interface->interface->ip.address;
+        } else {
+            id = config->router_id;
+        }
+
+        if(ospf_interface->dr == id) {
             ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR);
-        } else if(ospf_interface->dr && ospf_interface->bdr == config->router_id) {
+        } else if(ospf_interface->dr && ospf_interface->bdr == id) {
             ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_BACKUP);
         } else if(ospf_interface->dr) {
             ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR_OTHER);
