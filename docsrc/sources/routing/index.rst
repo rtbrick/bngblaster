@@ -9,6 +9,7 @@ router testing.
    :maxdepth: 1
 
    isis.rst
+   ospf.rst
    mpls.rst
    bgp.rst
    ldp.rst
