@@ -23,6 +23,16 @@ lsdb_scan_node_id(uint8_t *node_id, char *node_id_str)
     int dst_idx, reg;
     unsigned int idx, len;
 
+    /*
+     * Check first if this is dotted decimal notation.
+     */
+    if (inet_pton(AF_INET, node_id_str, node_id)) {
+	return;
+    }
+
+    /*
+     * This is sysid (0000.0000.0000.00) notation.
+     */
     dst_idx = 0;
     reg = 0;
     len = strlen(node_id_str);

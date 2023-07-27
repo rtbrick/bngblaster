@@ -165,13 +165,13 @@ lspgen_read_node_seq_cache(lsdb_ctx_t *ctx, json_t *node_obj)
 }
 
 void
-lspgen_read_level_seq_cache(lsdb_ctx_t *ctx, json_t *level_arr)
+lspgen_read_level_seq_cache(lsdb_ctx_t *ctx, json_t *node_arr)
 {
     uint32_t num_nodes, idx;
 
-    num_nodes = json_array_size(level_arr);
+    num_nodes = json_array_size(node_arr);
     for (idx = 0; idx < num_nodes; idx++) {
-        lspgen_read_node_seq_cache(ctx, json_array_get(level_arr, idx));
+        lspgen_read_node_seq_cache(ctx, json_array_get(node_arr, idx));
     }
 }
 
@@ -180,8 +180,9 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
 {
     json_t *root_obj;
     json_error_t error;
-    json_t *level;
+    json_t *value;
     char *seq_cache_filename;
+    const char *key;
 
     seq_cache_filename = lspgen_seq_cache_filename(ctx);
     if (!seq_cache_filename) {
@@ -199,27 +200,34 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
     if (json_typeof(root_obj) != JSON_OBJECT) {
         LOG(ERROR, "Error reading sequence cache file %s, root element must be object\n",
             seq_cache_filename);
-        return;
+	goto cleanup;
     }
 
     LOG(NORMAL, "Reading sequence cache file %s\n", seq_cache_filename);
 
-    switch (ctx->topology_id.level) {
-    case 1:
-	level = json_object_get(root_obj, "level1");
-	if (level && json_is_array(level)) {
-	    lspgen_read_level_seq_cache(ctx, level);
+    json_object_foreach(root_obj, key, value) {
+	if (strncmp(key, "level", 5) == 0 && ctx->protocol_id != PROTO_ISIS) {
+	    LOG(ERROR, "Found key %s, but protocol is not IS-IS\n", key);
+	    continue;
 	}
-	break;
-    case 2:
-	level = json_object_get(root_obj, "level2");
-	if (level && json_is_array(level)) {
-	    lspgen_read_level_seq_cache(ctx, level);
+
+	if (strncmp(key, "area", 4) == 0 &&
+	    (ctx->protocol_id != PROTO_OSPF2 && ctx->protocol_id != PROTO_OSPF3)) {
+	    LOG(ERROR, "Found key %s, but protocol is not OSPF\n", key);
+	    continue;
 	}
-	break;
-    default:
-	break;
+
+	if (!json_is_array(value)) {
+	    LOG(ERROR, "key %s is not an array\n", key);
+	    continue;;
+	}
+
+	/*
+	 * Good to parse the sequence number node array.
+	 */
+	lspgen_read_level_seq_cache(ctx, value);
     }
 
+ cleanup:
     json_decref(root_obj);
 }
