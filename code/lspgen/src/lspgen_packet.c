@@ -10,6 +10,7 @@
 #include "lspgen.h"
 #include "lspgen_lsdb.h"
 #include "lspgen_isis.h"
+#include "lspgen_ospf.h"
 #include "hmac_md5.h"
 
 /*
@@ -205,7 +206,7 @@ calculate_cksum(uint8_t *buf, uint16_t len)
  * Helper for calculating when to start a new packet.
  */
 uint32_t
-lspgen_calculate_auth_len(lsdb_ctx_t *ctx)
+lspgen_calculate_isis_auth_len(lsdb_ctx_t *ctx)
 {
    uint8_t auth_len;
 
@@ -429,14 +430,10 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
 }
 
 /*
- * Serialize a attribute into a buffer.
- *
- * This is used in two places.
- *  1) When an attribute gets added for size measurement.
- *  2) When the actual link-state packets gets built.
+ * Serialize an IS-IS attribute into a buffer.
  */
 void
-lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
+lspgen_serialize_isis_attr(lsdb_attr_t *attr, io_buffer_t *buf)
 {
     uint32_t metric, mask;
     uint8_t attr_len, flags;
@@ -598,6 +595,48 @@ lspgen_serialize_attr(lsdb_attr_t *attr, io_buffer_t *buf)
 }
 
 /*
+ * Serialize an OSPFv2 attribute into a buffer.
+ */
+void
+lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, io_buffer_t *buf)
+{
+    uint16_t attr_len;
+
+    switch (attr->key.attr_type) {
+    case OSPF_TLV_HOSTNAME:
+	attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
+	push_data(buf, (uint8_t *)attr->key.hostname, attr_len);
+	break;
+
+    default:
+            LOG(ERROR, "No packet serializer for attr %d\n", attr->key.attr_type);
+            break;
+    }
+}
+
+/*
+ * Serialize a attribute into a buffer.
+ *
+ * This is used in two places.
+ *  1) When an attribute gets added for size measurement.
+ *  2) When the actual link-state packets gets built.
+ */
+void
+lspgen_serialize_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr, io_buffer_t *buf)
+{
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	lspgen_serialize_isis_attr(attr, buf);
+	break;
+    case PROTO_OSPF2:
+	lspgen_serialize_ospf2_attr(attr, buf);
+	break;
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+    }
+}
+
+/*
  * Update length field of last TLV written to the buffer.
  */
 void
@@ -722,10 +761,10 @@ lspgen_refresh_interval (lsdb_ctx_t *ctx)
 }
 
 /*
- * Walk the graph of the LSDB and serialize packets.
+ * Walk the graph of the LSDB and serialize IS-IS packets.
  */
 void
-lspgen_gen_packet_node(lsdb_node_t *node)
+lspgen_gen_isis_packet_node(lsdb_node_t *node)
 {
     lsdb_ctx_t *ctx;
     struct lsdb_packet_ *packet;
@@ -785,7 +824,7 @@ lspgen_gen_packet_node(lsdb_node_t *node)
         /*
          * Space left in this packet ?
          */
-        min_len = lspgen_calculate_auth_len(ctx);
+        min_len = lspgen_calculate_isis_auth_len(ctx);
         min_len += attr->size + TLV_OVERHEAD;
         if (packet && packet->buf.idx > (1465-min_len)) {
 
@@ -826,7 +865,7 @@ lspgen_gen_packet_node(lsdb_node_t *node)
             push_be_uint(&packet->buf, 1, 0); /* Length */
         }
 
-        lspgen_serialize_attr(attr, &packet->buf);
+        lspgen_serialize_attr(ctx, attr, &packet->buf);
         lspgen_update_tlv_length(&packet->buf, tlv_start_idx);
 
         last_attr = attr->key.attr_type;
@@ -835,6 +874,140 @@ lspgen_gen_packet_node(lsdb_node_t *node)
 
     lspgen_finalize_packet(ctx, node, packet);
     dict_itor_free(itor);
+}
+
+/*
+ * Walk the graph of the LSDB and serialize OSPFv2 packets.
+ */
+void
+lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
+{
+    lsdb_ctx_t *ctx;
+    struct lsdb_packet_ *packet;
+    struct lsdb_attr_ *attr;
+    dict_itor *itor;
+    uint32_t id, last_attr, tlv_start_idx, min_len;
+
+    ctx = node->ctx;
+
+    packet = NULL;
+    id = 0;
+    last_attr = 0;
+    tlv_start_idx = 0;
+
+    /*
+     * Flush old serialized packets.
+     */
+    dict_clear(node->packet_dict, lsdb_free_packet);
+
+    if (!node->attr_dict) {
+        /*
+         * No attributes. This is a purge.
+         */
+        packet = lspgen_add_packet(ctx, node, id);
+        lspgen_finalize_packet(ctx, node, packet);
+        return;
+    }
+
+    /*
+     * Walk the node attributes.
+     */
+    itor = dict_itor_new(node->attr_dict);
+    if (!itor) {
+        return;
+    }
+
+    /*
+     * Node DB empty ?
+     */
+    if (!dict_itor_first(itor)) {
+        dict_itor_free(itor);
+        LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
+        return;
+    }
+
+    /*
+     * Start refresh timer.
+     */
+    if (ctx->ctrl_socket_path) {
+    timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
+               lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+    }
+
+    do {
+        attr = *dict_itor_datum(itor);
+
+        /*
+         * Space left in this packet ?
+         */
+        min_len = lspgen_calculate_isis_auth_len(ctx);
+        min_len += attr->size + TLV_OVERHEAD;
+        if (packet && packet->buf.idx > (1465-min_len)) {
+
+            /*
+            * No space left. Finalize this packet.
+            */
+            lspgen_finalize_packet(ctx, node, packet);
+            packet = NULL;
+
+            id++;
+            if (id > 255) {
+                dict_itor_free(itor);
+                LOG(ERROR, "Exhausted fragments for node %s\n", lsdb_format_node(node));
+                return;
+            }
+        }
+
+        /*
+         * Need a fresh packet ?
+         */
+        if (!packet) {
+            packet = lspgen_add_packet(ctx, node, id);
+            tlv_start_idx = packet->buf.idx;
+        }
+
+        /*
+         * Encode node attributes.
+         */
+
+        /*
+         * Start a fresh TLV ?
+         */
+        if ((last_attr != attr->key.attr_type) ||
+            (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
+        attr->key.start_tlv) {
+            tlv_start_idx = packet->buf.idx;
+            push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
+            push_be_uint(&packet->buf, 1, 0); /* Length */
+        }
+
+        lspgen_serialize_attr(ctx, attr, &packet->buf);
+        lspgen_update_tlv_length(&packet->buf, tlv_start_idx);
+
+        last_attr = attr->key.attr_type;
+
+    } while (dict_itor_next(itor));
+
+    lspgen_finalize_packet(ctx, node, packet);
+    dict_itor_free(itor);
+}
+
+void
+lspgen_gen_packet_node(lsdb_node_t *node)
+{
+    lsdb_ctx_t *ctx;
+
+    ctx = node->ctx;
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	lspgen_gen_isis_packet_node(node);
+	break;
+    case PROTO_OSPF2:
+	lspgen_gen_ospf2_packet_node(node);
+	break;
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+    }
 }
 
 /*
@@ -866,17 +1039,17 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
     do {
         node = *dict_itor_datum(itor);
 
-    /*
-     * Init per-packet tree for this node.
-     */
-    if (!node->packet_dict) {
-        node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
-    }
+	/*
+	 * Init per-packet tree for this node.
+	 */
+	if (!node->packet_dict) {
+	    node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
+	}
 
-    /*
-         * Generate the link-state packets for this node.
-         */
-        lspgen_gen_packet_node(node);
+	/*
+	 * Generate the link-state packets for this node.
+	 */
+	lspgen_gen_packet_node(node);
 
     } while (dict_itor_next(itor));
 

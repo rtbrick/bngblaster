@@ -12,6 +12,7 @@
 #include "lspgen.h"
 #include "lspgen_lsdb.h"
 #include "lspgen_isis.h"
+#include "lspgen_ospf.h"
 
 /*
  * Globals
@@ -555,8 +556,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         /* Host name */
         if (node->node_name) {
             lsdb_reset_attr_template(&attr_template);
-            attr_template.key.ordinal = 1;
-            attr_template.key.attr_type = ISIS_TLV_HOSTNAME;
+            attr_template.key.ordinal = OSPF_LSA_OPAQUE_AREA;
+            attr_template.key.attr_type = OSPF_TLV_HOSTNAME;
             strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
             lsdb_add_node_attr(node, &attr_template);
         }
@@ -572,8 +573,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.adv_sid = true;
         }
         attr_template.key.prefix.node_flag = true;
-        attr_template.key.ordinal = 1;
-        attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+        attr_template.key.ordinal = OSPF_LSA_ROUTER;
+        attr_template.key.attr_type = OSPF_ROUTER_LSA_LINK_STUB;
         lsdb_add_node_attr(node, &attr_template);
 
         /* external prefixes */
@@ -584,11 +585,13 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(ext_addr4, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, 4);
             attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_ext_prefix.len;
             attr_template.key.prefix.metric = 100;
-            attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+	    attr_template.key.ordinal = OSPF_LSA_EXTERNAL;
+            attr_template.key.attr_type = OSPF_EXTERNAL_PREFIX;
             lsdb_add_node_attr(node, &attr_template);
             ext_addr4 += ext_incr4;
         }
 
+#if 0
         if (!ctx->no_sr) {
             /* SR capability */
             lsdb_reset_attr_template(&attr_template);
@@ -604,6 +607,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
         }
+#endif
 
         /*
          * Walk all of our neighbors.
@@ -612,9 +616,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 
             /* Generate an IS reach for each link */
             lsdb_reset_attr_template(&attr_template);
-            attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
-            memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 7);
-            attr_template.key.link.metric = link->link_metric;
+            attr_template.key.ordinal = OSPF_LSA_ROUTER;
+            attr_template.key.attr_type = OSPF_ROUTER_LSA_LINK_PTP;
+            memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
+            attr_template.key.link.metric = link->link_metric; /* TODO clip metric */
             lsdb_add_node_attr(node, &attr_template);
 
             /* Generate an IPv4 prefix for each link */
@@ -624,8 +629,9 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             addr += link->link_index * inc;
             lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
             attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_link_prefix.len;
-            attr_template.key.prefix.metric = link->link_metric;
-            attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+            attr_template.key.prefix.metric = link->link_metric; /* TODO clip metric */
+            attr_template.key.ordinal = OSPF_LSA_ROUTER;
+            attr_template.key.attr_type = OSPF_ROUTER_LSA_LINK_STUB;
             lsdb_add_node_attr(node, &attr_template);
         }
 

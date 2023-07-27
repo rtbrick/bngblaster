@@ -12,6 +12,7 @@
 #include "lspgen.h"
 #include "lspgen_lsdb.h"
 #include "lspgen_isis.h"
+#include "lspgen_ospf.h"
 
 /*
  * Convert the node_id string to binary data.
@@ -690,7 +691,7 @@ lsdb_get_link(struct lsdb_ctx_ *ctx, struct lsdb_link_ *link_template)
 /*
  * Link State Attributes / name mappings
  */
-struct keyval_ attr_names[] = {
+struct keyval_ isis_attr_names[] = {
     { ISIS_TLV_AREA, "Area" },
     { ISIS_TLV_PROTOCOLS, "Protocol" },
     { ISIS_TLV_EXTD_IS_REACH, "Link" },
@@ -704,12 +705,12 @@ struct keyval_ attr_names[] = {
 };
 
 char *
-lsdb_format_attr(struct lsdb_attr_ *attr)
+lsdb_format_isis_attr(struct lsdb_attr_ *attr)
 {
     static char buf[128];
     int len;
 
-    len = snprintf(buf, sizeof(buf), "%s (%u)", val2key(attr_names, attr->key.attr_type), attr->key.attr_type);
+    len = snprintf(buf, sizeof(buf), "%s (%u)", val2key(isis_attr_names, attr->key.attr_type), attr->key.attr_type);
 
     switch(attr->key.attr_type) {
         case ISIS_TLV_PROTOCOLS:
@@ -747,6 +748,43 @@ lsdb_format_attr(struct lsdb_attr_ *attr)
     return buf;
 }
 
+struct keyval_ ospf_attr_names[] = {
+    { OSPF_TLV_HOSTNAME, "Hostname" },
+    { 0, NULL}
+};
+
+char *
+lsdb_format_ospf2_attr(struct lsdb_attr_ *attr)
+{
+    static char buf[128];
+    int len;
+
+    len = snprintf(buf, sizeof(buf), "%s (%u)", val2key(ospf_attr_names, attr->key.attr_type), attr->key.attr_type);
+
+    switch(attr->key.attr_type) {
+        case OSPF_TLV_HOSTNAME:
+            len += snprintf(buf+len, sizeof(buf)-len, " '%s'", attr->key.hostname);
+            break;
+        default:
+            break;
+    }
+    return buf;
+}
+
+char *
+lsdb_format_attr(lsdb_ctx_t *ctx, struct lsdb_attr_ *attr)
+{
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	return lsdb_format_isis_attr(attr);
+    case PROTO_OSPF2:
+	return lsdb_format_ospf2_attr(attr);
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+    }
+    return "Unknown protocol";
+}
+
 /*
  * Use this function to clear attributes.
  * The default ordinal is set to the worst.
@@ -760,9 +798,10 @@ lsdb_reset_attr_template(lsdb_attr_t *attr_template)
 }
 
 bool
-lsdb_is_ipv4_attr(lsdb_attr_t *attr)
+lsdb_is_ipv4_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr)
 {
-    switch (attr->key.attr_type) {
+    if (ctx->protocol_id == PROTO_ISIS) {
+	switch (attr->key.attr_type) {
         case ISIS_TLV_IPV4_ADDR:
         case ISIS_TLV_EXTD_IPV4_REACH:
             return true;
@@ -773,14 +812,20 @@ lsdb_is_ipv4_attr(lsdb_attr_t *attr)
             break;
         default:
             break;
+	}
+    } else if (ctx->protocol_id == PROTO_OSPF2) {
+	/* OSPFv2 only has IPV4 related attributes added */
+	return true;
     }
+
     return false;
 }
 
 bool
-lsdb_is_ipv6_attr(lsdb_attr_t *attr)
+lsdb_is_ipv6_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr)
 {
-    switch (attr->key.attr_type) {
+    if (ctx->protocol_id == PROTO_ISIS) {
+	switch (attr->key.attr_type) {
         case ISIS_TLV_IPV6_ADDR:
         case ISIS_TLV_EXTD_IPV6_REACH:
             return true;
@@ -791,6 +836,10 @@ lsdb_is_ipv6_attr(lsdb_attr_t *attr)
             break;
         default:
             break;
+	}
+    } else if (ctx->protocol_id == PROTO_OSPF3) {
+	/* OSPFv3 only has IPV6 related attributes added */
+	return true;
     }
     return false;
 }
@@ -803,6 +852,7 @@ lsdb_attr_t *
 lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
 {
     dict_insert_result result;
+    lsdb_ctx_t *ctx;
     struct lsdb_attr_ *attr;
     void **p;
     uint8_t data[255]; /* One max-sized TLV */
@@ -812,17 +862,19 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         return NULL;
     }
 
+    ctx = node->ctx;
+
     /*
      * Refuse addition of v4 attributes if v4 is turned off.
      */
-    if (node->ctx->no_ipv4 && lsdb_is_ipv4_attr(attr_template)) {
+    if (ctx->no_ipv4 && lsdb_is_ipv4_attr(ctx, attr_template)) {
         return NULL;
     }
 
     /*
      * Refuse addition of v6 attributes if v6 is turned off.
      */
-    if (node->ctx->no_ipv6 && lsdb_is_ipv6_attr(attr_template)) {
+    if (ctx->no_ipv6 && lsdb_is_ipv6_attr(ctx, attr_template)) {
         return NULL;
     }
 
@@ -863,7 +915,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         buf.data = data;
         buf.idx = 0;
         buf.size = sizeof(data);
-        lspgen_serialize_attr(attr, &buf);
+        lspgen_serialize_attr(ctx, attr, &buf);
         attr->size = buf.idx;
 
         /*
@@ -872,7 +924,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         node->attr_count++;
 
         LOG(LSDB, "  Add attr %s to node %s (%s), size %u\n",
-            lsdb_format_attr(attr),
+            lsdb_format_attr(ctx, attr),
             lsdb_format_node(node),
             lsdb_format_node_id(node->key.node_id),
             attr->size);
