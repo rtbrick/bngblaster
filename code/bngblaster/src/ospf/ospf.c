@@ -8,7 +8,7 @@
  */
 #include "ospf.h"
 
-uint8_t g_pdu_buf[OSPF_GLOBAL_PDU_BUF_LEN] = {0};
+uint8_t g_pdu_buf[OSPF_PDU_LEN_MAX] = {0};
 ospf_lsa_key_s g_lsa_key_zero = {0};
 
 /**
@@ -78,7 +78,8 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
     ospf_pdu_s pdu = {0};
 
     ospf_interface_s *ospf_interface = interface->ospf_interface;
-    ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
+    ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
+    ospf_config_s *config = ospf_interface->instance->config;
 
     bbl_ospf_s *ospf = ipv4->next;
 
@@ -115,15 +116,21 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
         return;
     }
 
-    LOG(PACKET, "OSPFv2 RX %s on interface %s\n",
-        ospf_pdu_type_string(pdu.pdu_type), interface->name);
-
     while(ospf_neighbor) {
         if(ospf_neighbor->router_id == pdu.router_id) {
             break;
         }
         ospf_neighbor = ospf_neighbor->next;
     }
+    if(!ospf_pdu_validate_auth(&pdu, config->auth_type, config->auth_key, ospf_neighbor)) {
+        LOG(OSPF, "OSPFv2 RX %s PDU auth error on interface %s\n", 
+            ospf_pdu_type_string(pdu.pdu_type), interface->name);
+        interface->stats.ospf_rx_error++;
+        return;
+    }
+
+    LOG(PACKET, "OSPFv2 RX %s on interface %s\n",
+        ospf_pdu_type_string(pdu.pdu_type), interface->name);
 
     switch(pdu.pdu_type) {
         case OSPF_PDU_HELLO:

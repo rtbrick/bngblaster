@@ -8,7 +8,6 @@
  */
 #include "ospf.h"
 
-extern uint8_t g_pdu_buf[];
 extern ospf_lsa_key_s g_lsa_key_zero;
 
 protocol_error_t
@@ -33,14 +32,16 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
 {
     ospf_interface_s *ospf_interface = ospf_neighbor->interface;
     ospf_instance_s  *ospf_instance = ospf_interface->instance;
+    ospf_config_s *config = ospf_instance->config;
+    ospf_lsa_s *lsa; 
+
     bbl_network_interface_s *interface = ospf_interface->interface;
 
-    ospf_lsa_s *lsa; 
     hb_itor *itor;
     bool next;
 
-    uint16_t l3_hdr_len;
-    uint8_t options = OSPF_DBD_OPTION_E|OSPF_DBD_OPTION_L|OSPF_DBD_OPTION_O;
+    uint16_t overhead;
+    uint8_t options = OSPF_DBD_OPTION_E|OSPF_DBD_OPTION_O;
     uint8_t flags = 0;
     uint8_t type = 0;
 
@@ -49,8 +50,6 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
 
     ospf_pdu_s pdu;
     ospf_pdu_init(&pdu, OSPF_PDU_DB_DESC, ospf_neighbor->version);
-    pdu.pdu = g_pdu_buf;
-    pdu.pdu_buf_len = OSPF_GLOBAL_PDU_BUF_LEN;
 
     /* OSPF header */
     ospf_pdu_add_u8(&pdu, ospf_neighbor->version);
@@ -60,12 +59,13 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
     ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
     ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
     if(ospf_neighbor->version == OSPF_VERSION_2) {
-        l3_hdr_len = 20;
-        /* Authentication */
-        ospf_pdu_add_u16(&pdu, OSPF_AUTH_NONE);
-        ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_DATA_LEN);
+        overhead = 20; /* IPv4 header length */
+        if(config->auth_type == OSPF_AUTH_MD5) {
+            overhead += OSPF_MD5_DIGEST_LEN;
+        }
+        ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_TYPE_LEN+OSPFV2_AUTH_DATA_LEN);
     } else {
-        l3_hdr_len = 40;
+        overhead = 40; /* IPv6 header length */
         ospf_pdu_add_u16(&pdu, 0);
         ospf_pdu_add_u32(&pdu, 0);
     }
@@ -92,7 +92,7 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
                     next = hb_itor_next(itor);
                     continue;
                 }
-                if((l3_hdr_len + pdu.pdu_len + OSPF_LLS_HDR_LEN + OSPF_LSA_HDR_LEN) > interface->mtu) {
+                if((overhead + pdu.pdu_len + OSPF_LLS_HDR_LEN + OSPF_LSA_HDR_LEN) > interface->mtu) {
                     memcpy(&ospf_neighbor->dbd_lsa_next, &lsa->key, sizeof(ospf_lsa_key_s));
                     ospf_neighbor->dbd_lsa_type_next = type;
                     break;
@@ -117,18 +117,12 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
         *OSPF_PDU_OFFSET(&pdu, OSPFV3_OFFSET_DBD_FLAGS) = flags;
     }
 
-    /* Update length and checksum */
+    /* Update length, auth and checksum */
     ospf_pdu_update_len(&pdu);
+    ospf_pdu_update_auth(&pdu, config->auth_type, config->auth_key);
     ospf_pdu_update_checksum(&pdu);
 
-    /* Add LLS Data Block */
-    OSPF_PDU_CURSOR_SET(&pdu, pdu.packet_len);
-    ospf_pdu_add_u16(&pdu, 0xfff6); /* checksum */
-    ospf_pdu_add_u16(&pdu, 3); /* length */
-    ospf_pdu_add_u16(&pdu, OSPF_EXTENDED_OPTION_TLV);
-    ospf_pdu_add_u16(&pdu, OSPF_EXTENDED_OPTION_TLV_LEN);
-    ospf_pdu_add_u32(&pdu, OSPF_EXT_OPTION_LSDB_RESYNC);
-
+    /* Send... */
     if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
         ospf_interface->stats.db_des_tx++;
         timer_add(&g_ctx->timer_root, &ospf_neighbor->timer_dbd_retry, "OSPF DBD RETRY", 
@@ -209,9 +203,14 @@ ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
         ospf_neighbor_state_string(state),
         ospf_interface->interface->name);
 
-
     switch(state) {
         case OSPF_NBSTATE_DOWN:
+            ospf_neighbor_clear(ospf_neighbor);
+            ospf_neighbor->rx.crypt_seq = 0;
+            ospf_neighbor->rx.dd = 0;
+            ospf_neighbor->rx.flags = 0;
+            ospf_neighbor->rx.options = 0;
+            break;
         case OSPF_NBSTATE_ATTEMPT:
         case OSPF_NBSTATE_INIT:
         case OSPF_NBSTATE_2WAY:
@@ -492,7 +491,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     /* Update LSA request-tree. */
-    while(OSPF_PDU_CURSOR_LEN(pdu) >= OSPF_LSA_HDR_LEN) {
+    while(OSPF_PDU_CURSOR_PLEN(pdu) >= OSPF_LSA_HDR_LEN) {
         hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
 

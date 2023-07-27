@@ -11,6 +11,7 @@
 
 #define OSPF_PDU_CURSOR(_pdu)            ((_pdu)->pdu+(_pdu)->cur)
 #define OSPF_PDU_CURSOR_LEN(_pdu)        (uint16_t)((_pdu)->pdu_len-(_pdu)->cur)
+#define OSPF_PDU_CURSOR_PLEN(_pdu)       (uint16_t)((_pdu)->packet_len-(_pdu)->cur)
 #define OSPF_PDU_CURSOR_RST(_pdu)        ((_pdu)->cur=0)
 #define OSPF_PDU_CURSOR_GET(_pdu)        ((_pdu)->cur)
 #define OSPF_PDU_CURSOR_SET(_pdu, _off)  ((_pdu)->cur=_off)
@@ -30,14 +31,14 @@ ospf_pdu_update_len(ospf_pdu_s *pdu);
 void
 ospf_pdu_update_checksum(ospf_pdu_s *pdu);
 
-void
-ospf_pdu_update_auth(ospf_pdu_s *pdu, char *key);
-
 bool
 ospf_pdu_validate_checksum(ospf_pdu_s *pdu);
 
+void
+ospf_pdu_update_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key);
+
 bool
-ospf_pdu_validate_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key);
+ospf_pdu_validate_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key, ospf_neighbor_s *ospf_neighbor);
 
 void
 ospf_pdu_init(ospf_pdu_s *pdu, uint8_t pdu_type, uint8_t pdu_version);

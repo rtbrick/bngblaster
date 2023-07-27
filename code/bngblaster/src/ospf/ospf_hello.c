@@ -26,19 +26,16 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
 
     bbl_ipv4_s ipv4 = {0};
     bbl_ospf_s ospf = {0};
-
     ospf_pdu_s pdu = {0};
-    uint8_t pdu_buf[OSPF_TX_BUF_LEN];
 
     ospf_interface_s *ospf_interface = interface->ospf_interface;
-    ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
-    ospf_instance_s  *ospf_instance = ospf_interface->instance;
+    ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    ospf_config_s *config = ospf_instance->config;
 
     uint8_t options = 0;
 
     ospf_pdu_init(&pdu, OSPF_PDU_HELLO, OSPF_VERSION_2);
-    pdu.pdu = pdu_buf;
-    pdu.pdu_buf_len = OSPF_TX_BUF_LEN;
 
     /* OSPFv2 header */
     ospf_pdu_add_u8(&pdu, OSPF_VERSION_2);
@@ -76,7 +73,10 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
         }
         ospf_neighbor = ospf_neighbor->next;
     }
+
+    /* Update length, auth, checksum and send... */
     ospf_pdu_update_len(&pdu);
+    ospf_pdu_update_auth(&pdu, config->auth_type, config->auth_key);
     ospf_pdu_update_checksum(&pdu);
 
     /* Build packet ... */

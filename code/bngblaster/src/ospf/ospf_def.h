@@ -44,8 +44,6 @@
 #define OSPF_TX_BUF_LEN                     1500
 #define OSPF_MAX_SELF_LSA_LEN               UINT16_MAX
 
-#define OSPF_GLOBAL_PDU_BUF_LEN             UINT16_MAX
-
 #define OSPF_OPTION_E_BIT                   0x02
 #define OSPF_OPTION_LLS_BIT                 0x10
 
@@ -139,12 +137,15 @@
 #define OSPF_EXT_OPTION_LSDB_RESYNC         0x01
 #define OSPF_EXT_OPTION_RESTART             0x02
 
+#define OSPFV2_AUTH_TYPE_LEN                2
 #define OSPFV2_AUTH_DATA_LEN                8
 #define OSPFV2_LSA_REQ_HDR_LEN              12
 #define OSPFV3_LSA_REQ_HDR_LEN              10
 
 #define OSPF_LSA_HDR_LEN                    20
 #define OSPF_LLS_HDR_LEN                    12
+
+#define OSPF_MD5_DIGEST_LEN                 16
 
 typedef struct ospf_config_ ospf_config_s;
 typedef struct ospf_instance_ ospf_instance_s;
@@ -236,6 +237,13 @@ typedef enum ospf_lsa_scope_ {
 
 /* STRUCTURES ... */
 
+typedef struct ospf_auth_header_ {
+    uint16_t    reserved;
+    uint8_t     key_id;
+    uint8_t     auth_data_len;
+    uint32_t    crypt_seq;
+} __attribute__ ((__packed__)) ospf_auth_header_s;
+
 typedef struct ospf_lsa_header_ {
     uint16_t    age; /* LS Age */
     uint8_t     options; /* Options */
@@ -276,26 +284,24 @@ typedef struct ospf_config_ {
 
     uint16_t id; /* OSPF instance identifier */
     uint8_t  version; /* OSPF version (default 2) */
+    bool     overload;
 
-    const char         *area_str;
-    ipv4addr_t          area;
+    ospf_auth_type auth_type;
+    char *auth_key;
 
-    const char         *router_id_str;
-    ipv4addr_t          router_id;
-    uint8_t             router_priority;
+    const char  *area_str;
+    ipv4addr_t   area;
 
-    bool                overload;
+    const char  *router_id_str;
+    ipv4addr_t   router_id;
+    uint8_t      router_priority;
 
-    ospf_auth_type      auth_type;
-    char               *auth_key;
+    uint16_t     hello_interval;
+    uint16_t     dead_interval;
+    uint16_t     lsa_retry_interval;
+    uint16_t     teardown_time;
 
-    uint16_t            hello_interval;
-    uint16_t            dead_interval;
-    uint16_t            lsa_retry_interval;
-
-    uint16_t            teardown_time;
-
-    const char         *hostname;
+    const char  *hostname;
 
     char *external_mrt_file;
     struct ospf_external_connection_ *external_connection;
@@ -327,6 +333,7 @@ typedef struct ospf_neighbor_ {
     uint8_t state;
 
     struct {
+        uint32_t crypt_seq;
         uint32_t dd;
         uint8_t flags;
         uint8_t options;
@@ -418,11 +425,10 @@ typedef struct ospf_pdu_ {
 
     uint32_t router_id;
     uint32_t area_id;
+
     uint16_t checksum;
 
     uint8_t  auth_type;
-    uint8_t  auth_data_len;
-    uint16_t auth_data_offset;
     uint16_t packet_len;
 
     uint8_t *mac; /* source MAC address */

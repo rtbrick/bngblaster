@@ -35,7 +35,7 @@ ospf_mrt_load(ospf_instance_s *instance, char *file_path)
         if(!(mrt.type == OSPF_MRT_TYPE && 
              mrt.subtype == 0 &&
              mrt.length >= OSPF_PDU_LEN_MIN &&
-             mrt.length <= OSPF_GLOBAL_PDU_BUF_LEN)) {
+             mrt.length <= OSPF_PDU_LEN_MAX)) {
             LOG(ERROR, "Invalid MRT file %s\n", file_path);
             fclose(mrt_file);
             return false;

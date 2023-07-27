@@ -10,12 +10,12 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+uint32_t g_crypt_seq = 0;
+
 static protocol_error_t
 ospf_pdu_load_v2(ospf_pdu_s *pdu)
 {
     pdu->auth_type = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_TYPE));
-    pdu->auth_data_len = OSPFV2_AUTH_DATA_LEN;
-    pdu->auth_data_offset = OSPFV2_OFFSET_AUTH_DATA;
     return PROTOCOL_SUCCESS;
 }
 
@@ -91,6 +91,10 @@ ospf_pdu_checksum_v2(ospf_pdu_s *pdu)
 
     uint64_t auth_data_orig;
 
+    if(pdu->auth_type == OSPF_AUTH_MD5) {
+        return 0;
+    }
+
     /* reset checkum/auth */
     checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
     *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
@@ -136,13 +140,6 @@ ospf_pdu_update_checksum(ospf_pdu_s *pdu)
     }
 }
 
-void
-ospf_pdu_update_auth(ospf_pdu_s *pdu, char *key)
-{
-    UNUSED(pdu);
-    UNUSED(key);
-}
-
 bool
 ospf_pdu_validate_checksum(ospf_pdu_s *pdu)
 {
@@ -162,21 +159,160 @@ ospf_pdu_validate_checksum(ospf_pdu_s *pdu)
     return false;
 }
 
-bool
-ospf_pdu_validate_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
+static bool
+ospf_pdu_update_auth_v2(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
+{
+    uint8_t *auth_data = OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_DATA);
+    ospf_auth_header_s *auth_hdr = (ospf_auth_header_s*)auth_data;
+
+    EVP_MD_CTX *ctx;
+    unsigned int md5_size = OSPF_MD5_DIGEST_LEN;
+    uint8_t padded_key[OSPF_MD5_DIGEST_LEN+1] = {0};
+
+    assert(pdu->pdu_len == pdu->packet_len);
+
+    *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_TYPE) = htobe16(auth);
+    switch(auth) {
+        case OSPF_AUTH_CLEARTEXT:
+            memset(auth_data, 0x0, OSPFV2_AUTH_DATA_LEN);
+            if(key) {
+                strncpy((char*)auth_data, key, OSPFV2_AUTH_DATA_LEN);
+            }
+            break;
+        case OSPF_AUTH_MD5:
+            if(pdu->pdu_len + OSPF_MD5_DIGEST_LEN > pdu->pdu_buf_len) {
+                return false;
+            }
+            *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
+
+            auth_hdr->reserved = 0;
+            auth_hdr->key_id = 0;
+            auth_hdr->auth_data_len = OSPF_MD5_DIGEST_LEN;
+            auth_hdr->crypt_seq = htobe32(++g_crypt_seq);
+
+            if(key) {
+                strncpy((char*)padded_key, key, OSPF_MD5_DIGEST_LEN);
+            }
+            ctx = EVP_MD_CTX_new();
+            EVP_DigestInit(ctx, EVP_md5());
+            EVP_DigestUpdate(ctx, pdu->pdu, pdu->packet_len);
+            EVP_DigestUpdate(ctx, padded_key, OSPF_MD5_DIGEST_LEN);
+            EVP_DigestFinal(ctx, OSPF_PDU_OFFSET(pdu, pdu->packet_len), &md5_size);
+            EVP_MD_CTX_free(ctx);
+
+            pdu->pdu_len += OSPF_MD5_DIGEST_LEN;
+            break;
+        default:
+            break;
+    }
+    return true;
+}
+
+static void
+ospf_pdu_update_auth_v3(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
 {
     UNUSED(pdu);
     UNUSED(auth);
     UNUSED(key);
+}
+
+void
+ospf_pdu_update_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
+{
+    pdu->auth_type = auth;
+    if(pdu->pdu_version == OSPF_VERSION_2) {
+        ospf_pdu_update_auth_v2(pdu, auth, key);
+    } else {
+        ospf_pdu_update_auth_v3(pdu, auth, key);
+    }
+}
+
+bool
+ospf_pdu_validate_auth_v2(ospf_pdu_s *pdu, ospf_auth_type auth, char *key, ospf_neighbor_s *ospf_neighbor)
+{
+    uint8_t *auth_data = OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_DATA);
+    ospf_auth_header_s *auth_hdr = (ospf_auth_header_s*)auth_data;
+
+    EVP_MD_CTX *ctx;
+    unsigned int md5_size = OSPF_MD5_DIGEST_LEN;
+    uint8_t md5[OSPF_MD5_DIGEST_LEN];
+    uint8_t padded_key[OSPF_MD5_DIGEST_LEN+1] = {0};
+
+    uint32_t crypt_seq;
+    
+    if(pdu->auth_type != auth) {
+        return false;
+    }
+    switch(auth) {
+        case OSPF_AUTH_NONE:
+            return true;
+        case OSPF_AUTH_CLEARTEXT:
+            if(key && strncmp((const char*)auth_data, key, OSPFV2_AUTH_DATA_LEN) == 0) {
+                return true;
+            }
+            break;
+        case OSPF_AUTH_MD5:
+            if(pdu->packet_len + OSPF_MD5_DIGEST_LEN > pdu->pdu_len) {
+                return false;
+            }
+            if(key) {
+                strncpy((char*)padded_key, key, OSPF_MD5_DIGEST_LEN);
+            }
+            ctx = EVP_MD_CTX_new();
+            EVP_DigestInit(ctx, EVP_md5());
+            EVP_DigestUpdate(ctx, pdu->pdu, pdu->packet_len);
+            EVP_DigestUpdate(ctx, padded_key, OSPF_MD5_DIGEST_LEN);
+            EVP_DigestFinal(ctx, md5, &md5_size);
+            EVP_MD_CTX_free(ctx);
+            if(memcmp(OSPF_PDU_OFFSET(pdu, pdu->packet_len), md5, OSPF_MD5_DIGEST_LEN) != 0) {
+                return false;
+            }
+            if(ospf_neighbor) {
+                crypt_seq = be32toh(auth_hdr->crypt_seq);
+                if(crypt_seq < ospf_neighbor->rx.crypt_seq) {
+                    return false;
+                }
+                ospf_neighbor->rx.crypt_seq = crypt_seq;
+            }
+            return true;
+        default:
+            LOG_NOARG(OSPF, "DEBUG: DEFAULT...\n");
+            break;
+    }
+    LOG_NOARG(OSPF, "DEBUG: MISC ERROR...\n");
     return false;
+}
+
+bool
+ospf_pdu_validate_auth_v3(ospf_pdu_s *pdu, ospf_auth_type auth, char *key, ospf_neighbor_s *ospf_neighbor)
+{
+    UNUSED(pdu);
+    UNUSED(auth);
+    UNUSED(key);
+    UNUSED(ospf_neighbor);
+    return false;
+}
+
+bool
+ospf_pdu_validate_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key, ospf_neighbor_s *ospf_neighbor)
+{
+    if(pdu->pdu_version == OSPF_VERSION_2) {
+        return ospf_pdu_validate_auth_v2(pdu, auth, key, ospf_neighbor);
+    } else {
+        return ospf_pdu_validate_auth_v3(pdu, auth, key, ospf_neighbor);
+    }
 }
 
 void
 ospf_pdu_init(ospf_pdu_s *pdu, uint8_t pdu_type, uint8_t pdu_version)
 {
+    static uint8_t pdu_buf[OSPF_PDU_LEN_MAX] = {0};
+
     memset(pdu, 0x0, sizeof(ospf_pdu_s));
     pdu->pdu_type = pdu_type;
     pdu->pdu_version = pdu_version;
+    pdu->pdu = pdu_buf;
+    pdu->pdu_buf_len = OSPF_PDU_LEN_MAX;
 }
 
 void
