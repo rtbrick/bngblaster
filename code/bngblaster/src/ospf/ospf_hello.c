@@ -71,7 +71,9 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
     }
 
     while(ospf_neighbor) {
-        ospf_pdu_add_ipv4(&pdu, ospf_neighbor->router_id);
+        if(ospf_neighbor->state > OSPF_NBSTATE_DOWN) {
+            ospf_pdu_add_ipv4(&pdu, ospf_neighbor->router_id);
+        }
         ospf_neighbor = ospf_neighbor->next;
     }
     ospf_pdu_update_len(&pdu);
