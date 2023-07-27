@@ -18,7 +18,7 @@
 void lspgen_gen_packet_node(lsdb_node_t *);
 
 void
-lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
+lspgen_gen_isis_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
     unsigned long long sysid;
     uint8_t lsattr;
@@ -76,6 +76,50 @@ lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *pack
     push_be_uint(&packet->buf, 1, lsattr); /* LSP Attributes */
 }
 
+void
+lspgen_gen_ospf2_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
+{
+    uint32_t router_id;
+
+    /*
+     * Reset buffer.
+     */
+    packet->buf.data = packet->data;
+    packet->buf.start_idx = 0;
+    packet->buf.idx = 0;
+    packet->buf.size = sizeof(packet->data);
+
+    push_be_uint(&packet->buf, 1, 2); /* Version */
+    push_be_uint(&packet->buf, 1, 4); /* Message Type: Link State Update */
+    push_be_uint(&packet->buf, 2, 0); /* Packet length - will be overwritten later */
+
+    router_id = read_be_uint(node->key.node_id, 4);
+    push_be_uint(&packet->buf, 4, router_id); /* Router ID */
+    push_be_uint(&packet->buf, 4, ctx->topology_id.area); /* Area ID */
+
+    push_be_uint(&packet->buf, 2, 0); /* Checksum - will be overwritten later */
+
+    push_be_uint(&packet->buf, 2, 0); /* Authentication Type */
+    push_be_uint(&packet->buf, 8, 0); /* Authentication */
+
+    push_be_uint(&packet->buf, 4, 0); /* # LSAs - will be overwritten later */
+}
+
+void
+lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
+{
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	lspgen_gen_isis_packet_header(ctx, node, packet);
+	break;
+    case PROTO_OSPF2:
+	lspgen_gen_ospf2_packet_header(ctx, node, packet);
+	break;
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+    }
+}
+
 /*
  * From tcpdump.org.
  * Creates the OSI Fletcher checksum. See 8473-1, Appendix C, section C.3.
@@ -125,6 +169,37 @@ calculate_fletcher_cksum(const uint8_t *pptr, int checksum_offset, int length)
     return ((x << 8) | (y & 0xff));
 }
 
+uint32_t
+_checksum(void *buf, ssize_t len)
+{
+    uint32_t result = 0;
+    uint16_t *cur = buf;
+    while (len > 1) {
+        result += *cur++;
+        len -= 2;
+    }
+    /*  Add left-over byte, if any */
+    if(len) {
+        result += *(uint8_t*)cur;
+    }
+    return result;
+}
+
+uint32_t
+_fold(uint32_t sum)
+{
+    while(sum >> 16) {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+    return sum;
+}
+
+uint16_t
+calculate_cksum(uint8_t *buf, uint16_t len)
+{
+    return ~_fold(_checksum(buf, len));
+}
+
 /*
  * Calculate the size of the authentication TLV to be inserted.
  * Helper for calculating when to start a new packet.
@@ -147,8 +222,7 @@ lspgen_calculate_auth_len(lsdb_ctx_t *ctx)
 }
 
 void
-lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node,
-                       lsdb_packet_t *packet)
+lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
     uint16_t checksum;
     uint8_t auth_len;
@@ -202,7 +276,42 @@ lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node,
     write_be_uint(packet->data+24, 2, 0); /* reset checksum field */
     checksum = calculate_fletcher_cksum(packet->data+12, 12, packet->buf.idx-12);
     write_be_uint(packet->data+24, 2, checksum);
+}
 
+void
+lspgen_finalize_ospf2_packet(__attribute__((unused))lsdb_ctx_t *ctx,
+			     __attribute__((unused))lsdb_node_t *node,
+			     lsdb_packet_t *packet)
+{
+    uint16_t checksum;
+
+    /*
+     * Update Packet length field.
+     */
+    write_be_uint(packet->data+4, 2, packet->buf.idx);
+
+    /*
+     * Calculate Checksum
+     */
+    write_be_uint(packet->data+12, 2, 0); /* reset checksum field */
+    checksum = calculate_cksum(packet->data, packet->buf.idx);
+    write_be_uint(packet->data+12, 2, checksum);
+
+}
+
+void
+lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
+{
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	lspgen_finalize_isis_packet(ctx, node, packet);
+	break;
+    case PROTO_OSPF2:
+	lspgen_finalize_ospf2_packet(ctx, node, packet);
+	break;
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+    }
 }
 
 bool
@@ -548,7 +657,7 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         */
         CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = true;
-    ctx->ctrl_stats.packets_queued++;
+	ctx->ctrl_stats.packets_queued++;
 
         /*
         * Parent
