@@ -1914,6 +1914,13 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         return false;
     }
 
+    value = json_object_get(ospf, "teardown-time");
+    if(json_is_number(value)) {
+        ospf_config->teardown_time = json_number_value(value);
+    } else {
+        ospf_config->teardown_time = OSPF_DEFAULT_TEARDOWN_TIME;
+    }
+
     sub = json_object_get(ospf, "external");
     if(json_is_object(sub)) {
 
