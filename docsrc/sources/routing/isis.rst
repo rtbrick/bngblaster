@@ -233,7 +233,7 @@ no support for route leaking between levels.
 MRT Files
 ~~~~~~~~~
 
-The BNG Blaster can load LSPs from an MRT file as defined in 
+The BNG Blaster can load LSPs from a MRT file as defined in 
 [RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
 
 .. code-block:: none

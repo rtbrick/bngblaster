@@ -67,3 +67,56 @@ attached to two network interfaces.
     }
 
 .. include:: ../configuration/ospf.rst
+
+Interfaces
+~~~~~~~~~~~
+
+Neighbors
+~~~~~~~~~
+
+Database
+~~~~~~~~
+
+Flooding
+~~~~~~~~
+
+Limitations
+~~~~~~~~~~~
+
+MRT Files
+~~~~~~~~~
+
+The BNG Blaster can load LSA updates from a MRT file as defined in 
+[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
+
+.. code-block:: none
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                           Timestamp                           |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |             Type              |            Subtype            |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                             Length                            |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                      Message... (variable)
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+The message field contains the complete OSPF LS Update PDU including 
+the OSPF common header starting with version field. 
+
+Those files can be loaded at startup via the configuration option 
+``"ospf": { "external": { "mrt-file": "<file>" } }`` or alternative
+via ``ospf-load-mrt`` :ref:`command <api>`. 
+
+``$ sudo bngblaster-cli run.sock ospf-load-mrt file test.mrt instance 1``
+
+LSA Update Command
+~~~~~~~~~~~~~~~~~~
+
+LSA Update via Scapy 
+~~~~~~~~~~~~~~~~~~~~
+
+LSPGEN
+~~~~~~
