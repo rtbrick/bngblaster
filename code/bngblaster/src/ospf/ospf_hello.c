@@ -228,6 +228,10 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
               ospf_instance->config->dead_interval, 0, ospf_neighbor, &ospf_hello_timeout);
     timer_no_smear(ospf_neighbor->timer_inactivity);
 
+    if(ospf_instance->teardown) {
+        return;
+    }
+
     if(is2way) {
         if(ospf_neighbor->state == OSPF_NBSTATE_INIT) {
             switch(ospf_interface->state) {

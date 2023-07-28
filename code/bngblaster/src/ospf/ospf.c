@@ -237,10 +237,18 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
 }
 
 void
+ospf_final_teardown(timer_s *timer) {
+    UNUSED(timer->data);
+    assert(g_ctx->routing_sessions);
+    g_ctx->routing_sessions--;
+}
+
+void
 ospf_teardown_job(timer_s *timer) {
     ospf_instance_s *instance = timer->data;
     ospf_interface_s *ospf_interface = instance->interfaces;
     ospf_neighbor_s  *ospf_neighbor;
+
     while(ospf_interface) {
         ospf_interface = instance->interfaces;
         ospf_neighbor = ospf_interface->neighbors;
@@ -248,8 +256,23 @@ ospf_teardown_job(timer_s *timer) {
             ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
             ospf_neighbor = ospf_neighbor->next;
         }
+        switch(ospf_interface->version) {
+            case OSPF_VERSION_2:
+                ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
+                break;
+            case OSPF_VERSION_3:
+                ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
+                break;
+            default:
+                break;
+        }
         ospf_interface = ospf_interface->next;
     }
+    /* Wait one more second to send hello with empty neighbor list 
+     * to close active neighbors. */
+    timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+              "OSPF FINAL TEARDOWN", 1, 0, instance,
+              &ospf_final_teardown);
 }
 
 /**
@@ -263,7 +286,8 @@ ospf_teardown()
     ospf_instance_s *instance = g_ctx->ospf_instances;
     while(instance) {
         if(!instance->teardown) {
-            LOG(ISIS, "Teardown OSPFv%u instance %u\n", instance->config->version, instance->config->id);
+            g_ctx->routing_sessions++;
+            LOG(OSPF, "Teardown OSPFv%u instance %u\n", instance->config->version, instance->config->id);
             instance->teardown = true;
             ospf_lsa_self_update(instance);
             ospf_lsa_purge_all_external(instance);
