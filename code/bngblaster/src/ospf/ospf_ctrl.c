@@ -354,3 +354,10 @@ ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
+
+int
+ospf_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused))) 
+{
+    ospf_teardown();
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}

@@ -27,4 +27,7 @@ ospf_ctrl_lsa_update(int fd, uint32_t session_id __attribute__((unused)), json_t
 int
 ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
+int
+ospf_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
 #endif

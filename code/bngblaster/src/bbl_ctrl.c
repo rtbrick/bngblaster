@@ -231,6 +231,7 @@ struct action actions[] = {
     {"ospf-load-mrt", ospf_ctrl_load_mrt, false},
     {"ospf-lsa-update", ospf_ctrl_lsa_update, false},
     {"ospf-pdu-update", ospf_ctrl_pdu_update, false},
+    {"ospf-teardown", ospf_ctrl_teardown, false},
     {"bgp-sessions", bgp_ctrl_sessions, true},
     {"bgp-disconnect", bgp_ctrl_disconnect, false},
     {"bgp-teardown", bgp_ctrl_teardown, true},
