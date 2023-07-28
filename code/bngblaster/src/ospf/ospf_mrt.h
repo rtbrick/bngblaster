@@ -9,7 +9,11 @@
 #ifndef __BBL_OSPF_MRT_H__
 #define __BBL_OSPF_MRT_H__
 
-#define OSPF_MRT_TYPE 32
+#define OSPFv2_MRT_TYPE 11
+#define OSPFv3_MRT_TYPE 48
+
+#define OSPFv2_MRT_PDU_OFFSET 8
+#define OSPFv3_MRT_PDU_OFFSET 36
 
 typedef struct ospf_mrt_hdr_ {
     uint32_t  timestamp;
