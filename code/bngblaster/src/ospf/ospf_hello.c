@@ -41,8 +41,8 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
     ospf_pdu_add_u8(&pdu, OSPF_VERSION_2);
     ospf_pdu_add_u8(&pdu, pdu.pdu_type);
     ospf_pdu_add_u16(&pdu, 0); /* skip length */
-    ospf_pdu_add_u32(&pdu, ospf_instance->config->router_id); /* Router ID */
-    ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
+    ospf_pdu_add_ipv4(&pdu, ospf_instance->config->router_id); /* Router ID */
+    ospf_pdu_add_ipv4(&pdu, ospf_instance->config->area); /* Area ID */
     ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
 
     /* Authentication */

@@ -239,7 +239,17 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
 void
 ospf_teardown_job(timer_s *timer) {
     ospf_instance_s *instance = timer->data;
-    UNUSED(instance);
+    ospf_interface_s *ospf_interface = instance->interfaces;
+    ospf_neighbor_s  *ospf_neighbor;
+    while(ospf_interface) {
+        ospf_interface = instance->interfaces;
+        ospf_neighbor = ospf_interface->neighbors;
+        while(ospf_neighbor) {
+            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
+            ospf_neighbor = ospf_neighbor->next;
+        }
+        ospf_interface = ospf_interface->next;
+    }
 }
 
 /**

@@ -325,7 +325,6 @@ typedef struct ospf_neighbor_ {
     uint8_t  options;
 
     bool     master;
-    bool     oob_resync;
 
     uint32_t dr;
     uint32_t bdr;

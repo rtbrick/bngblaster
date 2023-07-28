@@ -287,6 +287,7 @@ bbl_ctrl_job(timer_s *timer)
             }
             /* Teardown routing protocols. */
             isis_teardown();
+            ospf_teardown();
             ldp_teardown();
             bgp_teardown();
             g_teardown_request = false;

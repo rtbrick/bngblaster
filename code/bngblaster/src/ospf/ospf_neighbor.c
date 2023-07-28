@@ -232,10 +232,13 @@ ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
     /* Update router LSA if neighbor state changes to or from FULL. */
     if(state == OSPF_NBSTATE_FULL) {
         ospf_interface->neighbors_full++;
+        g_ctx->routing_sessions++;
         ospf_lsa_self_update_request(ospf_interface->instance);
     } else if (old == OSPF_NBSTATE_FULL) {
         assert(ospf_interface->neighbors_full);
         ospf_interface->neighbors_full--;
+        assert(g_ctx->routing_sessions);
+        g_ctx->routing_sessions--;
         ospf_lsa_self_update_request(ospf_interface->instance);
     }
 }
