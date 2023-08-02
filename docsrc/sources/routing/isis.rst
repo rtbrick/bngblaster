@@ -230,35 +230,6 @@ Limitations
 Currently, only ISIS P2P links are supported. There is also
 no support for route leaking between levels. 
 
-MRT Files
-~~~~~~~~~
-
-The BNG Blaster can load LSPs from a MRT file as defined in 
-[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
-
-.. code-block:: none
-
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |                           Timestamp                           |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |             Type              |            Subtype            |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |                             Length                            |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |                      Message... (variable)
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-The message field contains the complete ISIS LSP PDU including 
-the ISIS common header starting with ``0x83``. 
-
-Those files can be loaded at startup via the configuration option 
-``"isis": { "external": { "mrt-file": "<file>" } }`` or alternative
-via ``isis-load-mrt`` :ref:`command <api>`. 
-
-``$ sudo bngblaster-cli run.sock isis-load-mrt file test.mrt instance 1``
-
 LSP Update Command
 ~~~~~~~~~~~~~~~~~~
 
@@ -266,7 +237,7 @@ It is also possible to inject external LSPs using the ``isis-lsp-update``
 :ref:`command <api>`. 
 
 The :ref:`command <api>` expects a list of hex encoded PDU's including 
-the ISIS common header starting with ``0x83``, 
+the ISIS common header starting with ``0x83``.
 
 ``$ cat command.json | jq .``
 
@@ -351,6 +322,36 @@ and inject them using the ``isis-lsp-update`` :ref:`command <api>`.
 
     if __name__ == "__main__":
         main()
+
+
+MRT Files
+~~~~~~~~~
+
+The BNG Blaster can load LSPs from a MRT file as defined in 
+[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
+
+.. code-block:: none
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                           Timestamp                           |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |             Type              |            Subtype            |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                             Length                            |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                      Message... (variable)
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+The message field contains the complete ISIS LSP PDU including 
+the ISIS common header starting with ``0x83``. 
+
+Those files can be loaded at startup via the configuration option 
+``"isis": { "external": { "mrt-file": "<file>" } }`` or alternative
+via ``isis-load-mrt`` :ref:`command <api>`. 
+
+``$ sudo bngblaster-cli run.sock isis-load-mrt file test.mrt instance 1``
 
 
 LSPGEN

@@ -20,10 +20,10 @@
      - OSPF overload
      - false
    * - `auth-key`
-     - ISIS level 1 authentication key
+     - OSPF authentication key
      - 
    * - `auth-type`
-     - ISIS level 1 authentication type (simple or md5)
+     - OSPF authentication type (simple or md5)
      - disabled
    * - `hello-interval`
      - OSPF hello interval in seconds
