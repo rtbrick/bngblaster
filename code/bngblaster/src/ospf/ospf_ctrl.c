@@ -294,6 +294,7 @@ int
 ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     json_t *value;
+    size_t pdu_count;
     size_t lsa_count;
 
     ospf_pdu_s pdu = {0};
@@ -311,8 +312,8 @@ ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t
     /* Process LSA array */
     value = json_object_get(arguments, "pdu");
     if(json_is_array(value)) {
-        lsa_count = json_array_size(value);
-        for (size_t i = 0; i < lsa_count; i++) {
+        pdu_count = json_array_size(value);
+        for (size_t i = 0; i < pdu_count; i++) {
             lsa_string = json_string_value(json_array_get(value, i));
             if(!lsa_string) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to read OSPF PDU");
