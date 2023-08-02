@@ -789,7 +789,7 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
         link->link_data = external_connection->ipv4.address;
         link->type = OSPF_LSA_LINK_P2P;
         link->tos = 0;
-        link->metric = external_connection->metric;
+        link->metric = htobe16(external_connection->metric);
         lsa->lsa_len += sizeof(ospf_lsa_link_s);
         links++;
         external_connection = external_connection->next;
