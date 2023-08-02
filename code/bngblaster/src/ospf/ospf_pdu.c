@@ -117,6 +117,10 @@ ospf_pdu_checksum_v3(ospf_pdu_s *pdu)
     uint16_t checksum = 0;
     uint16_t checksum_orig = 0;
 
+    if(!(pdu->source && pdu->destination)) {
+        return 0;
+    }
+
     /* reset checkum */
     checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
     *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
@@ -435,6 +439,10 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
         ipv6.ttl = 1;
         ipv6.protocol = IPV6_NEXT_HEADER_OSPF;
         ipv6.next = &ospf;
+
+        pdu->source = ipv6.src;
+        pdu->destination = ipv6.dst;
+        ospf_pdu_update_checksum(pdu);
     }
     ospf.version = pdu->pdu_version;
     ospf.type = pdu->pdu_type;

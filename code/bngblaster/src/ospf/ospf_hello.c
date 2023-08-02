@@ -41,8 +41,8 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
     ospf_pdu_add_u8(&pdu, OSPF_VERSION_2);
     ospf_pdu_add_u8(&pdu, pdu.pdu_type);
     ospf_pdu_add_u16(&pdu, 0); /* skip length */
-    ospf_pdu_add_ipv4(&pdu, ospf_instance->config->router_id); /* Router ID */
-    ospf_pdu_add_ipv4(&pdu, ospf_instance->config->area); /* Area ID */
+    ospf_pdu_add_ipv4(&pdu, config->router_id); /* Router ID */
+    ospf_pdu_add_ipv4(&pdu, config->area); /* Area ID */
     ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
 
     /* Authentication */
@@ -51,11 +51,11 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
 
     /* OSPFv2 hello packet */
     ospf_pdu_add_ipv4(&pdu, ipv4_len_to_mask(interface->ip.len));
-    ospf_pdu_add_u16(&pdu, ospf_instance->config->hello_interval);
+    ospf_pdu_add_u16(&pdu, config->hello_interval);
     options |= OSPF_OPTION_E_BIT;
     ospf_pdu_add_u8(&pdu, options);
-    ospf_pdu_add_u8(&pdu, ospf_instance->config->router_priority);
-    ospf_pdu_add_u32(&pdu, ospf_instance->config->dead_interval);
+    ospf_pdu_add_u8(&pdu, config->router_priority);
+    ospf_pdu_add_u32(&pdu, config->dead_interval);
     switch(ospf_interface->type) {
         case OSPF_INTERFACE_P2P:
         case OSPF_INTERFACE_VIRTUAL:
@@ -115,11 +115,84 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
                      uint8_t *buf, uint16_t *len, 
                      bbl_ethernet_header_s *eth)
 {
-    UNUSED(interface);
-    UNUSED(buf);
-    UNUSED(len);
-    UNUSED(eth);
-    return PROTOCOL_SUCCESS;
+    protocol_error_t result;
+
+    bbl_ipv6_s ipv6 = {0};
+    bbl_ospf_s ospf = {0};
+    ospf_pdu_s pdu = {0};
+    uint8_t mac[ETH_ADDR_LEN];
+
+    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    ospf_config_s *config = ospf_instance->config;
+
+    uint8_t options = 0;
+
+    ospf_pdu_init(&pdu, OSPF_PDU_HELLO, OSPF_VERSION_3);
+    pdu.destination = (void*)ipv6_multicast_all_routers;
+    pdu.source = (void*)interface->ip6_ll;
+
+    /* OSPFv3 header */
+    ospf_pdu_add_u8(&pdu, OSPF_VERSION_3);
+    ospf_pdu_add_u8(&pdu, pdu.pdu_type);
+    ospf_pdu_add_u16(&pdu, 0); /* skip length */
+    ospf_pdu_add_ipv4(&pdu, config->router_id); /* Router ID */
+    ospf_pdu_add_ipv4(&pdu, config->area); /* Area ID */
+    ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
+    ospf_pdu_add_u16(&pdu, 0); /* skip instance */
+
+    /* OSPFv3 hello packet */
+    ospf_pdu_add_u32(&pdu, interface->ifindex);
+    ospf_pdu_add_u8(&pdu, config->router_priority);
+    ospf_pdu_add_u16(&pdu, 0); /* first two option bytes */
+    options |= OSPF_OPTION_E_BIT;
+    ospf_pdu_add_u8(&pdu, options);
+    ospf_pdu_add_u16(&pdu, config->hello_interval);
+    ospf_pdu_add_u16(&pdu, config->dead_interval);
+    switch(ospf_interface->type) {
+        case OSPF_INTERFACE_P2P:
+        case OSPF_INTERFACE_VIRTUAL:
+            ospf_pdu_zero_bytes(&pdu, 2*IPV4_ADDR_LEN);
+            break;
+        default:
+            ospf_pdu_add_ipv4(&pdu, ospf_interface->dr);
+            ospf_pdu_add_ipv4(&pdu, ospf_interface->bdr);
+            break;
+    }
+
+    while(ospf_neighbor) {
+        if(ospf_neighbor->state > OSPF_NBSTATE_DOWN) {
+            ospf_pdu_add_ipv4(&pdu, ospf_neighbor->router_id);
+        }
+        ospf_neighbor = ospf_neighbor->next;
+    }
+
+    /* Update length, auth, checksum and send... */
+    ospf_pdu_update_len(&pdu);
+    ospf_pdu_update_checksum(&pdu);
+
+    /* Build packet ... */
+    ipv6_multicast_mac(ipv6_multicast_ospf_routers, mac);
+    eth->type = ETH_TYPE_IPV6;
+    eth->next = &ipv6;
+    eth->dst = mac;
+    ipv6.dst = pdu.destination;
+    ipv6.src = pdu.source;
+    ipv6.ttl = 1;
+    ipv6.protocol = IPV6_NEXT_HEADER_OSPF;
+    ipv6.next = &ospf;
+    ospf.version = pdu.pdu_version;
+    ospf.type = pdu.pdu_type;
+    ospf.pdu = pdu.pdu;
+    ospf.pdu_len = pdu.pdu_len;
+    result = encode_ethernet(buf, len, eth);
+    if(result == PROTOCOL_SUCCESS) {
+        LOG(PACKET, "OSPFv3 TX %s on interface %s\n",
+            ospf_pdu_type_string(ospf.type), interface->name);
+        ospf_interface->stats.hello_tx++;
+    }
+    return result;
 }
 
 void
