@@ -133,10 +133,11 @@ ospf_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t
     interfaces = json_array();
     ospf_interface = ospf_instance->interfaces;
     while(ospf_interface) {
-        interface = json_pack("{ss ss ss ss ss si si s{sI sI sI sI sI sI sI sI sI sI}}", 
+        interface = json_pack("{ss ss ss sI ss ss si si s{sI sI sI sI sI sI sI sI sI sI}}", 
             "name", ospf_interface->interface->name,
             "type", ospf_interface_type_string(ospf_interface->type),
             "state", ospf_interface_state_string(ospf_interface->state),
+            "id", ospf_interface->id,
             "dr", format_ipv4_address(&ospf_interface->dr),
             "bdr", format_ipv4_address(&ospf_interface->bdr),
             "neighbors", ospf_interface->neighbors_count,

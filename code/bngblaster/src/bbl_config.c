@@ -1779,6 +1779,8 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
     int i, size;
     double number;
 
+    static uint32_t interface_id = 1000000;
+
     ospf_external_connection_s *connection = NULL;
 
     const char *schema[] = {
@@ -1949,7 +1951,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                 c = json_array_get(con, i);
 
                 const char *schema[] = {
-                    "router-id", "metric",
+                    "router-id", "metric", "neighbor-interface-id"
                 };
                 if(!schema_validate(c, "connections", schema, 
                 sizeof(schema)/sizeof(schema[0]))) {
@@ -1972,6 +1974,14 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                     connection->metric = json_number_value(value);
                 } else {
                     connection->metric = 10;
+                }
+
+                connection->interface_id = interface_id++;
+                value = json_object_get(c, "neighbor-interface-id");
+                if(json_is_number(value)) {
+                    connection->neighbor_interface_id = json_number_value(value);
+                } else {
+                    connection->neighbor_interface_id = connection->interface_id;
                 }
             }
         }
