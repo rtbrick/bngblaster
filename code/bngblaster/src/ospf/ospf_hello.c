@@ -130,7 +130,7 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
     uint8_t options = 0;
 
     ospf_pdu_init(&pdu, OSPF_PDU_HELLO, OSPF_VERSION_3);
-    pdu.destination = (void*)ipv6_multicast_all_routers;
+    pdu.destination = (void*)ipv6_multicast_ospf_routers;
     pdu.source = (void*)interface->ip6_ll;
 
     /* OSPFv3 header */

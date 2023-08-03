@@ -272,7 +272,7 @@ typedef struct ospf_lsa_link_ {
     uint8_t     type; /* Type */
     uint8_t     tos; /* Tos */
     uint16_t    metric; /* Metric */
-} __attribute__ ((__packed__)) ospf_lsa_link_s;
+} __attribute__ ((__packed__)) ospfv2_lsa_link_s;
 
 typedef struct ospfv3_lsa_nbr_ {
     uint8_t     type;
@@ -281,7 +281,7 @@ typedef struct ospfv3_lsa_nbr_ {
     uint32_t    interface_id;
     uint32_t    neighbor_interface_id;
     uint32_t    neighbor_router_id;
-} __attribute__ ((__packed__)) ospfv3_lsa_nbr_s;
+} __attribute__ ((__packed__)) ospfv3_lsa_link_s;
 
 typedef struct ospf_lsa_key_ {
     uint32_t    id;     /* Link State ID */
