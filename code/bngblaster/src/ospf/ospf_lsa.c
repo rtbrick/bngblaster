@@ -545,7 +545,7 @@ ospf_lsa_add_interface_v2(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
         case OSPF_IFSTATE_DR_OTHER:
             while(ospf_neighbor) {
                 if(ospf_neighbor->state == OSPF_NBSTATE_FULL && 
-                   ospf_neighbor->router_id == ospf_interface->dr) {
+                   ospf_neighbor->ipv4 == ospf_interface->dr) {
                     link = (ospfv2_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
                     link->link_id = ospf_neighbor->ipv4;
                     link->link_data = ospf_interface->interface->ip.address;
@@ -601,6 +601,100 @@ ospf_lsa_add_interface_v3(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
             break;
     }
     return links;
+}
+
+static void
+ospf_lsa_prefix_v3(ospf_instance_s *ospf_instance)
+{
+    /* Generate Intra-Area-Prefix LSA */
+    ospf_interface_s *ospf_interface = ospf_instance->interfaces;
+    ospf_config_s *config = ospf_instance->config;
+
+    ospf_external_connection_s *external_connection = NULL;
+
+    void **search = NULL;
+    dict_insert_result result;
+
+    ospfv3_lsa_iap_s *iap;
+    ospfv3_lsa_iap_prefix_s *prefix;
+    uint16_t prefixes = 0;
+
+    ospf_lsa_s *lsa;
+    ospf_lsa_header_s *hdr;
+    ospf_lsa_key_s key = { 
+        .id = config->router_id,
+        .router = config->router_id
+    };
+    search = hb_tree_search(ospf_instance->lsdb[OSPF_LSA_TYPE_9], &key);
+    if(search) {
+        /* Update existing LSA. */
+        lsa = *search;
+        if(lsa->lsa && lsa->lsa_buf_len && 
+           lsa->lsa_buf_len < OSPF_MAX_SELF_LSA_LEN) {
+            free(lsa->lsa);
+            lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+            lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+        }
+    } else {
+        /* Create new LSA. */
+        lsa = ospf_lsa_new(OSPF_LSA_TYPE_9, &key, ospf_instance);
+        lsa->seq = OSPF_LSA_SEQ_INIT;
+        lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+        lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+        result = hb_tree_insert(ospf_instance->lsdb[OSPF_LSA_TYPE_9], &lsa->key);
+        assert(result.inserted);
+        if(result.inserted) {
+            *result.datum_ptr = lsa;
+        } else {
+            LOG_NOARG(OSPF, "Failed to add self generated OSPF Type 9 LSA to LSDB\n");
+            return;
+        }
+    }
+    lsa->source.type = OSPF_SOURCE_SELF;
+    lsa->source.router_id = config->router_id;
+    lsa->lsa_len = OSPF_LSA_HDR_LEN;
+    lsa->expired = false;
+    lsa->deleted = false;    
+    hdr = (ospf_lsa_header_s*)lsa->lsa;
+    hdr->options = OSPFV3_FSCOPE_AREA;
+    hdr->type = OSPF_LSA_TYPE_9;
+    hdr->id = key.id;
+    hdr->router = key.router;
+    hdr->seq = htobe32(lsa->seq);
+
+    iap = (ospfv3_lsa_iap_s*)(lsa->lsa+lsa->lsa_len);
+    lsa->lsa_len += sizeof(ospfv3_lsa_iap_s);
+    iap->prefix_count = 0;
+    iap->ref_type = htobe16(0x2001); /* referenced to router LSA */
+    iap->ref_router = config->router_id;
+
+    while(ospf_interface) {
+        prefix = (ospfv3_lsa_iap_prefix_s*)(lsa->lsa+lsa->lsa_len);
+        prefix->prefix_len = ospf_interface->interface->ip6.len;
+        prefix->prefix_options = 0;
+        prefix->metric = htobe16(ospf_interface->metric);
+        memcpy(prefix->prefix, ospf_interface->interface->ip6.address, sizeof(ipv6addr_t));
+        lsa->lsa_len += (sizeof(ospfv3_lsa_iap_prefix_s) - (sizeof(ipv6addr_t)-BITS_TO_BYTES(prefix->prefix_len)));
+        prefixes++;
+        ospf_interface = ospf_interface->next;
+    }
+    
+    /* Add external connections */
+    external_connection = config->external_connection;
+    while(external_connection && lsa->lsa_len + sizeof(ospfv3_lsa_iap_prefix_s) <= lsa->lsa_buf_len) {
+        prefix = (ospfv3_lsa_iap_prefix_s*)(lsa->lsa+lsa->lsa_len);
+        prefix->prefix_len = external_connection->ipv6.len;
+        prefix->prefix_options = 0;
+        prefix->metric = htobe16(external_connection->metric);
+        memcpy(prefix->prefix, external_connection->ipv6.address, sizeof(ipv6addr_t));
+        lsa->lsa_len += (sizeof(ospfv3_lsa_iap_prefix_s) - (sizeof(ipv6addr_t)-BITS_TO_BYTES(prefix->prefix_len)));
+        prefixes++;
+        external_connection = external_connection->next;
+    }
+
+    iap->prefix_count = htobe16(prefixes);
+    hdr->length = htobe16(lsa->lsa_len);
+    ospf_lsa_refresh(lsa);
 }
 
 static void
@@ -674,8 +768,6 @@ ospf_lsa_add_network_v2(ospf_interface_s *ospf_interface)
     void **search = NULL;
     dict_insert_result result;
 
-    uint8_t options;
-
     ospf_lsa_s *lsa;
     ospf_lsa_header_s *hdr;
     ospf_lsa_key_s key = { 
@@ -708,18 +800,13 @@ ospf_lsa_add_network_v2(ospf_interface_s *ospf_interface)
             return;
         }
     }
-    if(config->version == OSPF_VERSION_2) {
-        options = OSPF_OPTION_E_BIT;
-    } else {
-        options = OSPFV3_FSCOPE_AREA;
-    }
     lsa->source.type = OSPF_SOURCE_SELF;
     lsa->source.router_id = config->router_id;
     lsa->lsa_len = OSPF_LSA_HDR_LEN;
     lsa->expired = false;
     lsa->deleted = false;    
     hdr = (ospf_lsa_header_s*)lsa->lsa;
-    hdr->options = options;
+    hdr->options = OSPF_OPTION_E_BIT;
     hdr->type = OSPF_LSA_TYPE_2;
     hdr->id = key.id;
     hdr->router = key.router;
@@ -775,6 +862,16 @@ ospf_lsa_links_v2(ospf_lsa_s *lsa)
     /* # links */
     links_cur = lsa->lsa_len;
     lsa->lsa_len += sizeof(uint16_t);
+
+    /* Add loopback */
+    link = (ospfv2_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+    link->link_id = config->router_id;
+    link->link_data = 0xffffffff;
+    link->type = OSPF_LSA_LINK_STUB;
+    link->tos = 0;
+    link->metric = 0;
+    lsa->lsa_len += sizeof(ospfv2_lsa_link_s);
+    links++;
 
     /* Add OSPF neighbor interfaces */
     while(ospf_interface) {
@@ -879,6 +976,7 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
         options = OSPFV3_FSCOPE_AREA;
         hdr->options = options;
         ospf_lsa_links_v3(lsa);
+        ospf_lsa_prefix_v3(ospf_instance);
     }
 
     hdr->length = htobe16(lsa->lsa_len);
@@ -1428,7 +1526,7 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
             if(OSPF_PDU_CURSOR_PLEN(pdu) < OSPFV3_LSA_REQ_HDR_LEN) {
                 break;
             }
-            OSPF_PDU_CURSOR_INC(pdu, 1);
+            OSPF_PDU_CURSOR_INC(pdu, 3);
             lsa_type = *OSPF_PDU_CURSOR(pdu);
             OSPF_PDU_CURSOR_INC(pdu, 1);
         }

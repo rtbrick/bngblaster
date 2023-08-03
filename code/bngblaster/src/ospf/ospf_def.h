@@ -42,7 +42,7 @@
 #define OSPFV2_LS_UPDATE_LEN_MIN            28
 #define OSPFV3_LS_UPDATE_LEN_MIN            24
 #define OSPFV2_LS_REQ_LEN_MIN               24
-#define OSPFV3_LS_REQ_LEN_MIN               18
+#define OSPFV3_LS_REQ_LEN_MIN               16
 #define OSPFV2_LS_ACK_LEN_MIN               24
 #define OSPFV3_LS_ACK_LEN_MIN               16
 
@@ -117,7 +117,7 @@
 #define OSPFV3_OFFSET_LS_UPDATE_LSA         20
 
 #define OSPFV2_OFFSET_LS_REQ_LSA            24
-#define OSPFV3_OFFSET_LS_REQ_LSA            18
+#define OSPFV3_OFFSET_LS_REQ_LSA            16
 
 #define OSPFV2_OFFSET_LS_ACK_LSA            24
 #define OSPFV3_OFFSET_LS_ACK_LSA            16
@@ -151,7 +151,7 @@
 #define OSPFV2_AUTH_TYPE_LEN                2
 #define OSPFV2_AUTH_DATA_LEN                8
 #define OSPFV2_LSA_REQ_HDR_LEN              12
-#define OSPFV3_LSA_REQ_HDR_LEN              10
+#define OSPFV3_LSA_REQ_HDR_LEN              12
 
 #define OSPF_LSA_HDR_LEN                    20
 #define OSPF_LLS_HDR_LEN                    12
@@ -273,6 +273,21 @@ typedef struct ospf_lsa_link_ {
     uint8_t     tos; /* Tos */
     uint16_t    metric; /* Metric */
 } __attribute__ ((__packed__)) ospfv2_lsa_link_s;
+
+/* Intra-Area-Prefix LSA Format */
+typedef struct ospfv3_lsa_iap_ {
+    uint16_t    prefix_count;
+    uint16_t    ref_type;
+    uint32_t    ref_id;
+    uint32_t    ref_router;
+} __attribute__ ((__packed__)) ospfv3_lsa_iap_s;
+
+typedef struct ospfv3_lsa_iap_prefix_ {
+    uint8_t     prefix_len;
+    uint8_t     prefix_options;
+    uint16_t    metric;
+    ipv6addr_t  prefix;
+} __attribute__ ((__packed__)) ospfv3_lsa_iap_prefix_s;
 
 typedef struct ospfv3_lsa_nbr_ {
     uint8_t     type;
