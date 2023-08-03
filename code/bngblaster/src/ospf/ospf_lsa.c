@@ -474,8 +474,8 @@ ospf_lsa_purge_all_external(ospf_instance_s *ospf_instance)
     }
 }
 
-uint16_t 
-ospf_lsa_add_interface(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
+static uint16_t 
+ospf_lsa_add_interface_v2(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
 {
     ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
     ospf_lsa_link_s *link;
@@ -572,7 +572,56 @@ ospf_lsa_add_interface(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
 }
 
 static void
-ospf_lsa_del_network(ospf_interface_s *ospf_interface)
+ospf_lsa_links_v3(ospf_lsa_s *lsa)
+{
+    ospf_instance_s *ospf_instance = lsa->instance;
+    ospf_interface_s *ospf_interface = ospf_instance->interfaces;
+    ospf_config_s *config = ospf_instance->config;
+
+    ospf_external_connection_s *external_connection = NULL;
+
+    ospfv3_lsa_nbr_s *nbr;
+
+    /* Options */
+    *(uint16_t*)(lsa->lsa+lsa->lsa_len) = 0; 
+    lsa->lsa_len += sizeof(uint16_t);
+
+    /* Add OSPF neighbor interfaces */
+    while(ospf_interface) {
+        nbr = (ospfv3_lsa_nbr_s*)(lsa->lsa+lsa->lsa_len);
+        if(ospf_interface->state == OSPF_IFSTATE_P2P) {
+            nbr->type = OSPF_LSA_LINK_P2P;
+        } else {
+            nbr->type = OSPF_LSA_LINK_TRANSIT;
+
+        }
+        nbr->reserved = 0;
+        nbr->metric = htobe16(external_connection->metric);
+        nbr->interface_id = external_connection->interface_id;
+        nbr->neighbor_interface_id = external_connection->router_id;
+        nbr->neighbor_router_id = external_connection->router_id;
+        lsa->lsa_len += sizeof(ospfv3_lsa_nbr_s);
+
+        ospf_interface = ospf_interface->next;
+    }
+
+    /* Add external connections */
+    external_connection = config->external_connection;
+    while(external_connection && lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
+        nbr = (ospfv3_lsa_nbr_s*)(lsa->lsa+lsa->lsa_len);
+        nbr->type = OSPF_LSA_LINK_P2P;
+        nbr->reserved = 0;
+        nbr->metric = htobe16(external_connection->metric);
+        nbr->interface_id = external_connection->interface_id;
+        nbr->neighbor_interface_id = external_connection->router_id;
+        nbr->neighbor_router_id = external_connection->router_id;
+        lsa->lsa_len += sizeof(ospfv3_lsa_nbr_s);
+        external_connection = external_connection->next;
+    }
+}
+
+static void
+ospf_lsa_del_network_v2(ospf_interface_s *ospf_interface)
 {
     ospf_instance_s *ospf_instance = ospf_interface->instance;
     ospf_config_s *config = ospf_instance->config;
@@ -595,7 +644,7 @@ ospf_lsa_del_network(ospf_interface_s *ospf_interface)
 }
 
 static void
-ospf_lsa_add_network(ospf_interface_s *ospf_interface)
+ospf_lsa_add_network_v2(ospf_interface_s *ospf_interface)
 {
     ospf_instance_s *ospf_instance = ospf_interface->instance;
     ospf_neighbor_s *ospf_neighbor;
@@ -604,7 +653,7 @@ ospf_lsa_add_network(ospf_interface_s *ospf_interface)
     void **search = NULL;
     dict_insert_result result;
 
-    uint8_t options = OSPF_OPTION_E_BIT;
+    uint8_t options;
 
     ospf_lsa_s *lsa;
     ospf_lsa_header_s *hdr;
@@ -638,6 +687,11 @@ ospf_lsa_add_network(ospf_interface_s *ospf_interface)
             return;
         }
     }
+    if(config->version == OSPF_VERSION_2) {
+        options = OSPF_OPTION_E_BIT;
+    } else {
+        options = OSPFV3_FSCOPE_AREA;
+    }
     lsa->source.type = OSPF_SOURCE_SELF;
     lsa->source.router_id = config->router_id;
     lsa->lsa_len = OSPF_LSA_HDR_LEN;
@@ -659,8 +713,8 @@ ospf_lsa_add_network(ospf_interface_s *ospf_interface)
     ospf_neighbor = ospf_interface->neighbors;
     while(ospf_neighbor) {
         if(ospf_neighbor->state == OSPF_NBSTATE_FULL) {
-            *(uint32_t*)(lsa->lsa+lsa->lsa_len) = ospf_neighbor->router_id;
-            lsa->lsa_len += sizeof(uint32_t);
+           *(uint32_t*)(lsa->lsa+lsa->lsa_len) = ospf_neighbor->router_id;
+           lsa->lsa_len += sizeof(uint32_t);
         }
         ospf_neighbor = ospf_neighbor->next;
     }
@@ -674,14 +728,59 @@ ospf_lsa_add_network(ospf_interface_s *ospf_interface)
  * @param ospf_interface OSPF interface
  */
 static void
-ospf_lsa_network(ospf_interface_s *ospf_interface)
+ospf_lsa_network_v2(ospf_interface_s *ospf_interface)
 {
     if(ospf_interface->state == OSPF_IFSTATE_DR && 
        ospf_interface->neighbors_full) {
-        ospf_lsa_add_network(ospf_interface);
+        ospf_lsa_add_network_v2(ospf_interface);
     } else {
-        ospf_lsa_del_network(ospf_interface);
+        ospf_lsa_del_network_v2(ospf_interface);
     }
+}
+
+static void
+ospf_lsa_links_v2(ospf_lsa_s *lsa)
+{
+    ospf_instance_s *ospf_instance = lsa->instance;
+    ospf_interface_s *ospf_interface = ospf_instance->interfaces;
+    ospf_config_s *config = ospf_instance->config;
+
+    ospf_external_connection_s *external_connection = NULL;
+
+    ospf_lsa_link_s *link;
+    uint16_t links = 0;
+    uint16_t links_cur = 0;
+
+    /* # links */
+    links_cur = lsa->lsa_len;
+    lsa->lsa_len += sizeof(uint16_t);
+
+    /* Add OSPF neighbor interfaces */
+    while(ospf_interface) {
+        if(ospf_interface->type == OSPF_INTERFACE_BROADCAST) {
+            ospf_lsa_network_v2(ospf_interface);
+        }
+        if(lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
+            links += ospf_lsa_add_interface_v2(lsa, ospf_interface);
+        }
+        ospf_interface = ospf_interface->next;
+    }
+
+    /* Add external connections */
+    external_connection = config->external_connection;
+    while(external_connection && lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
+        link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
+        link->link_id = external_connection->router_id;
+        link->link_data = external_connection->ipv4.address;
+        link->type = OSPF_LSA_LINK_P2P;
+        link->tos = 0;
+        link->metric = htobe16(external_connection->metric);
+        lsa->lsa_len += sizeof(ospf_lsa_link_s);
+        links++;
+        external_connection = external_connection->next;
+    }
+
+    *(uint16_t*)(lsa->lsa+links_cur) = htobe16(links); 
 }
 
 /**
@@ -694,21 +793,15 @@ ospf_lsa_network(ospf_interface_s *ospf_interface)
 bool
 ospf_lsa_self_update(ospf_instance_s *ospf_instance)
 {
-    ospf_interface_s *ospf_interface = ospf_instance->interfaces;
     ospf_config_s *config = ospf_instance->config;
 
     void **search = NULL;
     dict_insert_result result;
 
-    uint8_t options = OSPF_OPTION_E_BIT;
+    uint8_t options;
 
     ospf_lsa_s *lsa;
     ospf_lsa_header_s *hdr;
-    ospf_lsa_link_s *link;
-    uint16_t links = 0;
-    uint16_t links_cur = 0;
-
-    ospf_external_connection_s *external_connection = NULL;
 
     ospf_lsa_key_s key = { 
         .id = config->router_id, 
@@ -740,13 +833,13 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
             return false;
         }
     }
+
     lsa->source.type = OSPF_SOURCE_SELF;
     lsa->source.router_id = config->router_id;
     lsa->lsa_len = OSPF_LSA_HDR_LEN;
     lsa->expired = false;
     lsa->deleted = false;
     hdr = (ospf_lsa_header_s*)lsa->lsa;
-    hdr->options = options;
     hdr->type = OSPF_LSA_TYPE_1;
     hdr->id = key.id;
     hdr->router = key.router;
@@ -756,52 +849,23 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance)
     *(lsa->lsa+lsa->lsa_len++) = OSPF_LSA_BORDER_ROUTER|OSPF_LSA_EXTERNAL_ROUTER;
     /* Reserved */
     *(lsa->lsa+lsa->lsa_len++) = 0;
-    /* # links */
-    links_cur = lsa->lsa_len;
-    lsa->lsa_len += sizeof(uint16_t);
 
-    /* Add loopback */
-    link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
-    link->link_id = config->router_id;
-    link->link_data = 0xffffffff;
-    link->type = OSPF_LSA_LINK_STUB;
-    link->tos = 0;
-    link->metric = 0;
-    lsa->lsa_len += sizeof(ospf_lsa_link_s);
-    links++;
-
-    /* Add OSPF neighbor interfaces */
-    while(ospf_interface) {
-        if(ospf_interface->type == OSPF_INTERFACE_BROADCAST) {
-            ospf_lsa_network(ospf_interface);
-        }
-        if(lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
-            links += ospf_lsa_add_interface(lsa, ospf_interface);
-        }
-        ospf_interface = ospf_interface->next;
+    if(config->version == OSPF_VERSION_2) {
+        options = OSPF_OPTION_E_BIT;
+        hdr->options = options;
+        ospf_lsa_links_v2(lsa);
+    } else {
+        options = OSPFV3_FSCOPE_AREA;
+        hdr->options = options;
+        ospf_lsa_links_v3(lsa);
     }
 
-    /* Add external connections */
-    external_connection = config->external_connection;
-    while(external_connection && lsa->lsa_len + sizeof(ospf_lsa_link_s) <= lsa->lsa_buf_len) {
-        link = (ospf_lsa_link_s*)(lsa->lsa+lsa->lsa_len);
-        link->link_id = external_connection->router_id;
-        link->link_data = external_connection->ipv4.address;
-        link->type = OSPF_LSA_LINK_P2P;
-        link->tos = 0;
-        link->metric = htobe16(external_connection->metric);
-        lsa->lsa_len += sizeof(ospf_lsa_link_s);
-        links++;
-        external_connection = external_connection->next;
-    }
-
-    *(uint16_t*)(lsa->lsa+links_cur) = htobe16(links); 
     hdr->length = htobe16(lsa->lsa_len);
     ospf_lsa_refresh(lsa);
 
     timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
-                        "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
-                        &ospf_lsa_refresh_job);
+                       "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
+                       &ospf_lsa_refresh_job);
     return true;
 }
 
@@ -993,7 +1057,13 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
             if(lsa_count > 0 && (overhead + pdu.pdu_len + OSPF_LSA_HDR_LEN) > interface->mtu) {
                 break;
             }
-            ospf_pdu_add_u32(&pdu, entry->hdr.type);
+            if(ospf_interface->version == OSPF_VERSION_2) {
+                ospf_pdu_add_u32(&pdu, entry->hdr.type);
+            } else {
+                ospf_pdu_add_u16(&pdu, entry->hdr.age);
+                ospf_pdu_add_u8(&pdu, entry->hdr.options);
+                ospf_pdu_add_u8(&pdu, entry->hdr.type);
+            }
             ospf_pdu_add_ipv4(&pdu, entry->hdr.id);
             ospf_pdu_add_ipv4(&pdu, entry->hdr.router);
             lsa_count++;

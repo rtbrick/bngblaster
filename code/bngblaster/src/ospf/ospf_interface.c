@@ -225,6 +225,8 @@ ospf_interface_init(bbl_network_interface_s *interface,
     uint16_t instance_id;
     uint8_t interface_type;
 
+    static uint32_t interface_id = 1;
+
     switch(version) {
         case OSPF_VERSION_2:
             instance_id = network_config->ospfv2_instance_id;
@@ -253,7 +255,7 @@ ospf_interface_init(bbl_network_interface_s *interface,
                 ospf_interface->instance = ospf;
                 ospf_interface->version = version;
                 ospf_interface->type = interface_type;
-
+                ospf_interface->id = interface_id++;
                 if(version == OSPF_VERSION_2) {
                     ospf_interface->metric = network_config->ospfv2_metric;
                 } else {

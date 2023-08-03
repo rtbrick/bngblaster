@@ -143,7 +143,7 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
     ospf_pdu_add_u16(&pdu, 0); /* skip instance */
 
     /* OSPFv3 hello packet */
-    ospf_pdu_add_u32(&pdu, interface->ifindex);
+    ospf_pdu_add_u32(&pdu, ospf_interface->id);
     ospf_pdu_add_u8(&pdu, config->router_priority);
     ospf_pdu_add_u16(&pdu, 0); /* first two option bytes */
     options |= OSPF_OPTION_E_BIT;

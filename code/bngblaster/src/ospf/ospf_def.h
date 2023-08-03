@@ -27,6 +27,11 @@
 #define OSPF_VERSION_2                      2
 #define OSPF_VERSION_3                      3
 
+#define OSPFV3_FSCOPE_LL                    0x00
+#define OSPFV3_FSCOPE_AREA                  0x20
+#define OSPFV3_FSCOPE_AS                    0x40
+#define OSPFV3_FSCOPE_RESERVED              0x60
+
 #define OSPF_PDU_LEN_MIN                    16
 #define OSPF_PDU_LEN_MAX                    UINT16_MAX
 
@@ -122,14 +127,20 @@
 #define OSPF_DBD_FLAG_I                     0x04
 #define OSPF_DBD_FLAG_R                     0x08
 
-#define OSPF_DBD_OPTION_MT                  0x01
-#define OSPF_DBD_OPTION_E                   0x02
-#define OSPF_DBD_OPTION_MC                  0x04
-#define OSPF_DBD_OPTION_N                   0x08
-#define OSPF_DBD_OPTION_L                   0x10
-#define OSPF_DBD_OPTION_DC                  0x20
-#define OSPF_DBD_OPTION_O                   0x40
-#define OSPF_DBD_OPTION_DN                  0x80
+#define OSPFV2_DBD_OPTION_MT                0x01
+#define OSPFV2_DBD_OPTION_E                 0x02
+#define OSPFV2_DBD_OPTION_MC                0x04
+#define OSPFV2_DBD_OPTION_N                 0x08
+#define OSPFV2_DBD_OPTION_L                 0x10
+#define OSPFV2_DBD_OPTION_DC                0x20
+#define OSPFV2_DBD_OPTION_O                 0x40
+#define OSPFV2_DBD_OPTION_DN                0x80
+
+#define OSPFV3_DBD_OPTION_V6                0x01
+#define OSPFV3_DBD_OPTION_E                 0x02
+#define OSPFV3_DBD_OPTION_N                 0x08
+#define OSPFV3_DBD_OPTION_R                 0x10
+#define OSPFV3_DBD_OPTION_DC                0x20
 
 #define OSPF_EXTENDED_OPTION_TLV            1
 #define OSPF_EXTENDED_OPTION_TLV_LEN        4
@@ -246,7 +257,7 @@ typedef struct ospf_auth_header_ {
 
 typedef struct ospf_lsa_header_ {
     uint16_t    age; /* LS Age */
-    uint8_t     options; /* Options */
+    uint8_t     options; /* Options for OSPFv2 / Flooding Scope for OSPFv3 */
     uint8_t     type; /* LS Type */
     uint32_t    id; /* Link State ID */
     uint32_t    router; /* Advertising Router */
@@ -263,6 +274,15 @@ typedef struct ospf_lsa_link_ {
     uint16_t    metric; /* Metric */
 } __attribute__ ((__packed__)) ospf_lsa_link_s;
 
+typedef struct ospfv3_lsa_nbr_ {
+    uint8_t     type;
+    uint8_t     reserved;
+    uint16_t    metric;
+    uint32_t    interface_id;
+    uint32_t    neighbor_interface_id;
+    uint32_t    neighbor_router_id;
+} __attribute__ ((__packed__)) ospfv3_lsa_nbr_s;
+
 typedef struct ospf_lsa_key_ {
     uint32_t    id;     /* Link State ID */
     uint32_t    router; /* Advertising Router */
@@ -274,6 +294,8 @@ typedef struct ospf_external_connection_ {
     ipv4_prefix         ipv4;
     ipv6_prefix         ipv6;
     uint32_t            metric;
+    uint32_t            interface_id;
+    uint32_t            neighbor_interface_id;
     struct ospf_external_connection_ *next;
 } ospf_external_connection_s;
 
@@ -326,6 +348,7 @@ typedef struct ospf_neighbor_ {
 
     bool     master;
 
+    uint32_t id; /* 32 bit unique neighbor interface identifier */
     uint32_t dr;
     uint32_t bdr;
     uint32_t dd;
@@ -372,6 +395,7 @@ typedef struct ospf_interface_ {
     uint16_t neighbors_count;
     uint16_t neighbors_full;
 
+    uint32_t id; /* 32 bit unique interface identifier */
     uint32_t dr;
     uint32_t bdr;
 

@@ -41,7 +41,7 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
     bool next;
 
     uint16_t overhead;
-    uint8_t options = OSPF_DBD_OPTION_E|OSPF_DBD_OPTION_O;
+    uint8_t options;
     uint8_t flags = 0;
     uint8_t type = 0;
 
@@ -64,16 +64,19 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
             overhead += OSPF_MD5_DIGEST_LEN;
         }
         ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_TYPE_LEN+OSPFV2_AUTH_DATA_LEN);
+        ospf_pdu_add_u16(&pdu, interface->mtu);
+        options = OSPFV2_DBD_OPTION_E|OSPFV2_DBD_OPTION_O;
+        ospf_pdu_add_u8(&pdu, options);
+        ospf_pdu_add_u8(&pdu, 0);
     } else {
         overhead = 40; /* IPv6 header length */
+        ospf_pdu_zero_bytes(&pdu, 5);
+        options = OSPFV3_DBD_OPTION_V6|OSPFV3_DBD_OPTION_E|OSPFV3_DBD_OPTION_R;
+        ospf_pdu_add_u8(&pdu, options);
+        ospf_pdu_add_u16(&pdu, interface->mtu);
         ospf_pdu_add_u16(&pdu, 0);
-        ospf_pdu_add_u32(&pdu, 0);
     }
-    ospf_pdu_add_u16(&pdu, interface->mtu);
-    ospf_pdu_add_u8(&pdu, options);
-    ospf_pdu_add_u8(&pdu, flags);
     ospf_pdu_add_u32(&pdu, ospf_neighbor->dd);
-
     if(ospf_neighbor->state == OSPF_NBSTATE_EXSTART) {
         flags |= OSPF_DBD_FLAG_I;
     } else {
@@ -261,6 +264,7 @@ ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
     } else {
         memcpy(ospf_neighbor->ipv6, pdu->source, sizeof(ipv6addr_t));
         ospf_neighbor->version = OSPF_VERSION_3;
+        ospf_neighbor->id = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_INTERFACE_ID);
         ospf_neighbor->priority = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_PRIORITY);
         ospf_neighbor->dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DR);
         ospf_neighbor->bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_BDR);
@@ -291,7 +295,7 @@ void
 ospf_neigbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
 {
     ospf_interface_s *ospf_interface = ospf_neighbor->interface;
-    
+
     uint8_t priority;
     uint32_t dr, bdr;
 
