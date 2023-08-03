@@ -1066,7 +1066,7 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
         ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_TYPE_LEN+OSPFV2_AUTH_DATA_LEN);
     } else {
         overhead = 40; /* IPv6 header length */
-        ospf_pdu_add_u32(&pdu, 0);
+        ospf_pdu_add_u16(&pdu, 0);
     }
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
         tree = ospf_neighbor->lsa_request_tree[type];
@@ -1081,7 +1081,7 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
             if(ospf_interface->version == OSPF_VERSION_2) {
                 ospf_pdu_add_u32(&pdu, entry->hdr.type);
             } else {
-                ospf_pdu_add_u16(&pdu, entry->hdr.age);
+                ospf_pdu_add_u16(&pdu, 0);
                 ospf_pdu_add_u8(&pdu, entry->hdr.options);
                 ospf_pdu_add_u8(&pdu, entry->hdr.type);
             }
