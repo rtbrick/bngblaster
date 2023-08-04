@@ -12,7 +12,8 @@ ensuring network stability.
 There are two versions of OSPF: OSPFv2 and OSPFv3. OSPFv2 is used for IPv4 networks, 
 while OSPFv3 is designed specifically for IPv6 networks.
 
-The BNG Blaster can emulate multiple OSPF instances of both versions, OSPFv2 and OSPFv3. 
+The BNG Blaster can emulate multiple OSPF instances of both versions, OSPFv2 and OSPFv3 
+(OSPFv3 is basically working but still under development). 
 
 An OSPF instance is a virtual OSPF node with one or more network interfaces attached. Such a
 node behaves like a "real router" including database synchronization and  flooding. Every 
@@ -22,7 +23,7 @@ instance generates a ``self`` originated type 1 router LSA describing the node i
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example OSPF configuration with two instances 
+Following an example OSPFv2 configuration with two instances 
 attached to two network interfaces.
 
 .. code-block:: json
