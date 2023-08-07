@@ -436,6 +436,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
                   be32toh(ospf_neighbor->router_id) < 
                   be32toh(ospf_instance->config->router_id)) {
             /* MASTER */
+            ospf_neighbor->dd++;
             ospf_neighbor->master = true;
             ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
         }
