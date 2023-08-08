@@ -55,8 +55,8 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
     ospf_pdu_add_u8(&pdu, ospf_neighbor->version);
     ospf_pdu_add_u8(&pdu, pdu.pdu_type);
     ospf_pdu_add_u16(&pdu, 0); /* skip length */
-    ospf_pdu_add_u32(&pdu, ospf_instance->config->router_id); /* Router ID */
-    ospf_pdu_add_u32(&pdu, ospf_instance->config->area); /* Area ID */
+    ospf_pdu_add_ipv4(&pdu, config->router_id); /* Router ID */
+    ospf_pdu_add_ipv4(&pdu, config->area); /* Area ID */
     ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
     if(ospf_neighbor->version == OSPF_VERSION_2) {
         overhead = 20; /* IPv4 header length */
