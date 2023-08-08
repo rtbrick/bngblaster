@@ -205,7 +205,7 @@ ospf_hello_timeout(timer_s *timer)
         format_ipv4_address(&ospf_neighbor->router_id), 
         ospf_neighbor->interface->interface->name);
 
-    ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
+    ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
 }
 
 /**
@@ -280,7 +280,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
     }
 
     if(!ospf_neighbor) {
-        ospf_neighbor = ospf_neigbor_new(ospf_interface, pdu);
+        ospf_neighbor = ospf_neighbor_new(ospf_interface, pdu);
         ospf_neighbor->next = ospf_interface->neighbors;
         ospf_interface->neighbors = ospf_neighbor;
         if(ospf_interface->version == OSPF_VERSION_2) {
@@ -289,11 +289,11 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
             ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
         }
     } else {
-        ospf_neigbor_update(ospf_neighbor, pdu);
+        ospf_neighbor_update(ospf_neighbor, pdu);
     }
 
     if(ospf_neighbor->state == OSPF_NBSTATE_DOWN) {
-        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     }
 
     /* Reset inactivity timer */
@@ -311,14 +311,14 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
                 case OSPF_IFSTATE_P2P:
                 case OSPF_IFSTATE_BACKUP:
                 case OSPF_IFSTATE_DR:
-                    ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+                    ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
                     break;
                 case OSPF_IFSTATE_DR_OTHER:
                     if(pdu->router_id == ospf_interface->dr ||
                        pdu->router_id == ospf_interface->bdr) {
-                        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+                        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
                     } else {
-                        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
+                        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
                     }
                     break;
                 default:
@@ -326,7 +326,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
             }
         }
     } else {
-        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     }
 
     UNUSED(options);

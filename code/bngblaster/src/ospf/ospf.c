@@ -252,7 +252,7 @@ ospf_teardown_job(timer_s *timer) {
     while(ospf_interface) {
         ospf_neighbor = ospf_interface->neighbors;
         while(ospf_neighbor) {
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
             ospf_neighbor = ospf_neighbor->next;
         }
         switch(ospf_interface->version) {

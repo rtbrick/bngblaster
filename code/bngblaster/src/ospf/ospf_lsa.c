@@ -1457,16 +1457,8 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
     ospf_lsa_ack_tx(ospf_interface, ospf_neighbor);
     /* Send direct LSA update. */
     ospf_lsa_update_tx(ospf_interface, ospf_neighbor, false);
-    /* Set neighbor state to FULL if request tree becomes empty. */
-    if(ospf_neighbor->state == OSPF_NBSTATE_LOADING) {
-        lsa_count = 0;
-        for(lsa_type=OSPF_LSA_TYPE_1; lsa_type < OSPF_LSA_TYPE_MAX; lsa_type++) {
-            lsa_count += hb_tree_count(ospf_neighbor->lsa_request_tree[lsa_type]);
-        }
-        if(lsa_count == 0) {
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_FULL);
-        }
-    }
+    /* Check if state can updated from loading to full. */
+    ospf_neighbor_full(ospf_neighbor);
 }
 
 /**
@@ -1548,7 +1540,7 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
         } else {
             /* See RFC2328 BadLSReq */
             ospf_rx_error(interface, pdu, "BadLSReq");
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
         }
     }
     /* Send direct LSA update. */

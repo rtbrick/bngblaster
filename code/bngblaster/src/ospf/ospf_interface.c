@@ -145,7 +145,7 @@ ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
     if(old > OSPF_IFSTATE_P2P) {
         /* This refers to the event "AdjOK?" as described in RFC2328 */
         while(neighbor) {
-            ospf_neigbor_adjok(neighbor);
+            ospf_neighbor_adjok(neighbor);
             neighbor = neighbor->next;
         }
     }

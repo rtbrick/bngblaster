@@ -14,7 +14,7 @@ protocol_error_t
 ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor);
 
 void
-ospf_neigbor_dbd_retry_job(timer_s *timer)
+ospf_neighbor_dbd_retry_job(timer_s *timer)
 {
     ospf_neighbor_s *ospf_neighbor = timer->data;
     switch(ospf_neighbor->state) {
@@ -129,24 +129,24 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
     if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
         ospf_interface->stats.db_des_tx++;
         timer_add(&g_ctx->timer_root, &ospf_neighbor->timer_dbd_retry, "OSPF DBD RETRY", 
-                  5, 0, ospf_neighbor, &ospf_neigbor_dbd_retry_job);
+                  5, 0, ospf_neighbor, &ospf_neighbor_dbd_retry_job);
         return PROTOCOL_SUCCESS;
     } else {
         timer_add(&g_ctx->timer_root, &ospf_neighbor->timer_dbd_retry, "OSPF DBD RETRY", 
-                  1, 0, ospf_neighbor, &ospf_neigbor_dbd_retry_job);
+                  1, 0, ospf_neighbor, &ospf_neighbor_dbd_retry_job);
         return SEND_ERROR;
     }
 }
 
 void
-ospf_neigbor_req_job(timer_s *timer)
+ospf_neighbor_req_job(timer_s *timer)
 {
     ospf_neighbor_s *ospf_neighbor = timer->data;
     ospf_lsa_req_tx(ospf_neighbor->interface, ospf_neighbor);
 }
 
 void
-ospf_neigbor_retry_job(timer_s *timer)
+ospf_neighbor_retry_job(timer_s *timer)
 {
     ospf_neighbor_s *ospf_neighbor = timer->data;
     ospf_lsa_update_tx(ospf_neighbor->interface, ospf_neighbor, true);
@@ -165,7 +165,7 @@ ospf_neighbor_clear(ospf_neighbor_s *ospf_neighbor)
 }
 
 static void
-ospf_neigbor_exstart(ospf_neighbor_s *ospf_neighbor)
+ospf_neighbor_exstart(ospf_neighbor_s *ospf_neighbor)
 {
     ospf_neighbor->master = true;
     ospf_neighbor->dd = (rand() & 0xffff)+1;
@@ -178,20 +178,20 @@ ospf_neigbor_exstart(ospf_neighbor_s *ospf_neighbor)
     ospf_neighbor_dbd_tx(ospf_neighbor);
 
     timer_add_periodic(&g_ctx->timer_root, &ospf_neighbor->timer_lsa_request, "OSPF LSA REQ", 
-                       1, 0, ospf_neighbor, &ospf_neigbor_req_job);
+                       1, 0, ospf_neighbor, &ospf_neighbor_req_job);
 
     timer_add_periodic(&g_ctx->timer_root, &ospf_neighbor->timer_lsa_retry, "OSPF LSA RETRY", 
-                       1, 0, ospf_neighbor, &ospf_neigbor_retry_job);
+                       1, 0, ospf_neighbor, &ospf_neighbor_retry_job);
 }
 
 static void
-ospf_neigbor_loading(ospf_neighbor_s *ospf_neighbor)
+ospf_neighbor_loading(ospf_neighbor_s *ospf_neighbor)
 {
     UNUSED(ospf_neighbor);
 }
 
 void
-ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
+ospf_neighbor_update_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
 {
     if(ospf_neighbor->state == state) return;
 
@@ -221,10 +221,10 @@ ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
             break;
         case OSPF_NBSTATE_EXSTART:
             ospf_neighbor_clear(ospf_neighbor);
-            ospf_neigbor_exstart(ospf_neighbor);
+            ospf_neighbor_exstart(ospf_neighbor);
             break;
         case OSPF_NBSTATE_LOADING:
-            ospf_neigbor_loading(ospf_neighbor);
+            ospf_neighbor_loading(ospf_neighbor);
             break;
         case OSPF_NBSTATE_FULL:
             break;
@@ -246,8 +246,36 @@ ospf_neigbor_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
     }
 }
 
+void
+ospf_neighbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
+{
+    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+
+    uint8_t priority;
+    uint32_t dr, bdr;
+
+    if(pdu->pdu_version == OSPF_VERSION_2) {
+        priority = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_PRIORITY);
+        dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DR);
+        bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_BDR);
+    } else {
+        priority = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_PRIORITY);
+        dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DR);
+        bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_BDR);
+    }
+
+    if(priority != ospf_neighbor->priority ||
+       dr != ospf_neighbor->dr ||
+       bdr != ospf_neighbor->bdr) {
+        ospf_neighbor->priority = priority;
+        ospf_neighbor->dr = dr;
+        ospf_neighbor->bdr = bdr;
+        ospf_interface_neighbor_change(ospf_interface);
+    } 
+}
+
 ospf_neighbor_s *
-ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
+ospf_neighbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
 {
     ospf_neighbor_s *ospf_neighbor;
 
@@ -286,41 +314,38 @@ ospf_neigbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
         ospf_interface->interface->name);
 
     ospf_interface->neighbors_count++;
-    ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_INIT);
+    ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_INIT);
 
     return ospf_neighbor;
 }
 
+/**
+ * ospf_neighbor_full:
+ *
+ * Check if state can updated from loading to full.
+ * 
+ * @param ospf_neighbor OSPF neighbor
+ */
 void
-ospf_neigbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
+ospf_neighbor_full(ospf_neighbor_s *ospf_neighbor)
 {
-    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+    uint8_t  lsa_type;
+    uint32_t lsa_count;
 
-    uint8_t priority;
-    uint32_t dr, bdr;
-
-    if(pdu->pdu_version == OSPF_VERSION_2) {
-        priority = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_PRIORITY);
-        dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DR);
-        bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_BDR);
-    } else {
-        priority = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_PRIORITY);
-        dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DR);
-        bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_BDR);
+    /* Set neighbor state to FULL if request tree becomes empty. */
+    if(ospf_neighbor->state == OSPF_NBSTATE_LOADING) {
+        lsa_count = 0;
+        for(lsa_type=OSPF_LSA_TYPE_1; lsa_type < OSPF_LSA_TYPE_MAX; lsa_type++) {
+            lsa_count += hb_tree_count(ospf_neighbor->lsa_request_tree[lsa_type]);
+        }
+        if(lsa_count == 0) {
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_FULL);
+        }
     }
-
-    if(priority != ospf_neighbor->priority ||
-       dr != ospf_neighbor->dr ||
-       bdr != ospf_neighbor->bdr) {
-        ospf_neighbor->priority = priority;
-        ospf_neighbor->dr = dr;
-        ospf_neighbor->bdr = bdr;
-        ospf_interface_neighbor_change(ospf_interface);
-    } 
 }
 
 /**
- * ospf_neigbor_adjok:
+ * ospf_neighbor_adjok:
  *
  * Check active (state > 2WAY) OSPF adjcencies if they are 
  * still allowed and clear if not.
@@ -328,7 +353,7 @@ ospf_neigbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
  * @param ospf_neighbor OSPF neighbor
  */
 void
-ospf_neigbor_adjok(ospf_neighbor_s *ospf_neighbor)
+ospf_neighbor_adjok(ospf_neighbor_s *ospf_neighbor)
 {
     ospf_interface_s *ospf_interface = ospf_neighbor->interface;
 
@@ -338,7 +363,7 @@ ospf_neigbor_adjok(ospf_neighbor_s *ospf_neighbor)
              ospf_interface->state == OSPF_IFSTATE_BACKUP ||
              ospf_interface->dr == ospf_neighbor->router_id || 
              ospf_interface->bdr == ospf_neighbor->router_id)) {
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
         }
     }
 }
@@ -430,7 +455,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
             /* SLAVE */
             ospf_neighbor->master = false;
             ospf_neighbor->dd = dd;
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
         } else if(!(flags & (OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_MS)) &&
                   dd == ospf_neighbor->dd && 
                   be32toh(ospf_neighbor->router_id) < 
@@ -438,7 +463,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
             /* MASTER */
             ospf_neighbor->dd++;
             ospf_neighbor->master = true;
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
         }
         ospf_neighbor_dbd_tx(ospf_neighbor);
         return;
@@ -447,23 +472,23 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     if(flags & OSPF_DBD_FLAG_I) {
         /* I flag not expected after ExStart */
         ospf_rx_error(interface, pdu, "init");
-        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
         return;
     }
     if(ospf_neighbor->options != options) {
         ospf_rx_error(interface, pdu, "options");
-        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
         return;
     }
     if(ospf_neighbor->master) {
         if(flags & OSPF_DBD_FLAG_MS) {
             ospf_rx_error(interface, pdu, "master/slave");
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
         }
         if(dd != ospf_neighbor->dd) {
             ospf_rx_error(interface, pdu, "DD sequence");
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
         }
         if(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M) {
@@ -479,7 +504,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     } else {
         if(!(flags & OSPF_DBD_FLAG_MS)) {
             ospf_rx_error(interface, pdu, "master/slave");
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
         }
         if(dd == ospf_neighbor->dd) {
@@ -493,7 +518,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
             ospf_neighbor_dbd_tx(ospf_neighbor);
         } else {
             ospf_rx_error(interface, pdu, "DD sequence");
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
         }
     }
@@ -505,7 +530,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
 
         if(hdr->type < OSPF_LSA_TYPE_1 || hdr->type > OSPF_LSA_TYPE_11) {
             ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
-            ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
         }
 
@@ -521,6 +546,8 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
 
     /* Change state to loading if all DBD messages have been exchanged. */
     if(!(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M)) {
-        ospf_neigbor_state(ospf_neighbor, OSPF_NBSTATE_LOADING);
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_LOADING);
+        /* Set directly to full if already in sync. */
+        ospf_neighbor_full(ospf_neighbor);
     }
 }
