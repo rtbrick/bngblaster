@@ -13,10 +13,10 @@
 protocol_error_t
 isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
 {
-    uint16_t pdu_len;
-    uint8_t  hdr_len;
-    uint8_t  system_id_len;
-    isis_tlv_s *tlv;
+    uint16_t pdu_len = 0;
+    uint8_t  hdr_len = 0;
+    uint8_t  system_id_len = 0;
+    isis_tlv_s *tlv = NULL;
 
     if(len < ISIS_HDR_LEN_COMMON || len > ISIS_MAX_PDU_LEN_RX) {
         return DECODE_ERROR;
@@ -191,8 +191,8 @@ isis_pdu_update_checksum(isis_pdu_s *pdu)
 void
 isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
 {
-    uint16_t checksum;
-    uint16_t lifetime;
+    uint16_t checksum = 0;
+    uint16_t lifetime = 0;
 
     if(!(pdu && 
          pdu->auth_type > ISIS_AUTH_CLEARTEXT && 

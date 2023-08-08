@@ -104,16 +104,16 @@ static bool
 ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t *tlv_start = start;
-    uint16_t tlv_type;
-    uint16_t tlv_length;
+    uint16_t tlv_type = 0;
+    uint16_t tlv_length = 0;
 
-    uint8_t prefix_length;
-    uint8_t prefix_bytes;
+    uint8_t prefix_length = 0;
+    uint8_t prefix_bytes = 0;
 
-    uint8_t *fec_element;
-    uint16_t fec_length;
-    uint16_t fec_afi;
-    uint32_t label;
+    uint8_t *fec_element = NULL;
+    uint16_t fec_length = 0;
+    uint16_t fec_afi = 0;
+    uint32_t label = 0;
 
     ipv4_prefix ipv4prefix;
     ipv6_prefix ipv6prefix;

@@ -13,11 +13,11 @@ extern uint8_t g_pdu_buf[];
 bool
 ospf_mrt_load(ospf_instance_s *instance, char *file_path)
 {
-    FILE *mrt_file;
+    FILE *mrt_file = NULL;
     ospf_mrt_hdr_t mrt = {0};
 
     ospf_pdu_s pdu = {0};
-    uint32_t lsa_count;
+    uint32_t lsa_count = 0;
 
     LOG(OSPF, "Load OSPF MRT file %s\n", file_path);
 

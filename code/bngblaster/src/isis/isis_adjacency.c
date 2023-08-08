@@ -23,8 +23,8 @@ isis_adjacency_init(bbl_network_interface_s *interface,
                     isis_instance_s *instance)
 {
     isis_config_s *config = instance->config;
-    isis_adjacency_s *adjacency;
-    isis_adjacency_p2p_s *adjacency_p2p;
+    isis_adjacency_s *adjacency = NULL;
+    isis_adjacency_p2p_s *adjacency_p2p = NULL;
     
     uint8_t level;
 
@@ -57,6 +57,7 @@ isis_adjacency_init(bbl_network_interface_s *interface,
         adjacency->interface = interface;
         adjacency->instance = instance;
         if(interface_config->isis_p2p) {
+            if(!adjacency_p2p) return false;
             adjacency->peer = adjacency_p2p->peer;
         } else {
             adjacency->peer = calloc(1, sizeof(isis_peer_s));

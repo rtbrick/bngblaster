@@ -2007,7 +2007,7 @@ static protocol_error_t
 encode_pppoe_session(uint8_t *buf, uint16_t *len,
                      bbl_pppoe_session_s *pppoe)
 {
-    protocol_error_t result;
+    protocol_error_t result = PROTOCOL_SUCCESS;
     uint16_t *pppoe_len_field;
     uint16_t  pppoe_len = 0;
 
