@@ -62,7 +62,14 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
 target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -m64 -mtune=generic)
-set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+# Optional IPO. Do not use IPO if it's not supported by compiler.
+check_ipo_supported(RESULT result OUTPUT output)
+if(result)
+  set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+  message(WARNING "IPO is not supported: ${output}")
+endif()
 
 install(TARGETS bngblaster DESTINATION sbin)
 

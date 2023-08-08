@@ -4,6 +4,7 @@
 #cmake -DCMAKE_BUILD_TYPE=Debug .
 cmake_minimum_required (VERSION 3.10)
 project(bngblaster LANGUAGES C VERSION 0.0.0)
+include(CheckIPOSupported)
 
 if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     message(FATAL_ERROR "Host ${CMAKE_SYSTEM_NAME} is not supported!")
