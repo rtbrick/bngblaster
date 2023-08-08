@@ -439,7 +439,7 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
         /* Update data and cb if there was a change.
          * Do the reformatting of name only during a change. */
         if(timer->data != data || timer->cb != cb) {
-            strncpy(timer->name, name, sizeof(timer->name));
+            strncpy(timer->name, name, sizeof(timer->name)-1);
             timer->data = data;
             timer->cb = cb;
         }
@@ -462,7 +462,7 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
     }
 
     /* Store name, data, callback and misc. data. */
-    strncpy(timer->name, name, sizeof(timer->name));
+    strncpy(timer->name, name, sizeof(timer->name)-1);
     timer->data = data;
     timer->cb = cb;
     clock_gettime(CLOCK_MONOTONIC, &timer->expire);
