@@ -340,6 +340,14 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     tcpc->poll_interval = listen->poll_interval;
     tcpc->arg = listen->arg;
 
+    /* Copy TTL and TOS from listen socket. */
+    if(listen->pcb) {
+        if(listen->pcb->ttl) {
+            tpcb->ttl = listen->pcb->ttl;
+        }
+        tpcb->tos = listen->pcb->tos;
+    }
+
     tcpc->pcb = tpcb;
     tcp_arg(tpcb, tcpc);
 
@@ -391,10 +399,13 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
  * @param interface interface
  * @param address local address
  * @param port local port
+ * @param ttl TTL
+ * @param tos TOS
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uint16_t port)
+bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address,
+                     uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
 
@@ -428,6 +439,10 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uin
     tcpc->local_port = port;
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V4;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V4;
+    if(ttl) {
+        tcpc->pcb->ttl = ttl;
+    }
+    tcpc->pcb->tos = tos;
     tcpc->state = BBL_TCP_STATE_LISTEN;
     LOG(TCP, "TCP (%s %s:%u) listen\n",
         tcpc->ifname,
@@ -443,10 +458,13 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uin
  * @param interface interface
  * @param address local address
  * @param port local port
+ * @param ttl TTL
+ * @param tos TOS
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uint16_t port)
+bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
+                     uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
 
@@ -482,6 +500,10 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uin
     tcpc->remote_addr.type = IPADDR_TYPE_V6;
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V6;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V6;
+    if(ttl) {
+        tcpc->pcb->ttl = ttl;
+    }
+    tcpc->pcb->tos = tos;
     tcpc->state = BBL_TCP_STATE_LISTEN;
     LOG(TCP, "TCP (%s %s:%u) listen\n",
         tcpc->ifname,
@@ -498,10 +520,13 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uin
  * @param src source address
  * @param dst destination address
  * @param port destination port
+ * @param ttl TTL
+ * @param tos TOS
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port)
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, 
+                     uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
 
@@ -521,6 +546,12 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
 
     /* Disable nagle algorithm */
     tcp_nagle_disable(tcpc->pcb);
+
+    /* Set TTL and TOS */
+    if(ttl) {
+        tcpc->pcb->ttl = ttl;
+    }
+    tcpc->pcb->tos = tos;
 
     /* Connect session */
     tcpc->remote_addr.u_addr.ip4.addr = *dst;
@@ -556,7 +587,8 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port)
+bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t *dst, 
+                             uint16_t port)
 {
     bbl_tcp_ctx_s *tcpc;
 
@@ -612,10 +644,13 @@ bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t
  * @param src source address
  * @param dst destination address
  * @param port destination port
+ * @param ttl TTL
+ * @param tos TOS
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port)
+bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst,
+                     uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
 
@@ -636,6 +671,12 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
 
     /* Disable nagle algorithm */
     tcp_nagle_disable(tcpc->pcb);
+
+    /* Set TTL and TOS */
+    if(ttl) {
+        tcpc->pcb->ttl = ttl;
+    }
+    tcpc->pcb->tos = tos;
 
     /* Connect session */
     memcpy(&tcpc->remote_addr.u_addr.ip6.addr, dst, sizeof(ip6_addr_t));
@@ -672,7 +713,8 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port)
+bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t *dst, 
+                             uint16_t port)
 {
     bbl_tcp_ctx_s *tcpc;
 

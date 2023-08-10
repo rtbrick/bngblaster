@@ -39,6 +39,7 @@ ldp_hello_ipv4_encode(bbl_network_interface_s *interface,
     ipv4.dst = IPV4_MC_ALL_ROUTERS;
     ipv4.src = interface->ip.address;
     ipv4.ttl = 1;
+    ipv4.tos = config->tos;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
     udp.src = LDP_PORT;
@@ -89,6 +90,7 @@ ldp_hello_ipv6_encode(bbl_network_interface_s *interface,
     ipv6.protocol = IPV6_NEXT_HEADER_UDP;
     ipv6.next = &udp;
     ipv6.ttl = 255;
+    ipv6.tos = config->tos;
     udp.src = LDP_PORT;
     udp.dst = LDP_PORT;
     udp.protocol = UDP_PROTOCOL_LDP;

@@ -322,13 +322,15 @@ ldp_session_connect_job(timer_s *timer)
                 session->interface,
                 &session->local.ipv6_address,
                 &session->peer.ipv6_address,
-                LDP_PORT);
+                LDP_PORT,
+                0, session->instance->config->tos);
         } else {
             session->tcpc = bbl_tcp_ipv4_connect(
                 session->interface,
                 &session->local.ipv4_address,
                 &session->peer.ipv4_address,
-                LDP_PORT);
+                LDP_PORT,
+                0, session->instance->config->tos);
         }
 
         if(session->tcpc) {
@@ -370,12 +372,14 @@ ldp_session_listen(ldp_session_s *session)
         session->listen_tcpc = bbl_tcp_ipv6_listen(
             session->interface,
             &session->local.ipv6_address,
-            LDP_PORT);
+            LDP_PORT,
+            0, session->instance->config->tos);
     } else {
         session->listen_tcpc = bbl_tcp_ipv4_listen(
             session->interface,
             &session->local.ipv4_address,
-            LDP_PORT);
+            LDP_PORT,
+            0, session->instance->config->tos);
     }
 
     if(session->listen_tcpc) {
@@ -384,7 +388,6 @@ ldp_session_listen(ldp_session_s *session)
         session->listen_tcpc->connected_cb = ldp_connected_cb;
         session->listen_tcpc->receive_cb = ldp_receive_cb;
         session->listen_tcpc->error_cb = ldp_error_cb;
-
         ldp_session_state_change(session, LDP_LISTEN);
         timer_add_periodic(&g_ctx->timer_root, &session->connect_timer, 
                            "LDP CONNECT", 60, 0, session,

@@ -99,12 +99,12 @@ bbl_http_server_start(bbl_network_interface_s *network_interface,
         server->listen_tcpc = bbl_tcp_ipv4_listen(
             network_interface,
             &config->ipv4_address,
-            config->port);
+            config->port, 0, 0);
     } else {
         server->listen_tcpc = bbl_tcp_ipv6_listen(
             network_interface,
             &config->ipv6_address,
-            config->port);
+            config->port, 0, 0);
     }
     if(!server->listen_tcpc) {
         free(server);

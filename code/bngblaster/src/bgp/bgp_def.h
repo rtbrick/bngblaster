@@ -60,6 +60,8 @@ typedef struct bgp_config_ {
     uint32_t peer_as;
     uint16_t hold_time;
     uint16_t teardown_time;
+    uint8_t  tos; /* IPv4 TOS or IPv6 TC */
+    uint8_t  ttl; /* IPv4 TOS or IPv6 TC */
 
     bool reconnect;
     bool start_traffic;

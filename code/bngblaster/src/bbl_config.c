@@ -1302,7 +1302,7 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 
     const char *schema[] = {
         "network-interface", "local-ipv4-address", "peer-ipv4-address",
-        "local-as", "peer-as", "hold-time",
+        "local-as", "peer-as", "hold-time", "tos", "ttl",
         "id", "reconnect", "start-traffic",
         "teardown-time", "raw-update-file"
     };
@@ -1352,6 +1352,16 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->hold_time = json_number_value(value);
     } else {
         bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
+    }
+
+    value = json_object_get(bgp, "tos");
+    if(json_is_number(value)) {
+        bgp_config->tos = json_number_value(value);
+    }
+
+    value = json_object_get(bgp, "ttl");
+    if(json_is_number(value)) {
+        bgp_config->ttl = json_number_value(value);
     }
 
     bgp_config->id = htobe32(0x01020304);
@@ -1999,7 +2009,7 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
 
     const char *schema[] = {
         "instance-id", "keepalive-time", "hold-time",
-        "teardown-time", "hostname", "lsr-id",
+        "teardown-time", "hostname", "lsr-id", "tos",
         "ipv6-transport-address", "ipv4-transport-address",
         "no-ipv4-transport", "prefer-ipv4-transport",
         "raw-update-file"
@@ -2086,6 +2096,12 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
             return false;
         }
     }
+
+    value = json_object_get(ldp, "tos");
+    if(json_is_number(value)) {
+        ldp_config->tos = json_number_value(value);
+    }
+
     return true;
 }
 

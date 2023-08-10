@@ -271,7 +271,9 @@ bgp_session_connect_job(timer_s *timer)
             session->interface, 
             &session->ipv4_local_address,
             &session->ipv4_peer_address,
-            BGP_PORT);
+            BGP_PORT,
+            session->config->ttl,
+            session->config->tos);
 
         if(session->tcpc) {
             session->tcpc->arg = session;

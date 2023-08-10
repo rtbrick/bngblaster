@@ -156,6 +156,7 @@ typedef struct ldp_config_ {
     uint16_t keepalive_time;
     uint16_t hold_time;
     uint16_t teardown_time;
+    uint8_t  tos; /* IPv4 TOS or IPv6 TC */
 
     char *raw_update_file;
 

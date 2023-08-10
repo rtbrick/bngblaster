@@ -88,22 +88,28 @@ void
 bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address, uint16_t port);
+bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address,
+                     uint16_t port, uint8_t ttl, uint8_t tos);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address, uint16_t port);
+bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
+                     uint16_t port, uint8_t ttl, uint8_t tos);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, 
+                     uint16_t port, uint8_t ttl, uint8_t tos);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t *dst, uint16_t port);
+bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t *dst, 
+                             uint16_t port);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
+bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst,
+                     uint16_t port, uint8_t ttl, uint8_t tos);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t *dst, uint16_t port);
+bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t *dst, 
+                             uint16_t port);
 
 void
 bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
