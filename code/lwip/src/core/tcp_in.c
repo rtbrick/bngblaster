@@ -677,6 +677,10 @@ tcp_listen_input(struct tcp_pcb_listen *pcb)
     ip_addr_copy(npcb->remote_ip, *ip_current_src_addr());
     npcb->local_port = pcb->local_port;
     npcb->remote_port = tcphdr->src;
+    if(pcb->ttl) {
+        npcb->ttl = pcb->ttl;
+    }
+    npcb->tos = pcb->tos;
     npcb->state = SYN_RCVD;
     npcb->rcv_nxt = seqno + 1;
     npcb->rcv_ann_right_edge = npcb->rcv_nxt;
