@@ -149,6 +149,7 @@ struct keyval_ log_names[] = {
     { L2TP,          "l2tp" },
     { DHCP,          "dhcp" },
     { ISIS,          "isis" },
+    { OSPF,          "ospf" },
     { LDP,           "ldp" },
     { BGP,           "bgp" },
     { TCP,           "tcp" },
@@ -540,6 +541,12 @@ main(int argc, char *argv[])
     /* Init IS-IS instances. */
     if(!isis_init()) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
+        goto CLEANUP;
+    }
+
+    /* Init OSPF instances. */
+    if(!ospf_init()) {
+        fprintf(stderr, "Error: Failed to init OSPF\n");
         goto CLEANUP;
     }
 

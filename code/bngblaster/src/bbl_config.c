@@ -18,6 +18,7 @@ const char g_default_hostname[] = "bngblaster";
 const char g_default_router_id[] = "10.10.10.10";
 const char g_default_system_id[] = "0100.1001.0010";
 const char g_default_area[] = "49.0001/24";
+const char g_default_ospf_area[] = "0.0.0.0";
 
 static bool
 schema_validate(json_t *config, const char *section, const char *const attributes[], size_t len)
@@ -651,6 +652,8 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "gateway-mac", "vlan", "mtu",
         "gateway-resolve-wait", "isis-instance-id", "isis-level",
         "isis-p2p", "isis-l1-metric", "isis-l2-metric",
+        "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
+        "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
         "ldp-instance-id"
     };
     if(!schema_validate(network_interface, "network", schema, 
@@ -764,6 +767,52 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             network_config->isis_l2_metric = json_number_value(value);
         } else {
             network_config->isis_l2_metric = 10;
+        }
+    }
+
+    /* OSPF interface configuration */
+    value = json_object_get(network_interface, "ospfv2-instance-id");
+    if(json_is_number(value)) {
+        network_config->ospfv2_instance_id = json_number_value(value);
+        value = json_object_get(network_interface, "ospfv2-metric");
+        if(json_is_number(value)) {
+            network_config->ospfv2_metric = json_number_value(value);
+        } else {
+            network_config->ospfv2_metric = OSPF_DEFAULT_METRIC;
+        }
+        if(json_unpack(network_interface, "{s:s}", "ospfv2-type", &s) == 0) {
+            if(strcmp(s, "p2p") == 0) {
+                network_config->ospfv2_type = OSPF_INTERFACE_P2P;
+            } else if(strcmp(s, "broadcast") == 0) {
+                network_config->ospfv2_type = OSPF_INTERFACE_BROADCAST;
+            } else {
+                fprintf(stderr, "Config error: Invalid value for network->ospfv2-type\n");
+                return false;
+            }
+        } else {
+            network_config->ospfv2_type = OSPF_INTERFACE_BROADCAST;
+        }
+    }
+    value = json_object_get(network_interface, "ospfv3-instance-id");
+    if(json_is_number(value)) {
+        network_config->ospfv3_instance_id = json_number_value(value);
+        value = json_object_get(network_interface, "ospfv3-metric");
+        if(json_is_number(value)) {
+            network_config->ospfv3_metric = json_number_value(value);
+        } else {
+            network_config->ospfv3_metric = OSPF_DEFAULT_METRIC;
+        }
+        if(json_unpack(network_interface, "{s:s}", "ospfv3-type", &s) == 0) {
+            if(strcmp(s, "p2p") == 0) {
+                network_config->ospfv3_type = OSPF_INTERFACE_P2P;
+            } else if(strcmp(s, "broadcast") == 0) {
+                network_config->ospfv3_type = OSPF_INTERFACE_BROADCAST;
+            } else {
+                fprintf(stderr, "Config error: Invalid value for network->ospfv3-type\n");
+                return false;
+            }
+        } else {
+            network_config->ospfv3_type = OSPF_INTERFACE_BROADCAST;
         }
     }
 
@@ -1723,6 +1772,194 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 }
 
 static bool
+json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
+{
+    json_t *sub, *con, *c, *value = NULL;
+    const char *s = NULL;
+    int i, size;
+    double number;
+
+    ospf_external_connection_s *connection = NULL;
+
+    const char *schema[] = {
+        "instance-id", "version", "overload"
+        "auth-key", "auth-type", 
+        "hello-interval", "dead-interval",
+        "hostname", "area",
+        "router-id", "router-priority",
+        "teardown-time", "external"
+    };
+    if(!schema_validate(ospf, "ospf", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    value = json_object_get(ospf, "instance-id");
+    if(value) {
+        ospf_config->id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for ospf->instance-id\n");
+        return false;
+    }
+
+    value = json_object_get(ospf, "version");
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number == 2 || number == 3) {
+            ospf_config->version = number;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for ospf->version\n");
+            return false;
+        }
+    } else {
+        ospf_config->version = 2;
+    }
+
+    value = json_object_get(ospf, "overload");
+    if(json_is_boolean(value)) {
+        ospf_config->overload  = json_boolean_value(value);
+    }
+
+    if(json_unpack(ospf, "{s:s}", "auth-key", &s) == 0) {
+        ospf_config->auth_key = strdup(s);
+        ospf_config->auth_type = OSPF_AUTH_NONE;
+        if(json_unpack(ospf, "{s:s}", "auth-type", &s) == 0) {
+            if(strcmp(s, "md5") == 0) {
+                ospf_config->auth_type = OSPF_AUTH_MD5;
+            } else if(strcmp(s, "simple") == 0) {
+                ospf_config->auth_type = OSPF_AUTH_CLEARTEXT;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for ospf->auth-type\n");
+                return false;
+            }
+        }
+    }
+
+    value = json_object_get(ospf, "hello-interval");
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for ospf->hello-interval (1 - 65535)\n");
+            return false;
+        }
+        ospf_config->hello_interval = number;
+    } else {
+        ospf_config->hello_interval = OSPF_DEFAULT_HELLO_INTERVAL;
+    }
+
+    value = json_object_get(ospf, "dead-interval");
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 1 || number > UINT16_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for ospf->dead-interval (1 - 65535)\n");
+            return false;
+        }
+        ospf_config->dead_interval = number;
+    } else {
+        ospf_config->dead_interval = OSPF_DEFAULT_DEAD_INTERVAL;
+    }
+    if(ospf_config->dead_interval <= ospf_config->hello_interval) {
+        fprintf(stderr, "JSON config error: Invalid value for ospf->dead-interval which must be greater than the hello-interval\n");
+        return false;
+    }
+
+    if(json_unpack(ospf, "{s:s}", "hostname", &s) == 0) {
+        ospf_config->hostname = strdup(s);
+    } else {
+        ospf_config->hostname = g_default_hostname;
+    }
+
+    if(json_unpack(ospf, "{s:s}", "router-id", &s) == 0) {
+        ospf_config->router_id_str = strdup(s);
+    } else {
+        ospf_config->router_id_str = g_default_router_id;
+    }
+    if(!inet_pton(AF_INET, ospf_config->router_id_str, &ospf_config->router_id)) {
+        fprintf(stderr, "JSON config error: Invalid value for ospf->router-id\n");
+        return false;
+    }
+
+    value = json_object_get(ospf, "router-priority");
+    if(json_is_number(value)) {
+        number = json_number_value(value);
+        if(number < 0 || number > UINT8_MAX) {
+            fprintf(stderr, "JSON config error: Invalid value for ospf->router-priority (0 - 255)\n");
+            return false;
+        }
+        ospf_config->router_priority = number;
+    } else {
+        ospf_config->router_priority = OSPF_DEFAULT_ROUTER_PRIORITY;
+    }
+
+    if(json_unpack(ospf, "{s:s}", "area", &s) == 0) {
+        ospf_config->area_str = strdup(s);
+    } else {
+        ospf_config->area_str = g_default_ospf_area;
+    }
+    if(!inet_pton(AF_INET, ospf_config->area_str, &ospf_config->area)) {
+        fprintf(stderr, "JSON config error: Invalid value for ospf->area\n");
+        return false;
+    }
+
+    sub = json_object_get(ospf, "external");
+    if(json_is_object(sub)) {
+
+        const char *schema[] = {
+            "mrt-file", "connections"
+        };
+        if(!schema_validate(sub, "external", schema, 
+        sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+        
+        if(json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
+            ospf_config->external_mrt_file = strdup(s);
+        }
+        con = json_object_get(sub, "connections");
+        if(json_is_array(con)) {
+            size = json_array_size(con);
+            for(i = 0; i < size; i++) {
+                if(connection) {
+                    connection->next = calloc(1, sizeof(ospf_external_connection_s));
+                    connection = connection->next;
+                } else {
+                    connection = calloc(1, sizeof(ospf_external_connection_s));
+                    ospf_config->external_connection = connection;
+                }
+                c = json_array_get(con, i);
+
+                const char *schema[] = {
+                    "router-id", "metric",
+                };
+                if(!schema_validate(c, "connections", schema, 
+                sizeof(schema)/sizeof(schema[0]))) {
+                    return false;
+                }
+
+                if(json_unpack(c, "{s:s}", "router-id", &s) == 0) {
+                    connection->router_id_str = strdup(s);
+                    if(!inet_pton(AF_INET, connection->router_id_str, &connection->router_id)) {
+                        fprintf(stderr, "JSON config error: Invalid value for ospf->external->connections->router-id\n");
+                        return false;
+                    }
+                } else {
+                    fprintf(stderr, "JSON config error: Missing value for ospf->external->connections->router-id\n");
+                    return false;
+                }
+
+                value = json_object_get(c, "metric");
+                if(json_is_number(value)) {
+                    connection->metric = json_number_value(value);
+                } else {
+                    connection->metric = 10;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+static bool
 json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
 {
     json_t *value = NULL;
@@ -2363,6 +2600,7 @@ json_parse_config(json_t *root)
 
     bgp_config_s                *bgp_config             = NULL;
     isis_config_s               *isis_config            = NULL;
+    ospf_config_s               *ospf_config            = NULL;
     ldp_config_s                *ldp_config             = NULL;
 
     bbl_http_client_config_s    *http_client_config     = NULL;
@@ -2378,7 +2616,7 @@ json_parse_config(json_t *root)
         "ipoe", "pppoe", "ppp", "dhcp", "dhcpv6", "igmp",
         "access-line", "access-line-profiles", 
         "traffic", "session-traffic", "streams",
-        "isis",
+        "isis", "ospf",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
         "l2tp-server", 
@@ -3147,6 +3385,34 @@ json_parse_config(json_t *root)
             g_ctx->config.isis_config = isis_config;
         }
         if(!json_parse_isis_config(sub, isis_config)) {
+            return false;
+        }
+    }
+
+    /* OSPF Configuration */
+    sub = json_object_get(root, "ospf");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple OSPF instances) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!ospf_config) {
+                g_ctx->config.ospf_config = calloc(1, sizeof(ospf_config_s));
+                ospf_config = g_ctx->config.ospf_config;
+            } else {
+                ospf_config->next = calloc(1, sizeof(ospf_config_s));
+                ospf_config = ospf_config->next;
+            }
+            if(!json_parse_ospf_config(json_array_get(sub, i), ospf_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single OSPF instance) */
+        ospf_config = calloc(1, sizeof(ospf_config_s));
+        if(!g_ctx->config.ospf_config) {
+            g_ctx->config.ospf_config = ospf_config;
+        }
+        if(!json_parse_ospf_config(sub, ospf_config)) {
             return false;
         }
     }

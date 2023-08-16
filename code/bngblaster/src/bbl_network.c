@@ -191,6 +191,13 @@ bbl_network_interfaces_add()
             }
         }
 
+        if(!ospf_interface_init(network_interface, network_config, OSPF_VERSION_2)) {
+            return false;
+        }
+        if(!ospf_interface_init(network_interface, network_config, OSPF_VERSION_3)) {
+            return false;
+        }
+
         /* TX list init */
         CIRCLEQ_INIT(&network_interface->l2tp_tx_qhead);
 
@@ -393,6 +400,7 @@ bbl_network_rx_icmp(bbl_network_interface_s *interface,
         /* Send ICMP reply... */
         bbl_network_icmp_reply(interface, eth, ipv4, icmp);
     }
+    interface->stats.icmp_rx++;
 }
 
 /**
@@ -444,7 +452,6 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                    /* Drop wrong MAC */
                     return;
                 }
-                interface->stats.icmp_rx++;
                 bbl_network_rx_icmp(interface, eth, ipv4);
                 return;
             } else if(ipv4->protocol == PROTOCOL_IPV4_TCP) {
@@ -452,8 +459,10 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                    /* Drop wrong MAC */
                     return;
                 }
-                interface->stats.tcp_rx++;
                 bbl_tcp_ipv4_rx(interface, eth, ipv4);
+                return;
+            } else if(ipv4->protocol == PROTOCOL_IPV4_OSPF) {
+                ospf_handler_rx_ipv4(interface, eth, ipv4);
                 return;
             }
             break;
@@ -475,8 +484,10 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                    /* Drop wrong MAC */
                     return;
                 }
-                interface->stats.tcp_rx++;
                 bbl_tcp_ipv6_rx(interface, eth, ipv6);
+                return;
+            } else if(ipv6->protocol == IPV6_NEXT_HEADER_OSPF) {
+                ospf_handler_rx_ipv6(interface, eth, ipv6);
                 return;
             }
             break;

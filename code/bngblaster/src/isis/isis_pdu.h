@@ -9,16 +9,16 @@
 #ifndef __BBL_ISIS_PDU_H__
 #define __BBL_ISIS_PDU_H__
 
-#define PDU_CURSOR(_pdu)            ((_pdu)->pdu+(_pdu)->cur)
-#define PDU_CURSOR_LEN(_pdu)        (uint16_t)((_pdu)->pdu_len-(_pdu)->cur)
-#define PDU_CURSOR_RST(_pdu)        ((_pdu)->cur=0)
-#define PDU_CURSOR_GET(_pdu)        ((_pdu)->cur)
-#define PDU_CURSOR_SET(_pdu, _off)  ((_pdu)->cur=_off)
-#define PDU_CURSOR_INC(_pdu, _off)  ((_pdu)->cur+=_off)
-#define PDU_OFFSET(_pdu, _off)      ((_pdu)->pdu+_off)
-#define PDU_REMAINING(_pdu)         (ISIS_MAX_PDU_LEN-(_pdu)->cur)
+#define ISIS_PDU_CURSOR(_pdu)            ((_pdu)->pdu+(_pdu)->cur)
+#define ISIS_PDU_CURSOR_LEN(_pdu)        (uint16_t)((_pdu)->pdu_len-(_pdu)->cur)
+#define ISIS_PDU_CURSOR_RST(_pdu)        ((_pdu)->cur=0)
+#define ISIS_PDU_CURSOR_GET(_pdu)        ((_pdu)->cur)
+#define ISIS_PDU_CURSOR_SET(_pdu, _off)  ((_pdu)->cur=_off)
+#define ISIS_PDU_CURSOR_INC(_pdu, _off)  ((_pdu)->cur+=_off)
+#define ISIS_PDU_OFFSET(_pdu, _off)      ((_pdu)->pdu+_off)
+#define ISIS_PDU_REMAINING(_pdu)         (ISIS_MAX_PDU_LEN-(_pdu)->cur)
 
-#define PDU_BUMP_WRITE_BUFFER(_pdu, _off) \
+#define ISIS_PDU_BUMP_WRITE_BUFFER(_pdu, _off) \
     (_pdu)->cur+=(_off); \
     (_pdu)->pdu_len+=(_off)
 

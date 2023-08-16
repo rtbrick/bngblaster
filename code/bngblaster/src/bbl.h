@@ -28,6 +28,7 @@
 #include "io/io_def.h"
 #include "bgp/bgp_def.h"
 #include "isis/isis_def.h"
+#include "ospf/ospf_def.h"
 #include "ldp/ldp_def.h"
 
 #include "bbl_ctrl.h"
@@ -53,6 +54,7 @@
 #include "io/io.h"
 #include "bgp/bgp.h"
 #include "isis/isis.h"
+#include "ospf/ospf.h"
 #include "ldp/ldp.h"
 
 extern bbl_ctx_s *g_ctx;

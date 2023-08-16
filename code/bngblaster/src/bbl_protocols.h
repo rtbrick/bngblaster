@@ -129,6 +129,7 @@
 #define PROTOCOL_IPV4_IGMP              0x02
 #define PROTOCOL_IPV4_TCP               0x06
 #define PROTOCOL_IPV4_UDP               0x11
+#define PROTOCOL_IPV4_OSPF              0x59
 #define PROTOCOL_IPV4_INTERNAL          0x3D
 
 #define ICMP_TYPE_ECHO_REPLY            0x00
@@ -210,7 +211,7 @@
 #define IPV6_NEXT_HEADER_ICMPV6         58
 #define IPV6_NEXT_HEADER_NO             59
 #define IPV6_NEXT_HEADER_INTERNAL       61
-
+#define IPV6_NEXT_HEADER_OSPF           89
 
 #define ICMPV6_FLAGS_MANAGED            0x80
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
@@ -567,6 +568,16 @@ typedef struct bbl_isis_ {
     uint8_t *pdu;
     uint16_t pdu_len;
 } bbl_isis_s;
+
+/*
+ * OSPF PDU
+ */
+typedef struct bbl_ospf_ {
+    uint8_t  version;
+    uint8_t  type;
+    uint8_t *pdu;
+    uint16_t pdu_len;
+} bbl_ospf_s;
 
 typedef struct bbl_ldp_hello_ {
     uint32_t    lsr_id;

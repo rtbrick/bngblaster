@@ -276,7 +276,7 @@ isis_lsp_refresh(isis_lsp_s *lsp)
     lsp->expired = false;
     lsp->deleted = false;
 
-    *(uint32_t*)PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(lsp->seq);
+    *(uint32_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(lsp->seq);
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
     isis_pdu_update_len(pdu);
     isis_pdu_update_auth(pdu, lsp->auth_key);
@@ -534,7 +534,7 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
             goto NEXT;
         }
 
-        if(PDU_REMAINING(pdu) < 48) {
+        if(ISIS_PDU_REMAINING(pdu) < 48) {
             isis_lsp_final(lsp);
             isis_lsp_flood(lsp);
             if(fragment == UINT8_MAX) return false;
@@ -562,7 +562,7 @@ NEXT:
     
     external_connection = config->external_connection;
     while(external_connection) {
-        if(PDU_REMAINING(pdu) < 16) {
+        if(ISIS_PDU_REMAINING(pdu) < 16) {
             isis_lsp_final(lsp);
             isis_lsp_flood(lsp);
             if(fragment == UINT8_MAX) return false;
@@ -623,8 +623,8 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
 
     adjacency->stats.lsp_rx++;
 
-    lsp_id = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
-    seq = be32toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
+    lsp_id = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
+    seq = be32toh(*(uint32_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
 
     LOG(PACKET, "ISIS RX %s-LSP %s (seq %u) on interface %s\n", 
         isis_level_string(level), 
@@ -699,13 +699,13 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     lsp->source.type = ISIS_SOURCE_ADJACENCY;
     lsp->source.adjacency = adjacency;
     lsp->seq = seq;
-    lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+    lsp->lifetime = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;
     lsp->deleted = false;
     lsp->instance = adjacency->instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
-    PDU_CURSOR_RST(pdu);
+    ISIS_PDU_CURSOR_RST(pdu);
     memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
 
     isis_lsp_lifetime(lsp);
@@ -842,8 +842,8 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
         return false;
     }
 
-    lsp_id = be64toh(*(uint64_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
-    seq = be32toh(*(uint32_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
+    lsp_id = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_ID));
+    seq = be32toh(*(uint32_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_SEQ));
 
     LOG(ISIS, "ISIS UPDATE EXTERNAL %s-LSP %s (seq %u)\n", 
         isis_level_string(level), 
@@ -875,13 +875,13 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
     lsp->source.type = ISIS_SOURCE_EXTERNAL;
     lsp->source.adjacency = NULL;
     lsp->seq = seq;
-    lsp->lifetime = be16toh(*(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+    lsp->lifetime = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
     lsp->expired = false;
     lsp->deleted = false;
     lsp->instance = instance;
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
-    PDU_CURSOR_RST(pdu);
+    ISIS_PDU_CURSOR_RST(pdu);
     memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
 
     if(lsp->lifetime > 0 && instance->config->external_auto_refresh) {
