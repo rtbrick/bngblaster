@@ -776,8 +776,8 @@ isis_lsp_purge(isis_lsp_s *lsp)
     isis_pdu_update_auth(pdu, lsp->auth_key);
 
     /* Set checksum and lifetime to zero. */
-    *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = 0;
-    *(uint16_t*)PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = 0;
+    *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) = 0;
+    *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = 0;
 
     isis_lsp_flood(lsp);
 }
@@ -919,9 +919,9 @@ isis_lsp_flap_job(timer_s *timer)
     uint32_t seq;
 
     if(flap) {
-        seq = be32toh(*(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ));
+        seq = be32toh(*(uint32_t*)ISIS_PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ));
         seq += 2;
-        *(uint32_t*)PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(seq);
+        *(uint32_t*)ISIS_PDU_OFFSET(&flap->pdu, ISIS_OFFSET_LSP_SEQ) = htobe32(seq);
 
         if(!isis_lsp_update_external(flap->instance, &flap->pdu, true)) {
             LOG(ISIS, "Failed to flap ISIS LSP %s\n", isis_lsp_id_to_str(&flap->id));
