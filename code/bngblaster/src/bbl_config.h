@@ -166,7 +166,7 @@ typedef struct bbl_link_config_
     uint16_t  rx_cpuset_cur;
 
     char *lag_interface;
-    uint32_t lacp_priority;
+    uint16_t lacp_priority;
 
     void *next; /* pointer to next link config element */
     bbl_interface_s *link;

@@ -182,11 +182,11 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         return false;
     }
 
-    value = json_object_get(config, "access-line-profile-id");
+    JSON_OBJ_GET_NUMBER(config, value, "access-line-profiles", "access-line-profile-id", 0, 65535);
     if(value) {
         profile->access_line_profile_id = json_number_value(value);
     } else {
-        fprintf(stderr, "Config error: Missing value for access-line-profiles->access-line-profile-id\n");
+        fprintf(stderr, "JSON config error: Missing value for access-line-profiles->access-line-profile-id\n");
         return false;
     }
 
@@ -531,7 +531,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             g_ctx->dpdk = true;
 #endif
         } else {
-            fprintf(stderr, "Config error: Invalid value for links->io-mode\n");
+            fprintf(stderr, "JSON config error: Invalid value for links->io-mode\n");
             return false;
         }
     } else {
@@ -539,12 +539,12 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     }
     JSON_OBJ_GET_NUMBER(link, value, "links", "io-slots", 32, 65534);
     if(value) {
-        link_config->io_slots_tx = json_number_value(value);;
-        link_config->io_slots_rx = json_number_value(value);;
+        link_config->io_slots_tx = json_number_value(value);
     } else {
         link_config->io_slots_tx = g_ctx->config.io_slots;
-        link_config->io_slots_rx = g_ctx->config.io_slots;
     }
+    link_config->io_slots_rx = link_config->io_slots_tx;
+
     JSON_OBJ_GET_NUMBER(link, value, "links", "io-slots-tx", 32, 65534);
     if(value) {
         link_config->io_slots_tx = json_number_value(value);
@@ -553,12 +553,14 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     if(value) {
         link_config->io_slots_rx = json_number_value(value);
     }
+
     JSON_OBJ_GET_BOOL(link, value, "links", "qdisc-bypass");
     if(value) {
         link_config->qdisc_bypass = json_boolean_value(value);
     } else {
         link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
     }
+
     value = json_object_get(link, "tx-interval");
     if(json_is_number(value)) {
         link_config->tx_interval = json_number_value(value) * MSEC;
@@ -571,6 +573,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     } else {
         link_config->rx_interval = g_ctx->config.rx_interval;
     }
+
     JSON_OBJ_GET_NUMBER(link, value, "links", "tx-threads", 0, 255);
     if(value) {
         link_config->tx_threads = json_number_value(value);
@@ -635,7 +638,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             return false;
         }
         link_config->lag_interface = strdup(s);
-        value = json_object_get(link, "lacp-priority");
+        JSON_OBJ_GET_NUMBER(link, value, "links", "lacp-priority", 0, 65535);
         if(value) {
             link_config->lacp_priority = json_number_value(value);
         } else {
@@ -699,8 +702,8 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             return false;
         }
     }
-    value = json_object_get(network_interface, "ipv6-router-advertisement");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "ipv6-router-advertisement");
+    if(value) {
         network_config->ipv6_ra = json_boolean_value(value);
     } else {
         network_config->ipv6_ra = true;
@@ -719,57 +722,47 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             return false;
         }
     }
-    value = json_object_get(network_interface, "vlan");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "vlan", 0, 4095);
+    if(value) {
         network_config->vlan = json_number_value(value);
         network_config->vlan &= 4095;
     }
-
-    value = json_object_get(network_interface, "mtu");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "mtu", 64, 9000);
+    if(value) {
         network_config->mtu = json_number_value(value);
     } else {
         network_config->mtu = 1500;
     }
 
-    if(network_config->mtu < 64 || network_config->mtu > 9000) {
-        fprintf(stderr, "JSON config error: Invalid value for network->mtu\n");
-        return false;
-    }
-
-    value = json_object_get(network_interface, "gateway-resolve-wait");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "gateway-resolve-wait");
+    if(value) {
         network_config->gateway_resolve_wait = json_boolean_value(value);
     } else {
         network_config->gateway_resolve_wait = true;
     }
 
     /* IS-IS interface configuration */
-    value = json_object_get(network_interface, "isis-instance-id");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-instance-id", 0, 65535);
+    if(value) {
         network_config->isis_instance_id = json_number_value(value);
         network_config->isis_level = 3;
-        value = json_object_get(network_interface, "isis-level");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-level", 1, 3);
+        if(value) {
             network_config->isis_level = json_number_value(value);
-            if(network_config->isis_level == 0 || 
-               network_config->isis_level > 3) {
-                fprintf(stderr, "JSON config error: Invalid value for network->isis-level (1-3)\n");
-            }
         }
         network_config->isis_p2p = true;
-        value = json_object_get(network_interface, "isis-p2p");
-        if(json_is_boolean(value)) {
+        JSON_OBJ_GET_BOOL(network_interface, value, "network", "isis-p2p");
+        if(value) {
             network_config->isis_p2p = json_boolean_value(value);
         }
-        value = json_object_get(network_interface, "isis-l1-metric");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l1-metric", 0, 4294967295);
+        if(value) {
             network_config->isis_l1_metric = json_number_value(value);
         } else {
             network_config->isis_l1_metric = 10;
         }
-        value = json_object_get(network_interface, "isis-l2-metric");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l2-metric", 0, 4294967295);
+        if(value) {
             network_config->isis_l2_metric = json_number_value(value);
         } else {
             network_config->isis_l2_metric = 10;
@@ -777,11 +770,11 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     }
 
     /* OSPF interface configuration */
-    value = json_object_get(network_interface, "ospfv2-instance-id");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv2-instance-id", 0, 65535);
+    if(value) {
         network_config->ospfv2_instance_id = json_number_value(value);
-        value = json_object_get(network_interface, "ospfv2-metric");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv2-metric", 0, 4294967295);
+        if(value) {
             network_config->ospfv2_metric = json_number_value(value);
         } else {
             network_config->ospfv2_metric = OSPF_DEFAULT_METRIC;
@@ -792,18 +785,18 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             } else if(strcmp(s, "broadcast") == 0) {
                 network_config->ospfv2_type = OSPF_INTERFACE_BROADCAST;
             } else {
-                fprintf(stderr, "Config error: Invalid value for network->ospfv2-type\n");
+
                 return false;
             }
         } else {
             network_config->ospfv2_type = OSPF_INTERFACE_BROADCAST;
         }
     }
-    value = json_object_get(network_interface, "ospfv3-instance-id");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv3-instance-id", 0, 65535);
+    if(value) {
         network_config->ospfv3_instance_id = json_number_value(value);
-        value = json_object_get(network_interface, "ospfv3-metric");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv3-metric", 0, 4294967295);
+        if(value) {
             network_config->ospfv3_metric = json_number_value(value);
         } else {
             network_config->ospfv3_metric = OSPF_DEFAULT_METRIC;
@@ -814,7 +807,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             } else if(strcmp(s, "broadcast") == 0) {
                 network_config->ospfv3_type = OSPF_INTERFACE_BROADCAST;
             } else {
-                fprintf(stderr, "Config error: Invalid value for network->ospfv3-type\n");
+                fprintf(stderr, "JSON config error: Invalid value for network->ospfv3-type\n");
                 return false;
             }
         } else {
@@ -823,8 +816,8 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     }
 
     /* LDP interface configuration */
-    value = json_object_get(network_interface, "ldp-instance-id");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ldp-instance-id", 0, 65535);
+    if(value) {
         network_config->ldp_instance_id = json_number_value(value);
     }
 
@@ -837,7 +830,6 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     json_t *value = NULL;
     const char *s = NULL;
     uint32_t ipv4;
-    double number;
 
     access_config->ipv4_enable = true;
     access_config->ipv6_enable = true;
@@ -886,25 +878,25 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->a10nsp_interface = strdup(s);
     }
 
-    value = json_object_get(access_interface, "i1-start");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i1-start", 0, 4294967295);
     if(value) {
         access_config->i1 = json_number_value(value);
     } else {
         access_config->i1 = 1;
     }
-    value = json_object_get(access_interface, "i1-step");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i1-step", 0, 4294967295);
     if(value) {
         access_config->i1_step = json_number_value(value);
     } else {
         access_config->i1_step = 1;
     }
-    value = json_object_get(access_interface, "i2-start");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i2-start", 0, 4294967295);
     if(value) {
         access_config->i2 = json_number_value(value);
     } else {
         access_config->i2 = 1;
     }
-    value = json_object_get(access_interface, "i2-step");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i2-step", 0, 4294967295);
     if(value) {
         access_config->i2_step = json_number_value(value);
     } else {
@@ -935,57 +927,57 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         }
     }
 
-    value = json_object_get(access_interface, "monkey");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "monkey");
+    if(value) {
         access_config->monkey = json_boolean_value(value);
     }
 
-    value = json_object_get(access_interface, "qinq");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "qinq");
+    if(value) {
         access_config->qinq = json_boolean_value(value);
     }
 
     access_config->access_outer_vlan_step = 1;
     access_config->access_inner_vlan_step = 1;
-    value = json_object_get(access_interface, "outer-vlan");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "outer-vlan", 0, 4095);
+    if(value) {
         access_config->access_outer_vlan_min = json_number_value(value);
         access_config->access_outer_vlan_min &= 4095;
         access_config->access_outer_vlan_max = access_config->access_outer_vlan_min;
     } else {
-        value = json_object_get(access_interface, "outer-vlan-min");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(access_interface, value, "access", "outer-vlan-min", 0, 4095);
+        if(value) {
             access_config->access_outer_vlan_min = json_number_value(value);
             access_config->access_outer_vlan_min &= 4095;
         }
-        value = json_object_get(access_interface, "outer-vlan-max");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(access_interface, value, "access", "outer-vlan-max", 0, 4095);
+        if(value) {
             access_config->access_outer_vlan_max = json_number_value(value);
             access_config->access_outer_vlan_max &= 4095;
         }
-        value = json_object_get(access_interface, "outer-vlan-step");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(access_interface, value, "access", "outer-vlan-step", 0, 4095);
+        if(value) {
             access_config->access_outer_vlan_step = json_number_value(value);
         }
     }
-    value = json_object_get(access_interface, "inner-vlan");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "inner-vlan", 0, 4095);
+    if(value) {
         access_config->access_inner_vlan_min = json_number_value(value);
         access_config->access_inner_vlan_min &= 4095;
         access_config->access_inner_vlan_max = access_config->access_inner_vlan_min;
     } else {
-        value = json_object_get(access_interface, "inner-vlan-min");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(access_interface, value, "access", "inner-vlan-min", 0, 4095);
+        if(value) {
             access_config->access_inner_vlan_min = json_number_value(value);
             access_config->access_inner_vlan_min &= 4095;
         }
-        value = json_object_get(access_interface, "inner-vlan-max");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(access_interface, value, "access", "inner-vlan-max", 0, 4095);
+        if(value) {
             access_config->access_inner_vlan_max = json_number_value(value);
             access_config->access_inner_vlan_max &= 4095;
         }
-        value = json_object_get(access_interface, "inner-vlan-step");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(access_interface, value, "access", "inner-vlan-step", 0, 4095);
+        if(value) {
             access_config->access_inner_vlan_step = json_number_value(value);
         }
     }
@@ -994,13 +986,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         fprintf(stderr, "JSON config error: Invalid value for access VLAN range (min > max)\n");
         return false;
     }
-    value = json_object_get(access_interface, "third-vlan");
+
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "third-vlan", 0, 4095);
     if(value) {
         access_config->access_third_vlan = json_number_value(value);
         access_config->access_third_vlan &= 4095;
     }
 
-    value = json_object_get(access_interface, "ppp-mru");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "ppp-mru", 64, 9000);
     if(value) {
         access_config->ppp_mru = json_number_value(value);
     } else {
@@ -1055,7 +1048,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         } else if(strcmp(s, "CHAP") == 0) {
             access_config->authentication_protocol = PROTOCOL_CHAP;
         } else {
-            fprintf(stderr, "Config error: Invalid value for access->authentication-protocol\n");
+            fprintf(stderr, "JSON config error: Invalid value for access->authentication-protocol\n");
             return false;
         }
     } else {
@@ -1087,141 +1080,116 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         }
     }
 
-    value = json_object_get(access_interface, "rate-up");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "rate-up", 0, 4294967295);
     if(value) {
         access_config->rate_up = json_number_value(value);
     } else {
         access_config->rate_up = g_ctx->config.rate_up;
     }
-
-    value = json_object_get(access_interface, "rate-down");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "rate-down", 0, 4294967295);
     if(value) {
         access_config->rate_down = json_number_value(value);
     } else {
         access_config->rate_down = g_ctx->config.rate_down;
     }
-
-    value = json_object_get(access_interface, "dsl-type");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "dsl-type", 0, 4294967295);
     if(value) {
         access_config->dsl_type = json_number_value(value);
     } else {
         access_config->dsl_type = g_ctx->config.dsl_type;
     }
-
-    value = json_object_get(access_interface, "access-line-profile-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "access-line-profile-id", 0, 65535);
     if(value) {
         access_config->access_line_profile_id = json_number_value(value);
     }
 
     /* IPv4 settings */
-    value = json_object_get(access_interface, "ipcp");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "ipcp");
+    if(value) {
         access_config->ipcp_enable = json_boolean_value(value);
     } else {
         access_config->ipcp_enable = g_ctx->config.ipcp_enable;
     }
-    value = json_object_get(access_interface, "dhcp");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "dhcp");
+    if(value) {
         access_config->dhcp_enable = json_boolean_value(value);
     } else {
         access_config->dhcp_enable = g_ctx->config.dhcp_enable;
     }
-    value = json_object_get(access_interface, "ipv4");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "ipv4");
+    if(value) {
         access_config->ipv4_enable = json_boolean_value(value);
     }
-
-    /* IPv6 settings */
-    value = json_object_get(access_interface, "ip6cp");
-    if(json_is_boolean(value)) {
-        access_config->ip6cp_enable = json_boolean_value(value);
-    } else {
-        access_config->ip6cp_enable = g_ctx->config.ip6cp_enable;
-    }
-    value = json_object_get(access_interface, "dhcpv6");
-    if(json_is_boolean(value)) {
-        access_config->dhcpv6_enable = json_boolean_value(value);
-    } else {
-        access_config->dhcpv6_enable = g_ctx->config.dhcpv6_enable;
-    }
-    value = json_object_get(access_interface, "dhcpv6-ldra");
-    if(json_is_boolean(value)) {
-        access_config->dhcpv6_ldra = json_boolean_value(value);
-    } else {
-        access_config->dhcpv6_ldra = g_ctx->config.dhcpv6_ldra;
-    }
-    value = json_object_get(access_interface, "ipv6");
-    if(json_is_boolean(value)) {
-        access_config->ipv6_enable = json_boolean_value(value);
-    }
-
-    value = json_object_get(access_interface, "igmp-autostart");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "igmp-autostart");
+    if(value) {
         access_config->igmp_autostart = json_boolean_value(value);
     } else {
         access_config->igmp_autostart = g_ctx->config.igmp_autostart;
     }
-    value = json_object_get(access_interface, "igmp-version");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "igmp-version", 1, 3);
+    if(value) {
         access_config->igmp_version = json_number_value(value);
-        if(access_config->igmp_version < 1 || access_config->igmp_version > 3) {
-            fprintf(stderr, "JSON config error: Invalid value for access->igmp-version\n");
-            return false;
-        }
     } else {
         access_config->igmp_version = g_ctx->config.igmp_version;
     }
-    value = json_object_get(access_interface, "session-traffic-autostart");
-    if(json_is_boolean(value)) {
+
+    /* IPv6 settings */
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "ip6cp");
+    if(value) {
+        access_config->ip6cp_enable = json_boolean_value(value);
+    } else {
+        access_config->ip6cp_enable = g_ctx->config.ip6cp_enable;
+    }
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "dhcpv6");
+    if(value) {
+        access_config->dhcpv6_enable = json_boolean_value(value);
+    } else {
+        access_config->dhcpv6_enable = g_ctx->config.dhcpv6_enable;
+    }
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "dhcpv6-ldra");
+    if(value) {
+        access_config->dhcpv6_ldra = json_boolean_value(value);
+    } else {
+        access_config->dhcpv6_ldra = g_ctx->config.dhcpv6_ldra;
+    }
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "ipv6");
+    if(value) {
+        access_config->ipv6_enable = json_boolean_value(value);
+    }
+
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "session-traffic-autostart");
+    if(value) {
         access_config->session_traffic_autostart = json_boolean_value(value);
     } else {
         access_config->session_traffic_autostart = g_ctx->config.session_traffic_autostart;
     }
 
-    value = json_object_get(access_interface, "session-group-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "session-group-id", 0, 65535);
     if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for access->session-group-id\n");
-            return false;
-        }
-        access_config->session_group_id = number;
+        access_config->session_group_id = json_number_value(value);;
     }
 
-    value = json_object_get(access_interface, "stream-group-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "stream-group-id", 0, 65535);
     if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for access->stream-group-id\n");
-            return false;
-        }
-        access_config->stream_group_id = number;
+        access_config->stream_group_id = json_number_value(value);;
     }
 
     value = json_object_get(access_interface, "http-client-group-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "http-client-group-id", 0, 65535);
     if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for access->http-client-group-id\n");
-            return false;
-        }
-        access_config->http_client_group_id = number;
+        access_config->http_client_group_id = json_number_value(value);
         access_config->tcp = true;
     }
 
-    value = json_object_get(access_interface, "cfm-cc");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
+    if(value) {
         access_config->cfm_cc = json_boolean_value(value);
     }
-    value = json_object_get(access_interface, "cfm-level");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-level", 0, 7);
     if(value) {
         access_config->cfm_level = json_number_value(value);
-        if(access_config->cfm_level > 7) {
-            fprintf(stderr, "JSON config error: Invalid value for access->cfm-level\n");
-            return false;
-        }
     }
-    value = json_object_get(access_interface, "cfm-ma-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-ma-id", 0, 65535);
     if(value) {
         access_config->cfm_ma_id = json_number_value(value);
     }
@@ -1276,8 +1244,8 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
         return false;
     }
 
-    value = json_object_get(a10nsp_interface, "qinq");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(a10nsp_interface, value, "a10nsp", "qinq");
+    if(value) {
         a10nsp_config->qinq = json_boolean_value(value);
     }
 
@@ -1294,7 +1262,6 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
             return false;
         }
     }
-
     return true;
 }
 
@@ -1339,34 +1306,34 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         return false;   
     }
 
-    value = json_object_get(bgp, "local-as");
+    JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "local-as", 0, 4294967295);
     if(value) {
         bgp_config->local_as = json_number_value(value);
     } else {
         bgp_config->local_as = BGP_DEFAULT_AS;
     }
 
-    value = json_object_get(bgp, "peer-as");
+    JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "peer-as", 0, 4294967295);
     if(value) {
         bgp_config->peer_as = json_number_value(value);
     } else {
         bgp_config->peer_as = bgp_config->local_as;
     }
 
-    value = json_object_get(bgp, "hold-time");
+    JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "hold-time", 0, 65535);
     if(value) {
         bgp_config->hold_time = json_number_value(value);
     } else {
         bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
     }
 
-    value = json_object_get(bgp, "tos");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tos", 0, 255);
+    if(value) {
         bgp_config->tos = json_number_value(value);
     }
 
-    value = json_object_get(bgp, "ttl");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "ttl", 0, 255);
+    if(value) {
         bgp_config->ttl = json_number_value(value);
     }
 
@@ -1378,22 +1345,22 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         }
     } 
 
-    value = json_object_get(bgp, "reconnect");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(bgp, value, "bgp", "reconnect");
+    if(value) {
         bgp_config->reconnect = json_boolean_value(value);
     } else {
         bgp_config->reconnect = true;
     }
 
-    value = json_object_get(bgp, "start-traffic");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(bgp, value, "bgp", "start-traffic");
+    if(value) {
         bgp_config->start_traffic = json_boolean_value(value);
     } else {
         bgp_config->start_traffic = false;
     }
 
-    value = json_object_get(bgp, "teardown-time");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "teardown-time", 0, 65535);
+    if(value) {
         bgp_config->teardown_time = json_number_value(value);
     } else {
         bgp_config->teardown_time = BGP_DEFAULT_TEARDOWN_TIME;
@@ -1414,7 +1381,6 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     json_t *sub, *con, *c, *value = NULL;
     const char *s = NULL;
     int i, size;
-    double number;
 
     isis_external_connection_s *connection = NULL;
 
@@ -1437,7 +1403,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         return false;
     }
 
-    value = json_object_get(isis, "instance-id");
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "instance-id", 0, 65535);
     if(value) {
         isis_config->id = json_number_value(value);
     } else {
@@ -1445,31 +1411,27 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         return false;
     }
 
-    value = json_object_get(isis, "level");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "level", 1, 3);
+    if(value) {
         isis_config->level = json_number_value(value);
     } else {
         isis_config->level = 3;
     }
-    if(isis_config->level == 0 || isis_config->level > 3) {
-        fprintf(stderr, "JSON config error: Invalid value for isis->level\n");
-        return false;
-    }
 
-    value = json_object_get(isis, "overload");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(isis, value, "isis", "overload");
+    if(value) {
         isis_config->overload  = json_boolean_value(value);
     }
 
-    value = json_object_get(isis, "protocol-ipv4");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(isis, value, "isis", "protocol-ipv4");
+    if(value) {
         isis_config->protocol_ipv4  = json_boolean_value(value);
     } else {
         isis_config->protocol_ipv4  = true;
     }
 
-    value = json_object_get(isis, "protocol-ipv6");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(isis, value, "isis", "protocol-ipv6");
+    if(value) {
         isis_config->protocol_ipv6  = json_boolean_value(value);
     } else {
         isis_config->protocol_ipv6  = true;
@@ -1489,20 +1451,20 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
             }
         }
         if(isis_config->level1_auth) {
-            value = json_object_get(isis, "level1-auth-hello");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(isis, value, "isis", "level1-auth-hello");
+            if(value) {
                 isis_config->level1_auth_hello  = json_boolean_value(value);
             } else {
                 isis_config->level1_auth_hello  = true;
             }
-            value = json_object_get(isis, "level1-auth-csnp");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(isis, value, "isis", "level1-auth-csnp");
+            if(value) {
                 isis_config->level1_auth_csnp  = json_boolean_value(value);
             } else {
                 isis_config->level1_auth_csnp  = true;
             }
-            value = json_object_get(isis, "level1-auth-psnp");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(isis, value, "isis", "level1-auth-psnp");
+            if(value) {
                 isis_config->level1_auth_psnp  = json_boolean_value(value);
             } else {
                 isis_config->level1_auth_psnp  = true;
@@ -1524,20 +1486,20 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
             }
         }
         if(isis_config->level2_auth) {
-            value = json_object_get(isis, "level2-auth-hello");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(isis, value, "isis", "level2-auth-hello");
+            if(value) {
                 isis_config->level2_auth_hello  = json_boolean_value(value);
             } else {
                 isis_config->level2_auth_hello  = true;
             }
-            value = json_object_get(isis, "level2-auth-csnp");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(isis, value, "isis", "level2-auth-csnp");
+            if(value) {
                 isis_config->level2_auth_csnp  = json_boolean_value(value);
             } else {
                 isis_config->level2_auth_csnp  = true;
             }
-            value = json_object_get(isis, "level2-auth-psnp");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(isis, value, "isis", "level2-auth-psnp");
+            if(value) {
                 isis_config->level2_auth_psnp  = json_boolean_value(value);
             } else {
                 isis_config->level2_auth_psnp  = true;
@@ -1545,103 +1507,63 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         }
     }
 
-    value = json_object_get(isis, "hello-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->hello-interval (1 - 65535)\n");
-            return false;
-        }
-        isis_config->hello_interval = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "hello-interval", 1, 65535);
+    if(value) {
+        isis_config->hello_interval = json_number_value(value);
     } else {
         isis_config->hello_interval = ISIS_DEFAULT_HELLO_INTERVAL;
     }
 
-    value = json_object_get(isis, "hello-padding");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(isis, value, "isis", "hello-padding");
+    if(value) {
         isis_config->hello_padding  = json_boolean_value(value);
     }
 
-    value = json_object_get(isis, "hold-time");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->hold-time (1 - 65535)\n");
-            return false;
-        }
-        isis_config->hold_time = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "hold-time", 1, 65535);
+    if(value) {
+        isis_config->hold_time = json_number_value(value);
     } else {
         isis_config->hold_time = ISIS_DEFAULT_HOLD_TIME;
     }
 
-    value = json_object_get(isis, "lsp-lifetime");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < ISIS_DEFAULT_LSP_LIFETIME_MIN || number > ISIS_DEFAULT_LSP_LIFETIME) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-lifetime (330 - 65535)\n");
-            return false;
-        }
-        isis_config->lsp_lifetime = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-lifetime", 330, 65535);
+    if(value) {
+        isis_config->lsp_lifetime = json_number_value(value);
     } else {
         isis_config->lsp_lifetime = ISIS_DEFAULT_LSP_LIFETIME;
     }
 
-    value = json_object_get(isis, "lsp-refresh-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-refresh-interval (1 - 65535)\n");
-            return false;
-        }
-        isis_config->lsp_refresh_interval = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-refresh-interval", 1, 65535);
+    if(value) {
+        isis_config->lsp_refresh_interval = json_number_value(value);
     } else {
         isis_config->lsp_refresh_interval = ISIS_DEFAULT_LSP_REFRESH_IVL;
     }
 
-    value = json_object_get(isis, "lsp-retry-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-retry-interval (1 - 65535)\n");
-            return false;
-        }
-        isis_config->lsp_retry_interval = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-retry-interval", 1, 65535);
+    if(value) {
+        isis_config->lsp_retry_interval = json_number_value(value);
     } else {
         isis_config->lsp_retry_interval = ISIS_DEFAULT_LSP_RETRY_IVL;
     }
 
-    value = json_object_get(isis, "lsp-tx-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-tx-interval (1 - 65535)\n");
-            return false;
-        }
-        isis_config->lsp_tx_interval = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-tx-interval", 1, 65535);
+    if(value) {
+        isis_config->lsp_tx_interval = json_number_value(value);
     } else {
         isis_config->lsp_tx_interval = ISIS_DEFAULT_LSP_TX_IVL_MS;
     }
 
-    value = json_object_get(isis, "lsp-tx-window-size");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->lsp-tx-window-size (1 - 65535)\n");
-            return false;
-        }
-        isis_config->lsp_tx_window_size = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-tx-window-size", 1, 65535);
+    if(value) {
+        isis_config->lsp_tx_window_size = json_number_value(value);
     } else {
         isis_config->lsp_tx_window_size = ISIS_DEFAULT_LSP_WINDOWS_SIZE;
     }
 
-    value = json_object_get(isis, "csnp-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for isis->csnp-interval (1 - 65535)\n");
-            return false;
-        }
-        isis_config->csnp_interval = number;
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "csnp-interval", 1, 65535);
+    if(value) {
+        isis_config->csnp_interval = json_number_value(value);
     } else {
         isis_config->csnp_interval = ISIS_DEFAULT_CSNP_INTERVAL;
     }
@@ -1698,23 +1620,24 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         }
     }
 
-    value = json_object_get(isis, "sr-base");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "sr-base", 0, 1048575);
+    if(value) {
         isis_config->sr_base = json_number_value(value);
     }
 
-    value = json_object_get(isis, "sr-range");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "sr-range", 0, 1048575);
+    if(value) {
         isis_config->sr_range = json_number_value(value);
     }
 
-    value = json_object_get(isis, "sr-node-sid");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "sr-node-sid", 0, 1048575);
+    if(value) {
         isis_config->sr_node_sid = json_number_value(value);
     }
 
     value = json_object_get(isis, "teardown-time");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "teardown-time", 0, 65535);
+    if(value) {
         isis_config->teardown_time = json_number_value(value);
     } else {
         isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
@@ -1764,14 +1687,14 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                     fprintf(stderr, "JSON config error: Missing value for isis->external->connections->system-id\n");
                     return false;
                 }
-                value = json_object_get(c, "l1-metric");
-                if(json_is_number(value)) {
+                JSON_OBJ_GET_NUMBER(c, value, "isis->external->connections", "l1-metric", 0, 4294967295);
+                if(value) {
                     connection->level[ISIS_LEVEL_1_IDX].metric = json_number_value(value);
                 } else {
                     connection->level[ISIS_LEVEL_1_IDX].metric = 10;
                 }
-                value = json_object_get(c, "l2-metric");
-                if(json_is_number(value)) {
+                JSON_OBJ_GET_NUMBER(c, value, "isis->external->connections", "l2-metric", 0, 4294967295);
+                if(value) {
                     connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
                 } else {
                     connection->level[ISIS_LEVEL_2_IDX].metric = 10;
@@ -1780,8 +1703,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         }
     }
 
-    value = json_object_get(isis, "external-auto-refresh");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(isis, value, "isis", "external-auto-refresh");
+    if(value) {
         isis_config->external_auto_refresh  = json_boolean_value(value);
     }
     return true;
@@ -1793,7 +1716,6 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
     json_t *sub, *con, *c, *value = NULL;
     const char *s = NULL;
     int i, size;
-    double number;
 
     static uint32_t interface_id = 1000000;
 
@@ -1812,7 +1734,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         return false;
     }
 
-    value = json_object_get(ospf, "instance-id");
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "instance-id", 0, 65535);
     if(value) {
         ospf_config->id = json_number_value(value);
     } else {
@@ -1820,21 +1742,15 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         return false;
     }
 
-    value = json_object_get(ospf, "version");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number == 2 || number == 3) {
-            ospf_config->version = number;
-        } else {
-            fprintf(stderr, "JSON config error: Invalid value for ospf->version\n");
-            return false;
-        }
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "version", 2, 3);
+    if(value) {
+        ospf_config->version = json_number_value(value);
     } else {
         ospf_config->version = 2;
     }
 
-    value = json_object_get(ospf, "overload");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(ospf, value, "ospf", "overload");
+    if(value) {
         ospf_config->overload  = json_boolean_value(value);
     }
 
@@ -1853,26 +1769,16 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         }
     }
 
-    value = json_object_get(ospf, "hello-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for ospf->hello-interval (1 - 65535)\n");
-            return false;
-        }
-        ospf_config->hello_interval = number;
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "hello-interval", 1, 65535);
+    if(value) {
+        ospf_config->hello_interval = json_number_value(value);
     } else {
         ospf_config->hello_interval = OSPF_DEFAULT_HELLO_INTERVAL;
     }
 
-    value = json_object_get(ospf, "dead-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for ospf->dead-interval (1 - 65535)\n");
-            return false;
-        }
-        ospf_config->dead_interval = number;
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "dead-interval", 1, 65535);
+    if(value) {
+        ospf_config->dead_interval = json_number_value(value);
     } else {
         ospf_config->dead_interval = OSPF_DEFAULT_DEAD_INTERVAL;
     }
@@ -1881,18 +1787,12 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         return false;
     }
 
-    value = json_object_get(ospf, "lsa-retry-interval");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for ospf->lsa-retry-interval (1 - 65535)\n");
-            return false;
-        }
-        ospf_config->lsa_retry_interval = number;
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "lsa-retry-interval", 1, 65535);
+    if(value) {
+        ospf_config->lsa_retry_interval = json_number_value(value);
     } else {
         ospf_config->lsa_retry_interval = OSPF_DEFAULT_LSA_RETRY_IVL;
     }
-
 
     if(json_unpack(ospf, "{s:s}", "hostname", &s) == 0) {
         ospf_config->hostname = strdup(s);
@@ -1910,14 +1810,9 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         return false;
     }
 
-    value = json_object_get(ospf, "router-priority");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 0 || number > UINT8_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for ospf->router-priority (0 - 255)\n");
-            return false;
-        }
-        ospf_config->router_priority = number;
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "router-priority", 0, 255);
+    if(value) {
+        ospf_config->router_priority = json_number_value(value);
     } else {
         ospf_config->router_priority = OSPF_DEFAULT_ROUTER_PRIORITY;
     }
@@ -1932,8 +1827,8 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         return false;
     }
 
-    value = json_object_get(ospf, "teardown-time");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "teardown-time", 0, 65535);
+    if(value) {
         ospf_config->teardown_time = json_number_value(value);
     } else {
         ospf_config->teardown_time = OSPF_DEFAULT_TEARDOWN_TIME;
@@ -1985,8 +1880,8 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                     return false;
                 }
 
-                value = json_object_get(c, "metric");
-                if(json_is_number(value)) {
+                JSON_OBJ_GET_NUMBER(c, value, "ospf->external->connections", "metric", 0, 4294967295);
+                if(value) {
                     connection->metric = json_number_value(value);
                 } else {
                     connection->metric = 10;
@@ -2025,7 +1920,7 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         return false;
     }
 
-    value = json_object_get(ldp, "instance-id");
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "instance-id", 0, 65535);
     if(value) {
         ldp_config->id = json_number_value(value);
     } else {
@@ -2033,22 +1928,22 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         return false;
     }
 
-    value = json_object_get(ldp, "keepalive-time");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "keepalive-time", 0, 65535);
+    if(value) {
         ldp_config->keepalive_time = json_number_value(value);
     } else {
         ldp_config->keepalive_time = LDP_DEFAULT_KEEPALIVE_TIME;
     }
 
-    value = json_object_get(ldp, "hold-time");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "hold-time", 0, 65535);
+    if(value) {
         ldp_config->hold_time = json_number_value(value);
     } else {
         ldp_config->hold_time = LDP_DEFAULT_HOLD_TIME;
     }
 
-    value = json_object_get(ldp, "teardown-time");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "teardown-time", 0, 65535);
+    if(value) {
         ldp_config->teardown_time = json_number_value(value);
     } else {
         ldp_config->teardown_time = LDP_DEFAULT_TEARDOWN_TIME;
@@ -2086,13 +1981,13 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         ldp_config->ipv4_transport_address = ldp_config->lsr_id;
     }
 
-    value = json_object_get(ldp, "no-ipv4-transport");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(ldp, value, "ldp", "no-ipv4-transport");
+    if(value) {
         ldp_config->no_ipv4_transport = json_boolean_value(value);
     }
 
-    value = json_object_get(ldp, "prefer-ipv4-transport");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(ldp, value, "ldp", "prefer-ipv4-transport");
+    if(value) {
         ldp_config->prefer_ipv4_transport = json_boolean_value(value);
     }
 
@@ -2103,8 +1998,8 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         }
     }
 
-    value = json_object_get(ldp, "tos");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "tos", 0, 255);
+    if(value) {
         ldp_config->tos = json_number_value(value);
     }
 
@@ -2117,7 +2012,6 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     json_t *value = NULL;
     const char *s = NULL;
     double bps;
-    double number;
 
     const char *schema[] = {
         "name", "stream-group-id", "type",
@@ -2146,13 +2040,9 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         return false;
     }
 
-    value = json_object_get(stream, "stream-group-id");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "stream-group-id", 0, 65535);
     if(value) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id\n");
-        }
-        stream_config->stream_group_id = number;
+        stream_config->stream_group_id = json_number_value(value);
     }
 
     if(json_unpack(stream, "{s:s}", "type", &s) == 0) {
@@ -2207,26 +2097,24 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         return false;
     }
 
-    value = json_object_get(stream, "source-port");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "source-port", 0, 65535);
     if(value) {
         stream_config->src_port = json_number_value(value);
     } else {
         stream_config->src_port = BBL_UDP_PORT;
     }
 
-    value = json_object_get(stream, "destination-port");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "destination-port", 0, 65535);
     if(value) {
         stream_config->dst_port = json_number_value(value);
     } else {
         stream_config->dst_port = BBL_UDP_PORT;
     }
 
-    value = json_object_get(stream, "length");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "length", 76, 9000);
     if(value) {
         stream_config->length = json_number_value(value);
-        if(stream_config->length < 76 || 
-           stream_config->length > 9000 ||
-           stream_config->length > g_ctx->config.io_max_stream_len) {
+        if(stream_config->length > g_ctx->config.io_max_stream_len) {
             fprintf(stderr, "JSON config error: Invalid value for stream->length (must be between 76 and %u)\n", g_ctx->config.io_max_stream_len);
             return false;
         }
@@ -2234,12 +2122,12 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->length = 128;
     }
 
-    value = json_object_get(stream, "priority");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "priority", 0, 255);
     if(value) {
         stream_config->priority = json_number_value(value);
     }
 
-    value = json_object_get(stream, "vlan-priority");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "vlan-priority", 0, 7);
     if(value) {
         stream_config->vlan_priority = json_number_value(value);
     }
@@ -2256,7 +2144,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         value = json_object_get(stream, "bps");
         if(value) {
             bps = json_number_value(value);
-            if(!bps) {
+            if(bps <= 0) {
                 fprintf(stderr, "JSON config error: Invalid value for stream->bps\n");
                 return false;
             }
@@ -2265,7 +2153,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         value = json_object_get(stream, "Kbps");
         if(value) {
             bps = json_number_value(value);
-            if(!bps) {
+            if(bps <= 0) {
                 fprintf(stderr, "JSON config error: Invalid value for stream->Kbps\n");
                 return false;
             }
@@ -2274,7 +2162,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         value = json_object_get(stream, "Mbps");
         if(value) {
             bps = json_number_value(value);
-            if(!bps) {
+            if(bps <= 0) {
                 fprintf(stderr, "JSON config error: Invalid value for stream->Mbps\n");
                 return false;
             }
@@ -2283,7 +2171,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         value = json_object_get(stream, "Gbps");
         if(value) {
             bps = json_number_value(value);
-            if(!bps) {
+            if(bps <= 0) {
                 fprintf(stderr, "JSON config error: Invalid value for stream->Gbps\n");
                 return false;
             }
@@ -2292,12 +2180,12 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     }
     if(!stream_config->pps) stream_config->pps = 1;
 
-    value = json_object_get(stream, "max-packets");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "max-packets", 0, 4294967295);
     if(value) {
         stream_config->max_packets = json_number_value(value);
     }
 
-    value = json_object_get(stream, "start-delay");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "start-delay", 0, 4294967295);
     if(value) {
         stream_config->start_delay = json_number_value(value);
     }
@@ -2361,51 +2249,51 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     }
 
     /* Set DF bit for IPv4 traffic (default true) */
-    value = json_object_get(stream, "ipv4-df");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "ipv4-df");
+    if(value) {
         stream_config->ipv4_df = json_boolean_value(value);
     } else {
         stream_config->ipv4_df = true;
     }
 
     /* MPLS labels */
-    value = json_object_get(stream, "tx-label1");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "tx-label1", 0, 1048575);
     if(value) {
         stream_config->tx_mpls1 = true;
         stream_config->tx_mpls1_label = json_number_value(value);
     }
-    value = json_object_get(stream, "tx-label1-exp");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "tx-label1-exp", 0, 7);
     if(value) {
         stream_config->tx_mpls1_exp = json_number_value(value);
     }
-    value = json_object_get(stream, "tx-label1-ttl");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "tx-label1-ttl", 0, 255);
     if(value) {
         stream_config->tx_mpls1_ttl = json_number_value(value);
     } else {
         stream_config->tx_mpls1_ttl = 255;
     }
-    value = json_object_get(stream, "tx-label2");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "tx-label2", 0, 1048575);
     if(value) {
         stream_config->tx_mpls2 = true;
         stream_config->tx_mpls2_label = json_number_value(value);
     }
-    value = json_object_get(stream, "tx-label2-exp");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "tx-label2-exp", 0, 7);
     if(value) {
         stream_config->tx_mpls2_exp = json_number_value(value);
     }
-    value = json_object_get(stream, "tx-label2-ttl");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "tx-label2-ttl", 0, 255);
     if(value) {
         stream_config->tx_mpls2_ttl = json_number_value(value);
     } else {
         stream_config->tx_mpls2_ttl = 255;
     }
 
-    value = json_object_get(stream, "rx-label1");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "rx-label1", 0, 1048575);
     if(value) {
         stream_config->rx_mpls1 = true;
         stream_config->rx_mpls1_label = json_number_value(value);
     }
-    value = json_object_get(stream, "rx-label2");
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "rx-label2", 0, 1048575);
     if(value) {
         stream_config->rx_mpls2 = true;
         stream_config->rx_mpls2_label = json_number_value(value);
@@ -2483,7 +2371,6 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
 {
     json_t *value = NULL;
     const char *s = NULL;
-    double number;
 
     g_ctx->tcp = true;
 
@@ -2513,43 +2400,31 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
         return false;
     }
 
-    value = json_object_get(http, "http-client-group-id");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number >= UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for http-client->http-client-group-id\n");
-        }
-        http_client_config->http_client_group_id = number;
+    JSON_OBJ_GET_NUMBER(http, value, "http-client", "http-client-group-id", 0, 65535);
+    if(value) {
+        http_client_config->http_client_group_id = json_number_value(value);
     } else {
         fprintf(stderr, "JSON config error: Missing value for http-client->http-client-group-id\n");
         return false;
     }
 
-    value = json_object_get(http, "destination-port");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for http-client->destination-port\n");
-        }
-        http_client_config->dst_port = number;
+    JSON_OBJ_GET_NUMBER(http, value, "http-client", "destination-port", 0, 65535);
+    if(value) {
+        http_client_config->dst_port = json_number_value(value);
     } else {
         http_client_config->dst_port = 80;
     }
 
-    value = json_object_get(http, "autostart");
-    if(json_is_boolean(value)) {
+    JSON_OBJ_GET_BOOL(http, value, "http-client", "autostart");
+    if(value) {
         http_client_config->autostart = json_boolean_value(value);
     } else {
         http_client_config->autostart = true;
     }
 
-    value = json_object_get(http, "start-delay");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number > UINT32_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for http-client->start-delay\n");
-        }
-        http_client_config->start_delay = number;
+    JSON_OBJ_GET_NUMBER(http, value, "http-client", "start-delay", 0, 4294967295);
+    if(value) {
+        http_client_config->start_delay = json_number_value(value);
     }
 
     if(json_unpack(http, "{s:s}", "destination-ipv4-address", &s) == 0) {
@@ -2575,7 +2450,6 @@ json_parse_http_server_config(json_t *http, bbl_http_server_config_s *http_serve
 {
     json_t *value = NULL;
     const char *s = NULL;
-    double number;
 
     g_ctx->tcp = true;
 
@@ -2602,13 +2476,9 @@ json_parse_http_server_config(json_t *http, bbl_http_server_config_s *http_serve
         return false;
     }
 
-    value = json_object_get(http, "port");
-    if(json_is_number(value)) {
-        number = json_number_value(value);
-        if(number < 1 || number > UINT16_MAX) {
-            fprintf(stderr, "JSON config error: Invalid value for http-server->port\n");
-        }
-        http_server_config->port = number;
+    JSON_OBJ_GET_NUMBER(http, value, "http-server", "port", 0, 65535);
+    if(value) {
+        http_server_config->port = json_number_value(value);
     } else {
         http_server_config->port = 80;
     }
@@ -2935,7 +2805,6 @@ json_parse_config(json_t *root)
         }
         sub = json_object_get(section, "ipcp");
         if(json_is_object(sub)) {
-
             const char *schema[] = {
                 "enable", "request-ip", 
                 "request-dns1", "request-dns2",
@@ -2971,9 +2840,9 @@ json_parse_config(json_t *root)
                 g_ctx->config.ipcp_conf_request_retry = json_number_value(value);
             }
         }
+
         sub = json_object_get(section, "ip6cp");
         if(json_is_object(sub)) {
-
             const char *schema[] = {
                 "enable", "conf-request-timeout", "conf-request-retry"
             };
@@ -3516,7 +3385,7 @@ json_parse_config(json_t *root)
                 g_ctx->dpdk = true;
 #endif
             } else {
-                fprintf(stderr, "Config error: Invalid value for interfaces->io-mode\n");
+                fprintf(stderr, "JSON config error: Invalid value for interfaces->io-mode\n");
                 return false;
             }
         } else {
@@ -3776,7 +3645,7 @@ json_parse_config(json_t *root)
                 } else if(strcmp(s, "aggressive") == 0) {
                     l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
                 } else {
-                    fprintf(stderr, "Config error: Invalid value for l2tp-server->congestion-mode\n");
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->congestion-mode\n");
                     return false;
                 }
             } else {

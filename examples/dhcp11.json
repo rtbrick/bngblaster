@@ -20,7 +20,6 @@
     },
     "sessions": {
         "count": 1,
-        "session-time": 0,
         "max-outstanding": 800,
         "start-rate": 400,
         "stop-rate": 400
