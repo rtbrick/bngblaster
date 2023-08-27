@@ -430,14 +430,17 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
 }
 
 /*
- * Serialize an IS-IS attribute into a buffer.
+ * Serialize an IS-IS attribute into a packet buffer.
  */
 void
-lspgen_serialize_isis_attr(lsdb_attr_t *attr, io_buffer_t *buf)
+lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 {
     uint32_t metric, mask;
     uint8_t attr_len, flags;
     bool subtlv_present;
+    io_buffer_t *buf;
+
+    buf = &packet->buf;
 
     subtlv_present = lsdb_attr_subtlvs_present(attr);
 
@@ -595,12 +598,15 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, io_buffer_t *buf)
 }
 
 /*
- * Serialize an OSPFv2 attribute into a buffer.
+ * Serialize an OSPFv2 attribute into a packet buffer.
  */
 void
-lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, io_buffer_t *buf)
+lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 {
+    io_buffer_t *buf;
     uint16_t attr_len;
+
+    buf = &packet->buf;
 
     switch (attr->key.attr_type) {
     case OSPF_TLV_HOSTNAME:
@@ -615,21 +621,21 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, io_buffer_t *buf)
 }
 
 /*
- * Serialize a attribute into a buffer.
+ * Serialize an attribute into a buffer.
  *
  * This is used in two places.
  *  1) When an attribute gets added for size measurement.
- *  2) When the actual link-state packets gets built.
+ *  2) When the actual packet gets built.
  */
 void
-lspgen_serialize_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr, io_buffer_t *buf)
+lspgen_serialize_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr, lsdb_packet_t *packet)
 {
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
-	lspgen_serialize_isis_attr(attr, buf);
+	lspgen_serialize_isis_attr(attr, packet);
 	break;
     case PROTO_OSPF2:
-	lspgen_serialize_ospf2_attr(attr, buf);
+	lspgen_serialize_ospf2_attr(attr, packet);
 	break;
     default:
 	LOG_NOARG(ERROR, "Unknown protocol\n");
@@ -679,6 +685,8 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         if (!packet) {
             return NULL;
         }
+	/* fill redzone to detect overrruns */
+	memset(&packet->redzone, 0xaa, sizeof(packet->redzone));
 
         /*
         * Insert packet into dictionary hanging off a node.
@@ -859,13 +867,13 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          */
         if ((last_attr != attr->key.attr_type) ||
             (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
-        attr->key.start_tlv) {
+	    attr->key.start_tlv) {
             tlv_start_idx = packet->buf.idx;
             push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
             push_be_uint(&packet->buf, 1, 0); /* Length */
         }
 
-        lspgen_serialize_attr(ctx, attr, &packet->buf);
+        lspgen_serialize_attr(ctx, attr, packet);
         lspgen_update_tlv_length(&packet->buf, tlv_start_idx);
 
         last_attr = attr->key.attr_type;
@@ -953,7 +961,7 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
             id++;
             if (id > 255) {
                 dict_itor_free(itor);
-                LOG(ERROR, "Exhausted fragments for node %s\n", lsdb_format_node(node));
+                LOG(ERROR, "Exhausted packets for node %s\n", lsdb_format_node(node));
                 return;
             }
         }
@@ -975,13 +983,13 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
          */
         if ((last_attr != attr->key.attr_type) ||
             (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
-        attr->key.start_tlv) {
+	    attr->key.start_tlv) {
             tlv_start_idx = packet->buf.idx;
             push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
             push_be_uint(&packet->buf, 1, 0); /* Length */
         }
 
-        lspgen_serialize_attr(ctx, attr, &packet->buf);
+        lspgen_serialize_attr(ctx, attr, packet);
         lspgen_update_tlv_length(&packet->buf, tlv_start_idx);
 
         last_attr = attr->key.attr_type;

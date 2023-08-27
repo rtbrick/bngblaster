@@ -556,8 +556,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         /* Host name */
         if (node->node_name) {
             lsdb_reset_attr_template(&attr_template);
-            attr_template.key.ordinal = OSPF_LSA_OPAQUE_AREA;
-            attr_template.key.attr_type = OSPF_TLV_HOSTNAME;
+            attr_template.key.ordinal = 1;
+	    attr_template.key.msg[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.msg[1] = OSPF_LSA_OPAQUE_AREA;
+            attr_template.key.msg[2] = OSPF_TLV_HOSTNAME;
             strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
             lsdb_add_node_attr(node, &attr_template);
         }
@@ -573,8 +575,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.adv_sid = true;
         }
         attr_template.key.prefix.node_flag = true;
-        attr_template.key.ordinal = OSPF_LSA_ROUTER;
-        attr_template.key.attr_type = OSPF_ROUTER_LSA_LINK_STUB;
+
+	attr_template.key.msg[0] = OSPF_MSG_LSUPDATE;
+	attr_template.key.msg[1] = OSPF_LSA_ROUTER;
+	attr_template.key.msg[2] = OSPF_ROUTER_LSA_LINK_STUB;
         lsdb_add_node_attr(node, &attr_template);
 
         /* external prefixes */
@@ -585,8 +589,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(ext_addr4, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, 4);
             attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_ext_prefix.len;
             attr_template.key.prefix.metric = 100;
-	    attr_template.key.ordinal = OSPF_LSA_EXTERNAL;
-            attr_template.key.attr_type = OSPF_EXTERNAL_PREFIX;
+
+	    attr_template.key.msg[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.msg[1] = OSPF_LSA_EXTERNAL;
+	    attr_template.key.msg[2] = OSPF_EXTERNAL_PREFIX;;
             lsdb_add_node_attr(node, &attr_template);
             ext_addr4 += ext_incr4;
         }
@@ -614,10 +620,14 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
          */
         CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
 
-            /* Generate an IS reach for each link */
+            /*
+	     * Generate a ptp neighbor for each link
+	     * TODO Type-2 LSA handling.
+	     */
             lsdb_reset_attr_template(&attr_template);
-            attr_template.key.ordinal = OSPF_LSA_ROUTER;
-            attr_template.key.attr_type = OSPF_ROUTER_LSA_LINK_PTP;
+	    attr_template.key.msg[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.msg[1] = OSPF_LSA_ROUTER;
+	    attr_template.key.msg[2] = OSPF_ROUTER_LSA_LINK_PTP;
             memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
             attr_template.key.link.metric = link->link_metric; /* TODO clip metric */
             lsdb_add_node_attr(node, &attr_template);
@@ -630,8 +640,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
             attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_link_prefix.len;
             attr_template.key.prefix.metric = link->link_metric; /* TODO clip metric */
-            attr_template.key.ordinal = OSPF_LSA_ROUTER;
-            attr_template.key.attr_type = OSPF_ROUTER_LSA_LINK_STUB;
+
+	    attr_template.key.msg[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.msg[1] = OSPF_LSA_ROUTER;
+	    attr_template.key.msg[2] = OSPF_ROUTER_LSA_LINK_STUB;
             lsdb_add_node_attr(node, &attr_template);
         }
 

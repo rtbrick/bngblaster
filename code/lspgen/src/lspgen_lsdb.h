@@ -255,6 +255,14 @@ typedef struct lsdb_attr_cap_ {
 } lsdb_attr_cap_t;
 
 /*
+ * A message stack is used for hierarchical encoding of messages.
+ */
+typedef struct msg_stack_ {
+    uint16_t num_buffer;
+    struct io_buffer_ buf[1]; /* variable length */
+} msg_stack_t;
+
+/*
  * An Attribute hanging off a node or link
  */
 typedef struct lsdb_attr_ {
@@ -263,20 +271,21 @@ typedef struct lsdb_attr_ {
      * Key in the dict
      */
     struct {
-    uint8_t ordinal; /* Used for ordering TLV generation */
-    uint8_t attr_type; /* Type */
-    bool start_tlv; /* Always start a fresh TLV */
-    union {
-        struct lsdb_attr_prefix_ prefix;
-        iso_prefix area;
-        struct lsdb_attr_cap_ cap;
-        struct lsdb_attr_link_ link;
-        uint8_t ipv4_addr[IPV4_ADDR_LEN];
-        uint8_t ipv6_addr[IPV6_ADDR_LEN];
-        uint32_t srlg;
-        char hostname[36];
-        uint8_t protocol;
-    };
+	uint8_t ordinal; /* Used for ordering message generation */
+	uint8_t msg[4]; /* code points for multiple levels */
+	uint8_t attr_type; /* Type */
+	bool start_tlv; /* Always start a fresh TLV */
+	union {
+	    struct lsdb_attr_prefix_ prefix;
+	    iso_prefix area;
+	    struct lsdb_attr_cap_ cap;
+	    struct lsdb_attr_link_ link;
+	    uint8_t ipv4_addr[IPV4_ADDR_LEN];
+	    uint8_t ipv6_addr[IPV6_ADDR_LEN];
+	    uint32_t srlg;
+	    char hostname[36];
+	    uint8_t protocol;
+	};
     } key;
 
     uint32_t size; /* on-the wire space required in bytes */
@@ -296,12 +305,14 @@ typedef struct lsdb_packet_ {
      * Key in the dict
      */
     struct {
-    uint32_t id; /* Fragment # for IS-IS, LSA # for OSPF */
+	uint32_t id; /* Fragment # for IS-IS, LS-Update Packet # for OSPF */
     } key;
 
     struct io_buffer_ buf;
     uint8_t data[1500]; /* fixed buffer */
     uint8_t redzone[8]; /* Overwrite detection */
+
+    uint8_t prev_attr_cp[4]; /* cached code points for previous attr */
 
 } lsdb_packet_t;
 

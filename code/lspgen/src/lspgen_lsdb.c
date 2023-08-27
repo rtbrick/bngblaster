@@ -855,8 +855,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
     lsdb_ctx_t *ctx;
     struct lsdb_attr_ *attr;
     void **p;
-    uint8_t data[255]; /* One max-sized TLV */
-    struct io_buffer_ buf;
+    lsdb_packet_t packet;
 
     if (!node) {
         return NULL;
@@ -910,13 +909,17 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         *result.datum_ptr = attr;
 
         /*
-         * Calculate the size, by serializing the data into a dummy buffer.
+         * Calculate the size, by serializing the data into a dummy packet buffer.
          */
-        buf.data = data;
-        buf.idx = 0;
-        buf.size = sizeof(data);
-        lspgen_serialize_attr(ctx, attr, &buf);
-        attr->size = buf.idx;
+	packet.buf.data = packet.data;
+        //buf.data = data;
+	packet.buf.idx = 0;
+        //buf.idx = 0;
+	packet.buf.size = sizeof(packet.data);
+        //buf.size = sizeof(data);
+        lspgen_serialize_attr(ctx, attr, &packet);
+	attr->size = packet.buf.idx;
+        //attr->size = buf.idx;
 
         /*
          * Book keeping.
