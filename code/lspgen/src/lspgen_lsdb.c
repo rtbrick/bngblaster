@@ -748,8 +748,22 @@ lsdb_format_isis_attr(struct lsdb_attr_ *attr)
     return buf;
 }
 
-struct keyval_ ospf_attr_names[] = {
-    { OSPF_TLV_HOSTNAME, "Hostname" },
+struct keyval_ ospf_attr_l0_names[] = {
+    { OSPF_MSG_LSUPDATE,		"LS-Update" },
+    { 0, NULL}
+};
+
+struct keyval_ ospf_attr_l1_names[] = {
+    { OSPF_LSA_ROUTER,			"Router-LSA" },
+    { OSPF_LSA_EXTERNAL,		"External-LSA" },
+    { OSPF_LSA_OPAQUE_AREA_RI,		"Opaque-LSA-RI" },
+    { 0, NULL}
+};
+
+struct keyval_ ospf_attr_l2_names[] = {
+    { OSPF_ROUTER_LSA_LINK_PTP,		"ptp-link" },
+    { OSPF_ROUTER_LSA_LINK_STUB,	"ptp-stub" },
+    { OSPF_TLV_HOSTNAME,		"Hostname" },
     { 0, NULL}
 };
 
@@ -758,16 +772,42 @@ lsdb_format_ospf2_attr(struct lsdb_attr_ *attr)
 {
     static char buf[128];
     int len;
+    uint attr_cp;
 
-    len = snprintf(buf, sizeof(buf), "%s (%u)", val2key(ospf_attr_names, attr->key.attr_type), attr->key.attr_type);
-
-    switch(attr->key.attr_type) {
-        case OSPF_TLV_HOSTNAME:
-            len += snprintf(buf+len, sizeof(buf)-len, " '%s'", attr->key.hostname);
-            break;
-        default:
-            break;
+    attr_cp = attr->key.attr_cp[0];
+    len = snprintf(buf, sizeof(buf), "%s", val2key(ospf_attr_l0_names, attr_cp));
+    attr_cp = attr->key.attr_cp[1];
+    if (attr_cp) {
+	len += snprintf(buf+len, sizeof(buf)-len, " %s", val2key(ospf_attr_l1_names, attr_cp));
     }
+    attr_cp = attr->key.attr_cp[2];
+    if (attr_cp) {
+	len += snprintf(buf+len, sizeof(buf)-len, " %s", val2key(ospf_attr_l2_names, attr_cp));
+    }
+
+    switch(attr->key.attr_cp[1]) {
+    case OSPF_LSA_EXTERNAL:
+	len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+			format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
+			attr->key.prefix.metric);
+	break;
+    default:
+	break;
+    }
+
+    switch(attr->key.attr_cp[2]) {
+    case OSPF_ROUTER_LSA_LINK_STUB:
+	len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+			format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
+			attr->key.prefix.metric);
+	break;
+    case OSPF_TLV_HOSTNAME:
+	len += snprintf(buf+len, sizeof(buf)-len, ": %s", attr->key.hostname);
+	break;
+    default:
+	break;
+    }
+
     return buf;
 }
 
@@ -856,6 +896,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
     struct lsdb_attr_ *attr;
     void **p;
     lsdb_packet_t packet;
+    int idx;
 
     if (!node) {
         return NULL;
@@ -911,20 +952,25 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         /*
          * Calculate the size, by serializing the data into a dummy packet buffer.
          */
-	packet.buf.data = packet.data;
-        //buf.data = data;
-	packet.buf.idx = 0;
-        //buf.idx = 0;
-	packet.buf.size = sizeof(packet.data);
-        //buf.size = sizeof(data);
+	lspgen_reset_packet_buffer(&packet);
         lspgen_serialize_attr(ctx, attr, &packet);
 	attr->size = packet.buf.idx;
-        //attr->size = buf.idx;
+
+	/*
+	 * Find lowest level size.
+	 */
+	for (idx = MAX_MSG_LEVEL-1; idx; idx--) {
+	    if (packet.bufX[idx].idx) {
+		attr->size += packet.bufX[idx].idx;
+		break;
+	    }
+	}
 
         /*
          * Book keeping.
          */
         node->attr_count++;
+	attr->parent = node;
 
         LOG(LSDB, "  Add attr %s to node %s (%s), size %u\n",
             lsdb_format_attr(ctx, attr),

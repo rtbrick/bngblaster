@@ -262,6 +262,8 @@ typedef struct msg_stack_ {
     struct io_buffer_ buf[1]; /* variable length */
 } msg_stack_t;
 
+#define MAX_MSG_LEVEL 4
+
 /*
  * An Attribute hanging off a node or link
  */
@@ -272,7 +274,7 @@ typedef struct lsdb_attr_ {
      */
     struct {
 	uint8_t ordinal; /* Used for ordering message generation */
-	uint8_t msg[4]; /* code points for multiple levels */
+	uint8_t attr_cp[MAX_MSG_LEVEL]; /* code points for multiple levels */
 	uint8_t attr_type; /* Type */
 	bool start_tlv; /* Always start a fresh TLV */
 	union {
@@ -289,6 +291,7 @@ typedef struct lsdb_attr_ {
     } key;
 
     uint32_t size; /* on-the wire space required in bytes */
+    struct lsdb_node_ *parent;
 } lsdb_attr_t;
 
 /*
@@ -309,10 +312,11 @@ typedef struct lsdb_packet_ {
     } key;
 
     struct io_buffer_ buf;
+    struct io_buffer_ bufX[MAX_MSG_LEVEL];
     uint8_t data[1500]; /* fixed buffer */
     uint8_t redzone[8]; /* Overwrite detection */
 
-    uint8_t prev_attr_cp[4]; /* cached code points for previous attr */
+    uint8_t prev_attr_cp[MAX_MSG_LEVEL]; /* cached code points for previous attr */
 
 } lsdb_packet_t;
 

@@ -17,7 +17,7 @@
 #define OSPF_LSA_EXTERNAL          5
 
 #define OSPF_LSA_OPAQUE_LINK       9
-#define OSPF_LSA_OPAQUE_AREA      10
+#define OSPF_LSA_OPAQUE_AREA_RI  104
 #define OSPF_LSA_OPAQUE_DOMAIN    11
 
 #define OSPF_TLV_HOSTNAME          7
@@ -26,7 +26,4 @@ enum {
     /* Router LSA */
     OSPF_ROUTER_LSA_LINK_PTP,
     OSPF_ROUTER_LSA_LINK_STUB,
-
-    /* External LSA */
-    OSPF_EXTERNAL_PREFIX,
 };
