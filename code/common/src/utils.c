@@ -48,6 +48,18 @@ write_be_uint(uint8_t *data, size_t length, uint64_t value)
 }
 
 /*
+ * Increment a big endian number.
+ */
+bool
+inc_be_uint(uint8_t *data, size_t length)
+{
+    uint64_t value;
+
+    value = read_be_uint(data, length) + 1;
+    return write_be_uint(data, length, value);
+}
+
+/*
  * Push a big endian integer to the write buffer and update the cursor.
  */
 bool
