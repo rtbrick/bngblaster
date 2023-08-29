@@ -466,60 +466,59 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
             ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXCHANGE);
         }
         ospf_neighbor_dbd_tx(ospf_neighbor);
-        return;
-    }
-
-    if(flags & OSPF_DBD_FLAG_I) {
-        /* I flag not expected after ExStart */
-        ospf_rx_error(interface, pdu, "init");
-        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
-        return;
-    }
-    if(ospf_neighbor->options != options) {
-        ospf_rx_error(interface, pdu, "options");
-        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
-        return;
-    }
-    if(ospf_neighbor->master) {
-        if(flags & OSPF_DBD_FLAG_MS) {
-            ospf_rx_error(interface, pdu, "master/slave");
-            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
-            return;
-        }
-        if(dd != ospf_neighbor->dd) {
-            ospf_rx_error(interface, pdu, "DD sequence");
-            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
-            return;
-        }
-        if(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M) {
-            /* Next */
-            ospf_neighbor->dd++;
-            memcpy(&ospf_neighbor->dbd_lsa_start, &ospf_neighbor->dbd_lsa_next, sizeof(ospf_lsa_key_s));
-            ospf_neighbor->dbd_lsa_type_start = ospf_neighbor->dbd_lsa_type_next;
-            memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
-            ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
-
-            ospf_neighbor_dbd_tx(ospf_neighbor);
-        }
     } else {
-        if(!(flags & OSPF_DBD_FLAG_MS)) {
-            ospf_rx_error(interface, pdu, "master/slave");
+        if(flags & OSPF_DBD_FLAG_I) {
+            /* I flag not expected after ExStart */
+            ospf_rx_error(interface, pdu, "init");
             ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
         }
-        if(dd == ospf_neighbor->dd) {
-            /* Retry */
-            ospf_neighbor_dbd_tx(ospf_neighbor);
-        } else if(dd == ospf_neighbor->dd+1) {
-            /* Next */
-            ospf_neighbor->dd = dd;
-            memcpy(&ospf_neighbor->dbd_lsa_start, &ospf_neighbor->dbd_lsa_next, sizeof(ospf_lsa_key_s));
-            memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
-            ospf_neighbor_dbd_tx(ospf_neighbor);
-        } else {
-            ospf_rx_error(interface, pdu, "DD sequence");
+        if(ospf_neighbor->options != options) {
+            ospf_rx_error(interface, pdu, "options");
             ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;
+        }
+        if(ospf_neighbor->master) {
+            if(flags & OSPF_DBD_FLAG_MS) {
+                ospf_rx_error(interface, pdu, "master/slave");
+                ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+                return;
+            }
+            if(dd != ospf_neighbor->dd) {
+                ospf_rx_error(interface, pdu, "DD sequence");
+                ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+                return;
+            }
+            if(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M) {
+                /* Next */
+                ospf_neighbor->dd++;
+                memcpy(&ospf_neighbor->dbd_lsa_start, &ospf_neighbor->dbd_lsa_next, sizeof(ospf_lsa_key_s));
+                ospf_neighbor->dbd_lsa_type_start = ospf_neighbor->dbd_lsa_type_next;
+                memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
+                ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
+
+                ospf_neighbor_dbd_tx(ospf_neighbor);
+            }
+        } else {
+            if(!(flags & OSPF_DBD_FLAG_MS)) {
+                ospf_rx_error(interface, pdu, "master/slave");
+                ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+                return;
+            }
+            if(dd == ospf_neighbor->dd) {
+                /* Retry */
+                ospf_neighbor_dbd_tx(ospf_neighbor);
+            } else if(dd == ospf_neighbor->dd+1) {
+                /* Next */
+                ospf_neighbor->dd = dd;
+                memcpy(&ospf_neighbor->dbd_lsa_start, &ospf_neighbor->dbd_lsa_next, sizeof(ospf_lsa_key_s));
+                memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
+                ospf_neighbor_dbd_tx(ospf_neighbor);
+            } else {
+                ospf_rx_error(interface, pdu, "DD sequence");
+                ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+                return;
+            }
         }
     }
 
