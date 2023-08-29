@@ -135,6 +135,7 @@ typedef struct bbl_session_
     uint8_t *pppoe_service_name;
     uint16_t pppoe_service_name_len;
     uint64_t pppoe_host_uniq;
+    uint8_t  pppoe_retries;
 
     /* LCP */
     ppp_state_t lcp_state;

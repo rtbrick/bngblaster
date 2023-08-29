@@ -365,6 +365,12 @@ bbl_session_reset(bbl_session_s *session) {
     session->reconnect_disabled = false;
     timer_del(session->timer_reconnect);
 
+    session->pppoe_retries = 0;
+    session->lcp_retries = 0;
+    session->auth_retries = 0;
+    session->ipcp_retries = 0;
+    session->ip6cp_retries = 0;
+
     session->pppoe_session_id = 0;
     if(session->pppoe_ac_cookie) {
         free(session->pppoe_ac_cookie);

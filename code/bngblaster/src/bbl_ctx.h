@@ -237,7 +237,7 @@ typedef struct bbl_ctx_
         /* PPPoE */
         uint32_t pppoe_session_time;
         uint16_t pppoe_discovery_timeout;
-        uint16_t pppoe_discovery_retry;
+        uint8_t  pppoe_discovery_retry;
         uint16_t pppoe_max_payload;
         uint8_t  pppoe_vlan_priority;
         char    *pppoe_service_name;
@@ -249,16 +249,16 @@ typedef struct bbl_ctx_
 
         /* LCP */
         uint16_t lcp_conf_request_timeout;
-        uint16_t lcp_conf_request_retry;
+        uint8_t  lcp_conf_request_retry;
         uint16_t lcp_keepalive_interval;
-        uint16_t lcp_keepalive_retry;
+        uint8_t  lcp_keepalive_retry;
         uint16_t lcp_start_delay;
         bool lcp_vendor_ignore;
         bool lcp_connection_status_message;
 
         /* Authentication */
         uint16_t authentication_timeout;
-        uint16_t authentication_retry;
+        uint8_t  authentication_retry;
         uint16_t authentication_protocol;
 
         /* IPCP */
@@ -267,12 +267,12 @@ typedef struct bbl_ctx_
         bool ipcp_request_dns1;
         bool ipcp_request_dns2;
         uint16_t ipcp_conf_request_timeout;
-        uint16_t ipcp_conf_request_retry;
+        uint8_t  ipcp_conf_request_retry;
 
         /* IP6CP */
         bool ip6cp_enable;
         uint16_t ip6cp_conf_request_timeout;
-        uint16_t ip6cp_conf_request_retry;
+        uint8_t  ip6cp_conf_request_retry;
 
         /* IPv4 (IPoE) */
         bool ipoe_ipv4_enable;

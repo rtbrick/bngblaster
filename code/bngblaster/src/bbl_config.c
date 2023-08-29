@@ -2686,7 +2686,7 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.pppoe_discovery_timeout = json_number_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "pppoe", "discovery-retry", 1, 65535);
+        JSON_OBJ_GET_NUMBER(section, value, "pppoe", "discovery-retry", 0, 255);
         if(value) {
             g_ctx->config.pppoe_discovery_retry = json_number_value(value);
         }
@@ -2778,7 +2778,7 @@ json_parse_config(json_t *root)
             if(value) {
                 g_ctx->config.lcp_conf_request_timeout = json_number_value(value);
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "ppp->lcp", "conf-request-retry", 0, 65535);
+            JSON_OBJ_GET_NUMBER(sub, value, "ppp->lcp", "conf-request-retry", 0, 255);
             if(value) {
                 g_ctx->config.lcp_conf_request_retry = json_number_value(value);
             }
@@ -2786,7 +2786,7 @@ json_parse_config(json_t *root)
             if(value) {
                 g_ctx->config.lcp_keepalive_interval = json_number_value(value);
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "ppp->lcp", "keepalive-retry", 0, 65535);
+            JSON_OBJ_GET_NUMBER(sub, value, "ppp->lcp", "keepalive-retry", 0, 255);
             if(value) {
                 g_ctx->config.lcp_keepalive_retry = json_number_value(value);
             }
@@ -2835,7 +2835,7 @@ json_parse_config(json_t *root)
             if(value) {
                 g_ctx->config.ipcp_conf_request_timeout = json_number_value(value);
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "ppp->ipcp", "conf-request-retry", 0, 65535);
+            JSON_OBJ_GET_NUMBER(sub, value, "ppp->ipcp", "conf-request-retry", 0, 255);
             if(value) {
                 g_ctx->config.ipcp_conf_request_retry = json_number_value(value);
             }
@@ -2860,7 +2860,7 @@ json_parse_config(json_t *root)
             if(value) {
                 g_ctx->config.ip6cp_conf_request_timeout = json_number_value(value);
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "ppp->ip6cp", "conf-request-retry", 0, 65535);
+            JSON_OBJ_GET_NUMBER(sub, value, "ppp->ip6cp", "conf-request-retry", 0, 255);
             if(value) {
                 g_ctx->config.ip6cp_conf_request_retry = json_number_value(value);
             }

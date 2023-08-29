@@ -894,6 +894,9 @@ bbl_padr_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPPOE_REQUEST) {
+        if(session->pppoe_retries > g_ctx->config.pppoe_discovery_retry) {
+            bbl_session_update_state(session, BBL_PPPOE_INIT);
+        }
         session->send_requests = BBL_SEND_DISCOVERY;
         bbl_session_tx_qnode_insert(session);
     }
@@ -1320,6 +1323,7 @@ bbl_tx_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len)
     if(session->send_requests & BBL_SEND_DISCOVERY) {
         result = bbl_tx_encode_packet_discovery(session);
         session->send_requests &= ~BBL_SEND_DISCOVERY;
+        session->pppoe_retries++;
     } else if(session->send_requests & BBL_SEND_LCP_REQUEST) {
         result = bbl_tx_encode_packet_lcp_request(session);
         session->send_requests &= ~BBL_SEND_LCP_REQUEST;

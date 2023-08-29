@@ -1539,6 +1539,7 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                     }
                 }
                 bbl_session_update_state(session, BBL_PPPOE_REQUEST);
+                session->pppoe_retries = 0;
                 session->send_requests = BBL_SEND_DISCOVERY;
                 bbl_session_tx_qnode_insert(session);
             }
@@ -1566,6 +1567,7 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                             return;
                         }
                     }
+                    session->pppoe_retries = 0;
                     session->pppoe_session_id = pppoed->session_id;
                     bbl_session_update_state(session, BBL_PPP_LINK);
                     session->send_requests = BBL_SEND_LCP_REQUEST;
