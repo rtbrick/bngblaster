@@ -1125,7 +1125,7 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
 
     /* Fragmentation fields
      * (Identification, Flags, Fragment Offset) */
-    *(uint16_t*)buf = 0;
+    *(uint16_t*)buf = htobe16(ipv4->id);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint16_t*)buf = htobe16(ipv4->offset);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -3297,7 +3297,7 @@ decode_tcp(uint8_t *buf, uint16_t len,
 /*
  * decode_ospf
  */
-static protocol_error_t
+protocol_error_t
 decode_ospf(uint8_t *buf, uint16_t len,
             uint8_t *sp, uint16_t sp_len,
             bbl_ospf_s **_ospf)
@@ -3463,6 +3463,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
+    ipv4->id = be16toh(header->ip_id);
     ipv4->offset = be16toh(header->ip_off);
     ipv4->ttl = header->ip_ttl;
     ipv4->protocol = header->ip_p;
@@ -3480,8 +3481,14 @@ decode_ipv4(uint8_t *buf, uint16_t len,
     len = ipv4->payload_len;
 
     if(ipv4->offset & ~IPV4_DF) {
-        /* Reassembling of fragmented IPv4 packets is currently not supported. */
-        ipv4->protocol = 0;
+        /* Reassembling of fragmented IPv4 packets is 
+         * currently supported for OSPFv2 only. */
+        if(ipv4->protocol != PROTOCOL_IPV4_OSPF) {
+            ipv4->protocol = 0;
+        }
+        ipv4->next = NULL;
+        *_ipv4 = ipv4;
+        return ret_val;
     }
 
     switch(ipv4->protocol) {

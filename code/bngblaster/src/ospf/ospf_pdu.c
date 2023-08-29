@@ -368,6 +368,45 @@ ospf_pdu_zero_bytes(ospf_pdu_s *pdu, uint16_t len)
     OSPF_PDU_BUMP_WRITE_BUFFER(pdu, len);
 }
 
+static protocol_error_t
+ospf_pdu_tx_fragmented(ospf_pdu_s *pdu,
+                       bbl_ethernet_header_s *eth,
+                       bbl_ipv4_s *ipv4,
+                       bbl_ospf_s *ospf,
+                       bbl_network_interface_s *interface)
+{
+    uint16_t pdu_send = 0;
+    static uint16_t id = 1000;
+
+    id++;
+    if(id == 0 || id == UINT16_MAX) id = 1;
+    ipv4->id = id;
+
+    LOG(PACKET, "OSPFv2 TX %s fragmented on interface %s\n",
+        ospf_pdu_type_string(ospf->type), interface->name);
+
+    while(pdu_send < pdu->pdu_len) {
+        ospf->pdu = pdu->pdu + pdu_send;
+        ospf->pdu_len = pdu->pdu_len - pdu_send;
+        ipv4->offset = pdu_send >> 3;
+        if(ospf->pdu_len + 20 > interface->mtu) {
+            ospf->pdu_len = interface->mtu - 20;
+            ipv4->offset |= IPV4_MF;
+        } else {
+            ipv4->offset &= ~IPV4_MF;
+        }
+        pdu_send += ospf->pdu_len;
+
+        if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+            LOG(PACKET, "OSPFv2 TX %s fragment on interface %s\n",
+                ospf_pdu_type_string(ospf->type), interface->name);
+        } else {
+            return SEND_ERROR;
+        }
+    }
+    return PROTOCOL_SUCCESS;
+}
+
 /**
  * ospf_pdu_tx
  * 
@@ -394,6 +433,9 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
     bbl_ospf_s ospf = {0};
     uint8_t mac[ETH_ADDR_LEN];
 
+    ospf.version = pdu->pdu_version;
+    ospf.type = pdu->pdu_type;
+
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
     if(ospf_interface->version == OSPF_VERSION_2) {
@@ -416,6 +458,10 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
         ipv4.ttl = 1;
         ipv4.protocol = PROTOCOL_IPV4_OSPF;
         ipv4.next = &ospf;
+
+        if((pdu->pdu_len + 20) > interface->mtu) {
+            return ospf_pdu_tx_fragmented(pdu, &eth, &ipv4, &ospf, interface);
+        }
     } else {
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
@@ -444,8 +490,7 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
         pdu->destination = ipv6.dst;
         ospf_pdu_update_checksum(pdu);
     }
-    ospf.version = pdu->pdu_version;
-    ospf.type = pdu->pdu_type;
+
     ospf.pdu = pdu->pdu;
     ospf.pdu_len = pdu->pdu_len;
     if(bbl_txq_to_buffer(interface->txq, &eth) == BBL_TXQ_OK) {

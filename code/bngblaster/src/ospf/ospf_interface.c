@@ -258,6 +258,9 @@ ospf_interface_init(bbl_network_interface_s *interface,
                 ospf_interface->id = interface_id++;
                 if(version == OSPF_VERSION_2) {
                     ospf_interface->metric = network_config->ospfv2_metric;
+                    ospf_interface->frag_buf = malloc(OSPF_PDU_LEN_MAX);
+                    ospf_interface->frag_id = 0;
+                    ospf_interface->frag_off = 0;
                 } else {
                     ospf_interface->metric = network_config->ospfv3_metric;
                 }

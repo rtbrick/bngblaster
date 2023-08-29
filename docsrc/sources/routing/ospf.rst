@@ -139,11 +139,6 @@ The BNG Blaster floods LSAs received to all other active
 neighbors of the OSPF instance except to those with neighbor
 router-id equal to the source router-id of the LSA.
 
-Limitations
-~~~~~~~~~~~
-
-Currently, send and receive of fragmented IP packets is not supported.
-
 LSA Update Command
 ~~~~~~~~~~~~~~~~~~
 

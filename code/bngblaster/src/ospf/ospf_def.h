@@ -406,6 +406,10 @@ typedef struct ospf_interface_ {
     uint8_t type;       /* OSPF inteface type (P2P, broadcast, ...) */
     uint8_t state;
 
+    uint8_t *frag_buf;
+    uint16_t frag_id;
+    uint16_t frag_off;
+
     uint16_t metric;
     uint16_t neighbors_count;
     uint16_t neighbors_full;

@@ -771,6 +771,7 @@ typedef struct bbl_ipv4_ {
     uint8_t     ttl;
     uint8_t     protocol;
     bool        router_alert_option; /* add router alert option if true */
+    uint16_t    id;
     uint16_t    offset;
     uint16_t    len; /* IPv4 total length */
     uint8_t    *hdr; /* IPv4 header start */
@@ -1024,6 +1025,11 @@ bbl_checksum(uint8_t *buf, uint16_t len);
 
 uint16_t
 bbl_ipv6_ospf_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *ospf, uint16_t ospf_len);
+
+protocol_error_t
+decode_ospf(uint8_t *buf, uint16_t len,
+            uint8_t *sp, uint16_t sp_len,
+            bbl_ospf_s **_ospf);
 
 protocol_error_t
 decode_ethernet(uint8_t *buf, uint16_t len,

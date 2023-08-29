@@ -81,9 +81,50 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
     ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
     ospf_config_s *config = ospf_interface->instance->config;
 
-    bbl_ospf_s *ospf = ipv4->next;
+    bbl_ospf_s *ospf;
+    uint8_t ospf_sp[sizeof(bbl_ospf_s)];
 
     UNUSED(eth);
+
+    if(ipv4->offset & ~IPV4_DF) {
+        /* The following code provides very simplified support for 
+         * reassembling of fragmented IPv4 OSPFv2 packets.
+         * This code supports only in order fragments from single source. */
+        LOG(OSPF, "OSPFv2 RX PDU fragment on interface %s\n", interface->name);
+        if(ipv4->id == ospf_interface->frag_id) {
+            if(ospf_interface->frag_off == 0 ||
+               (OSPF_PDU_LEN_MAX - ospf_interface->frag_off) < ipv4->payload_len) {
+                ospf_interface->frag_id = 0; 
+                ospf_interface->frag_off = 0;
+                LOG(OSPF, "OSPFv2 RX PDU reassembling failed on interface %s\n", interface->name);
+                return;
+            }
+            /* Append fragment. */
+            memcpy(ospf_interface->frag_buf+ospf_interface->frag_off, ipv4->payload, ipv4->payload_len);
+            ospf_interface->frag_off += ipv4->payload_len;
+        } else {
+            /* New fragment. */
+            ospf_interface->frag_id = ipv4->id;
+            memcpy(ospf_interface->frag_buf, ipv4->payload, ipv4->payload_len);
+            ospf_interface->frag_off = ipv4->payload_len;
+        }
+        if(ipv4->offset & IPV4_MF) {
+            /* There is more, ... */
+            return;
+        } else {
+            /* Decode reassembled OSPF packet. */
+            result = decode_ospf(ospf_interface->frag_buf, ospf_interface->frag_off, ospf_sp, sizeof(ospf_sp), &ospf);
+            ospf_interface->frag_id = 0; 
+            ospf_interface->frag_off = 0;
+            if(result != PROTOCOL_SUCCESS) {
+                LOG(OSPF, "OSPFv2 RX PDU reassembling failed on interface %s\n", interface->name);
+                return;
+            }
+            LOG(OSPF, "OSPFv2 RX PDU reassembled on interface %s\n", interface->name);
+        }
+    } else {
+        ospf = ipv4->next;
+    }
 
     if(ipv4->dst == IPV4_MC_ALL_DR_ROUTERS) {
         if(!(ospf_interface->state == OSPF_IFSTATE_DR || ospf_interface->state == OSPF_IFSTATE_BACKUP)) {
