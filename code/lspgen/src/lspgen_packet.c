@@ -287,8 +287,6 @@ lspgen_finalize_ospf2_packet(__attribute__((unused))lsdb_ctx_t *ctx,
 {
     uint16_t state;
 
-    memcpy(&packet->buf, &packet->bufX[0], sizeof(struct io_buffer_)); /* XXX rework */
-
     /*
      * Close all Message levels that the serializer may have left open.
      */
@@ -303,6 +301,8 @@ lspgen_finalize_ospf2_packet(__attribute__((unused))lsdb_ctx_t *ctx,
 	state |= CLOSE_LEVEL2;
     }
     lspgen_serialize_ospf2_state(NULL, packet, state);
+    memcpy(&packet->buf, &packet->bufX[0], sizeof(struct io_buffer_)); /* XXX rework */
+
 }
 
 void
@@ -743,10 +743,11 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_OPAQUE_AREA_RI:
 	    inc_be_uint(buf0->data+20+24, 4); /* Update #LSAs */
 
-	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
-	    checksum = calculate_fletcher_cksum(buf1->data, 16, buf1->idx);
-	    write_be_uint(packet->data+16, 2, checksum); /* LSA Checksum */
+	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update length */
 
+	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
+	    checksum = calculate_fletcher_cksum(buf1->data+2, 14, buf1->idx-2);
+	    write_be_uint(buf1->data+16, 2, checksum); /* LSA Checksum */
 	    break;
 	default:
 	    break;
@@ -764,7 +765,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 		write_be_uint(buf0->data+20+12, 2, calculate_cksum(buf0->data+20, buf0->idx-20)); /* Checksum */
 
 		write_be_uint(buf0->data+2, 2, buf0->idx); /* IP Total length */
-		write_be_uint(buf0->data+12, 2, calculate_cksum(buf0->data, 20)); /* IP header checksum */
+		write_le_uint(buf0->data+10, 2, calculate_cksum(buf0->data, 20)); /* IP header checksum */
 		break;
 	default:
 	    break;
@@ -825,7 +826,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(&packet->buf, 4, node->sequence); /* Sequence */
+	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
 	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
@@ -841,7 +842,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(&packet->buf, 4, node->sequence); /* Sequence */
+	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
 	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
@@ -851,7 +852,6 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf1, 4, mask); /* Network Mask */
 
 	    push_be_uint(buf1, 1, 0x80); /* E2 */
-	    push_be_uint(buf1, 1, 0); /* Options */
             push_be_uint(buf1, 3, attr->key.prefix.metric); /* Metric */
 	    push_be_uint(buf1, 4, 0); /* Forwarding Address */
 	    push_be_uint(buf1, 4, 0); /* External Route Tag */
@@ -887,17 +887,20 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf2, 1, 0); /* #TOS */
 	    push_be_uint(buf2, 2, 100); /* metric */
 
-	    inc_be_uint(buf1->data+22, 1); /* Update #links */
+	    inc_be_uint(buf1->data+22, 2); /* Update #links */
 	    break;
 
 	case OSPF_ROUTER_LSA_LINK_STUB:
-	    push_be_uint(buf2, 4, 1); /* Link ID */
-	    push_be_uint(buf2, 4, 0xffffffff); /* Link Data */
+            push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+            mask = 0xffffffff;
+            /* convert prefix length to mask */
+            mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
+            push_be_uint(buf2, 4, mask); /* Link Data */
 	    push_be_uint(buf2, 1, 3); /* Type stub */
 	    push_be_uint(buf2, 1, 0); /* #TOS */
-	    push_be_uint(buf2, 2, 100); /* metric */
+	    push_be_uint(buf2, 2, attr->key.prefix.metric); /* metric */
 
-	    inc_be_uint(buf1->data+22, 1); /* Update #links */
+	    inc_be_uint(buf1->data+22, 2); /* Update #links */
 	    break;
 
 	case OSPF_TLV_HOSTNAME:
