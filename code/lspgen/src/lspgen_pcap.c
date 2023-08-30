@@ -116,7 +116,7 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
     struct lsdb_packet_ *packet;
     dict_itor *itor;
     struct io_buffer_ buf;
-    uint8_t pcap_packet[sizeof(packet->data)+32];
+    uint8_t pcap_packet[sizeof(packet->data)+64]; /* pcap header overhead */
     uint32_t total_length, eth_header_length;
     struct timespec now;
     uint64_t ts_usec;
