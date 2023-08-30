@@ -22,8 +22,6 @@
 
 #define OSPF_TLV_HOSTNAME          7
 
-enum {
-    /* Router LSA */
-    OSPF_ROUTER_LSA_LINK_PTP,
-    OSPF_ROUTER_LSA_LINK_STUB,
-};
+/* Router LSA */
+#define OSPF_ROUTER_LSA_LINK_PTP   1
+#define OSPF_ROUTER_LSA_LINK_STUB  3

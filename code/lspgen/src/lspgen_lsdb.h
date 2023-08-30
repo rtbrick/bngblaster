@@ -264,6 +264,16 @@ typedef struct msg_stack_ {
 
 #define MAX_MSG_LEVEL 4
 
+/* bits used in the serializer */
+#define OPEN_LEVEL0 0x01
+#define OPEN_LEVEL1 0x02
+#define OPEN_LEVEL2 0x04
+#define OPEN_LEVEL3 0x08
+#define CLOSE_LEVEL0 0x100
+#define CLOSE_LEVEL1 0x200
+#define CLOSE_LEVEL2 0x400
+#define CLOSE_LEVEL3 0x800
+
 /*
  * An Attribute hanging off a node or link
  */

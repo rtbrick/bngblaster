@@ -17,8 +17,7 @@
  * Prototypes.
  */
 void lspgen_gen_packet_node(lsdb_node_t *);
-
-#define PAD4(X) ((X+3)&(~3)) /* 32-Bit padding */
+void lspgen_serialize_ospf2_state(lsdb_attr_t *, lsdb_packet_t *, uint16_t);
 
 void
 lspgen_gen_isis_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
@@ -286,20 +285,24 @@ lspgen_finalize_ospf2_packet(__attribute__((unused))lsdb_ctx_t *ctx,
 			     __attribute__((unused))lsdb_node_t *node,
 			     lsdb_packet_t *packet)
 {
-    uint16_t checksum;
+    uint16_t state;
+
+    memcpy(&packet->buf, &packet->bufX[0], sizeof(struct io_buffer_)); /* XXX rework */
 
     /*
-     * Update Packet length field.
+     * Close all Message levels that the serializer may have left open.
      */
-    write_be_uint(packet->data+4, 2, packet->buf.idx);
-
-    /*
-     * Calculate Checksum
-     */
-    write_be_uint(packet->data+12, 2, 0); /* reset checksum field */
-    checksum = calculate_cksum(packet->data, packet->buf.idx);
-    write_be_uint(packet->data+12, 2, checksum);
-
+    state = 0;
+    if (packet->prev_attr_cp[0]) {
+	state |= CLOSE_LEVEL0;
+    }
+    if (packet->prev_attr_cp[1]) {
+	state |= CLOSE_LEVEL1;
+    }
+    if (packet->prev_attr_cp[3]) {
+	state |= CLOSE_LEVEL2;
+    }
+    lspgen_serialize_ospf2_state(NULL, packet, state);
 }
 
 void
@@ -601,7 +604,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 
 /*
  * Inititialize a next level buffer to the remnants of the passed in buffer.
- * This gives us nice hierarchical buffers with vboundary protection.
+ * This gives us nice hierarchical buffers with boundary protection.
  */
 void
 lspgen_propagate_buffer_down (lsdb_packet_t *packet, uint level)
@@ -622,13 +625,16 @@ lspgen_propagate_buffer_down (lsdb_packet_t *packet, uint level)
     next->start_idx = 0;
 }
 
+/*
+ * Propagate the buffer index one level up.
+ */
 void
 lspgen_propagate_buffer_up (lsdb_packet_t *packet, uint level)
 {
     struct io_buffer_ *cur, *prev;
 
     /* boundary protection */
-    if (level == 0) {
+    if (level == 0 || level >= MAX_MSG_LEVEL) {
 	return;
     }
 
@@ -636,13 +642,72 @@ lspgen_propagate_buffer_up (lsdb_packet_t *packet, uint level)
     prev = &packet->bufX[level-1];
 
     prev->idx += cur->idx;
+    cur->data += cur->idx;
+    cur->size -= cur->idx;
+    cur->idx = 0;
 }
 
-/*
- * Serialize an OSPFv2 attribute into a packet buffer.
- */
+char *
+lspgen_log_serializer_state (uint16_t state)
+{
+    static char buf[128];
+    int len;
+    bool first, open;
+
+    len = 0;
+    first = true;
+    open = false;
+    buf[0] = 0;
+
+    /* some open bits set ? */
+    if (state & (OPEN_LEVEL0|OPEN_LEVEL1|OPEN_LEVEL2|OPEN_LEVEL3)) {
+	len += snprintf(buf+len, sizeof(buf)-len, "open: ");
+	open = true;
+	if (state & OPEN_LEVEL0) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & OPEN_LEVEL1) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & OPEN_LEVEL2) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & OPEN_LEVEL3) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
+	    first =false;
+	}
+    }
+
+    /* some close bits set ? */
+    first = true;
+    if (state & (CLOSE_LEVEL0|CLOSE_LEVEL1|CLOSE_LEVEL2|CLOSE_LEVEL3)) {
+	len += snprintf(buf+len, sizeof(buf)-len, "%sclose: ", open ? ", " : "");
+	if (state & CLOSE_LEVEL0) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & CLOSE_LEVEL1) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & CLOSE_LEVEL2) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & CLOSE_LEVEL3) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
+	    first =false;
+	}
+    }
+
+    return buf;
+}
+
 void
-lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
+lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t state)
 {
     lsdb_node_t *node;
     io_buffer_t *buf0, *buf1, *buf2;
@@ -655,25 +720,76 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
     buf1 = &packet->bufX[1];
     buf2 = &packet->bufX[2];
 
-    /*
-     * New Level 0 message ?
-     */
-    if (packet->prev_attr_cp[0] != attr->key.attr_cp[0]) {
+    LOG(LSDB, "  %s\n", lspgen_log_serializer_state(state));
 
-	/* close Level 0 */
-	switch (packet->prev_attr_cp[0]) {
-	    case OSPF_MSG_LSUPDATE:
-		write_be_uint(buf0->data+2, 2, buf0->idx); /* Packet length */
-		write_be_uint(buf0->data+12, 2, calculate_cksum(buf0->data, buf0->idx)); /* Checksum */
-		break;
+    /* close Level 2 */
+    if (state & CLOSE_LEVEL2) {
+	switch (packet->prev_attr_cp[2]) {
+	case OSPF_ROUTER_LSA_LINK_PTP:
+	case OSPF_ROUTER_LSA_LINK_STUB:
+	    break;
 	default:
 	    break;
 	}
 
-	/* open Level 0 */
+	lspgen_propagate_buffer_up(packet, 2);
+    }
+
+    /* close Level 1 */
+    if (state & CLOSE_LEVEL1) {
+	switch (packet->prev_attr_cp[1]) {
+	case OSPF_LSA_ROUTER:
+	case OSPF_LSA_EXTERNAL:
+	case OSPF_LSA_OPAQUE_AREA_RI:
+	    inc_be_uint(buf0->data+20+24, 4); /* Update #LSAs */
+
+	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
+	    checksum = calculate_fletcher_cksum(buf1->data, 16, buf1->idx);
+	    write_be_uint(packet->data+16, 2, checksum); /* LSA Checksum */
+
+	    break;
+	default:
+	    break;
+	}
+
+	lspgen_propagate_buffer_up(packet, 1);
+    }
+
+    /* close Level 0 */
+    if (state & CLOSE_LEVEL0) {
+
+	switch (packet->prev_attr_cp[0]) {
+	    case OSPF_MSG_LSUPDATE:
+		write_be_uint(buf0->data+20+2, 2, buf0->idx - 20); /* Packet length */
+		write_be_uint(buf0->data+20+12, 2, calculate_cksum(buf0->data+20, buf0->idx-20)); /* Checksum */
+
+		write_be_uint(buf0->data+2, 2, buf0->idx); /* IP Total length */
+		write_be_uint(buf0->data+12, 2, calculate_cksum(buf0->data, 20)); /* IP header checksum */
+		break;
+	default:
+	    break;
+	}
+    }
+
+    /* open Level 0 */
+    if (state & OPEN_LEVEL0) {
+
 	switch(attr->key.attr_cp[0]) {
 	case OSPF_MSG_LSUPDATE:
 
+	    /* IPv4 header */
+	    push_be_uint(buf0, 1, 0x45); /* Version, Header Length */
+	    push_be_uint(buf0, 1, 0xc0); /* TOS */
+	    push_be_uint(buf0, 2, 0); /* Total length - will be overwritten later */
+	    push_be_uint(buf0, 2, 0); /* Identification */
+	    push_be_uint(buf0, 2, 0); /* Flags & Fragment offset */
+	    push_be_uint(buf0, 1, 255); /* TTL */
+	    push_be_uint(buf0, 1, 89); /* Protocol */
+	    push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
+	    push_be_uint(buf0, 4, 0x01020304); /* Source Address */
+	    push_be_uint(buf0, 4, 0xe0000005); /* Destination Address */
+
+	    /* OSPFv2 header */
 	    push_be_uint(buf0, 1, 2); /* Version */
 	    push_be_uint(buf0, 1, OSPF_MSG_LSUPDATE); /* Msg  */
 	    push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
@@ -689,35 +805,18 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 
 	    push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
 
-	    lspgen_propagate_buffer_down(packet, 0);
 	    break;
 	default:
             LOG(ERROR, "No Level 0 open packet serializer for attr %d\n", attr->key.attr_cp[0]);
 	    return;
 	}
+
+	lspgen_propagate_buffer_down(packet, 0);
     }
 
-    /*
-     * New Level 1 message ?
-     */
-    if (packet->prev_attr_cp[1] != attr->key.attr_cp[1]) {
+    /* open Level 1 */
+    if (state & OPEN_LEVEL1) {
 
-	/* close Level 1 */
-	switch (packet->prev_attr_cp[1]) {
-	case OSPF_LSA_ROUTER:
-	case OSPF_LSA_EXTERNAL:
-	case OSPF_LSA_OPAQUE_AREA_RI:
-	    inc_be_uint(buf0->data+24, 4); /* Update #LSAs */
-
-	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
-	    checksum = calculate_fletcher_cksum(buf1->data, 16, buf1->idx);
-	    write_be_uint(packet->data+16, 2, checksum); /* LSA Checksum */
-
-	    lspgen_propagate_buffer_up(packet, 1);
-	    break;
-	}
-
-	/* open Level 1 */
 	switch(attr->key.attr_cp[1]) {
 	case OSPF_LSA_ROUTER:
 	    push_be_uint(buf1, 2, 1); /* LS-age */
@@ -733,8 +832,6 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	    push_be_uint(buf1, 1, 0x02); /* Flags, E */
 	    push_be_uint(buf1, 1, 0);
 	    push_be_uint(buf1, 2, 0); /* # links - will be overwritten later */
-
-	    lspgen_propagate_buffer_down(packet, 1);
 	    break;
 
 	case OSPF_LSA_EXTERNAL:
@@ -758,8 +855,6 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             push_be_uint(buf1, 3, attr->key.prefix.metric); /* Metric */
 	    push_be_uint(buf1, 4, 0); /* Forwarding Address */
 	    push_be_uint(buf1, 4, 0); /* External Route Tag */
-
-	    lspgen_propagate_buffer_down(packet, 1);
 	    break;
 
 	case OSPF_LSA_OPAQUE_AREA_RI:
@@ -770,34 +865,20 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	    push_be_uint(buf1, 3, 0); /* Opaque subtype  */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(&packet->buf, 4, node->sequence); /* Sequence */
+	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
 	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
-
-	    lspgen_propagate_buffer_down(packet, 1);
 	    break;
 	default:
             LOG(ERROR, "No Level 1 open packet serializer for attr %d\n", attr->key.attr_cp[1]);
 	    return;
 	}
+
+	lspgen_propagate_buffer_down(packet, 1);
     }
 
-    /*
-     * New Level 2 message ?
-     */
-    if (packet->prev_attr_cp[2] != attr->key.attr_cp[2]) {
-
-	/* close Level 2 */
-	switch (packet->prev_attr_cp[2]) {
-	case OSPF_ROUTER_LSA_LINK_PTP:
-	case OSPF_ROUTER_LSA_LINK_STUB:
-	    inc_be_uint(buf1->data+22, 1); /* Update #links */
-
-	    lspgen_propagate_buffer_up(packet, 2);
-	    break;
-	}
-
-	/* open Level 2 */
+    /* open Level 2 */
+    if (state & OPEN_LEVEL2) {
 	switch(attr->key.attr_cp[2]) {
 	case OSPF_ROUTER_LSA_LINK_PTP:
 	    push_be_uint(buf2, 4, 0); /* Link ID */
@@ -806,7 +887,7 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	    push_be_uint(buf2, 1, 0); /* #TOS */
 	    push_be_uint(buf2, 2, 100); /* metric */
 
-	    lspgen_propagate_buffer_down(packet, 2);
+	    inc_be_uint(buf1->data+22, 1); /* Update #links */
 	    break;
 
 	case OSPF_ROUTER_LSA_LINK_STUB:
@@ -816,7 +897,7 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	    push_be_uint(buf2, 1, 0); /* #TOS */
 	    push_be_uint(buf2, 2, 100); /* metric */
 
-	    lspgen_propagate_buffer_down(packet, 2);
+	    inc_be_uint(buf1->data+22, 1); /* Update #links */
 	    break;
 
 	case OSPF_TLV_HOSTNAME:
@@ -825,10 +906,8 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 		push_be_uint(buf2, 2, 7); /* Type */
 		push_be_uint(buf2, 2, attr_len); /* Length */
 		push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
-		push_be_uint(buf2, PAD4(attr_len), 0); /* Padding zeros */
+		push_be_uint(buf2, PAD4(attr_len)-attr_len, 0); /* Padding zeros */
 	    }
-
-	    lspgen_propagate_buffer_down(packet, 2);
 	    break;
 
 	default:
@@ -836,6 +915,115 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	    return;
 	}
 
+	lspgen_propagate_buffer_down(packet, 2);
+    }
+}
+
+/*
+ * Serialize an OSPFv2 attribute into a packet buffer.
+ */
+void
+lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
+{
+    uint16_t state;
+
+    LOG(LSDB, "Serialize attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}, last attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}\n",
+	attr->key.attr_cp[0],
+	attr->key.attr_cp[1],
+	attr->key.attr_cp[2],
+	attr->key.attr_cp[3],
+	packet->prev_attr_cp[0],
+	packet->prev_attr_cp[1],
+	packet->prev_attr_cp[2],
+	packet->prev_attr_cp[3]);
+
+    /*
+     * Fresh message ?
+     */
+    state = 0;
+    if (attr->key.attr_cp[0] && packet->prev_attr_cp[0] == 0) {
+	state |= OPEN_LEVEL0;
+	if (attr->key.attr_cp[1] && packet->prev_attr_cp[1] == 0) {
+	    state |= OPEN_LEVEL1;
+	    if (attr->key.attr_cp[2] && packet->prev_attr_cp[2] == 0) {
+		state |= OPEN_LEVEL2;
+	    }
+	}
+	lspgen_serialize_ospf2_state(attr, packet, state);
+	return;
+    }
+
+    /*
+     * Different L0 message ?
+     */
+    if (packet->prev_attr_cp[0] != attr->key.attr_cp[0]) {
+	state |= CLOSE_LEVEL0;
+	if (attr->key.attr_cp[0]) {
+	    state |= OPEN_LEVEL0;
+	}
+	if (packet->prev_attr_cp[2]) {
+	    state |= CLOSE_LEVEL2;
+	}
+	if (attr->key.attr_cp[2]) {
+	    state |= OPEN_LEVEL2;
+	}
+	if (packet->prev_attr_cp[1]) {
+	    state |= CLOSE_LEVEL1;
+	}
+	if (attr->key.attr_cp[1]) {
+	    state |= OPEN_LEVEL1;
+	}
+	lspgen_serialize_ospf2_state(attr, packet, state);
+	return;
+    }
+
+    /*
+     * Different L1 message ?
+     */
+    if (packet->prev_attr_cp[1] != attr->key.attr_cp[1]) {
+	state |= CLOSE_LEVEL1;
+	if (attr->key.attr_cp[1]) {
+	    state |= OPEN_LEVEL1;
+	}
+	if (packet->prev_attr_cp[2]) {
+	    state |= CLOSE_LEVEL2;
+	}
+	if (attr->key.attr_cp[2]) {
+	    state |= OPEN_LEVEL2;
+	}
+	lspgen_serialize_ospf2_state(attr, packet, state);
+	return;
+    }
+
+    /*
+     * Different L2 message ?
+     */
+    if (packet->prev_attr_cp[2] != attr->key.attr_cp[2]) {
+	state |= CLOSE_LEVEL2;
+	if (attr->key.attr_cp[2]) {
+	    state |= OPEN_LEVEL2;
+	}
+	return;
+    }
+
+    /*
+     * Same message codepoints ?
+     */
+    if (memcmp(packet->prev_attr_cp, attr->key.attr_cp, MAX_MSG_LEVEL) == 0) {
+
+	/*
+	 * Figure out max level.
+	 */
+	if (attr->key.attr_cp[2]) {
+	    state |= OPEN_LEVEL2;
+	} else if (attr->key.attr_cp[1]) {
+	    state |= OPEN_LEVEL1;
+	} else if (attr->key.attr_cp[0]) {
+	    state |= OPEN_LEVEL0;
+	}
+
+	lspgen_serialize_ospf2_state(attr, packet, state);
+	return;
     }
 }
 
@@ -859,6 +1047,12 @@ lspgen_serialize_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr, lsdb_packet_t *packet)
     default:
 	LOG_NOARG(ERROR, "Unknown protocol\n");
     }
+
+    /*
+     * Update array of last codepoints, such that the serializer can correctly
+     * call into the open/close functions across all the <MAX_MSG_LEVEL> levels.
+     */
+    memcpy(&packet->prev_attr_cp, &attr->key.attr_cp, sizeof(packet->prev_attr_cp));
 }
 
 /*
@@ -900,6 +1094,11 @@ lspgen_reset_packet_buffer (struct lsdb_packet_ *packet)
     for (idx = 0; idx < MAX_MSG_LEVEL; idx++) {
 	memcpy(&packet->bufX[idx], &packet->buf, sizeof(struct io_buffer_));
     }
+
+    /*
+     * Reset prev attribute codepoint cache.
+     */
+    memset(&packet->prev_attr_cp, 0, sizeof(packet->prev_attr_cp));
 }
 
 /*
@@ -1135,14 +1334,12 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
     struct lsdb_packet_ *packet;
     struct lsdb_attr_ *attr;
     dict_itor *itor;
-    uint32_t id, last_attr, tlv_start_idx, min_len;
+    uint32_t id, min_len;
 
     ctx = node->ctx;
 
     packet = NULL;
     id = 0;
-    last_attr = 0;
-    tlv_start_idx = 0;
 
     /*
      * Flush old serialized packets.
@@ -1179,8 +1376,8 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
      * Start refresh timer.
      */
     if (ctx->ctrl_socket_path) {
-    timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
-               lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+	timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
+			   lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
     }
 
     do {
@@ -1190,12 +1387,12 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
          * Space left in this packet ?
          */
         min_len = lspgen_calculate_isis_auth_len(ctx);
-        min_len += attr->size + TLV_OVERHEAD;
-        if (packet && packet->buf.idx > (1465-min_len)) {
+        min_len += attr->size;
+        if (packet && packet->bufX[0].idx > (1480-min_len)) {
 
             /*
-            * No space left. Finalize this packet.
-            */
+	     * No space left. Finalize this packet.
+	     */
             lspgen_finalize_packet(ctx, node, packet);
             packet = NULL;
 
@@ -1212,28 +1409,12 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
          */
         if (!packet) {
             packet = lspgen_add_packet(ctx, node, id);
-            tlv_start_idx = packet->buf.idx;
         }
 
         /*
          * Encode node attributes.
          */
-
-        /*
-         * Start a fresh TLV ?
-         */
-        if ((last_attr != attr->key.attr_type) ||
-            (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
-	    attr->key.start_tlv) {
-            tlv_start_idx = packet->buf.idx;
-            push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
-            push_be_uint(&packet->buf, 1, 0); /* Length */
-        }
-
         lspgen_serialize_attr(ctx, attr, packet);
-        lspgen_update_tlv_length(&packet->buf, tlv_start_idx);
-
-        last_attr = attr->key.attr_type;
 
     } while (dict_itor_next(itor));
 
