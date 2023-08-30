@@ -1398,7 +1398,7 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
          */
         min_len = lspgen_calculate_isis_auth_len(ctx);
         min_len += attr->size;
-        if (packet && packet->bufX[0].idx > (1480-min_len)) {
+        if (packet && packet->bufX[0].idx > (1440-min_len)) {
 
             /*
 	     * No space left. Finalize this packet.

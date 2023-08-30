@@ -903,6 +903,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
     }
 
     ctx = node->ctx;
+    packet.parent = node;
 
     /*
      * Refuse addition of v4 attributes if v4 is turned off.
