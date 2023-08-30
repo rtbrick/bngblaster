@@ -524,8 +524,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
     struct lsdb_link_ *link;
     struct lsdb_attr_ attr_template;
     dict_itor *itor;
-    __uint128_t addr, inc, ext_addr4, ext_incr4;
-    uint32_t ext_per_node;
+    __uint128_t addr, inc, ext_addr4, ext_incr4, addr_offset;
+    uint32_t ext_per_node, metric;
 
     /*
      * Walk the node DB.
@@ -625,21 +625,33 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 	     * TODO Type-2 LSA handling.
 	     */
             lsdb_reset_attr_template(&attr_template);
+
+            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
+            inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
+            addr += link->link_index * inc;
+	    addr_offset = 0;
+	    if (lspgen_load_addr(link->key.remote_node_id, 4) < lspgen_load_addr(link->key.local_node_id, 4)) {
+		addr_offset = 1;
+	    }
+
+	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_node_id, 4);
+
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
 	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
             memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-            attr_template.key.link.metric = link->link_metric; /* TODO clip metric */
+	    metric = link->link_metric;
+	    if (metric > 65535) {
+		metric = 65535;
+	    }
+            attr_template.key.link.metric = metric;
             lsdb_add_node_attr(node, &attr_template);
 
             /* Generate an IPv4 prefix for each link */
             lsdb_reset_attr_template(&attr_template);
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
-            inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
-            addr += link->link_index * inc;
             lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
             attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_link_prefix.len;
-            attr_template.key.prefix.metric = link->link_metric; /* TODO clip metric */
+            attr_template.key.prefix.metric = metric;
 
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;

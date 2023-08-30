@@ -881,17 +881,17 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     if (state & OPEN_LEVEL2) {
 	switch(attr->key.attr_cp[2]) {
 	case OSPF_ROUTER_LSA_LINK_PTP:
-	    push_be_uint(buf2, 4, 0); /* Link ID */
-	    push_be_uint(buf2, 4, 0); /* Link Data */
+	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Link ID */
+	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_node_id, 4)); /* Link Data */
 	    push_be_uint(buf2, 1, 1); /* Type ptp */
 	    push_be_uint(buf2, 1, 0); /* #TOS */
-	    push_be_uint(buf2, 2, 100); /* metric */
+	    push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
 
 	    inc_be_uint(buf1->data+22, 2); /* Update #links */
 	    break;
 
 	case OSPF_ROUTER_LSA_LINK_STUB:
-            push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+            push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link ID */
             mask = 0xffffffff;
             /* convert prefix length to mask */
             mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
