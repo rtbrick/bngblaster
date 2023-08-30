@@ -1025,6 +1025,13 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	    state |= OPEN_LEVEL0;
 	}
 
+	/* Enforce building fresh messages ?*/
+	if (attr->key.start_tlv) {
+
+	    /* Clone close state from open state */
+	    state |= state << 8;
+	}
+
 	lspgen_serialize_ospf2_state(attr, packet, state);
 	return;
     }

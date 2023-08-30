@@ -254,14 +254,6 @@ typedef struct lsdb_attr_cap_ {
     mpls_ipv6_flag:1;
 } lsdb_attr_cap_t;
 
-/*
- * A message stack is used for hierarchical encoding of messages.
- */
-typedef struct msg_stack_ {
-    uint16_t num_buffer;
-    struct io_buffer_ buf[1]; /* variable length */
-} msg_stack_t;
-
 #define MAX_MSG_LEVEL 4
 
 /* bits used in the serializer */

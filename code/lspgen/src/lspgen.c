@@ -592,6 +592,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL;
+	    attr_template.key.start_tlv = true;
             lsdb_add_node_attr(node, &attr_template);
             ext_addr4 += ext_incr4;
         }
