@@ -1717,8 +1717,6 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
     const char *s = NULL;
     int i, size;
 
-    static uint32_t interface_id = 1000000;
-
     ospf_external_connection_s *connection = NULL;
 
     const char *schema[] = {
@@ -1862,7 +1860,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                 c = json_array_get(con, i);
 
                 const char *schema[] = {
-                    "router-id", "metric", "neighbor-interface-id"
+                    "router-id", "metric", "local-ipv4-address"
                 };
                 if(!schema_validate(c, "connections", schema, 
                 sizeof(schema)/sizeof(schema[0]))) {
@@ -1887,12 +1885,16 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                     connection->metric = 10;
                 }
 
-                connection->interface_id = interface_id++;
-                value = json_object_get(c, "neighbor-interface-id");
-                if(json_is_number(value)) {
-                    connection->neighbor_interface_id = json_number_value(value);
-                } else {
-                    connection->neighbor_interface_id = connection->interface_id;
+                if(ospf_config->version == 2) {
+                    if(json_unpack(c, "{s:s}", "local-ipv4-address", &s) == 0) {
+                        if(!inet_pton(AF_INET, s, &connection->ipv4.address)) {
+                            fprintf(stderr, "JSON config error: Invalid value for ospf->external->connections->local-ipv4-address\n");
+                            return false;
+                        }
+                    } else {
+                        fprintf(stderr, "JSON config error: Missing value for ospf->external->connections->local-ipv4-address\n");
+                        return false;
+                    }
                 }
             }
         }
