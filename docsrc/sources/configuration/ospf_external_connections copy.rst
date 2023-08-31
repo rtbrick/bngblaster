@@ -11,8 +11,11 @@
      - Description
      - Default
    * - `router-id`
-     - OSPF router identifier
+     - Mandatory remote router identifier
+     - 
+   * - `local-ipv4-address`
+     - Mandatory local IPv4 address (OSPFv2 only)
      - 
    * - `metric`
-     - OSPF interface metric
+     - Optional interface metric
      - 10
