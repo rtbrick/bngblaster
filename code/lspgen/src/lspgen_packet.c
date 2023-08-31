@@ -648,7 +648,7 @@ lspgen_propagate_buffer_up (lsdb_packet_t *packet, uint level)
 }
 
 char *
-lspgen_log_serializer_state (uint16_t state)
+lspgen_format_serializer_state (uint16_t state)
 {
     static char buf[128];
     int len;
@@ -720,7 +720,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     buf1 = &packet->bufX[1];
     buf2 = &packet->bufX[2];
 
-    LOG(LSDB, "  %s\n", lspgen_log_serializer_state(state));
+    LOG(PACKET, "  %s\n", lspgen_format_serializer_state(state));
 
     /* close Level 2 */
     if (state & CLOSE_LEVEL2) {
@@ -930,7 +930,7 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 {
     uint16_t state;
 
-    LOG(LSDB, "Serialize attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}, last attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}\n",
+    LOG(PACKET, "Serialize attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}, last attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}\n",
 	attr->key.attr_cp[0],
 	attr->key.attr_cp[1],
 	attr->key.attr_cp[2],

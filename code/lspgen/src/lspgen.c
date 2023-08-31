@@ -80,6 +80,7 @@ struct keyval_ log_names[] = {
     { DEBUG,         "debug" },
     { LSP,           "lsp" },
     { LSDB,          "lsdb" },
+    { PACKET,        "packet" },
     { CTRL,          "ctrl" },
     { ERROR,         "error" },
 #ifdef BNGBLASTER_TIMER_LOGGING
@@ -95,7 +96,6 @@ struct keyval_ log_names[] = {
 struct keyval_ proto_names[] = {
     { PROTO_ISIS, "isis" },
     { PROTO_OSPF2, "ospf2" },
-    { PROTO_OSPF2, "ospf" }, /* "ospf" is an alias for ospf2 */
     { PROTO_OSPF3, "ospf3" },
     { 0, NULL}
 };
@@ -124,7 +124,20 @@ lspgen_print_usage_arg(struct option *option)
     int len;
 
     if (option->has_arg == 1) {
-        if (strcmp(option->name, "log") == 0) {
+
+	/* protocol */
+	if (strcmp(option->name, "protocol") == 0) {
+            len = 0;
+            ptr = proto_names;
+            while (ptr->key) {
+                len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
+                ptr++;
+            }
+            return buf;
+        }
+
+	/* logging */
+	if (strcmp(option->name, "log") == 0) {
             len = 0;
             ptr = log_names;
             while (ptr->key) {
@@ -134,6 +147,7 @@ lspgen_print_usage_arg(struct option *option)
             return buf;
         }
 
+	/* authentication-type */
         if (strcmp(option->name, "authentication-type") == 0) {
             len = 0;
             ptr = isis_auth_names;
