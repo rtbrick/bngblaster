@@ -709,12 +709,14 @@ lspgen_format_serializer_state (uint16_t state)
 void
 lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t state)
 {
+    lsdb_ctx_t *ctx;
     lsdb_node_t *node;
     io_buffer_t *buf0, *buf1, *buf2;
     uint16_t attr_len, checksum;
     uint32_t router_id, mask;
 
     node = packet->parent;
+    ctx = node->ctx;
 
     buf0 = &packet->bufX[0];
     buf1 = &packet->bufX[1];
@@ -787,7 +789,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf0, 1, 255); /* TTL */
 	    push_be_uint(buf0, 1, 89); /* Protocol */
 	    push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf0, 4, 0x01020304); /* Source Address */
+	    push_data(buf0, ctx->root_node_id, 4); /* Source Address */
 	    push_be_uint(buf0, 4, 0xe0000005); /* Destination Address */
 
 	    /* OSPFv2 header */
@@ -797,7 +799,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf0, 4, router_id); /* Router ID */
-	    push_be_uint(buf0, 4, node->ctx->topology_id.area); /* Area ID */
+	    push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
 
 	    push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
 
