@@ -163,8 +163,17 @@ print_graph(lsdb_ctx_t *ctx, int v, int e, int *adj_matrix)
     /*
      * Store root.
      */
-    addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + root - 1;
-    lspgen_store_bcd_addr(addr, ctx->root_node_id, 4);
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	/* BCD notation for IS-IS */
+	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + root - 1;
+	lspgen_store_bcd_addr(addr, ctx->root_node_id, 4);
+	break;
+    default:
+	/* dotted decimal notation for everybody else */
+	memcpy(&ctx->root_node_id, &ctx->ipv4_node_prefix.address, 4);
+	break;
+    }
 }
 
 /*
@@ -265,7 +274,7 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
         return;
     }
 
-    LOG(NORMAL, " Root node %s\n", lsdb_format_node_id(node_template.key.node_id));
+    LOG(NORMAL, " Root node %s\n", lsdb_format_node(node));
 
     /*
      * Add connectors to the topology
