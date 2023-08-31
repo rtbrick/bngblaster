@@ -286,9 +286,12 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
         for (idx = 0; idx < ctx->num_connector; idx++) {
             memset(&link_template, 0, sizeof(link_template));
             memcpy(&link_template.key.local_node_id, ctx->root_node_id,
-            sizeof(link_template.key.local_node_id));
-            memcpy(&link_template.key.remote_node_id, ctx->connector[idx].node_id,
-            sizeof(link_template.key.remote_node_id));
+		   sizeof(link_template.key.local_node_id));
+            memcpy(&link_template.key.remote_node_id, ctx->connector[idx].remote_node_id,
+		   sizeof(link_template.key.remote_node_id));
+            memcpy(&link_template.key.local_link_id, ctx->connector[idx].local_link_id,
+		   sizeof(link_template.key.local_link_id));
+	    link_template.key.remote_node_id[7] = CONNECTOR_MARKER;
             link_template.link_metric = 100;
             lsdb_add_link(ctx, node, &link_template);
         }

@@ -634,6 +634,23 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
          */
         CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
 
+	    /*
+	     * Is this a conncetor link ?
+	     */
+	    if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
+		lsdb_reset_attr_template(&attr_template);
+
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+
+		memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
+		memcpy(attr_template.key.link.local_node_id, link->key.local_link_id, 4);
+		attr_template.key.link.metric = link->link_metric;
+		lsdb_add_node_attr(node, &attr_template);
+		continue;
+	    }
+
             /*
 	     * Generate a ptp neighbor for each link
 	     * TODO Type-2 LSA handling.
@@ -865,53 +882,100 @@ lspgen_compute_srgb_range(struct lsdb_ctx_ *ctx)
 }
 
 /*
- * Convert a connector string in the form of an
- * iso node id xxxx.xxxx.xxxx.xx into a LSDB node id.
- */
+ * Add  a connector string in the form of an
+ * iso remote_id xxxx.xxxx.xxxx.xx or
+ * ipv4 remote_id:local_ip xxx.xxx.xxx.xxx:yyy.yyy.yyy.yyy
+*/
 void
 lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 {
-    long long int node_id;
+    long long int iso_node_id; /* Used for ISO */
+    uint32_t remote_id, local_ip; /* Used for IP */
     char conn_dst[32];
     size_t src_len, dst_len;
     uint32_t src, dst, shift;
+    bool colon_found;
 
-    memset(conn_dst, 0, sizeof(conn_dst));
-    conn_dst[0] = '0';
-    conn_dst[1] = 'x';
-    dst = 2;
-    src_len = strlen(conn_src);
-    for (src = 0; src < src_len; src++) {
-
-    if (dst >= sizeof(conn_dst)-2) {
-        break;
-    }
-
-    if (conn_src[src] >= 'a' && conn_src[src] <= 'f') {
-        conn_dst[dst++] = conn_src[src];
-        continue;
-    }
-    if (conn_src[src] >= '0' && conn_src[src] <= '9') {
-        conn_dst[dst++] = conn_src[src];
-        continue;
-    }
-    }
-    node_id = strtoll(conn_dst, NULL, 16);
     if (ctx->num_connector >= (sizeof(ctx->connector)/sizeof(ctx->connector[0]))) {
         LOG(ERROR, "Maximum connector limit (%u) exceeded\n", ctx->num_connector);
         return;
     }
 
-    dst_len = strlen(&conn_dst[2]);
-    if (dst_len > 16) {
-        LOG(ERROR, "illegal connector length %s\n", conn_src);
-        return;
-    }
+    src_len = strlen(conn_src);
 
-    shift = (16 - dst_len) * 4;
-    write_be_uint(ctx->connector[ctx->num_connector].node_id, 8, node_id << shift);
-    ctx->num_connector++;
-    LOG(NORMAL, "Add connector to 0x%llx\n", node_id);
+    if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+
+	char *tok;
+
+	/*
+	 * First check if this is an remote-id:local_ip format.
+	 */
+	colon_found = false;
+	for (src = 0; src < src_len; src++) {
+	    if (conn_src[src] == ':') {
+		colon_found = true;
+		break;
+	    }
+	}
+
+	if (!colon_found) {
+	    LOG(ERROR, "Connector '%s' not in remote_id:local_ip format\n", conn_src);
+	    return;
+	}
+
+	remote_id = 0;
+	local_ip = 0;
+	tok = strtok(conn_src, ":");
+        if (tok && scan_ipv4_address(conn_src, &remote_id)) {
+	    tok = strtok(NULL, ":");
+	    if (tok && scan_ipv4_address(tok, &local_ip)) {
+		write_le_uint(ctx->connector[ctx->num_connector].remote_node_id, 4, remote_id);
+		write_le_uint(ctx->connector[ctx->num_connector].local_link_id, 4, local_ip);
+            }
+        }
+
+	LOG(NORMAL, "Add connector to %s:%s\n",
+	    format_ipv4_address(&remote_id),
+	    format_ipv4_address(&local_ip));
+	ctx->num_connector++;
+
+    } else if (ctx->protocol_id == PROTO_ISIS) {
+
+	/* ISO node-ID format */
+	memset(conn_dst, 0, sizeof(conn_dst));
+	conn_dst[0] = '0';
+	conn_dst[1] = 'x';
+	dst = 2;
+	for (src = 0; src < src_len; src++) {
+
+	    if (dst >= sizeof(conn_dst)-2) {
+		break;
+	    }
+
+	    if (conn_src[src] >= 'a' && conn_src[src] <= 'f') {
+		conn_dst[dst++] = conn_src[src];
+		continue;
+	    }
+	    if (conn_src[src] >= '0' && conn_src[src] <= '9') {
+		conn_dst[dst++] = conn_src[src];
+		continue;
+	    }
+	}
+	iso_node_id = strtoll(conn_dst, NULL, 16);
+
+	dst_len = strlen(&conn_dst[2]);
+	if (dst_len > 16) {
+	    LOG(ERROR, "illegal connector length %s\n", conn_src);
+	    return;
+	}
+
+	shift = (16 - dst_len) * 4;
+	write_be_uint(ctx->connector[ctx->num_connector].remote_node_id, 8, iso_node_id << shift);
+
+	LOG(NORMAL, "Add connector to %s\n",
+	    lsdb_format_node_id(ctx->connector[ctx->num_connector].remote_node_id));
+	ctx->num_connector++;
+    }
 }
 
 /* Get out of event loop */

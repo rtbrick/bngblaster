@@ -32,6 +32,7 @@
 
 #define CTRL_SOCKET_BUFSIZE 65536
 #define PAD4(X) ((X+3)&(~3)) /* 32-Bit padding */
+#define CONNECTOR_MARKER 1 /* Marker for connector link */
 
 __uint128_t lspgen_load_addr(uint8_t *, uint32_t);
 void lspgen_store_addr(__uint128_t, uint8_t *, uint32_t);

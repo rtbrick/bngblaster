@@ -30,7 +30,8 @@ typedef enum {
 } lsdb_proto_id_t;
 
 typedef struct lsdb_node_id_ {
-    uint8_t node_id[LSDB_MAX_NODE_ID_SIZE];
+    uint8_t local_link_id[LSDB_MAX_NODE_ID_SIZE];
+    uint8_t remote_node_id[LSDB_MAX_NODE_ID_SIZE];
 } lsdb_node_id_t;
 
 /*
