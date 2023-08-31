@@ -12,6 +12,10 @@
 #include "lspgen_lsdb.h"
 #include "lspgen_isis.h"
 
+/* https://datatracker.ietf.org/doc/html/rfc6396#section-4 */
+#define MRT_TYPE_OSPFV2 11
+#define MRT_TYPE_ISIS   32
+
 /*
  * Write all the generated LSPs of a single node into a MRT file.
  */
@@ -48,15 +52,45 @@ lspgen_dump_mrt_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
         buf.idx = 0;
 
         push_be_uint(&buf, 4, ctx->now); /* timestamp */
-        push_be_uint(&buf, 2, 32); /* type IS-IS */
-        push_be_uint(&buf, 2, 0); /* subtype */
-        push_be_uint(&buf, 4, 0); /* length, will be overwritten */
 
-        /*
-         * Copy packet
-         */
-        memcpy(&mrt_record[buf.idx], packet->data, packet->buf.idx);
-        buf.idx += packet->buf.idx;
+	switch(ctx->protocol_id) {
+	case PROTO_ISIS:
+	    push_be_uint(&buf, 2, MRT_TYPE_ISIS); /* type */
+	    push_be_uint(&buf, 2, 0); /* subtype */
+	    push_be_uint(&buf, 4, 0); /* length, will be overwritten */
+
+	    /*
+	     * Copy packet
+	     */
+	    memcpy(&mrt_record[buf.idx], packet->data, packet->buf.idx);
+	    buf.idx += packet->buf.idx;
+	    break;
+
+	case PROTO_OSPF2:
+	    push_be_uint(&buf, 2, MRT_TYPE_OSPFV2); /* type */
+	    push_be_uint(&buf, 2, 0); /* subtype */
+	    push_be_uint(&buf, 4, 0); /* length, will be overwritten */
+
+	    push_be_uint(&buf, 4, 0); /* remote IP address */
+	    push_be_uint(&buf, 4, 0); /*  local IP address */
+
+	    /*
+	     * Copy packet
+	     */
+	    if (packet->buf.idx > 20) {
+
+		/*
+		 * Skip 20 bytes of IPv4 header.
+		 */
+		memcpy(&mrt_record[buf.idx], packet->data+20, packet->buf.idx-20);
+		buf.idx += packet->buf.idx-20;
+	    }
+	    break;
+
+	default:
+	    LOG(ERROR, "No MRT writer for protocol %u\n", ctx->protocol_id);
+	    return;
+	}
 
         length = buf.idx-12;
         write_be_uint(buf.data+8, 4, length); /* overwrite length field */
