@@ -1032,10 +1032,12 @@ main(int argc, char *argv[])
 		if (ctx->protocol_id == PROTO_OSPF2) {
 		    ctx->topology_id.area = 0; /* reset area */
 		    ctx->no_ipv6 = true;
+		    ctx->sequence = 0x80000001;
 		}
 		if (ctx->protocol_id == PROTO_OSPF3) {
 		    ctx->topology_id.area = 0; /* reset area */
 		    ctx->no_ipv4 = true;
+		    ctx->sequence = 0x80000001;
 		}
 		break;
             case 'r':
@@ -1156,7 +1158,11 @@ main(int argc, char *argv[])
                 /* sequence */
                 ctx->sequence = strtol(optarg, NULL, 0);
                 if (ctx->sequence == 0) {
-                ctx->sequence = 1;
+		    if (ctx->protocol_id == PROTO_ISIS) {
+			ctx->sequence = 1;
+		    } else {
+			ctx->sequence = 0x80000001;
+		    }
                 }
                 break;
             case 'Q':
