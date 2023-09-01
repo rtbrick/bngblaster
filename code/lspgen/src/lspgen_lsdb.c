@@ -764,6 +764,7 @@ struct keyval_ ospf_attr_l2_names[] = {
     { OSPF_ROUTER_LSA_LINK_PTP,		"ptp-link" },
     { OSPF_ROUTER_LSA_LINK_STUB,	"ptp-stub" },
     { OSPF_TLV_HOSTNAME,		"Hostname" },
+    { OSPF_TLV_SID_LABEL_RANGE,		"SID/Label-Range" },
     { 0, NULL}
 };
 

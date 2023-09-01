@@ -297,7 +297,7 @@ lspgen_finalize_ospf2_packet(__attribute__((unused))lsdb_ctx_t *ctx,
     if (packet->prev_attr_cp[1]) {
 	state |= CLOSE_LEVEL1;
     }
-    if (packet->prev_attr_cp[3]) {
+    if (packet->prev_attr_cp[2]) {
 	state |= CLOSE_LEVEL2;
     }
     lspgen_serialize_ospf2_state(NULL, packet, state);
@@ -652,39 +652,17 @@ lspgen_format_serializer_state (uint16_t state)
 {
     static char buf[128];
     int len;
-    bool first, open;
+    bool first, close;
 
     len = 0;
-    first = true;
-    open = false;
+    close = false;
     buf[0] = 0;
-
-    /* some open bits set ? */
-    if (state & (OPEN_LEVEL0|OPEN_LEVEL1|OPEN_LEVEL2|OPEN_LEVEL3)) {
-	len += snprintf(buf+len, sizeof(buf)-len, "open: ");
-	open = true;
-	if (state & OPEN_LEVEL0) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & OPEN_LEVEL1) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & OPEN_LEVEL2) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & OPEN_LEVEL3) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
-	    first =false;
-	}
-    }
 
     /* some close bits set ? */
     first = true;
     if (state & (CLOSE_LEVEL0|CLOSE_LEVEL1|CLOSE_LEVEL2|CLOSE_LEVEL3)) {
-	len += snprintf(buf+len, sizeof(buf)-len, "%sclose: ", open ? ", " : "");
+	close = true;
+	len += snprintf(buf+len, sizeof(buf)-len, "close: ");
 	if (state & CLOSE_LEVEL0) {
 	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
 	    first =false;
@@ -703,7 +681,41 @@ lspgen_format_serializer_state (uint16_t state)
 	}
     }
 
+    /* some open bits set ? */
+    first = true;
+    if (state & (OPEN_LEVEL0|OPEN_LEVEL1|OPEN_LEVEL2|OPEN_LEVEL3)) {
+	len += snprintf(buf+len, sizeof(buf)-len, "%sopen: ", close ? ", " : "");
+	if (state & OPEN_LEVEL0) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & OPEN_LEVEL1) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & OPEN_LEVEL2) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
+	    first =false;
+	}
+	if (state & OPEN_LEVEL3) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
+	    first =false;
+	}
+    }
+
     return buf;
+}
+
+/*
+ * Fill a buffer with zeros up to the next 32bit boundary.
+ */
+void
+push_pad4(io_buffer_t *buf)
+{
+    uint pad_octets;
+
+    pad_octets = PAD4(buf->idx) - buf->idx;
+    push_be_uint(buf, pad_octets, 0);
 }
 
 void
@@ -911,7 +923,23 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 		push_be_uint(buf2, 2, 7); /* Type */
 		push_be_uint(buf2, 2, attr_len); /* Length */
 		push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
-		push_be_uint(buf2, PAD4(attr_len)-attr_len, 0); /* Padding zeros */
+		push_pad4(buf2);
+	    }
+	    break;
+
+	case OSPF_TLV_SID_LABEL_RANGE:
+	    if (attr->key.cap.srgb_base && attr->key.cap.srgb_range) {
+		push_be_uint(buf2, 2, 9); /* Type */
+		push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+		push_be_uint(buf2, 3, attr->key.cap.srgb_range); /* Range size */
+		push_be_uint(buf2, 1, 0); /* Reserved */
+
+		push_be_uint(buf2, 2, 1); /* SID Type Label */
+                push_be_uint(buf2, 2, 3); /* SID Type Length */
+                push_be_uint(buf2, 3, attr->key.cap.srgb_base);
+
+		write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
+		push_pad4(buf2);
 	    }
 	    break;
 
@@ -1008,6 +1036,7 @@ lspgen_serialize_ospf2_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 	if (attr->key.attr_cp[2]) {
 	    state |= OPEN_LEVEL2;
 	}
+	lspgen_serialize_ospf2_state(attr, packet, state);
 	return;
     }
 

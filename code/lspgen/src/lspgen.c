@@ -611,7 +611,6 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             ext_addr4 += ext_incr4;
         }
 
-#if 0
         if (!ctx->no_sr) {
             /* SR capability */
             lsdb_reset_attr_template(&attr_template);
@@ -620,14 +619,11 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
             attr_template.key.cap.srgb_base = ctx->srgb_base;
             attr_template.key.cap.srgb_range = ctx->srgb_range;
-            if (!ctx->no_ipv4) {
-                attr_template.key.cap.mpls_ipv4_flag = true; /* mpls ipv4 */
-            }
-            attr_template.key.attr_type = ISIS_TLV_CAP;
-            attr_template.key.ordinal = 1;
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+	    attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
             lsdb_add_node_attr(node, &attr_template);
         }
-#endif
 
         /*
          * Walk all of our neighbors.

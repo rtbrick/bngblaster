@@ -18,10 +18,13 @@
 
 #define OSPF_LSA_OPAQUE_LINK       9
 #define OSPF_LSA_OPAQUE_AREA_RI  104
+#define OSPF_LSA_OPAQUE_AREA_EP  107 /* rfc 7684 */
 #define OSPF_LSA_OPAQUE_DOMAIN    11
-
-#define OSPF_TLV_HOSTNAME          7
 
 /* Router LSA */
 #define OSPF_ROUTER_LSA_LINK_PTP   1
 #define OSPF_ROUTER_LSA_LINK_STUB  3
+
+/* Opaque LSA RI TLVs*/
+#define OSPF_TLV_HOSTNAME          7
+#define OSPF_TLV_SID_LABEL_RANGE   9
