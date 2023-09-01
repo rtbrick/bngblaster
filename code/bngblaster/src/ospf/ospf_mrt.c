@@ -83,6 +83,7 @@ ospf_mrt_load(ospf_instance_s *instance, char *file_path)
         } else {
             LOG(ERROR, "Invalid MRT file %s (wrong MRT type)\n", file_path);
             fclose(mrt_file);
+            return false;
         }
         if(pdu.pdu_type != OSPF_PDU_LS_UPDATE) {
             LOG(ERROR, "Invalid MRT file %s (wrong PDU type)\n", file_path);
