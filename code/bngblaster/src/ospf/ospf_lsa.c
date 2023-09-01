@@ -1654,7 +1654,9 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
             LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA len)\n");
             return false;
         }
+
         len -= lsa_len;
+        buf += lsa_len;
         lsa_count--;
 
         if(!ospf_lsa_verify_checksum(hdr)) {
