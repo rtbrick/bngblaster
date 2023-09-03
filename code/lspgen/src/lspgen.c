@@ -581,19 +581,26 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         /* IPv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
-        addr += node->node_index;
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
         attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
-        if (!ctx->no_sr) {
-            attr_template.key.prefix.sid = node->node_index;
-            attr_template.key.prefix.adv_sid = true;
-        }
-        attr_template.key.prefix.node_flag = true;
-
 	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
 	attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
         lsdb_add_node_attr(node, &attr_template);
+
+        if (!ctx->no_sr) {
+	    lsdb_reset_attr_template(&attr_template);
+	    lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
+	    attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
+	    attr_template.key.prefix.sid = node->node_index;
+
+            attr_template.key.ordinal = 1;
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
+	    attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX_RANGE;
+	    lsdb_add_node_attr(node, &attr_template);
+	}
+        addr += node->node_index;
 
         /* external prefixes */
         ext_per_node = ctx->num_ext / ctx->num_nodes;
@@ -622,6 +629,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
 	    attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
+	    attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
         }
 

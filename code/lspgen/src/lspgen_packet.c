@@ -755,6 +755,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_ROUTER:
 	case OSPF_LSA_EXTERNAL:
 	case OSPF_LSA_OPAQUE_AREA_RI:
+	case OSPF_LSA_OPAQUE_AREA_EP:
 	    inc_be_uint(buf0->data+20+24, 4); /* Update #LSAs */
 
 	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update length */
@@ -883,6 +884,20 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 	    break;
+
+	case OSPF_LSA_OPAQUE_AREA_EP:
+	    push_be_uint(buf1, 2, 1); /* LS-age */
+	    push_be_uint(buf1, 1, 0); /* Options */
+	    push_be_uint(buf1, 1, 10); /* LS-Type  */
+	    push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
+	    push_be_uint(buf1, 3, 0); /* Opaque subtype  */
+	    router_id = read_be_uint(node->key.node_id, 4);
+	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
+	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
+	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+	    break;
+
 	default:
             LOG(ERROR, "No Level 1 open packet serializer for attr %d\n", attr->key.attr_cp[1]);
 	    return;
@@ -941,6 +956,27 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 		write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
 		push_pad4(buf2);
 	    }
+	    break;
+
+	case OSPF_TLV_EXTENDED_PREFIX_RANGE:
+	    push_be_uint(buf2, 2, 2); /* Type */
+	    push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+	    push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
+	    push_be_uint(buf2, 1, 0); /* AF ipv4 */
+	    push_be_uint(buf2, 2, 1); /* Range size */
+	    push_be_uint(buf2, 1, 0); /* Flags */
+	    push_be_uint(buf2, 3, 0); /* Reserved */
+	    push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
+
+	    /* Prefix SID - XXX Move this to Level 4*/
+	    push_be_uint(buf2, 2, 2); /* Type */
+	    push_be_uint(buf2, 2, 7); /* Length */
+	    push_be_uint(buf2, 3, 0); /* Flags, Reserved, MT-ID */
+	    push_be_uint(buf2, 1, attr->key.prefix.sid_algo); /* Algorithm */
+	    push_be_uint(buf2, 3, attr->key.prefix.sid); /* SID Index */
+
+	    write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
+	    push_pad4(buf2);
 	    break;
 
 	default:

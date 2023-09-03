@@ -757,6 +757,7 @@ struct keyval_ ospf_attr_l1_names[] = {
     { OSPF_LSA_ROUTER,			"Router-LSA" },
     { OSPF_LSA_EXTERNAL,		"External-LSA" },
     { OSPF_LSA_OPAQUE_AREA_RI,		"Opaque-LSA-RI" },
+    { OSPF_LSA_OPAQUE_AREA_EP,		"Opaque-LSA-EP" },
     { 0, NULL}
 };
 
@@ -765,6 +766,7 @@ struct keyval_ ospf_attr_l2_names[] = {
     { OSPF_ROUTER_LSA_LINK_STUB,	"ptp-stub" },
     { OSPF_TLV_HOSTNAME,		"Hostname" },
     { OSPF_TLV_SID_LABEL_RANGE,		"SID/Label-Range" },
+    { OSPF_TLV_EXTENDED_PREFIX_RANGE,	"Extended-Prefix-Range" },
     { 0, NULL}
 };
 

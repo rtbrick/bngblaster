@@ -28,3 +28,6 @@
 /* Opaque LSA RI TLVs*/
 #define OSPF_TLV_HOSTNAME          7
 #define OSPF_TLV_SID_LABEL_RANGE   9
+
+/* Opaque LSA Extended Prefix TLVs */
+#define OSPF_TLV_EXTENDED_PREFIX_RANGE 2
