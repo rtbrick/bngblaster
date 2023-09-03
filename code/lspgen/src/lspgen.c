@@ -96,7 +96,7 @@ struct keyval_ log_names[] = {
 struct keyval_ proto_names[] = {
     { PROTO_ISIS, "isis" },
     { PROTO_OSPF2, "ospf2" },
-    { PROTO_OSPF3, "ospf3" },
+    //{ PROTO_OSPF3, "ospf3" },
     { 0, NULL}
 };
 
