@@ -814,11 +814,13 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 	for (idx = 0; idx < ctx->num_area; idx++) {
 	    LOG(NORMAL, " Area %s\n", format_iso_prefix(&ctx->area[idx]));
 	}
-	LOG(NORMAL, " Level %u, sequence 0x%x, lsp-lifetime %u\n",
-	    ctx->topology_id.level, ctx->sequence, ctx->lsp_lifetime);
+	LOG(NORMAL, " Level %u\n", ctx->topology_id.level);
+
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
 	    LOG(NORMAL, " Area %s\n", format_ipv4_address(&ctx->topology_id.area));
     }
+    LOG(NORMAL, " Sequence 0x%x, lsp-lifetime %u\n", ctx->sequence, ctx->lsp_lifetime);
+
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
             ctx->authentication_key, val2key(isis_auth_names, ctx->authentication_type));
@@ -1034,14 +1036,15 @@ main(int argc, char *argv[])
 	    case 'P':
 		ctx->protocol_id = key2val(proto_names, optarg);
 		if (ctx->protocol_id == PROTO_OSPF2) {
-		    ctx->topology_id.area = 0; /* reset area */
 		    ctx->no_ipv6 = true;
-		    ctx->sequence = 0x80000001;
 		}
 		if (ctx->protocol_id == PROTO_OSPF3) {
-		    ctx->topology_id.area = 0; /* reset area */
 		    ctx->no_ipv4 = true;
+		}
+		if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+		    ctx->topology_id.area = 0; /* reset area */
 		    ctx->sequence = 0x80000001;
+		    ctx->lsp_lifetime = 3600;
 		}
 		break;
             case 'r':
