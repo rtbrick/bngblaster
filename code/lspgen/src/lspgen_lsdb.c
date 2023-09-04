@@ -181,16 +181,20 @@ lsdb_format_node(lsdb_node_t *node)
 
     if (ctx->protocol_id == PROTO_ISIS) {
         if (node->node_name) {
-            snprintf(buffer, sizeof(buffer), "%s", node->node_name);
+            snprintf(buffer, sizeof(buffer), "%s (%s)", 
+                     lsdb_format_node_id(node->key.node_id), node->node_name);
         } else {
-            snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
+            snprintf(buffer, sizeof(buffer), "%s", 
+                     lsdb_format_node_id(node->key.node_id));
         }
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
         if (node->node_name) {
-            snprintf(buffer, sizeof(buffer), "%s", node->node_name);
+            snprintf(buffer, sizeof(buffer), "%u.%u.%u.%u (%s)",
+                     node->key.node_id[0], node->key.node_id[1], node->key.node_id[2], node->key.node_id[3], node->node_name);
+
         } else {
             snprintf(buffer, sizeof(buffer), "%u.%u.%u.%u",
-            node->key.node_id[0], node->key.node_id[1], node->key.node_id[2], node->key.node_id[3]);
+                     node->key.node_id[0], node->key.node_id[1], node->key.node_id[2], node->key.node_id[3]);
         }
     } else {
         snprintf(buffer, sizeof(buffer), "0x%08x%08x", ntohl(node->key.node_id[0]), ntohl(node->key.node_id[4]));
