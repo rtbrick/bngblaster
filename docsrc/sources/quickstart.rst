@@ -242,7 +242,7 @@ ISIS
 ----
 
 In the following example, we create two :ref:`ISIS <isis>` nodes (R1 and R2) with an emulated
-ISIS topology attached to R1 (`test.mrt``). 
+ISIS topology attached to R1 (`isis.mrt``). 
 
 .. image:: images/quickstart_isis.png
     :alt: ISIS Quickstart
@@ -291,7 +291,7 @@ ISIS topology attached to R1 (`test.mrt``).
                 "level1-auth-key": "secret123",
                 "level1-auth-type": "md5",
                 "external": {
-                    "mrt-file": "test.mrt",
+                    "mrt-file": "isis.mrt",
                     "connections": [
                         {
                             "system-id": "1921.6800.0000.00",
@@ -335,7 +335,7 @@ Now use the included tool ``lspgen`` to generate the attached ISIS topology.
 
 .. code-block:: none
 
-    $ lspgen -a 49.0001/24 -K secret123 -T md5 -C 1921.6800.1001 -m test.mrt
+    $ lspgen -a 49.0001/24 -K secret123 -T md5 -C 1921.6800.1001 -m isis.mrt
     Mar 30 14:54:19.647569 Add context for instance default, protocol isis, topology unicast
     Mar 30 14:54:19.647630 Add connector to 0x192168001001
     Mar 30 14:54:19.647633 LSP generation parameters
@@ -358,7 +358,7 @@ Finally, you can start the BNG Blaster.
 
     $ sudo bngblaster -C veth1-isis.json -l isis -P test.pcap -S run.sock
     Mar 30 14:56:11.981279 Init IS-IS instance 1
-    Mar 30 14:56:11.981314 Load ISIS MRT file test.mrt
+    Mar 30 14:56:11.981314 Load ISIS MRT file isis.mrt
     Mar 30 14:56:11.981335 Init IS-IS instance 2
     Mar 30 14:56:12.031917 Add network interface veth1.1 to IS-IS instance 1
     Mar 30 14:56:12.087877 Add network interface veth1.2 to IS-IS instance 2

@@ -35,18 +35,14 @@ attached to two network interfaces.
                     "interface": "eth1",
                     "address": "10.0.1.2/30",
                     "gateway": "10.0.1.1",
-                    "address-ipv6": "fc66:1337:7331:1::2/64",
-                    "gateway-ipv6": "fc66:1337:7331:1::1",
                     "ospfv2-instance-id": 1,
                     "ospfv2-type": "p2p",
-                    "ospfv3-instance-id": 2,
-                    "ospfv3-type": "p2p"
                 },
                 {
                     "interface": "eth2",
                     "address": "10.0.2.2/24",
                     "gateway": "10.0.2.1",
-                    "ospfv2-instance-id": 1,
+                    "ospfv2-instance-id": 2,
                     "ospfv2-type": "broadcast"
                 }
             ]
@@ -55,22 +51,30 @@ attached to two network interfaces.
             {
                 "instance-id": 1,
                 "version": 2,
-                "router-id": "10.255.1.1",
-                "hostname": "BBLv4"
+                "router-id": "10.0.0.11",
+                "hostname": "R1"
             },
             {
                 "instance-id": 2,
-                "version": 3,
-                "router-id": "10.255.1.1",
-                "hostname": "BBLv6"
+                "version": 2,
+                "router-id": "10.0.0.12",
+                "hostname": "R2"
             }
         ]
     }
 
 .. include:: ../configuration/ospf.rst
 
+The support for multiple instances allows different use cases. One example might 
+be to create two instances connected to the device or network under test. Now 
+inject an LSA on one instance and check if learned over the tested network on 
+the other instance. 
+
 Every OSPF instance can be also connected to an emulated link state graph loaded 
 by MRT files as shown in the example below. 
+
+.. image:: ../images/bbl_ospf.png
+    :alt: OSPF
 
 .. code-block:: json
 
@@ -79,13 +83,14 @@ by MRT files as shown in the example below.
             {
                 "instance-id": 1,
                 "version": 2,
-                "router-id": "10.255.1.1",
-                "hostname": "BBLv4"
+                "router-id": "10.0.0.11",
+                "hostname": "R1"
                 "external": {
-                    "mrt-file": "test.mrt",
+                    "mrt-file": "ospf.mrt",
                     "connections": [
                         {
-                            "router-id": "10.255.1.100",
+                            "router-id": "10.10.0.1",
+                            "local-ipv4-address": "10.0.0.1",
                             "metric": 1000
                         }
                     ]
@@ -142,11 +147,10 @@ router-id equal to the source router-id of the LSA.
 LSA Update Command
 ~~~~~~~~~~~~~~~~~~
 
-It is also possible to inject LSAs using the ``ospf-lsa-update``
-:ref:`command <api>`. 
+It is also possible to inject LSAs using the ``ospf-lsa-update`` :ref:`command <api>`.
 
-The :ref:`command <api>` expects a list of hex encoded LSA including 
-the OSPF LSA common header (`| LS age | Options | LS type | ... `). 
+This :ref:`command <api>` expects a list of hex encoded LSA including 
+the OSPF LSA common header (``| LS age | Options | LS type |``). 
 
 ``$ cat command.json | jq .``
 
@@ -163,8 +167,9 @@ the OSPF LSA common header (`| LS age | Options | LS type | ... `).
         }
     }
 
-The :ref:`command <api>` ``ospf-pdu-update`` work similar to ``ospf-lsa-update``
-expecting OSPF LS update request PDU including OSPF common header  (`| Version | Type | ... `). 
+
+The command ``ospf-pdu-update`` work similar to ``ospf-lsa-update`` expecting OSPF LS update 
+request PDU including OSPF common header  (``| Version | Type |``). 
 
 .. code-block:: json
 
@@ -183,7 +188,7 @@ LSA Update via Scapy
 ~~~~~~~~~~~~~~~~~~~~
 
 The following example shows how to generate LSAs via Scapy 
-and inject them using the ``ospf-lsa-update`` :ref:`command <api>`.
+and inject them using the ospf-lsa-update :ref:`command <api>`.
 
 .. code-block:: python
 
@@ -274,8 +279,7 @@ Those files can be loaded at startup via the configuration option
 ``"ospf": { "external": { "mrt-file": "<file>" } }`` or alternative
 via ``ospf-load-mrt`` :ref:`command <api>`. 
 
-``$ sudo bngblaster-cli run.sock ospf-load-mrt file test.mrt instance 1``
-
+``$ sudo bngblaster-cli run.sock ospf-load-mrt file ospf.mrt instance 1``
 
 The following example shows how to generate such MRT file via Scapy.
 
@@ -286,7 +290,7 @@ The following example shows how to generate such MRT file via Scapy.
 
     def main():
         """main function"""
-        with open("test.mrt", "wb") as f:
+        with open("ospf.mrt", "wb") as f:
             for i in range(10):
                 lsa = OSPF_External_LSA(type=5, id="10.222.%s.0" % i, adrouter="10.255.1.1", mask="255.255.255.0", seq=2147483949)
                 ospf = OSPF_Hdr()/OSPF_LSUpd(lsacount=1)/lsa
@@ -300,7 +304,41 @@ The following example shows how to generate such MRT file via Scapy.
 LSPGEN
 ~~~~~~
 
-The BNG Blaster includes a tool called ``lspgen`` which is able to generate
+The BNG Blaster includes a tool called :ref:`lspgen <lspgen>`, which is able to generate
 topologies and link state packets for export as MRT and PCAP files. This tool
 is also able to inject LSAs directly using the ``ospf-pdu-update``
 :ref:`command <api>`.
+
+OSPFv3
+~~~~~~
+
+The BNG Blaster also provides support for OSPFv3, although it should be noted that 
+its support, compared to OSPFv2, is still considered experimental.
+
+Conceptually, OSPFv2 and OSPFv3 function the same way in the BNG Blaster, and the 
+basic configuration differs only in the version number. The control commands are 
+also identical.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": [
+                {
+                    "interface": "eth1",
+                    "address-ipv6": "fc66:1337:60::2/64",
+                    "gateway-ipv6": "fc66:1337:60::1",
+                    "ospfv3-instance-id": 1,
+                    "ospfv3-type": "p2p"
+                }
+            ]
+        },
+        "ospf": [
+            {
+                "instance-id": 1,
+                "version": 3,
+                "router-id": "10.0.0.16",
+                "hostname": "R6"
+            }
+        ]
+    }

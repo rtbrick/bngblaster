@@ -52,7 +52,7 @@ Following is a basic HTTP client configuration example.
         ]
     }
 
-.. include:: ../configuration/http_client.rst
+.. include:: configuration/http_client.rst
 
 The association between the HTTP client and sessions is established through 
 the use of the HTTP client group identifier (http-client-group-id). Multiple 
@@ -203,7 +203,7 @@ Following is a basic HTTP server configuration example.
         ]
     }
 
-.. include:: ../configuration/http_server.rst
+.. include:: configuration/http_server.rst
 
 The BNG Blaster offers the capability to emulate a lightweight HTTP server on 
 top of any network interface function. This functionality allows the BNG Blaster 

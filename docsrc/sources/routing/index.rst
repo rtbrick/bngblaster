@@ -13,3 +13,4 @@ router testing.
    mpls.rst
    bgp.rst
    ldp.rst
+   lspgen.rst
