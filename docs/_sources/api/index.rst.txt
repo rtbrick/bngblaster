@@ -193,6 +193,10 @@ ISIS
 ----
 .. include:: isis.rst
 
+OSPF
+----
+.. include:: ospf.rst
+
 BGP
 ---
 .. include:: bgp.rst

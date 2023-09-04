@@ -8,9 +8,6 @@
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
@@ -302,7 +299,7 @@ IPoE DHCP configuration.</p>
 <section id="isis">
 <h2>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h2>
 <p>In the following example, we create two <a class="reference internal" href="routing/isis.html#isis"><span class="std std-ref">ISIS</span></a> nodes (R1 and R2) with an emulated
-ISIS topology attached to R1 (<cite>test.mrt`</cite>).</p>
+ISIS topology attached to R1 (<cite>isis.mrt`</cite>).</p>
 <img alt="ISIS Quickstart" src="_images/quickstart_isis.png" />
 <p><strong>isis.json:</strong></p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
@@ -345,7 +342,7 @@ ISIS topology attached to R1 (<cite>test.mrt`</cite>).</p>
 <span class="w">            </span><span class="nt">&quot;level1-auth-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;secret123&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;level1-auth-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test.mrt&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis.mrt&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">                </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
 <span class="w">                    </span><span class="p">{</span><span class="w"></span>
 <span class="w">                        </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1921.6800.0000.00&quot;</span><span class="p">,</span><span class="w"></span>
@@ -387,7 +384,7 @@ ISIS topology attached to R1 (<cite>test.mrt`</cite>).</p>
 </pre></div>
 </div>
 <p>Now use the included tool <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> to generate the attached ISIS topology.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ lspgen -a 49.0001/24 -K secret123 -T md5 -C 1921.6800.1001 -m test.mrt
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ lspgen -a 49.0001/24 -K secret123 -T md5 -C 1921.6800.1001 -m isis.mrt
 Mar 30 14:54:19.647569 Add context for instance default, protocol isis, topology unicast
 Mar 30 14:54:19.647630 Add connector to 0x192168001001
 Mar 30 14:54:19.647633 LSP generation parameters
@@ -408,7 +405,7 @@ Mar 30 14:54:19.647813  Root node 1921.6800.0000.00
 <p>Finally, you can start the BNG Blaster.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C veth1-isis.json -l isis -P test.pcap -S run.sock
 Mar 30 14:56:11.981279 Init IS-IS instance 1
-Mar 30 14:56:11.981314 Load ISIS MRT file test.mrt
+Mar 30 14:56:11.981314 Load ISIS MRT file isis.mrt
 Mar 30 14:56:11.981335 Init IS-IS instance 2
 Mar 30 14:56:12.031917 Add network interface veth1.1 to IS-IS instance 1
 Mar 30 14:56:12.087877 Add network interface veth1.2 to IS-IS instance 2

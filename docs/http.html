@@ -8,9 +8,6 @@
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
@@ -130,6 +127,56 @@ device under test in different deployment scenarios.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>name</cite></p></td>
+<td><p>Mandatory HTTP client name</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>http-client-group-id</cite></p></td>
+<td><p>Mandatory HTTP client identifier</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>url</cite></p></td>
+<td><p>Mandatory HTTP request URL</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>destination-port</cite></p></td>
+<td><p>TCP destination port</p></td>
+<td><p>80</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>autostart</cite></p></td>
+<td><p>Autostart HTTP client</p></td>
+<td><p>true</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
+<td><p>Delay start of HTTP client</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>destination-ipv4-address</cite></p></td>
+<td><p>Destination IPv4 address</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>destination-ipv6-address</cite></p></td>
+<td><p>Destination IPv6 address</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 <p>The association between the HTTP client and sessions is established through
 the use of the HTTP client group identifier (http-client-group-id). Multiple
 HTTP clients can be defined with the same HTTP client group identifier.</p>
@@ -264,6 +311,44 @@ continue interacting with the server.</p>
 <span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 50%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>name</cite></p></td>
+<td><p>Mandatory HTTP server name</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
+<td><p>Mandatory HTTP server network-interface</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>port</cite></p></td>
+<td><p>Local TCP port</p></td>
+<td><p>80</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>ipv4-address</cite></p></td>
+<td><p>Local IPv4 address</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><cite>ipv6-address</cite></p></td>
+<td><p>Local IPv6 address</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 <p>The BNG Blaster offers the capability to emulate a lightweight HTTP server on
 top of any network interface function. This functionality allows the BNG Blaster
 to simulate the behavior of an HTTP server, enabling various testing and

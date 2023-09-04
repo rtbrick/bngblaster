@@ -8,9 +8,6 @@
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
@@ -118,11 +115,11 @@ sudo apt install -y libssl3 libncurses6 libjansson4
 <p>The BNG Blaster has dependencies on the RtBrick
 <a class="reference external" href="https://github.com/rtbrick/libdict">libdict fork</a>
 and the following standard dependencies:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># libdict
-wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
-unzip libdict-debian.zip
-sudo dpkg -i libdict_1.0.1_amd64.deb
-sudo dpkg -i libdict-dev_1.0.1_amd64.deb
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install libdict for Ubuntu 22.04 LTS
+wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-ubuntu-22.04.zip
+unzip libdict-ubuntu-22.04.zip
+sudo dpkg -i libdict_1.0.3_amd64.deb
+sudo dpkg -i libdict-dev_1.0.3_amd64.deb
 
 # standard dependencies
 sudo apt install -y cmake \

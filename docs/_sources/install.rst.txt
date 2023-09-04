@@ -39,11 +39,11 @@ and the following standard dependencies:
 
 .. code-block:: none
 
-    # libdict
-    wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
-    unzip libdict-debian.zip
-    sudo dpkg -i libdict_1.0.1_amd64.deb
-    sudo dpkg -i libdict-dev_1.0.1_amd64.deb
+    # install libdict for Ubuntu 22.04 LTS
+    wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-ubuntu-22.04.zip
+    unzip libdict-ubuntu-22.04.zip
+    sudo dpkg -i libdict_1.0.3_amd64.deb
+    sudo dpkg -i libdict-dev_1.0.3_amd64.deb
 
     # standard dependencies
     sudo apt install -y cmake \
