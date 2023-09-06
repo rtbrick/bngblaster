@@ -81,12 +81,16 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
         flags |= OSPF_DBD_FLAG_I;
     } else {
         /* Add LSA header */
+        ospf_neighbor->dbd_more = false;
         for(type = ospf_neighbor->dbd_lsa_type_start; type < OSPF_LSA_TYPE_MAX; type++) {
             itor = hb_itor_new(ospf_instance->lsdb[type]);
-            next = hb_itor_search_ge(itor, &ospf_neighbor->dbd_lsa_start);
+            if(type == ospf_neighbor->dbd_lsa_type_start) {
+                next = hb_itor_search_ge(itor, &ospf_neighbor->dbd_lsa_start);
+            } else {
+                next = hb_itor_search_ge(itor, &g_lsa_key_zero);
+            }
             while(true) {
                 if(!next) {
-                    ospf_neighbor->dbd_more = false;
                     break;
                 }
                 lsa = *hb_itor_datum(itor);
@@ -98,6 +102,7 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
                 if((overhead + pdu.pdu_len + OSPF_LLS_HDR_LEN + OSPF_LSA_HDR_LEN) > interface->mtu) {
                     memcpy(&ospf_neighbor->dbd_lsa_next, &lsa->key, sizeof(ospf_lsa_key_s));
                     ospf_neighbor->dbd_lsa_type_next = type;
+                    ospf_neighbor->dbd_more = true;
                     break;
                 }
 
@@ -107,7 +112,7 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
                 next = hb_itor_next(itor);
             }
             hb_itor_free(itor);
-
+            if(ospf_neighbor->dbd_more) break;
         }
     }
 
