@@ -501,7 +501,6 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
                 ospf_neighbor->dbd_lsa_type_start = ospf_neighbor->dbd_lsa_type_next;
                 memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
                 ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
-
                 ospf_neighbor_dbd_tx(ospf_neighbor);
             }
         } else {
@@ -517,7 +516,9 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
                 /* Next */
                 ospf_neighbor->dd = dd;
                 memcpy(&ospf_neighbor->dbd_lsa_start, &ospf_neighbor->dbd_lsa_next, sizeof(ospf_lsa_key_s));
+                ospf_neighbor->dbd_lsa_type_start = ospf_neighbor->dbd_lsa_type_next;
                 memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
+                ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
                 ospf_neighbor_dbd_tx(ospf_neighbor);
             } else {
                 ospf_rx_error(interface, pdu, "DD sequence");
