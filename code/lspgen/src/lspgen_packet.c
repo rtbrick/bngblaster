@@ -996,10 +996,11 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
 	    /* Prefix SID - XXX Move this to Level 4*/
 	    push_be_uint(buf2, 2, 2); /* Type */
-	    push_be_uint(buf2, 2, 7); /* Length */
+	    push_be_uint(buf2, 2, 8); /* Length */
 	    push_be_uint(buf2, 3, 0); /* Flags, Reserved, MT-ID */
 	    push_be_uint(buf2, 1, attr->key.prefix.sid_algo); /* Algorithm */
-	    push_be_uint(buf2, 3, attr->key.prefix.sid); /* SID Index */
+	    push_be_uint(buf2, 4, attr->key.prefix.sid); /* SID Index */
+	    push_pad4(buf2);
 
 	    write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
 	    push_pad4(buf2);
