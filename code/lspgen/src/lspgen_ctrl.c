@@ -175,7 +175,17 @@ lspgen_ctrl_encode_packet(lsdb_ctx_t *ctx, lsdb_packet_t *packet)
         push_be_uint(buf, 1, '\n');
     }
     push_be_uint(buf, 1, '"');
-    for (idx = 0; idx < packet->buf.idx; idx++) {
+
+    idx = 0;
+    if (ctx->protocol_id == PROTO_OSPF2) {
+
+	/*
+	 * Omit the IP header (=the first 20 bytes).
+	 */
+	idx = 20;
+    }
+
+    for (; idx < packet->buf.idx; idx++) {
         hi_byte = packet->buf.data[idx] >> 4;
         lo_byte = packet->buf.data[idx] & 0xf;
 
@@ -254,7 +264,7 @@ lspgen_ctrl_write_cb(timer_s *timer)
 	    json_header = "{\n\"command\": \"isis-lsp-update\",\n"
 		"\"arguments\": {\n\"instance\": 1,\n\"pdu\": [";
 	} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	    json_header = "{\n\"command\": \"ospf-ls-update\",\n"
+	    json_header = "{\n\"command\": \"ospf-pdu-update\",\n"
 		"\"arguments\": {\n\"instance\": 1,\n\"pdu\": [";
 	}
 	if (!json_header) {
