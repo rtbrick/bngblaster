@@ -1832,17 +1832,23 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         ospf_config->teardown_time = OSPF_DEFAULT_TEARDOWN_TIME;
     }
 
+    ospf_config->external_purge = true;
     sub = json_object_get(ospf, "external");
     if(json_is_object(sub)) {
 
         const char *schema[] = {
-            "mrt-file", "connections"
+            "purge", "mrt-file", "connections"
         };
         if(!schema_validate(sub, "external", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
         
+        JSON_OBJ_GET_BOOL(sub, value, "ospf->external", "purge");
+        if(value) {
+            ospf_config->external_purge  = json_boolean_value(value);
+        }
+
         if(json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
             ospf_config->external_mrt_file = strdup(s);
         }

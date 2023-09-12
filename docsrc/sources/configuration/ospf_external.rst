@@ -10,6 +10,9 @@
    * - Attribute
      - Description
      - Default
+   * - `purge`
+     - Automatically purge all external LSA during teardown
+     - true
    * - `mrt-file`
      - OSPF MRT file
      - 

@@ -330,7 +330,9 @@ ospf_teardown()
             LOG(OSPF, "Teardown OSPFv%u instance %u\n", instance->config->version, instance->config->id);
             instance->teardown = true;
             ospf_lsa_self_update(instance);
-            ospf_lsa_purge_all_external(instance);
+            if(instance->config->external_purge) {
+                ospf_lsa_purge_all_external(instance);
+            }
             timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
                       "OSPF TEARDOWN", instance->config->teardown_time, 0, instance,
                       &ospf_teardown_job);
