@@ -255,6 +255,7 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
                                timer_sec, 0, interface, &bbl_lag_lacp_job);
         } else {
             member->lacp_state = LACP_DISABLED;
+            lag->interface->state = INTERFACE_UP;
         }
 
         bbl_lag_member_insert(lag, member);
