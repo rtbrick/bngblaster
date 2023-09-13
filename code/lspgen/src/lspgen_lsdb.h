@@ -83,6 +83,7 @@ typedef struct lsdb_ctx_
     bool no_sr;
     bool no_ipv4;
     bool no_ipv6;
+    bool purge;
     uint16_t lsp_lifetime;
 
     uint32_t node_index;

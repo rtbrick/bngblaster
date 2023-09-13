@@ -226,7 +226,7 @@ lspgen_calculate_isis_auth_len(lsdb_ctx_t *ctx)
 void
 lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
-    uint16_t checksum;
+    uint16_t checksum, lsp_lifetime;
     uint8_t auth_len;
 
     /*
@@ -262,10 +262,14 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
      * Set remaining lifetime
      */
     if (node->lsp_lifetime) {
-        write_be_uint(packet->data+10, 2, node->lsp_lifetime);
+	lsp_lifetime = node->lsp_lifetime;
     } else {
-        write_be_uint(packet->data+10, 2, ctx->lsp_lifetime);
+	lsp_lifetime = ctx->lsp_lifetime;
     }
+    if (ctx->purge) {
+	lsp_lifetime = 0;
+    }
+    write_be_uint(packet->data+10, 2, lsp_lifetime);
 
     /*
      * Update PDU length field.
@@ -706,6 +710,20 @@ lspgen_format_serializer_state (uint16_t state)
     return buf;
 }
 
+uint16_t
+lspgen_get_ospf_age(lsdb_node_t *node)
+{
+    lsdb_ctx_t *ctx;
+
+    ctx = node->ctx;
+
+    if (ctx->purge) {
+	return 3600;
+    }
+
+    return 1;
+}
+
 /*
  * Fill a buffer with zeros up to the next 32bit boundary.
  */
@@ -835,7 +853,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
 	switch(attr->key.attr_cp[1]) {
 	case OSPF_LSA_ROUTER:
-	    push_be_uint(buf1, 2, 1); /* LS-age */
+	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 1, 0); /* Options */
 	    push_be_uint(buf1, 1, OSPF_LSA_ROUTER); /* LS-Type  */
 	    router_id = read_be_uint(node->key.node_id, 4);
@@ -851,7 +869,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	case OSPF_LSA_EXTERNAL:
-	    push_be_uint(buf1, 2, 1); /* LS-age */
+	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 1, 0); /* Options */
 	    push_be_uint(buf1, 1, 5); /* LS-Type  */
             push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
@@ -873,7 +891,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	case OSPF_LSA_OPAQUE_AREA_RI:
-	    push_be_uint(buf1, 2, 1); /* LS-age */
+	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 1, 0); /* Options */
 	    push_be_uint(buf1, 1, 10); /* LS-Type  */
 	    push_be_uint(buf1, 1, 4); /* Opaque Type: Router-Information */
@@ -886,7 +904,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	case OSPF_LSA_OPAQUE_AREA_EP:
-	    push_be_uint(buf1, 2, 1); /* LS-age */
+	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 1, 0); /* Options */
 	    push_be_uint(buf1, 1, 10); /* LS-Type  */
 	    push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
@@ -904,6 +922,13 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	}
 
 	lspgen_propagate_buffer_down(packet, 1);
+    }
+
+    /*
+     * If users wants to generate purges encoding stops at level 1.
+     */
+    if (ctx->purge) {
+	return;
     }
 
     /* open Level 2 */
@@ -1311,9 +1336,10 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
      */
     dict_clear(node->packet_dict, lsdb_free_packet);
 
-    if (!node->attr_dict) {
+    if (!node->attr_dict || ctx->purge) {
+
         /*
-         * No attributes. This is a purge.
+         * Purge if no attributes or explicit purge.
          */
         packet = lspgen_add_packet(ctx, node, id);
         lspgen_finalize_packet(ctx, node, packet);
