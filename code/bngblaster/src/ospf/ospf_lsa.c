@@ -1717,6 +1717,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         lsa->age = be16toh(hdr->age);
         lsa->timestamp.tv_sec = now.tv_sec;
         lsa->timestamp.tv_nsec = now.tv_sec;
+        lsa->expired = false;
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
         ospf_lsa_lifetime(lsa);
