@@ -63,6 +63,7 @@ static struct option long_options[] = {
     {"mrt-file", required_argument, NULL, 'm'},
     {"node-count", required_argument, NULL, 'c'},
     {"pcap-file", required_argument, NULL, 'p'},
+    {"purge", no_argument, NULL, 'G'},
     {"stream-file", required_argument, NULL, 'f'},
     {"seed", required_argument, NULL, 's'},
     {"sequence", required_argument, NULL, 'q'},
@@ -819,7 +820,9 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
 	    LOG(NORMAL, " Area %s\n", format_ipv4_address(&ctx->topology_id.area));
     }
-    LOG(NORMAL, " Sequence 0x%x, lsp-lifetime %u\n", ctx->sequence, ctx->lsp_lifetime);
+    LOG(NORMAL, " Sequence 0x%x, lsp-lifetime %u%s\n",
+	ctx->sequence, ctx->lsp_lifetime,
+	ctx->purge ? ", Purge" : "");
 
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
@@ -1027,12 +1030,15 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:l:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
                 lspgen_print_version();
                 exit(0);
+	    case 'G':
+		ctx->purge = true;
+		break;
 	    case 'P':
 		ctx->protocol_id = key2val(proto_names, optarg);
 		if (ctx->protocol_id == PROTO_OSPF2) {
