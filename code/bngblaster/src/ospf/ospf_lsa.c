@@ -1471,6 +1471,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         lsa->age = be16toh(hdr->age)+1;
         lsa->timestamp.tv_sec = now.tv_sec;
         lsa->timestamp.tv_nsec = now.tv_sec;
+        lsa->expired = false;
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
         ospf_lsa_tree_add(lsa, NULL, ospf_interface->lsa_ack_tree[lsa->type]);
