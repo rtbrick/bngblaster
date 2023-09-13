@@ -161,7 +161,7 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
 static void
 lspgen_ctrl_encode_packet(lsdb_ctx_t *ctx, lsdb_packet_t *packet)
 {
-    struct io_buffer_ *buf;
+    struct io_buffer_ *buf, *src_buf;
     char hextable[] = "0123456789abcdef";
     uint8_t hi_byte, lo_byte;
     uint32_t idx, val;
@@ -185,9 +185,10 @@ lspgen_ctrl_encode_packet(lsdb_ctx_t *ctx, lsdb_packet_t *packet)
 	idx = 20;
     }
 
-    for (; idx < packet->buf.idx; idx++) {
-        hi_byte = packet->buf.data[idx] >> 4;
-        lo_byte = packet->buf.data[idx] & 0xf;
+    src_buf = &packet->buf[0];
+    for (; idx < src_buf->idx; idx++) {
+        hi_byte = src_buf->data[idx] >> 4;
+        lo_byte = src_buf->data[idx] & 0xf;
 
         val = (hextable[hi_byte] << 8) | hextable[lo_byte];
         push_be_uint(buf, 2, val);
@@ -285,7 +286,7 @@ lspgen_ctrl_write_cb(timer_s *timer)
         /*
 	 * Hexdumping doubles the data plus 4 bytes for two quotation marks, comma and whitespace.
 	 */
-        if (buffer_left < ((packet->buf.idx * 2) + 4)) {
+        if (buffer_left < ((packet->buf[0].idx * 2) + 4)) {
 
             /* no space, release buffer and try later */
             lspgen_write_ctrl_buffer(ctx);

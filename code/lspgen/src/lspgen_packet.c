@@ -22,45 +22,47 @@ void lspgen_serialize_ospf2_state(lsdb_attr_t *, lsdb_packet_t *, uint16_t);
 void
 lspgen_gen_isis_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
+    struct io_buffer_ *buf;
     unsigned long long sysid;
     uint8_t lsattr;
 
     /*
      * Reset buffer.
      */
-    packet->buf.data = packet->data;
-    packet->buf.start_idx = 0;
-    packet->buf.idx = 0;
-    packet->buf.size = sizeof(packet->data);
+    buf = &packet->buf[0];
+    buf->data = packet->data;
+    buf->start_idx = 0;
+    buf->idx = 0;
+    buf->size = sizeof(packet->data);
 
-    push_be_uint(&packet->buf, 1, 0x83); /* Intradomain Routeing Protocol Discriminator */
-    push_be_uint(&packet->buf, 1, 27); /* Length Indicator always 27 for LSPs */
-    push_be_uint(&packet->buf, 1, 1); /* Version/Protocol ID Extension */
-    push_be_uint(&packet->buf, 1, 0); /* ID Length */
+    push_be_uint(buf, 1, 0x83); /* Intradomain Routeing Protocol Discriminator */
+    push_be_uint(buf, 1, 27); /* Length Indicator always 27 for LSPs */
+    push_be_uint(buf, 1, 1); /* Version/Protocol ID Extension */
+    push_be_uint(buf, 1, 0); /* ID Length */
 
     /* PDU Type */
     if (ctx->topology_id.level == 1) {
-        push_be_uint(&packet->buf, 1, ISIS_PDU_L1_LSP);
+        push_be_uint(buf, 1, ISIS_PDU_L1_LSP);
     }
     if (ctx->topology_id.level == 2) {
-        push_be_uint(&packet->buf, 1, ISIS_PDU_L2_LSP);
+        push_be_uint(buf, 1, ISIS_PDU_L2_LSP);
     }
 
-    push_be_uint(&packet->buf, 1, 1); /* Version */
-    push_be_uint(&packet->buf, 1, 0); /* Reserved */
-    push_be_uint(&packet->buf, 1, 0); /* Maximum Area Addresses */
+    push_be_uint(buf, 1, 1); /* Version */
+    push_be_uint(buf, 1, 0); /* Reserved */
+    push_be_uint(buf, 1, 0); /* Maximum Area Addresses */
 
-    push_be_uint(&packet->buf, 2, 0); /* PDU length */
-    push_be_uint(&packet->buf, 2, 0); /* Remaining Lifetime  - will be overwritten during checksum calc */
+    push_be_uint(buf, 2, 0); /* PDU length */
+    push_be_uint(buf, 2, 0); /* Remaining Lifetime  - will be overwritten during checksum calc */
 
     /* LSP ID */
     sysid = read_be_uint(node->key.node_id, 6);
-    push_be_uint(&packet->buf, 6, sysid); /* System ID */
-    push_be_uint(&packet->buf, 1, 0); /* PSN # */
-    push_be_uint(&packet->buf, 1, packet->key.id); /* Fragment # */
+    push_be_uint(buf, 6, sysid); /* System ID */
+    push_be_uint(buf, 1, 0); /* PSN # */
+    push_be_uint(buf, 1, packet->key.id); /* Fragment # */
 
-    push_be_uint(&packet->buf, 4, node->sequence); /* Sequence */
-    push_be_uint(&packet->buf, 2, 0); /* Checksum */
+    push_be_uint(buf, 4, node->sequence); /* Sequence */
+    push_be_uint(buf, 2, 0); /* Checksum */
 
     lsattr = 0;
     if (ctx->topology_id.level == 1) {
@@ -75,36 +77,7 @@ lspgen_gen_isis_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t 
     if (node->attach) {
         lsattr |= 0x08;
     }
-    push_be_uint(&packet->buf, 1, lsattr); /* LSP Attributes */
-}
-
-void
-lspgen_gen_ospf2_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
-{
-    uint32_t router_id;
-
-    /*
-     * Reset buffer.
-     */
-    packet->buf.data = packet->data;
-    packet->buf.start_idx = 0;
-    packet->buf.idx = 0;
-    packet->buf.size = sizeof(packet->data);
-
-    push_be_uint(&packet->buf, 1, 2); /* Version */
-    push_be_uint(&packet->buf, 1, 4); /* Message Type: Link State Update */
-    push_be_uint(&packet->buf, 2, 0); /* Packet length - will be overwritten later */
-
-    router_id = read_be_uint(node->key.node_id, 4);
-    push_be_uint(&packet->buf, 4, router_id); /* Router ID */
-    push_be_uint(&packet->buf, 4, ctx->topology_id.area); /* Area ID */
-
-    push_be_uint(&packet->buf, 2, 0); /* Checksum - will be overwritten later */
-
-    push_be_uint(&packet->buf, 2, 0); /* Authentication Type */
-    push_be_uint(&packet->buf, 8, 0); /* Authentication */
-
-    push_be_uint(&packet->buf, 4, 0); /* # LSAs - will be overwritten later */
+    push_be_uint(buf, 1, lsattr); /* LSP Attributes */
 }
 
 void
@@ -115,7 +88,6 @@ lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *pack
 	lspgen_gen_isis_packet_header(ctx, node, packet);
 	break;
     case PROTO_OSPF2:
-	//lspgen_gen_ospf2_packet_header(ctx, node, packet);
 	break;
     default:
 	LOG_NOARG(ERROR, "Unknown protocol\n");
@@ -226,8 +198,11 @@ lspgen_calculate_isis_auth_len(lsdb_ctx_t *ctx)
 void
 lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
+    struct io_buffer_ *buf;
     uint16_t checksum, lsp_lifetime;
     uint8_t auth_len;
+
+    buf = &packet->buf[0];
 
     /*
      * Generate Authentication TLV
@@ -240,21 +215,21 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
             auth_len = 16;
         }
 
-        push_be_uint(&packet->buf, 1, ISIS_TLV_AUTH); /* Type */
-        push_be_uint(&packet->buf, 1, auth_len+1); /* Length */
-        push_be_uint(&packet->buf, 1, ctx->authentication_type);
+        push_be_uint(buf, 1, ISIS_TLV_AUTH); /* Type */
+        push_be_uint(buf, 1, auth_len+1); /* Length */
+        push_be_uint(buf, 1, ctx->authentication_type);
 
         if (ctx->authentication_type == ISIS_AUTH_SIMPLE) {
-            push_data(&packet->buf, (uint8_t *)ctx->authentication_key, auth_len);
+            push_data(buf, (uint8_t *)ctx->authentication_key, auth_len);
         }
         if (ctx->authentication_type == ISIS_AUTH_MD5) {
-            push_be_uint(&packet->buf, 8, 0);
-            push_be_uint(&packet->buf, 8, 0);
+            push_be_uint(buf, 8, 0);
+            push_be_uint(buf, 8, 0);
             /* Update PDU length field. */
-            write_be_uint(packet->data+8, 2, packet->buf.idx);
-            hmac_md5(packet->buf.data, packet->buf.idx,
+            write_be_uint(packet->data+8, 2, buf->idx);
+            hmac_md5(buf->data, buf->idx,
                 (unsigned char *)ctx->authentication_key, strlen(ctx->authentication_key),
-                packet->buf.data+packet->buf.idx-16);
+                buf->data+buf->idx-16);
         }
     }
 
@@ -274,14 +249,14 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
     /*
      * Update PDU length field.
      */
-    write_be_uint(packet->data+8, 2, packet->buf.idx);
+    write_be_uint(packet->data+8, 2, buf->idx);
 
     /*
      * Calculate Checksum
      */
-    write_be_uint(packet->data+24, 2, 0); /* reset checksum field */
-    checksum = calculate_fletcher_cksum(packet->data+12, 12, packet->buf.idx-12);
-    write_be_uint(packet->data+24, 2, checksum);
+    write_be_uint(buf->data+24, 2, 0); /* reset checksum field */
+    checksum = calculate_fletcher_cksum(buf->data+12, 12, buf->idx-12);
+    write_be_uint(buf->data+24, 2, checksum);
 }
 
 void
@@ -305,8 +280,6 @@ lspgen_finalize_ospf2_packet(__attribute__((unused))lsdb_ctx_t *ctx,
 	state |= CLOSE_LEVEL2;
     }
     lspgen_serialize_ospf2_state(NULL, packet, state);
-    memcpy(&packet->buf, &packet->bufX[0], sizeof(struct io_buffer_)); /* XXX rework */
-
 }
 
 void
@@ -449,7 +422,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
     bool subtlv_present;
     io_buffer_t *buf;
 
-    buf = &packet->buf;
+    buf = &packet->buf[0];
 
     subtlv_present = lsdb_attr_subtlvs_present(attr);
 
@@ -620,8 +593,8 @@ lspgen_propagate_buffer_down (lsdb_packet_t *packet, uint level)
 	return;
     }
 
-    cur = &packet->bufX[level];
-    next = &packet->bufX[level+1];
+    cur = &packet->buf[level];
+    next = &packet->buf[level+1];
 
     next->data = cur->data + cur->idx;
     next->size = cur->size - cur->idx;
@@ -642,8 +615,8 @@ lspgen_propagate_buffer_up (lsdb_packet_t *packet, uint level)
 	return;
     }
 
-    cur = &packet->bufX[level];
-    prev = &packet->bufX[level-1];
+    cur = &packet->buf[level];
+    prev = &packet->buf[level-1];
 
     prev->idx += cur->idx;
     cur->data += cur->idx;
@@ -748,9 +721,9 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     node = packet->parent;
     ctx = node->ctx;
 
-    buf0 = &packet->bufX[0];
-    buf1 = &packet->bufX[1];
-    buf2 = &packet->bufX[2];
+    buf0 = &packet->buf[0];
+    buf1 = &packet->buf[1];
+    buf2 = &packet->buf[2];
 
     LOG(PACKET, "  %s\n", lspgen_format_serializer_state(state));
 
@@ -1189,14 +1162,17 @@ lspgen_calculate_tlv_space(io_buffer_t *buf, uint32_t tlv_start_idx)
 void
 lspgen_reset_packet_buffer (struct lsdb_packet_ *packet)
 {
+    struct io_buffer_ *buf;
     uint idx;
 
-    packet->buf.data = packet->data;
-    packet->buf.start_idx = 0;
-    packet->buf.idx = 0;
-    packet->buf.size = sizeof(packet->data);
-    for (idx = 0; idx < MAX_MSG_LEVEL; idx++) {
-	memcpy(&packet->bufX[idx], &packet->buf, sizeof(struct io_buffer_));
+    buf = &packet->buf[0];
+
+    buf->data = packet->data;
+    buf->start_idx = 0;
+    buf->idx = 0;
+    buf->size = sizeof(packet->data);
+    for (idx = 1; idx < MAX_MSG_LEVEL; idx++) {
+	memcpy(&packet->buf[idx], buf, sizeof(struct io_buffer_));
     }
 
     /*
@@ -1379,7 +1355,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          */
         min_len = lspgen_calculate_isis_auth_len(ctx);
         min_len += attr->size + TLV_OVERHEAD;
-        if (packet && packet->buf.idx > (1465-min_len)) {
+        if (packet && packet->buf[0].idx > (1465-min_len)) {
 
             /*
             * No space left. Finalize this packet.
@@ -1400,7 +1376,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          */
         if (!packet) {
             packet = lspgen_add_packet(ctx, node, id);
-            tlv_start_idx = packet->buf.idx;
+            tlv_start_idx = packet->buf[0].idx;
         }
 
         /*
@@ -1411,15 +1387,15 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          * Start a fresh TLV ?
          */
         if ((last_attr != attr->key.attr_type) ||
-            (lspgen_calculate_tlv_space(&packet->buf, tlv_start_idx) < attr->size) ||
+            (lspgen_calculate_tlv_space(&packet->buf[0], tlv_start_idx) < attr->size) ||
 	    attr->key.start_tlv) {
-            tlv_start_idx = packet->buf.idx;
-            push_be_uint(&packet->buf, 1, attr->key.attr_type); /* Type */
-            push_be_uint(&packet->buf, 1, 0); /* Length */
+            tlv_start_idx = packet->buf[0].idx;
+            push_be_uint(&packet->buf[0], 1, attr->key.attr_type); /* Type */
+            push_be_uint(&packet->buf[0], 1, 0); /* Length */
         }
 
         lspgen_serialize_attr(ctx, attr, packet);
-        lspgen_update_tlv_length(&packet->buf, tlv_start_idx);
+        lspgen_update_tlv_length(&packet->buf[0], tlv_start_idx);
 
         last_attr = attr->key.attr_type;
 
@@ -1493,7 +1469,7 @@ lspgen_gen_ospf2_packet_node(lsdb_node_t *node)
          */
         min_len = lspgen_calculate_isis_auth_len(ctx);
         min_len += attr->size;
-        if (packet && packet->bufX[0].idx > (1440-min_len)) {
+        if (packet && packet->buf[0].idx > (1440-min_len)) {
 
             /*
 	     * No space left. Finalize this packet.

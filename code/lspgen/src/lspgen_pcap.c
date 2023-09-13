@@ -161,13 +161,13 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
 
 	    /* Account for the the faked ethernet & LLC header */
 	    eth_header_length = 17;
-	    push_le_uint(&buf, 4, packet->buf.idx+eth_header_length); /* captured packet length */
-	    push_le_uint(&buf, 4, packet->buf.idx+eth_header_length); /* original packet length */
+	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
+	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
 	    /* Fake an Ethernet & LLC header */
 	    push_be_uint(&buf, 6, 0x0180c2000014); /* Destination MAC */
 	    push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
-	    push_be_uint(&buf, 2, packet->buf.idx+3); /* Length + DSAP, SSAP, Mode */
+	    push_be_uint(&buf, 2, packet->buf[0].idx+3); /* Length + DSAP, SSAP, Mode */
 	    push_be_uint(&buf, 3, 0xfefe03); /* OSI DSAP, SSAP, Mode */
 
 	} else if (ctx->protocol_id == PROTO_OSPF2) {
@@ -176,8 +176,8 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
 
 	    /* Account for the faked Ethernet header */
 	    eth_header_length = 14;
-	    push_le_uint(&buf, 4, packet->buf.idx+eth_header_length); /* captured packet length */
-	    push_le_uint(&buf, 4, packet->buf.idx+eth_header_length); /* original packet length */
+	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
+	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
 	    /* Fake an Ethernet header */
 	    push_be_uint(&buf, 6, 0x01005e000005); /* Destination MAC */
@@ -190,8 +190,8 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
 
 	    /* Account for the faked Ethernet header */
 	    eth_header_length = 14;
-	    push_le_uint(&buf, 4, packet->buf.idx+eth_header_length); /* captured packet length */
-	    push_le_uint(&buf, 4, packet->buf.idx+eth_header_length); /* original packet length */
+	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
+	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
 	    /* Fake an Ethernet header */
 	    push_be_uint(&buf, 6, 0x333300000005); /* Destination MAC */
@@ -202,9 +202,9 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
         /*
          * Copy packet
          */
-        memcpy(&pcap_packet[buf.idx], packet->data, packet->buf.idx);
-        buf.idx += packet->buf.idx;
-        push_le_uint(&buf, calc_pad(packet->buf.idx+eth_header_length), 0); /* write pad bytes */
+        memcpy(&pcap_packet[buf.idx], packet->data, packet->buf[0].idx);
+        buf.idx += packet->buf[0].idx;
+        push_le_uint(&buf, calc_pad(packet->buf[0].idx+eth_header_length), 0); /* write pad bytes */
 
         /*
          * Calculate total length field. It occurs twice. Overwrite and append.

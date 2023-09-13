@@ -62,8 +62,8 @@ lspgen_dump_mrt_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
 	    /*
 	     * Copy packet
 	     */
-	    memcpy(&mrt_record[buf.idx], packet->data, packet->buf.idx);
-	    buf.idx += packet->buf.idx;
+	    memcpy(&mrt_record[buf.idx], packet->data, packet->buf[0].idx);
+	    buf.idx += packet->buf[0].idx;
 	    break;
 
 	case PROTO_OSPF2:
@@ -77,13 +77,13 @@ lspgen_dump_mrt_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
 	    /*
 	     * Copy packet
 	     */
-	    if (packet->buf.idx > 20) {
+	    if (packet->buf[0].idx > 20) {
 
 		/*
 		 * Skip 20 bytes of IPv4 header.
 		 */
-		memcpy(&mrt_record[buf.idx], packet->data+20, packet->buf.idx-20);
-		buf.idx += packet->buf.idx-20;
+		memcpy(&mrt_record[buf.idx], packet->data+20, packet->buf[0].idx-20);
+		buf.idx += packet->buf[0].idx-20;
 	    }
 	    break;
 

@@ -962,14 +962,14 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
          */
 	lspgen_reset_packet_buffer(&packet);
         lspgen_serialize_attr(ctx, attr, &packet);
-	attr->size = packet.buf.idx;
+	attr->size = packet.buf[0].idx;
 
 	/*
 	 * Find lowest level size.
 	 */
 	for (idx = MAX_MSG_LEVEL-1; idx; idx--) {
-	    if (packet.bufX[idx].idx) {
-		attr->size += packet.bufX[idx].idx;
+	    if (packet.buf[idx].idx) {
+		attr->size += packet.buf[idx].idx;
 		break;
 	    }
 	}
