@@ -182,7 +182,9 @@ isis_teardown()
             for(int i=0; i<ISIS_LEVELS; i++) {
                 if(instance->level[i].adjacency) {
                     isis_lsp_self_update(instance, i+1);
-                    isis_lsp_purge_all_external(instance, i+1);
+                    if(instance->config->external_purge) {
+                        isis_lsp_purge_all_external(instance, i+1);
+                    }
                 }
             }
 

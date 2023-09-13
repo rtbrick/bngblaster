@@ -342,6 +342,7 @@ typedef struct ospf_config_ {
 
     /* External */
     bool external_purge;
+    bool external_auto_refresh;
     char *external_mrt_file;
     struct ospf_external_connection_ *external_connection;
 
