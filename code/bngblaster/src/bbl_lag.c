@@ -257,6 +257,7 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             member->lacp_state = LACP_DISABLED;
             lag->interface->state = INTERFACE_UP;
             lag->active_list[lag->active_count++] = member;
+            lag->select++;
             if(CIRCLEQ_EMPTY(&lag->lag_member_qhead)) {
                 member->primary = true;
             }
