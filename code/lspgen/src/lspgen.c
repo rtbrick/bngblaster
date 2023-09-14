@@ -97,7 +97,7 @@ struct keyval_ log_names[] = {
 struct keyval_ proto_names[] = {
     { PROTO_ISIS, "isis" },
     { PROTO_OSPF2, "ospf2" },
-    //{ PROTO_OSPF3, "ospf3" },
+    { PROTO_OSPF3, "ospf3" },
     { 0, NULL}
 };
 
@@ -462,7 +462,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
 
             /* ipv6 external prefix */
             lsdb_reset_attr_template(&attr_template);
-            lspgen_store_addr(ext_addr6, attr_template.key.prefix.ipv6_prefix.address, 16);
+            lspgen_store_addr(ext_addr6, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
             attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_ext_prefix.len;
             attr_template.key.prefix.metric = 100;
             attr_template.key.attr_type = ISIS_TLV_EXTD_IPV6_REACH;
@@ -640,7 +640,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
 
 	    /*
-	     * Is this a conncetor link ?
+	     * Is this a connector link ?
 	     */
 	    if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
 		lsdb_reset_attr_template(&attr_template);
@@ -694,6 +694,176 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
             lsdb_add_node_attr(node, &attr_template);
         }
+
+    } while (dict_itor_next(itor));
+
+    dict_itor_free(itor);
+}
+
+/*
+ * Walk the graph of the LSDB and add the required node/link attributes for OSPFv3 LSP generation.
+ */
+void
+lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
+{
+    struct lsdb_node_ *node;
+    struct lsdb_link_ *link;
+    struct lsdb_attr_ attr_template;
+    dict_itor *itor;
+    __uint128_t addr, inc, ext_addr6, ext_incr6, addr_offset;
+    uint32_t ext_per_node, metric;
+
+    /*
+     * Walk the node DB.
+     */
+    itor = dict_itor_new(ctx->node_dict);
+    if (!itor) {
+        return;
+    }
+
+    /*
+     * Node DB empty ?
+     */
+    if (!dict_itor_first(itor)) {
+        dict_itor_free(itor);
+        LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    /*
+     * For external routes load the first address of the pool.
+     */
+    ext_addr6 = lspgen_load_addr((uint8_t*)&ctx->ipv6_ext_prefix.address, IPV6_ADDR_LEN);
+    ext_incr6 = lspgen_get_prefix_inc(AF_INET6, ctx->ipv6_ext_prefix.len);
+
+    do {
+        node = *dict_itor_datum(itor);
+
+	/* Host name */
+        if (node->node_name) {
+            lsdb_reset_attr_template(&attr_template);
+            attr_template.key.ordinal = 1;
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+            attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
+            strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
+            lsdb_add_node_attr(node, &attr_template);
+        }
+
+        /* IPv6 loopback prefix */
+        lsdb_reset_attr_template(&attr_template);
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
+        lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+        attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
+	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+	attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
+        lsdb_add_node_attr(node, &attr_template);
+
+        if (!ctx->no_sr) {
+	    lsdb_reset_attr_template(&attr_template);
+	    lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+	    attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
+	    attr_template.key.prefix.sid = node->node_index;
+
+            attr_template.key.ordinal = 1;
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
+	    attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX_RANGE;
+	    lsdb_add_node_attr(node, &attr_template);
+	}
+        addr += node->node_index;
+
+        /* external prefixes */
+        ext_per_node = ctx->num_ext / ctx->num_nodes;
+        while (ext_per_node--) {
+            /* ipv6 external prefix */
+            lsdb_reset_attr_template(&attr_template);
+            lspgen_store_addr(ext_addr6, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+            attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_ext_prefix.len;
+            attr_template.key.prefix.metric = 100;
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL;
+	    attr_template.key.start_tlv = true;
+            lsdb_add_node_attr(node, &attr_template);
+            ext_addr6 += ext_incr6;
+        }
+
+        if (!ctx->no_sr) {
+            /* SR capability */
+            lsdb_reset_attr_template(&attr_template);
+            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
+            addr += node->node_index;
+            lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
+            attr_template.key.cap.srgb_base = ctx->srgb_base;
+            attr_template.key.cap.srgb_range = ctx->srgb_range;
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+	    attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
+	    attr_template.key.ordinal = 1;
+            lsdb_add_node_attr(node, &attr_template);
+        }
+
+        /*
+         * Walk all of our neighbors.
+         */
+        CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
+
+	    /*
+	     * Is this a connector link ?
+	     */
+	    if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
+		lsdb_reset_attr_template(&attr_template);
+
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+
+		memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
+		memcpy(attr_template.key.link.local_node_id, link->key.local_link_id, 4);
+		attr_template.key.link.metric = link->link_metric;
+		lsdb_add_node_attr(node, &attr_template);
+		continue;
+	    }
+
+	    /*
+	     * Generate a ptp neighbor for each link
+	     * TODO Type-2 LSA handling.
+	     */
+            lsdb_reset_attr_template(&attr_template);
+
+            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
+            inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
+            addr += link->link_index * inc;
+	    addr_offset = 0;
+	    if (lspgen_load_addr(link->key.remote_node_id, 4) < lspgen_load_addr(link->key.local_node_id, 4)) {
+		addr_offset = 1;
+	    }
+
+	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_node_id, 4);
+
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+            memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
+	    metric = link->link_metric;
+	    if (metric > 65535) {
+		metric = 65535;
+	    }
+            attr_template.key.link.metric = metric;
+            lsdb_add_node_attr(node, &attr_template);
+
+            /* Generate an IPv6 prefix for each link */
+            lsdb_reset_attr_template(&attr_template);
+            lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+            attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_link_prefix.len;
+            attr_template.key.prefix.metric = metric;
+
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
+            lsdb_add_node_attr(node, &attr_template);
+	}
 
     } while (dict_itor_next(itor));
 
@@ -787,9 +957,9 @@ lspgen_compute_end_prefix6(struct ipv6_prefix_ *start_prefix, unsigned int num_p
     }
 
     prefix_inc = lspgen_get_prefix_inc(AF_INET6, start_prefix->len);
-    addr = lspgen_load_addr((uint8_t *)&start_prefix->address, 16);
+    addr = lspgen_load_addr((uint8_t *)&start_prefix->address, IPV6_ADDR_LEN);
     addr += prefix_inc * (num_prefixes-1);
-    lspgen_store_addr(addr, (uint8_t *)&end_prefix.address, 16);
+    lspgen_store_addr(addr, (uint8_t *)&end_prefix.address, IPV6_ADDR_LEN);
 
     return &end_prefix;
 }
@@ -1232,8 +1402,9 @@ main(int argc, char *argv[])
 	    lspgen_gen_isis_attr(ctx);
 	} else if (ctx->protocol_id == PROTO_OSPF2) {
 	    lspgen_gen_ospf2_attr(ctx);
+	} else if (ctx->protocol_id == PROTO_OSPF3) {
+	    lspgen_gen_ospf3_attr(ctx);
 	}
-
     }
 
     /*

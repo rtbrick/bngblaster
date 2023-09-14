@@ -181,10 +181,10 @@ lsdb_format_node(lsdb_node_t *node)
 
     if (ctx->protocol_id == PROTO_ISIS) {
         if (node->node_name) {
-            snprintf(buffer, sizeof(buffer), "%s (%s)", 
+            snprintf(buffer, sizeof(buffer), "%s (%s)",
                      lsdb_format_node_id(node->key.node_id), node->node_name);
         } else {
-            snprintf(buffer, sizeof(buffer), "%s", 
+            snprintf(buffer, sizeof(buffer), "%s",
                      lsdb_format_node_id(node->key.node_id));
         }
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
