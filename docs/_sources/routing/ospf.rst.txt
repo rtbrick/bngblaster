@@ -174,7 +174,7 @@ request PDU including OSPF common header  (``| Version | Type |``).
 .. code-block:: json
 
     {
-        "command": "ospf-lsa-update",
+        "command": "ospf-pdu-update",
         "arguments": {
             "instance": 1,
             "pdu": [

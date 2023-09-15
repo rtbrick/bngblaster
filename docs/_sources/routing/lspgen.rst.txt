@@ -53,6 +53,7 @@ The default protocol is ISIS which can be changed using the argument ``-P ospf2`
       -m --mrt-file <args>
       -c --node-count <args>
       -p --pcap-file <args>
+      -G --purge
       -f --stream-file <args>
       -s --seed <args>
       -q --sequence <args>
