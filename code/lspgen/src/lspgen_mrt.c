@@ -14,6 +14,7 @@
 
 /* https://datatracker.ietf.org/doc/html/rfc6396#section-4 */
 #define MRT_TYPE_OSPFV2 11
+#define MRT_TYPE_OSPFV3 48
 #define MRT_TYPE_ISIS   32
 
 /*
@@ -84,6 +85,30 @@ lspgen_dump_mrt_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
 		 */
 		memcpy(&mrt_record[buf.idx], packet->data+20, packet->buf[0].idx-20);
 		buf.idx += packet->buf[0].idx-20;
+	    }
+	    break;
+
+	    case PROTO_OSPF3:
+	    push_be_uint(&buf, 2, MRT_TYPE_OSPFV3); /* type */
+	    push_be_uint(&buf, 2, 0); /* subtype */
+	    push_be_uint(&buf, 4, 0); /* length, will be overwritten */
+
+	    push_be_uint(&buf, 2, 2); /* address family: ipv6 */
+	    push_be_uint(&buf, 8, 0); /* remote IP address */
+	    push_be_uint(&buf, 8, 0); /* remote IP address */
+	    push_be_uint(&buf, 8, 0); /*  local IP address */
+	    push_be_uint(&buf, 8, 0); /*  local IP address */
+
+	    /*
+	     * Copy packet
+	     */
+	    if (packet->buf[0].idx > 40) {
+
+		/*
+		 * Skip 40 bytes of IPv6 header.
+		 */
+		memcpy(&mrt_record[buf.idx], packet->data+40, packet->buf[0].idx-40);
+		buf.idx += packet->buf[0].idx-40;
 	    }
 	    break;
 
