@@ -1066,7 +1066,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf0, 2, 0); /* Payload length - will be overwritten later */
 	    push_be_uint(buf0, 1, 89); /* Next Header */
 	    push_be_uint(buf0, 1, 255); /* Hop limit */
-            push_data(buf0, (uint8_t *)&ctx->ipv6_node_prefix, IPV6_ADDR_LEN); /* Source Address */
+            push_data(buf0, (uint8_t *)&ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN); /* Source Address */
 	    push_be_uint(buf0, 8, 0xff02000000000000); /* Destination Address */
 	    push_be_uint(buf0, 8, 5); /* Destination Address */
 
