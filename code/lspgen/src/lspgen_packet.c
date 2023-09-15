@@ -1027,6 +1027,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_EXTERNAL:
 	case OSPF_LSA_OPAQUE_AREA_RI:
 	case OSPF_LSA_OPAQUE_AREA_EP:
+	case OSPF_LSA_INTRA_AREA_PREFIX:
 	    inc_be_uint(buf0->data+40+16, 4); /* Update #LSAs */
 	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update Packet length */
 	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
@@ -1131,12 +1132,28 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_pad4(buf1);
 	    break;
 
+	case OSPF_LSA_INTRA_AREA_PREFIX:
+	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+	    push_be_uint(buf1, 2, 0x2009); /* LS-Type  */
+            push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+	    router_id = read_be_uint(node->key.node_id, 4);
+	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
+	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
+	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+
+	    push_be_uint(buf1, 2, 0); /* # Prefixes - will be overwritten later */
+	    push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
+
+	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
+	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
+
+	    break;
+
 	case OSPF_LSA_OPAQUE_AREA_RI:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, 10); /* LS-Type  */
-	    push_be_uint(buf1, 1, 4); /* Opaque Type: Router-Information */
-	    push_be_uint(buf1, 3, 0); /* Opaque subtype  */
+	    push_be_uint(buf1, 2, 0x800c); /* LS-Type */
+	    push_be_uint(buf1, 4, 0); /* Link State ID (Instance ID)  */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1184,6 +1201,17 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Neighbor Router  ID */
 	    break;
 
+	case OSPF_IA_PREFIX_LSA_PREFIX:
+	    push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
+	    push_be_uint(buf2, 1, 0x00); /* Prefix Options */
+            push_be_uint(buf2, 2, attr->key.prefix.metric); /* Metric */
+	    attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
+	    push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
+	    push_pad4(buf2);
+
+	    inc_be_uint(buf1->data+20, 2); /* Update #prefixes */
+	    break;
+
 	case OSPF_TLV_HOSTNAME:
 	    attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
 	    if (attr_len) {
@@ -1206,7 +1234,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 		push_be_uint(buf2, 3, attr->key.cap.srgb_base);
 		push_pad4(buf2);
 
-		//write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
+		write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
 		push_pad4(buf2);
 	    }
 	    break;
