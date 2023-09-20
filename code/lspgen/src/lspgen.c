@@ -347,7 +347,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
     struct lsdb_attr_ attr_template;
     dict_itor *itor;
     __uint128_t addr, inc, ext_addr4, ext_incr4, ext_addr6, ext_incr6;
-    uint32_t ext_per_node, idx;
+    uint32_t ext_per_node, idx, nodes_left, ext_left;
 
     /*
      * Walk the node DB.
@@ -373,6 +373,9 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
     ext_incr4 = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_ext_prefix.len);
     ext_addr6 = lspgen_load_addr((uint8_t*)&ctx->ipv6_ext_prefix.address, IPV6_ADDR_LEN);
     ext_incr6 = lspgen_get_prefix_inc(AF_INET6, ctx->ipv6_ext_prefix.len);
+
+    nodes_left = ctx->num_nodes;
+    ext_left = ctx->num_ext;
 
     do {
         node = *dict_itor_datum(itor);
@@ -449,7 +452,8 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         lsdb_add_node_attr(node, &attr_template);
 
         /* external prefixes */
-        ext_per_node = ctx->num_ext / ctx->num_nodes;
+	ext_per_node = ext_left / nodes_left;
+	ext_left -= ext_per_node;
         while (ext_per_node--) {
             /* ipv4 external prefix */
             lsdb_reset_attr_template(&attr_template);
@@ -524,6 +528,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lsdb_add_node_attr(node, &attr_template);
         }
 
+	nodes_left--;
     } while (dict_itor_next(itor));
 
     dict_itor_free(itor);
@@ -540,7 +545,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
     struct lsdb_attr_ attr_template;
     dict_itor *itor;
     __uint128_t addr, inc, ext_addr4, ext_incr4, addr_offset;
-    uint32_t ext_per_node, metric;
+    uint32_t ext_per_node, metric, nodes_left, ext_left;
 
     /*
      * Walk the node DB.
@@ -564,6 +569,9 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
      */
     ext_addr4 = lspgen_load_addr((uint8_t*)&ctx->ipv4_ext_prefix.address, sizeof(ipv4addr_t));
     ext_incr4 = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_ext_prefix.len);
+
+    nodes_left = ctx->num_nodes;
+    ext_left = ctx->num_ext;
 
     do {
         node = *dict_itor_datum(itor);
@@ -604,7 +612,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         addr += node->node_index;
 
         /* external prefixes */
-        ext_per_node = ctx->num_ext / ctx->num_nodes;
+	ext_per_node = ext_left / nodes_left;
+	ext_left -= ext_per_node;
         while (ext_per_node--) {
             /* ipv4 external prefix */
             lsdb_reset_attr_template(&attr_template);
@@ -695,6 +704,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             lsdb_add_node_attr(node, &attr_template);
         }
 
+	nodes_left--;
     } while (dict_itor_next(itor));
 
     dict_itor_free(itor);
