@@ -463,7 +463,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 }
                 bbl_tcp_ipv4_rx(interface, eth, ipv4);
                 return;
-            } else if(ipv4->protocol == PROTOCOL_IPV4_OSPF) {
+            } else if(ipv4->protocol == PROTOCOL_IPV4_OSPF && interface->ospf_interface) {
                 ospf_handler_rx_ipv4(interface, eth, ipv4);
                 return;
             }
@@ -488,7 +488,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 }
                 bbl_tcp_ipv6_rx(interface, eth, ipv6);
                 return;
-            } else if(ipv6->protocol == IPV6_NEXT_HEADER_OSPF) {
+            } else if(ipv6->protocol == IPV6_NEXT_HEADER_OSPF && interface->ospf_interface) {
                 ospf_handler_rx_ipv6(interface, eth, ipv6);
                 return;
             }

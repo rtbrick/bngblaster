@@ -90,19 +90,19 @@ more, which is primarily driven by the single-thread performance of the given CP
 Every I/O thread will handle only one interface and direction. It is also possible to start
 multiple threads for the same interface and direction.</p>
 <p>The number of I/O threads can be configured globally for all interfaces or per interface link.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The configuration per interface link allows asymmetric thread pools. Assuming you would send
@@ -133,15 +133,15 @@ is 32 in the default configuration. Therefore each stream is limited to around 3
 This can be increased by changing the TX interval. With a TX interval of <cite>0.1</cite>, the single stream
 performance increases to 320K PPS. The max burst size is should not be increased to prevent microbursts.</p>
 <p>The following settings are recommended for most tests with 1M PPS or beyond.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>It is also recommended to increase the hardware and software queue size of your
@@ -168,64 +168,64 @@ in the corresponding <a class="reference internal" href="install.html#install-dp
 <p>The official BNG Blaster Debian release packages do not support
 <a class="reference external" href="https://www.dpdk.org/">DPDK</a>!</p>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">12</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">14</span><span class="p">,</span><span class="mi">15</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">9</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">11</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">12</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">14</span><span class="p">,</span><span class="mi">15</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">9</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">11</span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>

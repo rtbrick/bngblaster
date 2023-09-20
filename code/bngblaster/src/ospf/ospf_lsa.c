@@ -1007,6 +1007,37 @@ ospf_lsa_self_update_request(ospf_instance_s *ospf_instance)
     }
 }
 
+static protocol_error_t
+ospf_lsa_update_pdu_tx(ospf_pdu_s *pdu, uint16_t lsa_count,
+                       ospf_interface_s *ospf_interface, 
+                       ospf_neighbor_s *ospf_neighbor)
+{
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    ospf_config_s *config = ospf_instance->config;
+
+    if(lsa_count == 0) {
+        return EMPTY;
+    }
+
+    /* Update LSA count */
+    if(pdu->pdu_version == OSPF_VERSION_2) {
+        *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_LS_UPDATE_COUNT) = htobe32(lsa_count);
+    } else {
+        *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_LS_UPDATE_COUNT) = htobe32(lsa_count);
+    }
+
+    /* Update length, auth, checksum and send... */
+    ospf_pdu_update_len(pdu);
+    ospf_pdu_update_auth(pdu, config->auth_type, config->auth_key);
+    ospf_pdu_update_checksum(pdu);
+    if(ospf_pdu_tx(pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
+        ospf_interface->stats.ls_upd_tx++;
+        return PROTOCOL_SUCCESS;
+    } else {
+        return SEND_ERROR;
+    }
+}
+
 protocol_error_t
 ospf_lsa_update_tx(ospf_interface_s *ospf_interface, 
                    ospf_neighbor_s *ospf_neighbor, 
@@ -1031,6 +1062,9 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
     struct timespec ago;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
+    uint16_t lsa_start_cur;
+    uint16_t lsa_start_len;
+
     ospf_pdu_s pdu;
     ospf_pdu_init(&pdu, OSPF_PDU_LS_UPDATE, ospf_interface->version);
 
@@ -1053,6 +1087,8 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
     }
     ospf_pdu_add_u32(&pdu, 0); /* skip lsa_count */
 
+    lsa_start_cur = pdu.cur;
+    lsa_start_len = pdu.pdu_len;
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
         if(ospf_neighbor && retry) {
             /* Retry. */
@@ -1069,7 +1105,10 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
                 lsa = entry->lsa;
                 if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
                     if(lsa_count > 0 && (overhead + pdu.pdu_len + lsa->lsa_len) > interface->mtu) {
-                        break;
+                        ospf_lsa_update_pdu_tx(&pdu, lsa_count, ospf_interface, ospf_neighbor);
+                        pdu.cur = lsa_start_cur;
+                        pdu.pdu_len = lsa_start_len;
+                        lsa_count = 0;
                     }
                     ospf_lsa_update_age(entry->lsa, &now);
                     ospf_pdu_add_bytes(&pdu, lsa->lsa, lsa->lsa_len);
@@ -1092,7 +1131,10 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
                 lsa = entry->lsa;
                 if(lsa && lsa->lsa_len >= OSPF_LSA_HDR_LEN) {
                     if(lsa_count > 0 && (overhead + pdu.pdu_len + lsa->lsa_len) > interface->mtu) {
-                        break;
+                        ospf_lsa_update_pdu_tx(&pdu, lsa_count, ospf_interface, ospf_neighbor);
+                        pdu.cur = lsa_start_cur;
+                        pdu.pdu_len = lsa_start_cur;
+                        lsa_count = 0;
                     }
                     ospf_lsa_update_age(entry->lsa, &now);
                     ospf_pdu_add_bytes(&pdu, lsa->lsa, lsa->lsa_len);
@@ -1103,28 +1145,10 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
             }
         }
     }
-    if(lsa_count == 0) {
-        return EMPTY;
-    }
 
-    /* Update LSA count */
-    if(ospf_interface->version == OSPF_VERSION_2) {
-        *(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV2_OFFSET_LS_UPDATE_COUNT) = htobe32(lsa_count);
-    } else {
-        *(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV3_OFFSET_LS_UPDATE_COUNT) = htobe32(lsa_count);
-    }
-
-    /* Update length, auth, checksum and send... */
-    ospf_pdu_update_len(&pdu);
-    ospf_pdu_update_auth(&pdu, config->auth_type, config->auth_key);
-    ospf_pdu_update_checksum(&pdu);
-    if(ospf_pdu_tx(&pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
-        ospf_interface->stats.ls_upd_tx++;
-        return PROTOCOL_SUCCESS;
-    } else {
-        return SEND_ERROR;
-    }
+    return ospf_lsa_update_pdu_tx(&pdu, lsa_count, ospf_interface, ospf_neighbor);
 }
+
 
 protocol_error_t
 ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor)
@@ -1447,6 +1471,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         lsa->age = be16toh(hdr->age)+1;
         lsa->timestamp.tv_sec = now.tv_sec;
         lsa->timestamp.tv_nsec = now.tv_sec;
+        lsa->expired = false;
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
         ospf_lsa_tree_add(lsa, NULL, ospf_interface->lsa_ack_tree[lsa->type]);
@@ -1693,6 +1718,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         lsa->age = be16toh(hdr->age);
         lsa->timestamp.tv_sec = now.tv_sec;
         lsa->timestamp.tv_nsec = now.tv_sec;
+        lsa->expired = false;
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
         ospf_lsa_lifetime(lsa);

@@ -118,97 +118,97 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
 <p>Following is a basic PPPoE configuration example.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4049</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;authentication-protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PAP&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2999</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4049</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;authentication-protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CHAP&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;session-time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;max-outstanding&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;start-rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">400</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;stop-rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">400</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;discovery-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;discovery-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;mru&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1492</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user{session-global}@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;conf-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;conf-request-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;keepalive-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;keepalive-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;request-ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;request-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;request-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;conf-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;conf-request-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;conf-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;conf-request-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rapid-commit&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;access-line&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.{session-global}&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth {outer-vlan}:{inner-vlan}&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rate-up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rate-down&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv4-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv6-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv6pd-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4049</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;authentication-protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PAP&quot;</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2999</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4049</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;authentication-protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CHAP&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;session-time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;max-outstanding&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">800</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;start-rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">400</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;stop-rate&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">400</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;discovery-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;discovery-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;mru&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1492</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user{session-global}@rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;conf-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;conf-request-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;keepalive-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;keepalive-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;request-ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;request-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;request-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;conf-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;conf-request-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;conf-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;conf-request-retry&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rapid-commit&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;access-line&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.{session-global}&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth {outer-vlan}:{inner-vlan}&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rate-up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rate-down&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ipv4-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv6-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv6pd-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <section id="id2">
 <h3>PPPoE<a class="headerlink" href="#id2" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -257,7 +257,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 </section>
 <section id="ppp">
 <h3>PPP<a class="headerlink" href="#ppp" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -282,7 +282,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 </section>
 <section id="ppp-authentication">
 <h3>PPP Authentication<a class="headerlink" href="#ppp-authentication" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -323,7 +323,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 </section>
 <section id="ppp-lcp">
 <h3>PPP LCP<a class="headerlink" href="#ppp-lcp" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -372,7 +372,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 </section>
 <section id="ppp-ipcp-ipv4">
 <h3>PPP IPCP (IPv4)<a class="headerlink" href="#ppp-ipcp-ipv4" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -417,7 +417,7 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 </section>
 <section id="ppp-ip6cp-ipv6">
 <h3>PPP IP6CP (IPv6)<a class="headerlink" href="#ppp-ip6cp-ipv6" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -466,78 +466,78 @@ The value from the request is stored in the session as <code class="docutils lit
 <p>The <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> <code class="docutils literal notranslate"><span class="pre">session-info</span> <span class="pre">session-id</span> <span class="pre">&lt;id&gt;</span></code> provides
 detailed information for PPPoE sessions.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-info</span> <span class="pre">session-id</span> <span class="pre">1</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;session-information&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;session-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Established&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:01&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user1@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth 0:1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;lcp-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Opened&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipcp-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Opened&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ip6cp-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Opened&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.128.0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv4-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.3&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv4-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv6-prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1000:1::/64&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv6-delegated-prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:2000::/56&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv6-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::3&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ipv6-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bound&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::3&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10036</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10083</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-fragmented-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;total-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;verified-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv4-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv4-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv4-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv4-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv4-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv4-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv4-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv4-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv4-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv4-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv4-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv4-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;session-information&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;session-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Established&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:01&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user1@rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth 0:1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;lcp-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Opened&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipcp-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Opened&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ip6cp-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Opened&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.100.128.0&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv4-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.3&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv4-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.4&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv6-prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1000:1::/64&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv6-delegated-prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:2000::/56&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv6-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::3&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;ipv6-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::4&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Bound&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-dns1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::3&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-dns2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66::4&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10036</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10083</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-fragmented-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;total-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;verified-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv4-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv4-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;downstream-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">13</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;upstream-ipv6pd-wrong-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>

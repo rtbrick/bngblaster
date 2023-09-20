@@ -1647,13 +1647,22 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     if(json_is_object(sub)) {
 
         const char *schema[] = {
-            "mrt-file", "connections"
+            "purge", "auto-refresh", "mrt-file", "connections"
         };
         if(!schema_validate(sub, "external", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
-        
+
+        JSON_OBJ_GET_BOOL(sub, value, "isis->external", "purge");
+        if(value) {
+            isis_config->external_purge  = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_BOOL(sub, value, "isis->external", "auto-refresh");
+        if(value) {
+            isis_config->external_auto_refresh  = json_boolean_value(value);
+        }
+
         if(json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
             isis_config->external_mrt_file = strdup(s);
         }
@@ -1703,6 +1712,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         }
     }
 
+    /* Deprecated / Moved to external->auto-refresh ...*/
     JSON_OBJ_GET_BOOL(isis, value, "isis", "external-auto-refresh");
     if(value) {
         isis_config->external_auto_refresh  = json_boolean_value(value);
@@ -1832,17 +1842,28 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         ospf_config->teardown_time = OSPF_DEFAULT_TEARDOWN_TIME;
     }
 
+    ospf_config->external_purge = true;
     sub = json_object_get(ospf, "external");
     if(json_is_object(sub)) {
 
         const char *schema[] = {
-            "mrt-file", "connections"
+            "purge", "auto-refresh", "mrt-file", "connections"
         };
         if(!schema_validate(sub, "external", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
         
+        JSON_OBJ_GET_BOOL(sub, value, "ospf->external", "purge");
+        if(value) {
+            ospf_config->external_purge  = json_boolean_value(value);
+        }
+        /* TODO: Currently not supported! */
+        JSON_OBJ_GET_BOOL(sub, value, "ospf->external", "auto-refresh");
+        if(value) {
+            ospf_config->external_auto_refresh  = json_boolean_value(value);
+        }
+
         if(json_unpack(sub, "{s:s}", "mrt-file", &s) == 0) {
             ospf_config->external_mrt_file = strdup(s);
         }

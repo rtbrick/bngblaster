@@ -37,23 +37,29 @@ timer_set_expire(timer_s *timer, time_t sec, long nsec)
 static int
 timespec_compare(struct timespec *ts1, struct timespec *ts2)
 {
-    if(ts1->tv_sec < ts2->tv_sec) {
-        return -1;
+    /*
+     * gcc -O2 does a lot of clever things using setg and setl instructions
+     * if the hierarchical comparison is done like this:
+     *
+     * timespec_compare:
+     *         mov     rax, QWORD PTR [rsi]
+     *         cmp     QWORD PTR [rdi], rax
+     *         jne     .L2
+     *         mov     rax, QWORD PTR [rsi+8]
+     *         cmp     QWORD PTR [rdi+8], rax
+     * .L2:
+     *         setg    al
+     *         setl    dl
+     *         movzx   edx, dl
+     *         movzx   eax, al
+     *         sub     eax, edx
+     *         ret
+     */
+    if (ts1->tv_sec == ts2->tv_sec) {
+        return (ts1->tv_nsec > ts2->tv_nsec) - (ts1->tv_nsec < ts2->tv_nsec);
+    } else {
+        return (ts1->tv_sec > ts2->tv_sec) - (ts1->tv_sec < ts2->tv_sec);
     }
-
-    if(ts1->tv_sec > ts2->tv_sec) {
-        return +1;
-    }
-
-    if(ts1->tv_nsec < ts2->tv_nsec) {
-        return -1;
-    }
-
-    if(ts1->tv_nsec > ts2->tv_nsec) {
-        return +1;
-    }
-
-    return 0;
 }
 
 /**

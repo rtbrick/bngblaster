@@ -97,37 +97,37 @@ device under test in different deployment scenarios.</p>
 <section id="http-client">
 <h2>HTTP Client<a class="headerlink" href="#http-client" title="Permalink to this headline"></a></h2>
 <p>Following is a basic HTTP client configuration example.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
@@ -196,56 +196,56 @@ and control over the initiation and termination of HTTP client instances.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock http-clients session-id 1 | jq .
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;http-clients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.test.de&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.12&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;closed&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;response&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;minor-version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">302</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Found\r\nLocation: https://github.com/rtbrick/bngblaster\r\nContent-Length: 0\r\n\r\n&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;headers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                    </span><span class="p">{</span><span class="w"></span>
-<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Location&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                        </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/rtbrick/bngblaster&quot;</span><span class="w"></span>
-<span class="w">                    </span><span class="p">},</span><span class="w"></span>
-<span class="w">                    </span><span class="p">{</span><span class="w"></span>
-<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Content-Length&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                        </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0&quot;</span><span class="w"></span>
-<span class="w">                    </span><span class="p">}</span><span class="w"></span>
-<span class="w">                </span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.test.de&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.11&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;closed&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;response&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;minor-version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OK\r\nServer: BNG-Blaster\r\n\r\n&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;headers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">                    </span><span class="p">{</span><span class="w"></span>
-<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Server&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                        </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BNG-Blaster&quot;</span><span class="w"></span>
-<span class="w">                    </span><span class="p">}</span><span class="w"></span>
-<span class="w">                </span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;http-clients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.test.de&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.12&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;closed&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;response&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;minor-version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">302</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Found\r\nLocation: https://github.com/rtbrick/bngblaster\r\nContent-Length: 0\r\n\r\n&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;headers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Location&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/rtbrick/bngblaster&quot;</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Content-Length&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0&quot;</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.test.de&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.11&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;closed&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;response&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;minor-version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;OK\r\nServer: BNG-Blaster\r\n\r\n&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;headers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Server&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BNG-Blaster&quot;</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The output above demonstrates the responses of two HTTP client instances. However,
@@ -264,54 +264,54 @@ continue interacting with the server.</p>
 <section id="http-server">
 <h2>HTTP Server<a class="headerlink" href="#http-server" title="Permalink to this headline"></a></h2>
 <p>Following is a basic HTTP server configuration example.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10.1/24&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">],</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;eth2&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;vlan-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;N:1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10.1/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;http-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;CLIENT-1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blaster.rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SERVER&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;eth2&quot;</span>
+<span class="w">            </span><span class="nt">&quot;ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="colwidths-given docutils align-default">
