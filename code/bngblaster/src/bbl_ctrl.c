@@ -482,6 +482,9 @@ bbl_ctrl_socket_init()
     timer_add_periodic(&g_ctx->timer_root, &ctrl->main.timer, "CTRL Socket Main Timer", 0, 1000 * MSEC, ctrl, &bbl_ctrl_socket_main_job);
 
     LOG(INFO, "Opened control socket %s\n", g_ctx->ctrl_socket_path);
+
+    /* Ignore SIGPIPE */
+    signal(SIGPIPE, SIG_IGN);
     return true;
 }
 
