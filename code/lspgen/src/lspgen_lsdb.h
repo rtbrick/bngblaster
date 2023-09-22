@@ -316,8 +316,7 @@ typedef struct lsdb_packet_ {
 	uint32_t id; /* Fragment # for IS-IS, LS-Update Packet # for OSPF */
     } key;
 
-    struct io_buffer_ buf;
-    struct io_buffer_ bufX[MAX_MSG_LEVEL];
+    struct io_buffer_ buf[MAX_MSG_LEVEL];
     uint8_t data[1500]; /* fixed buffer */
     uint8_t redzone[8]; /* Overwrite detection */
 
