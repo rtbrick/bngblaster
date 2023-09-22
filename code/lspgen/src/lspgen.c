@@ -606,7 +606,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.ordinal = 1;
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
-	    attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX_RANGE;
+	    attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX;
+	    attr_template.key.attr_cp[3] = OSPF_SUBTLV_EXTENDED_PREFIX_SID;;
 	    lsdb_add_node_attr(node, &attr_template);
 	}
         addr += node->node_index;
