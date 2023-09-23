@@ -108,9 +108,9 @@ lsdb_format_proto (struct lsdb_ctx_ *ctx)
 }
 
 /*
- * IS-IS authentication type / name translation table.
+ * Authentication type / name translation table.
  */
-struct keyval_ isis_auth_names[] = {
+struct keyval_ auth_type_names[] = {
     { ISIS_AUTH_NONE, "none" },
     { ISIS_AUTH_SIMPLE, "simple" },
     { ISIS_AUTH_MD5, "md5" },
@@ -118,46 +118,56 @@ struct keyval_ isis_auth_names[] = {
 };
 
 char *
-lspgen_print_usage_arg(struct option *option)
+lspgen_print_arg_options(struct keyval_ *ptr)
 {
     static char buf[128];
-    struct keyval_ *ptr;
     int len;
 
+    len = 0;
+    buf[0] = 0;
+
+    if (!ptr) {
+	return buf;
+    }
+
+    while (ptr->key) {
+	len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
+	ptr++;
+    }
+    return buf;
+}
+
+char *
+lspgen_print_usage_arg(struct option *option)
+{
     if (option->has_arg == 1) {
 
 	/* protocol */
 	if (strcmp(option->name, "protocol") == 0) {
-            len = 0;
-            ptr = proto_names;
-            while (ptr->key) {
-                len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
-                ptr++;
-            }
-            return buf;
+	    return lspgen_print_arg_options(proto_names);
         }
 
 	/* logging */
 	if (strcmp(option->name, "log") == 0) {
-            len = 0;
-            ptr = log_names;
-            while (ptr->key) {
-                len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
-                ptr++;
-            }
-            return buf;
+	    return lspgen_print_arg_options(log_names);
         }
 
 	/* authentication-type */
         if (strcmp(option->name, "authentication-type") == 0) {
-            len = 0;
-            ptr = isis_auth_names;
-            while (ptr->key) {
-                len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
-                ptr++;
-            }
-            return buf;
+	    return lspgen_print_arg_options(auth_type_names);
         }
+
+	/* filenames */
+	if (strstr(option->name, "file")) {
+	    return " <filename>";
+	}
+
+	/* IP prefixes */
+	if (strstr(option->name, "prefix")) {
+	    return " <ip-prefix>";
+	}
+
+
         return " <args>";
     }
     return "";
@@ -202,9 +212,9 @@ get_authentication_type(char *auth_type_name)
     int idx;
 
     idx = 0;
-    while (isis_auth_names[idx].key) {
-        if (strcmp(isis_auth_names[idx].key, auth_type_name) == 0) {
-            return isis_auth_names[idx].val;
+    while (auth_type_names[idx].key) {
+        if (strcmp(auth_type_names[idx].key, auth_type_name) == 0) {
+            return auth_type_names[idx].val;
         }
         idx++;
     }
@@ -1017,7 +1027,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
-            ctx->authentication_key, val2key(isis_auth_names, ctx->authentication_type));
+            ctx->authentication_key, val2key(auth_type_names, ctx->authentication_type));
     }
     if (!ctx->no_ipv4) {
         end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_node_prefix, ctx->num_nodes);
