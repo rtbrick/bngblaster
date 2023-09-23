@@ -752,67 +752,75 @@ lsdb_format_isis_attr(struct lsdb_attr_ *attr)
     return buf;
 }
 
-struct keyval_ ospf_attr_l0_names[] = {
+/*
+ * Link State Attributes / name mappings
+ */
+struct keyval_ ospf_attr_names[] = {
     { OSPF_MSG_LSUPDATE,		"LS-Update" },
-    { 0, NULL}
-};
-
-struct keyval_ ospf_attr_l1_names[] = {
     { OSPF_LSA_ROUTER,			"Router-LSA" },
     { OSPF_LSA_EXTERNAL,		"External-LSA" },
+    { OSPF_LSA_INTRA_AREA_PREFIX,       "Intra-Area-Prefix-LSA" },
     { OSPF_LSA_OPAQUE_AREA_RI,		"Opaque-LSA-RI" },
     { OSPF_LSA_OPAQUE_AREA_EP,		"Opaque-LSA-EP" },
-    { 0, NULL}
-};
-
-struct keyval_ ospf_attr_l2_names[] = {
     { OSPF_ROUTER_LSA_LINK_PTP,		"ptp-link" },
     { OSPF_ROUTER_LSA_LINK_STUB,	"ptp-stub" },
     { OSPF_TLV_HOSTNAME,		"Hostname" },
     { OSPF_TLV_SID_LABEL_RANGE,		"SID/Label-Range" },
+    { OSPF_TLV_EXTENDED_PREFIX,		"Extended-Prefix" },
     { OSPF_TLV_EXTENDED_PREFIX_RANGE,	"Extended-Prefix-Range" },
+    { OSPF_SUBTLV_EXTENDED_PREFIX_SID,	"Prefix-SID" },
+    { OSPF_IA_PREFIX_LSA_PREFIX,	"Prefix" },
     { 0, NULL}
 };
 
 char *
-lsdb_format_ospf2_attr(struct lsdb_attr_ *attr)
+lsdb_format_ospf_attr(struct lsdb_attr_ *attr)
 {
     static char buf[128];
     int len;
-    uint attr_cp;
+    uint attr_cp, idx;
 
-    attr_cp = attr->key.attr_cp[0];
-    len = snprintf(buf, sizeof(buf), "%s", val2key(ospf_attr_l0_names, attr_cp));
-    attr_cp = attr->key.attr_cp[1];
-    if (attr_cp) {
-	len += snprintf(buf+len, sizeof(buf)-len, " %s", val2key(ospf_attr_l1_names, attr_cp));
-    }
-    attr_cp = attr->key.attr_cp[2];
-    if (attr_cp) {
-	len += snprintf(buf+len, sizeof(buf)-len, " %s", val2key(ospf_attr_l2_names, attr_cp));
-    }
+    /*
+     * Print the attribute names.
+     */
+    len = 0;
+    for (idx = 0; idx < MAX_MSG_LEVEL; idx++) {
+	attr_cp = attr->key.attr_cp[idx];
 
-    switch(attr->key.attr_cp[1]) {
-    case OSPF_LSA_EXTERNAL:
-	len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
-			format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
-			attr->key.prefix.metric);
-	break;
-    default:
-	break;
+	if (!attr_cp) {
+	    continue;
+	}
+
+	if (idx == 0) {
+	    len += snprintf(buf+len, sizeof(buf)-len, "%s", val2key(ospf_attr_names, attr_cp));
+	} else {
+	    len += snprintf(buf+len, sizeof(buf)-len, ", %s", val2key(ospf_attr_names, attr_cp));
+	}
     }
 
-    switch(attr->key.attr_cp[2]) {
-    case OSPF_ROUTER_LSA_LINK_STUB:
-	len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
-			format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
-			attr->key.prefix.metric);
-	break;
-    case OSPF_TLV_HOSTNAME:
-	len += snprintf(buf+len, sizeof(buf)-len, ": %s", attr->key.hostname);
-	break;
-    default:
-	break;
+    /*
+     * Custom attribute printing.
+     */
+    for (idx = 0; idx < MAX_MSG_LEVEL; idx++) {
+	attr_cp = attr->key.attr_cp[idx];
+
+	if (!attr_cp) {
+	    continue;
+	}
+
+	switch (attr_cp) {
+	case OSPF_ROUTER_LSA_LINK_STUB: /* fall through */
+	case OSPF_LSA_EXTERNAL:
+	    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+			    format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
+			    attr->key.prefix.metric);
+	    break;
+	case OSPF_TLV_HOSTNAME:
+	    len += snprintf(buf+len, sizeof(buf)-len, ": %s", attr->key.hostname);
+	    break;
+	default:
+	    break;
+	}
     }
 
     return buf;
@@ -824,8 +832,9 @@ lsdb_format_attr(lsdb_ctx_t *ctx, struct lsdb_attr_ *attr)
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
 	return lsdb_format_isis_attr(attr);
-    case PROTO_OSPF2:
-	return lsdb_format_ospf2_attr(attr);
+    case PROTO_OSPF2: /* fall through */
+    case PROTO_OSPF3:
+	return lsdb_format_ospf_attr(attr);
     default:
 	LOG_NOARG(ERROR, "Unknown protocol\n");
     }
@@ -980,10 +989,8 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         node->attr_count++;
 	attr->parent = node;
 
-        LOG(LSDB, "  Add attr %s to node %s (%s), size %u\n",
+        LOG(LSDB, "  Add attr %s, size %u\n",
             lsdb_format_attr(ctx, attr),
-            lsdb_format_node(node),
-            lsdb_format_node_id(node->key.node_id),
             attr->size);
 
         return attr;
