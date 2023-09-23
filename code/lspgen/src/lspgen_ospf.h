@@ -8,33 +8,38 @@
  * Copyright (C) 2015-2023, RtBrick, Inc.
  */
 
-#define OSPF_MSG_LSUPDATE          4
+/*
+ * Those codepoints are purely used for lspgen internal handling.
+ * They do not (!) represent the IANA allocated codepoints on the wire.
+ */
+enum {
+    OSPF_UNKNOWN = 0,
 
-#define OSPF_LSA_ROUTER            1
-#define OSPF_LSA_NETWORK           2
-#define OSPF_LSA_SUMMARY           3
-#define OSPF_LSA_ASBR_SUMMARY      4
-#define OSPF_LSA_EXTERNAL          5
-#define OSPF_LSA_OPAQUE_LINK       9
-#define OSPF_LSA_INTRA_AREA_PREFIX 39 /* OSPFv3 LSA Type 9*/
-#define OSPF_LSA_OPAQUE_AREA_RI  104
-#define OSPF_LSA_OPAQUE_AREA_EP  107 /* rfc 7684 */
-#define OSPF_LSA_OPAQUE_DOMAIN    11
+    /* Message Type */
+    OSPF_MSG_LSUPDATE,
 
-/* Router LSA */
-#define OSPF_ROUTER_LSA_LINK_PTP   1
-#define OSPF_ROUTER_LSA_LINK_STUB  3
+    /* LSA Type */
+    OSPF_LSA_ROUTER,
+    OSPF_LSA_EXTERNAL,
+    OSPF_LSA_INTRA_AREA_PREFIX, /* ospf3 */
+    OSPF_LSA_OPAQUE_AREA_RI,
+    OSPF_LSA_OPAQUE_AREA_EP, /* rfc 7684 */
 
-/* Opaque LSA RI TLVs*/
-#define OSPF_TLV_HOSTNAME          7
-#define OSPF_TLV_SID_LABEL_RANGE   9
+    /* OSPFv2 Router LSA subtypes */
+    OSPF_ROUTER_LSA_LINK_PTP,
+    OSPF_ROUTER_LSA_LINK_STUB,
 
-/* Opaque LSA Extended Prefix TLVs */
-#define OSPF_TLV_EXTENDED_PREFIX       12
-#define OSPF_TLV_EXTENDED_PREFIX_RANGE 2
+    /* Opaque LSA RI TLVs*/
+    OSPF_TLV_HOSTNAME,
+    OSPF_TLV_SID_LABEL_RANGE,
 
-/* Extended Prefix & Extended Prefix range subTLVs */
-#define OSPF_SUBTLV_EXTENDED_PREFIX_SID 1
+    /* Opaque LSA Extended Prefix TLVs */
+    OSPF_TLV_EXTENDED_PREFIX,
+    OSPF_TLV_EXTENDED_PREFIX_RANGE,
 
-/* Inter Area Prefix LSA */
-#define OSPF_IA_PREFIX_LSA_PREFIX  31
+    /* Extended Prefix & Extended Prefix range subTLVs */
+    OSPF_SUBTLV_EXTENDED_PREFIX_SID,
+
+    /* Inter Area Prefix LSA */
+    OSPF_IA_PREFIX_LSA_PREFIX,
+};

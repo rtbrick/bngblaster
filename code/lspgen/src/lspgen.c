@@ -390,6 +390,10 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
     do {
         node = *dict_itor_datum(itor);
 
+	LOG(LSDB, "Generating node %s (%s) attributes\n",
+            lsdb_format_node(node),
+            lsdb_format_node_id(node->key.node_id));
+
         /* Area */
         for (idx = 0; idx < ctx->num_area; idx++) {
             lsdb_reset_attr_template(&attr_template);
@@ -586,6 +590,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
     do {
         node = *dict_itor_datum(itor);
 
+        LOG(LSDB, "Generating node %s (%s) attributes\n",
+            lsdb_format_node(node),
+            lsdb_format_node_id(node->key.node_id));
+
         /* Host name */
         if (node->node_name) {
             lsdb_reset_attr_template(&attr_template);
@@ -764,6 +772,10 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
     do {
         node = *dict_itor_datum(itor);
 
+	LOG(LSDB, "Generating node %s (%s) attributes\n",
+            lsdb_format_node(node),
+            lsdb_format_node_id(node->key.node_id));
+
 	/* Host name */
         if (node->node_name) {
             lsdb_reset_attr_template(&attr_template);
@@ -778,6 +790,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
         /* IPv6 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
         addr = lspgen_load_addr((uint8_t*)&ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
+        addr += node->node_index;
         lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
         attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
 	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
@@ -798,7 +811,6 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 	    attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX_RANGE;
 	    lsdb_add_node_attr(node, &attr_template);
 	}
-        addr += node->node_index;
 #endif
 
         /* external prefixes */

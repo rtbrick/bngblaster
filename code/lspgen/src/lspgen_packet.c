@@ -834,7 +834,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
 	    /* OSPFv2 header */
 	    push_be_uint(buf0, 1, 2); /* Version */
-	    push_be_uint(buf0, 1, OSPF_MSG_LSUPDATE); /* Msg  */
+	    push_be_uint(buf0, 1, 4); /* Msg: LS-Update  */
 	    push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
 
 	    router_id = read_be_uint(node->key.node_id, 4);
@@ -863,7 +863,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_ROUTER:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, OSPF_LSA_ROUTER); /* LS-Type  */
+	    push_be_uint(buf1, 1, 1); /* LS-Type: Router-LSA  */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
@@ -1115,7 +1115,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
 	    /* OSPFv3 header */
 	    push_be_uint(buf0, 1, 3); /* Version */
-	    push_be_uint(buf0, 1, OSPF_MSG_LSUPDATE); /* Msg  */
+	    push_be_uint(buf0, 1, 4); /* Msg: LS-Update */
 	    push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
 
 	    router_id = read_be_uint(node->key.node_id, 4);
