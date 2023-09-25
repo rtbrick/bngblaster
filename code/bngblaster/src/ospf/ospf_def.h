@@ -158,6 +158,8 @@
 
 #define OSPF_MD5_DIGEST_LEN                 16
 
+#define OSPFV2_EXT_PREFIX_TLV               1
+
 typedef struct ospf_config_ ospf_config_s;
 typedef struct ospf_instance_ ospf_instance_s;
 typedef struct ospf_interface_ ospf_interface_s;
@@ -246,7 +248,21 @@ typedef enum ospf_lsa_scope_ {
     OSPF_LSA_SCOPE_AS           = 0x4
 } ospf_lsa_scope;
 
+/* OSPF Router Information (RI) TLVs */
+typedef enum ospf_ri_tlv_ {
+    OSPF_RI_TLV_RESERVED        = 0x00,
+    OSPF_RI_TLV_HOSTNAME        = 0x07,
+    OSPF_RI_TLV_SR_ALGO         = 0x08,
+    OSPF_RI_TLV_SID_LABEL_RANGE = 0x09
+} ospf_ri_tlv;
+
 /* STRUCTURES ... */
+
+typedef struct ospf_lsa_tlv_ {
+    uint16_t    type;
+    uint16_t    len;
+    uint8_t     value[];
+} __attribute__ ((__packed__)) ospf_lsa_tlv_s;
 
 typedef struct ospf_auth_header_ {
     uint16_t    reserved;
@@ -339,6 +355,10 @@ typedef struct ospf_config_ {
     uint16_t     teardown_time;
 
     const char  *hostname;
+
+    uint32_t    sr_base;
+    uint32_t    sr_range;
+    uint32_t    sr_node_sid;
 
     /* External */
     bool external_purge;

@@ -41,6 +41,16 @@ ospf_init() {
                 config->version, config->id);
             return false;
         }
+        if(!ospf_lsa_router_information_update(instance)) {
+            LOG(OSPF, "Failed to generate self originated router-information LSA for OSPFv%u instance %u\n", 
+                config->version, config->id);
+            return false;
+        }
+        if(!ospf_lsa_extended_prefix_update(instance)) {
+            LOG(OSPF, "Failed to generate self originated extended-prefix LSA for OSPFv%u instance %u\n", 
+                config->version, config->id);
+            return false;
+        }
 
         if(config->external_mrt_file) {
             if(!ospf_mrt_load(instance, config->external_mrt_file)) {

@@ -42,6 +42,12 @@ ospf_lsa_self_update(ospf_instance_s *ospf_instance);
 void
 ospf_lsa_self_update_request(ospf_instance_s *ospf_instance);
 
+bool
+ospf_lsa_router_information_update(ospf_instance_s *ospf_instance);
+
+bool
+ospf_lsa_extended_prefix_update(ospf_instance_s *ospf_instance);
+
 ospf_lsa_s *
 ospf_lsa_new(uint8_t type, ospf_lsa_key_s *key, ospf_instance_s *ospf_instance);
 

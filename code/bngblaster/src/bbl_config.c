@@ -1733,8 +1733,8 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         "instance-id", "version", "overload",
         "auth-key", "auth-type", 
         "hello-interval", "dead-interval", "lsa-retry-interval",
-        "hostname", "area",
-        "router-id", "router-priority",
+        "hostname", "area", "sr-base", "sr-range",
+        "sr-node-sid", "router-id", "router-priority",
         "teardown-time", "external"
     };
     if(!schema_validate(ospf, "ospf", schema, 
@@ -1833,6 +1833,21 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
     if(!inet_pton(AF_INET, ospf_config->area_str, &ospf_config->area)) {
         fprintf(stderr, "JSON config error: Invalid value for ospf->area\n");
         return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "sr-base", 0, 1048575);
+    if(value) {
+        ospf_config->sr_base = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "sr-range", 0, 1048575);
+    if(value) {
+        ospf_config->sr_range = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "sr-node-sid", 0, 1048575);
+    if(value) {
+        ospf_config->sr_node_sid = json_number_value(value);
     }
 
     JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "teardown-time", 0, 65535);

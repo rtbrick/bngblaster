@@ -1007,6 +1007,184 @@ ospf_lsa_self_update_request(ospf_instance_s *ospf_instance)
     }
 }
 
+/**
+ * This function adds/updates 
+ * the self originated opaque 
+ * router information LSA. 
+ *
+ * @param ospf_instance  OSPF instance
+ * @return true (success) / false (error)
+ */
+bool
+ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
+{
+    ospf_config_s *config = ospf_instance->config;
+
+    void **search = NULL;
+    dict_insert_result result;
+
+    ospf_lsa_s *lsa;
+    ospf_lsa_header_s *hdr;
+    ospf_lsa_tlv_s *tlv;
+
+    ospf_lsa_key_s key = { 
+        .id = htobe32(0x04000000), 
+        .router = config->router_id
+    };
+
+    search = hb_tree_search(ospf_instance->lsdb[OSPF_LSA_TYPE_10], &key);
+    if(search) {
+        /* Update existing LSA. */
+        lsa = *search;
+        if(lsa->lsa && lsa->lsa_buf_len && 
+           lsa->lsa_buf_len < OSPF_MAX_SELF_LSA_LEN) {
+            free(lsa->lsa);
+            lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+            lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+        }
+    } else {
+        /* Create new LSA. */
+        lsa = ospf_lsa_new(OSPF_LSA_TYPE_10, &key, ospf_instance);
+        lsa->seq = OSPF_LSA_SEQ_INIT;
+        lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+        lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+        result = hb_tree_insert(ospf_instance->lsdb[OSPF_LSA_TYPE_10], &lsa->key);
+        assert(result.inserted);
+        if(result.inserted) {
+            *result.datum_ptr = lsa;
+        } else {
+            LOG_NOARG(OSPF, "Failed to add self generated OSPF Type 10 LSA to LSDB\n");
+            return false;
+        }
+    }
+
+    lsa->source.type = OSPF_SOURCE_SELF;
+    lsa->source.router_id = config->router_id;
+    lsa->lsa_len = OSPF_LSA_HDR_LEN;
+    lsa->expired = false;
+    lsa->deleted = false;
+    hdr = (ospf_lsa_header_s*)lsa->lsa;
+    hdr->type = OSPF_LSA_TYPE_10;
+    hdr->id = key.id;
+    hdr->router = key.router;
+    hdr->seq = htobe32(lsa->seq);
+
+    tlv = (ospf_lsa_tlv_s*)(lsa->lsa+lsa->lsa_len);
+    tlv->type = htobe16(OSPF_RI_TLV_HOSTNAME);
+    tlv->len = htobe16(strlen(config->hostname));
+    strcpy((char*)tlv->value, (char*)config->hostname);
+    lsa->lsa_len += 4 + ((strlen(config->hostname)+3)&(~3));
+
+    if(config->sr_base && config->sr_node_sid && config->sr_range) {
+        tlv = (ospf_lsa_tlv_s*)(lsa->lsa+lsa->lsa_len);
+        tlv->type = htobe16(OSPF_RI_TLV_SID_LABEL_RANGE);
+        tlv->len = htobe16(12);
+        *(uint32_t*)tlv->value = htobe32(config->sr_range << 8);
+        *(uint16_t*)(tlv->value+4) = htobe16(1);
+        *(uint16_t*)(tlv->value+6) = htobe16(3);
+        *(uint32_t*)(tlv->value+8) = htobe32(config->sr_node_sid << 8);
+        lsa->lsa_len += 16;
+    }
+
+    hdr->length = htobe16(lsa->lsa_len);
+    ospf_lsa_refresh(lsa);
+
+    timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
+                       "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
+                       &ospf_lsa_refresh_job);
+    return true;
+}
+
+/**
+ * This function adds/updates 
+ * the self originated opaque 
+ * extended prefix LSA. 
+ *
+ * @param ospf_instance  OSPF instance
+ * @return true (success) / false (error)
+ */
+bool
+ospf_lsa_extended_prefix_update(ospf_instance_s *ospf_instance)
+{
+    ospf_config_s *config = ospf_instance->config;
+
+    void **search = NULL;
+    dict_insert_result result;
+
+    ospf_lsa_s *lsa;
+    ospf_lsa_header_s *hdr;
+    ospf_lsa_tlv_s *tlv;
+
+    ospf_lsa_key_s key = { 
+        .id = htobe32(0x07000000), 
+        .router = config->router_id
+    };
+
+    if(!(config->sr_base && config->sr_node_sid && config->sr_range)) {
+        return true;
+    }
+
+    search = hb_tree_search(ospf_instance->lsdb[OSPF_LSA_TYPE_10], &key);
+    if(search) {
+        /* Update existing LSA. */
+        lsa = *search;
+        if(lsa->lsa && lsa->lsa_buf_len && 
+           lsa->lsa_buf_len < OSPF_MAX_SELF_LSA_LEN) {
+            free(lsa->lsa);
+            lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+            lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+        }
+    } else {
+        /* Create new LSA. */
+        lsa = ospf_lsa_new(OSPF_LSA_TYPE_10, &key, ospf_instance);
+        lsa->seq = OSPF_LSA_SEQ_INIT;
+        lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
+        lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
+        result = hb_tree_insert(ospf_instance->lsdb[OSPF_LSA_TYPE_10], &lsa->key);
+        assert(result.inserted);
+        if(result.inserted) {
+            *result.datum_ptr = lsa;
+        } else {
+            LOG_NOARG(OSPF, "Failed to add self generated OSPF Type 10 LSA to LSDB\n");
+            return false;
+        }
+    }
+
+    lsa->source.type = OSPF_SOURCE_SELF;
+    lsa->source.router_id = config->router_id;
+    lsa->lsa_len = OSPF_LSA_HDR_LEN;
+    lsa->expired = false;
+    lsa->deleted = false;
+    hdr = (ospf_lsa_header_s*)lsa->lsa;
+    hdr->type = OSPF_LSA_TYPE_10;
+    hdr->id = key.id;
+    hdr->router = key.router;
+    hdr->seq = htobe32(lsa->seq);
+
+    tlv = (ospf_lsa_tlv_s*)(lsa->lsa+lsa->lsa_len);
+    tlv->type = htobe16(OSPFV2_EXT_PREFIX_TLV);
+    tlv->len = htobe16(20);
+    lsa->lsa_len += 24;
+
+    *tlv->value = 1;
+    *(tlv->value+1) = 32;
+    *(tlv->value+2) = 0;
+    *(tlv->value+3) = 0;
+    *(uint32_t*)(tlv->value+4) = config->router_id;
+    *(uint16_t*)(tlv->value+8) = htobe16(2);
+    *(uint16_t*)(tlv->value+10) = htobe16(8);
+    *(uint32_t*)(tlv->value+12) = 0x00;
+    *(uint64_t*)(tlv->value+12) = 0x00;
+
+    hdr->length = htobe16(lsa->lsa_len);
+    ospf_lsa_refresh(lsa);
+
+    timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
+                       "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
+                       &ospf_lsa_refresh_job);
+    return true;
+}
+
 static protocol_error_t
 ospf_lsa_update_pdu_tx(ospf_pdu_s *pdu, uint16_t lsa_count,
                        ospf_interface_s *ospf_interface, 
