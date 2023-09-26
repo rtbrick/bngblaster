@@ -21,7 +21,9 @@ enum {
     /* LSA Type */
     OSPF_LSA_ROUTER,
     OSPF_LSA_EXTERNAL,
+    OSPF_LSA_EXTERNAL6, /* ospf3*/
     OSPF_LSA_INTRA_AREA_PREFIX, /* ospf3 */
+    OSPF_LSA_E_INTRA_AREA_PREFIX, /* ospf3, rfc8362 */
     OSPF_LSA_OPAQUE_AREA_RI,
     OSPF_LSA_OPAQUE_AREA_EP, /* rfc 7684 */
 
@@ -37,8 +39,11 @@ enum {
     OSPF_TLV_EXTENDED_PREFIX,
     OSPF_TLV_EXTENDED_PREFIX_RANGE,
 
-    /* Extended Prefix & Extended Prefix range subTLVs */
-    OSPF_SUBTLV_EXTENDED_PREFIX_SID,
+    /* rfc 8362 */
+    OSPF_TLV_INTRA_AREA_PREFIX,
+
+    /* rfc 8666 */
+    OSPF_SUBTLV_PREFIX_SID,
 
     /* Inter Area Prefix LSA */
     OSPF_IA_PREFIX_LSA_PREFIX,

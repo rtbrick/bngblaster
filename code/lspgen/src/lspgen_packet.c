@@ -750,7 +750,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     /* close Level 3 */
     if (state & CLOSE_LEVEL3) {
 	switch (packet->prev_attr_cp[3]) {
-	case OSPF_SUBTLV_EXTENDED_PREFIX_SID:
+	case OSPF_SUBTLV_PREFIX_SID:
 	    write_be_uint(buf3->data+2, 2, buf3->idx-4); /* Update length */
 	    push_pad4(buf3);
 	    break;
@@ -1022,7 +1022,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     /* open Level 3 */
     if (state & OPEN_LEVEL3) {
 	switch(attr->key.attr_cp[3]) {
-	case OSPF_SUBTLV_EXTENDED_PREFIX_SID:
+	case OSPF_SUBTLV_PREFIX_SID:
 	    push_be_uint(buf3, 2, 2); /* Type */
 	    push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
 	    push_be_uint(buf3, 3, 0); /* Flags, Reserved, MT-ID */
@@ -1155,7 +1155,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 3, 0); /* Options */
 	    break;
 
-	case OSPF_LSA_EXTERNAL:
+	case OSPF_LSA_EXTERNAL6:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
             push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
