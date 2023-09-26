@@ -972,6 +972,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
          */
         node->attr_count++;
 	attr->parent = node;
+	attr->link_state_id = node->attr_count; /* Simple monotonic increasing number */
 
         LOG(LSDB, "  Add attr %s, size %u\n",
             lsdb_format_attr(ctx, attr),
