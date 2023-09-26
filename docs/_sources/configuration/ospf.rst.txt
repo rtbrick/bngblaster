@@ -46,6 +46,15 @@
    * - `area`
      - OSPF area
      - 0.0.0.0
+   * - `sr-base`
+     - OSPF SR base
+     - 
+   * - `sr-range`
+     - OSPF SR range
+     - 
+   * - `sr-node-sid`
+     - OSPF SR node SID
+     - 
    * - `teardown-time`
      - OSPF teardown time in seconds
      - 5
