@@ -880,7 +880,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 1, 0); /* Options */
 	    push_be_uint(buf1, 1, 5); /* LS-Type  */
-            push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+	    push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1095,17 +1095,17 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	switch (packet->prev_attr_cp[1]) {
 	case OSPF_LSA_ROUTER:
 	case OSPF_LSA_EXTERNAL:
+	case OSPF_LSA_EXTERNAL6:
 	case OSPF_LSA_OPAQUE_AREA_RI:
 	case OSPF_LSA_OPAQUE_AREA_EP:
 	case OSPF_LSA_INTRA_AREA_PREFIX:
-	case OSPF_LSA_E_INTRA_AREA_PREFIX:
+	case OSPF_LSA_E_INTRA_AREA_PREFIX: /* fall through */
+	default:
 	    inc_be_uint(buf0->data+40+16, 4); /* Update #LSAs */
 	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update Packet length */
 	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
 	    checksum = calculate_fletcher_cksum(buf1->data+2, 14, buf1->idx-2);
 	    write_be_uint(buf1->data+16, 2, checksum); /* Update LSA Checksum */
-	    break;
-	default:
 	    break;
 	}
 
@@ -1174,7 +1174,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x2001); /* LS-Type  */
 	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Link State ID */
+	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
 	    push_be_uint(buf1, 2, 0xffff); /* Checksum - will be overwritten later */
@@ -1187,7 +1187,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_EXTERNAL6:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
-            push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1207,7 +1207,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_INTRA_AREA_PREFIX:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x2009); /* LS-Type  */
-            push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1224,7 +1224,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_E_INTRA_AREA_PREFIX:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0xa029); /* LS-Type  */
-            push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1242,7 +1242,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_OPAQUE_AREA_RI:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x800c); /* LS-Type */
-	    push_be_uint(buf1, 4, 0); /* Link State ID (Instance ID)  */
+	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */

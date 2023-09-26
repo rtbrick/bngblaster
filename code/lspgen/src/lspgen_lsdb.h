@@ -295,6 +295,7 @@ typedef struct lsdb_attr_ {
 	};
     } key;
 
+    uint32_t link_state_id; /* OSPFv3 uses a monotonic increasing number.*/
     uint32_t size; /* on-the wire space required in bytes */
     struct lsdb_node_ *parent;
 } lsdb_attr_t;
