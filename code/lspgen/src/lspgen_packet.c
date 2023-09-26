@@ -849,7 +849,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
 	    break;
 	default:
-            LOG(ERROR, "No Level 0 open packet serializer for attr %d\n", attr->key.attr_cp[0]);
+            LOG(ERROR, "No Level 0 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[0]));
 	    return;
 	}
 
@@ -925,7 +926,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	default:
-            LOG(ERROR, "No Level 1 open packet serializer for attr %d\n", attr->key.attr_cp[1]);
+            LOG(ERROR, "No Level 1 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[1]));
 	    return;
 	}
 
@@ -1012,7 +1014,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	default:
-            LOG(ERROR, "No Level 2 open packet serializer for attr %d\n", attr->key.attr_cp[2]);
+            LOG(ERROR, "No Level 2 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[2]));
 	    return;
 	}
 
@@ -1031,7 +1034,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	default:
-            LOG(ERROR, "No Level 3 open packet serializer for attr %d\n", attr->key.attr_cp[3]);
+            LOG(ERROR, "No Level 3 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[3]));
 	    return;
 	}
 
@@ -1130,7 +1134,8 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
 	    break;
 	default:
-            LOG(ERROR, "No Level 0 open packet serializer for attr %d\n", attr->key.attr_cp[0]);
+            LOG(ERROR, "No Level 0 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[0]));
 	    return;
 	}
 
@@ -1218,7 +1223,8 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	default:
-            LOG(ERROR, "No Level 1 open packet serializer for attr %d\n", attr->key.attr_cp[1]);
+            LOG(ERROR, "No Level 1 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[1]));
 	    return;
 	}
 
@@ -1305,7 +1311,8 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    break;
 
 	default:
-            LOG(ERROR, "No Level 2 open packet serializer for attr %d\n", attr->key.attr_cp[2]);
+            LOG(ERROR, "No Level 2 open packet serializer for attr %s\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[2]));
 	    return;
 	}
 

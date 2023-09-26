@@ -48,3 +48,5 @@ enum {
     /* Inter Area Prefix LSA */
     OSPF_IA_PREFIX_LSA_PREFIX,
 };
+
+extern struct keyval_ ospf_attr_names[];
