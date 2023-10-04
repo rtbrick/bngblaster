@@ -1215,9 +1215,9 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
 	    push_be_uint(buf1, 2, 0); /* # Prefixes - will be overwritten later */
-	    push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
+	    push_be_uint(buf1, 2, 0x0001); /* # Referenced LS Type */
 
-	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
+	    push_be_uint(buf1, 4, 1); /* Referenced Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
 	    break;
 
@@ -1232,9 +1232,9 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
 	    push_be_uint(buf1, 2, 0); /* */
-	    push_be_uint(buf1, 2, 0xa021); /* # Referenced LS Type */
+	    push_be_uint(buf1, 2, 0x0001); /* # Referenced LS Type */
 
-	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
+	    push_be_uint(buf1, 4, 1); /* Referenced Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
 	    break;
 
