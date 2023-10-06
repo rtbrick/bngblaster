@@ -534,6 +534,7 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
                      uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
+    err_t err = ERR_OK;
 
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
@@ -560,7 +561,16 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
 
     /* Connect session */
     tcpc->remote_addr.u_addr.ip4.addr = *dst;
-    if(tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected) != ERR_OK) {
+    err = tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected);
+    if(err != ERR_OK) {
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) connect error %d (%s)\n",
+            tcpc->ifname,
+            format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), 
+            tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr),
+            port,
+            err, tcp_err_string(err));
+
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
@@ -596,6 +606,7 @@ bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t
                              uint16_t port)
 {
     bbl_tcp_ctx_s *tcpc;
+    err_t err = ERR_OK;
 
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
@@ -620,7 +631,16 @@ bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t
 
     /* Connect session */
     tcpc->remote_addr.u_addr.ip4.addr = *dst;
-    if(tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected) != ERR_OK) {
+    err = tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected);
+    if(err != ERR_OK) {
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) connect error %d (%s)\n",
+            tcpc->ifname,
+            format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), 
+            tcpc->local_port,
+            format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr),
+            port,
+            err, tcp_err_string(err));
+
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
@@ -658,6 +678,7 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
                      uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
+    err_t err = ERR_OK;
 
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
@@ -686,7 +707,16 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
     /* Connect session */
     memcpy(&tcpc->remote_addr.u_addr.ip6.addr, dst, sizeof(ip6_addr_t));
     tcpc->remote_addr.type = IPADDR_TYPE_V6;
-    if(tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected) != ERR_OK) {
+    err = tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected);
+    if(err != ERR_OK) {
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) connect error %d (%s)\n",
+            tcpc->ifname,
+            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
+            tcpc->local_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr),
+            port,
+            err, tcp_err_string(err));
+
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
@@ -722,6 +752,7 @@ bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t
                              uint16_t port)
 {
     bbl_tcp_ctx_s *tcpc;
+    err_t err = ERR_OK;
 
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
@@ -748,7 +779,16 @@ bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t
     /* Connect session */
     memcpy(&tcpc->remote_addr.u_addr.ip6.addr, dst, sizeof(ip6_addr_t));
     tcpc->remote_addr.type = IPADDR_TYPE_V6;
-    if(tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected) != ERR_OK) {
+    err = tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected);
+    if(err != ERR_OK) {
+        LOG(TCP, "TCP (%s %s:%u - %s:%u) connect error %d (%s)\n",
+            tcpc->ifname,
+            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
+            tcpc->local_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr),
+            port,
+            err, tcp_err_string(err));
+
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
