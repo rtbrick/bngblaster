@@ -22,6 +22,7 @@ typedef enum {
     HTTP_CLIENT_CLOSING,
     HTTP_CLIENT_CLOSED,
     HTTP_CLIENT_SESSION_DOWN,
+    HTTP_CLIENT_RETRY_WAIT,
 } __attribute__ ((__packed__)) http_state_t;
 
 typedef struct bbl_http_client_config_
