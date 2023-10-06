@@ -20,6 +20,7 @@ bbl_http_client_state_string(http_state_t state)
         case HTTP_CLIENT_CLOSING: return "closing";
         case HTTP_CLIENT_CLOSED: return "closed";
         case HTTP_CLIENT_SESSION_DOWN: return "session-down";
+        case HTTP_CLIENT_RETRY_WAIT: return "retry-wait";
         default: return "unknown";
     }
 }
@@ -160,8 +161,8 @@ bbl_http_client_connect(bbl_http_client_s *client)
     } else {
         LOG(HTTP, "HTTP (ID: %u Name: %s) connect failed\n", 
             client->session->session_id, config->name);
-
-        client->state = HTTP_CLIENT_IDLE;
+        client->state = HTTP_CLIENT_RETRY_WAIT;
+        client->timeout = rand() % 30;
     }
 }
 
@@ -242,6 +243,11 @@ bbl_http_client_job(timer_s *timer)
         case HTTP_CLIENT_CLOSING:
             bbl_http_client_disconnect(client);
             break;
+        case HTTP_CLIENT_RETRY_WAIT:
+            if(client->timeout) client->timeout--;
+            if(client->timeout == 0) {
+                client->state = HTTP_CLIENT_IDLE;
+            }
         default:
             break;
     }
