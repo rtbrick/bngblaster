@@ -2079,7 +2079,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "destination-ipv6-address", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
-        "rx-label2"
+        "rx-label2", "nat"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2352,7 +2352,21 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->rx_mpls2_label = json_number_value(value);
     }
 
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "nat");
+    if(value) {
+        stream_config->nat = json_boolean_value(value);
+    }
+
     /* Validate configuration */
+    if(stream_config->nat && stream_config->type != BBL_SUB_TYPE_IPV4) {
+        fprintf(stderr, "JSON config error: NAT support can't be enabledd for IPv6 stream %s\n", stream_config->name);
+        return false;
+    }
+    if(stream_config->nat && stream_config->direction == BBL_DIRECTION_DOWN) {
+        fprintf(stderr, "JSON config error: NAT support can't be enabledd for downstream only stream %s\n", stream_config->name);
+        return false;
+    }
+
     if(stream_config->stream_group_id == 0) {
         /* RAW stream */
         if(stream_config->type == BBL_SUB_TYPE_IPV4) {

@@ -59,6 +59,11 @@ bbl_tcp_close(bbl_tcp_ctx_s *tcpc)
             }
             tcp_close(tcpc->pcb);
         }
+        if(tcpc->sp) {
+            free(tcpc->sp);
+            tcpc->sp = NULL;
+            tcpc->sp_len = 0;
+        }
         tcpc->state = BBL_TCP_STATE_CLOSED;
         tcpc->pcb = NULL;
     }
