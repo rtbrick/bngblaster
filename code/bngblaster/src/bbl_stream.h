@@ -84,7 +84,7 @@ typedef struct bbl_stream_
 
     bbl_stream_group_s *group;
     bbl_stream_s *group_next; /* Next stream of same group */
-    bbl_stream_s *opposite; /* Opposite stream direction */
+    bbl_stream_s *reverse; /* Reverse stream direction */
 
     uint32_t session_version;
     bbl_session_s *session;

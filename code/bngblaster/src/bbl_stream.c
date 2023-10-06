@@ -628,9 +628,9 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
                 ipv4.src = network_interface->ip.address;
             }
             /* Destination address */
-            if(stream->nat && stream->opposite) {
-                ipv4.dst = stream->opposite->rx_source_ip;
-                udp.dst = stream->opposite->rx_source_port;
+            if(stream->nat && stream->reverse) {
+                ipv4.dst = stream->reverse->rx_source_ip;
+                udp.dst = stream->reverse->rx_source_port;
             } else if(stream->config->ipv4_destination_address) {
                 ipv4.dst = stream->config->ipv4_destination_address;
             } else {
@@ -1207,9 +1207,9 @@ bbl_stream_can_send(bbl_stream_s *stream)
         }
         /* NAT enabled downstream streams need to wait for upstream 
          * packet to learn translated source IP and port. */
-        if(stream->opposite && 
-           stream->opposite->rx_source_ip && 
-           stream->opposite->rx_source_port) {
+        if(stream->reverse && 
+           stream->reverse->rx_source_ip && 
+           stream->reverse->rx_source_port) {
             return true;
         }
     }
@@ -1693,8 +1693,8 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             return false;
         }
         if(stream_up && stream_down) {
-            stream_up->opposite = stream_down;
-            stream_down->opposite = stream_up;
+            stream_up->reverse = stream_down;
+            stream_down->reverse = stream_up;
         }
     }
     return true;
@@ -2269,8 +2269,8 @@ bbl_stream_json(bbl_stream_s *stream)
             json_object_set(root, "session-id", json_integer(stream->session->session_id));
             json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
         }
-        if(stream->opposite) {
-            json_object_set(root, "opposite-flow-id", json_integer(stream->opposite->flow_id));
+        if(stream->reverse) {
+            json_object_set(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
         }
     } else {
         root = json_pack("{ss* ss ss ss ss* sI sI sI sI sI sf}",
