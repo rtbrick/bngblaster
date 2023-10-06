@@ -58,6 +58,8 @@ typedef struct bbl_stream_config_
     bool     rx_mpls2;
     uint32_t rx_mpls2_label;
 
+    bool     nat;
+
     bbl_stream_config_s *next; /* Next stream config */
 } bbl_stream_config_s;
 
@@ -82,6 +84,7 @@ typedef struct bbl_stream_
 
     bbl_stream_group_s *group;
     bbl_stream_s *group_next; /* Next stream of same group */
+    bbl_stream_s *opposite; /* Opposite stream direction */
 
     uint32_t session_version;
     bbl_session_s *session;
@@ -107,6 +110,7 @@ typedef struct bbl_stream_
     bool wait;
     bool stop;
     bool reset;
+    bool nat;
     bool lag;
     bool ldp_lookup;
     uint32_t ldp_entry_version;
@@ -155,6 +159,9 @@ typedef struct bbl_stream_
     uint8_t  rx_mpls2_exp;
     uint8_t  rx_mpls2_ttl;
     uint32_t rx_mpls2_label;
+
+    uint32_t rx_source_ip;
+    uint16_t rx_source_port;
 
     bbl_access_interface_s *rx_access_interface;
     bbl_network_interface_s *rx_network_interface;

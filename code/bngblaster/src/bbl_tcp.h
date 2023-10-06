@@ -61,6 +61,9 @@ typedef struct bbl_tcp_ctx_
 
     void *arg; /* application callback argument */
 
+    uint8_t *sp; /* optional scratchpad buffer */
+    uint16_t sp_len;
+
     bbl_tcp_state_t state;
     err_t err;
 

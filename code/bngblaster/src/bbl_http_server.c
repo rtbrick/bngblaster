@@ -15,11 +15,26 @@ void
 bbl_http_server_receive_cb(void *arg, uint8_t *buf, uint16_t len)
 {
     bbl_http_server_connection_s *connection = (bbl_http_server_connection_s*)arg;
+    bbl_tcp_ctx_s *tcpc = connection->tcpc;
+    int str_len = 0;
 
     UNUSED(buf);
     UNUSED(len);
 
-    bbl_tcp_send(connection->tcpc, (uint8_t*)HTTP_SERVER_RESPONSE_STRING, sizeof(HTTP_SERVER_RESPONSE_STRING));
+    if(tcpc->af == AF_INET) {
+        if(!tcpc->sp_len) {
+            tcpc->sp = malloc(256);
+            tcpc->sp_len = 256;
+        }
+        str_len = snprintf((char*)connection->tcpc->sp, connection->tcpc->sp_len, 
+                           HTTP_SERVER_RESPONSE_STRING_IP_PORT, 
+                           format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr),
+                           tcpc->remote_port);
+
+        bbl_tcp_send(connection->tcpc, connection->tcpc->sp, str_len);
+    } else {
+        bbl_tcp_send(connection->tcpc, (uint8_t*)HTTP_SERVER_RESPONSE_STRING, sizeof(HTTP_SERVER_RESPONSE_STRING));
+    }
 }
 
 /**
