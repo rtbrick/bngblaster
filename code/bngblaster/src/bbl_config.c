@@ -1728,6 +1728,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
     int i, size;
 
     ospf_external_connection_s *connection = NULL;
+    static uint32_t interface_id = 1;
 
     const char *schema[] = {
         "instance-id", "version", "overload",
@@ -1896,7 +1897,8 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                 c = json_array_get(con, i);
 
                 const char *schema[] = {
-                    "router-id", "metric", "local-ipv4-address"
+                    "router-id", "metric", "local-ipv4-address",
+                    "local-interface-id", "neighbor-interface-id"
                 };
                 if(!schema_validate(c, "connections", schema, 
                 sizeof(schema)/sizeof(schema[0]))) {
@@ -1930,6 +1932,19 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                     } else {
                         fprintf(stderr, "JSON config error: Missing value for ospf->external->connections->local-ipv4-address\n");
                         return false;
+                    }
+                } else {
+                    JSON_OBJ_GET_NUMBER(c, value, "ospf->external->connections", "local-interface-id", 0, 4294967295);
+                    if(value) {
+                        connection->interface_id = json_number_value(value);
+                    } else {
+                        connection->interface_id = interface_id++;
+                    }
+                    JSON_OBJ_GET_NUMBER(c, value, "ospf->external->connections", "neighbor-interface-id", 0, 4294967295);
+                    if(value) {
+                        connection->neighbor_interface_id = json_number_value(value);
+                    } else {
+                        connection->neighbor_interface_id = connection->interface_id;
                     }
                 }
             }

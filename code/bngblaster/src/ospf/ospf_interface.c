@@ -225,7 +225,7 @@ ospf_interface_init(bbl_network_interface_s *interface,
     uint16_t instance_id;
     uint8_t interface_type;
 
-    static uint32_t interface_id = 1;
+    static uint32_t interface_id = 1000000;
 
     switch(version) {
         case OSPF_VERSION_2:
