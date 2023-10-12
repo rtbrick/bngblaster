@@ -324,6 +324,22 @@ typedef struct ospf_lsa_link_ {
     uint16_t    metric; /* Metric */
 } __attribute__ ((__packed__)) ospfv2_lsa_link_s;
 
+typedef struct ospfv3_lsa_prefix_ {
+    uint8_t     prefix_len;
+    uint8_t     prefix_options;
+    uint16_t    metric;
+    ipv6addr_t  prefix;
+} __attribute__ ((__packed__)) ospfv3_lsa_prefix_s;
+
+/* Link LSA Format */
+typedef struct ospfv3_lsa_link_ {
+    uint8_t     priority; /* Rtr Priority */
+    uint16_t    reserved;
+    uint8_t     options;
+    ipv6addr_t  ll_address;
+    uint32_t    prefix_count;
+} __attribute__ ((__packed__)) ospfv3_lsa_link_s;
+
 /* Intra-Area-Prefix LSA Format */
 typedef struct ospfv3_lsa_iap_ {
     uint16_t    prefix_count;
@@ -332,21 +348,14 @@ typedef struct ospfv3_lsa_iap_ {
     uint32_t    ref_router;
 } __attribute__ ((__packed__)) ospfv3_lsa_iap_s;
 
-typedef struct ospfv3_lsa_iap_prefix_ {
-    uint8_t     prefix_len;
-    uint8_t     prefix_options;
-    uint16_t    metric;
-    ipv6addr_t  prefix;
-} __attribute__ ((__packed__)) ospfv3_lsa_iap_prefix_s;
-
-typedef struct ospfv3_lsa_nbr_ {
+typedef struct ospfv3_lsa_interface_ {
     uint8_t     type;
     uint8_t     reserved;
     uint16_t    metric;
     uint32_t    interface_id;
     uint32_t    neighbor_interface_id;
     uint32_t    neighbor_router_id;
-} __attribute__ ((__packed__)) ospfv3_lsa_link_s;
+} __attribute__ ((__packed__)) ospfv3_lsa_interface_s;
 
 typedef struct ospf_lsa_key_ {
     uint32_t    id;     /* Link State ID */
@@ -545,6 +554,7 @@ typedef struct ospf_lsa_ {
     uint8_t type;
     ospf_lsa_key_s key;
     ospf_instance_s *instance;
+    ospf_interface_s *ll_scope;
 
     struct {
         ospf_lsa_source type;

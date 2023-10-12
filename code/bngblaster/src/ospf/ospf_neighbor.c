@@ -102,6 +102,11 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
                     next = hb_itor_next(itor);
                     continue;
                 }
+                if(lsa->ll_scope && lsa->ll_scope != ospf_neighbor->interface) {
+                    /* Ignore link-local scope LSA belonging to other interfaces. */
+                    next = hb_itor_next(itor);
+                    continue;
+                }
                 if((overhead + pdu.pdu_len + OSPF_LLS_HDR_LEN + OSPF_LSA_HDR_LEN) > interface->mtu) {
                     memcpy(&ospf_neighbor->dbd_lsa_next, &lsa->key, sizeof(ospf_lsa_key_s));
                     ospf_neighbor->dbd_lsa_type_next = type;
