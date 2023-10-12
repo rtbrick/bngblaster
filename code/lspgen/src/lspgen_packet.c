@@ -945,7 +945,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	switch(attr->key.attr_cp[2]) {
 	case OSPF_ROUTER_LSA_LINK_PTP:
 	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Link ID */
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_node_id, 4)); /* Link Data */
+	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Link Data */
 	    push_be_uint(buf2, 1, 1); /* Type ptp */
 	    push_be_uint(buf2, 1, 0); /* #TOS */
 	    push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
@@ -1286,8 +1286,8 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf2, 1, 1); /* Type ptp */
 	    push_be_uint(buf2, 1, 0); /* #TOS */
 	    push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_node_id, 4)); /* Interface ID */
-	    push_be_uint(buf2, 4, 0); /* Neighbor Interface ID */
+	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Interface ID */
+	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_link_id, 4)); /* Neighbor Interface ID */
 	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Neighbor Router  ID */
 	    break;
 

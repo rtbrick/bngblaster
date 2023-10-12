@@ -679,7 +679,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
 
 		memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-		memcpy(attr_template.key.link.local_node_id, link->key.local_link_id, 4);
+		memcpy(attr_template.key.link.remote_link_id, link->key.remote_link_id, 4);
+		memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
 		attr_template.key.link.metric = link->link_metric;
 		lsdb_add_node_attr(node, &attr_template);
 		continue;
@@ -699,7 +700,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 		addr_offset = 1;
 	    }
 
-	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_node_id, 4);
+	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_link_id, 4);
 
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
@@ -861,7 +862,8 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
 
 		memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-		memcpy(attr_template.key.link.local_node_id, link->key.local_link_id, 4);
+		memcpy(attr_template.key.link.remote_link_id, link->key.remote_link_id, 4);
+		memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
 		attr_template.key.link.metric = link->link_metric;
 		lsdb_add_node_attr(node, &attr_template);
 		continue;
@@ -881,7 +883,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 		addr_offset = 1;
 	    }
 
-	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_node_id, 4);
+	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_link_id, 4);
 
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
