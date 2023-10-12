@@ -1181,7 +1181,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
 	    push_be_uint(buf1, 1, 0x02); /* Flags, E */
-	    push_be_uint(buf1, 3, 0); /* Options */
+	    push_be_uint(buf1, 3, 0x13); /* Options */
 	    break;
 
 	case OSPF_LSA_EXTERNAL6:
