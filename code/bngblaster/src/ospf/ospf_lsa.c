@@ -598,7 +598,7 @@ ospf_lsa_add_interface_v3(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
                 link->type = OSPF_LSA_LINK_P2P;
                 link->reserved = 0;
                 link->metric = htobe16(ospf_interface->metric);
-                link->interface_id = ospf_interface->id;
+                link->interface_id = htobe32(ospf_interface->id);
                 link->neighbor_interface_id = ospf_neighbor->id;
                 link->neighbor_router_id = ospf_neighbor->router_id;
                 lsa->lsa_len += sizeof(ospfv3_lsa_link_s);
@@ -674,6 +674,7 @@ ospf_lsa_prefix_v3(ospf_instance_s *ospf_instance)
     lsa->lsa_len += sizeof(ospfv3_lsa_iap_s);
     iap->prefix_count = 0;
     iap->ref_type = htobe16(0x2001); /* referenced to router LSA */
+    iap->ref_id = config->router_id;
     iap->ref_router = config->router_id;
 
     while(ospf_interface) {
@@ -690,13 +691,15 @@ ospf_lsa_prefix_v3(ospf_instance_s *ospf_instance)
     /* Add external connections */
     external_connection = config->external_connection;
     while(external_connection && lsa->lsa_len + sizeof(ospfv3_lsa_iap_prefix_s) <= lsa->lsa_buf_len) {
-        prefix = (ospfv3_lsa_iap_prefix_s*)(lsa->lsa+lsa->lsa_len);
-        prefix->prefix_len = external_connection->ipv6.len;
-        prefix->prefix_options = 0;
-        prefix->metric = htobe16(external_connection->metric);
-        memcpy(prefix->prefix, external_connection->ipv6.address, sizeof(ipv6addr_t));
-        lsa->lsa_len += (sizeof(ospfv3_lsa_iap_prefix_s) - (sizeof(ipv6addr_t)-BITS_TO_BYTES(prefix->prefix_len)));
-        prefixes++;
+        if(external_connection->ipv6.len) {
+            prefix = (ospfv3_lsa_iap_prefix_s*)(lsa->lsa+lsa->lsa_len);
+            prefix->prefix_len = external_connection->ipv6.len;
+            prefix->prefix_options = 0;
+            prefix->metric = htobe16(external_connection->metric);
+            memcpy(prefix->prefix, external_connection->ipv6.address, sizeof(ipv6addr_t));
+            lsa->lsa_len += (sizeof(ospfv3_lsa_iap_prefix_s) - (sizeof(ipv6addr_t)-BITS_TO_BYTES(prefix->prefix_len)));
+            prefixes++;
+        }
         external_connection = external_connection->next;
     }
 
@@ -717,7 +720,7 @@ ospf_lsa_links_v3(ospf_lsa_s *lsa)
     ospfv3_lsa_link_s *link;
 
     /* Options */
-    *(uint16_t*)(lsa->lsa+lsa->lsa_len) = 0; 
+    *(uint16_t*)(lsa->lsa+lsa->lsa_len) = OSPF_OPTION_IPV6_BIT|OSPF_OPTION_E_BIT|OSPF_OPTION_R_BIT;; 
     lsa->lsa_len += sizeof(uint16_t);
 
     /* Add OSPF neighbor interfaces */
@@ -735,8 +738,8 @@ ospf_lsa_links_v3(ospf_lsa_s *lsa)
         link->type = OSPF_LSA_LINK_P2P;
         link->reserved = 0;
         link->metric = htobe16(external_connection->metric);
-        link->interface_id = external_connection->interface_id;
-        link->neighbor_interface_id = external_connection->neighbor_interface_id;
+        link->interface_id = htobe32(external_connection->interface_id);
+        link->neighbor_interface_id = htobe32(external_connection->neighbor_interface_id);
         link->neighbor_router_id = external_connection->router_id;
         lsa->lsa_len += sizeof(ospfv3_lsa_link_s);
         external_connection = external_connection->next;
@@ -1920,6 +1923,12 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
         ospf_lsa_lifetime(lsa);
+
+        if(ospf_instance->config->external_auto_refresh) {
+            timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
+                               "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
+                               &ospf_lsa_refresh_job);
+        }
     }
     return true;
 }
