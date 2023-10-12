@@ -99,7 +99,9 @@ ospf_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
 
     database = json_array();
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
-        ospf_ctrl_append_database_entries(ospf_instance->lsdb[type], database, &now);
+        if(hb_tree_count(ospf_instance->lsdb[type])) { 
+            ospf_ctrl_append_database_entries(ospf_instance->lsdb[type], database, &now);
+        }
     }
     root = json_pack("{ss si so}",
                      "status", "ok",

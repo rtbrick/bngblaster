@@ -13,7 +13,7 @@
 #define OSPFv3_MRT_TYPE 48
 
 #define OSPFv2_MRT_PDU_OFFSET 8
-#define OSPFv3_MRT_PDU_OFFSET 36
+#define OSPFv3_MRT_PDU_OFFSET 34
 
 typedef struct ospf_mrt_hdr_ {
     uint32_t  timestamp;

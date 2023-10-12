@@ -83,6 +83,9 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
         /* Add LSA header */
         ospf_neighbor->dbd_more = false;
         for(type = ospf_neighbor->dbd_lsa_type_start; type < OSPF_LSA_TYPE_MAX; type++) {
+            if(hb_tree_count(ospf_instance->lsdb[type]) == 0){ 
+                continue;
+            }
             itor = hb_itor_new(ospf_instance->lsdb[type]);
             if(type == ospf_neighbor->dbd_lsa_type_start) {
                 next = hb_itor_search_ge(itor, &ospf_neighbor->dbd_lsa_start);
@@ -533,7 +536,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
 
-        if(hdr->type < OSPF_LSA_TYPE_1 || hdr->type > OSPF_LSA_TYPE_11) {
+        if(hdr->type < OSPF_LSA_TYPE_1 || hdr->type > OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
             ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
             return;

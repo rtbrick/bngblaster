@@ -214,6 +214,9 @@ ospf_lsa_gc_job(timer_s *timer)
     dict_remove_result removed;
 
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+        if(hb_tree_count(ospf_instance->lsdb[type]) == 0) { 
+            continue;
+        }
         delete_list_len = 0;
         itor = hb_itor_new(ospf_instance->lsdb[type]);
         next = hb_itor_first(itor);
@@ -460,7 +463,12 @@ ospf_lsa_purge_all_external(ospf_instance_s *ospf_instance)
     uint8_t type;
 
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
-        if(!ospf_instance->lsdb[type]) continue;
+        if(!ospf_instance->lsdb[type]) {
+            continue;
+        }
+        if(hb_tree_count(ospf_instance->lsdb[type]) == 0) { 
+            continue;
+        }
         itor = hb_itor_new(ospf_instance->lsdb[type]);
         next = hb_itor_first(itor);
         while(next) {
@@ -728,7 +736,7 @@ ospf_lsa_links_v3(ospf_lsa_s *lsa)
         link->reserved = 0;
         link->metric = htobe16(external_connection->metric);
         link->interface_id = external_connection->interface_id;
-        link->neighbor_interface_id = external_connection->router_id;
+        link->neighbor_interface_id = external_connection->neighbor_interface_id;
         link->neighbor_router_id = external_connection->router_id;
         lsa->lsa_len += sizeof(ospfv3_lsa_link_s);
         external_connection = external_connection->next;
@@ -1271,6 +1279,9 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
         if(ospf_neighbor && retry) {
             /* Retry. */
             tree = ospf_neighbor->lsa_retry_tree[type];
+            if(hb_tree_count(tree) == 0){ 
+                continue;
+            }
             itor = hb_itor_new(tree);
             next = hb_itor_first(itor);
             while(next) {
@@ -1302,6 +1313,9 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
                 tree = ospf_neighbor->lsa_update_tree[type];
             } else {
                 tree = ospf_interface->lsa_flood_tree[type];
+            }
+            if(hb_tree_count(tree) == 0){ 
+                continue;
             }
             search = hb_tree_search_gt(tree, &g_lsa_key_zero);
             while(search) {
@@ -1370,6 +1384,9 @@ ospf_lsa_req_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
     }
     for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
         tree = ospf_neighbor->lsa_request_tree[type];
+        if(hb_tree_count(tree) == 0){ 
+            continue;
+        }
         itor = hb_itor_new(tree);
         next = hb_itor_first(itor);
         while(next) {
@@ -1456,6 +1473,9 @@ ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
         } else {
             /* Delayed LS ack */
             tree = ospf_interface->lsa_ack_tree[type];
+        }
+        if(hb_tree_count(tree) == 0){ 
+            continue;
         }
         search = hb_tree_search_gt(tree, &g_lsa_key_zero);
         while(search) {
@@ -1559,7 +1579,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         lsa_id = hdr->id;
         lsa_router = hdr->router;
 
-        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_11) {
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
             return;
         }
@@ -1725,7 +1745,7 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
             lsa_type = *OSPF_PDU_CURSOR(pdu);
             OSPF_PDU_CURSOR_INC(pdu, 1);
         }
-        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_11) {
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
             break;
         }
@@ -1806,7 +1826,7 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
         key = (ospf_lsa_key_s*)&hdr_a->id;
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
 
-        if(hdr_a->type < OSPF_LSA_TYPE_1 || hdr_a->type > OSPF_LSA_TYPE_11) {
+        if(hdr_a->type < OSPF_LSA_TYPE_1 || hdr_a->type > OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "invalid LSA type");
             return;
         }
@@ -1848,13 +1868,13 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         key = (ospf_lsa_key_s*)&hdr->id;
 
         lsa_type = hdr->type;
-        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_11) {
-            LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA type)\n");
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
+            LOG(ERROR, "Failed to decode external OSPF LSA (invalid LSA type %u)\n", lsa_type);
             return false;
         }
         lsa_len = be16toh(hdr->length);
         if(lsa_len > len) {
-            LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA len)\n");
+            LOG(ERROR, "Failed to decode external OSPF LSA (invalid LSA len %u)\n", lsa_len);
             return false;
         }
 
