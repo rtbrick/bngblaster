@@ -291,6 +291,7 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
 		   sizeof(link_template.key.remote_node_id));
             memcpy(&link_template.key.local_link_id, ctx->connector[idx].local_link_id,
 		   sizeof(link_template.key.local_link_id));
+	    link_template.key.remote_link_id[3] = idx+1;
 	    link_template.key.remote_node_id[7] = CONNECTOR_MARKER;
             link_template.link_metric = 100;
             lsdb_add_link(ctx, node, &link_template);

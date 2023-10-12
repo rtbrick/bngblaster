@@ -788,7 +788,14 @@ lsdb_format_ospf_attr(struct lsdb_attr_ *attr)
 	}
 
 	switch (attr_cp) {
-	case OSPF_ROUTER_LSA_LINK_STUB: /* fall through */
+	case OSPF_ROUTER_LSA_LINK_PTP:
+	    len += snprintf(buf+len, sizeof(buf)-len, " rmt-node %s, lcl-link %s, rmt-link %s",
+			    format_ipv4_address((uint32_t*)&attr->key.link.remote_node_id),
+			    format_ipv4_address((uint32_t*)&attr->key.link.local_link_id),
+			    format_ipv4_address((uint32_t*)&attr->key.link.remote_link_id));
+	    break;
+	case OSPF_ROUTER_LSA_LINK_STUB:
+	    /* fall through */
 	case OSPF_LSA_EXTERNAL:
 	    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
 			    format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
