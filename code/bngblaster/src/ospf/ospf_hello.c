@@ -146,7 +146,7 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
     ospf_pdu_add_u32(&pdu, ospf_interface->id);
     ospf_pdu_add_u8(&pdu, config->router_priority);
     ospf_pdu_add_u16(&pdu, 0); /* first two option bytes */
-    options |= OSPF_OPTION_E_BIT;
+    options |= OSPF_OPTION_IPV6_BIT|OSPF_OPTION_E_BIT|OSPF_OPTION_R_BIT;
     ospf_pdu_add_u8(&pdu, options);
     ospf_pdu_add_u16(&pdu, config->hello_interval);
     ospf_pdu_add_u16(&pdu, config->dead_interval);

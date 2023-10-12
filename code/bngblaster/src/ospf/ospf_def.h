@@ -49,7 +49,10 @@
 #define OSPF_TX_BUF_LEN                     1500
 #define OSPF_MAX_SELF_LSA_LEN               UINT16_MAX
 
+#define OSPF_OPTION_IPV6_BIT                0x01
 #define OSPF_OPTION_E_BIT                   0x02
+#define OSPF_OPTION_R_BIT                   0x10
+
 #define OSPF_OPTION_LLS_BIT                 0x10
 
 #define OSPF_DEFAULT_TEARDOWN_TIME          5
