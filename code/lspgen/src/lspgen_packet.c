@@ -178,6 +178,33 @@ calculate_cksum(uint8_t *buf, uint16_t len)
 }
 
 /*
+ * Calculate an ospf3 checksum including the pseudoheader as per
+ *   https://www.rfc-editor.org/rfc/rfc2460#page-27
+ *
+ * Expects the IPv6 header at the beginning of buf and a correctly set packet length field.
+ */
+uint16_t
+calculate_ospf3_cksum(uint8_t *buf, uint16_t len)
+{
+    uint32_t cksum;
+    uint8_t protocol[4] = {0, 0, 0, 89} ; /* Protocol pseudoheader */
+
+    if (len < 40) {
+	return 0;
+    }
+
+    cksum = 0;
+    cksum += _checksum(buf+8, 16);   /* source-ip */
+    cksum += _checksum(buf+24, 16);  /* destination-ip */
+    cksum += _checksum(buf+4, 2);    /* packet-length */
+    cksum += _checksum(protocol, 4); /* protocol */
+
+    cksum += _checksum(buf+40, len-40);
+
+    return ~_fold(cksum);
+}
+
+/*
  * Calculate the size of the authentication data to be inserted.
  * Helper for calculating when to start a new packet.
  */
@@ -1117,8 +1144,8 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	switch (packet->prev_attr_cp[0]) {
 	    case OSPF_MSG_LSUPDATE:
 		write_be_uint(buf0->data+40+2, 2, buf0->idx - 40); /* Packet length */
-		write_be_uint(buf0->data+40+12, 2, calculate_cksum(buf0->data+40, buf0->idx-40)); /* Checksum */
 		write_be_uint(buf0->data+4, 2, buf0->idx - 40); /* Payload length */
+		write_le_uint(buf0->data+40+12, 2, calculate_ospf3_cksum(buf0->data, buf0->idx)); /* Checksum */
 		break;
 	default:
 	    break;
