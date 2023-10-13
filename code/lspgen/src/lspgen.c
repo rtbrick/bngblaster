@@ -898,18 +898,24 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 	    attr_template.link_state_id = 1;
 	    lsdb_add_node_attr(node, &attr_template);
 
-#if 0
             /* Generate an IPv6 prefix for each link */
             lsdb_reset_attr_template(&attr_template);
-            lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+
+            addr = lspgen_load_addr(ctx->ipv6_link_prefix.address, IPV6_ADDR_LEN);
+            inc = lspgen_get_prefix_inc(AF_INET6, ctx->ipv6_link_prefix.len);
+            addr += link->link_index * inc;
+            lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
             attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_link_prefix.len;
+	    metric = link->link_metric;
+	    if (metric > 65535) {
+		metric = 65535;
+	    }
             attr_template.key.prefix.metric = metric;
 
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
 	    attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
             lsdb_add_node_attr(node, &attr_template);
-#endif
 	}
 
 	nodes_left--;

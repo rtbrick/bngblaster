@@ -801,6 +801,9 @@ lsdb_format_ospf_attr(struct lsdb_attr_ *attr)
 			    format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
 			    attr->key.prefix.metric);
 	    break;
+	case OSPF_LSA_INTRA_AREA_PREFIX:
+	case OSPF_LSA_E_INTRA_AREA_PREFIX:
+	    /* fall through */
 	case OSPF_LSA_EXTERNAL6:
 	    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
 			    format_ipv6_prefix(&attr->key.prefix.ipv6_prefix),
