@@ -2312,6 +2312,8 @@ bbl_stream_json(bbl_stream_s *stream)
     char *access_interface_name = NULL;
     char *network_interface_name = NULL;
     char *a10nsp_interface_name = NULL;
+    char *src_address = NULL;
+    char *dst_address = NULL;
 
     if(!stream) {
         return NULL;
@@ -2326,13 +2328,25 @@ bbl_stream_json(bbl_stream_s *stream)
     if(stream->a10nsp_interface) {
         a10nsp_interface_name = stream->a10nsp_interface->name;
     }
+    if(stream->ipv6_src && stream->ipv6_dst) {
+        src_address = format_ipv6_address((ipv6addr_t*)stream->ipv6_src);
+        dst_address = format_ipv6_address((ipv6addr_t*)stream->ipv6_dst);
+    } else {
+        src_address = format_ipv4_address(&stream->ipv4_src);
+        dst_address = format_ipv4_address(&stream->ipv4_dst);
+    }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{ss* ss ss ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI}",
+        root = json_pack("{ss* ss ss ss ss sI ss sI ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI}",
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
+            "source-address", src_address,
+            "source-port", (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) ? stream->config->dst_port : stream->config->src_port,
+            "destination-address", dst_address,
+            "destination-port", (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) ? stream->config->src_port : stream->config->dst_port,
+            "protocol", stream->tcp ? "tcp" : "udp",
             "access-interface", access_interface_name,
             "network-interface", network_interface_name,
             "a10nsp-interface", a10nsp_interface_name,
