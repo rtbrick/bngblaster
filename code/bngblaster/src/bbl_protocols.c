@@ -85,6 +85,18 @@ bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len
     return ~_fold(result);
 }
 
+uint16_t
+bbl_ipv4_tcp_checksum(uint32_t src, uint32_t dst, uint8_t *tcp, uint16_t tcp_len)
+{
+    uint32_t result;
+    result  = htobe16(PROTOCOL_IPV4_TCP);
+    result += htobe16(tcp_len);
+    result += _checksum(&src, sizeof(src));
+    result += _checksum(&dst, sizeof(dst));
+    result += _checksum(tcp, tcp_len);
+    return ~_fold(result);
+}
+
 static uint16_t
 bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp_len)
 {
@@ -95,6 +107,18 @@ bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp
     result += _checksum(dst, sizeof(ipv6addr_t));
     result += _checksum(udp, 6);
     result += _checksum(udp+8, udp_len-8);
+    return ~_fold(result);
+}
+
+uint16_t
+bbl_ipv6_tcp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *tcp, uint16_t tcp_len)
+{
+    uint32_t result;
+    result  = htobe16(IPV6_NEXT_HEADER_TCP);
+    result += htobe16(tcp_len);
+    result += _checksum(src, sizeof(ipv6addr_t));
+    result += _checksum(dst, sizeof(ipv6addr_t));
+    result += _checksum(tcp, tcp_len);
     return ~_fold(result);
 }
 
@@ -796,6 +820,43 @@ encode_udp(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_raw_tcp
+ */
+static protocol_error_t
+encode_raw_tcp(uint8_t *buf, uint16_t *len,
+                 bbl_udp_s *udp)
+{
+    protocol_error_t result = ENCODE_ERROR;
+
+    *(uint16_t*)buf = htobe16(udp->src);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = htobe16(udp->dst);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+
+    *(uint32_t*)buf = htobe32(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint32_t*)buf = htobe32(1);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    *buf = 0x50; /* Set header length to 20 */
+    *(buf+1) = 0x02; /* Set SYN bit */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    *(uint16_t*)buf = 0xff; /* Set max window size */
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+
+    /* Add protocol */
+    switch(udp->protocol) {
+        case UDP_PROTOCOL_BBL:
+            result = encode_bbl(buf, len, (bbl_bbl_s*)udp->next);
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
+/*
  * encode_icmpv6
  */
 static protocol_error_t
@@ -1078,6 +1139,10 @@ encode_ipv6(uint8_t *buf, uint16_t *len,
                 *(uint16_t*)(buf + 6) = bbl_ipv6_udp_checksum(ipv6->src, ipv6->dst, buf, ipv6_len);
             }
             break;
+        case IPV6_NEXT_HEADER_TCP:
+            result = encode_raw_tcp(buf, len, (bbl_udp_s*)ipv6->next);
+            ipv6_len = *len - ipv6_len;
+            break;
         case IPV6_NEXT_HEADER_OSPF:
             result = encode_ospf(buf, len, (bbl_ospf_s*)ipv6->next);
             ipv6_len = *len - ipv6_len;
@@ -1172,6 +1237,9 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
                 /* Update UDP checksum */
                 *(uint16_t*)(buf + 6) = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
             }
+            break;
+        case PROTOCOL_IPV4_TCP:
+            result = encode_raw_tcp(buf, len, (bbl_udp_s*)ipv4->next);
             break;
         case PROTOCOL_IPV4_OSPF:
             result = encode_ospf(buf, len, (bbl_ospf_s*)ipv4->next);
@@ -2981,13 +3049,13 @@ decode_bbl(uint8_t *buf, uint16_t len,
 {
     bbl_bbl_s *bbl;
 
-    if(len < 48 || sp_len < sizeof(bbl_bbl_s)) {
+    if(len < BBL_HEADER_LEN || sp_len < sizeof(bbl_bbl_s)) {
         return DECODE_ERROR;
     }
 
-    if(len > 48) {
+    if(len > BBL_HEADER_LEN) {
         /* Bump padding... */
-        BUMP_BUFFER(buf, len, (len - 48));
+        BUMP_BUFFER(buf, len, (len - BBL_HEADER_LEN));
     }
 
     if(*(uint64_t*)buf != BBL_MAGIC_NUMBER) {
@@ -3272,13 +3340,14 @@ decode_udp(uint8_t *buf, uint16_t len,
 static protocol_error_t
 decode_tcp(uint8_t *buf, uint16_t len,
            uint8_t *sp, uint16_t sp_len,
+           bbl_ethernet_header_s *eth,
            bbl_tcp_s **_tcp)
 {
     protocol_error_t ret_val = PROTOCOL_SUCCESS;
 
     bbl_tcp_s *tcp;
 
-    if(len < 20 || sp_len < sizeof(bbl_tcp_s)) {
+    if(len < TCP_HDR_LEN_MIN || sp_len < sizeof(bbl_tcp_s)) {
         return DECODE_ERROR;
     }
 
@@ -3286,10 +3355,14 @@ decode_tcp(uint8_t *buf, uint16_t len,
     tcp = (bbl_tcp_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_tcp_s));
 
     tcp->src = be16toh(*(uint16_t*)buf);
-    BUMP_BUFFER(buf, len, sizeof(uint16_t));
-    tcp->dst = be16toh(*(uint16_t*)buf);
-    BUMP_BUFFER(buf, len, sizeof(uint16_t));
+    tcp->dst = be16toh(*(uint16_t*)(buf+sizeof(uint16_t)));
+    BUMP_BUFFER(buf, len, TCP_HDR_LEN_MIN);
 
+    /* Try if payload could be decoded as BBL! 
+     * This fails fast if the 64 bit magic number 
+     * is not found on the expected position. */
+    decode_bbl(buf, len, sp, sp_len, (bbl_bbl_s**)&eth->bbl);
+    
     *_tcp = tcp;
     return ret_val;
 }
@@ -3386,7 +3459,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
             ret_val = decode_udp(buf, len, sp, sp_len, eth, (bbl_udp_s**)&ipv6->next);
             break;
         case IPV6_NEXT_HEADER_TCP:
-            ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_s**)&ipv6->next);
+            ret_val = decode_tcp(buf, len, sp, sp_len, eth, (bbl_tcp_s**)&ipv6->next);
             break;
         case IPV6_NEXT_HEADER_OSPF:
             ret_val = decode_ospf(buf, len, sp, sp_len, (bbl_ospf_s**)&ipv6->next);
@@ -3502,7 +3575,7 @@ decode_ipv4(uint8_t *buf, uint16_t len,
             ret_val = decode_udp(buf, len, sp, sp_len, eth, (bbl_udp_s**)&ipv4->next);
             break;
         case PROTOCOL_IPV4_TCP:
-            ret_val = decode_tcp(buf, len, sp, sp_len, (bbl_tcp_s**)&ipv4->next);
+            ret_val = decode_tcp(buf, len, sp, sp_len, eth, (bbl_tcp_s**)&ipv4->next);
             break;
         case PROTOCOL_IPV4_OSPF:
             ret_val = decode_ospf(buf, len, sp, sp_len, (bbl_ospf_s**)&ipv4->next);

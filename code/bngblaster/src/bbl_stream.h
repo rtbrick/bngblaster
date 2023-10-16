@@ -59,6 +59,7 @@ typedef struct bbl_stream_config_
     uint32_t rx_mpls2_label;
 
     bool     nat;
+    bool     raw_tcp; /* Pseudo TCP Streams*/
 
     bbl_stream_config_s *next; /* Next stream config */
 } bbl_stream_config_s;
@@ -101,8 +102,14 @@ typedef struct bbl_stream_
     bbl_interface_s *tx_interface; /* TX interface */
     uint8_t *tx_buf; /* TX buffer */
     uint16_t tx_len; /* TX length */
+    uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
     uint64_t tx_interval; /* TX interval in nsec */
     __time_t tx_first_epoch;
+
+    uint32_t ipv4_src;
+    uint32_t ipv4_dst;
+    uint8_t *ipv6_src;
+    uint8_t *ipv6_dst;
 
     bool threaded;
     bool session_traffic;
@@ -111,6 +118,7 @@ typedef struct bbl_stream_
     bool stop;
     bool reset;
     bool nat;
+    bool tcp;
     bool lag;
     bool ldp_lookup;
     uint32_t ldp_entry_version;

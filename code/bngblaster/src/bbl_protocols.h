@@ -269,6 +269,8 @@
 #define CMF_MD_NAME_FORMAT_STRING       4
 #define CMF_MA_NAME_FORMAT_STRING       2
 
+#define TCP_HDR_LEN_MIN                 20
+
 #define MAX_VLANS                       3
 
 #define BUMP_BUFFER(_buf, _len, _size) \
@@ -1022,6 +1024,12 @@ packet_is_bbl(uint8_t *buf, uint16_t len);
 
 uint16_t
 bbl_checksum(uint8_t *buf, uint16_t len);
+
+uint16_t
+bbl_ipv4_tcp_checksum(uint32_t src, uint32_t dst, uint8_t *tcp, uint16_t tcp_len);
+
+uint16_t
+bbl_ipv6_tcp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *tcp, uint16_t tcp_len);
 
 uint16_t
 bbl_ipv6_ospf_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *ospf, uint16_t ospf_len);
