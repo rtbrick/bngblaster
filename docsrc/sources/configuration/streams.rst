@@ -106,6 +106,12 @@
    * - `ldp-ipv6-lookup-address`
      - Dynamically resolve outer label 
      - 
+   * - `nat`
+     - Enable NAT support
+     - 
+   * - `raw-tcp`
+     - Send RAW TCP traffic (UDP like traffic with TCP header)
+     - 
 
 For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4 
 and inner IPv4 header.
