@@ -178,11 +178,11 @@ lspgen_ctrl_encode_packet(lsdb_ctx_t *ctx, lsdb_packet_t *packet)
 
     idx = 0;
     if (ctx->protocol_id == PROTO_OSPF2) {
-
-	/*
-	 * Omit the IP header (=the first 20 bytes).
-	 */
-	idx = 20;
+        /* Omit the IPv4 header (the first 20 bytes). */
+        idx = 20;
+    } else if (ctx->protocol_id == PROTO_OSPF3) {
+        /* Omit the IPv6 header (the first 40 bytes). */
+        idx = 40;
     }
 
     src_buf = &packet->buf[0];
