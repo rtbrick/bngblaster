@@ -1077,7 +1077,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
         end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_link_prefix, ctx->num_nodes*2);
         LOG(NORMAL, " IPv6 Link Base Prefix %s, End Prefix %s, %u prefixes\n",
             format_ipv6_prefix(&ctx->ipv6_link_prefix),
-            format_ipv6_prefix(end_prefix6), ctx->num_nodes);
+            format_ipv6_prefix(end_prefix6), ctx->num_nodes*2);
 
         end_prefix6 = lspgen_compute_end_prefix6(&ctx->ipv6_ext_prefix, ctx->num_ext);
         LOG(NORMAL, " IPv6 External Base Prefix %s, End Prefix %s, %u prefixes\n",
