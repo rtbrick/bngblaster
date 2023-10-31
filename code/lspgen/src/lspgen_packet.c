@@ -1269,7 +1269,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_OPAQUE_AREA_RI:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x800c); /* LS-Type */
-	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
+	    push_be_uint(buf1, 4, 0); /* Link State ID - rfc 4970 section 2.2 says this must be zero */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
