@@ -29,3 +29,7 @@
      - Reset all traffic streams
      - 
      - 
+   * - `streams-pending`
+     - List flow-id of all pending (not verfied) traffic streams
+     - 
+     - 

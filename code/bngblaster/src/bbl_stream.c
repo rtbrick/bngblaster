@@ -2615,3 +2615,40 @@ bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_
     dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    
 }
+
+int
+bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    bbl_stream_s *stream;
+    struct dict_itor *itor;
+
+    json_t *root, *json_streams;
+    json_streams = json_array();
+
+    /* Iterate over all traffic streams */
+    itor = dict_itor_new(g_ctx->stream_flow_dict);
+    dict_itor_first(itor);
+    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
+        stream = (bbl_stream_s*)*dict_itor_datum(itor);
+        if(!stream) {
+            continue;
+        }
+        if(!stream->verified) {
+            json_array_append(json_streams, json_integer(stream->flow_id));
+        }
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "streams-pending", json_streams);
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(json_streams);
+    }
+    return result;
+}

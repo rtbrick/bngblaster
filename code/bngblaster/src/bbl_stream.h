@@ -234,4 +234,7 @@ bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __at
 int
 bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
+int
+bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
 #endif

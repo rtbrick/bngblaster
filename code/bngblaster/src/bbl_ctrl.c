@@ -192,6 +192,7 @@ struct action actions[] = {
     {"stream-summary", bbl_stream_ctrl_summary, true},
     {"stream-stats", bbl_stream_ctrl_stats, true},
     {"stream-reset", bbl_stream_ctrl_reset, false},
+    {"streams-pending", bbl_stream_ctrl_pending, true},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start, false},
     {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop, false},
     {"igmp-join", bbl_igmp_ctrl_join, false},
