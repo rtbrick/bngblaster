@@ -779,13 +779,13 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 
 	/* Host name */
         if (node->node_name) {
-            lsdb_reset_attr_template(&attr_template);
-	    //attr_template.key.ordinal = 1;
+	    lsdb_reset_attr_template(&attr_template);
+	    attr_template.key.ordinal = 1;
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
-            attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
-            strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
-            lsdb_add_node_attr(node, &attr_template);
+	    attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
+	    strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
+	    lsdb_add_node_attr(node, &attr_template);
         }
 
         /* IPv6 loopback prefix */
@@ -804,7 +804,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 	    lsdb_add_node_attr(node, &attr_template);
 	} else {
 
-            // attr_template.key.ordinal = 1;
+	    attr_template.key.ordinal = 1;
 	    attr_template.key.prefix.sid = node->node_index;
 
 	    /* For SR use the Extended-Intra-Area-Router-LSA */
