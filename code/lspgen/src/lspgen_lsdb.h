@@ -320,8 +320,7 @@ typedef struct lsdb_packet_ {
     } key;
 
     struct io_buffer_ buf[MAX_MSG_LEVEL];
-    uint8_t data[1500]; /* fixed buffer */
-    uint8_t redzone[8]; /* Overwrite detection */
+    uint8_t data[16384]; /* fixed buffer */
 
     uint8_t prev_attr_cp[MAX_MSG_LEVEL]; /* cached code points for previous attr */
 

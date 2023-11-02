@@ -1673,8 +1673,6 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         if (!packet) {
             return NULL;
         }
-	/* fill redzone to detect overrruns */
-	memset(&packet->redzone, 0xaa, sizeof(packet->redzone));
 
         /*
         * Insert packet into dictionary hanging off a node.
@@ -1942,7 +1940,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
          */
         min_len = lspgen_calculate_auth_len(ctx);
         min_len += attr->size;
-        if (packet && packet->buf[0].idx > (1440-min_len)) {
+        if (packet && packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
 
             /*
 	     * No space left. Finalize this packet.

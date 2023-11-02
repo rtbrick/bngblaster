@@ -1338,8 +1338,8 @@ main(int argc, char *argv[])
                 break;
             case 'u':
                 ctx->link_multiplier = strtol(optarg, NULL, 10);
-                if (ctx->link_multiplier > 200) {
-                    ctx->link_multiplier = 200;
+                if (ctx->link_multiplier > 150) {
+                    ctx->link_multiplier = 150;
                     LOG(ERROR, "Set link-multiplier to maximum %u\n", ctx->link_multiplier);
                 }
 		break;
