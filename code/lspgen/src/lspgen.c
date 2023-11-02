@@ -53,6 +53,7 @@ static struct option long_options[] = {
     {"ipv6-node-prefix", required_argument, NULL, 'N'},
     {"ipv4-external-prefix", required_argument, NULL, 'x'},
     {"ipv6-external-prefix", required_argument, NULL, 'X'},
+    {"link-multiplier", required_argument, NULL, 'u'},
     {"lsp-lifetime", required_argument, NULL, 'M'},
     {"no-ipv4", no_argument, NULL, 'z'},
     {"no-ipv6", no_argument, NULL, 'Z'},
@@ -946,6 +947,8 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     ctx->seed = 0x74522142; /* RtB! */
     ctx->lsp_lifetime = 65535;
 
+    ctx->link_multiplier = 1;
+
     /* ipv4 link prefix */
     inet_pton(AF_INET, "172.16.0.0", &ctx->ipv4_link_prefix.address);
     ctx->ipv4_link_prefix.len = 31;
@@ -1051,6 +1054,9 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
             ctx->authentication_key, val2key(auth_type_names, ctx->authentication_type));
+    }
+    if (ctx->link_multiplier) {
+        LOG(NORMAL, " Link-multiplier %u\n", ctx->link_multiplier);
     }
     if (!ctx->no_ipv4) {
         end_prefix4 = lspgen_compute_end_prefix4(&ctx->ipv4_node_prefix, ctx->num_nodes);
@@ -1254,7 +1260,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -1330,7 +1336,14 @@ main(int argc, char *argv[])
                 /* logging */
                 log_enable(optarg);
                 break;
-            case 'c':
+            case 'u':
+                ctx->link_multiplier = strtol(optarg, NULL, 10);
+                if (ctx->link_multiplier > 200) {
+                    ctx->link_multiplier = 200;
+                    LOG(ERROR, "Set link-multiplier to maximum %u\n", ctx->link_multiplier);
+                }
+		break;
+	    case 'c':
                 ctx->num_nodes = strtol(optarg, NULL, 10);
                 if (ctx->num_nodes < 5) {
                     ctx->num_nodes = 5;

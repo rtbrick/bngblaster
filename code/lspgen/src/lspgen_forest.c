@@ -79,6 +79,7 @@ print_graph(lsdb_ctx_t *ctx, int v, int e, int *adj_matrix)
     struct lsdb_node_ *local_node, *remote_node;
     char node_name[32];
     int i, j, index;
+    uint32_t link_index;
     unsigned int root = 0;
     __uint128_t addr;
 
@@ -122,41 +123,46 @@ print_graph(lsdb_ctx_t *ctx, int v, int e, int *adj_matrix)
             node_template.node_name = node_name;
             remote_node = lsdb_add_node(ctx, &node_template);
 
-            /*
-             * Add outgoing link.
-             */
-            link_template.link_metric = weights[adj_matrix[index]];
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + i - 1;
-	    if (ctx->protocol_id == PROTO_ISIS) {
-		lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
-	    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-		lspgen_store_addr(addr, link_template.key.local_node_id, 4);
-	    }
-	    addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + j - 1;
-	    if (ctx->protocol_id == PROTO_ISIS) {
-		lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
-	    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-		lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
-            }
-	    lsdb_add_link(ctx, local_node, &link_template);
+	    for (link_index = 0; link_index < ctx->link_multiplier; link_index++) {
 
-            /*
-             * Add incoming link.
-             */
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + j - 1;
-	    if (ctx->protocol_id == PROTO_ISIS) {
-		lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
-	    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-		lspgen_store_addr(addr, link_template.key.local_node_id, 4);
+		/*
+		 * Add outgoing link.
+		 */
+		link_template.link_metric = weights[adj_matrix[index]];
+		addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + i - 1;
+		if (ctx->protocol_id == PROTO_ISIS) {
+		    lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
+		} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+		    lspgen_store_addr(addr, link_template.key.local_node_id, 4);
+		}
+		addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + j - 1;
+		if (ctx->protocol_id == PROTO_ISIS) {
+		    lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
+		} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+		    lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
+		}
+		lspgen_store_addr(link_index, link_template.key.local_link_id, 4);
+		lsdb_add_link(ctx, local_node, &link_template);
+
+		/*
+		 * Add incoming link.
+		 */
+		addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + j - 1;
+		if (ctx->protocol_id == PROTO_ISIS) {
+		    lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
+		} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+		    lspgen_store_addr(addr, link_template.key.local_node_id, 4);
+		}
+		addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + i - 1;
+		if (ctx->protocol_id == PROTO_ISIS) {
+		    lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
+		} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+		    lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
+		}
+		lspgen_store_addr(link_index, link_template.key.local_link_id, 4);
+		lsdb_add_link(ctx, remote_node, &link_template);
+            }
 	    }
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + i - 1;
-	    if (ctx->protocol_id == PROTO_ISIS) {
-		lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
-	    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-		lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
-            }
-	    lsdb_add_link(ctx, remote_node, &link_template);
-            }
         }
     }
 
