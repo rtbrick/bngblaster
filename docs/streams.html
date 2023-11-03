@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
@@ -60,6 +61,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
@@ -166,161 +168,257 @@ addresses dynamically from the sessions.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Attribute</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
-</tr>
-</thead>
 <tbody>
-<tr class="row-even"><td><p><cite>name</cite></p></td>
-<td><p>Mandatory stream name</p></td>
-<td></td>
+<tr class="row-odd"><td><p>Attribute</p></td>
+<td><p>Description</p></td>
 </tr>
-<tr class="row-odd"><td><p><cite>stream-group-id</cite></p></td>
-<td><p>Stream group identifier</p></td>
-<td><p>0 (raw)</p></td>
+<tr class="row-even"><td><p><strong>name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory stream name.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>type</cite></p></td>
-<td><p>Mandatory stream type (<cite>ipv4</cite>, <cite>ipv6</cite> or <cite>ipv6pd</cite>)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>stream-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Stream group identifier.</div>
+<div class="line">Default: 0 (raw)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>direction</cite></p></td>
-<td><p>Mandatory stream direction (<cite>upstream</cite>, <cite>downstream</cite> or <cite>both</cite>)</p></td>
-<td><p><cite>both</cite></p></td>
+<tr class="row-even"><td><p><strong>type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory stream type (<cite>ipv4</cite>, <cite>ipv6</cite>, or <cite>ipv6pd</cite>).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>source-port</cite></p></td>
-<td><p>Overwrite the default source port</p></td>
-<td><p>65056</p></td>
+<tr class="row-odd"><td><p><strong>direction</strong></p></td>
+<td><div class="line-block">
+<div class="line">Stream direction (<cite>upstream</cite>, <cite>downstream</cite>, or <cite>both</cite>).</div>
+<div class="line">Default: <cite>both</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>destination-port</cite></p></td>
-<td><p>Overwrite the default destination port</p></td>
-<td><p>65056</p></td>
+<tr class="row-even"><td><p><strong>source-port</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the default source port.</div>
+<div class="line">Default: 65056 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv4-df</cite></p></td>
-<td><p>Set IPv4 DF bit</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>destination-port</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the default destination port.</div>
+<div class="line">Default: 65056 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>priority</cite></p></td>
-<td><p>IPv4 TOS / IPv6 TC</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>ipv4-df</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set IPv4 DF bit.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>vlan-priority</cite></p></td>
-<td><p>VLAN priority</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPv4 TOS / IPv6 TC.</div>
+<div class="line">For L2TP downstream traffic, the IPv4 TOS is applied</div>
+<div class="line">to the outer IPv4 and inner IPv4 header.</div>
+<div class="line">Default: 0 Range: 0 - 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>length</cite></p></td>
-<td><p>Layer 3 (IP header + payload) traffic length (76 - 9000)</p></td>
-<td><p>128</p></td>
+<tr class="row-even"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN priority.</div>
+<div class="line">Default: 0 Range: 0 - 7</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>pps</cite></p></td>
-<td><p>Stream traffic rate in packets per second</p></td>
-<td><p>1</p></td>
+<tr class="row-odd"><td><p><strong>length</strong></p></td>
+<td><div class="line-block">
+<div class="line">Layer 3 (IP header + payload) traffic length.</div>
+<div class="line">Default: 128 Range: 76 - 9000</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>bps</cite></p></td>
-<td><p>Stream traffic rate in bits per second (layer 3)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>pps</strong></p></td>
+<td><div class="line-block">
+<div class="line">Stream traffic rate in packets per second.</div>
+<div class="line">This value supports also float numbers like 0.1 or 2.5.</div>
+<div class="line">In example 0.1 means one packet every 10 seconds.</div>
+<div class="line">Default: 1.0</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>a10nsp-interface</cite></p></td>
-<td><p>Select the corresponding A10NSP interface for this stream</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>bps</strong></p></td>
+<td><div class="line-block">
+<div class="line">Stream traffic rate in bits per second (layer 3).</div>
+<div class="line">PPS has priority over bps where the second is only a helper</div>
+<div class="line">to calculate the actual PPS based on given bps and length.</div>
+<div class="line">The resulting rate in bps is the layer 3 rate because length</div>
+<div class="line">is also the layer 3 length (IP header + payload).</div>
+<div class="line">It is also supported to put the capital letters K (Kilo),</div>
+<div class="line">M (Mega) or G (Giga) in front of bps for better readability.</div>
+<div class="line">For example, <code class="docutils literal notranslate"><span class="pre">&quot;Gbps&quot;:</span> <span class="pre">1</span></code></div>
+<div class="line">which is equal to <code class="docutils literal notranslate"><span class="pre">&quot;bps&quot;:</span> <span class="pre">1000000000</span></code>.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
-<td><p>Select the corresponding network interface for this stream</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>a10nsp-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Select the corresponding A10NSP interface for this stream.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>network-ipv4-address</cite></p></td>
-<td><p>Overwrite network interface IPv4 address</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Select the corresponding network interface for this stream.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>network-ipv6-address</cite></p></td>
-<td><p>Overwrite network interface IPv6 address</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>network-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite network interface IPv4 address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>destination-ipv4-address</cite></p></td>
-<td><p>Overwrite the IPv4 destination address</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>network-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite network interface IPv6 address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>destination-ipv6-address</cite></p></td>
-<td><p>Overwrite the IPv6 destination address</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>destination-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the IPv4 destination address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>access-ipv4-source-address</cite></p></td>
-<td><p>Overwrite the access IPv4 source address (client)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>destination-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the IPv6 destination address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>access-ipv6-source-address</cite></p></td>
-<td><p>Overwrite the access IPv6 source address (client)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>access-ipv4-source-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the access IPv4 source address (client).</div>
+<div class="line">This option can be used to test the BNG RPF functionality</div>
+<div class="line">with traffic sent from source addresses different than those</div>
+<div class="line">assigned to the client.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>max-packets</cite></p></td>
-<td><p>Send a burst of N packets and stop</p></td>
-<td><p>0 (infinity)</p></td>
+<tr class="row-odd"><td><p><strong>access-ipv6-source-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the access IPv6 source address (client).</div>
+<div class="line">This option can be used to test the BNG RPF functionality</div>
+<div class="line">with traffic sent from source addresses different than those</div>
+<div class="line">assigned to the client.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
-<td><p>Wait N seconds after the session is established before starting</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>max-packets</strong></p></td>
+<td><div class="line-block">
+<div class="line">Send a burst of N packets and stop.</div>
+<div class="line">Default: 0 (infinity)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-label1</cite></p></td>
-<td><p>MPLS send (TX) label (outer label)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>start-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">Wait N seconds after the session is established</div>
+<div class="line">before starting the traffic stream.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-label1-exp</cite></p></td>
-<td><p>EXP bits of the first label (outer label)</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>tx-label1</strong></p></td>
+<td><div class="line-block">
+<div class="line">MPLS send (TX) label (outer label).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-label1-ttl</cite></p></td>
-<td><p>TTL of the first label (outer label)</p></td>
-<td><p>255</p></td>
+<tr class="row-odd"><td><p><strong>tx-label1-exp</strong></p></td>
+<td><div class="line-block">
+<div class="line">EXP bits of the first label (outer label).</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-label2</cite></p></td>
-<td><p>MPLS send (TX) label (inner label)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>tx-label1-ttl</strong></p></td>
+<td><div class="line-block">
+<div class="line">TTL of the first label (outer label).</div>
+<div class="line">Default: 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-label2-exp</cite></p></td>
-<td><p>EXP bits of the second label (inner label)</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>tx-label2</strong></p></td>
+<td><div class="line-block">
+<div class="line">MPLS send (TX) label (inner label).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-label2-ttl</cite></p></td>
-<td><p>TTL of the second label (inner label)</p></td>
-<td><p>255</p></td>
+<tr class="row-even"><td><p><strong>tx-label2-exp</strong></p></td>
+<td><div class="line-block">
+<div class="line">EXP bits of the second label (inner label).</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>rx-label1</cite></p></td>
-<td><p>Expected receive MPLS label (outer label)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>tx-label2-ttl</strong></p></td>
+<td><div class="line-block">
+<div class="line">TTL of the second label (inner label).</div>
+<div class="line">Default: 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-label2</cite></p></td>
-<td><p>Expected receive MPLS label (inner label)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>rx-label1</strong></p></td>
+<td><div class="line-block">
+<div class="line">Expected receive MPLS label (outer label).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ldp-ipv4-lookup-address</cite></p></td>
-<td><p>Dynamically resolve outer label</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>rx-label2</strong></p></td>
+<td><div class="line-block">
+<div class="line">Expected receive MPLS label (inner label).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ldp-ipv6-lookup-address</cite></p></td>
-<td><p>Dynamically resolve outer label</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ldp-ipv4-lookup-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Dynamically resolve outer label.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ldp-ipv6-lookup-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Dynamically resolve outer label.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>nat</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable NAT support.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>raw-tcp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Send RAW TCP traffic (UDP-like traffic with TCP header).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
-<p>For L2TP downstream traffic, the IPv4 TOS is applied to the outer IPv4
-and inner IPv4 header.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">pps</span></code> option supports also float numbers like 0.1, or 2.5 PPS and has
-priority over <code class="docutils literal notranslate"><span class="pre">bps</span></code> where the second is only a helper to calculate the <code class="docutils literal notranslate"><span class="pre">pps</span></code>
-based on given <code class="docutils literal notranslate"><span class="pre">bps</span></code> and <code class="docutils literal notranslate"><span class="pre">length</span></code>. The resulting rate in <code class="docutils literal notranslate"><span class="pre">bps</span></code> is the
-layer 3 rate because <code class="docutils literal notranslate"><span class="pre">length</span></code> is also the layer 3 length (IP header + payload).
-It is also supported to put the capital letters <code class="docutils literal notranslate"><span class="pre">K</span></code> (Kilo), <code class="docutils literal notranslate"><span class="pre">M</span></code> (Mega)
-or <code class="docutils literal notranslate"><span class="pre">G</span></code> (Giga) in front of <code class="docutils literal notranslate"><span class="pre">bps</span></code> for better readability.
-For example <code class="docutils literal notranslate"><span class="pre">&quot;Gbps&quot;:</span> <span class="pre">1</span></code> which is equal to <code class="docutils literal notranslate"><span class="pre">&quot;bps&quot;:</span> <span class="pre">1000000000</span></code>.</p>
-<p>The options <code class="docutils literal notranslate"><span class="pre">access-ipv4-source-address</span></code> and <code class="docutils literal notranslate"><span class="pre">access-ipv6-source-address</span></code>
-can be used to test the BNG RPF functionality with traffic sent from source addresses
-different than those assigned to the client.</p>
 </section>
 <section id="stream-configuration-file">
 <h2>Stream Configuration File<a class="headerlink" href="#stream-configuration-file" title="Permalink to this headline"></a></h2>

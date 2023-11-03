@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -54,6 +55,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -89,6 +91,50 @@
              
   <section id="access-protocols">
 <h1>Access Protocols<a class="headerlink" href="#access-protocols" title="Permalink to this headline"></a></h1>
+<p>A BNG, or Broadband Network Gateway, is a network device that
+connects customer premises equipment to the service provider’s
+broadband network, managing user authentication, traffic routing,
+and quality of service (QoS) for internet services.</p>
+<p id="sessions">The BNG Blaster is equipped with versatile support for various
+access protocols, allowing the creation of seubscriber sessions,
+each of which can comprise multiple protocols. For instance, in the
+case of dual-stack IPoE sessions, these are formed by a combination of
+DHCPv4, DHCPv6, as well as ARP/ND protocols. Every session is
+defined by an <a class="reference internal" href="../interfaces.html#access-interface"><span class="std std-ref">access interface function</span></a>
+and identified by a globally unique <strong>session-id</strong>, with the
+numbering starting at 1 and increasing sequentially for each
+new session established. Furthermore, you have the flexibility
+to group multiple sessions together using the optional
+<strong>session-group-id</strong>, which enables the application of commands
+<a class="reference internal" href="../api/index.html#api"><span class="std std-ref">commands</span></a> to an entire group of sessions simultaneously.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;even@rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1998</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;odd@rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>It is also possible to assign multiple access interface
+sections to a single session group.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="pppoe.html">PPPoE</a></li>

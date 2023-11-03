@@ -2,35 +2,26 @@
 
     { "http-client": {} }
 
-
-.. list-table::
-   :widths: 25 50 25
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Default
-   * - `name`
-     - Mandatory HTTP client name
-     - 
-   * - `http-client-group-id`
-     - Mandatory HTTP client identifier
-     - 
-   * - `url`
-     - Mandatory HTTP request URL
-     - 
-   * - `destination-port`
-     - TCP destination port
-     - 80
-   * - `autostart`
-     - Autostart HTTP client
-     - true
-   * - `start-delay`
-     - Delay start of HTTP client
-     - 0
-   * - `destination-ipv4-address`
-     - Destination IPv4 address
-     - 
-   * - `destination-ipv6-address`
-     - Destination IPv6 address
-     - 
++-----------------------------------+----------------------------------------------------------------------+
+| Attribute                         | Description                                                          |
++===================================+======================================================================+
+| **name**                          | | Mandatory HTTP client name.                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **http-client-group-id**          | | Mandatory HTTP client identifier.                                  |
+|                                   | | Range: 1 - 65535                                                   |
++-----------------------------------+----------------------------------------------------------------------+
+| **url**                           | | Mandatory HTTP request URL.                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **destination-port**              | | TCP destination port.                                              |
+|                                   | | Default: 80 Range: 1 - 65535                                       |
++-----------------------------------+----------------------------------------------------------------------+
+| **autostart**                     | | Autostart HTTP client.                                             |
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **start-delay**                   | | HTTP client start delay in seconds.                                |
+|                                   | | Default: 0                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **destination-ipv4-address**      | | Destination IPv4 address.                                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **destination-ipv6-address**      | | Destination IPv6 address.                                          |
++-----------------------------------+----------------------------------------------------------------------+

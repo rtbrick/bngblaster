@@ -2,107 +2,88 @@
 
     { "isis": {} }
 
-
-.. list-table::
-   :widths: 25 50 25
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Default
-   * - `instance-id`
-     - ISIS instance identifier
-     - 
-   * - `level`
-     - ISIS level
-     - 3
-   * - `overload`
-     - ISIS overload
-     - false
-   * - `protocol-ipv4`
-     - Enable/disable IPv4
-     - true
-   * - `protocol-ipv6`
-     - Enable/disable IPv6
-     - true
-   * - `level1-auth-key`
-     - ISIS level 1 authentication key
-     - 
-   * - `level1-auth-type`
-     - ISIS level 1 authentication type (simple or md5)
-     - disabled
-   * - `level1-auth-hello`
-     - ISIS level 1 hello authentication 
-     - true
-   * - `level1-auth-csnp`
-     - ISIS level 1 CSNP authentication 
-     - true
-   * - `level1-auth-psnp`
-     - ISIS level 1 PSNP authentication 
-     - true
-   * - `level2-auth-key`
-     - ISIS level 2 authentication key
-     - 
-   * - `level2-auth-type`
-     - ISIS level 2 authentication type (simple or md5)
-     - disabled
-   * - `level2-auth-hello`
-     - ISIS level 2 hello authentication 
-     - true
-   * - `level2-auth-csnp`
-     - ISIS level 2 CSNP authentication 
-     - true
-   * - `level2-auth-psnp`
-     - ISIS level 2 PSNP authentication 
-     - true
-   * - `hello-interval`
-     - ISIS hello interval in seconds
-     - 10
-   * - `hello-padding`
-     - ISIS hello padding
-     - false
-   * - `hold-time`
-     - ISIS hold time in seconds
-     - 30
-   * - `lsp-lifetime`
-     - ISIS LSP lifetime in seconds
-     - 65535
-   * - `lsp-refresh-interval`
-     - ISIS LSP refresh interval in seconds
-     - 300
-   * - `lsp-retry-interval`
-     - ISIS LSP retry interval in seconds
-     - 5
-   * - `lsp-tx-interval`
-     - ISIS LSP TX interval in ms (time between LSP send windows)
-     - 10
-   * - `lsp-tx-window-size`
-     - ISIS LSP TX window size (LSP send per window)
-     - 1
-   * - `csnp-interval`
-     - ISIS CSNP interval in seconds
-     - 30
-   * - `hostname`
-     - ISIS hostname
-     - bngblaster
-   * - `router-id`
-     - ISIS router identifier
-     - 10.10.10.10
-   * - `system-id`
-     - ISIS system identifier
-     - 0100.1001.0010
-   * - `area`
-     - ISIS area(s)
-     - 49.0001/24
-   * - `sr-base`
-     - ISIS SR base
-     - 
-   * - `sr-range`
-     - ISIS SR range
-     - 
-   * - `sr-node-sid`
-     - ISIS SR node SID
-     - 
-   * - `teardown-time`
-     - ISIS teardown time in seconds
-     - 5
++----------------------------------+-------------------------------------------------------------------+
+| Attribute                        | Description                                                       |
++==================================+===================================================================+
+| **instance-id**                  | | ISIS instance identifier.                                       |
++----------------------------------+-------------------------------------------------------------------+
+| **level**                        | | Level.                                                          |
+|                                  | | Default: 3 Range: 1 - 3                                         |
++----------------------------------+-------------------------------------------------------------------+
+| **protocol-ipv4**                | | Enable/disable IPv4 routing.                                    |
+|                                  | | Default: true                                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **protocol-ipv6**                | | Enable/disable IPv6 routing.                                    |
+|                                  | | Default: true                                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **level1-auth-key**              | | Level 1 authentication key.                                     |
++----------------------------------+-------------------------------------------------------------------+
+| **level1-auth-type**             | | Level 1 authentication type (simple or md5).                    |
++----------------------------------+-------------------------------------------------------------------+
+| **level1-auth-hello**            | | Level 1 hello authentication.                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **level1-auth-csnp**             | | Level 1 CSNP authentication.                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **level1-auth-psnp**             | | Level 1 PSNP authentication.                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **level2-auth-key**              | | Level 2 authentication key.                                     |
++----------------------------------+-------------------------------------------------------------------+
+| **level2-auth-type**             | | Level 2 authentication type (simple or md5).                    |
++----------------------------------+-------------------------------------------------------------------+
+| **level2-auth-hello**            | | Level 2 hello authentication.                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **level2-auth-csnp**             | | Level 2 CSNP authentication.                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **level2-auth-psnp**             | | Level 2 PSNP authentication.                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **hello-interval**               | | Hello interval in seconds                                       |
+|                                  | | Default: 10 Range: 1 - 65535                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **hello-padding**                | | Enable/disable hello padding.                                   |
+|                                  | | Default: false                                                  |
++----------------------------------+-------------------------------------------------------------------+
+| **hold-time**                    | | ISIS hold time in seconds.                                      |
+|                                  | | Default: 30 Range: 1 - 65535                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **lsp-lifetime**                 | | ISIS LSP lifetime in seconds.                                   |
+|                                  | | Default: 65535 Range: 330 - 65535                               |
++----------------------------------+-------------------------------------------------------------------+
+| **lsp-refresh-interval**         | | ISIS LSP refresh interval in seconds.                           |
+|                                  | | Default: 300 Range: 1 - 65535                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **lsp-retry-interval**           | | ISIS LSP retry interval in seconds.                             |
+|                                  | | Default: 5 Range: 1 - 65535                                     |
++----------------------------------+-------------------------------------------------------------------+
+| **lsp-tx-interval**              | | ISIS LSP TX interval in ms (time between LSP send windows).     |
+|                                  | | Default: 10 Range: 1 - 65535                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **lsp-tx-window-size**           | | ISIS LSP TX window size (LSP send per window).                  |
+|                                  | | Default: 1 Range: 1 - 65535                                     |
++----------------------------------+-------------------------------------------------------------------+
+| **csnp-interval**                | | ISIS CSNP interval in seconds.                                  |
+|                                  | | Default: 30 Range: 1 - 65535                                    |
++----------------------------------+-------------------------------------------------------------------+
+| **hostname**                     | | ISIS hostname                                                   |
+|                                  | | Default: bngblaster                                             |
++----------------------------------+-------------------------------------------------------------------+
+| **router-id**                    | | ISIS router identifier.                                         |
+|                                  | | Default: 10.10.10.10                                            |
++----------------------------------+-------------------------------------------------------------------+
+| **system-id**                    | | ISIS system identifier.                                         |
+|                                  | | Default: 0100.1001.0010                                         |
++----------------------------------+-------------------------------------------------------------------+
+| **area**                         | | ISIS area(s)                                                    |
+|                                  | | Default: 49.0001/24                                             |
++----------------------------------+-------------------------------------------------------------------+
+| **sr-base**                      | | ISIS SR base                                                    |
+|                                  | | Default: 0 Range: 0 - 1048575                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **sr-range**                     | | ISIS SR range                                                   |
+|                                  | | Default: 0 Range: 0 - 1048575                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **sr-node-sid**                  | | ISIS SR node SID                                                |
+|                                  | | Default: 0 Range: 0 - 1048575                                   |
++----------------------------------+-------------------------------------------------------------------+
+| **teardown-time**                | | ISIS teardown time in seconds.                                  |
+|                                  | | Default: 5 Range: 0 - 65535                                     |
++----------------------------------+-------------------------------------------------------------------+

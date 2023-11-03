@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">API/CLI</a></li>
@@ -77,33 +79,41 @@
              
   <table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
-<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Mandatory Arguments</p></th>
-<th class="head"><p>Optional Arguments</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>http-clients</cite></p></td>
-<td><p>Display all HTTP client instances</p></td>
-<td></td>
-<td><p><cite>session-id</cite></p></td>
+<tr class="row-even"><td><p><strong>http-clients</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display all HTTP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>http-clients-start</cite></p></td>
-<td><p>Start all HTTP client instances</p></td>
-<td></td>
-<td><p><cite>session-id</cite></p></td>
+<tr class="row-odd"><td><p><strong>http-clients-start</strong></p></td>
+<td><div class="line-block">
+<div class="line">Start all HTTP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>http-clients-stop</cite></p></td>
-<td><p>Stop all HTTP client instances</p></td>
-<td></td>
-<td><p><cite>session-id</cite></p></td>
+<tr class="row-even"><td><p><strong>http-clients-stop</strong></p></td>
+<td><div class="line-block">
+<div class="line">Stop all HTTP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

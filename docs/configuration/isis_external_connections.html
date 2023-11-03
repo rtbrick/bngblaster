@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -78,30 +80,36 @@
   <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>system-id</cite></p></td>
-<td><p>ISIS system identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>system-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS system identifier.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>l1-metric</cite></p></td>
-<td><p>ISIS level 1 interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>l1-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS level 1 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>l2-metric</cite></p></td>
-<td><p>ISIS level 2 interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-even"><td><p><strong>l2-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS level 2 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

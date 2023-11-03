@@ -182,7 +182,7 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(config, value, "access-line-profiles", "access-line-profile-id", 0, 65535);
+    JSON_OBJ_GET_NUMBER(config, value, "access-line-profiles", "access-line-profile-id", 1, 65535);
     if(value) {
         profile->access_line_profile_id = json_number_value(value);
     } else {
@@ -2472,7 +2472,7 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(http, value, "http-client", "http-client-group-id", 0, 65535);
+    JSON_OBJ_GET_NUMBER(http, value, "http-client", "http-client-group-id", 1, 65535);
     if(value) {
         http_client_config->http_client_group_id = json_number_value(value);
     } else {
@@ -2480,7 +2480,7 @@ json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_clien
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(http, value, "http-client", "destination-port", 0, 65535);
+    JSON_OBJ_GET_NUMBER(http, value, "http-client", "destination-port", 1, 65535);
     if(value) {
         http_client_config->dst_port = json_number_value(value);
     } else {
@@ -2548,7 +2548,7 @@ json_parse_http_server_config(json_t *http, bbl_http_server_config_s *http_serve
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(http, value, "http-server", "port", 0, 65535);
+    JSON_OBJ_GET_NUMBER(http, value, "http-server", "port", 1, 65535);
     if(value) {
         http_server_config->port = json_number_value(value);
     } else {

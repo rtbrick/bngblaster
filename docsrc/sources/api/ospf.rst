@@ -1,35 +1,37 @@
-.. list-table::
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Mandatory Arguments
-     - Optional Arguments
-   * - `ospf-interfaces`
-     - Display OSPF interfaces
-     - `instance`
-     - 
-   * - `ospf-neighbors`
-     - Display OSPF neighbors
-     - `instance`
-     - 
-   * - `ospf-database`
-     - Display OSPF database (LSDB)
-     - `instance`
-     - 
-   * - `ospf-load-mrt`
-     - Load OSPF MRT file
-     - `instance`, `file`
-     - 
-   * - `ospf-lsa-update`
-     - Update OSPF LSA
-     - `instance`, `pdu`
-     - 
-   * - `ospf-pdu-update`
-     - Update OSPF LSA from PDU
-     - `instance`,
-     - 
-   * - `ospf-teardown`
-     - Teardown OSPF
-     - 
-     - 
++-----------------------------------+----------------------------------------------------------------------+
+| Command                           | Description                                                          |
++===================================+======================================================================+
+| **ospf-interfaces**               | | Display OSPF interfaces.                                           |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``instance`` Mandatory                                             |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospf-neighbors**                | | Display OSPF neighbors.                                            |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``instance`` Mandatory                                             |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospf-database**                 | | Display OSPF database (LSDB).                                      |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``instance`` Mandatory                                             |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospf-load-mrt**                 | | Load OSPF MRT file.                                                |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``instance`` Mandatory                                             |
+|                                   | | ``file`` Mandatory                                                 |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospf-lsa-update**               | | Update OSPF LSA.                                                   |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``instance`` Mandatory                                             |
+|                                   | | ``pdu`` Mandatory                                                  |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospf-pdu-update**               | | Update OSPF LSA from PDU.                                          |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``instance`` Mandatory                                             |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospf-teardown**                 | | Teardown OSPF.                                                     |
++-----------------------------------+----------------------------------------------------------------------+

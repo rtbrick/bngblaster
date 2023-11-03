@@ -1,9 +1,9 @@
 Routing Protocols
 =================
 
-There are various routing protocols supported like ISIS and BGP. 
-So you can use the BNG Blaster for end-to-end BNG and non-BNG 
-router testing. 
+Multiple routing protocols are available, including ISIS and BGP. 
+To perform comprehensive end-to-end testing for both BNG and 
+non-BNG routers, you can use the BNG Blaster.
 
 .. toctree::
    :maxdepth: 1

@@ -4,6 +4,8 @@ on:
   push:
     paths-ignore:
     - 'docs/**'
+    branches-ignore:    
+      - pages
 
 env:
   BUILD_TYPE: Release

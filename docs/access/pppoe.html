@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -67,6 +68,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -211,46 +213,65 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 26%" />
+<col style="width: 74%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>session-time</cite></p></td>
-<td><p>Max PPPoE session time in seconds</p></td>
-<td><p>0 (infinity)</p></td>
+<tr class="row-even"><td><p><strong>session-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">Max PPPoE session time in seconds.</div>
+<div class="line">Default: 0 (infinity)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>reconnect</cite></p></td>
-<td><p>Automatically reconnect sessions if terminated</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>reconnect</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically reconnect sessions if terminated.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>discovery-timeout</cite></p></td>
-<td><p>PPPoE discovery (PADI and PADR) timeout in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>discovery-timeout</strong></p></td>
+<td><div class="line-block">
+<div class="line">PPPoE discovery (PADI and PADR) timeout in seconds.</div>
+<div class="line">Default: 5</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>discovery-retry</cite></p></td>
-<td><p>PPPoE discovery (PADI and PADR) max retry</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>discovery-retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">PPPoE discovery (PADI and PADR) max retry.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>service-name</cite></p></td>
-<td><p>PPPoE discovery service name</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>service-name</strong></p></td>
+<td><div class="line-block">
+<div class="line">PPPoE discovery service name.</div>
+<div class="line">Default:</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>host-uniq</cite></p></td>
-<td><p>PPPoE discovery host-uniq</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>host-uniq</strong></p></td>
+<td><div class="line-block">
+<div class="line">PPPoE discovery host-uniq.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>vlan-priority</cite></p></td>
-<td><p>VLAN PBIT for all PPPoE/PPP control traffic</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN PBIT for all PPPoE/PPP control traffic.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -260,22 +281,23 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 16%" />
+<col style="width: 84%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>mru</cite></p></td>
-<td><p>Define the maximum receive unit proposed via PPP</p></td>
-<td><p>1492</p></td>
+<tr class="row-even"><td><p><strong>mru</strong></p></td>
+<td><div class="line-block">
+<div class="line">Define the maximum receive unit proposed via PPP.</div>
+<div class="line">Default: 1492 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -285,38 +307,52 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 80%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>username</cite></p></td>
-<td><p>Username</p></td>
-<td><p><a class="reference external" href="mailto:user{session-global}&#37;&#52;&#48;rtbrick&#46;com">user{session-global}<span>&#64;</span>rtbrick<span>&#46;</span>com</a></p></td>
+<tr class="row-even"><td><p><strong>username</strong></p></td>
+<td><div class="line-block">
+<div class="line">Username.</div>
+<div class="line">Default: <a class="reference external" href="mailto:user{session-global}&#37;&#52;&#48;rtbrick&#46;com">user{session-global}<span>&#64;</span>rtbrick<span>&#46;</span>com</a></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>password</cite></p></td>
-<td><p>Password</p></td>
-<td><p>test</p></td>
+<tr class="row-odd"><td><p><strong>password</strong></p></td>
+<td><div class="line-block">
+<div class="line">Password.</div>
+<div class="line">Default: test</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>timeout</cite></p></td>
-<td><p>Authentication request timeout in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>timeout</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication request timeout in seconds.</div>
+<div class="line">Default: 5</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>retry</cite></p></td>
-<td><p>Authentication request max retry</p></td>
-<td><p>30</p></td>
+<tr class="row-odd"><td><p><strong>retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication request max retry.</div>
+<div class="line">Default: 30</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>protocol</cite></p></td>
-<td><p>This value can be set to <cite>PAP</cite> or <cite>CHAP</cite> to reject the other protocol</p></td>
-<td><p>allow PAP and CHAP</p></td>
+<tr class="row-even"><td><p><strong>protocol</strong></p></td>
+<td><div class="line-block">
+<div class="line">This value can be set to PAP or CHAP to reject</div>
+<div class="line">the other protocol.</div>
+<div class="line">Default: <cite>allow both PAP and CHAP</cite></div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -326,46 +362,65 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 32%" />
+<col style="width: 68%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>conf-request-timeout</cite></p></td>
-<td><p>LCP configuration request timeout in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>conf-request-timeout</strong></p></td>
+<td><div class="line-block">
+<div class="line">LCP configuration request timeout in seconds.</div>
+<div class="line">Default: 5</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>conf-request-retry</cite></p></td>
-<td><p>LCP configuration request max retry</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>conf-request-retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">LCP configuration request max retry.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>keepalive-interval</cite></p></td>
-<td><p>LCP echo request interval in seconds (0 means disabled)</p></td>
-<td><p>30</p></td>
+<tr class="row-even"><td><p><strong>keepalive-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">LCP echo request interval in seconds (0 means disabled).</div>
+<div class="line">Default: 30</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>keepalive-retry</cite></p></td>
-<td><p>PPP LCP echo request max retry</p></td>
-<td><p>3</p></td>
+<tr class="row-odd"><td><p><strong>keepalive-retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">PPP LCP echo request max retry.</div>
+<div class="line">Default: 3</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>start-delay</cite></p></td>
-<td><p>PPP LCP initial request delay in milliseconds</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>start-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">PPP LCP initial request delay in milliseconds.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ignore-vendor-specific</cite></p></td>
-<td><p>Ignore LCP vendor-specific requests</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>ignore-vendor-specific</strong></p></td>
+<td><div class="line-block">
+<div class="line">Ignore LCP vendor-specific requests.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>connection-status-message</cite></p></td>
-<td><p>Accept LCP connection status messages</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>connection-status-message</strong></p></td>
+<td><div class="line-block">
+<div class="line">Accept LCP connection status messages.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -375,42 +430,59 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 28%" />
+<col style="width: 72%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>enable</cite></p></td>
-<td><p>This option allows to enable or disable the IPCP protocol</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>enable</strong></p></td>
+<td><div class="line-block">
+<div class="line">This option allows to enable or disable the IPCP protocol</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>request-ip</cite></p></td>
-<td><p>Include IP-Address with 0.0.0.0 in initial LCP configuration request</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>request-ip</strong></p></td>
+<td><div class="line-block">
+<div class="line">Include IP-Address with 0.0.0.0 in the initial IPCP</div>
+<div class="line">configuration request.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>request-dns1</cite></p></td>
-<td><p>Request Primary DNS Server Address (option 129)</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>request-dns1</strong></p></td>
+<td><div class="line-block">
+<div class="line">Request Primary DNS Server Address (option 129).</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>request-dns2</cite></p></td>
-<td><p>Request Secondary DNS Server Address (option 131)</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>request-dns2</strong></p></td>
+<td><div class="line-block">
+<div class="line">Request Secondary DNS Server Address (option 131).</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>conf-request-timeout</cite></p></td>
-<td><p>IPCP configuration request timeout in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>conf-request-timeout</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPCP configuration request timeout in seconds</div>
+<div class="line">Default: 5</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>conf-request-retry</cite></p></td>
-<td><p>IPCP configuration request max retry</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>conf-request-retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPCP configuration request max retry.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -420,30 +492,37 @@ the case, to ensure it failed if the device under test behaves faulty.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 34%" />
+<col style="width: 66%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>enable</cite></p></td>
-<td><p>This option allows to enable or disable the IP6CP protocol</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>enable</strong></p></td>
+<td><div class="line-block">
+<div class="line">This option allows to enable or disable the IP6CP protocol.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>conf-request-timeout</cite></p></td>
-<td><p>IP6CP configuration request timeout in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-odd"><td><p><strong>conf-request-timeout</strong></p></td>
+<td><div class="line-block">
+<div class="line">IP6CP configuration request timeout in seconds.</div>
+<div class="line">Default: 5</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>conf-request-retry</cite></p></td>
-<td><p>IP6CP configuration request max retry</p></td>
-<td><p>10</p></td>
+<tr class="row-even"><td><p><strong>conf-request-retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">IP6CP configuration request max retry.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

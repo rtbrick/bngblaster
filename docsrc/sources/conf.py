@@ -26,6 +26,10 @@ html_theme_options = {
     'logo_only': False,
     'display_version': False,
 }
+html_static_path = ['_static']
+html_css_files = [
+    'custom.css',  # Add your custom CSS file
+]
 
 # -- Options for EPUB output
 

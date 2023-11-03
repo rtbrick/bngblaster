@@ -1,35 +1,39 @@
-.. list-table::
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Mandatory Arguments
-     - Optional Arguments
-   * - `ldp-adjacencies`
-     - Display all LDP adjacencies
-     - 
-     - `ldp-instance-id`
-   * - `ldp-sessions`
-     - Display all matching LDP sessions
-     - 
-     - `ldp-instance-id`, `local-ipv4-address`, `peer-ipv4-address`
-   * - `ldp-database`
-     - Display LDP database
-     - `ldp-instance-id`
-     -
-   * - `ldp-disconnect`
-     - Disconnect all matching LDP sessions
-     - 
-     - `ldp-instance-id`, `local-ipv4-address`, `peer-ipv4-address`
-   * - `ldp-teardown`
-     - Teardown LDP
-     - 
-     - 
-   * - `ldp-raw-update-list`
-     - List all loaded LDP RAW update files
-     - 
-     - 
-   * - `ldp-raw-update`
-     - Update all matching LDP session
-     - `file`
-     - `ldp-instance-id`, `local-ipv4-address`, `peer-ipv4-address`
++-----------------------------------+----------------------------------------------------------------------+
+| Command                           | Description                                                          |
++===================================+======================================================================+
+| **ldp-adjacencies**               | | Display all LDP adjacencies.                                       |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``ldp-instance-id``                                                |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-sessions**                  | | Display all matching LDP sessions.                                 |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``ldp-instance-id``                                                |
+|                                   | | ``local-ipv4-address``                                             |
+|                                   | | ``peer-ipv4-address``                                              |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-database**                  | | Display LDP database.                                              |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``ldp-instance-id`` Mandatory                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-disconnect**                | | Disconnect all matching LDP sessions.                              |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``ldp-instance-id``                                                |
+|                                   | | ``local-ipv4-address``                                             |
+|                                   | | ``peer-ipv4-address``                                              |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-teardown**                  | | Teardown LDP.                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-raw-update-list**           | | List all loaded LDP RAW update files.                              |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-raw-update**                | | Update all matching LDP session.                                   |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``file`` Mandatory                                                 |
+|                                   | | ``ldp-instance-id``                                                |
+|                                   | | ``local-ipv4-address``                                             |
+|                                   | | ``peer-ipv4-address``                                              |
++-----------------------------------+----------------------------------------------------------------------+

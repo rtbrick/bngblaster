@@ -1,5 +1,9 @@
 .. _api:
 
+.. raw:: html
+
+   <link rel="stylesheet" type="text/css" href="_static/custom.css">
+
 API/CLI
 =======
 
@@ -12,7 +16,7 @@ included CLI tool ``bngblaster-cli``. You can use this for
 interactive communication with the BNG Blaster.
 
 You need to enable the control socket by providing the path to 
-the socket file with the argument ``-S`` (``bngblaster -S run.sock``).
+the control socket file with the argument ``-S`` (``bngblaster -S run.sock``).
 
 Each request must contain at least the ``command`` element which carries
 the actual command with optional arguments.
@@ -132,37 +136,25 @@ for interactive communication with the BNG Blaster.
 Test
 ----
 
-.. list-table::
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Mandatory Arguments
-     - Optional Arguments
-   * - `test-info`
-     - Display information about the running test instance
-     - 
-     - 
-   * - `test-stop`
-     - Stop/teardown the test
-     - 
-     - 
-   * - `terminate`
-     - Stop/teardown the test
-     - 
-     - 
-   * - `monkey-start`
-     - Start monkey test
-     - 
-     - 
-   * - `monkey-stop`
-     - Stop monkey test
-     - 
-     - 
-
++-----------------------------------+----------------------------------------------------------------------+
+| Command                           | Description                                                          |
++===================================+======================================================================+
+| **test-info**                     | | Display information about the running test instance.               |
++-----------------------------------+----------------------------------------------------------------------+
+| **test-stop**                     | | Stop/teardown the test.                                            |
++-----------------------------------+----------------------------------------------------------------------+
+| **terminate**                     | | Stop/teardown the test.                                            |
++-----------------------------------+----------------------------------------------------------------------+
+| **monkey-start**                  | | Start monkey test.                                                 |
++-----------------------------------+----------------------------------------------------------------------+
+| **monkey-stop**                   | | Stop monkey test.                                                  |
++-----------------------------------+----------------------------------------------------------------------+
 
 Interfaces
 ----------
+This is explained detailed in the 
+:ref:`interfaces <interfaces>` section.
+
 .. include:: interfaces.rst
 
 Sessions
@@ -171,10 +163,16 @@ Sessions
 
 PPP
 ---
+This is explained detailed in the 
+:ref:`PPPoE <pppoe>` section.
+
 .. include:: ppp.rst
 
 L2TP
 ----
+This is explained detailed in the 
+:ref:`L2TP <l2tp>` section.
+
 .. include:: l2tp.rst
 
 IGMP
@@ -187,22 +185,37 @@ Traffic
 
 Streams
 -------
+This is explained detailed in the 
+:ref:`streams <streams>` section.
+
 .. include:: streams.rst
 
 ISIS
 ----
+This is explained detailed in the 
+:ref:`ISIS <isis>` section.
+
 .. include:: isis.rst
 
 OSPF
 ----
+This is explained detailed in the 
+:ref:`OSPF <ospf>` section.
+
 .. include:: ospf.rst
 
 BGP
 ---
+This is explained detailed in the 
+:ref:`BGP <bgp>` section.
+
 .. include:: bgp.rst
 
 LDP
 ---
+This is explained detailed in the 
+:ref:`LDP <ldp>` section.
+
 .. include:: ldp.rst
 
 CFM
@@ -211,7 +224,6 @@ CFM
 
 Legal Interception (LI)
 -----------------------
-
 This is explained detailed in the 
 :ref:`Legal Interception (LI) <li>` section.
 
@@ -219,7 +231,6 @@ This is explained detailed in the
 
 HTTP
 ----
-
 This is explained detailed in the 
 :ref:`HTTP <http>` section.
 

@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -78,113 +80,170 @@
   <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;igmp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>autostart</cite></p></td>
-<td><p>Automatically join after the session is established</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically join after the session is established.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>version</cite></p></td>
-<td><p>IGMP protocol version (1, 2 or 3)</p></td>
-<td><p>3</p></td>
+<tr class="row-odd"><td><p><strong>start-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">Delay between session established and initial IGMP join in seconds.</div>
+<div class="line">Default: 1</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>combined-leave-join</cite></p></td>
-<td><p>Combine leave and join records within a single IGMPv3 report</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>version</strong></p></td>
+<td><div class="line-block">
+<div class="line">IGMP protocol version (1, 2, or 3).</div>
+<div class="line">Default: 3</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>start-delay</cite></p></td>
-<td><p>Delay between session established and initial IGMP join in seconds</p></td>
-<td><p>1</p></td>
+<tr class="row-odd"><td><p><strong>combined-leave-join</strong></p></td>
+<td><div class="line-block">
+<div class="line">Per default, join and leave requests are sent using dedicated</div>
+<div class="line">reports. This option allows the combination of leave and join</div>
+<div class="line">records within a single IGMPv3 report using multiple group records.</div>
+<div class="line">This option applies to the IGMP version 3 only!</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>group</cite></p></td>
-<td><p>Multicast group base address (e.g. 239.0.0.1)</p></td>
-<td><p>0.0.0.0 (disabled)</p></td>
+<tr class="row-even"><td><p><strong>group</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast group base address (e.g. 239.0.0.1).</div>
+<div class="line">If group is set to 293.0.0.1 with group-iter of 0.0.0.2,</div>
+<div class="line">source 1.1.1.1 and group-count 3, the result are the following</div>
+<div class="line">three groups (S.G):</div>
+<div class="line"><cite>1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3, 1.1.1.1,239.0.0.5</cite></div>
+<div class="line">Default: 0.0.0.0 (disabled)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>group-iter</cite></p></td>
-<td><p>Multicast group iterator</p></td>
-<td><p>0.0.0.1</p></td>
+<tr class="row-odd"><td><p><strong>group-iter</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast group iterator.</div>
+<div class="line">Default: 0.0.0.1</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>group-count</cite></p></td>
-<td><p>Multicast group count</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>group-count</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast group count.</div>
+<div class="line">Default: 1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>source</cite></p></td>
-<td><p>Multicast source address (e.g. 1.1.1.1)</p></td>
-<td><p>0.0.0.0 (ASM)</p></td>
+<tr class="row-odd"><td><p><strong>source</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast source address (e.g. 1.1.1.1).</div>
+<div class="line">Default: 0.0.0.0 (ASM)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>zapping-interval</cite></p></td>
-<td><p>IGMP channel zapping interval in seconds</p></td>
-<td><p>0 (disabled)</p></td>
+<tr class="row-even"><td><p><strong>zapping-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">IGMP channel zapping interval in seconds.</div>
+<div class="line">Default: 0 (disabled)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>zapping-count</cite></p></td>
-<td><p>Define the number of channel changes before starting the view duration</p></td>
-<td><p>0 (disabled)</p></td>
+<tr class="row-odd"><td><p><strong>zapping-count</strong></p></td>
+<td><div class="line-block">
+<div class="line">Define the number of channel changes before starting</div>
+<div class="line">the view duration.</div>
+<div class="line">Default: 0 (disabled)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>zapping-wait</cite></p></td>
-<td><p>Wait for multicast traffic before zapping to the next channel</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>zapping-wait</strong></p></td>
+<td><div class="line-block">
+<div class="line">Wait for multicast traffic before zapping to the next channel.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>view-duration</cite></p></td>
-<td><p>Define the view duration in seconds</p></td>
-<td><p>0 (disabled)</p></td>
+<tr class="row-odd"><td><p><strong>view-duration</strong></p></td>
+<td><div class="line-block">
+<div class="line">Define the view duration in seconds.</div>
+<div class="line">Default: 0 (disabled)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>send-multicast-traffic</cite></p></td>
-<td><p>Generate multicast traffic</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>max-join-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">Maximum join delay in milliseconds.</div>
+<div class="line">If configured, the final report includes how often</div>
+<div class="line">the measured join delay is above this threshold.</div>
+<div class="line">Default: 0 (disabled)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>multicast-traffic-autostart</cite></p></td>
-<td><p>Automatically start multicast traffic</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>send-multicast-traffic</strong></p></td>
+<td><div class="line-block">
+<div class="line">If enabled, the BNG Blaster generates multicast traffic on the</div>
+<div class="line">network interface based on the specified  group and source</div>
+<div class="line">attributes mentioned before. This traffic includes some special</div>
+<div class="line">signatures for faster processing and more detailed analysis.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>multicast-traffic-length</cite></p></td>
-<td><p>Multicast traffic IP length</p></td>
-<td><p>76</p></td>
+<tr class="row-even"><td><p><strong>multicast-traffic-autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically start multicast traffic.</div>
+<div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>multicast-traffic-tos</cite></p></td>
-<td><p>Multicast traffic TOS priority</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>multicast-traffic-length</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast traffic IP length.</div>
+<div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
+<div class="line">Default: 76</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>multicast-traffic-pps</cite></p></td>
-<td><p>Multicast traffic PPS per group</p></td>
-<td><p>1000</p></td>
+<tr class="row-even"><td><p><strong>multicast-traffic-tos</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast traffic TOS priority.</div>
+<div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
-<td><p>Multicast traffic source interface</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>multicast-traffic-pps</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast traffic PPS (packets-per-second) per group.</div>
+<div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
+<div class="line">Default: 1000</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>max-join-delay</cite></p></td>
-<td><p>Maximum join delay in milliseconds</p></td>
-<td><p>0 (disabled)</p></td>
+<tr class="row-even"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast traffic source interface.</div>
+<div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
+<div class="line">Default: <cite>first network interface from configuration</cite></div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
-<p>Per default, join and leave requests are sent using dedicated reports.
-The option <code class="docutils literal notranslate"><span class="pre">combined-leave-join</span></code> allows the combination of leave and
-join records within a single IGMPv3 report using multiple group records.
-This option applies to the IGMP version 3 only!</p>
-<p>If <code class="docutils literal notranslate"><span class="pre">send-multicast-traffic</span></code> is true, the BNG Blaster generates multicast
-traffic on the network interface based on the specified group and source
-attributes mentioned before. This traffic includes some special signatures
-for faster processing and more detailed analysis. This traffic starts
-automatically, which can be suppressed by setting <code class="docutils literal notranslate"><span class="pre">multicast-traffic-autostart</span></code>
-to false. The length, TOS and packets per second (PPS) can be controlled
-with the corresponding options.</p>
-<p>If group is set to 293.0.0.1 with group-iter of 0.0.0.2, source 1.1.1.1
-and group-count 3, the result are the following three groups (S.G)
-1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3 and 1.1.1.1,239.0.0.5.</p>
-<p>If <code class="docutils literal notranslate"><span class="pre">max-join-delay</span></code> is configured, the final report includes how often
-the measured join delay is above this threshold.</p>
 
 
            </div>

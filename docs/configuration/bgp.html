@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -78,62 +80,107 @@
   <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>network-interface</cite></p></td>
-<td><p>BGP local interface (source interface)</p></td>
-<td><p>first network interface</p></td>
+<tr class="row-even"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local interface (source interface).</div>
+<div class="line">Default: <cite>first network interface from configuration</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>local-ipv4-address</cite></p></td>
-<td><p>BGP local IPv4 address (source address)</p></td>
-<td><p>network interface address</p></td>
+<tr class="row-odd"><td><p><strong>local-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local IPv4 address (source address).</div>
+<div class="line">Default: <cite>network interface address</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>local-as</cite></p></td>
-<td><p>BGP local AS</p></td>
-<td><p>65000</p></td>
+<tr class="row-even"><td><p><strong>local-as</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local AS.</div>
+<div class="line">Default: 65000 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>peer-ipv4-address</cite></p></td>
-<td><p>BGP peer address</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>peer-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory BGP peer address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>peer-as</cite></p></td>
-<td><p>BGP peer AS</p></td>
-<td><p>local AS</p></td>
+<tr class="row-even"><td><p><strong>peer-as</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP peer AS.</div>
+<div class="line">Default: <cite>local AS</cite> Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>hold-time</cite></p></td>
-<td><p>BGP hold-time in seconds</p></td>
-<td><p>90</p></td>
+<tr class="row-odd"><td><p><strong>hold-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP hold-time in seconds.</div>
+<div class="line">Default: 90 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>id</cite></p></td>
-<td><p>BGP identifier</p></td>
-<td><p>1.2.3.4</p></td>
+<tr class="row-even"><td><p><strong>id</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP identifier.</div>
+<div class="line">Default: 1.2.3.4</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>reconnect</cite></p></td>
-<td><p>BGP reconnect</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>tos</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP IP TOS.</div>
+<div class="line">Default: 0 Range: 0 - 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>start-traffic</cite></p></td>
-<td><p>BGP starts global traffic after RAW update</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>ttl</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP IP TTL.</div>
+<div class="line">Default: 255 Range: 0 - 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
-<td><p>BGP teardown time in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-odd"><td><p><strong>reconnect</strong></p></td>
+<td><div class="line-block">
+<div class="line">Reconnect BGP session automatically.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
-<td><p>BGP RAW update file</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>start-traffic</strong></p></td>
+<td><div class="line-block">
+<div class="line">Start global traffic after RAW update finished.</div>
+<div class="line">If enabled, the control command <strong>traffic-start</strong> is automatically</div>
+<div class="line">executed as soon as the BGP RAW update has finished.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP teardown time in seconds.</div>
+<div class="line">Default: 5 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP RAW update file.</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

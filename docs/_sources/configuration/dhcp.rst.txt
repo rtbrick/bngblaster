@@ -2,38 +2,33 @@
 
     { "dhcp": {} }
 
-
-.. list-table::
-   :widths: 25 50 25
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Default
-   * - `enable`
-     - This option allows to enable or disable DHCP
-     - true
-   * - `broadcast`
-     - DHCP broadcast flag
-     - false
-   * - `timeout`
-     - DHCP timeout in seconds
-     - 5
-   * - `retry`
-     - DHCP retry
-     - 10
-   * - `release-interval`
-     - DHCP release interval
-     - 1
-   * - `release-retry`
-     - DHCP release retry
-     - 3
-   * - `tos`
-     - IPv4 TOS for all DHCP control traffic
-     - 0
-   * - `vlan-priority`
-     - VLAN PBIT for all DHCP control traffic
-     - 0
-   * - `access-line`
-     - Add access-line attributes like Agent-Remote/Circuit-Id
-     - true
++-----------------------------------+----------------------------------------------------------------------+
+| Attribute                         | Description                                                          |
++===================================+======================================================================+
+| **enable**                        | | This option allows enabling or disabling DHCP.                     |
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **broadcast**                     | | DHCP broadcast flag.                                               |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **timeout**                       | | DHCP timeout in seconds.                                           |
+|                                   | | Default: 5                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **retry**                         | | DHCP retry.                                                        |
+|                                   | | Default: 10                                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **release-interval**              | | DHCP release interval.                                             |
+|                                   | | Default: 1                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **release-retry**                 | | DHCP release retry.                                                |
+|                                   | | Default: 3                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **tos**                           | | IPv4 TOS for all DHCP control traffic.                             |
+|                                   | | Default: 0                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **vlan-priority**                 | | VLAN PBIT for all DHCP control traffic.                            |
+|                                   | | Default: 0                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **access-line**                   | | Add access-line attributes like Agent-Remote/Circuit-Id.           |
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+

@@ -2,20 +2,15 @@
 
     { "isis": { "external": {} } }
 
-
-.. list-table::
-   :widths: 25 50 25
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Default
-   * - `purge`
-     - Automatically purge all external LSP during teardown
-     - true
-   * - `auto-refresh`
-     - Automatically refresh all external LSP
-     - false
-   * - `mrt-file`
-     - ISIS MRT file
-     - 
++-----------------------------------+----------------------------------------------------------------------+
+| Attribute                         | Description                                                          |
++===================================+======================================================================+
+| **purge**                         | | Automatically purge all external LSP during teardown. This option  |
+|                                   | | requires a reasonable teardown-time depending on the database size.|
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **auto-refresh**                  | | Automatically refresh all external LSP.                            |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **mrt-file**                      | | MRT file                                                           |
++-----------------------------------+----------------------------------------------------------------------+

@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
@@ -70,6 +71,7 @@
 <li class="toctree-l1"><a class="reference internal" href="routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
@@ -175,71 +177,96 @@ TX:             512
 <section id="interface-settings">
 <h2>Interface Settings<a class="headerlink" href="#interface-settings" title="Permalink to this headline"></a></h2>
 <p>The interfaces section contains all configurations around interface links and options.</p>
-<p>The following configuration allows to overwrite the global default interface link settings.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>io-mode</cite></p></td>
-<td><p>IO mode</p></td>
-<td><p>packet_mmap_raw</p></td>
+<tr class="row-even"><td><p><strong>io-mode</strong></p></td>
+<td><div class="line-block">
+<div class="line">IO mode.</div>
+<div class="line">The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code></div>
+<div class="line">but except <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently</div>
+<div class="line">considered experimental. In the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>)</div>
+<div class="line">all packets are received in a Packet MMAP ring buffer and sent</div>
+<div class="line">directly through RAW packet sockets.</div>
+<div class="line">Default: packet_mmap_raw</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-slots</cite></p></td>
-<td><p>IO slots (ring size)</p></td>
-<td><p>4096</p></td>
+<tr class="row-odd"><td><p><strong>io-slots</strong></p></td>
+<td><div class="line-block">
+<div class="line">IO slots (ring size).</div>
+<div class="line">It might be also needed to increase the <strong>io-slots</strong> to</div>
+<div class="line">reach the desired throughput. The actual meaning of IO slots</div>
+<div class="line">depends on the selected IO mode. For Packet MMAP, it defines the</div>
+<div class="line">maximum number of packets in the ring buffer.</div>
+<div class="line">Default: 4096</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>qdisc-bypass</cite></p></td>
-<td><p>Bypass the kernel’s qdisc layer</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>qdisc-bypass</strong></p></td>
+<td><div class="line-block">
+<div class="line">Bypass the kernel’s qdisc layer.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-interval</cite></p></td>
-<td><p>TX polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
+<tr class="row-odd"><td><p><strong>tx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">TX polling interval in milliseconds.</div>
+<div class="line">Default: 1.0 Range: 0.0001 to 1000</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>rx-interval</cite></p></td>
-<td><p>RX polling interval in milliseconds</p></td>
-<td><p>1.0</p></td>
+<tr class="row-even"><td><p><strong>rx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">RX polling interval in milliseconds.</div>
+<div class="line">Default: 1.0 Range: 0.0001 to 1000</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>tx-threads</cite></p></td>
-<td><p>Number of TX threads per interface link</p></td>
-<td><p>0 (main thread)</p></td>
+<tr class="row-odd"><td><p><strong>tx-threads</strong></p></td>
+<td><div class="line-block">
+<div class="line">Number of TX threads per interface link.</div>
+<div class="line">Default: 0 (main thread)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>rx-threads</cite></p></td>
-<td><p>Number of RX threads per interface link</p></td>
-<td><p>0 (main thread)</p></td>
+<tr class="row-even"><td><p><strong>rx-threads</strong></p></td>
+<td><div class="line-block">
+<div class="line">Number of RX threads per interface link.</div>
+<div class="line">Default: 0 (main thread)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>capture-include-streams</cite></p></td>
-<td><p>Include traffic streams in the capture</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>capture-include-streams</strong></p></td>
+<td><div class="line-block">
+<div class="line">Include traffic streams in the capture.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>mac-modifier</cite></p></td>
-<td><p>Third byte of access session MAC address (0-255)</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>mac-modifier</strong></p></td>
+<td><div class="line-block">
+<div class="line">Third byte of access session MAC address (0-255). This option</div>
+<div class="line">allows to run multiple BNG Blaster instances with disjoint session</div>
+<div class="line">MAC addresses.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
-<p>The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code> but except
-<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently considered experimental. In
-the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>) all packets are received in a Packet MMAP
-ring buffer and sent directly through RAW packet sockets.</p>
-<p>The default <code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> of <code class="docutils literal notranslate"><span class="pre">1.0</span></code> (1ms) allows precise timestamps
-and high throughput. Those values can be further increased (e.g. <code class="docutils literal notranslate"><span class="pre">0.1</span></code>) for higher throughput
-or decreased (e.g. <code class="docutils literal notranslate"><span class="pre">5.0</span></code>) for lower system load.</p>
-<p>It might be also needed to increase the <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> from the default value of <code class="docutils literal notranslate"><span class="pre">4096</span></code> to
-reach the desired throughput. The actual meaning of IO slots depends on the selected IO mode.
-For Packet MMAP, it defines the maximum number of packets in the ring buffer.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span>
@@ -260,82 +287,116 @@ for interface links referenced by interface functions.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Interface name (e.g. eth0, …)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Interface name (e.g. eth0, …).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>description</cite></p></td>
-<td><p>Interface description</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>description</strong></p></td>
+<td><div class="line-block">
+<div class="line">Interface description.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>mac</cite></p></td>
-<td><p>Overwrite the MAC address</p></td>
-<td><p>Interface MAC address</p></td>
+<tr class="row-even"><td><p><strong>mac</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the MAC address.</div>
+<div class="line">Default: <cite>physical interface MAC address</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-mode</cite></p></td>
-<td><p>Overwrite the IO mode</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>lag-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Add interface/link to LAG group.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>io-slots</cite></p></td>
-<td><p>Overwrite the IO slots (ring size)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>lacp-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">LACP interface priority.</div>
+<div class="line">Default: 32768</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>io-slots-tx</cite></p></td>
-<td><p>Overwrite the TX IO slots (ring size)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>tx-cpuset</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optionally pin TX threads to CPU cores (cpuset). This is required</div>
+<div class="line">for DPDK only.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>io-slots-rx</cite></p></td>
-<td><p>Overwrite the RX IO slots (ring size)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>rx-cpuset</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optionally pin RX threads to CPU cores (cpuset). This is required</div>
+<div class="line">for DPDK only.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>qdisc-bypass</cite></p></td>
-<td><p>Overwrite the kernel’s qdisc layer configuration</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>io-mode</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the IO mode.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-interval</cite></p></td>
-<td><p>Overwrite the TX polling interval in milliseconds</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>io-slots</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the IO slots (ring size).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-interval</cite></p></td>
-<td><p>Overwrite the RX polling interval in milliseconds</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>io-slots-tx</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the TX IO slots (ring size).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-threads</cite></p></td>
-<td><p>Overwrite the number of TX threads per interface link</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>io-slots-rx</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the RX IO slots (ring size).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-threads</cite></p></td>
-<td><p>Overwrite the number of RX threads per interface link</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>qdisc-bypass</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the kernel’s qdisc layer configuration.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>tx-cpuset</cite></p></td>
-<td><p>Optionally pin TX threads to CPU cores (cpuset)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>tx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the TX polling interval in milliseconds.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>rx-cpuset</cite></p></td>
-<td><p>Optionally pin RX threads to CPU cores (cpuset)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>rx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the RX polling interval in milliseconds.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lag-interface</cite></p></td>
-<td><p>Add interface link to LAG group</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>tx-threads</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the number of TX threads per interface link.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lacp-priority</cite></p></td>
-<td><p>LACP interface priority</p></td>
-<td><p>32768</p></td>
+<tr class="row-odd"><td><p><strong>rx-threads</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the number of RX threads per interface link.</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -357,56 +418,77 @@ for all kinds of interface functions.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Interface name (e.g. lag0, …)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">LAG interface name (e.g. lag0, …).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lacp</cite></p></td>
-<td><p>De-/activate LACP</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>lacp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable LACP.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lacp-timeout-short</cite></p></td>
-<td><p>De-/activate LACP short timeout (3x1s)</p></td>
-<td><p>false (3x30s)</p></td>
+<tr class="row-even"><td><p><strong>lacp-timeout-short</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable LACP short timeout (3x1s)</div>
+<div class="line">Default: false (3x30s)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lacp-system-priority</cite></p></td>
-<td><p>LACP system priority</p></td>
-<td><p>32768</p></td>
+<tr class="row-odd"><td><p><strong>lacp-system-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">LACP system priority.</div>
+<div class="line">Default: 32768</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lacp-system-id</cite></p></td>
-<td><p>LACP system identifier</p></td>
-<td><p>02:ff:ff:ff:ff:00</p></td>
+<tr class="row-even"><td><p><strong>lacp-system-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">LACP system identifier</div>
+<div class="line">Default: 02:ff:ff:ff:ff:00</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lacp-min-active-links</cite></p></td>
-<td><p>Define the minimum number of active links</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>lacp-min-active-links</strong></p></td>
+<td><div class="line-block">
+<div class="line">Define the minimum number of active links.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lacp-max-active-links</cite></p></td>
-<td><p>Limit the maximum number of active links</p></td>
-<td><p>255</p></td>
+<tr class="row-even"><td><p><strong>lacp-max-active-links</strong></p></td>
+<td><div class="line-block">
+<div class="line">Limit the maximum number of active links.</div>
+<div class="line">Default: 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>mac</cite></p></td>
-<td><p>LAG interface MAC address</p></td>
-<td><p>02:ff:ff:ff:ff:&lt;id&gt;</p></td>
+<tr class="row-odd"><td><p><strong>mac</strong></p></td>
+<td><div class="line-block">
+<div class="line">LAG interface MAC address.</div>
+<div class="line">Default: 02:ff:ff:ff:ff:&lt;interface-id&gt;</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Multithreaded IO is not supported for LAG member interfaces!</p>
+<p>Multithreaded TX is not supported for LAG member interfaces!</p>
 </div>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -463,74 +545,156 @@ interfaces without any access interface defined for non-BNG testing.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Parent interface link name (e.g. eth0, …)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Parent interface/link name (e.g. eth0, …).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address</cite></p></td>
-<td><p>Local network interface IPv4 address</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local IPv4 address (e.g. 10.0.0.1/24).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway</cite></p></td>
-<td><p>Gateway network interface IPv4 address</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>gateway</strong></p></td>
+<td><div class="line-block">
+<div class="line">Default gateway IPv4 address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address-ipv6</cite></p></td>
-<td><p>Local network interface IPv6 address (implicitly /64)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>address-ipv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local IPv6 address (e.g. fc66::1/64)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway-ipv6</cite></p></td>
-<td><p>Gateway network interface IPv6 address (implicitly /64)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>gateway-ipv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Default gateway IPv6 address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ipv6-router-advertisement</cite></p></td>
-<td><p>Disable IPv6 router advertisements</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>ipv6-router-advertisement</strong></p></td>
+<td><div class="line-block">
+<div class="line">Send IPv6 router advertisements (ICMPv6 RA).</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>vlan</cite></p></td>
-<td><p>Network interface VLAN</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Network interface VLAN</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>gateway-mac</cite></p></td>
-<td><p>Optional set gateway MAC address manually</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>gateway-mac</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional set default gateway MAC address manually. Per default</div>
+<div class="line">this MAC address is resolved via ARP/ND.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway-resolve-wait</cite></p></td>
-<td><p>Sessions will not start until gateways are resolved</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>gateway-resolve-wait</strong></p></td>
+<td><div class="line-block">
+<div class="line">Sessions and protocols will not start until gateways are resolved.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>isis-instance-id</cite></p></td>
-<td><p>Assign the interface to ISIS instance</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>isis-instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Assign the interface to an ISIS instance.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>isis-level</cite></p></td>
-<td><p>ISIS interface level</p></td>
-<td><p>3</p></td>
+<tr class="row-even"><td><p><strong>isis-level</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS interface level.</div>
+<div class="line">Default: 3 Range: 1 - 3</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>isis-p2p</cite></p></td>
-<td><p>ISIS P2P interface</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>isis-p2p</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS P2P interface.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>isis-l1-metric</cite></p></td>
-<td><p>ISIS level 1 interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-even"><td><p><strong>isis-l1-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS level 1 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>isis-l2-metric</cite></p></td>
-<td><p>ISIS level 2 interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>isis-l2-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS level 2 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ospfv2-instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Assign the interface to an OSPFv2 instance.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ospfv2-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPFv2 interface type (p2p or broadcast).</div>
+<div class="line">Default: broadcast</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ospfv2-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPFv2 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ospfv3-instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Assign the interface to an OSPFv3 instance.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ospfv3-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPFv3 interface type (p2p or broadcast).</div>
+<div class="line">Default: broadcast</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ospfv3-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line-block">
+<div class="line">OSPFv3 interface metric.</div>
+</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ldp-instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Assign the interface to a LDP instance.</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -612,218 +776,342 @@ in the configuration to distinguish between them.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Parent interface link name (e.g. eth0, …)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Parent interface/link name (e.g. eth0, …).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
-<td><p>Select the corresponding network interface for this session</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Select the corresponding network interface for those sessions.</div>
+<div class="line">Default: <cite>first network interface from configuration</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>a10nsp-interface</cite></p></td>
-<td><p>Select the corresponding A10NSP interface for this session</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>a10nsp-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Select the corresponding A10NSP interface for those sessions.</div>
+<div class="line">Default: <cite>first a10nsp interface from configuration</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>type</cite></p></td>
-<td><p>Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>)</p></td>
-<td><p>pppoe</p></td>
+<tr class="row-odd"><td><p><strong>type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>).</div>
+<div class="line">Default: pppoe</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>vlan-mode</cite></p></td>
-<td><p>Set VLAN mode <cite>1:1</cite> or <cite>N:1</cite></p></td>
-<td><p>1:1</p></td>
+<tr class="row-even"><td><p><strong>vlan-mode</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set VLAN mode to <cite>1:1</cite> or <cite>N:1</cite>.</div>
+<div class="line">Default: 1:1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
-<td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>qinq</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set outer VLAN ethertype to QinQ (0x88a8).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan-min</cite></p></td>
-<td><p>Outer VLAN minimum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>outer-vlan-min</strong></p></td>
+<td><div class="line-block">
+<div class="line">Outer VLAN minimum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan-max</cite></p></td>
-<td><p>Outer VLAN maximum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-odd"><td><p><strong>outer-vlan-max</strong></p></td>
+<td><div class="line-block">
+<div class="line">Outer VLAN maximum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan-step</cite></p></td>
-<td><p>Outer VLAN step (iterator)</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>outer-vlan-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Outer VLAN step (iterator).</div>
+<div class="line">Default: 1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan</cite></p></td>
-<td><p>Set outer-vlan-min/max equally</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>outer-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set outer-vlan-min/max equally.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan-min</cite></p></td>
-<td><p>Inner VLAN minimum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>inner-vlan-min</strong></p></td>
+<td><div class="line-block">
+<div class="line">Inner VLAN minimum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan-max</cite></p></td>
-<td><p>Inner VLAN maximum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-odd"><td><p><strong>inner-vlan-max</strong></p></td>
+<td><div class="line-block">
+<div class="line">Inner VLAN maximum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan-step</cite></p></td>
-<td><p>Inner VLAN step (iterator)</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>inner-vlan-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Inner VLAN step (iterator).</div>
+<div class="line">Default: 1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan</cite></p></td>
-<td><p>Set inner-vlan-min/max equally</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>inner-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set inner-vlan-min/max equally.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>third-vlan</cite></p></td>
-<td><p>Add a fixed third VLAN (most inner VLAN)</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>third-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Add a static third VLAN (most inner VLAN).</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address</cite></p></td>
-<td><p>Static IPv4 base address (IPoE only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>ipv4</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set false to deactivate IPv4.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ppp-mru</cite></p></td>
-<td><p>Overwrite PPP MRU (PPPoE only)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ipv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set false to deactivate IPv6.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address-iter</cite></p></td>
-<td><p>Static IPv4 base address iterator (IPoE only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 base address (IPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway</cite></p></td>
-<td><p>Static IPv4 gateway address (IPoE only)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>address-iter</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 base address iterator (IPoE only).</div>
+<div class="line">Default: 0.0.0.0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>gateway-iter</cite></p></td>
-<td><p>Static IPv4 gateway address iterator (IPoE only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>gateway</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 gateway address (IPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>username</cite></p></td>
-<td><p>Overwrite the username from the authentication section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>gateway-iter</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 gateway address iterator (IPoE only).</div>
+<div class="line">Default: 0.0.0.0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>password</cite></p></td>
-<td><p>Overwrite the password from the authentication section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>cfm-cc</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable EOAM CFM CC (IPoE only).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>authentication-protocol</cite></p></td>
-<td><p>Overwrite the username from the authentication section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>cfm-level</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance domain level.</div>
+<div class="line">Default: 0 Range: 0 - 7</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>agent-circuit-id</cite></p></td>
-<td><p>Overwrite the agent-circuit-id from the access-line section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>cfm-ma-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance association identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>agent-remote-id</cite></p></td>
-<td><p>Overwrite the agent-remote-id from the access-line section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>cfm-ma-name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance association short name (string).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>access-aggregation-circuit-id</cite></p></td>
-<td><p>Overwrite the access-aggregation-circuit-id from the access-line section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>username</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the username from the authentication section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>rate-up</cite></p></td>
-<td><p>Overwrite the rate-up from the access-line section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>password</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the password from the authentication section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>rate-down</cite></p></td>
-<td><p>Overwrite the rate-down from the access-line section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>authentication-protocol</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the username from the authentication section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>dsl-type</cite></p></td>
-<td><p>Overwrite the dsl-type from the access-line section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>agent-circuit-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the agent-circuit-id from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ipcp</cite></p></td>
-<td><p>De-/activate PPP IPCP</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>agent-remote-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the agent-remote-id from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ip6cp</cite></p></td>
-<td><p>De-/activate PPP IP6CP</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>access-aggregation-circuit-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the access-aggregation-circuit-id from the</div>
+<div class="line">access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ipv4</cite></p></td>
-<td><p>De-/activate IPv4</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>rate-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the rate-up from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv6</cite></p></td>
-<td><p>De-/activate IPv6</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>rate-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the rate-down from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>dhcp</cite></p></td>
-<td><p>De-/activate DHCP</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>dsl-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the dsl-type from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>dhcpv6</cite></p></td>
-<td><p>De-/activate DHCPv6</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ppp-mru</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite PPP MRU (PPPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>dhcpv6-ldra</cite></p></td>
-<td><p>De-/activate DHCPv6 LDRA</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>ipcp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite PPP IPCP enable option (PPPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>igmp-autostart</cite></p></td>
-<td><p>Overwrite IGMP autostart</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ip6cp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite PPP IP6CP enable option (PPPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>igmp-version</cite></p></td>
-<td><p>Overwrite IGMP protocol version (1, 2 or 3)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>dhcp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite DHCP enable option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>session-group-id</cite></p></td>
-<td><p>Session group identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>dhcpv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite DHCPv6 enable option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>stream-group-id</cite></p></td>
-<td><p>Stream group identifier</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>dhcpv6-ldra</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite DHCPv6 LDRA option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>access-line-profile-id</cite></p></td>
-<td><p>Access-line-profile identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>igmp-autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite IGMP autostart option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-cc</cite></p></td>
-<td><p>De-/activate EOAM CFM CC (IPoE only)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>igmp-version</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite IGMP protocol version (1, 2, or 3).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-level</cite></p></td>
-<td><p>Set EOAM CFM maintenance domain level</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>session-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set session group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-ma-id</cite></p></td>
-<td><p>Set EOAM CFM maintenance association identifier</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>stream-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set stream group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-ma-name</cite></p></td>
-<td><p>Set EOAM CFM maintenance association short name</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>access-line-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set access-line-profile identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>i1-start</cite></p></td>
-<td><p>Iterator for usage in strings <cite>{i1}</cite></p></td>
-<td><p>1</p></td>
+<tr class="row-odd"><td><p><strong>i1-start</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i1}</strong> start value.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>i1-step</cite></p></td>
-<td><p>Iterator step per session</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>i1-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i1}</strong> step per session.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>i2-start</cite></p></td>
-<td><p>Iterator for usage in strings <cite>{i2}</cite></p></td>
-<td><p>1</p></td>
+<tr class="row-odd"><td><p><strong>i2-start</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i2}</strong> start value.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>i2-step</cite></p></td>
-<td><p>Iterator step per session</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>i2-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i2}</strong> step per session.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>monkey</cite></p></td>
-<td><p>Enable monkey testing</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>monkey</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable monkey testing.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -1013,30 +1301,36 @@ ADSL network reference model from TR-025.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Parent interface link name (e.g. eth0, …)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Parent interface/link name (e.g. eth0, …).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
-<td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>qinq</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set outer VLAN ethertype to QinQ (0x88a8).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>mac</cite></p></td>
-<td><p>Optional set gateway interface address manually</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>mac</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional set gateway interface address manually.</div>
+<div class="line">Default: <cite>parent interface/link MAC address</cite></div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

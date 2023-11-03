@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -78,218 +80,342 @@
   <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>interface</cite></p></td>
-<td><p>Parent interface link name (e.g. eth0, …)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Parent interface/link name (e.g. eth0, …).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>network-interface</cite></p></td>
-<td><p>Select the corresponding network interface for this session</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Select the corresponding network interface for those sessions.</div>
+<div class="line">Default: <cite>first network interface from configuration</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>a10nsp-interface</cite></p></td>
-<td><p>Select the corresponding A10NSP interface for this session</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>a10nsp-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Select the corresponding A10NSP interface for those sessions.</div>
+<div class="line">Default: <cite>first a10nsp interface from configuration</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>type</cite></p></td>
-<td><p>Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>)</p></td>
-<td><p>pppoe</p></td>
+<tr class="row-odd"><td><p><strong>type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set access type (<cite>pppoe</cite> or <cite>ipoe</cite>).</div>
+<div class="line">Default: pppoe</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>vlan-mode</cite></p></td>
-<td><p>Set VLAN mode <cite>1:1</cite> or <cite>N:1</cite></p></td>
-<td><p>1:1</p></td>
+<tr class="row-even"><td><p><strong>vlan-mode</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set VLAN mode to <cite>1:1</cite> or <cite>N:1</cite>.</div>
+<div class="line">Default: 1:1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>qinq</cite></p></td>
-<td><p>Set outer VLAN ethertype to QinQ (0x88a8)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>qinq</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set outer VLAN ethertype to QinQ (0x88a8).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan-min</cite></p></td>
-<td><p>Outer VLAN minimum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>outer-vlan-min</strong></p></td>
+<td><div class="line-block">
+<div class="line">Outer VLAN minimum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan-max</cite></p></td>
-<td><p>Outer VLAN maximum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-odd"><td><p><strong>outer-vlan-max</strong></p></td>
+<td><div class="line-block">
+<div class="line">Outer VLAN maximum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>outer-vlan-step</cite></p></td>
-<td><p>Outer VLAN step (iterator)</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>outer-vlan-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Outer VLAN step (iterator).</div>
+<div class="line">Default: 1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>outer-vlan</cite></p></td>
-<td><p>Set outer-vlan-min/max equally</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>outer-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set outer-vlan-min/max equally.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan-min</cite></p></td>
-<td><p>Inner VLAN minimum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>inner-vlan-min</strong></p></td>
+<td><div class="line-block">
+<div class="line">Inner VLAN minimum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan-max</cite></p></td>
-<td><p>Inner VLAN maximum value</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-odd"><td><p><strong>inner-vlan-max</strong></p></td>
+<td><div class="line-block">
+<div class="line">Inner VLAN maximum value.</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>inner-vlan-step</cite></p></td>
-<td><p>Inner VLAN step (iterator)</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>inner-vlan-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Inner VLAN step (iterator).</div>
+<div class="line">Default: 1</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>inner-vlan</cite></p></td>
-<td><p>Set inner-vlan-min/max equally</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>inner-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set inner-vlan-min/max equally.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>third-vlan</cite></p></td>
-<td><p>Add a fixed third VLAN (most inner VLAN)</p></td>
-<td><p>0 (untagged)</p></td>
+<tr class="row-even"><td><p><strong>third-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Add a static third VLAN (most inner VLAN).</div>
+<div class="line">Default: 0 (untagged)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address</cite></p></td>
-<td><p>Static IPv4 base address (IPoE only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>ipv4</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set false to deactivate IPv4.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ppp-mru</cite></p></td>
-<td><p>Overwrite PPP MRU (PPPoE only)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ipv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set false to deactivate IPv6.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address-iter</cite></p></td>
-<td><p>Static IPv4 base address iterator (IPoE only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 base address (IPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>gateway</cite></p></td>
-<td><p>Static IPv4 gateway address (IPoE only)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>address-iter</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 base address iterator (IPoE only).</div>
+<div class="line">Default: 0.0.0.0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>gateway-iter</cite></p></td>
-<td><p>Static IPv4 gateway address iterator (IPoE only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>gateway</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 gateway address (IPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>username</cite></p></td>
-<td><p>Overwrite the username from the authentication section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>gateway-iter</strong></p></td>
+<td><div class="line-block">
+<div class="line">Static IPv4 gateway address iterator (IPoE only).</div>
+<div class="line">Default: 0.0.0.0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>password</cite></p></td>
-<td><p>Overwrite the password from the authentication section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>cfm-cc</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable EOAM CFM CC (IPoE only).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>authentication-protocol</cite></p></td>
-<td><p>Overwrite the username from the authentication section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>cfm-level</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance domain level.</div>
+<div class="line">Default: 0 Range: 0 - 7</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>agent-circuit-id</cite></p></td>
-<td><p>Overwrite the agent-circuit-id from the access-line section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>cfm-ma-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance association identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>agent-remote-id</cite></p></td>
-<td><p>Overwrite the agent-remote-id from the access-line section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>cfm-ma-name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance association short name (string).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>access-aggregation-circuit-id</cite></p></td>
-<td><p>Overwrite the access-aggregation-circuit-id from the access-line section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>username</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the username from the authentication section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>rate-up</cite></p></td>
-<td><p>Overwrite the rate-up from the access-line section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>password</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the password from the authentication section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>rate-down</cite></p></td>
-<td><p>Overwrite the rate-down from the access-line section</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>authentication-protocol</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the username from the authentication section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>dsl-type</cite></p></td>
-<td><p>Overwrite the dsl-type from the access-line section</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>agent-circuit-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the agent-circuit-id from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ipcp</cite></p></td>
-<td><p>De-/activate PPP IPCP</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>agent-remote-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the agent-remote-id from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ip6cp</cite></p></td>
-<td><p>De-/activate PPP IP6CP</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>access-aggregation-circuit-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the access-aggregation-circuit-id from the</div>
+<div class="line">access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ipv4</cite></p></td>
-<td><p>De-/activate IPv4</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>rate-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the rate-up from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv6</cite></p></td>
-<td><p>De-/activate IPv6</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>rate-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the rate-down from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>dhcp</cite></p></td>
-<td><p>De-/activate DHCP</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>dsl-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite the dsl-type from the access-line section.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>dhcpv6</cite></p></td>
-<td><p>De-/activate DHCPv6</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ppp-mru</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite PPP MRU (PPPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>dhcpv6-ldra</cite></p></td>
-<td><p>De-/activate DHCPv6 LDRA</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>ipcp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite PPP IPCP enable option (PPPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>igmp-autostart</cite></p></td>
-<td><p>Overwrite IGMP autostart</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ip6cp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite PPP IP6CP enable option (PPPoE only).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>igmp-version</cite></p></td>
-<td><p>Overwrite IGMP protocol version (1, 2 or 3)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>dhcp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite DHCP enable option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>session-group-id</cite></p></td>
-<td><p>Session group identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>dhcpv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite DHCPv6 enable option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>stream-group-id</cite></p></td>
-<td><p>Stream group identifier</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>dhcpv6-ldra</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite DHCPv6 LDRA option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>access-line-profile-id</cite></p></td>
-<td><p>Access-line-profile identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>igmp-autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite IGMP autostart option.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-cc</cite></p></td>
-<td><p>De-/activate EOAM CFM CC (IPoE only)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>igmp-version</strong></p></td>
+<td><div class="line-block">
+<div class="line">Overwrite IGMP protocol version (1, 2, or 3).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-level</cite></p></td>
-<td><p>Set EOAM CFM maintenance domain level</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>session-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set session group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>cfm-ma-id</cite></p></td>
-<td><p>Set EOAM CFM maintenance association identifier</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>stream-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set stream group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>cfm-ma-name</cite></p></td>
-<td><p>Set EOAM CFM maintenance association short name</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>access-line-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set access-line-profile identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>i1-start</cite></p></td>
-<td><p>Iterator for usage in strings <cite>{i1}</cite></p></td>
-<td><p>1</p></td>
+<tr class="row-odd"><td><p><strong>i1-start</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i1}</strong> start value.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>i1-step</cite></p></td>
-<td><p>Iterator step per session</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>i1-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i1}</strong> step per session.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>i2-start</cite></p></td>
-<td><p>Iterator for usage in strings <cite>{i2}</cite></p></td>
-<td><p>1</p></td>
+<tr class="row-odd"><td><p><strong>i2-start</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i2}</strong> start value.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>i2-step</cite></p></td>
-<td><p>Iterator step per session</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>i2-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Iterator <strong>{i2}</strong> step per session.</div>
+<div class="line">Default: 1 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>monkey</cite></p></td>
-<td><p>Enable monkey testing</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>monkey</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable monkey testing.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

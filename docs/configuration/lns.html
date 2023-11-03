@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -78,79 +80,115 @@
   <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;l2tp-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 38%" />
+<col style="width: 62%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>name</cite></p></td>
-<td><p>Mandatory L2TP LNS server hostname (AVP 7)</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory L2TP LNS server hostname (AVP 7)</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>address</cite></p></td>
-<td><p>Mandatory L2TP server address</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory L2TP server address.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>secret</cite></p></td>
-<td><p>Tunnel secret</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>secret</strong></p></td>
+<td><div class="line-block">
+<div class="line">Tunnel secret.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>receive-window-size</cite></p></td>
-<td><p>Control messages receive window size</p></td>
-<td><p>16</p></td>
+<tr class="row-odd"><td><p><strong>receive-window-size</strong></p></td>
+<td><div class="line-block">
+<div class="line">Control messages receive window size.</div>
+<div class="line">Default: 16 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>max-retry</cite></p></td>
-<td><p>Control messages max retry</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>max-retry</strong></p></td>
+<td><div class="line-block">
+<div class="line">Control messages max retry.</div>
+<div class="line">Default: 5 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>congestion-mode</cite></p></td>
-<td><p>Control messages congestion mode</p></td>
-<td><p>default</p></td>
+<tr class="row-odd"><td><p><strong>congestion-mode</strong></p></td>
+<td><div class="line-block">
+<div class="line">Control messages congestion mode (default, slow or aggressive).</div>
+<div class="line">The BNG Blaster supports different congestion modes for the</div>
+<div class="line">reliable delivery of control messages. The default mode is</div>
+<div class="line">described in RFC2661 appendix A (Control Channel Slow Start and</div>
+<div class="line">Congestion Avoidance). The mode slow uses a fixed control window</div>
+<div class="line">size of 1 where aggressive sticks to max permitted based on peer</div>
+<div class="line">received window size.</div>
+<div class="line">Default: default</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>hello-interval</cite></p></td>
-<td><p>Set hello interval</p></td>
-<td><p>30</p></td>
+<tr class="row-even"><td><p><strong>hello-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set hello interval.</div>
+<div class="line">Default: 30 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>data-control-priority</cite></p></td>
-<td><p>Set the priority bit in the L2TP header for all non-IP data packets (LCP, IPCP, …)</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>data-control-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set the priority bit in the L2TP header for all non-IP data</div>
+<div class="line">packets (LCP, IPCP, …).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>data-length</cite></p></td>
-<td><p>Set length bit for all data packets</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>data-length</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set length bit for all data packets.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>data-offset</cite></p></td>
-<td><p>Set offset bit with offset zero for all data packets</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>data-offset</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set offset bit with offset zero for all data packets.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>control-tos</cite></p></td>
-<td><p>L2TP control traffic (SCCRQ, ICRQ, …) TOS priority</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>control-tos</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set L2TP control traffic (SCCRQ, ICRQ, …) TOS priority.</div>
+<div class="line">Default: 0 Range: 0 - 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>data-control-tos</cite></p></td>
-<td><p>Set the L2TP tunnel TOS priority (outer IPv4 header) for all non-IP data packets (LCP, IPCP, …)</p></td>
-<td><p>0</p></td>
+<tr class="row-odd"><td><p><strong>data-control-tos</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set the L2TP tunnel TOS priority (outer IPv4 header) for all</div>
+<div class="line">non-IP data packets (LCP, IPCP, …).</div>
+<div class="line">Default: 0 Range: 0 - 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lcp-padding</cite></p></td>
-<td><p>Add fixed padding to LCP packets send from LNS</p></td>
-<td><p>0</p></td>
+<tr class="row-even"><td><p><strong>lcp-padding</strong></p></td>
+<td><div class="line-block">
+<div class="line">Add fixed padding to LCP packets send from LNS.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
-<p>The BNG Blaster supports different congestion modes for the
-reliable delivery of control messages. The <code class="docutils literal notranslate"><span class="pre">default</span></code> mode
-is described in RFC2661 appendix A (Control Channel Slow Start and
-Congestion Avoidance). The mode <code class="docutils literal notranslate"><span class="pre">slow</span></code> uses a fixed control window
-size of 1 where <code class="docutils literal notranslate"><span class="pre">aggressive</span></code> sticks to max permitted based on peer
-received window size.</p>
 
 
            </div>

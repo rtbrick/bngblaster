@@ -55,10 +55,6 @@ as the intermediate agent functionality.
 The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts 
 all DHCPv4 and PPPoE sessions were received to verify forwarding and header enrichment.
 
-.. note:: 
-    It is also planned to emulate a lightweight DHCPv6 server
-    to verify IPv6 forwarding and header enrichment for IPoE. 
-
 Following a basic PPPoE/A10NSP configuration example which is
 detailed explained in the configuration section.
 

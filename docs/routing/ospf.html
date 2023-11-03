@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -64,6 +65,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -155,82 +157,118 @@ attached to two network interfaces.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 34%" />
+<col style="width: 66%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>instance-id</cite></p></td>
-<td><p>OSPF instance identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF instance identifier.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>version</cite></p></td>
-<td><p>version</p></td>
-<td><p>2</p></td>
+<tr class="row-odd"><td><p><strong>version</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF version.</div>
+<div class="line">Default: 2</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>overload</cite></p></td>
-<td><p>OSPF overload</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>auth-key</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF authentication key.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>auth-key</cite></p></td>
-<td><p>OSPF authentication key</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>auth-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF authentication type (simple or md5).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>auth-type</cite></p></td>
-<td><p>OSPF authentication type (simple or md5)</p></td>
-<td><p>disabled</p></td>
+<tr class="row-even"><td><p><strong>hello-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF hello interval in seconds.</div>
+<div class="line">Default: 10 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>hello-interval</cite></p></td>
-<td><p>OSPF hello interval in seconds</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>dead-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF dead interval in seconds.</div>
+<div class="line">Default: 40 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>dead-interval</cite></p></td>
-<td><p>OSPF dead interval in seconds</p></td>
-<td><p>40</p></td>
+<tr class="row-even"><td><p><strong>lsa-retry-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF LSA retry interval in seconds.</div>
+<div class="line">Default: 5 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lsa-retry-interval</cite></p></td>
-<td><p>OSPF LSA retry interval in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-odd"><td><p><strong>hostname</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF hostname.</div>
+<div class="line">Default: bngblaster</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>hostname</cite></p></td>
-<td><p>OSPF hostname</p></td>
-<td><p>bngblaster</p></td>
+<tr class="row-even"><td><p><strong>router-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF router identifier.</div>
+<div class="line">Default: 10.10.10.10</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>router-id</cite></p></td>
-<td><p>OSPF router identifier</p></td>
-<td><p>10.10.10.10</p></td>
+<tr class="row-odd"><td><p><strong>router-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF router priority.</div>
+<div class="line">Default: 64 Range: 0 - 255</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>router-priority</cite></p></td>
-<td><p>OSPF router priority</p></td>
-<td><p>64</p></td>
+<tr class="row-even"><td><p><strong>area</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF area.</div>
+<div class="line">Default: 0.0.0.0</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>area</cite></p></td>
-<td><p>OSPF area</p></td>
-<td><p>0.0.0.0</p></td>
+<tr class="row-odd"><td><p><strong>sr-base</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF SR base.</div>
+<div class="line">Default: 0 Range: 0 - 1048575</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>sr-base</cite></p></td>
-<td><p>OSPF SR base</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>sr-range</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF SR range.</div>
+<div class="line">Default: 0 Range: 0 - 1048575</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>sr-range</cite></p></td>
-<td><p>OSPF SR range</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>sr-node-sid</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF SR node SID.</div>
+<div class="line">Default: 0 Range: 0 - 1048575</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>sr-node-sid</cite></p></td>
-<td><p>OSPF SR node SID</p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
-<td><p>OSPF teardown time in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF teardown time in seconds.</div>
+<div class="line">Default: 5 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -266,56 +304,78 @@ by MRT files as shown in the example below.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 21%" />
+<col style="width: 79%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>purge</cite></p></td>
-<td><p>Automatically purge all external LSA during teardown</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>purge</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically purge all external LSA during teardown.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>mrt-file</cite></p></td>
-<td><p>OSPF MRT file</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>mrt-file</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF MRT file.</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 34%" />
+<col style="width: 66%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>router-id</cite></p></td>
-<td><p>Mandatory remote router identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>router-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory remote router identifier.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>local-ipv4-address</cite></p></td>
-<td><p>Mandatory local IPv4 address (OSPFv2 only)</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional interface metric.</div>
+<div class="line">Default: 10 Range: 0 - 4294967295</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>metric</cite></p></td>
-<td><p>Optional interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-even"><td><p><strong>local-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory local IPv4 address (OSPFv2 only).</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>local-interface-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local interface identifier (OSPFv3 only).</div>
+<div class="line">Default: 1 (2, 3, …)</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>neighbor-interface-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Remote interface identifier (OSPFv3 only).</div>
+<div class="line">Default: <cite>local-interface-id</cite></div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

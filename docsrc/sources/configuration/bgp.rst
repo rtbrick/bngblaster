@@ -2,44 +2,45 @@
 
     { "bgp": {} }
 
-
-.. list-table::
-   :widths: 25 50 25
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Default
-   * - `network-interface`
-     - BGP local interface (source interface)
-     - first network interface
-   * - `local-ipv4-address`
-     - BGP local IPv4 address (source address)
-     - network interface address
-   * - `local-as`
-     - BGP local AS
-     - 65000
-   * - `peer-ipv4-address`
-     - BGP peer address
-     - 
-   * - `peer-as`
-     - BGP peer AS
-     - local AS
-   * - `hold-time`
-     - BGP hold-time in seconds
-     - 90
-   * - `id`
-     - BGP identifier
-     - 1.2.3.4
-   * - `reconnect`
-     - BGP reconnect
-     - true
-   * - `start-traffic`
-     - BGP starts global traffic after RAW update
-     - false
-   * - `teardown-time`
-     - BGP teardown time in seconds
-     - 5
-   * - `raw-update-file`
-     - BGP RAW update file
-     - 
++-----------------------------------+----------------------------------------------------------------------+
+| Attribute                         | Description                                                          |
++===================================+======================================================================+
+| **network-interface**             | | BGP local interface (source interface).                            |
+|                                   | | Default: `first network interface from configuration`              |
++-----------------------------------+----------------------------------------------------------------------+
+| **local-ipv4-address**            | | BGP local IPv4 address (source address).                           |
+|                                   | | Default: `network interface address`                               |
++-----------------------------------+----------------------------------------------------------------------+
+| **local-as**                      | | BGP local AS.                                                      |
+|                                   | | Default: 65000 Range: 0 - 4294967295                               |
++-----------------------------------+----------------------------------------------------------------------+
+| **peer-ipv4-address**             | | Mandatory BGP peer address.                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **peer-as**                       | | BGP peer AS.                                                       |
+|                                   | | Default: `local AS` Range: 0 - 4294967295                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **hold-time**                     | | BGP hold-time in seconds.                                          |
+|                                   | | Default: 90 Range: 0 - 65535                                       |
++-----------------------------------+----------------------------------------------------------------------+
+| **id**                            | | BGP identifier.                                                    |
+|                                   | | Default: 1.2.3.4                                                   |
++-----------------------------------+----------------------------------------------------------------------+
+| **tos**                           | | BGP IP TOS.                                                        |
+|                                   | | Default: 0 Range: 0 - 255                                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **ttl**                           | | BGP IP TTL.                                                        |
+|                                   | | Default: 255 Range: 0 - 255                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **reconnect**                     | | Reconnect BGP session automatically.                               |
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **start-traffic**                 | | Start global traffic after RAW update finished.                    |
+|                                   | | If enabled, the control command **traffic-start** is automatically |
+|                                   | | executed as soon as the BGP RAW update has finished.               |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **teardown-time**                 | | BGP teardown time in seconds.                                      |
+|                                   | | Default: 5 Range: 0 - 65535                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **raw-update-file**               | | BGP RAW update file.                                               |
++-----------------------------------+----------------------------------------------------------------------+

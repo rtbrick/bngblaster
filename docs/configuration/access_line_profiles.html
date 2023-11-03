@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -75,159 +77,266 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access-line-profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
+  <p>Attributes within the <strong>access-line-profiles</strong> are treated analogous to those within the
+<strong>access-line</strong> section but they provide the capability to apply different profiles to
+each access interface.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access-line-profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>access-line-profile-id</cite></p></td>
-<td><p>Mandatory access-line-profile identifier</p></td>
+<tr class="row-even"><td><p><strong>access-line-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory access-line-profile identifier.</div>
+<div class="line">Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>act-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Actual Data Rate Upstream.</div>
+<div class="line">This value is overwritten by <strong>rate-up</strong>.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>act-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Actual Data Rate Downstream.</div>
+<div class="line">This value is overwritten by <strong>rate-down</strong></div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>min-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Minimum Data Rate Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>min-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Minimum Data Rate Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>att-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Attainable DataRate Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>att-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Attainable DataRate Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>max-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Maximum Data Rate Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>max-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Maximum Data Rate Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>min-up-low</strong></p></td>
+<td><div class="line-block">
+<div class="line">Min Data Rate Upstream.in low power state</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>min-down-low</strong></p></td>
+<td><div class="line-block">
+<div class="line">Min Data Rate Downstream.in low power state</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>max-interl-delay-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Max Interleaving Delay Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>act-interl-delay-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Actual Interleaving Delay Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>max-interl-delay-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Max Interleaving Delay Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>act-interl-delay-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Actual Interleaving Delay Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>data-link-encaps</strong></p></td>
+<td><div class="line-block">
+<div class="line">Data Link Encapsulation</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>dsl-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">DSL Type.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>pon-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">PON Access Type.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>etr-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Expected Throughput (ETR) Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>etr-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Expected Throughput (ETR) Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>attetr-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Attainable Expected Throughput (ATTETR) Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>attetr-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Attainable Expected Throughput (ATTETR) Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>gdr-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Gamma Data Rate (GDR) Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>gdr-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Gamma Data Rate (GDR) Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>attgdr-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">Attainable Gamma Data Rate (ATTGDR) Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>attgdr-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">Attainable Gamma Data Rate (ATTGDR) Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ont-onu-avg-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">ONT/ONU Average Data Rate Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ont-onu-peak-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">ONT/ONU Peak Data Rate Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ont-onu-max-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">ONT/ONU Maximum Data Rate Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ont-onu-ass-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">ONT/ONU Assured Data Rate Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>pon-max-up</strong></p></td>
+<td><div class="line-block">
+<div class="line">PON Tree Maximum Data Rate Upstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>pon-max-down</strong></p></td>
+<td><div class="line-block">
+<div class="line">PON Tree Maximum Data Rate Downstream.</div>
+<div class="line">Default: 0 Range: 0 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>pon-access-line-version</strong></p></td>
+<td><div class="line-block">
+<div class="line">This option allows to switch between the versions</div>
+<div class="line">00 (DRAFT-LIHAWI-00) and 04 (DRAFT-LIHAWI-04) of the RFC</div>
+<div class="line"><cite>draft-lihawi-ancp-protocol-access-extension</cite>.</div>
+<div class="line">Default: DRAFT-LIHAWI-04</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td></td>
 <td></td>
-</tr>
-<tr class="row-odd"><td><p><cite>act-up</cite></p></td>
-<td><p>Actual Data Rate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>act-down</cite></p></td>
-<td><p>Actual Data Rate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>min-up</cite></p></td>
-<td><p>Minimum Data Rate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>min-down</cite></p></td>
-<td><p>Minimum Data Rate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>att-up</cite></p></td>
-<td><p>Attainable DataRate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>att-down</cite></p></td>
-<td><p>Attainable DataRate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>max-up</cite></p></td>
-<td><p>Maximum Data Rate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>max-down</cite></p></td>
-<td><p>Maximum Data Rate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>min-up-low</cite></p></td>
-<td><p>Min Data Rate Upstream in low power state</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>min-down-low</cite></p></td>
-<td><p>Min Data Rate Downstream in low power state</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>max-interl-delay-up</cite></p></td>
-<td><p>Max Interleaving Delay Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>act-interl-delay-up</cite></p></td>
-<td><p>Actual Interleaving Delay Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>max-interl-delay-down</cite></p></td>
-<td><p>Max Interleaving Delay Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>act-interl-delay-down</cite></p></td>
-<td><p>Actual Interleaving Delay Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>data-link-encaps</cite></p></td>
-<td><p>Data Link Encapsulation</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>dsl-type</cite></p></td>
-<td><p>DSL Type</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>pon-type</cite></p></td>
-<td><p>PON Access Type</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>etr-up</cite></p></td>
-<td><p>Expected Throughput (ETR) Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>etr-down</cite></p></td>
-<td><p>Expected Throughput (ETR) Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>attetr-up</cite></p></td>
-<td><p>Attainable Expected Throughput (ATTETR) Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>attetr-down</cite></p></td>
-<td><p>Attainable Expected Throughput (ATTETR) Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>gdr-up</cite></p></td>
-<td><p>Gamma Data Rate (GDR) Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>gdr-down</cite></p></td>
-<td><p>Gamma Data Rate (GDR) Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>attgdr-up</cite></p></td>
-<td><p>Attainable Gamma Data Rate (ATTGDR) Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>attgdr-down</cite></p></td>
-<td><p>Attainable Gamma Data Rate (ATTGDR) Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>ont-onu-avg-down</cite></p></td>
-<td><p>ONT/ONU Average Data Rate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>ont-onu-peak-down</cite></p></td>
-<td><p>ONT/ONUPeak Data Rate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>ont-onu-max-up</cite></p></td>
-<td><p>ONT/ONU Maximum Data Rate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>ont-onu-ass-up</cite></p></td>
-<td><p>ONT/ONU Assured Data Rate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>pon-max-up</cite></p></td>
-<td><p>PON Tree Maximum Data Rate Upstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-odd"><td><p><cite>pon-max-down</cite></p></td>
-<td><p>PON Tree Maximum Data Rate Downstream</p></td>
-<td><p>0</p></td>
-</tr>
-<tr class="row-even"><td><p><cite>pon-access-line-version</cite></p></td>
-<td><p>DRAFT-LIHAWI-00 or DRAFT-LIHAWI-04</p></td>
-<td><p>DRAFT-LIHAWI-04</p></td>
 </tr>
 </tbody>
 </table>
-<p>Attributes with values set to 0 will not be sent.</p>
-<p>The values for <code class="docutils literal notranslate"><span class="pre">rate-up</span></code>, <code class="docutils literal notranslate"><span class="pre">rate-down</span></code> and <code class="docutils literal notranslate"><span class="pre">dsl-type</span></code> defined in the
-access-line or interface section has priority over those defined here.</p>
+<p>The values specified for <strong>rate-up</strong>, <strong>rate-down</strong> and <strong>dsl-type</strong> defined in the
+<strong>access-line</strong> or <strong>interface</strong> section section take precedence over the definitions
+provided here.</p>
 
 
            </div>

@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -63,6 +64,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -165,146 +167,222 @@ attached to two network interfaces.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 34%" />
+<col style="width: 66%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>instance-id</cite></p></td>
-<td><p>ISIS instance identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS instance identifier.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>level</cite></p></td>
-<td><p>ISIS level</p></td>
-<td><p>3</p></td>
+<tr class="row-odd"><td><p><strong>level</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level.</div>
+<div class="line">Default: 3 Range: 1 - 3</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>overload</cite></p></td>
-<td><p>ISIS overload</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>protocol-ipv4</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable/disable IPv4 routing.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>protocol-ipv4</cite></p></td>
-<td><p>Enable/disable IPv4</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>protocol-ipv6</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable/disable IPv6 routing.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>protocol-ipv6</cite></p></td>
-<td><p>Enable/disable IPv6</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>level1-auth-key</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 1 authentication key.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>level1-auth-key</cite></p></td>
-<td><p>ISIS level 1 authentication key</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>level1-auth-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 1 authentication type (simple or md5).</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>level1-auth-type</cite></p></td>
-<td><p>ISIS level 1 authentication type (simple or md5)</p></td>
-<td><p>disabled</p></td>
+<tr class="row-even"><td><p><strong>level1-auth-hello</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 1 hello authentication.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>level1-auth-hello</cite></p></td>
-<td><p>ISIS level 1 hello authentication</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>level1-auth-csnp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 1 CSNP authentication.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>level1-auth-csnp</cite></p></td>
-<td><p>ISIS level 1 CSNP authentication</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>level1-auth-psnp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 1 PSNP authentication.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>level1-auth-psnp</cite></p></td>
-<td><p>ISIS level 1 PSNP authentication</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>level2-auth-key</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 2 authentication key.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>level2-auth-key</cite></p></td>
-<td><p>ISIS level 2 authentication key</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>level2-auth-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 2 authentication type (simple or md5).</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>level2-auth-type</cite></p></td>
-<td><p>ISIS level 2 authentication type (simple or md5)</p></td>
-<td><p>disabled</p></td>
+<tr class="row-odd"><td><p><strong>level2-auth-hello</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 2 hello authentication.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>level2-auth-hello</cite></p></td>
-<td><p>ISIS level 2 hello authentication</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>level2-auth-csnp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 2 CSNP authentication.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>level2-auth-csnp</cite></p></td>
-<td><p>ISIS level 2 CSNP authentication</p></td>
-<td><p>true</p></td>
+<tr class="row-odd"><td><p><strong>level2-auth-psnp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Level 2 PSNP authentication.</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>level2-auth-psnp</cite></p></td>
-<td><p>ISIS level 2 PSNP authentication</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>hello-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Hello interval in seconds</div>
+<div class="line">Default: 10 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>hello-interval</cite></p></td>
-<td><p>ISIS hello interval in seconds</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>hello-padding</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable/disable hello padding.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>hello-padding</cite></p></td>
-<td><p>ISIS hello padding</p></td>
-<td><p>false</p></td>
+<tr class="row-even"><td><p><strong>hold-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS hold time in seconds.</div>
+<div class="line">Default: 30 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>hold-time</cite></p></td>
-<td><p>ISIS hold time in seconds</p></td>
-<td><p>30</p></td>
+<tr class="row-odd"><td><p><strong>lsp-lifetime</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS LSP lifetime in seconds.</div>
+<div class="line">Default: 65535 Range: 330 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lsp-lifetime</cite></p></td>
-<td><p>ISIS LSP lifetime in seconds</p></td>
-<td><p>65535</p></td>
+<tr class="row-even"><td><p><strong>lsp-refresh-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS LSP refresh interval in seconds.</div>
+<div class="line">Default: 300 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lsp-refresh-interval</cite></p></td>
-<td><p>ISIS LSP refresh interval in seconds</p></td>
-<td><p>300</p></td>
+<tr class="row-odd"><td><p><strong>lsp-retry-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS LSP retry interval in seconds.</div>
+<div class="line">Default: 5 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lsp-retry-interval</cite></p></td>
-<td><p>ISIS LSP retry interval in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>lsp-tx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS LSP TX interval in ms (time between LSP send windows).</div>
+<div class="line">Default: 10 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>lsp-tx-interval</cite></p></td>
-<td><p>ISIS LSP TX interval in ms (time between LSP send windows)</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>lsp-tx-window-size</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS LSP TX window size (LSP send per window).</div>
+<div class="line">Default: 1 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lsp-tx-window-size</cite></p></td>
-<td><p>ISIS LSP TX window size (LSP send per window)</p></td>
-<td><p>1</p></td>
+<tr class="row-even"><td><p><strong>csnp-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS CSNP interval in seconds.</div>
+<div class="line">Default: 30 Range: 1 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>csnp-interval</cite></p></td>
-<td><p>ISIS CSNP interval in seconds</p></td>
-<td><p>30</p></td>
+<tr class="row-odd"><td><p><strong>hostname</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS hostname</div>
+<div class="line">Default: bngblaster</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>hostname</cite></p></td>
-<td><p>ISIS hostname</p></td>
-<td><p>bngblaster</p></td>
+<tr class="row-even"><td><p><strong>router-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS router identifier.</div>
+<div class="line">Default: 10.10.10.10</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>router-id</cite></p></td>
-<td><p>ISIS router identifier</p></td>
-<td><p>10.10.10.10</p></td>
+<tr class="row-odd"><td><p><strong>system-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS system identifier.</div>
+<div class="line">Default: 0100.1001.0010</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>system-id</cite></p></td>
-<td><p>ISIS system identifier</p></td>
-<td><p>0100.1001.0010</p></td>
+<tr class="row-even"><td><p><strong>area</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS area(s)</div>
+<div class="line">Default: 49.0001/24</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>area</cite></p></td>
-<td><p>ISIS area(s)</p></td>
-<td><p>49.0001/24</p></td>
+<tr class="row-odd"><td><p><strong>sr-base</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS SR base</div>
+<div class="line">Default: 0 Range: 0 - 1048575</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>sr-base</cite></p></td>
-<td><p>ISIS SR base</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>sr-range</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS SR range</div>
+<div class="line">Default: 0 Range: 0 - 1048575</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>sr-range</cite></p></td>
-<td><p>ISIS SR range</p></td>
-<td></td>
+<tr class="row-odd"><td><p><strong>sr-node-sid</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS SR node SID</div>
+<div class="line">Default: 0 Range: 0 - 1048575</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>sr-node-sid</cite></p></td>
-<td><p>ISIS SR node SID</p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
-<td><p>ISIS teardown time in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS teardown time in seconds.</div>
+<div class="line">Default: 5 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -346,30 +424,37 @@ by MRT files as shown in the example below.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>purge</cite></p></td>
-<td><p>Automatically purge all external LSP during teardown</p></td>
-<td><p>true</p></td>
+<tr class="row-even"><td><p><strong>purge</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically purge all external LSP during teardown. This option</div>
+<div class="line">requires a reasonable teardown-time depending on the database size.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>auto-refresh</cite></p></td>
-<td><p>Automatically refresh all external LSP</p></td>
-<td><p>false</p></td>
+<tr class="row-odd"><td><p><strong>auto-refresh</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically refresh all external LSP.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>mrt-file</cite></p></td>
-<td><p>ISIS MRT file</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>mrt-file</strong></p></td>
+<td><div class="line-block">
+<div class="line">MRT file</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
@@ -378,30 +463,36 @@ reachability to node <code class="docutils literal notranslate"><span class="pre
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 67%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>system-id</cite></p></td>
-<td><p>ISIS system identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>system-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS system identifier.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>l1-metric</cite></p></td>
-<td><p>ISIS level 1 interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-odd"><td><p><strong>l1-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS level 1 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>l2-metric</cite></p></td>
-<td><p>ISIS level 2 interface metric</p></td>
-<td><p>10</p></td>
+<tr class="row-even"><td><p><strong>l2-metric</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS level 2 interface metric.</div>
+<div class="line">Default: 10</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>

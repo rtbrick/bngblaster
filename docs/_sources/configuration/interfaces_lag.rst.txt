@@ -2,39 +2,33 @@
 
     { "interfaces": { "lag": [] } }
 
-
-.. list-table::
-   :widths: 25 50 25
-   :header-rows: 1
-
-   * - Attribute
-     - Description
-     - Default
-   * - `interface`
-     - Interface name (e.g. lag0, ...)
-     - 
-   * - `lacp`
-     - De-/activate LACP
-     - false
-   * - `lacp-timeout-short`
-     - De-/activate LACP short timeout (3x1s)
-     - false (3x30s)
-   * - `lacp-system-priority`
-     - LACP system priority
-     - 32768
-   * - `lacp-system-id`
-     - LACP system identifier
-     - 02:ff:ff:ff:ff:00
-   * - `lacp-min-active-links`
-     - Define the minimum number of active links
-     - 0
-   * - `lacp-max-active-links`
-     - Limit the maximum number of active links
-     - 255
-   * - `mac`
-     - LAG interface MAC address
-     - 02:ff:ff:ff:ff:<id>
++-----------------------------------+----------------------------------------------------------------------+
+| Attribute                         | Description                                                          |
++===================================+======================================================================+
+| **interface**                     | | LAG interface name (e.g. lag0, ...).                               |
++-----------------------------------+----------------------------------------------------------------------+
+| **lacp**                          | | Enable LACP.                                                       |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **lacp-timeout-short**            | | Enable LACP short timeout (3x1s)                                   |
+|                                   | | Default: false (3x30s)                                             |
++-----------------------------------+----------------------------------------------------------------------+
+| **lacp-system-priority**          | | LACP system priority.                                              |
+|                                   | | Default: 32768                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **lacp-system-id**                | | LACP system identifier                                             |
+|                                   | | Default: 02:ff:ff:ff:ff:00                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **lacp-min-active-links**         | | Define the minimum number of active links.                         |
+|                                   | | Default: 0                                                         |
++-----------------------------------+----------------------------------------------------------------------+
+| **lacp-max-active-links**         | | Limit the maximum number of active links.                          |
+|                                   | | Default: 255                                                       |
++-----------------------------------+----------------------------------------------------------------------+
+| **mac**                           | | LAG interface MAC address.                                         |
+|                                   | | Default: 02:ff:ff:ff:ff:<interface-id>                             |
++-----------------------------------+----------------------------------------------------------------------+
 
 .. note::
 
-    Multithreaded IO is not supported for LAG member interfaces!
+    Multithreaded TX is not supported for LAG member interfaces!

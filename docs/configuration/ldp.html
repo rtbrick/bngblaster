@@ -8,6 +8,7 @@
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
         <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
@@ -42,6 +43,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -78,79 +80,108 @@
   <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-given docutils align-default">
+<table class="docutils align-default">
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 50%" />
-<col style="width: 25%" />
+<col style="width: 36%" />
+<col style="width: 64%" />
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
-<th class="head"><p>Default</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><cite>instance-id</cite></p></td>
-<td><p>LDP instance identifier</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>instance-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP instance identifier.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>keepalive-time</cite></p></td>
-<td><p>LDP session keepalive time in seconds</p></td>
-<td><p>15</p></td>
+<tr class="row-odd"><td><p><strong>keepalive-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP session keepalive time in seconds.</div>
+<div class="line">The <strong>keepalive-time</strong> defines the local LDP session</div>
+<div class="line">keepalive timeout. Each LDP peer must calculate the</div>
+<div class="line">effective keepalive timeout by using the smaller of its</div>
+<div class="line">locally defined and received timeout in the PDU. The</div>
+<div class="line">value chosen indicates the maximum number of seconds</div>
+<div class="line">that may elapse between the receipt of successive PDUs</div>
+<div class="line">from the LDP peer on the session TCP connection. The</div>
+<div class="line">keepalive timeout is reset each time a PDU arrives. The</div>
+<div class="line">BNG Blaster will send keepalive messages at an interval</div>
+<div class="line">calculated by using the effective keepalive time divided</div>
+<div class="line">by 3. Assuming an effective keepalive time of of 15</div>
+<div class="line">seconds results in a keepalive interval of 5 seconds.</div>
+<div class="line">Default: 15 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>hold-time</cite></p></td>
-<td><p>LDP hello hold time in seconds</p></td>
-<td><p>15</p></td>
+<tr class="row-even"><td><p><strong>hold-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP hello hold time in seconds.</div>
+<div class="line">Default: 15 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>hostname</cite></p></td>
-<td><p>LDP hostname</p></td>
-<td><p>bngblaster</p></td>
+<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP teardown time in seconds.</div>
+<div class="line">Default: 5 Range: 0 - 65535</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>lsr-id</cite></p></td>
-<td><p>LDP LSR identifier</p></td>
-<td><p>10.10.10.10</p></td>
+<tr class="row-even"><td><p><strong>hostname</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP hostname.</div>
+<div class="line">Default: bngblaster</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>teardown-time</cite></p></td>
-<td><p>LDP teardown time in seconds</p></td>
-<td><p>5</p></td>
+<tr class="row-odd"><td><p><strong>lsr-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP LSR identifier.</div>
+<div class="line">Default: 10.10.10.10</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>ipv6-transport-address</cite></p></td>
-<td><p>LDP transport IPv6 address</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>ipv6-transport-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP transport IPv6 address.</div>
+<div class="line">Setting a valid IPv6 address here enables LDP IPv6</div>
+<div class="line">hello and transport.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>ipv4-transport-address</cite></p></td>
-<td><p>LDP transport IPv6 address</p></td>
-<td><p><cite>lsr-id</cite></p></td>
+<tr class="row-odd"><td><p><strong>ipv4-transport-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP transport IPv4 address.</div>
+<div class="line">Default: <cite>lsr-id</cite></div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>no-ipv4-transport</cite></p></td>
-<td><p>Disable/discard IPv4 LDP hello messages</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>no-ipv4-transport</strong></p></td>
+<td><div class="line-block">
+<div class="line">Disable/discard IPv4 LDP hello messages.</div>
+</div>
+</td>
 </tr>
-<tr class="row-odd"><td><p><cite>prefer-ipv4-transport</cite></p></td>
-<td><p>Prefer IPv4 transport even if IPv6 is enabled</p></td>
-<td><p><cite>false</cite></p></td>
+<tr class="row-odd"><td><p><strong>prefer-ipv4-transport</strong></p></td>
+<td><div class="line-block">
+<div class="line">According to RFC7552, IPv6 is preferred over IPv4 which</div>
+<div class="line">can be changed with this option to prefer IPv4 transport</div>
+<div class="line">even if IPv6 is enabled.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
 </tr>
-<tr class="row-even"><td><p><cite>raw-update-file</cite></p></td>
-<td><p>LDP RAW update file</p></td>
-<td></td>
+<tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
+<td><div class="line-block">
+<div class="line">LDP RAW update file.</div>
+</div>
+</td>
 </tr>
 </tbody>
 </table>
-<p>The <cite>keepalive-time</cite> defines the local LDP session keepalive
-timeout. Each LDP peer must calculate the effective keepalive
-timeout by using the smaller of its locally defined and received
-timeout in the PDU. The value chosen indicates the maximum number
-of seconds that may elapse between the receipt of successive PDUs
-from the LDP peer on the session TCP connection. The keepalive
-timeout is reset each time a PDU arrives. The BNG Blaster will
-send keepalive messages at an interval calculated by using the
-effective keepalive time divided by 3. Assuming an effective
-keepalive time of 15 seconds results in a keepalive interval
-of 5 seconds.</p>
-<p>Setting a valid <cite>ipv6-transport-address</cite> enables LDP IPv6
-hello and transport. According to RFC7552, IPv6 is preferred
-over IPv4 which can be changed with <cite>prefer-ipv4-transport</cite>.</p>
 
 
            </div>

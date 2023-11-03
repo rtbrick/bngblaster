@@ -43,8 +43,8 @@ RtBrick and many more.
 
         * Setup thousands of BGP sessions with millions of prefixes
         * Verify MPLS labels for millions of flows
-        * Emulate ISIS topologies with thousands of nodes 
-        * Support for ISIS Segment Routing
+        * Emulate ISIS and OSPFv2/3 topologies with thousands of nodes 
+        * Support for ISIS and OSPFv2/3 Segment Routing
         * Support for LDP and traffic streams with dynamically resolved labels
         * Support all routing protocols with link aggregation (LAG)
         * ...
@@ -56,6 +56,8 @@ RtBrick and many more.
         * Verify all forwarding states
         * Measure convergence times and loss
         * Capture traffic
+        * Emulate HTTP clients and servers
+        * NAT and CGNAT testing
         * ...
 
 A short `introduction <https://youtu.be/EHJ70p0_Sw0>`_ and a good presentation
@@ -99,6 +101,7 @@ Contents
    routing/index
    streams
    http
+   nat
    reports
    configuration/index
    api/index
