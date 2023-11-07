@@ -48,6 +48,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#stream-configuration-file">Stream Configuration File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stream-commands">Stream Commands</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#raw-streams">RAW Streams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tcp-raw-streams">TCP RAW Streams</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#start-stop-session-stream-traffic">Start/Stop Session Stream Traffic</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#bng-blaster-traffic">BNG Blaster Traffic</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#unicast-session-traffic">Unicast Session Traffic</a></li>
@@ -606,6 +607,30 @@ from network to access interfaces.</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">destination-ipv4-address</span></code> is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
 the BNG Blaster will set the destination MAC address to the corresponding
 multicast MAC address automatically. For unicast traffic the network gateway MAC address is used.</p>
+</section>
+<section id="tcp-raw-streams">
+<h2>TCP RAW Streams<a class="headerlink" href="#tcp-raw-streams" title="Permalink to this headline"></a></h2>
+<p>A new option called <code class="docutils literal notranslate"><span class="pre">raw-tcp</span></code> is added to the stream configuraton.
+If enabled, UDP-like traffic with a constant rate is sent using a
+static (RAW) TCP header.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TCP1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;raw-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This option can be used stand-alone to verify firewall filters or together
+with the new NAT option to verify NAT TCP streams.</p>
+<p>For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.</p>
 </section>
 <section id="start-stop-session-stream-traffic">
 <h2>Start/Stop Session Stream Traffic<a class="headerlink" href="#start-stop-session-stream-traffic" title="Permalink to this headline"></a></h2>

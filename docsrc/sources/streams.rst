@@ -285,6 +285,34 @@ If ``destination-ipv4-address`` is set to a multicast IP address (224.0.0.0 - 23
 the BNG Blaster will set the destination MAC address to the corresponding
 multicast MAC address automatically. For unicast traffic the network gateway MAC address is used.
 
+TCP RAW Streams
+~~~~~~~~~~~~~~~
+
+A new option called ``raw-tcp`` is added to the stream configuraton. 
+If enabled, UDP-like traffic with a constant rate is sent using a 
+static (RAW) TCP header.
+
+.. code-block:: json
+
+    {
+        "streams": [
+            {
+                "name": "TCP1",
+                "stream-group-id": 1,
+                "type": "ipv4",
+                "direction": "both",
+                "pps": 1,
+                "raw-tcp": true,
+                "network-ipv4-address": "10.0.0.1"
+            }
+        ]
+    }
+
+This option can be used stand-alone to verify firewall filters or together 
+with the new NAT option to verify NAT TCP streams. 
+
+For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
+
 Start/Stop Session Stream Traffic
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
