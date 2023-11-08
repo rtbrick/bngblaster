@@ -1181,7 +1181,7 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
         *(uint32_t*)tlv->value = htobe32(config->sr_range << 8);
         *(uint16_t*)(tlv->value+4) = htobe16(1);
         *(uint16_t*)(tlv->value+6) = htobe16(3);
-        *(uint32_t*)(tlv->value+8) = htobe32(config->sr_node_sid << 8);
+        *(uint32_t*)(tlv->value+8) = htobe32(config->sr_base << 8);
         lsa->lsa_len += 16;
     }
 
@@ -1218,6 +1218,10 @@ ospf_lsa_extended_prefix_update(ospf_instance_s *ospf_instance)
         .id = htobe32(0x07000000), 
         .router = config->router_id
     };
+
+    if(config->version != OSPF_VERSION_2) {
+        return true;
+    }
 
     if(!(config->sr_base && config->sr_node_sid && config->sr_range)) {
         return true;
@@ -1272,8 +1276,8 @@ ospf_lsa_extended_prefix_update(ospf_instance_s *ospf_instance)
     *(uint32_t*)(tlv->value+4) = config->router_id;
     *(uint16_t*)(tlv->value+8) = htobe16(2);
     *(uint16_t*)(tlv->value+10) = htobe16(8);
-    *(uint32_t*)(tlv->value+12) = 0x00;
-    *(uint64_t*)(tlv->value+12) = 0x00;
+    *(uint32_t*)(tlv->value+12) = 0;
+    *(uint32_t*)(tlv->value+16) = 0;
 
     hdr->length = htobe16(lsa->lsa_len);
     ospf_lsa_refresh(lsa);
