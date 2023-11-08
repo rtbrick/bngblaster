@@ -1277,7 +1277,7 @@ ospf_lsa_extended_prefix_update(ospf_instance_s *ospf_instance)
     *(uint16_t*)(tlv->value+8) = htobe16(2);
     *(uint16_t*)(tlv->value+10) = htobe16(8);
     *(uint32_t*)(tlv->value+12) = 0;
-    *(uint32_t*)(tlv->value+16) = 0;
+    *(uint32_t*)(tlv->value+16) = htobe32(config->sr_node_sid);
 
     hdr->length = htobe16(lsa->lsa_len);
     ospf_lsa_refresh(lsa);
