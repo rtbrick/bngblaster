@@ -190,7 +190,7 @@ ospf_pdu_update_auth_v2(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
             *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
 
             auth_hdr->reserved = 0;
-            auth_hdr->key_id = 0;
+            auth_hdr->key_id = 1;
             auth_hdr->auth_data_len = OSPF_MD5_DIGEST_LEN;
             auth_hdr->crypt_seq = htobe32(++g_crypt_seq);
 
