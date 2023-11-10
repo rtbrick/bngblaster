@@ -1166,6 +1166,21 @@ bbl_stream_rx_wrong_session(bbl_stream_s *stream)
 }
 
 static void
+bbl_stream_setup_established(bbl_stream_s *stream)
+{
+    if(stream->setup) {
+        if(stream->reverse) {
+            if(stream->reverse->verified) {
+                stream->reverse->setup = false;
+                stream->setup = false;
+            }
+        } else {
+            stream->setup = false;
+        }
+    }
+}
+
+static void
 bbl_stream_ctrl(bbl_stream_s *stream)
 {
     bbl_session_s *session = stream->session;
@@ -1195,6 +1210,7 @@ bbl_stream_ctrl(bbl_stream_s *stream)
             if(stream->session_traffic) {
                 if(session) {
                     stream->verified = true;
+                    bbl_stream_setup_established(stream);
                     session->session_traffic.flows_verified++;
                     g_ctx->stats.session_traffic_flows_verified++;
                     if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
@@ -1203,6 +1219,7 @@ bbl_stream_ctrl(bbl_stream_s *stream)
                 }
             } else {
                 stream->verified = true;
+                bbl_stream_setup_established(stream);
                 g_ctx->stats.stream_traffic_flows_verified++;
                 if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
                     LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
@@ -1477,7 +1494,19 @@ bbl_stream_token_job(timer_s *timer)
         }
     }
 
-    if(stream->send_window_active) {
+    if(stream->setup) {
+        if(!stream->send_window_start.tv_sec) {
+            stream->send_window_start.tv_sec = timer->timestamp->tv_sec - (rand() % stream->config->setup_interval);
+        }
+        timespec_sub(&time_elapsed, timer->timestamp, &stream->send_window_start);
+        if(time_elapsed.tv_sec < stream->config->setup_interval) {
+            stream->token_bucket = 0;
+            return;
+        } else {
+            stream->token_bucket = 1;
+            stream->send_window_start.tv_sec = timer->timestamp->tv_sec;
+        }
+    } else if(stream->send_window_active) {
         /** Update send window */
         timespec_sub(&time_elapsed, timer->timestamp, &stream->send_window_start);
         packets_expected = time_elapsed.tv_sec * stream->config->pps;
@@ -1621,6 +1650,11 @@ bbl_stream_add(bbl_stream_s *stream)
                             timer_sec, timer_nsec, stream, &bbl_stream_token_job);
     }
     stream->tx_timer->reset = false;
+
+    if(stream->config->setup_interval) {
+        stream->setup = true;
+    }
+    g_ctx->total_pps += stream->config->pps;
 }
 
 static bool 
@@ -2137,6 +2171,9 @@ bbl_stream_reset(bbl_stream_s *stream)
         stream->rx_source_port = 0;
         stream->verified = false;
         stream->stop = false;
+        if(stream->config->setup_interval) {
+            stream->setup = true;
+        }
     }
 }
 

@@ -196,6 +196,33 @@ with the new NAT option to verify NAT TCP streams.
 
 For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
 
+Stream Setup interval
+~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to configure an optional stream setup interval in seconds.
+If set, the BNG Blaster will sent max 1 packet per setup interval until the 
+stream becomes verified. After setup is done, the actual rate will be applied. 
+
+For bidirectional streams (direction both), this requires both 
+directions to be verified.    
+
+.. code-block:: json
+
+    {
+        "streams": [
+            {
+                "name": "TCP1",
+                "stream-group-id": 1,
+                "type": "ipv4",
+                "direction": "both",
+                "pps": 1,
+                "setup-interval": 30,
+                "raw-tcp": true,
+                "network-ipv4-address": "10.0.0.1"
+            }
+        ]
+    }
+
 HTTP NAT Extension
 ~~~~~~~~~~~~~~~~~~
 The existing :ref:`HTTP client/server <http>` was also enhanced for NAT usage.

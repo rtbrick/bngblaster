@@ -588,6 +588,7 @@ main(int argc, char *argv[])
             goto CLEANUP;
         }
     }
+    LOG(INFO, "Total PPS of all streams: %.2f\n", g_ctx->total_pps);
 
     /* Setup control job. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 

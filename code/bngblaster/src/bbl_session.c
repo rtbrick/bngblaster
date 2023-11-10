@@ -1707,7 +1707,7 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused
         }
     }
     dict_itor_free(itor);
-    return bbl_ctrl_status(fd, "ok", 200, NULL);    
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int

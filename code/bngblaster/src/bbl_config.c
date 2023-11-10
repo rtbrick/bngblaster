@@ -2079,7 +2079,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "destination-ipv6-address", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
-        "rx-label2", "nat", "raw-tcp"
+        "rx-label2", "nat", "raw-tcp", "setup-interval"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2183,6 +2183,11 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "vlan-priority", 0, 7);
     if(value) {
         stream_config->vlan_priority = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "setup-interval", 0, 900);
+    if(value) {
+        stream_config->setup_interval = json_number_value(value);
     }
 
     value = json_object_get(stream, "pps");

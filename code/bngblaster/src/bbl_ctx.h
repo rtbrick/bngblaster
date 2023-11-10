@@ -136,6 +136,8 @@ typedef struct bbl_ctx_
     endpoint_state_t multicast_endpoint;
     bool zapping;
 
+    double total_pps; /* Sum of all sream PPS */
+
     /* Config options */
     struct {
         bool interface_lock_force;
