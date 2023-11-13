@@ -16,7 +16,11 @@ if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(lspgen PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
 
-target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -m64 -mtune=generic)
+if(BNGBLASTER_CPU_NATIVE)
+    target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -march=native -mtune=native)
+else()
+    target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -m64 -mtune=generic)
+endif()
 
 # Optional IPO. Do not use IPO if it's not supported by compiler.
 check_ipo_supported(RESULT result OUTPUT output)

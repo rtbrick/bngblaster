@@ -15,6 +15,7 @@ message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
 option(BNGBLASTER_DPDK "Build with dpdk support" OFF)
 option(BNGBLASTER_TIMER_LOGGING "Build with timer logging support" OFF)
+option(BNGBLASTER_CPU_NATIVE "Build for native CPU type" OFF)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
