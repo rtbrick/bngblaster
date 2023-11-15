@@ -4,6 +4,7 @@
 [![Linux](https://img.shields.io/badge/OS-linux-lightgrey)](https://rtbrick.github.io/bngblaster/install)
 [![License](https://img.shields.io/badge/License-BSD-lightgrey)](https://github.com/rtbrick/bngblaster/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/Documentation-lightgrey)](https://rtbrick.github.io/bngblaster)
+[![Chat](https://img.shields.io/badge/Documentation-lightgrey)](https://matrix.to/#/#bngblaster:matrix.org)
 
 The BNG Blaster is an open-source network tester 
 for access and routing protocols. It can emulate massive 
@@ -48,4 +49,5 @@ Copyright (C) 2020-2023, RtBrick, Inc.
 
 ## Contact
 
-bngblaster@rtbrick.com
+* Mail: bngblaster@rtbrick.com
+* Chat: [matrix.org #bngblaster](https://matrix.to/#/#bngblaster:matrix.org)
