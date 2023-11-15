@@ -4,12 +4,12 @@
 [![Linux](https://img.shields.io/badge/OS-linux-lightgrey)](https://rtbrick.github.io/bngblaster/install)
 [![License](https://img.shields.io/badge/License-BSD-lightgrey)](https://github.com/rtbrick/bngblaster/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/Documentation-lightgrey)](https://rtbrick.github.io/bngblaster)
-[![Chat](https://img.shields.io/badge/Documentation-lightgrey)](https://matrix.to/#/#bngblaster:matrix.org)
+[![Chat](https://img.shields.io/badge/Chat-lightgrey)](https://matrix.to/#/#bngblaster:matrix.org)
 
 The BNG Blaster is an open-source network tester 
 for access and routing protocols. It can emulate massive 
 PPPoE and IPoE (DHCP) subscribers including IPTV, and L2TP (LNS). 
-There are various routing protocols supported like ISIS and BGP. 
+There are various routing protocols supported like ISIS, OSPF and BGP. 
 So you can use it for end-to-end BNG and non-BNG router testing.
 
 You can use the included traffic generator for forwarding verification,
