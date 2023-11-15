@@ -133,4 +133,5 @@ Copyright |copy| 2020-2023, RtBrick, Inc.
 Contact
 -------
 
-bngblaster@rtbrick.com
+* Mail: bngblaster@rtbrick.com
+* Chat: `matrix.org #bngblaster <https://matrix.to/#/#bngblaster:matrix.org>`_
