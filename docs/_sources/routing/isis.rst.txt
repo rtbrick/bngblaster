@@ -328,7 +328,7 @@ MRT Files
 ~~~~~~~~~
 
 The BNG Blaster can load LSPs from a MRT file as defined in 
-[RFC6396](https://datatracker.ietf.org/doc/html/rfc6396).
+`RFC6396 <https://datatracker.ietf.org/doc/html/rfc6396>`_.
 
 .. code-block:: none
 
