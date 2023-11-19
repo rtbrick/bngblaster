@@ -27,6 +27,10 @@ the testing process and facilitates seamless interaction with the BNG Blaster's 
 
 https://github.com/rtbrick/bngblaster-controller
 
+.. image:: images/controller.png
+    :alt: BNG Blaster Controller
+
+
 Installation
 ------------
 
