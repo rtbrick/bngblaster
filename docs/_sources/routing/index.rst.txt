@@ -13,7 +13,7 @@ bgpupdate, ldpupdate, or through the creation of custom tools using
 provided examples.
 
 For ISIS and OSPF, the generated topologies are serialized into an 
-MRT file ([RFC6396](https://datatracker.ietf.org/doc/html/rfc6396)). 
+MRT file as defined in [RFC6396](https://datatracker.ietf.org/doc/html/rfc6396). 
 This serialized topology can be dynamically updated to simulate 
 link flapping in real-time.
 
@@ -23,8 +23,6 @@ messages via CLI/REST API.
 In the case of LDP and BGP, update messages are produced as raw updates 
 and then transmitted to the established session. Similar to ISIS and OSPF, 
 live updates can replace the file to mimic link flapping. 
-
-https://datatracker.ietf.org/doc/html/rfc6396
 
 .. toctree::
    :maxdepth: 1

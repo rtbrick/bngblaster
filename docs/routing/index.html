@@ -99,7 +99,7 @@ generated offline using built-in tools such as lspgen (for ISIS and OSPF),
 bgpupdate, ldpupdate, or through the creation of custom tools using
 provided examples.</p>
 <p>For ISIS and OSPF, the generated topologies are serialized into an
-MRT file ([RFC6396](<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6396">https://datatracker.ietf.org/doc/html/rfc6396</a>)).
+MRT file as defined in [RFC6396](<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6396">https://datatracker.ietf.org/doc/html/rfc6396</a>).
 This serialized topology can be dynamically updated to simulate
 link flapping in real-time.</p>
 <p>Additionally, commands are available to for example inject LSA/LSP
@@ -107,7 +107,6 @@ messages via CLI/REST API.</p>
 <p>In the case of LDP and BGP, update messages are produced as raw updates
 and then transmitted to the established session. Similar to ISIS and OSPF,
 live updates can replace the file to mimic link flapping.</p>
-<p><a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc6396">https://datatracker.ietf.org/doc/html/rfc6396</a></p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="isis.html">ISIS</a></li>
