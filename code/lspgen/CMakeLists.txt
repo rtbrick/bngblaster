@@ -19,7 +19,7 @@ endif()
 if(BNGBLASTER_CPU_NATIVE)
     target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -march=native -mtune=native)
 else()
-    target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -m64 -mtune=generic)
+    target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -mtune=generic)
 endif()
 
 # Optional IPO. Do not use IPO if it's not supported by compiler.
