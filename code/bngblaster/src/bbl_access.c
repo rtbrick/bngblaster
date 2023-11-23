@@ -986,6 +986,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
 
     if(!g_ctx->config.ip6cp_enable) {
         /* Protocol Reject */
+        LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Send IP6CP protocol reject\n", session->session_id);
         *(uint16_t*)session->lcp_options = htobe16(PROTOCOL_IP6CP);
         session->lcp_options_len = 2;
         session->lcp_peer_identifier = ++session->lcp_identifier;
@@ -1091,6 +1092,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
 
     if(!g_ctx->config.ipcp_enable) {
         /* Protocol Reject */
+        LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Send IPCP protocol reject\n", session->session_id);
         *(uint16_t*)session->lcp_options = htobe16(PROTOCOL_IPCP);
         session->lcp_options_len = 2;
         session->lcp_peer_identifier = ++session->lcp_identifier;
@@ -1436,12 +1438,12 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
         case PPP_CODE_PROT_REJECT:
             if(lcp->protocol == PROTOCOL_IPCP) {
                 session->ipcp_state = BBL_PPP_REJECTED;
-                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IPCP rejected\n", session->session_id);
+                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IPCP reject received\n", session->session_id);
             } else if(lcp->protocol == PROTOCOL_IP6CP) {
                 session->ip6cp_state = BBL_PPP_REJECTED;
-                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IP6CP rejected\n", session->session_id);
+                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IP6CP reject received\n", session->session_id);
             } else {
-                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol 0x%04x rejected\n", 
+                LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol 0x%04x reject  received\n", 
                     session->session_id, lcp->protocol);
             }
             bbl_access_rx_established_pppoe(interface, session, eth);
