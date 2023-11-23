@@ -536,11 +536,13 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_access_rx_established_ipoe(interface, session, eth);
-            } else if(session->dhcpv6_state > BBL_DHCP_DISABLED && 
-                      (icmpv6->flags & ICMPV6_FLAGS_MANAGED ||
-                       icmpv6->flags & ICMPV6_FLAGS_OTHER_CONFIG)) {
-                bbl_dhcpv6_start(session);
-                bbl_session_tx_qnode_insert(session);
+            } else if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
+                if(icmpv6->flags & (ICMPV6_FLAGS_MANAGED|ICMPV6_FLAGS_OTHER_CONFIG)) {
+                    bbl_dhcpv6_start(session);
+                    bbl_session_tx_qnode_insert(session);
+                } else {
+                    LOG(DHCP, "DHCPv6 (ID: %u) can't start DHCPv6 because of missing M or O flag in ICMPv6 RA\n", session->session_id);
+                }
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
