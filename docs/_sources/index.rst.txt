@@ -60,11 +60,9 @@ RtBrick and many more.
         * NAT and CGNAT testing
         * ...
 
-A short `introduction <https://youtu.be/EHJ70p0_Sw0>`_ and a good presentation
-from `DENOG13 <https://youtu.be/LVg6rlVEfNU>`_ can be found on YouTube. There is 
-also an article in the 
-`APNIC blog <https://blog.apnic.net/2022/05/26/bng-blaster-the-open-network-tester-for-the-ip-networking-community/>`_ 
-where we explained our motivation for this project. 
+A short introduction from `DENOG15 <https://youtu.be/4rmwf6livyI>`_
+can be found on YouTube. There are even more videos and articles 
+listed below.
 
 .. image:: images/bbl_interactive.png
     :alt: BNG Blaster Interactive
@@ -110,10 +108,30 @@ Contents
    troubleshooting
    faq
 
+Contact
+-------
+
+* Mail: bngblaster@rtbrick.com
+* Chat: `matrix.org #bngblaster <https://matrix.to/#/#bngblaster:matrix.org>`_
+
+Articles
+--------
+
+* `APNIC Blog - The open network tester for the IP networking community <https://blog.apnic.net/2022/05/26/bng-blaster-the-open-network-tester-for-the-ip-networking-community/>`_ 
+
+YouTube 
+-------
+
+* `DENOG15 (2023) <https://youtu.be/4rmwf6livyI>`_ 
+* `UKNOF49 (2022) <https://youtu.be/HTswAl388Gg>`_ 
+* `DENOG13 (2012) <https://youtu.be/LVg6rlVEfNU>`_ 
+* `Introduction (2012) <https://youtu.be/EHJ70p0_Sw0>`_
+
 Sources
 -------
 
-https://github.com/rtbrick/bngblaster
+* https://github.com/rtbrick/bngblaster
+* https://github.com/rtbrick/bngblaster-controller
 
 License
 -------
@@ -129,9 +147,3 @@ Copyright
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
 Copyright |copy| 2020-2023, RtBrick, Inc.
-
-Contact
--------
-
-* Mail: bngblaster@rtbrick.com
-* Chat: `matrix.org #bngblaster <https://matrix.to/#/#bngblaster:matrix.org>`_
