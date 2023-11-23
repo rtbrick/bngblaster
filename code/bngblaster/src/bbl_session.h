@@ -165,6 +165,8 @@ typedef struct bbl_session_
     uint8_t     ipcp_identifier;
     uint8_t     ipcp_peer_identifier;
     uint8_t     ipcp_retries;
+    bool        ipcp_request_dns1;
+    bool        ipcp_request_dns2;
 
     /* IP6CP */
     ppp_state_t ip6cp_state;

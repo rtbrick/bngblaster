@@ -708,11 +708,11 @@ bbl_tx_encode_packet_ipcp_request(bbl_session_s *session)
             ipcp.address = session->ip_address;
             ipcp.option_address = true;
         }
-        if(g_ctx->config.ipcp_request_dns1) {
+        if(session->ipcp_request_dns1) {
             ipcp.dns1 = session->dns1;
             ipcp.option_dns1 = true;
         }
-        if(g_ctx->config.ipcp_request_dns2) {
+        if(session->ipcp_request_dns2) {
             ipcp.dns2 = session->dns2;
             ipcp.option_dns2 = true;
         }

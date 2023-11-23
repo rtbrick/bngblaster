@@ -369,6 +369,8 @@ bbl_session_reset(bbl_session_s *session) {
     session->lcp_retries = 0;
     session->auth_retries = 0;
     session->ipcp_retries = 0;
+    session->ipcp_request_dns1 = g_ctx->config.ipcp_request_dns1;
+    session->ipcp_request_dns2 = g_ctx->config.ipcp_request_dns2;
     session->ip6cp_retries = 0;
 
     session->pppoe_session_id = 0;
@@ -922,6 +924,8 @@ bbl_sessions_init()
             session->lcp_state = BBL_PPP_CLOSED;
             if(access_config->ipv4_enable && access_config->ipcp_enable) {
                 session->ipcp_state = BBL_PPP_CLOSED;
+                session->ipcp_request_dns1 = g_ctx->config.ipcp_request_dns1;
+                session->ipcp_request_dns2 = g_ctx->config.ipcp_request_dns2;
                 session->endpoint.ipv4 = ENDPOINT_ENABLED;
             }
             if(access_config->ipv6_enable && access_config->ip6cp_enable) {

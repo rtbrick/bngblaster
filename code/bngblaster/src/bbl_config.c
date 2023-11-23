@@ -2879,7 +2879,7 @@ json_parse_config(json_t *root)
         if(json_is_object(sub)) {
             const char *schema[] = {
                 "enable", "request-ip", 
-                "request-dns1", "request-dns2",
+                "request-dns1", "request-dns2", "conf-reject-ignore",
                 "conf-request-timeout", "conf-request-retry"
             };
             if(!schema_validate(sub, "ipcp", schema, 
@@ -2902,6 +2902,10 @@ json_parse_config(json_t *root)
             JSON_OBJ_GET_BOOL(sub, value, "ppp->ipcp", "request-dns2");
             if(value) {
                 g_ctx->config.ipcp_request_dns2 = json_boolean_value(value);
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "ppp->ipcp", "conf-reject-ignore");
+            if(value) {
+                g_ctx->config.ipcp_conf_reject_ignore = json_boolean_value(value);
             }
             JSON_OBJ_GET_NUMBER(sub, value, "ppp->ipcp", "conf-request-timeout", 0, 65535);
             if(value) {

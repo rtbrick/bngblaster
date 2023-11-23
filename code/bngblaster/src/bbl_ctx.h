@@ -266,6 +266,7 @@ typedef struct bbl_ctx_
         bool ipcp_request_ip;
         bool ipcp_request_dns1;
         bool ipcp_request_dns2;
+        bool ipcp_conf_reject_ignore;
         uint16_t ipcp_conf_request_timeout;
         uint8_t  ipcp_conf_request_retry;
 

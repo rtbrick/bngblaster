@@ -3842,6 +3842,7 @@ decode_ppp_ipcp(uint8_t *buf, uint16_t len,
         case PPP_CODE_CONF_REQUEST:
         case PPP_CODE_CONF_ACK:
         case PPP_CODE_CONF_NAK:
+        case PPP_CODE_CONF_REJECT:
             while(ipcp_len >= 2) {
                 if(ipcp_option_index < PPP_MAX_OPTIONS) {
                     ipcp->option[ipcp_option_index++] = buf;

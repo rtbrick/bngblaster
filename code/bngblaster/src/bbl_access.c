@@ -1133,6 +1133,28 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             session->send_requests |= BBL_SEND_IPCP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
             break;
+        case PPP_CODE_CONF_REJECT:
+            if(g_ctx->config.ipcp_conf_reject_ignore) {
+                LOG(PPPOE, "IPCP (ID: %u) conf-reject ignored\n", session->session_id);
+            } else {
+                LOG(PPPOE, "IPCP (ID: %u) conf-reject received\n", session->session_id);
+                session->ipcp_retries = 0;
+                if(ipcp->option_address) {
+                    LOG(PPPOE, "IPCP (ID: %u) Address option rejected\n", session->session_id);
+                }
+                if(ipcp->option_dns1) {
+                    session->ipcp_request_dns1 = false;
+                    LOG(PPPOE, "IPCP (ID: %u) Primary DNS option rejected\n", session->session_id);
+                }
+                if(ipcp->option_dns2) {
+                    session->ipcp_request_dns2 = false;
+                    LOG(PPPOE, "IPCP (ID: %u) Secondary DNS option rejected\n", session->session_id);
+                }
+                session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
+                bbl_session_tx_qnode_insert(session);
+            }
+            break;
         case PPP_CODE_CONF_NAK:
             session->ipcp_retries = 0;
             if(ipcp->address) {
