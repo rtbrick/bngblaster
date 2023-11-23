@@ -12,11 +12,14 @@
 |                          | | configuration request.                                         |
 |                          | | Default: true                                                  |
 +--------------------------+------------------------------------------------------------------+
-| **request-dns1**         | | Request Primary DNS Server Address (option 129).               |
+| **request-dns1**         | | Request primary DNS server address (option 129).               |
 |                          | | Default: true                                                  |
 +--------------------------+------------------------------------------------------------------+
-| **request-dns2**         | | Request Secondary DNS Server Address (option 131).             |
+| **request-dns2**         | | Request secondary DNS server address (option 131).             |
 |                          | | Default: true                                                  |
++--------------------------+------------------------------------------------------------------+
+| **conf-reject-ignore**   | | Ignore configuration reject messages.                          |
+|                          | | Default: false                                                 |
 +--------------------------+------------------------------------------------------------------+
 | **conf-request-timeout** | | IPCP configuration request timeout in seconds                  |
 |                          | | Default: 5                                                     |
