@@ -456,10 +456,10 @@ BNG Blaster configuration files needed.
             afi-safi-name = "ipv6-unicast"
         [[neighbors.afi-safis]]
             [neighbors.afi-safis.config]
-            afi-safi-name = "ipv4-labeled-unicast"
+            afi-safi-name = "ipv4-labelled-unicast"
         [[neighbors.afi-safis]]
             [neighbors.afi-safis.config]
-            afi-safi-name = "ipv6-labeled-unicast"
+            afi-safi-name = "ipv6-labelled-unicast"
 
 **bgp.json:**
 
@@ -492,8 +492,8 @@ with 10.000 IPv4 and 10.000 IPv6 prefixes.
 
 .. code-block:: none
 
-    bgpupdate -a 65001 -n 192.168.92.2 -p 11.0.0.0/28 -P 10000 
-    bgpupdate -a 65001 -n 192.168.92.2 -p fc66:11::/64 -P 10000 --append
+    bgpupdate -a 65001 -l 100 -n 192.168.92.2 -p 11.0.0.0/28 -P 10000 
+    bgpupdate -a 65001 -l 100 -n 192.168.92.2 -p fc66:11::/64 -P 10000 --append
 
 
 Start the `gobgp <https://github.com/osrg/gobgp>`_ daemon.
