@@ -625,7 +625,7 @@ Route statistics:
 </div>
 <p>If the test is still running, you can add further routes. Therefore
 first create a new BGP update file.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f update.bgp
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -a 65001 -l 100 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f update.bgp
 </pre></div>
 </div>
 <p>Apply this file to the specified BGP session.</p>

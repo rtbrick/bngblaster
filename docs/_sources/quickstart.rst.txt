@@ -606,7 +606,7 @@ first create a new BGP update file.
 
 .. code-block:: none
 
-    bgpupdate -a 65001 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f update.bgp
+    bgpupdate -a 65001 -l 100 -n 192.168.92.2 -p 22.0.0.0/28 -P 100000 -f update.bgp
 
 
 Apply this file to the specified BGP session. 
