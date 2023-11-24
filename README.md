@@ -35,7 +35,7 @@ with their famous Access 4.0 project, network hard- and software vendors like
 RtBrick and many more.
 
 A short introduction from [DENOG15](https://youtu.be/4rmwf6livyI "DENOG15") 
-can be found on YouTube
+can be found on YouTube.
 
 Please check out the [documentation](https://rtbrick.github.io/bngblaster/) for details.
 
