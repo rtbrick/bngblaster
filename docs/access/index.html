@@ -107,30 +107,30 @@ new session established. Furthermore, you have the flexibility
 to group multiple sessions together using the optional
 <strong>session-group-id</strong>, which enables the application of commands
 <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">commands</span></a> to an entire group of sessions simultaneously.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;even@rtbrick.com&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1998</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;odd@rtbrick.com&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;even@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1998</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;session-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;odd@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1999</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>It is also possible to assign multiple access interface

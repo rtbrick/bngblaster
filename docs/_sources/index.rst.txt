@@ -1,18 +1,29 @@
 BNG Blaster
 ===========
 
-The **BNG Blaster** is an open-source network tester 
-for access and routing protocols. It can emulate a huge amount of 
-PPPoE and IPoE (DHCP) subscribers including IPTV, and L2TP (LNS). 
-There are various routing protocols supported like ISIS and BGP. 
-So you can use it for end-to-end BNG and non-BNG router testing.
+**The open network tester for the IP networking community.**
 
-You can use the included traffic generator for forwarding verification,
-QoS testing or to measure convergence times. The traffic generator supports 
-millions of separate tracked flows. This allows you to verify every single 
-forwarding state of a full-feed internet routing table. You can also send 
-traffic to every single QoS queue of your service edge router with detailed 
-per-flow statistics like receive rate, loss or latency.
+The **BNG Blaster** is an open-source network tester for **access** and **routing** protocols.
+
+Originally developed as an access protocol tester, the BNG Blaster has undergone a 
+significant evolution, transforming into a comprehensive network testing tool that 
+now encompasses both access and routing functionalities. Its scope has expanded beyond 
+the assessment of access protocols and now encompasses a broader spectrum, involving 
+the evaluation of network functionalities at large. Contrary to its nomenclature, 
+the BNG Blaster isn't restricted only to BNG (Broadband Network Gateway) testing.
+
+It simulates a massive number of PPPoE and IPoE (DHCP) subscribers, encompassing 
+IPTV and L2TP (LNS). Additionally, it supports all common routing protocols such 
+as IS-IS, OSPF, LDP and BGP. This allows for comprehensive testing of both BNG 
+and non-BNG routers, enabling end-to-end evaluations.
+
+The included traffic generator serves various functions. It can be used to verify 
+forwarding, conduct QoS tests, and measure convergence times. With the capacity to 
+handle millions of separate tracked flows, it allows for thorough verification of 
+every forwarding state within a complete internet routing table. Furthermore, it 
+enables the transmission of traffic to each specific QoS queue present in 
+service edge routers with detailed per-flow statistics like receive rate, loss 
+or latency.
 
 The BNG Blaster is used by leading network operators like Deutsche Telekom AG
 with their famous Access 4.0 project, network hard- and software vendors like
@@ -124,8 +135,8 @@ YouTube
 
 * `DENOG15 (2023) <https://youtu.be/4rmwf6livyI>`_ 
 * `UKNOF49 (2022) <https://youtu.be/HTswAl388Gg>`_ 
-* `DENOG13 (2012) <https://youtu.be/LVg6rlVEfNU>`_ 
-* `Introduction (2012) <https://youtu.be/EHJ70p0_Sw0>`_
+* `DENOG13 (2021) <https://youtu.be/LVg6rlVEfNU>`_ 
+* `Introduction (2021) <https://youtu.be/EHJ70p0_Sw0>`_
 
 Sources
 -------
