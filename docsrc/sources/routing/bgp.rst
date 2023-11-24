@@ -215,9 +215,9 @@ with IPv4 and labeled IPv6 prefixes (6PE).
 
 .. code-block:: none
 
-    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000
-    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append
-    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib
+    bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000
+    bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append
+    bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib
 
 Per default, the file is replaced but the option `--append` allows it to append to an existing file. 
 The last update to a file should include the option `--end-of-rib` (optional). 
@@ -228,8 +228,8 @@ appending to an existing file.
 
 .. code-block:: none
 
-    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000 -s streams.json
-    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append -s streams.json --stream-append
-    bgpupdate -f test.bgp -a 65001 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib -s streams.json --stream-append
+    bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -p 10.1.0.0/24 -P 100000 -s streams.json
+    bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append -s streams.json --stream-append
+    bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib -s streams.json --stream-append
 
 There are several options supported to further define the traffic streams like PPS and expected RX labels.
