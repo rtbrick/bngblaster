@@ -541,7 +541,7 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     bbl_dhcpv6_start(session);
                     bbl_session_tx_qnode_insert(session);
                 } else {
-                    LOG(DHCP, "DHCPv6 (ID: %u) can't start DHCPv6 because of missing M or O flag in ICMPv6 RA\n", session->session_id);
+                    LOG(PPPOE, "DHCPv6 (ID: %u) Failed to start DHCPv6 over PPPoE because of missing M or O flag in ICMPv6 RA\n", session->session_id);
                 }
             }
         }
