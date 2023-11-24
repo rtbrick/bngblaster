@@ -258,18 +258,29 @@ def main():
             if args.stream_direction == "both":
                 if ip_version == 4:
                     stream["type"] = "ipv4"
-                    stream["network-ipv4-address"] = str(prefix.network_address+1)
+                    if prefix.prefixlen < 30:
+                        stream["network-ipv4-address"] = str(prefix.network_address+1)
+                    else:
+                        stream["network-ipv4-address"] = str(prefix.network_address)
                 else:
                     stream["type"] = "ipv6"
-                    stream["network-ipv6-address"] = str(prefix.network_address+1)
+                    if prefix.prefixlen < 128:
+                        stream["network-ipv6-address"] = str(prefix.network_address+1)
+                    else:
+                        stream["network-ipv6-address"] = str(prefix.network_address)
             else:
                 if ip_version == 4:
                     stream["type"] = "ipv4"
-                    stream["destination-ipv4-address"] = str(prefix.network_address+1)
+                    if prefix.prefixlen < 30:
+                        stream["destination-ipv4-address"] = str(prefix.network_address+1)
+                    else:
+                        stream["destination-ipv4-address"] = str(prefix.network_address)
                 else:
                     stream["type"] = "ipv6"
-                    stream["destination-ipv6-address"] = str(prefix.network_address+1)
-
+                    if prefix.prefixlen < 128:
+                        stream["destination-ipv6-address"] = str(prefix.network_address+1)
+                    else:
+                        stream["destination-ipv6-address"] = str(prefix.network_address)
 
             if args.stream_interface:
                 stream["network-interface"] = args.stream_interface
