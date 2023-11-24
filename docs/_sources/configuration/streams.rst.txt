@@ -50,6 +50,13 @@
 |                                | | For example, ``"Gbps": 1``                                     |
 |                                | | which is equal to ``"bps": 1000000000``.                       |
 +--------------------------------+------------------------------------------------------------------+
+| **setup-interval**             | | Set optional setup interval in seconds. If set, sent max 1     |
+|                                | | packet per setup interval until stream becomes verified.       |
+|                                | | After setup is done, the actual rate will be applied.          |
+|                                | | For bidirectional streams (direction both), this requires both |
+|                                | | directions to be verified.                                     |
+|                                | | Default: 0 (disabled) Range: 0 - 900                           |
++--------------------------------+------------------------------------------------------------------+
 | **a10nsp-interface**           | | Select the corresponding A10NSP interface for this stream.     |
 +--------------------------------+------------------------------------------------------------------+
 | **network-interface**          | | Select the corresponding network interface for this stream.    |
