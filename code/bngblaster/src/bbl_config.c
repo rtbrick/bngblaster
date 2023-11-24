@@ -2236,7 +2236,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             stream_config->pps = (bps*1000000000) / (stream_config->length * 8);
         }
     }
-    if(!stream_config->pps) stream_config->pps = 1;
+    if(stream_config->pps <= 0) stream_config->pps = 1.0;
 
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "max-packets", 0, 4294967295);
     if(value) {
