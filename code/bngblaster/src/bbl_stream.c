@@ -2592,7 +2592,7 @@ bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribu
 }
 
 static int
-bbl_stream_ctrl_traffic_start_stop(int fd, uint32_t session_id, bool status)
+bbl_stream_ctrl_traffic_start_stop(int fd, uint32_t session_id, int session_group_id, bool status)
 {
     bbl_session_s *session;
     uint32_t i;
@@ -2606,10 +2606,14 @@ bbl_stream_ctrl_traffic_start_stop(int fd, uint32_t session_id, bool status)
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
     } else {
-        /* Iterate over all sessions */
+        /* Iterate over all sessions ... */
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session) {
+                if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                    /* Skip sessions with wrong session-group-id if present. */
+                    continue;
+                }
                 session->streams.active = status;
             }
         }
@@ -2618,15 +2622,27 @@ bbl_stream_ctrl_traffic_start_stop(int fd, uint32_t session_id, bool status)
 }
 
 int
-bbl_stream_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_stream_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_traffic_start_stop(fd, session_id, true);
+    int session_group_id = -1;
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+    return bbl_stream_ctrl_traffic_start_stop(fd, session_id, session_group_id, true);
 }
 
 int
-bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_traffic_start_stop(fd, session_id, false);
+    int session_group_id = -1;
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+    return bbl_stream_ctrl_traffic_start_stop(fd, session_id, session_group_id, false);
 }
 
 int
