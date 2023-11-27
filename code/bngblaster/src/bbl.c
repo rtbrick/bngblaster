@@ -608,7 +608,6 @@ main(int argc, char *argv[])
      * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->smear_timer, "Timer Smearing", 
                        45, 12345678, g_ctx, &bbl_smear_job);
-    timer_no_smear(g_ctx->smear_timer);
 
     /* Prevent traffic from autostart. */
     if(g_ctx->config.multicast_traffic_autostart == false) {

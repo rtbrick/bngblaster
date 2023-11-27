@@ -257,7 +257,6 @@ isis_lsp_lifetime_job(timer_s *timer)
               &lsp->timer_lifetime, 
               "ISIS PURGE", 30, 0, lsp,
               &isis_lsp_purge_job);
-    timer_no_smear(lsp->timer_lifetime);
 }
 
 void
@@ -276,7 +275,6 @@ isis_lsp_lifetime(isis_lsp_s *lsp)
                   "ISIS PURGE", 30, 0, lsp,
                   &isis_lsp_purge_job);
     }
-    timer_no_smear(lsp->timer_lifetime);
 }
 
 void

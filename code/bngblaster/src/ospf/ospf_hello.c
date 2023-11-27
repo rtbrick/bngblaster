@@ -299,7 +299,6 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
     /* Reset inactivity timer */
     timer_add(&g_ctx->timer_root, &ospf_neighbor->timer_inactivity, "OSPF",
               ospf_instance->config->dead_interval, 0, ospf_neighbor, &ospf_hello_timeout);
-    timer_no_smear(ospf_neighbor->timer_inactivity);
 
     if(ospf_instance->teardown) {
         return;

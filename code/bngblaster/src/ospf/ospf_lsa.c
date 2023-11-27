@@ -272,7 +272,6 @@ ospf_lsa_lifetime_job(timer_s *timer)
     timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
               "OSPF PURGE", 30, 0, 
               lsa, &ospf_lsa_purge_job);
-    timer_no_smear(lsa->timer_lifetime);
 }
 
 void
@@ -289,7 +288,6 @@ ospf_lsa_lifetime(ospf_lsa_s *lsa)
                 "OSPF PURGE", 30, 0, 
                 lsa, &ospf_lsa_purge_job);
     }
-    timer_no_smear(lsa->timer_lifetime);
 }
 
 /**
