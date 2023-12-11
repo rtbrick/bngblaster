@@ -107,15 +107,15 @@ bgp_raw_update_stop_cb(void *arg)
     
     LOG(BGP, "BGP (%s %s - %s) raw update stop after %lds\n",
         session->interface->name,
-        format_ipv4_address(&session->ipv4_local_address),
-        format_ipv4_address(&session->ipv4_peer_address),
+        session->local_address_str,
+        session->peer_address_str,
         time_diff.tv_sec);
 
     if(session->config->start_traffic) {
         LOG(BGP, "BGP (%s %s - %s) start traffic streams\n",
             session->interface->name,
-            format_ipv4_address(&session->ipv4_local_address),
-            format_ipv4_address(&session->ipv4_peer_address));
+            session->local_address_str,
+            session->peer_address_str);
         enable_disable_traffic(true);
     }
 }
@@ -132,8 +132,8 @@ bgp_session_update_job(timer_s *timer)
 
                 LOG(BGP, "BGP (%s %s - %s) raw update start\n",
                     session->interface->name,
-                    format_ipv4_address(&session->ipv4_local_address),
-                    format_ipv4_address(&session->ipv4_peer_address));
+                    session->local_address_str,
+                    session->peer_address_str);
 
                 clock_gettime(CLOCK_MONOTONIC, &session->update_start_timestamp);
                 session->tcpc->idle_cb = bgp_raw_update_stop_cb;
@@ -213,8 +213,8 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
 
     LOG(BGP, "BGP (%s %s - %s) state changed from %s -> %s\n",
         session->interface->name,
-        format_ipv4_address(&session->ipv4_local_address),
-        format_ipv4_address(&session->ipv4_peer_address),
+        session->local_address_str,
+        session->peer_address_str,
         bgp_session_state_string(session->state),
         bgp_session_state_string(new_state));
 
@@ -248,8 +248,8 @@ bgp_error_cb(void *arg, err_t err) {
 
     LOG(BGP, "BGP (%s %s - %s) TCP error %d (%s)\n",
         session->interface->name,
-        format_ipv4_address(&session->ipv4_local_address),
-        format_ipv4_address(&session->ipv4_peer_address),
+        session->local_address_str,
+        session->peer_address_str,
         err, tcp_err_string(err));
 
     session->error_code = 0;
@@ -267,14 +267,23 @@ bgp_session_connect_job(timer_s *timer)
         timeout = 1;
     } else if(session->state == BGP_IDLE) {
         /* Connect TCP session */
-        session->tcpc = bbl_tcp_ipv4_connect(
-            session->interface, 
-            &session->ipv4_local_address,
-            &session->ipv4_peer_address,
-            BGP_PORT,
-            session->config->ttl,
-            session->config->tos);
-
+        if(session->af == AF_INET) {
+            session->tcpc = bbl_tcp_ipv4_connect(
+                session->interface, 
+                &session->ipv4_local_address,
+                &session->ipv4_peer_address,
+                BGP_PORT,
+                session->config->ttl,
+                session->config->tos);
+        } else {
+            session->tcpc = bbl_tcp_ipv6_connect(
+                session->interface, 
+                session->ipv6_local_address,
+                session->ipv6_peer_address,
+                BGP_PORT,
+                session->config->ttl,
+                session->config->tos);
+        }
         if(session->tcpc) {
             session->tcpc->arg = session;
             session->tcpc->connected_cb = bgp_connected_cb;
@@ -282,12 +291,12 @@ bgp_session_connect_job(timer_s *timer)
             session->tcpc->error_cb = bgp_error_cb;
             bgp_session_state_change(session, BGP_CONNECT);
             /* Close session if not established within 60 seconds */
-            timeout = 60; 
+            timeout = 60;
         } else {
             LOG(BGP, "BGP (%s %s - %s) TCP connect failed\n", 
                 session->interface->name,
-                format_ipv4_address(&session->ipv4_local_address),
-                format_ipv4_address(&session->ipv4_peer_address));
+                session->local_address_str,
+                session->peer_address_str);
         }
     } else if(session->state == BGP_ESTABLISHED) {
         timer->periodic = false;
@@ -295,8 +304,8 @@ bgp_session_connect_job(timer_s *timer)
     } else {
         LOG(BGP, "BGP (%s %s - %s) connect timeout\n", 
             session->interface->name,
-            format_ipv4_address(&session->ipv4_local_address),
-            format_ipv4_address(&session->ipv4_peer_address));
+            session->local_address_str,
+            session->peer_address_str);
 
         bgp_session_close(session);
         timer->periodic = false;
@@ -392,8 +401,8 @@ bgp_session_close(bgp_session_s *session)
         /* Send notification messages */
         LOG(BGP, "BGP (%s %s - %s) send notification message (error code %u sub-code %u)\n",
             session->interface->name,
-            format_ipv4_address(&session->ipv4_local_address),
-            format_ipv4_address(&session->ipv4_peer_address),
+            session->local_address_str,
+            session->peer_address_str,
             session->error_code, session->error_subcode);
         bgp_session_reset_write_buffer(session);
         bgp_push_notification_message(session);
@@ -415,8 +424,8 @@ bgp_session_hold_timer_job(timer_s *timer)
 
     LOG(BGP, "BGP (%s %s - %s) session timeout\n",
         session->interface->name,
-        format_ipv4_address(&session->ipv4_local_address),
-        format_ipv4_address(&session->ipv4_peer_address));
+        session->local_address_str,
+        session->peer_address_str);
 
     if(!session->error_code) {
         session->error_code = 4; /* hold timer expired */

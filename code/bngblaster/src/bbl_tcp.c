@@ -235,7 +235,7 @@ bbl_tcp_error_cb(void *arg, err_t err)
             format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr), tcpc->remote_port,
             err, tcp_err_string(err));
     } else {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) error %d (%s)\n",
+        LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) error %d (%s)\n",
             tcpc->ifname,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->remote_port,
@@ -286,7 +286,7 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
             format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), tcpc->local_port,
             format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr), tcpc->remote_port);
     } else {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) session connected\n",
+        LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) session connected\n",
             tcpc->ifname,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
             format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr), tcpc->remote_port);
@@ -374,7 +374,7 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     } else {
         memcpy(&tcpc->local_addr.u_addr.ip6.addr, &tpcb->local_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
         memcpy(&tcpc->remote_addr.u_addr.ip6.addr, &tpcb->remote_ip.u_addr.ip6.addr, IPV6_ADDR_LEN);
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) session accepted\n",
+        LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) session accepted\n",
             tcpc->ifname,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
             format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr), tcpc->remote_port);
@@ -709,7 +709,7 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
     tcpc->remote_addr.type = IPADDR_TYPE_V6;
     err = tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected);
     if(err != ERR_OK) {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) connect error %d (%s)\n",
+        LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) connect error %d (%s)\n",
             tcpc->ifname,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
             tcpc->local_port,
@@ -728,7 +728,7 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V6;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V6;
     tcpc->state = BBL_TCP_STATE_CONNECTING;
-    LOG(TCP, "TCP (%s %s:%u - %s:%u) connect\n",
+    LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) connect\n",
         tcpc->ifname,
         format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
         tcpc->local_port,
@@ -781,7 +781,7 @@ bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t
     tcpc->remote_addr.type = IPADDR_TYPE_V6;
     err = tcp_connect(tcpc->pcb, &tcpc->remote_addr, port, bbl_tcp_connected);
     if(err != ERR_OK) {
-        LOG(TCP, "TCP (%s %s:%u - %s:%u) connect error %d (%s)\n",
+        LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) connect error %d (%s)\n",
             tcpc->ifname,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
             tcpc->local_port,
@@ -800,7 +800,7 @@ bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t
     tcpc->pcb->local_ip.type = IPADDR_TYPE_V6;
     tcpc->pcb->remote_ip.type = IPADDR_TYPE_V6;
     tcpc->state = BBL_TCP_STATE_CONNECTING;
-    LOG(TCP, "TCP (%s %s:%u - %s:%u) connect\n",
+    LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) connect\n",
         tcpc->ifname,
         format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), 
         tcpc->local_port,
@@ -905,7 +905,7 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 
 #if BNGBLASTER_TCP_DEBUG
     bbl_tcp_s *tcp = (bbl_tcp_s*)ipv6->next;
-    LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
+    LOG(DEBUG, "TCP (%s [%s]:%u - [%s]:%u) packet received\n",
         interface->name,
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
         format_ipv6_address((ipv6addr_t*)ipv6->src), tcp->src);
@@ -917,10 +917,8 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     ip_data.current_netif = &interface->netif;
     ip_data.current_input_netif = &interface->netif;
     memcpy(&ip_data.current_iphdr_dest.u_addr.ip6.addr, ipv6->dst, sizeof(ip6_addr_t));
-    ip_data.current_iphdr_dest.u_addr.ip6.zone = 0;
     ip_data.current_iphdr_dest.type = IPADDR_TYPE_V6;
     memcpy(&ip_data.current_iphdr_src.u_addr.ip6.addr, ipv6->src, sizeof(ip6_addr_t));
-    ip_data.current_iphdr_src.u_addr.ip6.zone = 0;
     ip_data.current_iphdr_src.type = IPADDR_TYPE_V6;
 
     pbuf = pbuf_alloc_reference(ipv6->payload, ipv6->payload_len, PBUF_ROM);
@@ -947,7 +945,7 @@ bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_
 
 #if BNGBLASTER_TCP_DEBUG
     bbl_tcp_s *tcp = (bbl_tcp_s*)ipv6->next;
-    LOG(DEBUG, "TCP (ID: %u %s:%u - %s:%u) packet received\n",
+    LOG(DEBUG, "TCP (ID: %u [%s]:%u - [%s]:%u) packet received\n",
         session->session_id,
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
         format_ipv6_address((ipv6addr_t*)ipv6->src), tcp->src);
@@ -959,10 +957,8 @@ bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_
     ip_data.current_netif = &session->netif;
     ip_data.current_input_netif = &session->netif;
     memcpy(&ip_data.current_iphdr_dest.u_addr.ip6.addr, ipv6->dst, sizeof(ip6_addr_t));
-    ip_data.current_iphdr_dest.u_addr.ip6.zone = 0;
     ip_data.current_iphdr_dest.type = IPADDR_TYPE_V6;
     memcpy(&ip_data.current_iphdr_src.u_addr.ip6.addr, ipv6->src, sizeof(ip6_addr_t));
-    ip_data.current_iphdr_src.u_addr.ip6.zone = 0;
     ip_data.current_iphdr_src.type = IPADDR_TYPE_V6;
 
     pbuf = pbuf_alloc_reference(ipv6->payload, ipv6->payload_len, PBUF_ROM);
@@ -1182,6 +1178,7 @@ bbl_tcp_network_interface_init(bbl_network_interface_s *interface, bbl_network_c
     interface->netif.state = interface;
     interface->netif.mtu = config->mtu;
     interface->netif.mtu6 = config->mtu;
+
     return true;
 }
 

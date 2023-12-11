@@ -1265,19 +1265,59 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
     return true;
 }
 
+static uint32_t 
+bgp_afi_safi(const char *s) 
+{
+    if(strcmp(s, "ipv4-unicast") == 0) {
+        return BGP_IPV4_UC;
+    } else if(strcmp(s, "ipv6-unicast") == 0) {
+        return BGP_IPv6_UC;
+    } else if(strcmp(s, "ipv4-multicast") == 0) {
+        return BGP_IPv4_MC;
+    } else if(strcmp(s, "ipv6-multicast") == 0) {
+        return BGP_IPv6_MC;
+    } else if(strcmp(s, "ipv4-labeled-unicast") == 0) {
+        return BGP_IPv4_LU;
+    } else if(strcmp(s, "ipv6-labeled-unicast") == 0) {
+        return BGP_IPv6_LU;
+    } else if(strcmp(s, "ipv4-vpn-unicast") == 0) {
+        return BGP_IPv4_VPN_UC;
+    } else if(strcmp(s, "ipv6-vpn-unicast") == 0) {
+        return BGP_IPv6_VPN_UC;
+    } else if(strcmp(s, "ipv4-vpn-multicast") == 0) {
+        return BGP_IPv4_VPN_MC;
+    } else if(strcmp(s, "ipv6-vpn-multicast") == 0) {
+        return BGP_IPv6_VPN_MC;
+    } else if(strcmp(s, "ipv4-flow") == 0) {
+        return BGP_IPv4_FLOW;
+    } else if(strcmp(s, "ipv6-flow") == 0) {
+        return BGP_IPv6_FLOW;
+    } else if(strcmp(s, "evpn") == 0) {
+        return BGP_EVPN;
+    } else {
+        return 0;
+    }
+}
+
 static bool
 json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 {
-    json_t *value = NULL;
+    json_t *value, *sub = NULL;
     const char *s = NULL;    
-    
+    int i, size;
+    uint32_t family;
+
     g_ctx->tcp = true;
 
     const char *schema[] = {
-        "network-interface", "local-ipv4-address", "peer-ipv4-address",
+        "network-interface", 
+        "local-address", "peer-address",
+        "local-ipv4-address", "peer-ipv4-address",
+        "local-ipv6-address", "peer-ipv6-address",
         "local-as", "peer-as", "hold-time", "tos", "ttl",
         "id", "reconnect", "start-traffic",
-        "teardown-time", "raw-update-file"
+        "teardown-time", "raw-update-file",
+        "family", "extended-nexthop"
     };
     if(!schema_validate(bgp, "bgp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1288,22 +1328,53 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->network_interface = strdup(s);
     }
 
-    if(json_unpack(bgp, "{s:s}", "local-ipv4-address", &s) == 0) {
+    if(json_unpack(bgp, "{s:s}", "local-address", &s) == 0) {
+        if(inet_pton(AF_INET, s, &bgp_config->ipv4_local_address)) {
+            add_secondary_ipv4(bgp_config->ipv4_local_address);
+        } else if(inet_pton(AF_INET6, s, &bgp_config->ipv6_local_address)) {
+            add_secondary_ipv6(bgp_config->ipv6_local_address);
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->local-address\n");
+            return false;
+        }
+    } else if(json_unpack(bgp, "{s:s}", "local-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &bgp_config->ipv4_local_address)) {
             fprintf(stderr, "JSON config error: Invalid value for bgp->local-ipv4-address\n");
             return false;
         }
         add_secondary_ipv4(bgp_config->ipv4_local_address);
+    } else if(json_unpack(bgp, "{s:s}", "local-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &bgp_config->ipv6_local_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->local-ipv6-address\n");
+            return false;
+        }
+        add_secondary_ipv6(bgp_config->ipv6_local_address);
     }
 
-    if(json_unpack(bgp, "{s:s}", "peer-ipv4-address", &s) == 0) {
+    if(json_unpack(bgp, "{s:s}", "peer-address", &s) == 0) {
+        if(inet_pton(AF_INET, s, &bgp_config->ipv4_peer_address)) {
+            bgp_config->af = AF_INET;
+        } else if(inet_pton(AF_INET6, s, &bgp_config->ipv6_peer_address)) {
+            bgp_config->af = AF_INET6;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->peer-address\n");
+            return false;
+        }
+    } else if(json_unpack(bgp, "{s:s}", "peer-ipv4-address", &s) == 0) {
+        bgp_config->af = AF_INET;
         if(!inet_pton(AF_INET, s, &bgp_config->ipv4_peer_address)) {
             fprintf(stderr, "JSON config error: Invalid value for bgp->peer-ipv4-address\n");
             return false;
         }
+    } else if(json_unpack(bgp, "{s:s}", "peer-ipv6-address", &s) == 0) {
+        bgp_config->af = AF_INET6;
+        if(!inet_pton(AF_INET6, s, &bgp_config->ipv6_peer_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->peer-ipv6-address\n");
+            return false;
+        }
     } else {
-        fprintf(stderr, "JSON config error: Missing value for bgp->peer-ipv4-address\n");
-        return false;   
+        fprintf(stderr, "JSON config error: Missing value for bgp->peer-address\n");
+        return false;
     }
 
     JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "local-as", 0, 4294967295);
@@ -1370,6 +1441,60 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->raw_update_file = strdup(s);
         if(!bgp_raw_update_load(bgp_config->raw_update_file, true)) {
             return false;
+        }
+    }
+
+    value = json_object_get(bgp, "family");
+    if(value) {
+        if(!json_is_array(value)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->family (array of strings expected)\n");
+            return false;
+        }
+        size = json_array_size(value);
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(value, i);
+            if(!json_is_string(sub)) {
+                fprintf(stderr, "JSON config error: InvaInvalid value for bgp->family (array of strings expected)\n");
+                return false;
+            }
+            family = bgp_afi_safi(json_string_value(sub));
+            if(!family) {
+                fprintf(stderr, "JSON config error: Invalid value for bgp->family (unknown family %s)\n", json_string_value(sub));
+                return false;
+            }
+            bgp_config->family |= family;
+        }
+    } else {
+        bgp_config->family = (BGP_IPV4_UC|BGP_IPv6_UC|BGP_IPv4_LU|BGP_IPv6_LU);
+    }
+
+    value = json_object_get(bgp, "extended-nexthop");
+    if(value) {
+        if(!json_is_array(value)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->extended-nexthop (array of strings expected)\n");
+            return false;
+        }
+        size = json_array_size(value);
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(value, i);
+            if(!json_is_string(sub)) {
+                fprintf(stderr, "JSON config error: InvaInvalid value for bgp->extended-nexthop (array of strings expected)\n");
+                return false;
+            }
+            family = bgp_afi_safi(json_string_value(sub));
+            if(!family) {
+                fprintf(stderr, "JSON config error: Invalid value for bgp->extended-nexthop (unknown family %s)\n", json_string_value(sub));
+                return false;
+            }
+            switch (family) {
+                case BGP_IPV4_UC:
+                case BGP_IPv4_VPN_UC:
+                    bgp_config->extended_nexthop |= family;
+                    break;
+                default:
+                    fprintf(stderr, "JSON config error: Invalid value for bgp->extended-nexthop (unsupported family %s)\n", json_string_value(sub));
+                    return false;
+            }
         }
     }
     return true;
@@ -2927,7 +3052,7 @@ json_parse_config(json_t *root)
             const char *schema[] = {
                 "enable", "conf-request-timeout", "conf-request-retry"
             };
-            if(!schema_validate(sub, "ipcp", schema, 
+            if(!schema_validate(sub, "ip6cp", schema, 
             sizeof(schema)/sizeof(schema[0]))) {
                 return false;
             }

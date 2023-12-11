@@ -24,6 +24,23 @@
 #define BGP_MSG_NOTIFICATION        3
 #define BGP_MSG_KEEPALIVE           4
 
+#define BGP_CAPABILITY              2
+#define BGP_CAPABILITY_4_BYTE_AS    65
+
+#define BGP_IPV4_UC                 0x00000001
+#define BGP_IPv6_UC                 0x00000002
+#define BGP_IPv4_MC                 0x00000040
+#define BGP_IPv6_MC                 0x00000080
+#define BGP_IPv4_LU                 0x00000004
+#define BGP_IPv6_LU                 0x00000008
+#define BGP_IPv4_VPN_UC             0x00000010
+#define BGP_IPv6_VPN_UC             0x00000020
+#define BGP_IPv4_VPN_MC             0x00000010
+#define BGP_IPv6_VPN_MC             0x00000020
+#define BGP_IPv4_FLOW               0x00000100
+#define BGP_IPv6_FLOW               0x00000200
+#define BGP_EVPN                    0x00000400
+
 typedef enum bgp_state_ {
     BGP_CLOSED,
     BGP_IDLE,
@@ -53,15 +70,23 @@ typedef struct bgp_raw_update_ {
  * BGP Configuration
  */
 typedef struct bgp_config_ {
+    uint8_t  af; /* address family */
     uint32_t ipv4_local_address;
     uint32_t ipv4_peer_address;
+
+    ipv6addr_t ipv6_local_address;
+    ipv6addr_t ipv6_peer_address;
+
     uint32_t id;
     uint32_t local_as;
     uint32_t peer_as;
     uint16_t hold_time;
     uint16_t teardown_time;
     uint8_t  tos; /* IPv4 TOS or IPv6 TC */
-    uint8_t  ttl; /* IPv4 TOS or IPv6 TC */
+    uint8_t  ttl;
+
+    uint32_t family;
+    uint32_t extended_nexthop;
 
     bool reconnect;
     bool start_traffic;
@@ -76,13 +101,21 @@ typedef struct bgp_config_ {
 /*
  * BGP Session
  */
-typedef struct bgp_session_ {    
+typedef struct bgp_session_ {
+    uint8_t  af; /* address family */
     uint32_t ipv4_local_address;
     uint32_t ipv4_peer_address;
+
+    ipv6addr_t *ipv6_local_address;
+    ipv6addr_t *ipv6_peer_address;
+
+    char *local_address_str;
+    char *peer_address_str;
 
     bgp_config_s *config;
     bbl_network_interface_s *interface;
     bbl_tcp_ctx_s *tcpc;
+    bbl_tcp_ctx_s *listen_tcpc;
 
     struct timer_ *connect_timer;
     struct timer_ *keepalive_timer;

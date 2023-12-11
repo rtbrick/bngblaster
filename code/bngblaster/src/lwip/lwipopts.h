@@ -54,11 +54,11 @@ extern unsigned char debug_flags;
 #define LWIP_IPV4                  1
 #define LWIP_IPV6                  1
 
-#define LWIP_IPV6_FRAG             1
-#define LWIP_IPV6_REASS            1
+#define LWIP_IPV6_FRAG             0
+#define LWIP_IPV6_REASS            0
 #define LWIP_IPV6_AUTOCONFIG       0
-
-#define IPV6_FRAG_COPYHEADER       1
+#define IPV6_FRAG_COPYHEADER       0
+#define LWIP_IPV6_SCOPES           0
 
 /* ---------- Memory options ---------- */
 /* MEM_ALIGNMENT: should be set to the alignment of the CPU for which

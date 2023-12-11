@@ -40,14 +40,30 @@ bgp_init()
 
         session->config = config;
         session->interface = network_interface;
+        session->af = config->af;
 
-        if(config->ipv4_local_address) {
-            session->ipv4_local_address = config->ipv4_local_address;
+        if(session->af == AF_INET) {
+            if(config->ipv4_local_address) {
+                session->ipv4_local_address = config->ipv4_local_address;
+            } else {
+                session->ipv4_local_address = network_interface->ip.address;
+            }
+            session->ipv4_peer_address = config->ipv4_peer_address;
+            session->local_address_str = strdup(format_ipv4_address(&session->ipv4_local_address));
+            session->peer_address_str = strdup(format_ipv4_address(&session->ipv4_peer_address));
         } else {
-            session->ipv4_local_address = network_interface->ip.address;
+            if(ipv6_addr_not_zero(&config->ipv6_local_address)) {
+                session->ipv6_local_address = &config->ipv6_local_address;
+            } else if(ipv6_addr_not_zero(&network_interface->ip6.address)) {
+                session->ipv6_local_address = &network_interface->ip6.address;
+            } else {
+                session->ipv6_local_address = &network_interface->ip6_ll;
+            }
+            session->ipv6_peer_address = &config->ipv6_peer_address;
+            session->local_address_str = strdup(format_ipv6_address(session->ipv6_local_address));
+            session->peer_address_str = strdup(format_ipv6_address(session->ipv6_peer_address));
         }
-        session->ipv4_peer_address = config->ipv4_peer_address;
-        
+
         /* Init read/write buffer */
         session->read_buf.data = malloc(BGP_BUF_SIZE);
         session->read_buf.size = BGP_BUF_SIZE;
@@ -65,8 +81,8 @@ bgp_init()
 
         LOG(BGP, "BGP (%s %s - %s) init session\n",
             session->interface->name,
-            format_ipv4_address(&session->ipv4_local_address),
-            format_ipv4_address(&session->ipv4_peer_address));
+            session->local_address_str,
+            session->peer_address_str);
 
         bgp_session_connect(session, 1);
         g_ctx->routing_sessions++;
@@ -98,8 +114,8 @@ bgp_teardown()
         if(!session->teardown) {
             LOG(BGP, "BGP (%s %s - %s) teardown session\n",
                 session->interface->name,
-                format_ipv4_address(&session->ipv4_local_address),
-                format_ipv4_address(&session->ipv4_peer_address));
+                session->local_address_str,
+                session->peer_address_str);
 
             session->teardown = true;
             if(!session->error_code) {
