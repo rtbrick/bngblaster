@@ -24,8 +24,7 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 
-#include "libdict/dict.h"
-
+#include <dict.h>
 #include <common_include.h>
 
 #include "lspgen_lsdb.h"

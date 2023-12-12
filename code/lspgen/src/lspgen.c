@@ -6,8 +6,7 @@
  * Copyright (C) 2015-2022, RtBrick, Inc.
  */
 #include <signal.h>
-
-#include "libdict/dict.h"
+#include <dict.h>
 
 #include "lspgen.h"
 #include "lspgen_lsdb.h"

@@ -9,7 +9,7 @@ foreach(_file ${LSPGEN_SOURCES})
     set_property(SOURCE ${_file} APPEND_STRING PROPERTY COMPILE_FLAGS "-frandom-seed=0x${checksum}")
 endforeach()
 
-add_executable(lspgen ${COMMON_SOURCES} ${LSPGEN_SOURCES})
+add_executable(lspgen ${LIBDICT_SOURCES} ${COMMON_SOURCES} ${LSPGEN_SOURCES})
 target_link_libraries(lspgen crypto jansson ${libdict} m)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)

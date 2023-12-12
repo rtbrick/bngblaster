@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if ! which valgrind >/dev/null; then
+    echo "`basename $0`: valgrind not found." >&2
+    exit 1
+fi
+
+valgrind --tool=memcheck --trace-children=yes \
+	--track-fds=yes --num-callers=32 \
+	--memcheck:leak-check=yes --memcheck:leak-resolution=high \
+	--show-reachable=yes \
+	"$@" 2>&1 | tee vg.log
