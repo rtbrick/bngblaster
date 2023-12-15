@@ -1129,7 +1129,14 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
         .router = config->router_id
     };
 
-    search = hb_tree_search(ospf_instance->lsdb[OSPF_LSA_TYPE_10], &key);
+    uint8_t lsa_type = OSPF_LSA_TYPE_10;
+    uint8_t options = 0;
+    if(config->version == OSPF_VERSION_3) {
+        lsa_type = OSPF_LSA_TYPE_12;
+        options = OSPFV3_FSCOPE_AREA;
+    }
+    
+    search = hb_tree_search(ospf_instance->lsdb[lsa_type], &key);
     if(search) {
         /* Update existing LSA. */
         lsa = *search;
@@ -1141,16 +1148,17 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
         }
     } else {
         /* Create new LSA. */
-        lsa = ospf_lsa_new(OSPF_LSA_TYPE_10, &key, ospf_instance);
+        lsa = ospf_lsa_new(lsa_type, &key, ospf_instance);
         lsa->seq = OSPF_LSA_SEQ_INIT;
         lsa->lsa = malloc(OSPF_MAX_SELF_LSA_LEN);
         lsa->lsa_buf_len = OSPF_MAX_SELF_LSA_LEN;
-        result = hb_tree_insert(ospf_instance->lsdb[OSPF_LSA_TYPE_10], &lsa->key);
+        result = hb_tree_insert(ospf_instance->lsdb[lsa_type], &lsa->key);
         assert(result.inserted);
         if(result.inserted) {
             *result.datum_ptr = lsa;
         } else {
-            LOG_NOARG(OSPF, "Failed to add self generated OSPF Type 10 LSA to LSDB\n");
+            LOG(OSPF, "Failed to add self generated OSPFv%u Type %u LSA to LSDB\n", 
+                config->version, lsa_type);
             return false;
         }
     }
@@ -1161,7 +1169,8 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
     lsa->expired = false;
     lsa->deleted = false;
     hdr = (ospf_lsa_header_s*)lsa->lsa;
-    hdr->type = OSPF_LSA_TYPE_10;
+    hdr->options = options;
+    hdr->type = lsa_type;
     hdr->id = key.id;
     hdr->router = key.router;
     hdr->seq = htobe32(lsa->seq);
