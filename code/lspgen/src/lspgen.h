@@ -30,7 +30,7 @@
 
 #include "lspgen_lsdb.h"
 
-#define CTRL_SOCKET_BUFSIZE 65536
+#define CTRL_SOCKET_BUFSIZE 1024*4096
 #define PAD4(X) ((X+3)&(~3)) /* 32-Bit padding */
 #define CONNECTOR_MARKER 1 /* Marker for connector link */
 
