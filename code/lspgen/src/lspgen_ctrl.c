@@ -295,11 +295,9 @@ lspgen_ctrl_write_cb(timer_s *timer)
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;
 
         /*
-	 * Hexdumping doubles the data,
-	 * plus 4 bytes for two quotation marks, comma and whitespace,
-	 * plus 6 bytes for the json footer.
+	 * Close the JSON message and socket once 99% of the buffer have been consumed.
 	 */
-        if (buffer_left < ((packet->buf[0].idx * 2) + 4 + 6)) {
+        if (buffer_left < (CTRL_SOCKET_BUFSIZE/100)) {
 
             /* no space, close the JSON datagram and continue later */
             LOG_NOARG(NORMAL, "End of buffer\n");
