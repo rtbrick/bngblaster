@@ -29,17 +29,17 @@
 
 #define BGP_IPV4_UC                 0x00000001
 #define BGP_IPv6_UC                 0x00000002
-#define BGP_IPv4_MC                 0x00000040
-#define BGP_IPv6_MC                 0x00000080
-#define BGP_IPv4_LU                 0x00000004
-#define BGP_IPv6_LU                 0x00000008
-#define BGP_IPv4_VPN_UC             0x00000010
-#define BGP_IPv6_VPN_UC             0x00000020
-#define BGP_IPv4_VPN_MC             0x00000010
-#define BGP_IPv6_VPN_MC             0x00000020
-#define BGP_IPv4_FLOW               0x00000100
-#define BGP_IPv6_FLOW               0x00000200
-#define BGP_EVPN                    0x00000400
+#define BGP_IPv4_MC                 0x00000004
+#define BGP_IPv6_MC                 0x00000008
+#define BGP_IPv4_LU                 0x00000010
+#define BGP_IPv6_LU                 0x00000020
+#define BGP_IPv4_VPN_UC             0x00000040
+#define BGP_IPv6_VPN_UC             0x00000080
+#define BGP_IPv4_VPN_MC             0x00000100
+#define BGP_IPv6_VPN_MC             0x00000200
+#define BGP_IPv4_FLOW               0x00000400
+#define BGP_IPv6_FLOW               0x00000800
+#define BGP_EVPN                    0x00001000
 
 typedef enum bgp_state_ {
     BGP_CLOSED,
