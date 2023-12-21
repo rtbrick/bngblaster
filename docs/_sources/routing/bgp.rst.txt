@@ -28,11 +28,12 @@ Following is an example of a BGP configuration with one session.
         },
         "bgp": [
             {
-                "local-ipv4-address": "10.0.1.2",
-                "peer-ipv4-address": "10.0.1.1",
+                "local-address": "10.0.1.2",
+                "peer-address": "10.0.1.1",
                 "raw-update-file": "test.bgp",
                 "local-as": 65001,
-                "peer-as": 65001
+                "peer-as": 65001,
+                "family": [ "ipv4-unicast",  "ipv6-unicast" ]
             }
         ]
     }
@@ -43,13 +44,15 @@ Following is an example of a BGP configuration with one session.
 BGP Sessions
 ~~~~~~~~~~~~
 
-Every BGP session is opened with the capabilities for the following
+BGP session are opened with the capabilities for the following
 address families:
 
 + IPv4 unicast
 + IPv4 labeled unicast
 + IPv6 unicast
 + IPv6 labeled unicast
+
+This can be changed using `family` configuration option.
 
 Limitations
 ~~~~~~~~~~~
@@ -125,8 +128,8 @@ via ``bgp-raw-update-files`` configuration.
     {
         "bgp": [
             {
-                "local-ipv4-address": "10.0.1.2",
-                "peer-ipv4-address": "10.0.1.1",
+                "local-address": "10.0.1.2",
+                "peer-address": "10.0.1.1",
                 "raw-update-file": "start.bgp",
                 "local-as": 65001,
                 "peer-as": 65001
