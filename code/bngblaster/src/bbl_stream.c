@@ -2351,6 +2351,8 @@ bbl_stream_json(bbl_stream_s *stream)
     char *a10nsp_interface_name = NULL;
     char *src_address = NULL;
     char *dst_address = NULL;
+    uint16_t src_port = 0;
+    uint16_t dst_port = 0;
 
     if(!stream) {
         return NULL;
@@ -2365,12 +2367,28 @@ bbl_stream_json(bbl_stream_s *stream)
     if(stream->a10nsp_interface) {
         a10nsp_interface_name = stream->a10nsp_interface->name;
     }
+
+    if (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) {
+        src_port = stream->config->dst_port;
+        dst_port = stream->config->src_port;
+    } else {
+        src_port = stream->config->src_port;
+        dst_port = stream->config->dst_port;
+    }
+
     if(stream->ipv6_src && stream->ipv6_dst) {
         src_address = format_ipv6_address((ipv6addr_t*)stream->ipv6_src);
         dst_address = format_ipv6_address((ipv6addr_t*)stream->ipv6_dst);
     } else {
         src_address = format_ipv4_address(&stream->ipv4_src);
-        dst_address = format_ipv4_address(&stream->ipv4_dst);
+        if(stream->nat && stream->reverse && 
+           stream->reverse->rx_source_ip && 
+           stream->reverse->rx_source_port) {
+            dst_address = format_ipv4_address(&stream->reverse->rx_source_ip);
+            dst_port = stream->reverse->rx_source_port;
+        } else { 
+            dst_address = format_ipv4_address(&stream->ipv4_dst);
+        }
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
@@ -2380,9 +2398,9 @@ bbl_stream_json(bbl_stream_s *stream)
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "source-address", src_address,
-            "source-port", (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) ? stream->config->dst_port : stream->config->src_port,
+            "source-port", src_port,
             "destination-address", dst_address,
-            "destination-port", (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) ? stream->config->src_port : stream->config->dst_port,
+            "destination-port", dst_port,
             "protocol", stream->tcp ? "tcp" : "udp",
             "access-interface", access_interface_name,
             "network-interface", network_interface_name,
