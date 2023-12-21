@@ -10,15 +10,17 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **stream-summary**                | | Display stream/flow summary information.                           |
 +-----------------------------------+----------------------------------------------------------------------+
-| **stream-traffic-start**          | | Enable/start traffic streams.                                      |
+| **stream-traffic-start**          | | Enable/start traffic streams bound to sessions.                    |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id``                                               |
 +-----------------------------------+----------------------------------------------------------------------+
-| **stream-traffic-stop**           | | Disable/stop traffic streams.                                      |
+| **stream-traffic-stop**           | | Disable/stop traffic streams bound to sessions.                    |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id``                                               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **stream-reset**                  | | Reset all traffic streams.                                         |
 +-----------------------------------+----------------------------------------------------------------------+

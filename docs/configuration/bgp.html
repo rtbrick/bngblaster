@@ -98,9 +98,9 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>local-ipv4-address</strong></p></td>
+<tr class="row-odd"><td><p><strong>local-address</strong></p></td>
 <td><div class="line-block">
-<div class="line">BGP local IPv4 address (source address).</div>
+<div class="line">BGP local IPv4/6 address (source address).</div>
 <div class="line">Default: <cite>network interface address</cite></div>
 </div>
 </td>
@@ -112,9 +112,9 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>peer-ipv4-address</strong></p></td>
+<tr class="row-odd"><td><p><strong>peer-address</strong></p></td>
 <td><div class="line-block">
-<div class="line">Mandatory BGP peer address.</div>
+<div class="line">Mandatory BGP peer IPv4/6 address.</div>
 </div>
 </td>
 </tr>
@@ -179,6 +179,28 @@
 <tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP RAW update file.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>family</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP families to be send in open message.</div>
+<div class="line">Default: ipv4/6-unicast, ipv4/6-labeled-unicast</div>
+<div class="line">Values:</div>
+<div class="line">ipv4-unicast, ipv6-unicast,</div>
+<div class="line">ipv4-multicast, ipv6-multicast,</div>
+<div class="line">ipv4-labeled-unicast, ipv6-labeled-unicast,</div>
+<div class="line">ipv4-vpn-unicast, ipv6-vpn-unicast,</div>
+<div class="line">ipv4-vpn-multicast, ipv6-vpn-multicast,</div>
+<div class="line">ipv4-flow, ipv6-flow, evpn</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>extended-nexthop</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP extended-nexthop families to be send in open message.</div>
+<div class="line">Default: None</div>
+<div class="line">Values: ipv4-unicast, ipv4-vpn-unicast</div>
 </div>
 </td>
 </tr>

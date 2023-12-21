@@ -114,22 +114,8 @@ sudo apt install -y libssl3 libncurses6 libjansson4
 <h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Permalink to this headline"></a></h2>
 <section id="dependencies">
 <h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h3>
-<p>The BNG Blaster has dependencies on the RtBrick
-<a class="reference external" href="https://github.com/rtbrick/libdict">libdict fork</a>
-and the following standard dependencies:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install libdict for Ubuntu 18.04 LTS
-wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
-unzip libdict-debian.zip
-sudo dpkg -i libdict_1.0.1_amd64.deb
-sudo dpkg -i libdict-dev_1.0.1_amd64.deb
-
-# install libdict for Ubuntu 22.04 LTS
-wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-ubuntu-22.04.zip
-unzip libdict-ubuntu-22.04.zip
-sudo dpkg -i libdict_1.0.3_amd64.deb
-sudo dpkg -i libdict-dev_1.0.3_amd64.deb
-
-# install other dependencies
+<p>The BNG Blaster has the following dependcancies:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install dependencies
 sudo apt install -y cmake \
     libpcap-dev \
     libcunit1-dev \
