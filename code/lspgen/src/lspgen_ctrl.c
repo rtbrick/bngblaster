@@ -220,6 +220,15 @@ lspgen_ctrl_close_cb(timer_s *timer)
      LOG(NORMAL, "Closing connection to %s\n", ctx->ctrl_socket_path);
 
      /*
+      * If not all packet have been drained then start another connection to finish the job.
+      */
+     if (!CIRCLEQ_EMPTY(&ctx->packet_change_qhead)) {
+	 timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
+			    "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+	 return;
+     }
+
+     /*
       * Terminate the event loop if user wants.
       */
      if (ctx->quit_loop) {
@@ -275,6 +284,8 @@ lspgen_ctrl_write_cb(timer_s *timer)
         push_data(&ctx->ctrl_io_buf, (uint8_t *)json_header, strlen(json_header));
     }
 
+    json_footer = "]\n}\n}\n";
+
     /*
      * Drain the change queue as long as there is buffer left.
      */
@@ -284,17 +295,13 @@ lspgen_ctrl_write_cb(timer_s *timer)
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;
 
         /*
-	 * Hexdumping doubles the data plus 4 bytes for two quotation marks, comma and whitespace.
+	 * Close the JSON message and socket once 99% of the buffer have been consumed.
 	 */
-        if (buffer_left < ((packet->buf[0].idx * 2) + 4)) {
+        if (buffer_left < (CTRL_SOCKET_BUFSIZE/100)) {
 
-            /* no space, release buffer and try later */
-            lspgen_write_ctrl_buffer(ctx);
-            LOG(NORMAL, "Sent %u packets, %u bytes to %s\n",
-            ctx->ctrl_stats.packets_sent,
-            ctx->ctrl_stats.octets_sent,
-            ctx->ctrl_socket_path);
-            return;
+            /* no space, close the JSON datagram and continue later */
+            LOG_NOARG(NORMAL, "End of buffer\n");
+            goto close_socket;
         }
 
         lspgen_ctrl_encode_packet(ctx, packet);
@@ -307,7 +314,8 @@ lspgen_ctrl_write_cb(timer_s *timer)
         ctx->ctrl_stats.packets_queued--;
     }
 
-     json_footer = "]\n}\n}\n";
+ close_socket:
+
      push_data(&ctx->ctrl_io_buf, (uint8_t *)json_footer, strlen(json_footer));
      lspgen_write_ctrl_buffer(ctx);
 
@@ -345,7 +353,7 @@ lspgen_ctrl_connect_cb(timer_s *timer)
 {
     struct sockaddr_un addr;
     struct lsdb_ctx_ *ctx;
-    int res;
+    int res, valopt;
 
     ctx = timer->data;
 
@@ -365,6 +373,13 @@ lspgen_ctrl_connect_cb(timer_s *timer)
 
     if (res == 0) {
         LOG(NORMAL, "Connected to %s\n", ctx->ctrl_socket_path);
+
+	/* Now lets try to set the send buffer size */
+	valopt = CTRL_SOCKET_BUFSIZE;
+	res = setsockopt(ctx->ctrl_socket_sockfd, SOL_SOCKET, SO_SNDBUF,  &valopt, sizeof(int));
+	if (res != 0) {
+	    LOG(ERROR, "Unable to set send buffer size, continuing with default size\n");
+	}
 
         /* Delete the connect timer */
         timer_del(timer);
@@ -390,7 +405,7 @@ lspgen_ctrl_connect_cb(timer_s *timer)
          */
         ctx->ctrl_packet_first = true;
 
-        LOG(NORMAL, "Enqueued %u packets to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
+        LOG(NORMAL, "%u packets enqueued to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
         return;
     }
 

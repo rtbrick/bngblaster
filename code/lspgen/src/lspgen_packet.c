@@ -2039,7 +2039,13 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
     dict_itor_free(itor);
 
     /*
-     * Distribute expiration of refresh timer over time.
+     * Do not smear if this is a one-off LSDB drain.
      */
-    timer_smear_bucket(&ctx->timer_root, lspgen_refresh_interval(ctx), 0);
+    if (!ctx->quit_loop) {
+
+	/*
+	 * Distribute expiration of refresh timer over time.
+	 */
+	timer_smear_bucket(&ctx->timer_root, lspgen_refresh_interval(ctx), 0);
+    }
 }
