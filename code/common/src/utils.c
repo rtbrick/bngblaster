@@ -671,6 +671,7 @@ ipv4_mask_to_len(uint32_t mask)
 uint32_t
 ipv4_len_to_mask(uint8_t len)
 {
-    if(len > 32) return UINT32_MAX;
-    return UINT32_MAX >> (32 - len);
+    if(len >= 32) return UINT32_MAX;
+    if(len == 0) return 0;
+    return htobe32(~((1 << (32 - len)) - 1));
 }
