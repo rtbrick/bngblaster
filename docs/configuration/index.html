@@ -501,7 +501,7 @@ for interface links referenced by interface functions.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>address-ipv6</strong></p></td>
 <td><div class="line-block">
-<div class="line">Local IPv6 address (e.g. fc66::1/64)</div>
+<div class="line">Local IPv6 address (e.g. fc66::1/64).</div>
 </div>
 </td>
 </tr>
@@ -518,95 +518,102 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>vlan</strong></p></td>
+<tr class="row-even"><td><p><strong>mtu</strong></p></td>
 <td><div class="line-block">
-<div class="line">Network interface VLAN</div>
+<div class="line">MTU size.</div>
+<div class="line">Default: 1500 Range: 64 - 9000</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Network interface VLAN.</div>
 <div class="line">Default: 0 (untagged)</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>gateway-mac</strong></p></td>
+<tr class="row-even"><td><p><strong>gateway-mac</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional set default gateway MAC address manually. Per default</div>
 <div class="line">this MAC address is resolved via ARP/ND.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>gateway-resolve-wait</strong></p></td>
+<tr class="row-odd"><td><p><strong>gateway-resolve-wait</strong></p></td>
 <td><div class="line-block">
 <div class="line">Sessions and protocols will not start until gateways are resolved.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an ISIS instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-level</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-level</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS interface level.</div>
 <div class="line">Default: 3 Range: 1 - 3</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-p2p</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-p2p</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS P2P interface.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-l1-metric</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-l2-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv2 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-type</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv2-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-metric</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv3-instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv3-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv3 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv3-type</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv3-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv3-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv3-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line-block">
 <div class="line">OSPFv3 interface metric.</div>
@@ -615,7 +622,7 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ldp-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ldp-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to a LDP instance.</div>
 </div>
