@@ -189,28 +189,42 @@ lspgen_write_label_binding_config(json_t *arr, lsdb_attr_t *attr)
 }
 
 void
-lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_arr)
+lspgen_write_node_common_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *node_obj)
 {
-    struct lsdb_attr_ *attr;
-    dict_itor *itor;
-    json_t *node_obj, *str;
-    json_t *ipv4_prefix_arr = NULL;
-    json_t *nbr_arr = NULL;
-    json_t *cap_arr = NULL;
+    json_t *str;
     char seq[12];
 
-    node_obj = json_object();
-    str = json_string(lsdb_format_node_no_name(node));
-    json_object_set_new(node_obj, "node_id", str);
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	str = json_string(lsdb_format_node_id(node->key.node_id));
+	json_object_set_new(node_obj, "node_id", str);
+
+	if (node->overload) {
+	    json_object_set_new(node_obj, "overload", json_boolean(1));
+	}
+	if (node->attach) {
+	    json_object_set_new(node_obj, "attach", json_boolean(1));
+	}
+	break;
+    case PROTO_OSPF2:
+    case PROTO_OSPF3: /* fall through */
+	str = json_string(lsdb_format_node_no_name(node));
+	json_object_set_new(node_obj, "node_id", str);
+	break;
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+	return;
+    }
+
     json_object_set_new(node_obj, "hostname", json_string(node->node_name));
     if (node->sequence) {
         snprintf(seq, sizeof(seq), "0x%08x", node->sequence);
         json_object_set_new(node_obj, "sequence", json_string(seq));
     }
+
     if (node->lsp_lifetime) {
         json_object_set_new(node_obj, "lsp_lifetime", json_integer(node->lsp_lifetime));
     }
-
     if (node->is_pseudonode) {
         json_object_set_new(node_obj, "is_pseudonode", json_boolean(node->is_pseudonode));
     }
@@ -220,6 +234,20 @@ lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
     if (node->is_direct_neighbor) {
         json_object_set_new(node_obj, "is_direct_neighbor", json_boolean(node->is_direct_neighbor));
     }
+}
+
+void
+lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_arr)
+{
+    struct lsdb_attr_ *attr;
+    dict_itor *itor;
+    json_t *node_obj;
+    json_t *ipv4_prefix_arr = NULL;
+    json_t *nbr_arr = NULL;
+    json_t *cap_arr = NULL;
+
+    node_obj = json_object();
+    lspgen_write_node_common_config(ctx, node, node_obj);
 
     /* Walk the node attributes. */
     itor = dict_itor_new(node->attr_dict);
@@ -336,13 +364,135 @@ lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
     dict_itor_free(itor);
 }
 
+void
+lspgen_write_node_ospf3_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_arr)
+{
+    struct lsdb_attr_ *attr;
+    dict_itor *itor;
+    json_t *node_obj;
+    json_t *ipv6_prefix_arr = NULL;
+    json_t *nbr_arr = NULL;
+    json_t *cap_arr = NULL;
+
+    node_obj = json_object();
+    lspgen_write_node_common_config(ctx, node, node_obj);
+
+    /* Walk the node attributes. */
+    itor = dict_itor_new(node->attr_dict);
+    if (!itor) {
+        return;
+    }
+
+    /* Node attribute DB empty? */
+    if (!dict_itor_first(itor)) {
+        dict_itor_free(itor);
+        LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
+        return;
+    }
+
+    do {
+        attr = *dict_itor_datum(itor);
+
+	/* Level 0 */
+        switch (attr->key.attr_cp[0]) {
+	case 0: /* fall through */
+	case OSPF_MSG_LSUPDATE:
+	    break;
+        default:
+            LOG(ERROR, "No ospf3 json encoder for L0 attr %s (%d)\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[0]),
+		attr->key.attr_cp[0]);
+            break;
+        }
+
+	/* Level 1 */
+        switch (attr->key.attr_cp[1]) {
+	case 0: /* fall through */
+	case OSPF_LSA_ROUTER:
+	case OSPF_LSA_OPAQUE_AREA_RI:
+	case OSPF_LSA_INTRA_AREA_PREFIX:
+	case OSPF_LSA_E_INTRA_AREA_PREFIX:
+	    break;
+	case OSPF_LSA_EXTERNAL6:
+            if (!ipv6_prefix_arr) {
+                ipv6_prefix_arr = json_array();
+                json_object_set_new(node_obj, "ipv6_prefix_list", ipv6_prefix_arr);
+            }
+            lspgen_write_ipv6_prefix_config(ipv6_prefix_arr, attr);
+            break;
+        default:
+            LOG(ERROR, "No ospf3 json encoder for L1 attr %s (%d)\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[1]),
+		attr->key.attr_cp[1]);
+            break;
+        }
+
+	/* Level 2 */
+        switch (attr->key.attr_cp[2]) {
+	case 0: /* fall through */
+	case OSPF_TLV_HOSTNAME:
+	case OSPF_TLV_INTRA_AREA_PREFIX:
+	    break;
+	case OSPF_ROUTER_LSA_LINK_PTP:
+            if (!nbr_arr) {
+                nbr_arr = json_array();
+                json_object_set_new(node_obj, "neighbor_list", nbr_arr);
+            }
+            lspgen_write_link_config(ctx, nbr_arr, attr);
+	    break;
+	case OSPF_IA_PREFIX_LSA_PREFIX:
+            if (!ipv6_prefix_arr) {
+                ipv6_prefix_arr = json_array();
+                json_object_set_new(node_obj, "ipv6_prefix_list", ipv6_prefix_arr);
+            }
+            lspgen_write_ipv6_prefix_config(ipv6_prefix_arr, attr);
+	    break;
+	case OSPF_TLV_SID_LABEL_RANGE:
+	    if (!cap_arr) {
+                cap_arr = json_array();
+                json_object_set_new(node_obj, "capability_list", cap_arr);
+            }
+            lspgen_write_cap_config(cap_arr, attr);
+	    break;
+        default:
+            LOG(ERROR, "No ospf3 json encoder for L2 attr %s (%d)\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[2]),
+		attr->key.attr_cp[2]);
+            break;
+        }
+
+	/* Level 3 */
+        switch (attr->key.attr_cp[3]) {
+	case 0:
+	    break;
+	case OSPF_SUBTLV_PREFIX_SID:
+	    if (!ipv6_prefix_arr) {
+		ipv6_prefix_arr = json_array();
+		json_object_set_new(node_obj, "ipv6_prefix_list", ipv6_prefix_arr);
+	    }
+	    lspgen_write_ipv6_prefix_config(ipv6_prefix_arr, attr);
+	    break;
+        default:
+            LOG(ERROR, "No ospf3 json encoder for L3 attr %s (%d)\n",
+		val2key(ospf_attr_names, attr->key.attr_cp[3]),
+		attr->key.attr_cp[3]);
+            break;
+        }
+
+    } while (dict_itor_next(itor));
+
+    json_array_append(level_arr, node_obj);
+    json_decref(node_obj);
+
+    dict_itor_free(itor);
+}
 
 void
 lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_arr)
 {
     struct lsdb_attr_ *attr;
     dict_itor *itor;
-    json_t *node_obj, *str;
+    json_t *node_obj;
     json_t *ipv4_addr_arr = NULL;
     json_t *ipv6_addr_arr = NULL;
     json_t *ipv4_prefix_arr = NULL;
@@ -354,23 +504,7 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
     json_t *binding_arr = NULL;
 
     node_obj = json_object();
-    str = json_string(lsdb_format_node_id(node->key.node_id));
-    json_object_set_new(node_obj, "node_id", str);
-    json_object_set_new(node_obj, "hostname", json_string(node->node_name));
-    if (node->overload) {
-        json_object_set_new(node_obj, "overload", json_boolean(1));
-    }
-    if (node->attach) {
-        json_object_set_new(node_obj, "attach", json_boolean(1));
-    }
-    if (node->sequence) {
-        char seq[12];
-        snprintf(seq, sizeof(seq), "0x%08x", node->sequence);
-        json_object_set_new(node_obj, "sequence", json_string(seq));
-    }
-    if (node->lsp_lifetime) {
-        json_object_set_new(node_obj, "lsp_lifetime", json_integer(node->lsp_lifetime));
-    }
+    lspgen_write_node_common_config(ctx, node, node_obj);
 
     /* Walk the node attributes. */
     itor = dict_itor_new(node->attr_dict);
@@ -530,6 +664,9 @@ lspgen_write_config(lsdb_ctx_t *ctx)
 	    break;
 	case PROTO_OSPF2:
 	    lspgen_write_node_ospf2_config(ctx, node, arr);
+	    break;
+	case PROTO_OSPF3:
+	    lspgen_write_node_ospf3_config(ctx, node, arr);
 	    break;
 	default:
 	    LOG_NOARG(ERROR, "Unknown protocol\n");
