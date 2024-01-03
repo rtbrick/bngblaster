@@ -136,9 +136,12 @@ typedef struct lsdb_node_ {
     /*
      * Misc flags.
      */
-    uint16_t overload:1,
-    attach:1,
-    is_root:1;    /* root node */
+    bool overload:1;
+    bool attach:1;
+    bool is_direct_neighbor;
+    bool is_pseudonode;
+    bool is_local_pseudonode; /* direct adjacent Pseudonodes */
+    bool is_root;    /* root node */
 
     uint32_t sequence;
     uint16_t lsp_lifetime;
@@ -332,6 +335,7 @@ typedef struct lsdb_packet_ {
 char *lsdb_format_node(lsdb_node_t *);
 char *lsdb_format_node_no_name(lsdb_node_t *);
 char *lsdb_format_node_id(unsigned char *);
+char *lsdb_format_ospf_node_id(unsigned char *);
 char *lsdb_format_link(lsdb_link_t *);
 void lsdb_scan_node_id(uint8_t *, char *);
 const char *lsdb_format_proto(struct lsdb_ctx_ *);

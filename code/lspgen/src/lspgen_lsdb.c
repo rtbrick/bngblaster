@@ -81,6 +81,21 @@ lsdb_format_node_id(unsigned char *node_id)
 }
 
 char *
+lsdb_format_ospf_node_id(unsigned char *node_id)
+{
+    static char buffer[4][32];
+    static int idx = 0;
+    char *ret;
+
+    ret = buffer[idx];
+    idx = (idx + 1) & 3;
+
+    snprintf(ret, 32, "%u.%u.%u.%u", *node_id, *(node_id+1), *(node_id+2), *(node_id+3));
+
+    return ret;
+}
+
+char *
 lsdb_format_link(lsdb_link_t *link)
 {
     struct lsdb_ctx_ *ctx;
