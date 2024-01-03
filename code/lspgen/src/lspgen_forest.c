@@ -281,6 +281,7 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
     }
 
     LOG(NORMAL, " Root node %s\n", lsdb_format_node(node));
+    node->is_root = true;
 
     /*
      * Add connectors to the topology

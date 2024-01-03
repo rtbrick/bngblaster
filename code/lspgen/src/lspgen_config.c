@@ -32,17 +32,26 @@ lspgen_write_link_config(lsdb_ctx_t *ctx, json_t *arr, lsdb_attr_t *attr)
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
 	str = json_string(lsdb_format_node_id(attr->key.link.remote_node_id));
+	json_object_set_new(obj, "remote_node_id", str);
 	break;
     case PROTO_OSPF2:
     case PROTO_OSPF3:
-	str = json_string(lsdb_format_ospf_node_id(attr->key.link.remote_node_id));
+	str = json_string(format_ipv4_address((uint32_t*)&(attr->key.link.remote_node_id)));
+	json_object_set_new(obj, "remote_node_id", str);
+	str = json_string(format_ipv4_address((uint32_t*)&(attr->key.link.local_link_id)));
+	json_object_set_new(obj, "local_link_id", str);
+
+	/* Remote link ID is optional */
+	if (strcmp(format_ipv4_address((uint32_t*)&(attr->key.link.remote_link_id)), "0.0.0.0") != 0) {
+	    str = json_string(format_ipv4_address((uint32_t*)&(attr->key.link.remote_link_id)));
+	    json_object_set_new(obj, "remote_link_id", str);
+	}
 	break;
     default:
 	LOG_NOARG(ERROR, "Unknown protocol\n");
 	return;
     }
 
-    json_object_set_new(obj, "remote_node_id", str);
     json_object_set_new(obj, "metric", json_integer(attr->key.link.metric));
     json_array_append(arr, obj);
     json_decref(obj);
@@ -224,6 +233,13 @@ lspgen_write_node_common_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *node
 
     if (node->lsp_lifetime) {
         json_object_set_new(node_obj, "lsp_lifetime", json_integer(node->lsp_lifetime));
+    }
+
+    /*
+     * Flags
+     */
+    if (node->is_root) {
+        json_object_set_new(node_obj, "is_root", json_boolean(node->is_root));
     }
     if (node->is_pseudonode) {
         json_object_set_new(node_obj, "is_pseudonode", json_boolean(node->is_pseudonode));
