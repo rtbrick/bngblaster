@@ -14,12 +14,6 @@ support.
 
 https://savannah.nongnu.org/projects/lwip/
 
-### libdict
-
-Local fork of libdict:
-
-https://github.com/fmela/libdict 
-
 ### bngblaster
 
 BNG Blaster directory.

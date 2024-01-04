@@ -8,7 +8,7 @@ foreach(_file ${BBL_SOURCES})
     set_property(SOURCE ${_file} APPEND_STRING PROPERTY COMPILE_FLAGS "-frandom-seed=0x${checksum}")
 endforeach()
 
-add_executable(bngblaster ${LIBDICT_SOURCES} ${COMMON_SOURCES} ${BBL_SOURCES})
+add_executable(bngblaster ${COMMON_SOURCES} ${BBL_SOURCES})
 
 set(PLATFORM_SPECIFIC_LIBS "-lpthread")
 string(APPEND CMAKE_C_FLAGS "-pthread")

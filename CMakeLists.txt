@@ -38,6 +38,9 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "..." FORCE)
 endif()
 
+# libdict will be statically linked
+find_library(libdict NAMES libdict.a REQUIRED)
+
 if(BNGBLASTER_TESTS)
     include(CTest)
 endif()

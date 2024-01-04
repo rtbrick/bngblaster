@@ -34,7 +34,8 @@
 #include <sys/types.h>
 
 #include <common.h>
-#include <dict.h>
+
+#include "libdict/dict.h"
 
 /* LwIP */
 #ifdef BNGBLASTER_LWIP

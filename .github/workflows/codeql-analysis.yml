@@ -47,6 +47,14 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
+    - name: Download RtBrick libdict
+      shell: bash
+      run: wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-ubuntu-22.04.zip
+
+    - name: Install RtBrick libdict
+      shell: bash
+      run: unzip libdict-ubuntu-22.04.zip; sudo dpkg -i libdict_1.0.3_amd64.deb; sudo dpkg -i libdict-dev_1.0.3_amd64.deb
+
     - name: Install Dependencies
       shell: bash
       run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
