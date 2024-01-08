@@ -82,6 +82,7 @@ bbl_network_interfaces_add()
         /* Init interface */
         network_interface->name = strdup(ifname);
         network_interface->interface = interface;
+        network_interface->ifindex = interface->ifindex;
 
         /* Init TXQ */
         network_interface->txq = calloc(1, sizeof(bbl_txq_s));

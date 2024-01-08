@@ -72,6 +72,7 @@ bbl_a10nsp_interfaces_add()
         /* Init interface */
         a10nsp_interface->name = a10nsp_config->interface;
         a10nsp_interface->interface = interface;
+        a10nsp_interface->ifindex = interface->ifindex;
 
         /* Init TXQ */
         a10nsp_interface->txq = calloc(1, sizeof(bbl_txq_s));

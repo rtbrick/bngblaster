@@ -32,6 +32,7 @@ typedef struct bbl_access_interface_
         uint64_t mc_rx;
         uint64_t mc_loss;
         uint64_t unknown;
+        uint64_t no_session;
 
         /* Packet Stats */
         uint32_t arp_tx;

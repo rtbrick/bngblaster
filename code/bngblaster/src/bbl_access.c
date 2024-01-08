@@ -63,6 +63,7 @@ bbl_access_interfaces_add()
             /* Init interface */
             access_interface->name = access_config->interface;
             access_interface->interface = interface;
+            access_interface->ifindex = interface->ifindex;
             
             /* Init TXQ */
             access_interface->txq = calloc(1, sizeof(bbl_txq_s));
@@ -1858,6 +1859,8 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
                     break;
             }
         }
+    } else {
+        interface->stats.no_session++;
     }
 }
 
