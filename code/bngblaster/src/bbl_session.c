@@ -1087,6 +1087,35 @@ bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s 
     return session_id;
 }
 
+const char *
+bbl_session_substate_pppoe(bbl_session_s *session)
+{
+    UNUSED(session);
+    return NULL;
+}
+
+const char *
+bbl_session_substate_ipoe(bbl_session_s *session)
+{
+    if(session->access_config->ipv4_enable) {
+        if(session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND) {
+            return "DHCPv4 pending";
+        }
+        if(!session->arp_resolved) {
+            return "ARP not resolved";
+        }
+    }
+    if(session->access_config->ipv6_enable) {
+        if (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND) {
+            return "DHCPv6 pending";
+        }
+        if(!session->icmpv6_ra_received) {
+            return "Wait for ICMPv6 RA";
+        }
+    }
+    return NULL;
+}
+
 json_t *
 bbl_session_json(bbl_session_s *session)
 {
@@ -1232,10 +1261,12 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si so* so*}",
+        root = json_pack("{ss si ss ss* si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
+            "session-substate", bbl_session_substate_pppoe(session),
+            "flapped", session->stats.flapped,
             "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
@@ -1261,6 +1292,20 @@ bbl_session_json(bbl_session_s *session)
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx,
             "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+            "tx-bytes", session->stats.bytes_tx,
+            "rx-bytes", session->stats.bytes_rx,
+            "tx-accounting-packets", session->stats.accounting_packets_tx,
+            "rx-accounting-packets", session->stats.accounting_packets_rx,
+            "tx-accounting-bytes", session->stats.accounting_bytes_tx,
+            "rx-accounting-bytes", session->stats.accounting_bytes_rx,
+            "tx-arp", session->stats.arp_tx,
+            "rx-arp", session->stats.arp_rx,
+            "tx-igmp", session->stats.igmp_tx,
+            "rx-igmp", session->stats.igmp_rx,
+            "tx-icmp", session->stats.icmp_tx,
+            "rx-icmp", session->stats.icmp_rx,
+            "tx-icmpv6", session->stats.icmpv6_tx,
+            "rx-icmpv6", session->stats.icmpv6_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
 
@@ -1280,10 +1325,12 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si so* so*}",
+        root = json_pack("{ss si ss ss* si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
+            "session-substate", bbl_session_substate_ipoe(session),
+            "flapped", session->stats.flapped,
             "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
@@ -1331,6 +1378,20 @@ bbl_session_json(bbl_session_s *session)
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx,
             "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
+            "tx-bytes", session->stats.bytes_tx,
+            "rx-bytes", session->stats.bytes_rx,
+            "tx-accounting-packets", session->stats.accounting_packets_tx,
+            "rx-accounting-packets", session->stats.accounting_packets_rx,
+            "tx-accounting-bytes", session->stats.accounting_bytes_tx,
+            "rx-accounting-bytes", session->stats.accounting_bytes_rx,
+            "tx-arp", session->stats.arp_tx,
+            "rx-arp", session->stats.arp_rx,
+            "tx-igmp", session->stats.igmp_tx,
+            "rx-igmp", session->stats.igmp_rx,
+            "tx-icmp", session->stats.icmp_tx,
+            "rx-icmp", session->stats.icmp_rx,
+            "tx-icmpv6", session->stats.icmpv6_tx,
+            "rx-icmpv6", session->stats.icmpv6_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
     }
