@@ -79,10 +79,9 @@ per session added. In example if username is configured as
 
 .. tip:: 
     The argument ``session-id`` can be alternatively replaced 
-    with interface index and VLAN of the session. The interface 
-    index (``ifindex``) can be requested using the ``interfaces`` 
-    command or skipped. The first access interface is automatically 
-    used if the argument ``ifindex`` is not present in the command. 
+    with interface and VLAN of the session. The last access 
+    interface is automatically used if the argument ``interface`` 
+    is not present in the command.
 
     This is not supported for N:1 sessions because multiple 
     sessions can be assigned to a single VLAN.
@@ -92,7 +91,7 @@ per session added. In example if username is configured as
         {
             "command": "session-info",
             "arguments": {
-                "ifindex": 10,
+                "interface": "eth0",
                 "outer-vlan": 1,
                 "inner-vlan": 1
             }

@@ -142,7 +142,7 @@ io_thread_main_rx_job(timer_s *timer)
                 if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                     pcap = true;
                     pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
-                                              interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+                                              interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
                 }
                 bbl_txq_read_next(thread->txq);
             }
@@ -181,7 +181,7 @@ io_thread_main_tx_job(timer_s *timer)
             if(g_ctx->pcap.write_buf) {
                 pcap = true;
                 pcapng_push_packet_header(&timestamp, slot->packet, slot->packet_len,
-                                        interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
             }
             bbl_txq_write_next(txq);
         } else if(tx_result == EMPTY) {
@@ -244,7 +244,7 @@ io_thread_init(io_handle_s *io)
 
     io->thread = thread;
     thread->io = io;
-    io->fanout_id = interface->ifindex;
+    io->fanout_id = interface->ifindex+1;
     io->fanout_type = PACKET_FANOUT_HASH;
 
     /* Allocate thread scratchpad memory */

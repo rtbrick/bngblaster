@@ -360,8 +360,13 @@ bbl_ctrl_socket_thread(void *thread_data)
                                     goto CLOSE;
                                 }
                             } else {
-                                /* Use first interface as default. */
-                                access_interface = bbl_access_interface_get(NULL);
+                                value = json_object_get(arguments, "interface");
+                                if(value && json_is_string(value)) {
+                                    access_interface = bbl_access_interface_get((char*)json_string_value(value));
+                                } else {
+                                    /* Use first interface as default. */
+                                    access_interface = bbl_access_interface_get(NULL);
+                                }
                                 if(access_interface) {
                                     key.ifindex = access_interface->ifindex;
                                 }

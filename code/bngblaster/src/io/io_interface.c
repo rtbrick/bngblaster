@@ -32,7 +32,7 @@ set_kernel_info(bbl_interface_s *interface)
         close(fd);
         return false;
     }
-    interface->ifindex = ifr.ifr_ifindex;
+    interface->kernel_index = ifr.ifr_ifindex;
 
     close(fd);
     return true;
@@ -47,7 +47,7 @@ set_promisc(bbl_interface_s *interface) {
     struct packet_mreq mreq = {0};
     int sfd;
 
-    LOG(DEBUG, "Set interface %s (%d) in promiscuous mode\n", interface->name, interface->ifindex);
+    LOG(DEBUG, "Set interface %s (%d) in promiscuous mode\n", interface->name, interface->kernel_index);
 
     /* This socket is only opened, but not closed. Closing the socket would reset
      * its flags - effectively removing the just added promisc mode.
@@ -58,7 +58,7 @@ set_promisc(bbl_interface_s *interface) {
     }
 
     mreq.mr_type = PACKET_MR_PROMISC;
-    mreq.mr_ifindex = interface->ifindex;
+    mreq.mr_ifindex = interface->kernel_index;
     if(setsockopt(sfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) != 0) {
         LOG(ERROR, "Failed to put interface %s in promiscuous mode\n", interface->name);
         return false;

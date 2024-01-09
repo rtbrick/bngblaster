@@ -39,6 +39,7 @@ typedef struct bbl_ctx_
     struct timespec timestamp_resolved;
     struct timespec timestamp_established;
 
+    uint32_t interfaces;
     uint32_t sessions;
     uint32_t sessions_pppoe;
     uint32_t sessions_ipoe;
@@ -110,7 +111,6 @@ typedef struct bbl_ctx_
         uint32_t write_idx;
         bool wrote_header;
         bool include_streams;
-        uint32_t index; /* next to be allocated interface index */
     } pcap;
 
     /* Global Stats */

@@ -204,7 +204,7 @@ io_dpdk_rx_job(timer_s *timer)
             if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                 pcap = true;
                 pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                        interface->pcap_index, PCAPNG_EPB_FLAGS_INBOUND);
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
             }
             rte_pktmbuf_free(packet);
         }
@@ -305,7 +305,7 @@ io_dpdk_tx_job(timer_s *timer)
         if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
             pcap = true;
             pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                      interface->pcap_index, PCAPNG_EPB_FLAGS_OUTBOUND);
+                                      interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
         }
         io->stats.packets++;
         io->stats.bytes += io->buf_len;

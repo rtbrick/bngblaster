@@ -16,10 +16,9 @@ typedef struct bbl_interface_
     interface_type_t type; /* interface type */
     interface_state_t state; /* interface state */
     uint32_t state_transitions; /* interface state transitions */
-    uint32_t ifindex; /* interface index */
-    uint32_t pcap_index; /* interface index for packet captures */
+    uint32_t ifindex; /* internal interface index */
+    uint32_t kernel_index; /* kernel interface index  */
     uint16_t port_id; /* DPDK port identifier */
-
 
     bbl_link_config_s *config;
 

@@ -36,7 +36,7 @@ set_qdisc_bypass(io_handle_s *io)
 /* Set fanout group. */
 static bool
 set_fanout(io_handle_s *io)
-{     
+{
     if(io->fanout_id && io->direction == IO_INGRESS) {
         int fanout_arg = (io->fanout_id | (io->fanout_type << 16));
         if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
@@ -125,7 +125,7 @@ io_socket_open(io_handle_s *io) {
     }
     /* Limit socket to the given interface index. */
     io->addr.sll_family = AF_PACKET;
-    io->addr.sll_ifindex = io->interface->ifindex;
+    io->addr.sll_ifindex = io->interface->kernel_index;
     io->addr.sll_protocol = protocol;
     if(bind(io->fd, (struct sockaddr*)&io->addr, sizeof(io->addr)) == -1) {
         LOG(ERROR, "Failed to bind socket for interface %s - %s (%d)\n",
