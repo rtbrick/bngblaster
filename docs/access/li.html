@@ -105,69 +105,69 @@ headers can be easily integrated.</p>
 <p>The functionality is automatically enabled on the network interface
 and works combined with sessions in one instance or as standalone
 mediation device as shown in the following example.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.10/24&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.2&quot;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.10/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;100.0.0.2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The received flows can be displayed with the command <cite>li-flows</cite>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">li-flows</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;li-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;source-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;source-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ethernet&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;sub-packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double-tagged&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;liid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4194301</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;bytes-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">94</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-no-next-header&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;source-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;source-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;upstream&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ethernet&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;sub-packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double-tagged&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;liid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4194301</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;bytes-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">160720</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-no-next-header&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;li-flows&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ethernet&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;sub-packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double-tagged&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;liid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4194301</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;bytes-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">94</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-no-next-header&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;source-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">49152</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;upstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ethernet&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;sub-packet-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;double-tagged&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;liid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4194301</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;bytes-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">160720</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv4-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-udp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-host-internal&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;packets-rx-ipv6-no-next-header&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">packets-rx-ipv4-host-internal</span></code> refers to the IPv4 protocol number 61

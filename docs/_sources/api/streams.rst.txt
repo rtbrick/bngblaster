@@ -24,5 +24,21 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **stream-reset**                  | | Reset all traffic streams.                                         |
 +-----------------------------------+----------------------------------------------------------------------+
+| **stream-start**                  | | Enable/start traffic streams/flows. This command also applies to   |
+|                                   | | RAW stream which are not bould to sessions.                        |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id``                                               |
+|                                   | | ``flow-id``                                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **stream-stop**                   | | Disable/stop traffic streams/flows. This command also applies to   |
+|                                   | | RAW stream which are not bould to sessions.                        |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id``                                               |
+|                                   | | ``flow-id``                                                        |
++-----------------------------------+----------------------------------------------------------------------+
 | **streams-pending**               | | List flow-id of all pending (not verfied) traffic streams.         |
 +-----------------------------------+----------------------------------------------------------------------+
