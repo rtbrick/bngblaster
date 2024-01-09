@@ -157,16 +157,15 @@ per session added. In example if username is configured as
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The argument <code class="docutils literal notranslate"><span class="pre">session-id</span></code> can be alternatively replaced
-with interface index and VLAN of the session. The interface
-index (<code class="docutils literal notranslate"><span class="pre">ifindex</span></code>) can be requested using the <code class="docutils literal notranslate"><span class="pre">interfaces</span></code>
-command or skipped. The first access interface is automatically
-used if the argument <code class="docutils literal notranslate"><span class="pre">ifindex</span></code> is not present in the command.</p>
+with interface and VLAN of the session. The last access
+interface is automatically used if the argument <code class="docutils literal notranslate"><span class="pre">interface</span></code>
+is not present in the command.</p>
 <p>This is not supported for N:1 sessions because multiple
 sessions can be assigned to a single VLAN.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-info&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;ifindex&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
 <span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
