@@ -638,7 +638,6 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 	    attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
 	    lsdb_add_node_attr(node, &attr_template);
 	}
-        addr += node->node_index;
 
         /* external prefixes */
 	ext_per_node = ext_left / nodes_left;
@@ -805,21 +804,20 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
         lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
 	attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
 	attr_template.key.prefix.node_flag = true;
+	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
+	attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
+	lsdb_add_node_attr(node, &attr_template);
 
-        if (ctx->no_sr) {
-
-	    /* For non-SR use the Intra-Area-Router-LSA */
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
-	    attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
-	    lsdb_add_node_attr(node, &attr_template);
-	} else {
-
-	    attr_template.key.ordinal = 1;
+        if (!ctx->no_sr) {
+	    lsdb_reset_attr_template(&attr_template);
+	    lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+	    attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
 	    attr_template.key.prefix.sid = node->node_index;
 	    attr_template.key.prefix.adv_sid = true;
 
 	    /* For SR use the Extended-Intra-Area-Router-LSA */
+	    attr_template.key.ordinal = 1;
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_E_INTRA_AREA_PREFIX;
 	    attr_template.key.attr_cp[2] = OSPF_TLV_INTRA_AREA_PREFIX;
@@ -855,7 +853,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
 	    attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
-	    //attr_template.key.ordinal = 1;
+	    attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
         }
 
@@ -1458,10 +1456,6 @@ main(int argc, char *argv[])
         }
     }
 
-    /*
-     * Display options.
-     */
-    lspgen_log_ctx(ctx);
 
     /*
      * Read the link-state database from a config file.
@@ -1469,7 +1463,13 @@ main(int argc, char *argv[])
     if (ctx->config_read && ctx->config_filename) {
         lspgen_read_config(ctx);
     } else {
-        /*
+
+	/*
+	 * Display default options.
+	 */
+	lspgen_log_ctx(ctx);
+
+	/*
          * Generate a random graph.
          */
         lsdb_init_graph(ctx);

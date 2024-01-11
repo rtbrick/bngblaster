@@ -827,6 +827,11 @@ lsdb_format_ospf_attr(struct lsdb_attr_ *attr)
 	case OSPF_TLV_HOSTNAME:
 	    len += snprintf(buf+len, sizeof(buf)-len, ": %s", attr->key.hostname);
 	    break;
+	case OSPF_TLV_SID_LABEL_RANGE:
+	    len += snprintf(buf+len, sizeof(buf)-len, ": base %u, range %u",
+			    attr->key.cap.srgb_base,
+			    attr->key.cap.srgb_range);
+	    break;
 	default:
 	    break;
 	}

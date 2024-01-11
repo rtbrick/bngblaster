@@ -704,8 +704,11 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     ctx->config_file = NULL;
 }
 
+/*
+ * Read an ISO Area from a config and add it as an node attribute.
+ */
 void
-lspgen_read_area_config(lsdb_node_t *node, json_t *obj)
+lspgen_read_iso_area_config(lsdb_node_t *node, json_t *obj)
 {
     struct lsdb_attr_ attr_template;
     const char *s;
@@ -838,8 +841,11 @@ lspgen_read_common_prefix_config(lsdb_attr_t *attr, json_t *obj)
 void
 lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
 {
+    struct lsdb_ctx_ *ctx;
     struct lsdb_attr_ attr_template;
     char *s;
+
+    ctx = node->ctx;
 
     lsdb_reset_attr_template(&attr_template);
     if (json_unpack(obj, "{s:s}", "ipv4_prefix", &s) == 0) {
@@ -847,18 +853,46 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
 
         lspgen_read_common_prefix_config(&attr_template, obj);
 
-	/*
-	 * TLV type depends on small-metrics and external flag.
-	 */
-	if (attr_template.key.prefix.small_metrics) {
-	    if (attr_template.key.prefix.ext_flag) {
-		attr_template.key.attr_type = ISIS_TLV_EXT_IPV4_REACH;
+	if (ctx->protocol_id == PROTO_ISIS) {
+
+	    /*
+	     * IS-IS TLV type depends on small-metrics and external flag.
+	     */
+	    if (attr_template.key.prefix.small_metrics) {
+		if (attr_template.key.prefix.ext_flag) {
+		    attr_template.key.attr_type = ISIS_TLV_EXT_IPV4_REACH;
+		} else {
+		    attr_template.key.attr_type = ISIS_TLV_INT_IPV4_REACH;
+		}
 	    } else {
-		attr_template.key.attr_type = ISIS_TLV_INT_IPV4_REACH;
+		attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
 	    }
-	} else {
-	    attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
+	} else if (ctx->protocol_id == PROTO_OSPF2) {
+
+	    if (attr_template.key.prefix.node_flag &&
+		attr_template.key.prefix.adv_sid) {
+
+		/* OSPF loopback with prefix sid*/
+		attr_template.key.ordinal = 1;
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
+		attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX;
+		attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
+
+	    } else if (attr_template.key.prefix.ext_flag) {
+
+		/* OSPF external */
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL;
+		attr_template.key.start_tlv = true;
+	    } else {
+
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
+	    }
 	}
+
         lsdb_add_node_attr(node, &attr_template);
     }
 }
@@ -866,15 +900,48 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
 void
 lspgen_read_ipv6_prefix_config(lsdb_node_t *node, json_t *obj)
 {
+    struct lsdb_ctx_ *ctx;
     struct lsdb_attr_ attr_template;
     char *s;
+
+    ctx = node->ctx;
 
     lsdb_reset_attr_template(&attr_template);
     if (json_unpack(obj, "{s:s}", "ipv6_prefix", &s) == 0) {
         scan_ipv6_prefix(s, &attr_template.key.prefix.ipv6_prefix);
         lspgen_read_common_prefix_config(&attr_template, obj);
-        attr_template.key.attr_type = ISIS_TLV_EXTD_IPV6_REACH;
-        lsdb_add_node_attr(node, &attr_template);
+
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    attr_template.key.attr_type = ISIS_TLV_EXTD_IPV6_REACH;
+
+	} else if (ctx->protocol_id == PROTO_OSPF3) {
+
+	    if (attr_template.key.prefix.node_flag &&
+		attr_template.key.prefix.adv_sid) {
+
+		/* OSPF loopback with prefix sid*/
+		attr_template.key.ordinal = 1;
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_E_INTRA_AREA_PREFIX;
+		attr_template.key.attr_cp[2] = OSPF_TLV_INTRA_AREA_PREFIX;
+		attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
+
+	    } else if (attr_template.key.prefix.ext_flag) {
+
+		/* OSPF external */
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL6;
+		attr_template.key.start_tlv = true;
+
+	    } else {
+
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
+		attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
+	    }
+	}
+
+	lsdb_add_node_attr(node, &attr_template);
     }
 }
 
@@ -904,9 +971,12 @@ lspgen_read_label_binding_config(lsdb_node_t *node, json_t *obj)
 void
 lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
 {
+    struct lsdb_ctx_ *ctx;
     struct lsdb_attr_ attr_template;
     json_t *value;
     char *s;
+
+    ctx = node->ctx;
 
     if (json_unpack(obj, "{s:s}", "router_id", &s) == 0) {
 
@@ -933,7 +1003,14 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
         attr_template.key.cap.srgb_range = json_integer_value(value);
     }
 
-    attr_template.key.attr_type = ISIS_TLV_CAP;
+    if (ctx->protocol_id == PROTO_ISIS) {
+	attr_template.key.attr_type = ISIS_TLV_CAP;
+    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+	attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
+    }
+
     attr_template.key.ordinal = 1;
     lsdb_add_node_attr(node, &attr_template);
     }
@@ -944,6 +1021,7 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
 {
     struct lsdb_link_ link_template;
     struct lsdb_attr_ attr_template;
+    uint32_t metric;
     json_t *value;
     char *s;
 
@@ -951,34 +1029,101 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
     memcpy(link_template.key.local_node_id, node->key.node_id, LSDB_MAX_NODE_ID_SIZE);
 
     if (json_unpack(link_obj, "{s:s}", "remote_node_id", &s) == 0) {
-    lsdb_scan_node_id(link_template.key.remote_node_id, s);
+	lsdb_scan_node_id(link_template.key.remote_node_id, s);
 
-    value = json_object_get(link_obj, "metric");
-    if (value && json_is_integer(value)) {
-        link_template.link_metric = json_integer_value(value);
-    }
-    lsdb_add_link(ctx, node, &link_template);
+	value = json_object_get(link_obj, "metric");
+	if (value && json_is_integer(value)) {
+	    link_template.link_metric = json_integer_value(value);
+	}
 
-    /* Generate an IS reach for the link */
-    lsdb_reset_attr_template(&attr_template);
+	if (json_unpack(link_obj, "{s:s}", "local_link_id", &s) == 0) {
+	    lsdb_scan_node_id(link_template.key.local_link_id, s);
+	}
 
-    value = json_object_get(link_obj, "small_metrics");
-    if (value && json_is_boolean(value)) {
-        attr_template.key.prefix.small_metrics = json_boolean_value(value);
-    }
+	if (json_unpack(link_obj, "{s:s}", "remote_link_id", &s) == 0) {
+	    lsdb_scan_node_id(link_template.key.remote_link_id, s);
+	}
 
-    /*
-     * TLV type depends on small-metrics.
-     */
-    if (attr_template.key.prefix.small_metrics) {
-	attr_template.key.attr_type = ISIS_TLV_IS_REACH;
-	attr_template.key.start_tlv = true;
-    } else {
-	attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
-    }
-    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);
-    attr_template.key.link.metric = link_template.link_metric;
-    lsdb_add_node_attr(node, &attr_template);
+	lsdb_add_link(ctx, node, &link_template);
+
+	/* Generate an attribute for the link */
+	lsdb_reset_attr_template(&attr_template);
+
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    value = json_object_get(link_obj, "small_metrics");
+	    if (value && json_is_boolean(value)) {
+		attr_template.key.prefix.small_metrics = json_boolean_value(value);
+	    }
+
+	    /*
+	     * IS-IS TLV type depends on small-metrics.
+	     */
+	    if (attr_template.key.prefix.small_metrics) {
+		attr_template.key.attr_type = ISIS_TLV_IS_REACH;
+		attr_template.key.start_tlv = true;
+
+		/*
+		 * Clip metric.
+		 */
+		metric = link_template.link_metric;
+		if (metric > 63) {
+		    metric = 63; /* 2^6 - 1 */
+		}
+		attr_template.key.link.metric = metric;
+
+	    } else {
+		attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
+
+		/*
+		 * Clip metric.
+		 */
+		metric = link_template.link_metric;
+		if (metric > 16777215) {
+		    metric = 16777215; /* 2^24 - 1 */
+		}
+		attr_template.key.link.metric = metric;
+	    }
+
+	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);
+
+
+	} else if (ctx->protocol_id == PROTO_OSPF2) {
+
+	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 4);
+
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+
+	    /*
+	     * Clip metric.
+	     */
+	    metric = link_template.link_metric;
+	    if (metric > 65535) {
+		metric = 65535; /* 2^16 - 1 */
+	    }
+            attr_template.key.link.metric = metric;
+
+	} else if (ctx->protocol_id == PROTO_OSPF3) {
+
+	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 4);
+
+	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+
+	    /*
+	     * Clip metric.
+	     */
+	    metric = link_template.link_metric;
+	    if (metric > 65535) {
+		metric = 65535; /* 2^16 - 1 */
+	    }
+            attr_template.key.link.metric = metric;
+	    attr_template.link_state_id = 1;
+	}
+
+	lsdb_add_node_attr(node, &attr_template);
     }
 }
 
@@ -1008,20 +1153,32 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         if (node_template.node_name) {
             lsdb_reset_attr_template(&attr_template);
             attr_template.key.ordinal = 1;
-            attr_template.key.attr_type = ISIS_TLV_HOSTNAME;
-            strncpy(attr_template.key.hostname, node_template.node_name, sizeof(attr_template.key.hostname)-1);
+
+	    if (ctx->protocol_id == PROTO_ISIS) {
+		attr_template.key.attr_type = ISIS_TLV_HOSTNAME;
+	    } else if (ctx->protocol_id == PROTO_OSPF2) {
+		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+		attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+		attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
+	    }
+
+	    strncpy(attr_template.key.hostname, node_template.node_name, sizeof(attr_template.key.hostname)-1);
             lsdb_add_node_attr(node, &attr_template);
         }
 
-        value = json_object_get(node_obj, "overload");
-        if (value && json_is_boolean(value)) {
-            node->overload = json_boolean_value(value);
-        }
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    value = json_object_get(node_obj, "overload");
+	    if (value && json_is_boolean(value)) {
+		node->overload = json_boolean_value(value);
+	    }
+	}
 
-        value = json_object_get(node_obj, "attach");
-        if (value && json_is_boolean(value)) {
-            node->attach = json_boolean_value(value);
-        }
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    value = json_object_get(node_obj, "attach");
+	    if (value && json_is_boolean(value)) {
+		node->attach = json_boolean_value(value);
+	    }
+	}
 
         if (json_unpack(node_obj, "{s:s}", "sequence", &s) == 0) {
             node->sequence = strtol(s, NULL, 0);
@@ -1032,37 +1189,45 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
             node->lsp_lifetime = json_integer_value(value);
         }
 
-        arr = json_object_get(node_obj, "area_list");
-        if (arr && json_is_array(arr)) {
-            num_arr = json_array_size(arr);
-            for (idx = 0; idx < num_arr; idx++) {
-                lspgen_read_area_config(node, json_array_get(arr, idx));
-            }
-        }
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    arr = json_object_get(node_obj, "area_list");
+	    if (arr && json_is_array(arr)) {
+		num_arr = json_array_size(arr);
+		for (idx = 0; idx < num_arr; idx++) {
+		    lspgen_read_iso_area_config(node, json_array_get(arr, idx));
+		}
+	    }
+	}
 
-        arr = json_object_get(node_obj, "protocol_list");
-        if (arr && json_is_array(arr)) {
-            num_arr = json_array_size(arr);
-            for (idx = 0; idx < num_arr; idx++) {
-                lspgen_read_protocol_config(node, json_array_get(arr, idx));
-            }
-        }
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    arr = json_object_get(node_obj, "protocol_list");
+	    if (arr && json_is_array(arr)) {
+		num_arr = json_array_size(arr);
+		for (idx = 0; idx < num_arr; idx++) {
+		    lspgen_read_protocol_config(node, json_array_get(arr, idx));
+		}
+	    }
+	}
 
-        arr = json_object_get(node_obj, "ipv4_address_list");
-        if (arr && json_is_array(arr)) {
-            num_arr = json_array_size(arr);
-            for (idx = 0; idx < num_arr; idx++) {
-                lspgen_read_ipv4_addr_config(node, json_array_get(arr, idx));
-            }
-        }
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    arr = json_object_get(node_obj, "ipv4_address_list");
+	    if (arr && json_is_array(arr)) {
+		num_arr = json_array_size(arr);
+		for (idx = 0; idx < num_arr; idx++) {
+		    lspgen_read_ipv4_addr_config(node, json_array_get(arr, idx));
+		}
+	    }
+	}
 
-        arr = json_object_get(node_obj, "ipv6_address_list");
-        if (arr && json_is_array(arr)) {
-            num_arr = json_array_size(arr);
-            for (idx = 0; idx < num_arr; idx++) {
-                lspgen_read_ipv6_addr_config(node, json_array_get(arr, idx));
-            }
-        }
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    arr = json_object_get(node_obj, "ipv6_address_list");
+	    if (arr && json_is_array(arr)) {
+		num_arr = json_array_size(arr);
+		for (idx = 0; idx < num_arr; idx++) {
+		    lspgen_read_ipv6_addr_config(node, json_array_get(arr, idx));
+		}
+	    }
+	}
 
         arr = json_object_get(node_obj, "capability_list");
         if (arr && json_is_array(arr)) {
@@ -1100,14 +1265,14 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         if (arr && json_is_array(arr)) {
             num_arr = json_array_size(arr);
             for (idx = 0; idx < num_arr; idx++) {
-            lspgen_read_label_binding_config(node, json_array_get(arr, idx));
+		lspgen_read_label_binding_config(node, json_array_get(arr, idx));
             }
         }
     }
 }
 
 void
-lspgen_read_level_config(lsdb_ctx_t *ctx, json_t *level_arr)
+lspgen_read_lsdb_config(lsdb_ctx_t *ctx, json_t *level_arr)
 {
     uint32_t num_nodes, idx;
 
@@ -1123,8 +1288,9 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     json_t *root_obj;
     json_error_t error;
     json_t *protocol, *instance;
-    json_t *level;
-    bool level_found;
+    json_t *lsdb;
+    bool lsdb_found;
+    const char *key;
 
     root_obj = json_load_file(ctx->config_filename, 0, &error);
     if (!root_obj) {
@@ -1142,7 +1308,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     LOG(NORMAL, "Reading config file %s\n", ctx->config_filename);
 
     /*
-     * protocol
+     * Protocol
      */
     protocol = json_object_get(root_obj, "protocol");
     if (!protocol) {
@@ -1162,7 +1328,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     }
 
     /*
-     * instance
+     * Instance
      */
     instance = json_object_get(root_obj, "instance");
     if (!instance) {
@@ -1180,31 +1346,37 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     }
     ctx->instance_name = strdup(json_string_value(instance));
 
-    switch(ctx->protocol_id) {
-    case PROTO_ISIS:
-	level_found = false;
-	level = json_object_get(root_obj, "level1");
-	if (level && json_is_array(level)) {
-	    ctx->topology_id.level = 1;
-	    level_found = true;
-	    lspgen_read_level_config(ctx, level);
+    /* Iterate through all top level objects */
+    lsdb_found = false;
+    json_object_foreach(root_obj, key, lsdb) {
+
+	/*
+	 * Hunt for the level<N>, area<N> lsdb.
+	 */
+	if (!json_is_array(lsdb)) {
+	    continue;
 	}
 
-	level = json_object_get(root_obj, "level2");
-	if (level && json_is_array(level)) {
-	    ctx->topology_id.level = 2;
-	    level_found = true;
-	    lspgen_read_level_config(ctx, level);
+	/* OSPF */
+	if (strstr(key, "area")) {
+	    inet_pton(AF_INET, &key[4], &ctx->topology_id.area);
+	    lspgen_read_lsdb_config(ctx, lsdb);
+	    lsdb_found = true;
+	    break;
 	}
 
-	if (!level_found) {
-	    LOG(ERROR, "Error reading config file %s, no level1|2 object found\n",
-		ctx->config_filename);
+	/* IS-IS */
+	if (strstr(key, "level")) {
+	    ctx->topology_id.level = strtol(&key[5], NULL, 10);
+	    lspgen_read_lsdb_config(ctx, lsdb);
+	    lsdb_found = true;
+	    break;
 	}
-	break;
-    default:
-	LOG(ERROR, "Error reading config file %s, no config reader for protocol %s\n",
-	    ctx->config_filename, json_string_value(protocol));
+    }
+
+    if (!lsdb_found) {
+	LOG(ERROR, "Error reading config file %s, no level1|2 or area<n.n.n.n> array found\n",
+	    ctx->config_filename);
     }
 
  cleanup:
