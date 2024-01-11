@@ -339,6 +339,7 @@ char *lsdb_format_ospf_node_id(unsigned char *);
 char *lsdb_format_link(lsdb_link_t *);
 void lsdb_scan_node_id(uint8_t *, char *);
 const char *lsdb_format_proto(struct lsdb_ctx_ *);
+lsdb_proto_id_t lsdb_scan_proto(const char *);
 
 lsdb_link_t *lsdb_add_link(lsdb_ctx_t *, lsdb_node_t *, lsdb_link_t *);
 lsdb_link_t *lsdb_get_link(lsdb_ctx_t *, lsdb_link_t *);

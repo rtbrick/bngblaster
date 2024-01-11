@@ -655,6 +655,7 @@ lspgen_write_config(lsdb_ctx_t *ctx)
 
     root_obj = json_object();
     json_object_set_new(root_obj, "instance", json_string(ctx->instance_name));
+    json_object_set_new(root_obj, "protocol", json_string(lsdb_format_proto(ctx)));
     arr = json_array();
 
     switch (ctx->protocol_id) {
@@ -1121,6 +1122,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
 {
     json_t *root_obj;
     json_error_t error;
+    json_t *protocol, *instance;
     json_t *level;
     bool level_found;
 
@@ -1139,25 +1141,72 @@ lspgen_read_config(lsdb_ctx_t *ctx)
 
     LOG(NORMAL, "Reading config file %s\n", ctx->config_filename);
 
-    level_found = false;
-    level = json_object_get(root_obj, "level1");
-    if (level && json_is_array(level)) {
-        ctx->topology_id.level = 1;
-        level_found = true;
-        lspgen_read_level_config(ctx, level);
-    }
-
-    level = json_object_get(root_obj, "level2");
-    if (level && json_is_array(level)) {
-        ctx->topology_id.level = 2;
-        level_found = true;
-        lspgen_read_level_config(ctx, level);
-    }
-
-    if (!level_found) {
-        LOG(ERROR, "Error reading config file %s, no level1|2 object found\n",
+    /*
+     * protocol
+     */
+    protocol = json_object_get(root_obj, "protocol");
+    if (!protocol) {
+        LOG(ERROR, "Error reading config file %s, no protocol attribute found\n",
             ctx->config_filename);
+	goto cleanup;
+    }
+    if (!json_is_string(protocol)) {
+        LOG(ERROR, "Error reading config file %s, protocol attribute is not a string\n",
+            ctx->config_filename);
+	goto cleanup;
+    }
+    ctx->protocol_id = lsdb_scan_proto(json_string_value(protocol));
+    if (ctx->protocol_id == PROTO_UNKNOWN) {
+        LOG(ERROR, "Error reading config file %s, unknown protocol %s\n",
+            ctx->config_filename, json_string_value(protocol));
     }
 
+    /*
+     * instance
+     */
+    instance = json_object_get(root_obj, "instance");
+    if (!instance) {
+        LOG(ERROR, "Error reading config file %s, no instance attribute found\n",
+            ctx->config_filename);
+	goto cleanup;
+    }
+    if (!json_is_string(instance)) {
+        LOG(ERROR, "Error reading config file %s, instance attribute is not a string\n",
+            ctx->config_filename);
+	goto cleanup;
+    }
+    if (ctx->instance_name) {
+	free(ctx->instance_name);
+    }
+    ctx->instance_name = strdup(json_string_value(instance));
+
+    switch(ctx->protocol_id) {
+    case PROTO_ISIS:
+	level_found = false;
+	level = json_object_get(root_obj, "level1");
+	if (level && json_is_array(level)) {
+	    ctx->topology_id.level = 1;
+	    level_found = true;
+	    lspgen_read_level_config(ctx, level);
+	}
+
+	level = json_object_get(root_obj, "level2");
+	if (level && json_is_array(level)) {
+	    ctx->topology_id.level = 2;
+	    level_found = true;
+	    lspgen_read_level_config(ctx, level);
+	}
+
+	if (!level_found) {
+	    LOG(ERROR, "Error reading config file %s, no level1|2 object found\n",
+		ctx->config_filename);
+	}
+	break;
+    default:
+	LOG(ERROR, "Error reading config file %s, no config reader for protocol %s\n",
+	    ctx->config_filename, json_string_value(protocol));
+    }
+
+ cleanup:
     json_decref(root_obj);
 }

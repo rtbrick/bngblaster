@@ -93,7 +93,7 @@ struct keyval_ log_names[] = {
 };
 
 /*
- * Protocool / name translation table.
+ * Protocol / name translation table.
  */
 struct keyval_ proto_names[] = {
     { PROTO_ISIS, "isis" },
@@ -106,6 +106,12 @@ const char *
 lsdb_format_proto (struct lsdb_ctx_ *ctx)
 {
     return val2key(proto_names, ctx->protocol_id);
+}
+
+lsdb_proto_id_t
+lsdb_scan_proto (const char *protocol_name)
+{
+    return key2val(proto_names, protocol_name);
 }
 
 /*
