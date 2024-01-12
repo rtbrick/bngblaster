@@ -148,7 +148,7 @@ bgp_session_update_job(timer_s *timer)
 RETRY:
     /* Try again ... */
     timer_add_periodic(&g_ctx->timer_root, &session->connect_timer, 
-                       "BGP UPDATE", 1, 0, session,
+                       "BGP UPDATE", 0, 250 * MSEC, session,
                        &bgp_session_update_job);
 
 }
