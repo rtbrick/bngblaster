@@ -363,6 +363,12 @@ which is typically not needed for millions of streams.
 
 All traffic stats are still working but the live rate is not calculated. 
 
+It is also possible to disable the stream delay calcualtion if not needed.
+
+.. code-block:: json
+
+    { "traffic": { "stream-delay-calculation": false } }
+
 Another option is to setup the traffic streams with a rate of 0.1 PPS,
 meaning one packet every 10 seconds. This is enough to keep NAT translation
 active but allows 1M streams with only 100K PPS. 

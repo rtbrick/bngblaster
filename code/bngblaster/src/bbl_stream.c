@@ -2296,7 +2296,9 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
         stream->rx_packets++;
         stream->rx_last_seq = bbl->flow_seq;
         stream->rx_last_epoch = eth->timestamp.tv_sec;
-        bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
+        if(g_ctx->config.stream_delay_calc) {
+            bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
+        }
         return stream;
     } else {
         return NULL;
