@@ -26,13 +26,15 @@
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``instance`` Mandatory                                             |
 |                                   | | ``level`` Mandatory                                                |
+|                                   | | ``id`` Mandatory LSP identifier                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **isis-lsp-flap**                 | | Flap ISIS LSP based on LSP identifier.                             |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``instance`` Mandatory                                             |
 |                                   | | ``level`` Mandatory                                                |
-|                                   | | ``timer``                                                          |
+|                                   | | ``timer`` Optional flap timer (default 30s)                        |
+|                                   | | ``id`` Mandatory LSP identifier                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **isis-teardown**                 | | Teardown ISIS.                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
