@@ -426,6 +426,10 @@ which is typically not needed for millions of streams.</p>
 </pre></div>
 </div>
 <p>All traffic stats are still working but the live rate is not calculated.</p>
+<p>It is also possible to disable the stream delay calcualtion if not needed.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;stream-delay-calculation&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
 <p>Another option is to setup the traffic streams with a rate of 0.1 PPS,
 meaning one packet every 10 seconds. This is enough to keep NAT translation
 active but allows 1M streams with only 100K PPS.</p>
