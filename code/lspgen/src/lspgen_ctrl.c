@@ -295,9 +295,9 @@ lspgen_ctrl_write_cb(timer_s *timer)
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;
 
         /*
-	 * Close the JSON message and socket once 99% of the buffer have been consumed.
+	 * Close the JSON message and socket once 96% of the buffer have been consumed.
 	 */
-        if (buffer_left < (CTRL_SOCKET_BUFSIZE/100)) {
+        if (buffer_left < (CTRL_SOCKET_BUFSIZE/25)) {
 
             /* no space, close the JSON datagram and continue later */
             LOG_NOARG(NORMAL, "End of buffer\n");
