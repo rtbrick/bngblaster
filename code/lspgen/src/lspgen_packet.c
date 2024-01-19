@@ -103,12 +103,12 @@ lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *pack
  * The checksum field of the passed PDU does not need to be reset to zero.
  */
 uint16_t
-calculate_fletcher_cksum(const uint8_t *pptr, int checksum_offset, int length)
+calculate_fletcher_cksum(const uint8_t *pptr, uint checksum_offset, uint length)
 {
 
-    int x, y;
-    uint32_t mul, c0, c1;
-    int idx;
+    int64_t x, y;
+    uint64_t mul, c0, c1;
+    uint idx;
 
     c0 = 0;
     c1 = 0;
