@@ -16,9 +16,18 @@
 
 #ifdef BNGBLASTER_DPDK
 
+#include <dev_driver.h>
+
 #include <rte_memory.h>
 #include <rte_launch.h>
 #include <rte_eal.h>
+#include <rte_common.h>
+#include <rte_dev.h>
+#include <rte_bbdev.h>
+#include <rte_cycles.h>
+#include <rte_random.h>
+#include <rte_hexdump.h>
+#include <rte_interrupts.h>
 #include <rte_per_lcore.h>
 #include <rte_lcore.h>
 #include <rte_debug.h>
@@ -26,14 +35,14 @@
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 
-#define NUM_MBUFS 4096
-#define MBUF_CACHE_SIZE 250
-#define BURST_SIZE_RX 64
+#define NUM_MBUFS 8192
+#define MBUF_CACHE_SIZE 256
+#define BURST_SIZE_RX 256
 #define BURST_SIZE_TX 32
 
 static struct rte_eth_conf port_conf = {
     .rxmode = {
-        .split_hdr_size = 0,
+        .mq_mode = 0,
     },
     .txmode = {
         .mq_mode = RTE_ETH_MQ_TX_NONE,
@@ -66,7 +75,7 @@ io_dpdk_link_status(uint16_t port_id)
             interface->state = INTERFACE_UP;
             LOG(DPDK, "DPDK: interface %s (%u) link up (speed %u Mbps %s)\n", 
                 interface->name, port_id, (unsigned)link.link_speed,
-                (link.link_duplex == ETH_LINK_FULL_DUPLEX) ? ("full-duplex") : ("half-duplex"));
+                (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ? ("full-duplex") : ("half-duplex"));
         } else {
             interface->state = INTERFACE_DOWN;
             LOG(DPDK, "DPDK: interface %s (%u) link down\n", 
@@ -194,17 +203,25 @@ io_dpdk_rx_job(timer_s *timer)
                 /* Copy RX timestamp */
                 eth->timestamp.tv_sec = io->timestamp.tv_sec;
                 eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
+                /* Dump the packet into pcap file */
+                if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
+                    pcap = true;
+                    pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                              interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                }
                 bbl_rx_handler(interface, eth);
-            } else if(decode_result == UNKNOWN_PROTOCOL) {
-                io->stats.unknown++;
             } else {
-                io->stats.protocol_errors++;
-            }
-            /* Dump the packet into pcap file */
-            if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
-                pcap = true;
-                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                          interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                /* Dump the packet into pcap file */
+                if(g_ctx->pcap.write_buf) {
+                    pcap = true;
+                    pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                              interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                }
+                if(decode_result == UNKNOWN_PROTOCOL) {
+                    io->stats.unknown++;
+                } else {
+                    io->stats.protocol_errors++;
+                }
             }
             rte_pktmbuf_free(packet);
         }
@@ -245,73 +262,87 @@ io_dpdk_tx_job(timer_s *timer)
     io_handle_s *io = timer->data;
     bbl_interface_s *interface = io->interface;
 
-    uint32_t stream_packets = 0;
-    bool ctrl = true;
+    bbl_stream_s *stream = NULL;
+    uint16_t burst = interface->config->io_burst;
+
     bool pcap = false;
 
     assert(io->mode == IO_MODE_DPDK);
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
-    io_update_stream_token_bucket(io);
-
     /* Get TX timestamp */
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-    while(true) {
-        /* If sendto fails, the failed packet remains in TX buffer to be retried
-         * in the next interval. */
-        if(io->buf_len) {
-            if(packet_is_bbl(io->buf, io->buf_len)) {
-                /* Update timestamp if BBL traffic is retried. */
-                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
-                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
-            }
-        } else {
-            if(!io->mbuf) {
-                if(!io_dpdk_mbuf_alloc(io)) {
-                    break;
-                }
-            }
-            if(ctrl) {
-                /* First send all control traffic which has higher priority. */
-                if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
-                    io->buf_len = 0;
-                    ctrl = false;
-                    continue;
-                }
-            } else {
-                /* Send traffic streams up to allowed burst. */
-                if(++stream_packets > io->stream_burst) {
-                    break;
-                }
-                if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
-                    break;
-                }
+
+    while(burst) {
+        if(!io->mbuf) {
+            if(!io_dpdk_mbuf_alloc(io)) {
+                break;
             }
         }
-        io->mbuf->data_len = io->buf_len;
+        if(likely(io->buf_len == 0)) {
+            if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                io->buf_len = 0;
+                break;
+            }        
+        }
         /* Transmit the packet. */
-        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) == 0) {
+        io->mbuf->data_len = io->buf_len;
+        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
+            /* Dump the packet into pcap file. */
+            if(unlikely(g_ctx->pcap.write_buf != NULL)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+            }
+            io->stats.packets++;
+            io->stats.bytes += io->buf_len;
+            io->mbuf = NULL;
+            io->buf_len = 0;
+            burst--;
+        } else {
             /* This packet will be retried next interval 
              * because io->buf_len is not reset to zero. */
-            if(pcap) {
-                pcapng_fflush();
+            io->stats.io_errors++;
+            burst = 0;
+        }
+    }
+
+    while(burst) {
+        /* Send traffic streams up to allowed burst. */
+        if(!io->mbuf) {
+            if(!io_dpdk_mbuf_alloc(io)) {
+                break;
             }
-            return;
         }
-        /* Dump the packet into pcap file. */
-        if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
-            pcap = true;
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                      interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+        stream = bbl_stream_io_send_iter(io);
+        if(unlikely(stream == NULL)) {
+            break;
         }
-        io->stats.packets++;
-        io->stats.bytes += io->buf_len;
-        io->mbuf = NULL;
-        io->buf = 0;
-        io->buf_len = 0;
+        /* Transmit the packet. */
+        io->mbuf->data_len = io->buf_len;
+        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
+            /* Dump the packet into pcap file. */
+            if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+            }
+            stream->tx_packets++;
+            stream->flow_seq++;
+            io->stats.packets++;
+            io->stats.bytes += io->buf_len;
+            io->mbuf = NULL;
+            io->buf_len = 0;
+            burst--;
+        } else {
+            /* This packet will be retried next interval 
+             * because io->buf_len is not reset to zero. */
+            io->stats.io_errors++;
+            burst = 0;
+        }
     }
     if(pcap) {
         pcapng_fflush();
@@ -337,12 +368,11 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
 
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 0;
+    sleep.tv_nsec = 10;
 
     while(thread->active) {
         nb_rx = rte_eth_rx_burst(port_id, io->queue, pkts_burst, BURST_SIZE_RX);
         if(nb_rx == 0) {
-            sleep.tv_nsec = 10;
             nanosleep(&sleep, &rem);
             continue;
         }
@@ -360,83 +390,88 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
     }
 }
 
-/**
- * This job is for DPDK TX in worker thread!
- */
 void
-io_dpdk_thread_tx_job(timer_s *timer)
+io_dpdk_thread_tx_run_fn(io_thread_s *thread)
 {
-    io_thread_s *thread = timer->data;
     io_handle_s *io = thread->io;
     bbl_interface_s *interface = io->interface;
 
     bbl_txq_s *txq = thread->txq;
     bbl_txq_slot_t *slot;
 
-    uint32_t stream_packets = 0;
-    bool ctrl = true;
+    bbl_stream_s *stream = NULL;
+    uint16_t io_burst = interface->config->io_burst;
+    uint16_t burst = 0;
+
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 1000; 
 
     assert(io->mode == IO_MODE_DPDK);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
-    io_update_stream_token_bucket(io);
+    while(thread->active) {
+        nanosleep(&sleep, &rem);
+        burst = io_burst;
 
-    /* Get TX timestamp */
-    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-    io->timestamp.tv_sec = timer->timestamp->tv_sec;
-    io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-
-    while(true) {
-        /* If sendto fails, the failed packet remains in TX buffer to be retried
-         * in the next interval. */
-        if(io->buf_len) {
-            if(packet_is_bbl(io->buf, io->buf_len)) {
-                /* Update timestamp if BBL traffic is retried. */
-                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
-                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
-            }
-        } else {
+        /* First send all control traffic which has higher priority. */
+        while((slot = bbl_txq_read_slot(txq))) {
+            /* This packet will be retried next interval 
+             * because slot is not marked as read. */
             if(!io->mbuf) {
                 if(!io_dpdk_mbuf_alloc(io)) {
                     break;
                 }
             }
-            if(ctrl) {
-                /* First send all control traffic which has higher priority. */
-                slot = bbl_txq_read_slot(txq);
-                if(slot) {
-                    io->buf_len = slot->packet_len;
-                    memcpy(io->buf, slot->packet, slot->packet_len);
-                    bbl_txq_read_next(txq);
-                } else {
-                    ctrl = false;
-                    continue;
-                }
+            /* Transmit the packet. */
+            io->mbuf->data_len = slot->packet_len;
+            memcpy(io->buf, slot->packet, slot->packet_len);
+            if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
+                io->stats.packets++;
+                io->stats.bytes += slot->packet_len;
+                io->mbuf = NULL;
+                bbl_txq_read_next(txq);
+                if(burst) burst--;
             } else {
-                /* Send traffic streams up to allowed burst. */
-                if(++stream_packets > io->stream_burst) {
-                    break;
-                }
-                if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+                io->stats.io_errors++;
+                burst = 0;
+                break;
+            }
+        }
+
+        /* Get TX timestamp */
+        clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+
+        while(burst) {
+            /* Send traffic streams up to allowed burst. */
+            if(!io->mbuf) {
+                if(!io_dpdk_mbuf_alloc(io)) {
                     break;
                 }
             }
+            stream = bbl_stream_io_send_iter(io);
+            if(unlikely(stream == NULL)) {
+                break;
+            }
+            /* Transmit the packet. */
+            io->mbuf->data_len = stream->tx_len;
+            memcpy(io->buf, stream->tx_buf, stream->tx_len);
+            if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
+                stream->tx_packets++;
+                stream->flow_seq++;
+                io->stats.packets++;
+                io->stats.bytes += stream->tx_len;
+                io->mbuf = NULL;
+                burst--;
+            } else {
+                io->stats.io_errors++;
+                burst = 0;
+            }
         }
-        io->mbuf->data_len = io->buf_len;
-        /* Transmit the packet. */
-        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) == 0) {
-            /* This packet will be retried next interval 
-             * because io->buf_len is not reset to zero. */
-            return;
-        }
-        io->stats.packets++;
-        io->stats.bytes += io->buf_len;
-        io->mbuf = NULL;
-        io->buf = 0;
-        io->buf_len = 0;
     }
 }
+
 
 bool
 io_dpdk_add_mbuf_pool(io_handle_s *io)
@@ -475,11 +510,11 @@ io_dpdk_interface_init(bbl_interface_s *interface)
     uint16_t id;
     uint16_t nb_rx_queue = 1;
     uint16_t nb_tx_queue = 1;
-    struct rte_eth_dev_info dev_info;
+    struct rte_eth_dev_info dev_info = {0};
     struct rte_eth_conf local_port_conf = port_conf;
-    struct rte_eth_rxconf rx_conf;
-    struct rte_eth_txconf tx_conf;
-    struct rte_ether_addr mac;
+    struct rte_eth_rxconf rx_conf = {0};
+    struct rte_eth_txconf tx_conf = {0};
+    struct rte_ether_addr mac = {0};
     io_handle_s *io;
 
     RTE_ETH_FOREACH_DEV(port_id) {
@@ -523,7 +558,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
 
     local_port_conf.rxmode.mq_mode = RTE_ETH_MQ_RX_RSS;
     local_port_conf.rx_adv_conf.rss_conf.rss_hf =
-        (RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP) &
+        (RTE_ETH_RSS_VLAN | RTE_ETH_RSS_IP | RTE_ETH_RSS_TCP | RTE_ETH_RSS_UDP | RTE_ETH_RSS_PPPOE | RTE_ETH_RSS_L2TPV2| RTE_ETH_RSS_MPLS) &
         dev_info.flow_type_rss_offloads;
 
     ret = rte_eth_dev_configure(port_id, nb_rx_queue, nb_tx_queue, &local_port_conf);
@@ -557,7 +592,6 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         io->next = interface->io.rx;
         interface->io.rx = io;
         io->interface = interface;
-        CIRCLEQ_INIT(&io->stream_tx_qhead);
         if(config->rx_threads) {
             if(!io_thread_init(io)) {
                 return false;
@@ -565,7 +599,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
             io->thread->run_fn = io_dpdk_thread_rx_run_fn;
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->io.rx_job, "RX", 0, 
-                config->rx_interval, io, &io_dpdk_rx_job);
+                               config->rx_interval, io, &io_dpdk_rx_job);
         }
         io->queue = queue;
         if(!io_dpdk_add_mbuf_pool(io)) {
@@ -597,15 +631,11 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         interface->io.tx = io;
         io->interface = interface;
         io->buf = malloc(IO_BUFFER_LEN);
-        CIRCLEQ_INIT(&io->stream_tx_qhead);
         if(config->tx_threads) {
             if(!io_thread_init(io)) {
                 return false;
             }
-            timer_add_periodic(&io->thread->timer.root, &io->thread->timer.io, "TX (threaded)", 0, 
-                config->tx_interval, io->thread, &io_dpdk_thread_tx_job);
-            io->thread->timer.io->reset = false;
-            io->thread->set_cpu_affinity = true;
+            io->thread->run_fn = io_dpdk_thread_tx_run_fn;
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->io.tx_job, "TX", 0, 
                 config->tx_interval, io, &io_dpdk_tx_job);

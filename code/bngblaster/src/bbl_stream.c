@@ -21,6 +21,43 @@ const char g_session_traffic_ipv6[] = "session-ipv6";
 const char g_session_traffic_ipv6pd[] = "session-ipv6pd";
 endpoint_state_t g_endpoint = ENDPOINT_ACTIVE;
 
+/**
+ * bbl_stream_fast_index_get
+ *
+ * @param flow_id flow-id
+ * @return stream or NULL if stream not found
+ */
+bbl_stream_s *
+bbl_stream_index_get(uint64_t flow_id)
+{
+    if(g_ctx->stream_index && flow_id <= g_ctx->streams && flow_id > 0) {
+        return g_ctx->stream_index[flow_id-1];
+    }
+    return NULL;
+}
+
+/**
+ * bbl_stream_index_init
+ */
+bool
+bbl_stream_index_init()
+{
+    uint64_t flow_id;
+    bbl_stream_s *stream = g_ctx->stream_head;
+
+    g_ctx->stream_index = calloc(g_ctx->streams, sizeof(bbl_stream_s*));
+    
+    while(stream) {
+        flow_id = stream->flow_id;
+        if(flow_id > g_ctx->streams || flow_id < 1) {
+            return false;
+        }
+        g_ctx->stream_index[flow_id-1] = stream;
+        stream = stream->next;
+    }
+    return true;
+}
+
 static void
 bbl_stream_delay(bbl_stream_s *stream, struct timespec *rx_timestamp, struct timespec *bbl_timestamp)
 {
@@ -941,6 +978,7 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
 
+    if(packets == 0) return;
     if(stream->direction == BBL_DIRECTION_UP) {
         access_interface = stream->access_interface;
         session = stream->session;
@@ -1041,6 +1079,7 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
 
+    if(packets == 0) return;
     if(stream->rx_access_interface) {
         access_interface = stream->rx_access_interface;
         access_interface->stats.packets_rx += packets;
@@ -1193,78 +1232,72 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     /* Calculate TX packets/bytes since last sync. */
     packets = stream->tx_packets;
     packets_delta = packets - stream->last_sync_packets_tx;
-    bytes_delta = packets_delta * stream->tx_len;
-    stream->last_sync_packets_tx = packets;
-    bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
-    if(g_ctx->config.stream_rate_calc) {
-        bbl_compute_avg_rate(&stream->rate_packets_tx, stream->tx_packets);
+    if(packets_delta) {
+        bytes_delta = packets_delta * stream->tx_len;
+        stream->last_sync_packets_tx = packets;
+        bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
+        if(g_ctx->config.stream_rate_calc) {
+            bbl_compute_avg_rate(&stream->rate_packets_tx, stream->tx_packets);
+        }
     }
-    if(stream->type == BBL_TYPE_MULTICAST) {
+    if(unlikely(stream->type == BBL_TYPE_MULTICAST)) {
         return;
     }
-    if(unlikely(stream->rx_wrong_session)) {
-        bbl_stream_rx_wrong_session(stream);
-    }
-    if(unlikely(!stream->verified)) {
-        if(stream->rx_first_seq) {
-            if(stream->session_traffic) {
-                if(session) {
-                    stream->verified = true;
-                    bbl_stream_setup_established(stream);
-                    session->session_traffic.flows_verified++;
-                    g_ctx->stats.session_traffic_flows_verified++;
-                    if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
-                        LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
-                    }
-                }
-            } else {
-                stream->verified = true;
-                bbl_stream_setup_established(stream);
-                g_ctx->stats.stream_traffic_flows_verified++;
-                if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
-                    LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
-                }
-            }
-        }
-        if(stream->verified) {
-            if(g_ctx->config.traffic_stop_verified) {
-                stream->stop = true;
-            }
-        } else {
-            return;
-        }
-    }
-
     /* Calculate RX packets/bytes since last sync. */
     packets = stream->rx_packets;
     packets_delta = packets - stream->last_sync_packets_rx;
-    bytes_delta = packets_delta * stream->rx_len;
-    stream->last_sync_packets_rx = packets;
-    /* Calculate RX loss since last sync. */
-    packets = stream->rx_loss;
-    loss_delta = packets - stream->last_sync_loss;
-    stream->last_sync_loss = packets;
-    bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
-    if(g_ctx->config.stream_rate_calc) {
-        bbl_compute_avg_rate(&stream->rate_packets_rx, stream->rx_packets);
+    if(packets_delta) {
+        bytes_delta = packets_delta * stream->rx_len;
+        stream->last_sync_packets_rx = packets;
+        /* Calculate RX loss since last sync. */
+        packets = stream->rx_loss;
+        loss_delta = packets - stream->last_sync_loss;
+        stream->last_sync_loss = packets;
+        bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
+        if(g_ctx->config.stream_rate_calc) {
+            bbl_compute_avg_rate(&stream->rate_packets_rx, stream->rx_packets);
+        }
+        if(unlikely(stream->rx_wrong_session)) {
+            bbl_stream_rx_wrong_session(stream);
+        }
+        if(unlikely(!stream->verified)) {
+            if(stream->rx_first_seq) {
+                if(stream->session_traffic) {
+                    if(session) {
+                        stream->verified = true;
+                        bbl_stream_setup_established(stream);
+                        session->session_traffic.flows_verified++;
+                        g_ctx->stats.session_traffic_flows_verified++;
+                        if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
+                            LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+                        }
+                    }
+                } else {
+                    stream->verified = true;
+                    bbl_stream_setup_established(stream);
+                    g_ctx->stats.stream_traffic_flows_verified++;
+                    if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
+                        LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+                    }
+                }
+            }
+            if(stream->verified) {
+                if(g_ctx->config.traffic_stop_verified) {
+                    stream->stop = true;
+                }
+            }
+        }
     }
 }
 
 void
 bbl_stream_final()
 {
-    struct dict_itor *itor;
-    bbl_stream_s *stream;
-
-    itor = dict_itor_new(g_ctx->stream_flow_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(stream) {
-            bbl_stream_ctrl(stream);
-        }
+    bbl_stream_s *stream = g_ctx->stream_head;
+    while(stream) {
+        bbl_stream_ctrl(stream);
+        stream = stream->next;
     }
-    dict_itor_free(itor);
 }
 
 static bool
@@ -1300,7 +1333,7 @@ bbl_stream_ldp_lookup(bbl_stream_s *stream)
 static bool
 bbl_stream_can_send(bbl_stream_s *stream)
 {
-    if(stream->reset) {
+    if(unlikely(stream->reset)) {
         stream->reset = false;
         stream->flow_seq = 1;
     } else if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
@@ -1336,21 +1369,29 @@ bbl_stream_can_send(bbl_stream_s *stream)
     return false;
 }
 
-void
-bbl_stream_tx_qnode_insert(io_handle_s *io, bbl_stream_s *stream)
+static bool
+bbl_stream_session_can_send(bbl_stream_s *stream)
 {
-    if(CIRCLEQ_NEXT(stream, tx_qnode)) {
-        return;
-    }
-    CIRCLEQ_INSERT_TAIL(&io->stream_tx_qhead, stream, tx_qnode);
-}
+    bbl_session_s *session = stream->session;
 
-void
-bbl_stream_tx_qnode_remove(io_handle_s *io, bbl_stream_s *stream)
-{
-    CIRCLEQ_REMOVE(&io->stream_tx_qhead, stream, tx_qnode);
-    CIRCLEQ_NEXT(stream, tx_qnode) = NULL;
-    CIRCLEQ_PREV(stream, tx_qnode) = NULL;
+    if(session) {
+        if(stream->session_traffic) {
+            if(!session->session_traffic.active) {
+                return false;
+            }
+        } else if(!session->streams.active) {
+            return false;
+        }
+        if(stream->session_version != session->version) {
+            if(stream->tx_buf) {
+                free(stream->tx_buf);
+                stream->tx_buf = NULL;
+                stream->tx_len = 0;
+            }
+            stream->session_version = session->version;
+        }
+    }
+    return true;
 }
 
 static void
@@ -1368,48 +1409,11 @@ bbl_stream_update_tcp(bbl_stream_s *stream)
     }
 }
 
-protocol_error_t
-bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len)
-{
-    bbl_stream_s *stream;
-    if(!CIRCLEQ_EMPTY(&io->stream_tx_qhead)) {
-        stream = CIRCLEQ_FIRST(&io->stream_tx_qhead);
-        if(stream->token_bucket && stream->tx_buf) {
-            /* Update BBL header fields */
-            *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
-            *(uint32_t*)(stream->tx_buf + (stream->tx_len - 8)) = io->timestamp.tv_sec;
-            *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = io->timestamp.tv_nsec;
-            if(stream->tcp) {
-                bbl_stream_update_tcp(stream);
-            }
-            *len = stream->tx_len;
-            memcpy(buf, stream->tx_buf, *len);
-            stream->token_bucket--;
-            stream->tx_packets++;
-
-            if(stream->flow_seq == 1) {
-                stream->tx_first_epoch = io->timestamp.tv_sec;
-            }
-            stream->flow_seq++;
-
-            /* Remove only from TX queue if all tokens are consumed! */
-            bbl_stream_tx_qnode_remove(io, stream);
-            if(stream->token_bucket) {
-                /* Move to the end. */
-                bbl_stream_tx_qnode_insert(io, stream);
-            }
-        } else {
-            bbl_stream_tx_qnode_remove(io, stream);
-        }
-        return PROTOCOL_SUCCESS;
-    }
-    return EMPTY;
-}
-
 static bool
 bbl_stream_lag(bbl_stream_s *stream)
 {
     bbl_lag_s *lag = stream->tx_interface->lag;
+    bbl_stream_s *s;
     io_handle_s *io;
     uint8_t key;
 
@@ -1422,132 +1426,155 @@ bbl_stream_lag(bbl_stream_s *stream)
         key = stream->flow_id % lag->active_count;
         io = lag->active_list[key]->interface->io.tx;
         if(stream->io != io) {
-            if(CIRCLEQ_NEXT(stream, tx_qnode)) {
-                bbl_stream_tx_qnode_remove(stream->io, stream);
+            s = stream->io->stream_head;
+            if(s == stream) {
+                stream->io->stream_head = s->io_next;
+            } else {
+                while(s) {
+                    if(s->io_next == stream) {
+                        s->io_next = stream->io_next;
+                        s = NULL;
+                    }
+                }
             }
+            if(stream->io->stream_pps > stream->config->pps) {
+                stream->io->stream_pps -= stream->config->pps;
+                io->stream_count--;
+            }
+            io->stream_pps += stream->config->pps;
+            io->stream_count++;
             stream->io = io;
+            stream->io_next = io->stream_head;
+            io->stream_head = stream;
+            io->stream_cur = stream;
+
+            stream->io->stream_cur = stream->io->stream_head;
         }
     }
     return true;
 }
 
-void
-bbl_stream_token_job(timer_s *timer)
+static void
+bbl_stream_setup(bbl_stream_s *stream)
 {
-    bbl_stream_s *stream = timer->data;
-    bbl_session_s *session = stream->session;
+    uint64_t setup_tokens;
+    if(stream->tx_packets == 0) {
+        setup_tokens = (rand() % stream->config->setup_interval) * stream->config->pps;
+    } else {
+        setup_tokens = stream->config->setup_interval * stream->config->pps;
+    }
+    if(setup_tokens) setup_tokens--;
+    stream->tokens += setup_tokens * IO_TOKENS_PER_PACKET;
+}
+
+protocol_error_t
+bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
+{
     struct timespec time_elapsed;
+    bbl_stream_config_s *config;
+    io_bucket_s *io_bucket = stream->io_bucket;
+    uint64_t tokens;
 
-    uint64_t packets_expected;
-    uint64_t packets_send;
-
-    if(!bbl_stream_can_send(stream)) {
-        stream->token_bucket = 0;
-        stream->send_window_active = false;
-        return;
+    if(unlikely(io_bucket->tokens < stream->tokens)) {
+        return STREAM_WAIT;
     }
 
-    if(session) {
-        if(stream->session_traffic) {
-            if(!session->session_traffic.active) {
-                stream->token_bucket = 0;
-                stream->send_window_active = false;
-                return;
-            }
-        } else if(!session->streams.active) {
-            stream->token_bucket = 0;
-            stream->send_window_active = false;
-            return;
-        }
-        if(stream->session_version != session->version) {
-            if(stream->tx_buf) {
-                free(stream->tx_buf);
-                stream->tx_buf = NULL;
-                stream->tx_len = 0;
-            }
-            stream->session_version = session->version;
-        }
+    tokens = io_bucket->tokens - stream->tokens;
+    if(likely(stream->active && tokens < IO_TOKENS_PER_PACKET)) {
+        return STREAM_WAIT;
+    }
+    
+    /** Enforce optional stream packet limit ... */
+    config = stream->config;
+    if(unlikely(config->max_packets && stream->tx_packets >= config->max_packets)) {
+        return FULL;
     }
 
-    if(stream->lag) {
+    if(unlikely(!(bbl_stream_can_send(stream) && 
+                  bbl_stream_session_can_send(stream)))) {
+        stream->active = false;
+        return WRONG_PROTOCOL_STATE;
+    }
+
+    if(unlikely(stream->lag)) {
         if(!bbl_stream_lag(stream)) {
-            stream->token_bucket = 0;
-            stream->send_window_active = false;
-            return;
+            stream->active = false;
+            return WRONG_PROTOCOL_STATE;
         }
     }
 
     /** Enforce optional stream traffic start delay ... */
-    if(stream->config->start_delay && stream->tx_packets == 0) {
+    if(unlikely(stream->tx_packets == 0 && config->start_delay)) {
         if(stream->wait) {
-            timespec_sub(&time_elapsed, timer->timestamp, &stream->wait_start);
+            timespec_sub(&time_elapsed, &io->timestamp, &stream->wait_start);
             if(time_elapsed.tv_sec <= stream->config->start_delay) {
                 /** Wait ... */
-                return;
+                return STREAM_WAIT;
             }
         } else {
             /** Start wait window ... */
             stream->wait = true;
-            stream->wait_start.tv_sec = timer->timestamp->tv_sec;
-            stream->wait_start.tv_nsec = timer->timestamp->tv_nsec;
-            return;
+            stream->wait_start.tv_sec = io->timestamp.tv_sec;
+            stream->wait_start.tv_nsec = io->timestamp.tv_nsec;
+            return STREAM_WAIT;
         }
     }
 
-    if(stream->setup) {
-        if(!stream->send_window_start.tv_sec) {
-            stream->send_window_start.tv_sec = timer->timestamp->tv_sec - (rand() % stream->config->setup_interval);
-        }
-        timespec_sub(&time_elapsed, timer->timestamp, &stream->send_window_start);
-        if(time_elapsed.tv_sec < stream->config->setup_interval) {
-            stream->token_bucket = 0;
-            return;
-        } else {
-            stream->token_bucket = 1;
-            stream->send_window_start.tv_sec = timer->timestamp->tv_sec;
-        }
-    } else if(stream->send_window_active) {
-        /** Update send window */
-        timespec_sub(&time_elapsed, timer->timestamp, &stream->send_window_start);
-        packets_expected = time_elapsed.tv_sec * stream->config->pps;
-        packets_expected += stream->config->pps * ((double)time_elapsed.tv_nsec / 1000000000.0);
-        packets_send = stream->tx_packets - stream->send_window_start_packets;
-        if(packets_expected > packets_send) {
-            stream->token_bucket = packets_expected - packets_send;
-            if(stream->token_bucket > stream->token_burst) {
-                stream->token_bucket = stream->token_burst;
-            }
-        } else {
-            stream->token_bucket = 1;
-        }
-    } else {
-        /* Open new send window */
-        stream->send_window_active = true;
-        stream->send_window_start_packets = stream->tx_packets;
-        stream->send_window_start.tv_sec = timer->timestamp->tv_sec;
-        stream->send_window_start.tv_nsec = timer->timestamp->tv_nsec;
-        stream->token_bucket = 1;
+    if(unlikely(!stream->active)) {
+        stream->active = true;
+        stream->tokens = stream->io_bucket->tokens + (rand() % IO_TOKENS_PER_PACKET);
+    } else if(unlikely(tokens > stream->tokens_burst)) {
+        stream->tokens = stream->io_bucket->tokens - stream->tokens_burst;
     }
 
-    /** Enforce optional stream packet limit ... */
-    if(stream->config->max_packets &&
-       stream->tx_packets + stream->token_bucket > stream->config->max_packets) {
-       if(stream->tx_packets < stream->config->max_packets) {
-           stream->token_bucket = stream->config->max_packets - stream->tx_packets;
-       } else {
-           stream->token_bucket = 0;
-           return;
-       }
+    if(unlikely(stream->setup)) {
+        bbl_stream_setup(stream);
     }
     
-    if(!stream->tx_buf) {
+    if(unlikely(!stream->tx_buf)) {
         if(!bbl_stream_build_packet(stream)) {
             LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
-            stream->token_bucket = 0;
-            return;
+            return ENCODE_ERROR;
         }
     }
-    bbl_stream_tx_qnode_insert(stream->io, stream);
+
+    /* Update BBL header fields */
+    *(uint64_t*)(stream->tx_buf + (stream->tx_len - 16)) = stream->flow_seq;
+    *(uint32_t*)(stream->tx_buf + (stream->tx_len - 8)) = io->timestamp.tv_sec;
+    *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = io->timestamp.tv_nsec;
+    if(stream->tcp) {
+        bbl_stream_update_tcp(stream);
+    }
+    if(unlikely(stream->flow_seq == 1)) {
+        stream->tx_first_epoch = io->timestamp.tv_sec;
+    }
+    stream->tokens += IO_TOKENS_PER_PACKET;
+    return PROTOCOL_SUCCESS;
+}
+
+bbl_stream_s*
+bbl_stream_io_send_iter(io_handle_s *io)
+{
+    bbl_stream_s *stream = io->stream_cur;
+    int_fast32_t i = io->stream_count;
+
+    while(likely(i)) {
+        i--;
+        if(bbl_stream_io_send(io, stream) == PROTOCOL_SUCCESS) {
+            if(stream->io_next) {
+                io->stream_cur = stream->io_next;
+            } else {
+                io->stream_cur = io->stream_head;
+            }
+            return stream;
+        }
+        if(likely(stream->io_next != NULL)) {
+            stream = stream->io_next;
+        } else {
+            stream = io->stream_head;
+        }
+    }
+    return NULL;
 }
 
 void
@@ -1561,31 +1588,44 @@ bbl_stream_group_job(timer_s *timer)
     }
 }
 
-bbl_stream_group_s *
-bbl_stream_group_init()
+static bbl_stream_group_s *
+bbl_stream_group_init(double pps)
 {
+    time_t interval = 1;
     bbl_stream_group_s *group = calloc(1, sizeof(bbl_stream_group_s));
+    group->pps = pps;
+    if(pps < 1.0) {
+        interval = 1.0 / pps;
+    }
     timer_add_periodic(&g_ctx->timer_root, &group->timer, "Stream CTRL", 
-                       1, 0, group, &bbl_stream_group_job);
+                       interval, 0, group, &bbl_stream_group_job);
+    group->timer->reset = false;
     return group;
 }
 
 static void
 bbl_stream_add_group(bbl_stream_s *stream)
 {
-    bbl_stream_group_s *group = NULL;
-    if(!g_ctx->stream_groups) {
-        group = bbl_stream_group_init();
-        g_ctx->stream_groups = group;
-    } else if(g_ctx->stream_groups->count >= 64) {
-        group = bbl_stream_group_init();
+    bbl_stream_group_s *group = g_ctx->stream_groups;
+    while(group) {
+        if(group->count < 256 && group->pps == stream->config->pps) {
+            break;
+        }
+        group = group->next;
+    }
+    if(!group) {
+        group = bbl_stream_group_init(stream->config->pps);
         group->next = g_ctx->stream_groups;
         g_ctx->stream_groups = group;
-    } else {
-        group = g_ctx->stream_groups;
     }
     stream->group = group;
     stream->group_next = group->head;
+
+    stream->tokens_burst = IO_TOKENS_PER_PACKET;
+    stream->tokens_burst += stream->config->pps * (IO_TOKENS_PER_PACKET/10); /* 100ms burst */
+    if(stream->tokens_burst > g_ctx->config.stream_max_burst*IO_TOKENS_PER_PACKET) {
+        stream->tokens_burst = g_ctx->config.stream_max_burst*IO_TOKENS_PER_PACKET;
+    }
     group->head = stream;
     group->count++;
 }
@@ -1600,6 +1640,9 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         if(!stream->io) {
             stream->io = member->interface->io.tx;
+            stream->io_next = stream->io->stream_head;
+            stream->io->stream_head = stream;
+            stream->io->stream_cur = stream;
         }
         member->interface->io.tx->stream_pps += stream->config->pps;
     }
@@ -1618,7 +1661,11 @@ bbl_stream_select_io(bbl_stream_s *stream)
         io_iter = io_iter->next;
     }
     io->stream_pps += stream->config->pps;
+    io->stream_count++;
     stream->io = io;
+    stream->io_next = io->stream_head;
+    io->stream_head = stream;
+    io->stream_cur = stream;
     if(io->thread) {
         stream->threaded = true;
     }
@@ -1627,33 +1674,23 @@ bbl_stream_select_io(bbl_stream_s *stream)
 static void
 bbl_stream_add(bbl_stream_s *stream)
 {
-    time_t timer_sec;
-    long timer_nsec;
-
     bbl_stream_add_group(stream);
     if(stream->tx_interface->type == LAG_INTERFACE) {
         bbl_stream_select_io_lag(stream);
     } else {
         bbl_stream_select_io(stream);
     }
-
-    stream->token_burst = g_ctx->config.stream_max_burst;
-
-    /* Calculate timer. */
-    timer_sec = stream->tx_interval / 1000000000;
-    timer_nsec = stream->tx_interval % 1000000000;
-    if(stream->io && stream->io->thread) {
-        timer_add_periodic(&stream->io->thread->timer.root, &stream->tx_timer, "Stream Tokens",
-                            timer_sec, timer_nsec, stream, &bbl_stream_token_job);
-    } else {
-        timer_add_periodic(&g_ctx->timer_root, &stream->tx_timer, "Stream Tokens",
-                            timer_sec, timer_nsec, stream, &bbl_stream_token_job);
-    }
-    stream->tx_timer->reset = false;
-
+    io_bucket_stream(stream);
     if(stream->config->setup_interval) {
         stream->setup = true;
     }
+    if(g_ctx->stream_head) {
+        g_ctx->stream_tail->next = stream;
+    } else {
+        g_ctx->stream_head = stream;
+    }
+    g_ctx->stream_tail = stream;
+    g_ctx->streams++;
     g_ctx->total_pps += stream->config->pps;
 }
 
@@ -1665,10 +1702,6 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
     bbl_a10nsp_interface_s *a10nsp_interface = NULL;
     bbl_stream_s *stream_up = NULL;
     bbl_stream_s *stream_down = NULL;
-
-    dict_insert_result result;
-
-    uint64_t tx_interval = 0;
 
     assert(config);
     assert(session);
@@ -1701,7 +1734,6 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         return true;
     }
 
-    tx_interval = SEC / config->pps;
     if(config->direction & BBL_DIRECTION_UP) {
         if(config->type == BBL_SUB_TYPE_IPV4) {
             if(!((network_interface && network_interface->ip.address) ||
@@ -1749,14 +1781,6 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         }
         stream_up->access_interface = access_interface;
         stream_up->tx_interface = access_interface->interface;
-        stream_up->tx_interval = tx_interval;
-        result = dict_insert(g_ctx->stream_flow_dict, &stream_up->flow_id);
-        if(!result.inserted) {
-            LOG(ERROR, "Failed to insert stream %s (upstream)\n", config->name);
-            free(stream_up);
-            return false;
-        }
-        *result.datum_ptr = stream_up;
         stream_up->session_next = session->streams.head;
         session->streams.head = stream_up;
         bbl_stream_add(stream_up);
@@ -1798,15 +1822,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(stream_down->config->raw_tcp) {
             stream_down->tcp = true;
         }
-        stream_down->tx_interval = tx_interval;
         stream_down->session_traffic = config->session_traffic;
-        result = dict_insert(g_ctx->stream_flow_dict, &stream_down->flow_id);
-        if(!result.inserted) {
-            LOG(ERROR, "Failed to insert stream %s (downstream)\n", config->name);
-            free(stream_down);
-            return false;
-        }
-        *result.datum_ptr = stream_down;
         stream_down->session_next = session->streams.head;
         session->streams.head = stream_down;
         if(network_interface) {
@@ -1920,10 +1936,6 @@ bbl_stream_init() {
     bbl_stream_s *stream;
 
     bbl_network_interface_s *network_interface;
-
-    dict_insert_result result;
-
-    uint64_t tx_interval = 0;
     int i;
 
     uint32_t group;
@@ -1939,7 +1951,6 @@ bbl_stream_init() {
                 return false;
             }
 
-            tx_interval = SEC / config->pps;
             if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
                 stream->endpoint = &g_endpoint;
@@ -1958,19 +1969,11 @@ bbl_stream_init() {
                 stream->direction = BBL_DIRECTION_DOWN;
                 stream->network_interface = network_interface;
                 stream->tx_interface = network_interface->interface;
-                stream->tx_interval = tx_interval;
                 if(network_interface->ldp_adjacency && 
                    (config->ipv4_ldp_lookup_address || 
                     *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
                     stream->ldp_lookup = true;
                 }
-                result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
-                if(!result.inserted) {
-                    LOG(ERROR, "Failed to insert RAW stream %s\n", config->name);
-                    free(stream);
-                    return false;
-                }
-                *result.datum_ptr = stream;
                 bbl_stream_add(stream);
                 if(stream->type == BBL_TYPE_MULTICAST) {
                     LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %0.2lf PPS\n", 
@@ -1993,7 +1996,6 @@ bbl_stream_init() {
             return false;
         }
 
-        tx_interval = SEC / g_ctx->config.multicast_traffic_pps;
         for(i = 0; i < g_ctx->config.igmp_group_count; i++) {
 
             group = be32toh(g_ctx->config.igmp_group) + i * be32toh(g_ctx->config.igmp_group_iter);
@@ -2029,14 +2031,6 @@ bbl_stream_init() {
             stream->direction = BBL_DIRECTION_DOWN;
             stream->network_interface = network_interface;
             stream->tx_interface = network_interface->interface;
-            stream->tx_interval = tx_interval;
-            result = dict_insert(g_ctx->stream_flow_dict, &stream->flow_id);
-            if(!result.inserted) {
-                LOG(ERROR, "Failed to insert multicast stream %s\n", config->name);
-                free(stream);
-                return false;
-            }
-            *result.datum_ptr = stream;
             bbl_stream_add(stream);
             LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %0.2lf PPS\n", 
                 network_interface->name, config->pps);
@@ -2211,12 +2205,12 @@ bbl_stream_rx_nat(bbl_ethernet_header_s *eth, bbl_stream_s *stream) {
 }
 
 bbl_stream_s *
-bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
+bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
 {
     bbl_bbl_s *bbl = eth->bbl;
     bbl_stream_s *stream;
+    bbl_session_s *session;
     bbl_mpls_s *mpls;
-    void **search = NULL;
 
     uint64_t loss = 0;
 
@@ -2224,22 +2218,15 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
         return NULL;
     }
 
-    search = dict_search(g_ctx->stream_flow_dict, &bbl->flow_id);
-    if(search) {
-        stream = *search;
+    stream = bbl_stream_index_get(bbl->flow_id);
+    if(stream) {
         if(stream->rx_first_seq) {
             /* Stream already verified */
             if((stream->rx_last_seq +1) < bbl->flow_seq) {
                 loss = bbl->flow_seq - (stream->rx_last_seq +1);
                 stream->rx_loss += loss;
-                if(session) {
-                    LOG(LOSS, "LOSS (ID: %u) Unicast flow: %lu seq: %lu last: %lu\n",
-                        session->session_id, bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
-
-                } else {
-                    LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu\n",
-                        bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
-                }
+                LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu\n",
+                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
             }
         } else {
             /* Verify stream ... */
@@ -2279,12 +2266,29 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
                 bbl->direction != stream->direction) {
                 return NULL;
             }
-            if(session && stream->session_traffic) {
-                if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
-                   bbl->inner_vlan_id != session->vlan_key.inner_vlan_id ||
-                   bbl->session_id != session->session_id) {
-                    stream->rx_wrong_session++;
+            if(mac) {
+                if(memcmp(mac, eth->dst, ETH_ADDR_LEN) != 0) {
                     return NULL;
+                }
+            } else {
+                session = stream->session;
+                if(!session) {
+                    return NULL;
+                }
+                if(session->session_state == BBL_TERMINATED || 
+                   session->session_state == BBL_IDLE) {
+                    return NULL;
+                }
+                if(memcmp(session->client_mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                    return NULL;
+                }
+                if(stream->session_traffic) {
+                    if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
+                       bbl->inner_vlan_id != session->vlan_key.inner_vlan_id ||
+                       bbl->session_id != session->session_id) {
+                        stream->rx_wrong_session++;
+                        return NULL;
+                    }
                 }
             }
             if(stream->nat && stream->direction == BBL_DIRECTION_UP) {
@@ -2308,39 +2312,31 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session)
 static json_t *
 bbl_stream_summary_json()
 {
-    struct dict_itor *itor;
-    bbl_stream_s *stream;
-
+    bbl_stream_s *stream = g_ctx->stream_head;
     json_t *jobj, *jobj_array;
-
     jobj_array = json_array();
 
-    itor = dict_itor_new(g_ctx->stream_flow_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(stream) {
-            jobj = json_pack("{si ss* ss ss ss sI sI sI sI sI }",
-                "flow-id", stream->flow_id,
-                "name", stream->config->name,
-                "type", stream_type_string(stream),
-                "sub-type", stream_sub_type_string(stream),
-                "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
-                "tx-packets", stream->tx_packets - stream->reset_packets_tx,
-                "tx-bytes", (stream->tx_packets - stream->reset_packets_tx) * stream->tx_len,
-                "rx-packets", stream->rx_packets - stream->reset_packets_rx,
-                "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
-                "rx-loss", stream->rx_loss - stream->reset_loss);
-            if(jobj) {
-                if(stream->session) {
-                    json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
-                    json_object_set(jobj, "session-traffic", json_boolean(stream->session_traffic));
-                }
-                json_array_append(jobj_array, jobj);
+    while(stream) {
+        jobj = json_pack("{si ss* ss ss ss sI sI sI sI sI }",
+            "flow-id", stream->flow_id,
+            "name", stream->config->name,
+            "type", stream_type_string(stream),
+            "sub-type", stream_sub_type_string(stream),
+            "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
+            "tx-packets", stream->tx_packets - stream->reset_packets_tx,
+            "tx-bytes", (stream->tx_packets - stream->reset_packets_tx) * stream->tx_len,
+            "rx-packets", stream->rx_packets - stream->reset_packets_rx,
+            "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
+            "rx-loss", stream->rx_loss - stream->reset_loss);
+        if(jobj) {
+            if(stream->session) {
+                json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
+                json_object_set(jobj, "session-traffic", json_boolean(stream->session_traffic));
             }
+            json_array_append(jobj_array, jobj);
         }
+        stream = stream->next;
     }
-    dict_itor_free(itor);
     return jobj_array;
 }
 
@@ -2394,7 +2390,7 @@ bbl_stream_json(bbl_stream_s *stream)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{ss* ss ss ss ss sI ss sI ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI}",
+        root = json_pack("{ss* ss ss ss ss sI ss sI ss ss* ss* ss* sb sI sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI sI sI sI}",
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
@@ -2434,7 +2430,11 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0,
             "tx-first-epoch", stream->tx_first_epoch,
             "rx-first-epoch", stream->rx_first_epoch,
-            "rx-last-epoch", stream->rx_last_epoch);
+            "rx-last-epoch", stream->rx_last_epoch,
+            "tokens", stream->tokens,
+            "bucket", stream->io_bucket->tokens,
+            "burst", stream->tokens_burst
+            );
 
         if(stream->config->rx_mpls1) { 
             json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
@@ -2508,7 +2508,6 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     json_t *json_stream = NULL;
 
     bbl_stream_s *stream;
-    void **search = NULL;
 
     int number = 0;
     uint64_t flow_id;
@@ -2519,9 +2518,8 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     }
 
     flow_id = number;
-    search = dict_search(g_ctx->stream_flow_dict, &flow_id);
-    if(search) {
-        stream = *search;
+    stream = bbl_stream_index_get(flow_id);
+    if(stream) {
         json_stream = bbl_stream_json(stream);
         root = json_pack("{ss si so*}",
                          "status", "ok",
@@ -2668,24 +2666,17 @@ bbl_stream_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments)
 int
 bbl_stream_ctrl_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
-    bbl_stream_s *stream;
-    struct dict_itor *itor;
+    bbl_stream_s *stream = g_ctx->stream_head;
     
     g_ctx->stats.stream_traffic_flows_verified = 0;
 
     /* Iterate over all traffic streams */
-    itor = dict_itor_new(g_ctx->stream_flow_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(!stream) {
-            continue;
-        }
+    while(stream) {
         if(!stream->session_traffic) {
             bbl_stream_reset(stream);
         }
+        stream = stream->next;
     }
-    dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);    
 }
 
@@ -2693,23 +2684,18 @@ int
 bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
-    bbl_stream_s *stream;
-    struct dict_itor *itor;
+    bbl_stream_s *stream = g_ctx->stream_head;
 
     json_t *root, *json_streams;
     json_streams = json_array();
 
     /* Iterate over all traffic streams */
-    itor = dict_itor_new(g_ctx->stream_flow_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(!stream) {
-            continue;
-        }
+    /* Iterate over all traffic streams */
+    while(stream) {
         if(!stream->verified) {
             json_array_append(json_streams, json_integer(stream->flow_id));
         }
+        stream = stream->next;
     }
 
     root = json_pack("{ss si so}",
@@ -2730,14 +2716,11 @@ static int
 bbl_stream_ctrl_start_stop(int fd, uint32_t session_id, int session_group_id, uint64_t flow_id, bool status)
 {
     bbl_session_s *session;
-    bbl_stream_s *stream;
-    struct dict_itor *itor;
-    void **search = NULL;
+    bbl_stream_s *stream = g_ctx->stream_head;
 
     if(flow_id) {
-        search = dict_search(g_ctx->stream_flow_dict, &flow_id);
-        if(search) {
-            stream = *search;
+        stream = bbl_stream_index_get(flow_id);
+        if(stream) {
             stream->stop = status;
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "stream not found");
@@ -2755,21 +2738,13 @@ bbl_stream_ctrl_start_stop(int fd, uint32_t session_id, int session_group_id, ui
         }
     } else {
         /* Iterate over all traffic streams */
-        itor = dict_itor_new(g_ctx->stream_flow_dict);
-        dict_itor_first(itor);
-        for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-            stream = (bbl_stream_s*)*dict_itor_datum(itor);
-            if(!stream) {
-                continue;
+        while(stream) {
+            if(!(session_group_id && stream->session && 
+                 stream->session->session_group_id != session_group_id)) {
+                stream->stop = status;
             }
-            if(session_group_id && stream->session && 
-               stream->session->session_group_id != session_group_id) {
-                continue;
-            }
-            stream->stop = status;
+            stream = stream->next;
         }
-        dict_itor_free(itor);
-
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

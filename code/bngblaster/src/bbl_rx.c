@@ -14,10 +14,8 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
                       bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
-    if(!eth->bbl || memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
-        return false;
-    }
-    stream = bbl_stream_rx(eth, NULL);
+    if(!eth->bbl) return false;
+    stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
         if(stream->rx_network_interface == NULL) {
             stream->rx_network_interface = interface;
@@ -32,29 +30,13 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
                      bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
-    bbl_session_s *session;
-    uint32_t session_id = 0;
-
-    if(!(eth->bbl && eth->bbl->type == BBL_TYPE_UNICAST)) {
-        return false;
-    }
-
-    session_id |= eth->dst[5];
-    session_id |= eth->dst[4] << 8;
-    session_id |= eth->dst[3] << 16;
-
-    session = bbl_session_get(session_id);
-    if(session) {
-        if(session->session_state != BBL_TERMINATED &&
-           session->session_state != BBL_IDLE) {
-            stream = bbl_stream_rx(eth, session);
-            if(stream) {
-                if(stream->rx_access_interface == NULL) {
-                    stream->rx_access_interface = interface;
-                }
-                return true;
-            }
+    if(!eth->bbl) return false;
+    stream = bbl_stream_rx(eth, NULL);
+    if(stream) {
+        if(stream->rx_access_interface == NULL) {
+            stream->rx_access_interface = interface;
         }
+        return true;
     }
     return false;
 }
@@ -64,10 +46,8 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
                      bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
-    if(!eth->bbl || memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
-        return false;
-    }
-    stream = bbl_stream_rx(eth, NULL);
+    if(!eth->bbl) return false;
+    stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
         if(stream->rx_a10nsp_interface == NULL) {
             stream->rx_a10nsp_interface = interface;
@@ -81,19 +61,14 @@ bool
 bbl_rx_thread(bbl_interface_s *interface, 
               bbl_ethernet_header_s *eth)
 {
-    bbl_network_interface_s *network_interface = interface->network;
-
+    bbl_network_interface_s *network_interface;
     if(interface->state == INTERFACE_DISABLED) {
         return true;
     }
-
-    while(network_interface) {
-        if(network_interface->vlan == eth->vlan_outer) {
-            return bbl_rx_stream_network(network_interface, eth);
-        }
-        network_interface = network_interface->next;
-    }
-    if(interface->access) {
+    network_interface = interface->network_vlan[eth->vlan_outer];
+    if(network_interface) {
+        return bbl_rx_stream_network(network_interface, eth);
+    } else if(interface->access) {
         return bbl_rx_stream_access(interface->access, eth);
     } else if(interface->a10nsp) {
         return bbl_rx_stream_a10nsp(interface->a10nsp, eth);
@@ -130,7 +105,7 @@ bbl_rx_handler(bbl_interface_s *interface,
         if(!bbl_rx_stream_network(network_interface, eth)) {
             bbl_network_rx_handler(network_interface, eth);
         }
-     } else if(interface->access) {
+    } else if(interface->access) {
         if(!bbl_rx_stream_access(interface->access, eth)) {
             bbl_access_rx_handler(interface->access, eth);
         }

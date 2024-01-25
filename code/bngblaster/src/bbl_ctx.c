@@ -80,7 +80,6 @@ bbl_ctx_add()
     g_ctx->vlan_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_SESSION_HASHTABLE_SIZE);
     g_ctx->l2tp_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_SESSION_HASHTABLE_SIZE);
     g_ctx->li_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_LI_HASHTABLE_SIZE);
-    g_ctx->stream_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_STREAM_FLOW_HASHTABLE_SIZE);
 
     return true;
 }
@@ -119,13 +118,14 @@ bbl_ctx_del() {
             bbl_session_free(p);
         }
     }
-    free(g_ctx->session_list);
- 
+
+    if(g_ctx->session_list) free(g_ctx->session_list);
+    if(g_ctx->stream_index) free(g_ctx->stream_index);
+
     /* Free hash table dictionaries. */
     dict_free(g_ctx->vlan_session_dict, NULL);
     dict_free(g_ctx->l2tp_session_dict, NULL);
     dict_free(g_ctx->li_flow_dict, NULL);
-    dict_free(g_ctx->stream_flow_dict, NULL);
 
     pcapng_free();
     free(g_ctx);

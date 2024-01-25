@@ -78,7 +78,11 @@ typedef struct bbl_ctx_
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
-    dict *stream_flow_dict; /* hashtable for traffic stream flows */
+
+    bbl_stream_s **stream_index;
+    bbl_stream_s *stream_head;
+    bbl_stream_s *stream_tail;
+    uint64_t streams;
 
     bbl_stream_group_s *stream_groups;
 
@@ -89,6 +93,7 @@ typedef struct bbl_ctx_
     char *ctrl_socket_path;
     bbl_ctrl_thread_s *ctrl_thread;
     io_thread_s *io_threads; /* single linked list of threads */
+    io_bucket_s *io_bucket;
 
     bool tcp;
     bool dpdk;
@@ -146,6 +151,7 @@ typedef struct bbl_ctx_
         io_mode_t io_mode;
 
         uint16_t io_slots;
+        uint16_t io_burst;
         uint16_t io_max_stream_len;
 
         bool qdisc_bypass;

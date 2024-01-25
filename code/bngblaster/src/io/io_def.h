@@ -9,6 +9,8 @@
 #ifndef __BBL_IO_DEF_H__
 #define __BBL_IO_DEF_H__
 
+#define IO_TOKENS_PER_PACKET 1000
+
 typedef struct io_handle_ io_handle_s;
 typedef struct io_thread_ io_thread_s;
 
@@ -37,6 +39,15 @@ typedef enum {
     IO_MODE_DPDK,               /* DPDK */
     IO_MODE_AF_XDP              /* AF_XDP */
 } __attribute__ ((__packed__)) io_mode_t;
+
+typedef struct io_bucket_ {
+    double pps;
+    uint64_t tokens_per_sec;
+    uint64_t tokens;
+    struct timer_ *timer;
+    struct timespec timestamp_start;
+    struct io_bucket_ *next;
+} io_bucket_s;
 
 typedef struct io_handle_ {
     io_mode_t mode;
@@ -70,10 +81,9 @@ typedef struct io_handle_ {
     uint16_t vlan_tpid;
 
     double stream_pps;
-    uint32_t stream_tokens;
-    uint32_t stream_rate;
-    uint32_t stream_burst;
-    CIRCLEQ_HEAD(stream_tx_, bbl_stream_) stream_tx_qhead;
+    uint32_t stream_count;
+    bbl_stream_s *stream_head;
+    bbl_stream_s *stream_cur;
 
     struct timespec timestamp; /* user space timestamps */
 
@@ -93,7 +103,6 @@ typedef struct io_handle_ {
 } io_handle_s;
 
 typedef void (*io_thread_cb_fn)(io_thread_s *thread);
-typedef bool (*io_thread_stream_cb_fn)(bbl_stream_s *stream);
 
 typedef struct io_thread_ {
     pthread_t thread;
@@ -108,17 +117,10 @@ typedef struct io_thread_ {
     io_thread_cb_fn run_fn;
     io_thread_cb_fn teardown_fn;
 
-    io_thread_stream_cb_fn stream_tx_fn;
-
     uint8_t *sp;
 
     io_handle_s *io;
     bbl_txq_s *txq;
-
-    struct {
-        struct timer_root_ root;
-        struct timer_ *io;
-    } timer;
 
     struct io_thread_ *next;
 } io_thread_s;
