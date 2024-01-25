@@ -88,17 +88,25 @@ io_packet_mmap_rx_job(timer_s *timer)
             //eth->timestamp.tv_nsec = tphdr->tp_nsec; /* ktime/hw timestamp */
             eth->timestamp.tv_sec = io->timestamp.tv_sec;
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
+            /* Dump the packet into pcap file */
+            if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+            }
             bbl_rx_handler(interface, eth);
-        } else if(decode_result == UNKNOWN_PROTOCOL) {
-            io->stats.unknown++;
         } else {
-            io->stats.protocol_errors++;
-        }
-        /* Dump the packet into pcap file */
-        if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
-            pcap = true;
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                      interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+            /* Dump the packet into pcap file */
+            if(g_ctx->pcap.write_buf) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+            }
+            if(decode_result == UNKNOWN_PROTOCOL) {
+                io->stats.unknown++;
+            } else {
+                io->stats.protocol_errors++;
+            }
         }
         /* Return ownership back to kernel */
         tphdr->tp_status = TP_STATUS_KERNEL; 
@@ -124,15 +132,15 @@ io_packet_mmap_tx_job(timer_s *timer)
     struct tpacket2_hdr* tphdr;
     uint8_t *frame_ptr;
 
-    uint32_t stream_packets = 0;
+    bbl_stream_s *stream = NULL;
+    uint16_t burst = interface->config->io_burst;
+
     bool ctrl = true;
     bool pcap = false;
 
     assert(io->mode == IO_MODE_PACKET_MMAP);
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
-
-    io_update_stream_token_bucket(io);
 
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
@@ -145,7 +153,7 @@ io_packet_mmap_tx_job(timer_s *timer)
         //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
         io->timestamp.tv_sec = timer->timestamp->tv_sec;
         io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-        while(true) {
+        while(burst) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
@@ -160,21 +168,20 @@ io_packet_mmap_tx_job(timer_s *timer)
                     continue;
                 }
             } else {
-                /* Send traffic streams up to allowed burst. */
-                if(++stream_packets > io->stream_burst) {
+                stream = bbl_stream_io_send_iter(io);
+                if(!stream) {
                     break;
                 }
-                if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
-                    break;
-                }
-            }
-
+                memcpy(io->buf, stream->tx_buf, stream->tx_len);
+                io->buf_len = stream->tx_len;
+            } 
             tphdr->tp_len = io->buf_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
 
             io->queued++;
             io->stats.packets++;
             io->stats.bytes += io->buf_len;
+            burst--;
 
             /* Dump the packet into pcap file. */
             if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
@@ -225,15 +232,14 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
     struct timespec sleep, rem;
 
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 0;
+    sleep.tv_nsec = 10000; /* 0.01ms */
 
     while(thread->active) {
         frame_ptr = ring + (cursor * frame_size);
         tphdr = (struct tpacket2_hdr*)frame_ptr;
         if(!(tphdr->tp_status & TP_STATUS_USER)) {
             /* If no buffer is available poll kernel */
-            poll_kernel(io, POLLIN);
-            sleep.tv_nsec = 100000; /* 0.1ms */
+            //poll_kernel(io, POLLIN);
             nanosleep(&sleep, &rem);
             continue;
         }
@@ -254,18 +260,13 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
             frame_ptr = ring + (cursor * frame_size);
             tphdr = (struct tpacket2_hdr*)frame_ptr;
         }
-        sleep.tv_nsec = 1000; /* 0.001ms */
         nanosleep(&sleep, &rem);
     }
 }
 
-/**
- * This job is for PACKET_MMAP TX in worker thread!
- */
 void
-io_packet_mmap_thread_tx_job(timer_s *timer)
+io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 {
-    io_thread_s *thread = timer->data;
     io_handle_s *io = thread->io;
     bbl_interface_s *interface = io->interface;
 
@@ -275,30 +276,41 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
     struct tpacket2_hdr* tphdr;
     uint8_t *frame_ptr;
 
-    uint32_t stream_packets = 0;
+    bbl_stream_s *stream = NULL;
+    uint16_t io_burst = interface->config->io_burst;
+    uint16_t burst = 0;
+
     bool ctrl = true;
+
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 10;
 
     assert(io->mode == IO_MODE_PACKET_MMAP);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
-    io_update_stream_token_bucket(io);
+    while(thread->active) {
+        nanosleep(&sleep, &rem);
 
-    frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
-    tphdr = (struct tpacket2_hdr *)frame_ptr;
-    if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
-        /* If no buffer is available poll kernel. */
-        poll_kernel(io, POLLOUT);
-        io->stats.no_buffer++;
-    } else {
+        frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
+        tphdr = (struct tpacket2_hdr *)frame_ptr;
+        if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
+            /* If no buffer is available poll kernel. */
+            io->stats.no_buffer++;
+            poll_kernel(io, POLLOUT);
+            continue;
+        }
+
         /* Get TX timestamp */
-        //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-        io->timestamp.tv_sec = timer->timestamp->tv_sec;
-        io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-        while(true) {
-            /* Check if this slot available for writing. */
+        clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+        
+        burst = io_burst;
+        ctrl = true;
+        while(burst) {
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
+                poll_kernel(io, POLLOUT);
                 break;
             }
             io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
@@ -316,12 +328,12 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
                 }
             } else {
                 /* Send traffic streams up to allowed burst. */
-                if(++stream_packets > io->stream_burst) {
+                stream = bbl_stream_io_send_iter(io);
+                if(!stream) {
                     break;
                 }
-                if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
-                    break;
-                }
+                memcpy(io->buf, stream->tx_buf, stream->tx_len);
+                io->buf_len = stream->tx_len;
             }
 
             tphdr->tp_len = io->buf_len;
@@ -330,22 +342,23 @@ io_packet_mmap_thread_tx_job(timer_s *timer)
             io->queued++;
             io->stats.packets++;
             io->stats.bytes += io->buf_len;
+            burst--;
 
             /* Get next slot. */
             io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
             frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
         }
-    }
 
-    if(io->queued) {
-        /* Notify kernel. */
-        if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
-            LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
-                interface->name, strerror(errno), errno);
-            io->stats.io_errors++;
-        } else {
-            io->queued = 0;
+        if(io->queued) {
+            /* Notify kernel. */
+            if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
+                LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
+                    interface->name, strerror(errno), errno);
+                io->stats.io_errors++;
+            } else {
+                io->queued = 0;
+            }
         }
     }
 }
@@ -366,9 +379,7 @@ io_packet_mmap_init(io_handle_s *io)
         if(io->direction == IO_INGRESS) {
             thread->run_fn = io_packet_mmap_thread_rx_run_fn;
         } else {
-            timer_add_periodic(&thread->timer.root, &thread->timer.io, "TX (threaded)", 0, 
-                config->tx_interval, thread, &io_packet_mmap_thread_tx_job);
-            thread->timer.io->reset = false;
+            thread->run_fn = io_packet_mmap_thread_tx_run_fn;
         }
     } else {
         if(io->direction == IO_INGRESS) {

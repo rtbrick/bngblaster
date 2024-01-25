@@ -309,6 +309,7 @@ typedef enum protocol_error_ {
     IGNORED,
     EMPTY,
     FULL,
+    STREAM_WAIT
 } protocol_error_t;
 
 typedef enum icmpv6_message_ {

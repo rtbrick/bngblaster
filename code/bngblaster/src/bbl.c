@@ -590,6 +590,12 @@ main(int argc, char *argv[])
     }
     LOG(INFO, "Total PPS of all streams: %.2f\n", g_ctx->total_pps);
 
+    if(!bbl_stream_index_init()) {
+        fprintf(stderr, "Error: Failed to init stream index\n");
+        goto CLEANUP;
+    }
+
+
     /* Setup control job. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 
                        1, 0, g_ctx, &bbl_ctrl_job);
@@ -600,9 +606,6 @@ main(int argc, char *argv[])
             goto CLEANUP;
         }
     }
-
-    /* Init IO stream token buckets. */
-    io_init_stream_token_bucket();
 
     /* Start smear job. Use a crazy nsec bucket '12345678',
      * such that we do not accidentally smear ourselves. */

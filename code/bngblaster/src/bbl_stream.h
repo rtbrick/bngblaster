@@ -67,6 +67,7 @@ typedef struct bbl_stream_config_
 
 typedef struct bbl_stream_group_
 {
+    double pps;
     uint32_t count;
     bbl_stream_s *head;
     struct timer_ *timer;
@@ -82,38 +83,9 @@ typedef struct bbl_stream_
     uint8_t sub_type;
     uint8_t direction;
 
-    bbl_stream_config_s *config;
-
-    bbl_stream_group_s *group;
-    bbl_stream_s *group_next; /* Next stream of same group */
-    bbl_stream_s *reverse; /* Reverse stream direction */
-
-    uint32_t session_version;
-    bbl_session_s *session;
-    bbl_stream_s *session_next; /* Next stream of same session */
-    endpoint_state_t *endpoint;
-
-    io_handle_s *io;
-
-    bbl_access_interface_s *access_interface;
-    bbl_network_interface_s *network_interface;
-    bbl_a10nsp_interface_s *a10nsp_interface;
-
-    struct timer_ *tx_timer;
-    bbl_interface_s *tx_interface; /* TX interface */
-    uint8_t *tx_buf; /* TX buffer */
-    uint16_t tx_len; /* TX length */
-    uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
-    uint64_t tx_interval; /* TX interval in nsec */
-    __time_t tx_first_epoch;
-
-    uint32_t ipv4_src;
-    uint32_t ipv4_dst;
-    uint8_t *ipv6_src;
-    uint8_t *ipv6_dst;
-
     bool threaded;
     bool session_traffic;
+    bool active;
     bool setup;
     bool verified;
     bool wait;
@@ -123,22 +95,50 @@ typedef struct bbl_stream_
     bool tcp;
     bool lag;
     bool ldp_lookup;
+
+    uint32_t session_version;
     uint32_t ldp_entry_version;
+
+    uint32_t ipv4_src;
+    uint32_t ipv4_dst;
+
+    uint16_t tx_len; /* TX length */
+    uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
+    uint8_t *tx_buf; /* TX buffer */
+
+    uint8_t *ipv6_src;
+    uint8_t *ipv6_dst;
+
+    bbl_stream_config_s *config;
+
+    bbl_stream_s *next; /* Next stream (global) */
+    bbl_stream_s *io_next; /* Next stream of same IO handle */
+    bbl_stream_s *group_next; /* Next stream of same group */
+    bbl_stream_s *session_next; /* Next stream of same session */
+    bbl_stream_s *reverse; /* Reverse stream direction */
+
+    bbl_stream_group_s *group;
+    bbl_session_s *session;
+    endpoint_state_t *endpoint;
+
+    io_handle_s *io;
+    io_bucket_s *io_bucket;
+
+    bbl_access_interface_s *access_interface;
+    bbl_network_interface_s *network_interface;
+    bbl_a10nsp_interface_s *a10nsp_interface;
+
+    bbl_interface_s *tx_interface; /* TX interface */
     ldp_db_entry_s *ldp_entry;
 
-    bool send_window_active;
-    uint64_t send_window_start_packets;
-    struct timespec send_window_start;
-    
-    struct timespec wait_start;
-
-    CIRCLEQ_ENTRY(bbl_stream_) tx_qnode;
-    uint32_t token_bucket;
-    uint32_t token_burst;
-
-    uint64_t lag_select;
-
     uint64_t tx_packets;
+    uint64_t tokens;
+    uint64_t tokens_burst;
+    uint32_t lag_select;
+
+    __time_t tx_first_epoch;
+
+    struct timespec wait_start;
 
     char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
@@ -194,6 +194,12 @@ typedef struct bbl_stream_
 
 } bbl_stream_s;
 
+bbl_stream_s *
+bbl_stream_index_get(uint64_t flow_id);
+
+bool
+bbl_stream_index_init();
+
 bool
 bbl_stream_session_init(bbl_session_s *session);
 
@@ -204,10 +210,13 @@ void
 bbl_stream_final();
 
 protocol_error_t
-bbl_stream_tx(io_handle_s *io, uint8_t *buf, uint16_t *len);
+bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream);
+
+bbl_stream_s*
+bbl_stream_io_send_iter(io_handle_s *io);
 
 bbl_stream_s *
-bbl_stream_rx(bbl_ethernet_header_s *eth, bbl_session_s *session);
+bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac);
 
 void
 bbl_stream_reset(bbl_stream_s *stream);

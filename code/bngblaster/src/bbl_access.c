@@ -78,7 +78,7 @@ bbl_access_interfaces_add()
             /* Timer to compute periodic rates */
             timer_add_periodic(&g_ctx->timer_root, &access_interface->rate_job, "Rate Computation", 1, 0, access_interface,
                                &bbl_access_interface_rate_job);
-
+            access_interface->rate_job->reset = false;
             LOG(DEBUG, "Added access interface %s\n", access_config->interface);
         }
         access_config->access_interface = interface->access;
