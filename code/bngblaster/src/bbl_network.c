@@ -207,7 +207,7 @@ bbl_network_interfaces_add()
         /* Timer to compute periodic rates */
         timer_add_periodic(&g_ctx->timer_root, &network_interface->rate_job, "Rate Computation", 1, 0, network_interface,
                            &bbl_network_interface_rate_job);
-
+        network_interface->rate_job->reset = false;
         LOG(DEBUG, "Added network interface %s\n", ifname);
         network_config = network_config->next;
     }

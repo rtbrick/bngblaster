@@ -62,7 +62,7 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
 
     io->stats.packets++;
     io->stats.bytes += io->buf_len;
-    if(likely(packet_is_bbl(io->buf, io->buf_len))) {
+    if(packet_is_bbl(io->buf, io->buf_len)) {
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
@@ -132,17 +132,25 @@ io_thread_main_rx_job(timer_s *timer)
                     /* Copy RX timestamp */
                     eth->timestamp.tv_sec = slot->timestamp.tv_sec;
                     eth->timestamp.tv_nsec = slot->timestamp.tv_nsec;
+                    /* Dump the packet into pcap file. */
+                    if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
+                        pcap = true;
+                        pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
+                                                  interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                    }
                     bbl_rx_handler(interface, eth);
-                } else if(decode_result == UNKNOWN_PROTOCOL) {
-                    io->stats.unknown++;
                 } else {
-                    io->stats.protocol_errors++;
-                }
-                /* Dump the packet into pcap file. */
-                if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
-                    pcap = true;
-                    pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
-                                              interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                    /* Dump the packet into pcap file. */
+                    if(g_ctx->pcap.write_buf) {
+                        pcap = true;
+                        pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
+                                                  interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                    }
+                    if(decode_result == UNKNOWN_PROTOCOL) {
+                        io->stats.unknown++;
+                    } else {
+                        io->stats.protocol_errors++;
+                    }
                 }
                 bbl_txq_read_next(thread->txq);
             }
@@ -211,17 +219,6 @@ io_thread_main(void *thread_data)
     return NULL;
 }
 
-void
-io_thread_timer_loop(io_thread_s *thread)
-{
-    pthread_mutex_lock(&thread->mutex);
-    timer_smear_all_buckets(&thread->timer.root);
-    pthread_mutex_unlock(&thread->mutex);
-    while(thread->active) {
-        timer_walk(&thread->timer.root);
-    }
-}
-
 bool
 io_thread_init(io_handle_s *io)
 {
@@ -262,11 +259,8 @@ io_thread_init(io_handle_s *io)
         return false;
     }
 
-    /* Init thread timer root */
-    timer_init_root(&thread->timer.root);
-
     /* Default run function which might be overwritten */
-    thread->run_fn = io_thread_timer_loop;
+    thread->run_fn = NULL;
 
     /* Add thread main loop timers/jobs */
     if(io->direction == IO_INGRESS && !interface->io.rx_job) {
@@ -313,7 +307,6 @@ io_thread_start_all()
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
     while(thread) {
         thread->active = true;
-        timer_smear_all_buckets(&thread->timer.root);
         pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
         if(thread->set_cpu_affinity) {
             if(pthread_setaffinity_np(thread->thread, sizeof(cpu_set_t), &thread->cpuset)) {

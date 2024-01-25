@@ -92,7 +92,7 @@ bbl_a10nsp_interfaces_add()
         /* Timer to compute periodic rates */
         timer_add_periodic(&g_ctx->timer_root, &a10nsp_interface->rate_job, "Rate Computation", 1, 0, a10nsp_interface,
                            &bbl_a10nsp_interface_rate_job);
-
+        a10nsp_interface->rate_job->reset = false;
         LOG(DEBUG, "Added a10nsp interface %s\n", a10nsp_config->interface);
         a10nsp_config = a10nsp_config->next;
     }

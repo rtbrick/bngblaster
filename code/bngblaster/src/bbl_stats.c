@@ -165,8 +165,6 @@ bbl_stats_generate(bbl_stats_s * stats)
     bbl_stats_update_cps();
     bbl_stats_generate_multicast(stats, false);
 
-    struct dict_itor *itor;
-
     /* Iterate over all sessions */
     for(i = 0; i < g_ctx->sessions; i++) {
         session = &g_ctx->session_list[i];
@@ -370,36 +368,32 @@ bbl_stats_generate(bbl_stats_s * stats)
     }
 
     /* Iterate over all traffic streams */
-    itor = dict_itor_new(g_ctx->stream_flow_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(stream) {
-            if(stats->min_stream_loss) {
-                if(stream->rx_loss < stats->min_stream_loss) stats->min_stream_loss = stream->rx_loss;
-            } else {
-                stats->min_stream_loss = stream->rx_loss;
-            }
-            if(stream->rx_loss > stats->max_stream_loss) stats->max_stream_loss = stream->rx_loss;
-
-            if(stream->rx_first_seq) {
-                if(stats->min_stream_rx_first_seq) {
-                    if(stream->rx_first_seq < stats->min_stream_rx_first_seq) stats->min_stream_rx_first_seq = stream->rx_first_seq;
-                } else {
-                    stats->min_stream_rx_first_seq = stream->rx_first_seq;
-                }
-                if(stream->rx_first_seq > stats->max_stream_rx_first_seq) stats->max_stream_rx_first_seq = stream->rx_first_seq;
-
-                if(stats->min_stream_delay_us) {
-                    if(stream->rx_min_delay_us < stats->min_stream_delay_us) stats->min_stream_delay_us = stream->rx_min_delay_us;
-                } else {
-                    stats->min_stream_delay_us = stream->rx_min_delay_us;
-                }
-                if(stream->rx_max_delay_us > stats->max_stream_delay_us) stats->max_stream_delay_us = stream->rx_max_delay_us;
-            }
+    stream = g_ctx->stream_head;
+    while(stream) {
+        if(stats->min_stream_loss) {
+            if(stream->rx_loss < stats->min_stream_loss) stats->min_stream_loss = stream->rx_loss;
+        } else {
+            stats->min_stream_loss = stream->rx_loss;
         }
+        if(stream->rx_loss > stats->max_stream_loss) stats->max_stream_loss = stream->rx_loss;
+
+        if(stream->rx_first_seq) {
+            if(stats->min_stream_rx_first_seq) {
+                if(stream->rx_first_seq < stats->min_stream_rx_first_seq) stats->min_stream_rx_first_seq = stream->rx_first_seq;
+            } else {
+                stats->min_stream_rx_first_seq = stream->rx_first_seq;
+            }
+            if(stream->rx_first_seq > stats->max_stream_rx_first_seq) stats->max_stream_rx_first_seq = stream->rx_first_seq;
+
+            if(stats->min_stream_delay_us) {
+                if(stream->rx_min_delay_us < stats->min_stream_delay_us) stats->min_stream_delay_us = stream->rx_min_delay_us;
+            } else {
+                stats->min_stream_delay_us = stream->rx_min_delay_us;
+            }
+            if(stream->rx_max_delay_us > stats->max_stream_delay_us) stats->max_stream_delay_us = stream->rx_max_delay_us;
+        }
+        stream = stream->next;
     }
-    dict_itor_free(itor);
 }
 
 void
@@ -805,8 +799,6 @@ bbl_stats_json(bbl_stats_s * stats)
     bbl_session_s *session;
     bbl_stream_s *stream;
 
-    struct dict_itor *itor;
-
     json_t *root        = NULL;
     json_t *jobj        = NULL;
     json_t *jobj_array  = NULL;
@@ -1204,18 +1196,14 @@ bbl_stats_json(bbl_stats_s * stats)
     if(g_ctx->config.json_report_streams) {
         jobj_array = json_array();
 
-        itor = dict_itor_new(g_ctx->stream_flow_dict);
-        dict_itor_first(itor);
-        for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-            stream = (bbl_stream_s*)*dict_itor_datum(itor);
-            if(stream) {
-                jobj_sub = bbl_stream_json(stream);
-                if(jobj_sub) {
-                    json_array_append(jobj_array, jobj_sub);
-                }
+        stream = g_ctx->stream_head;
+        while(stream) {
+            jobj_sub = bbl_stream_json(stream);
+            if(jobj_sub) {
+                json_array_append(jobj_array, jobj_sub);
             }
+            stream = stream->next;
         }
-        dict_itor_free(itor);
         json_object_set(jobj, "streams", jobj_array);
     }
 
@@ -1233,7 +1221,6 @@ void
 bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value)
 {
     uint8_t idx;
-    uint64_t div;
     uint64_t sum;
 
     if(current_value == 0) return;
@@ -1241,18 +1228,10 @@ bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value)
     rate->diff_value[rate->cursor] = current_value - rate->last_value;
 
     sum = 0;
-    div = 0;
     for(idx = 0; idx < BBL_AVG_SAMPLES; idx++) {
-        if(rate->diff_value[idx]) {
-            sum += rate->diff_value[idx];
-            div++;
-        }
+        sum += rate->diff_value[idx];
     }
-    if(div) {
-        rate->avg = sum / div;
-    } else {
-        rate->avg = 0;
-    }
+    rate->avg = sum / BBL_AVG_SAMPLES;
     if(rate->avg > rate->avg_max) {
         rate->avg_max = rate->avg;
     }

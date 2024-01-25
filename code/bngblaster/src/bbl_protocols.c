@@ -3536,8 +3536,8 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    ipv4->id = be16toh(header->ip_id);
-    ipv4->offset = be16toh(header->ip_off);
+    if(header->ip_id) ipv4->id = be16toh(header->ip_id);
+    if(header->ip_off) ipv4->offset = be16toh(header->ip_off);
     ipv4->ttl = header->ip_ttl;
     ipv4->protocol = header->ip_p;
 

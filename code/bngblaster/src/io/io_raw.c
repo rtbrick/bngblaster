@@ -45,17 +45,25 @@ io_raw_rx_job(timer_s *timer)
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = io->timestamp.tv_sec;
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
+            /* Dump the packet into pcap file */
+            if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                        interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+            }
             bbl_rx_handler(interface, eth);
-        } else if(decode_result == UNKNOWN_PROTOCOL) {
-            io->stats.unknown++;
         } else {
-            io->stats.protocol_errors++;
-        }
-        /* Dump the packet into pcap file */
-        if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
-            pcap = true;
-            pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                      interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+            /* Dump the packet into pcap file */
+            if(g_ctx->pcap.write_buf) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+            }
+            if(decode_result == UNKNOWN_PROTOCOL) {
+                io->stats.unknown++;
+            } else {
+                io->stats.protocol_errors++;
+            }
         }
     }
     if(pcap) {
@@ -89,71 +97,85 @@ io_raw_tx_job(timer_s *timer)
     io_handle_s *io = timer->data;
     bbl_interface_s *interface = io->interface;
 
-    uint32_t stream_packets = 0;
-    bool ctrl = true;
+    bbl_stream_s *stream = NULL;
+    uint16_t burst = interface->config->io_burst;
+
     bool pcap = false;
 
     assert(io->mode == IO_MODE_RAW);
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
-    io_update_stream_token_bucket(io);
-
     /* Get TX timestamp */
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-    while(true) {
-        /* If sendto fails, the failed packet remains in TX buffer to be retried
-         * in the next interval. */
-        if(io->buf_len) {
-            if(packet_is_bbl(io->buf, io->buf_len)) {
-                /* Update timestamp if BBL traffic is retried. */
-                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
-                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
-            }
-        } else if(ctrl) {
-            /* First send all control traffic which has higher priority. */
+
+    while(burst) {
+        if(likely(io->buf_len == 0)) {
             if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
                 io->buf_len = 0;
-                ctrl = false;
-                continue;
-            }
-        } else {
-            /* Send traffic streams up to allowed burst. */
-            if(++stream_packets > io->stream_burst) {
-                break;
-            }
-            if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
                 break;
             }
         }
-
-        if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-            if(errno == EMSGSIZE) {
-                io_raw_tx_lo_long(io);
-            } else {
-                /* This packet will be retried next interval 
-                 * because io->buf_len is not reset to zero. */
-                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                    interface->name, strerror(errno), errno);
-                io->stats.io_errors++;
-                break;
-            }
-        } else {
+        if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) > 0) {
             /* Dump the packet into pcap file. */
-            if(g_ctx->pcap.write_buf && (ctrl || g_ctx->pcap.include_streams)) {
+            if(unlikely(g_ctx->pcap.write_buf != NULL)) {
                 pcap = true;
                 pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
                                           interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
             }
             io->stats.packets++;
             io->stats.bytes += io->buf_len;
-
+            io->buf_len = 0;
+            burst--;
+        } else {
+            if(errno == EMSGSIZE) {
+                io_raw_tx_lo_long(io);
+                io->buf_len = 0;
+            } else {
+                /* This packet will be retried next interval 
+                 * because io->buf_len is not reset to zero. */
+                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                    interface->name, strerror(errno), errno);
+                io->stats.io_errors++;
+                burst = 0;
+            }
         }
-        io->buf_len = 0;
     }
-    if(pcap) {
+
+    while(burst) {
+        /* Send traffic streams up to allowed burst. */
+        stream = bbl_stream_io_send_iter(io);
+        if(unlikely(stream == NULL)) {
+            break;
+        }
+        if(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) > 0) {
+            /* Dump the packet into pcap file. */
+            if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
+                pcap = true;
+                pcapng_push_packet_header(&io->timestamp, stream->tx_buf, stream->tx_len,
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+            }
+            stream->tx_packets++;
+            stream->flow_seq++;
+            io->stats.packets++;
+            io->stats.bytes += stream->tx_len;
+            burst--;
+        } else {
+            if(errno == EMSGSIZE) {
+                io->buf_len = stream->tx_len;
+                io_raw_tx_lo_long(io);
+                io->buf_len = 0;
+            } else {
+                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                    interface->name, strerror(errno), errno);
+                io->stats.io_errors++;
+                burst = 0;
+            }
+        }
+    }
+    if(unlikely(pcap)) {
         pcapng_fflush();
     }
 }
@@ -166,12 +188,11 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
     struct sockaddr saddr;
     int saddr_size = sizeof(saddr);
 
-    struct timespec sleep, rem;
-
     assert(io->direction == IO_INGRESS);
 
+    struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 0;
+    sleep.tv_nsec = 1000; /* 0.001ms */
 
     while(thread->active) {
         /* Get RX timestamp */
@@ -179,7 +200,6 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
         /* Receive from socket */
         io->buf_len = recvfrom(io->fd, io->buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
         if(io->buf_len < 14 || io->buf_len > IO_BUFFER_LEN) {
-            sleep.tv_nsec = 1000; /* 0.001ms */
             nanosleep(&sleep, &rem);
             continue;
         }
@@ -188,77 +208,75 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
     }
 }
 
-/**
- * This job is for RAW TX in worker thread!
- */
 void
-io_raw_thread_tx_job(timer_s *timer)
+io_raw_thread_tx_run_fn(io_thread_s *thread)
 {
-    io_thread_s *thread = timer->data;
     io_handle_s *io = thread->io;
+    bbl_interface_s *interface = io->interface;
 
     bbl_txq_s *txq = thread->txq;
     bbl_txq_slot_t *slot;
 
-    uint32_t stream_packets = 0;
+    bbl_stream_s *stream = NULL;
+    uint16_t io_burst = interface->config->io_burst;
+    uint16_t burst = 0;
+
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 1000 * io_burst; 
 
     assert(io->mode == IO_MODE_RAW);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
-    io_update_stream_token_bucket(io);
+    while(thread->active) {
+        nanosleep(&sleep, &rem);
+        burst = io_burst;
 
-    /* First send all control traffic which has higher priority. */
-    while((slot = bbl_txq_read_slot(txq))) {
-        /* This packet will be retried next interval 
-         * because slot is not marked as read. */
-        if(sendto(io->fd, slot->packet, slot->packet_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-            LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                io->interface->name, strerror(errno), errno);
-            io->stats.io_errors++;
-            return;
-        }
-        io->stats.packets++;
-        io->stats.bytes += slot->packet_len;
-        bbl_txq_read_next(txq);
-    }
-
-    /* Get TX timestamp */
-    //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-    io->timestamp.tv_sec = timer->timestamp->tv_sec;
-    io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-
-    /* Send traffic streams up to allowed burst. */
-    while(stream_packets++ < io->stream_burst) {
-        /* If sendto fails, the failed packet remains in TX buffer 
-         * to be retried in the next interval. */
-        if(io->buf_len) {
-            if(packet_is_bbl(io->buf, io->buf_len)) {
-                /* Update timestamp if BBL traffic is retried. */
-                *(uint32_t*)(io->buf + (io->buf_len - 8)) = io->timestamp.tv_sec;
-                *(uint32_t*)(io->buf + (io->buf_len - 4)) = io->timestamp.tv_nsec;
-            }
-        } else {
-            if(bbl_stream_tx(io, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
-                break;
-            }
-        }
-        if(sendto(io->fd, io->buf, io->buf_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) <0 ) {
-            if(errno == EMSGSIZE) {
-                io_raw_tx_lo_long(io);
+        /* First send all control traffic which has higher priority. */
+        while((slot = bbl_txq_read_slot(txq))) {
+            if(sendto(io->fd, slot->packet, slot->packet_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) >= 0 ) {
+                io->stats.packets++;
+                io->stats.bytes += slot->packet_len;
+                bbl_txq_read_next(txq);
+                if(burst) burst--;
             } else {
-                /* This packet will be retried next interval 
-                 * because io->buf_len is not reset to zero. */
                 LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
                     io->interface->name, strerror(errno), errno);
                 io->stats.io_errors++;
+                burst = 0;
                 break;
             }
-        } else {
-            io->stats.packets++;
-            io->stats.bytes += io->buf_len;
         }
-        io->buf_len = 0;
+
+        /* Get TX timestamp */
+        clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+
+        while(burst) {
+            /* Send traffic streams up to allowed burst. */
+            stream = bbl_stream_io_send_iter(io);
+            if(unlikely(stream == NULL)) {
+                break;
+            }
+            if(unlikely(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) >=0)) {
+                stream->tx_packets++;
+                stream->flow_seq++;
+                io->stats.packets++;
+                io->stats.bytes += stream->tx_len;
+                burst--;
+            } else {
+                if(errno == EMSGSIZE) {
+                    io->buf_len = stream->tx_len;
+                    io_raw_tx_lo_long(io);
+                    io->buf_len = 0;
+                } else {
+                    LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                        io->interface->name, strerror(errno), errno);
+                    io->stats.io_errors++;
+                    burst = 0;
+                }
+            }
+        }
     }
 }
 
@@ -280,9 +298,7 @@ io_raw_init(io_handle_s *io)
         if(io->direction == IO_INGRESS) {
             thread->run_fn = io_raw_thread_rx_run_fn;
         } else {
-            timer_add_periodic(&thread->timer.root, &thread->timer.io, "TX (threaded)", 0, 
-                config->tx_interval, thread, &io_raw_thread_tx_job);
-            thread->timer.io->reset = false;
+            thread->run_fn = io_raw_thread_tx_run_fn;
         }
     } else {
         if(io->direction == IO_INGRESS) {

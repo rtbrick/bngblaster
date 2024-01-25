@@ -459,6 +459,7 @@ link_add(char *interface_name)
     link_config = calloc(1, sizeof(bbl_link_config_s));
     link_config->interface = strdup(interface_name);
     link_config->io_mode = g_ctx->config.io_mode;
+    link_config->io_burst = g_ctx->config.io_burst;
     link_config->io_slots_rx = g_ctx->config.io_slots;
     link_config->io_slots_tx = g_ctx->config.io_slots;
     link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
@@ -479,11 +480,12 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 
     const char *schema[] = {
         "interface", "description", "mac",
-        "io-mode", "io-slots", "io-slots-tx",
-        "io-slots-rx", "qdisc-bypass", "tx-interval",
-        "rx-interval", "tx-threads", "rx-threads",
-        "rx-cpuset", "tx-cpuset", "lag-interface",
-        "lacp-priority"
+        "io-mode", "io-slots" "io-burst", 
+        "io-slots-tx", "io-slots-rx", "qdisc-bypass", 
+        "tx-interval","rx-interval", 
+        "tx-threads", "rx-threads",
+        "rx-cpuset", "tx-cpuset", 
+        "lag-interface", "lacp-priority"
     };
     if(!schema_validate(link, "links", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -553,7 +555,12 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     if(value) {
         link_config->io_slots_rx = json_number_value(value);
     }
-
+    JSON_OBJ_GET_NUMBER(link, value, "links", "io-burst", 1, 65535);
+    if(value) {
+        link_config->io_burst = json_number_value(value);
+    } else {
+        link_config->io_burst = g_ctx->config.io_burst;
+    }
     JSON_OBJ_GET_BOOL(link, value, "links", "qdisc-bypass");
     if(value) {
         link_config->qdisc_bypass = json_boolean_value(value);
@@ -2538,31 +2545,38 @@ json_parse_config_streams(json_t *root)
     bbl_stream_config_s *stream_config = g_ctx->config.stream_config;
 
     if(json_typeof(root) != JSON_OBJECT) {
-        fprintf(stderr, "JSON config error: Configuration root element must object\n");
+        fprintf(stderr, "JSON config error: Configuration root element must be of type object\n");
         return false;
     }
 
     section = json_object_get(root, "streams");
-    if(json_is_array(section)) {
-        /* Get tail end of stream-config list. */
-        if(stream_config) {
-            while(stream_config->next) {
-                stream_config = stream_config->next;
-            }
+    if(section) {
+        if(!json_is_array(section)) {
+            fprintf(stderr, "JSON config error: Configuration streams element must contain list of objects\n");
+            return false;
         }
-        /* Config is provided as array (multiple streams) */
-        size = json_array_size(section);
-        for(i = 0; i < size; i++) {
-            if(!stream_config) {
-                g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = g_ctx->config.stream_config;
-            } else {
-                stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
-                stream_config = stream_config->next;
-            }
-            if(!json_parse_stream(json_array_get(section, i), stream_config)) {
-                return false;
-            }
+    } else {
+        return true;
+    }
+
+    /* Get tail end of stream-config list. */
+    if(stream_config) {
+        while(stream_config->next) {
+            stream_config = stream_config->next;
+        }
+    }
+    /* Config is provided as array (multiple streams) */
+    size = json_array_size(section);
+    for(i = 0; i < size; i++) {
+        if(!stream_config) {
+            g_ctx->config.stream_config = calloc(1, sizeof(bbl_stream_config_s));
+            stream_config = g_ctx->config.stream_config;
+        } else {
+            stream_config->next = calloc(1, sizeof(bbl_stream_config_s));
+            stream_config = stream_config->next;
+        }
+        if(!json_parse_stream(json_array_get(section, i), stream_config)) {
+            return false;
         }
     }
     return true;
@@ -3571,7 +3585,7 @@ json_parse_config(json_t *root)
     if(json_is_object(section)) {
 
         const char *schema[] = {
-            "io-mode", "io-slots", "qdisc-bypass",
+            "io-mode", "io-slots", "io-burst", "qdisc-bypass",
             "tx-interval", "rx-interval", "tx-threads",
             "rx-threads", "capture-include-streams", "mac-modifier",
             "lag", "network", "access", "a10nsp", "links"
@@ -3607,6 +3621,11 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "interfaces", "io-slots", 32, 65535);
         if(value) {
             g_ctx->config.io_slots = json_number_value(value);
+        }
+        value = json_object_get(section, "io-burst");
+        JSON_OBJ_GET_NUMBER(section, value, "interfaces", "io-burst", 1, 65535);
+        if(value) {
+            g_ctx->config.io_burst = json_number_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "interfaces", "qdisc-bypass");
         if(value) {
@@ -4041,9 +4060,10 @@ bbl_config_init_defaults()
     g_ctx->pcap.include_streams = false;
     g_ctx->config.username = g_default_user;
     g_ctx->config.password = g_default_pass;
-    g_ctx->config.tx_interval = 1 * MSEC;
-    g_ctx->config.rx_interval = 1 * MSEC;
+    g_ctx->config.tx_interval = 0.1 * MSEC;
+    g_ctx->config.rx_interval = 0.1 * MSEC;
     g_ctx->config.io_slots = 4096;
+    g_ctx->config.io_burst = 256;
     g_ctx->config.io_max_stream_len = 9000;
     g_ctx->config.qdisc_bypass = true;
     g_ctx->config.sessions = 1;
@@ -4099,7 +4119,7 @@ bbl_config_init_defaults()
     g_ctx->config.multicast_traffic_pps = 1000;
     g_ctx->config.traffic_autostart = true;
     g_ctx->config.stream_rate_calc = true;
-    g_ctx->config.stream_max_burst = 32;
+    g_ctx->config.stream_max_burst = 16;
     g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }
