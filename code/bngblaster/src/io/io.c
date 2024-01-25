@@ -8,35 +8,3 @@
  */
 
 #include "io.h"
-
-void
-io_update_stream_token_bucket(io_handle_s *io)
-{
-    io->stream_tokens += io->stream_rate;
-    if(io->stream_tokens > io->stream_burst) {
-        io->stream_tokens = io->stream_burst;
-    }
-}
-
-void
-io_init_stream_token_bucket()
-{
-    bbl_interface_s *interface;
-    io_handle_s *io;
-    double rate;
-
-    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        io = interface->io.tx;
-        while(io) {
-            rate = (io->stream_pps / (io->interface->config->tx_interval / 1000)) * 1.3;
-            io->stream_rate = rate;
-            if(rate - (double)io->stream_rate) {
-                /* Roundup. */
-                io->stream_rate++;
-            }
-            io->stream_tokens = 0;
-            io->stream_burst = io->stream_rate * 3;
-            io = io->next;
-        }
-    }
-}

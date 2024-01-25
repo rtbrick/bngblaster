@@ -280,10 +280,6 @@ bbl_session_monkey_job(timer_s *timer) {
 /**
  * bbl_session_get
  *
- * This function allows to change the state of a session including
- * the required action caused by state changes.
- *
- * @param ctx global context
  * @param session_id session-id
  * @return session or NULL if session not found
  */
@@ -1749,25 +1745,18 @@ bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __a
 int
 bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
-    bbl_stream_s *stream;
-    struct dict_itor *itor;
+    bbl_stream_s *stream = g_ctx->stream_head;
     
     g_ctx->stats.session_traffic_flows_verified = 0;
 
     /* Iterate over all traffic streams */
-    itor = dict_itor_new(g_ctx->stream_flow_dict);
-    dict_itor_first(itor);
-    for (; dict_itor_valid(itor); dict_itor_next(itor)) {
-        stream = (bbl_stream_s*)*dict_itor_datum(itor);
-        if(!stream) {
-            continue;
-        }
+    while(stream) {
         if(stream->session && stream->session_traffic) {
             stream->session->session_traffic.flows_verified = 0;
             bbl_stream_reset(stream);
         }
+        stream = stream->next;
     }
-    dict_itor_free(itor);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 

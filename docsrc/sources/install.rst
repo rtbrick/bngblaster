@@ -157,16 +157,10 @@ The following steps are required to build the BNG Blaster with experimental
 
 .. note::
 
-    Tested with DPDK version 21.11.2 (LTS) and Ubuntu 22.04 (LTS)!
+    Tested with DPDK version 23.11 (LTS) and Ubuntu 22.04 (LTS)!
 
-It is recommended to install the DPDK development package if possible:
 
-.. code-block:: none
-
-    sudo apt install dpdk libdpdk-dev
-
-This package does not support all NIC types (e.g. Mellanox, ...),
-which requires downloading and installing DPDK manually:
+Download and install DPDK:
 https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
 
 .. code-block:: none
@@ -175,12 +169,12 @@ https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
     sudo apt install meson ninja-build
 
     # download DPDK
-    wget https://fast.dpdk.org/rel/dpdk-21.11.2.tar.xz
-    tar xJf dpdk-21.11.2.tar.xz
-    cd dpdk-stable-21.11.2
+    wget https://fast.dpdk.org/rel/dpdk-22.11.4.tar.xz
+    tar xJf dpdk-22.11.4.tar.xz
+    cd dpdk-stable-22.11.4
 
-    # build 
-    meson build 
+    # build with driver SDK
+    meson -Denable_driver_sdk=true build
     cd build
     ninja
 
@@ -200,9 +194,9 @@ If DPDK is installed correctly, cmake should show the following output:
 .. code-block:: none
 
     -- Build bngblaster with DPDK support
-    -- Found PkgConfig: /usr/bin/pkg-config (found version "0.29.2")
+    -- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.0")
     -- Checking for module 'libdpdk'
-    --   Found libdpdk, version 21.11.2
+    --   Found libdpdk, version 22.11.4
     -- Found DPDK via pkg-config
 
 The installed version should now show `dpdk` as new IO mode. 

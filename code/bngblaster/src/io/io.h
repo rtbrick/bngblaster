@@ -19,6 +19,7 @@
 #include "../bbl_txq.h"
 
 #include "io_def.h"
+#include "io_bucket.h"
 #include "io_socket.h"
 #include "io_interface.h"
 #include "io_thread.h"
@@ -29,11 +30,5 @@
 #ifdef BNGBLASTER_DPDK
 #include "io_dpdk.h"
 #endif
-
-void
-io_update_stream_token_bucket(io_handle_s *io);
-
-void
-io_init_stream_token_bucket();
 
 #endif
