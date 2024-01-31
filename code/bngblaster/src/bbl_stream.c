@@ -1236,9 +1236,9 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         bytes_delta = packets_delta * stream->tx_len;
         stream->last_sync_packets_tx = packets;
         bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
-        if(g_ctx->config.stream_rate_calc) {
-            bbl_compute_avg_rate(&stream->rate_packets_tx, stream->tx_packets);
-        }
+    }
+    if(g_ctx->config.stream_rate_calc) {
+        bbl_compute_avg_rate(&stream->rate_packets_tx, stream->tx_packets);
     }
     if(unlikely(stream->type == BBL_TYPE_MULTICAST)) {
         return;
@@ -1254,9 +1254,6 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         loss_delta = packets - stream->last_sync_loss;
         stream->last_sync_loss = packets;
         bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
-        if(g_ctx->config.stream_rate_calc) {
-            bbl_compute_avg_rate(&stream->rate_packets_rx, stream->rx_packets);
-        }
         if(unlikely(stream->rx_wrong_session)) {
             bbl_stream_rx_wrong_session(stream);
         }
@@ -1287,6 +1284,9 @@ bbl_stream_ctrl(bbl_stream_s *stream)
                 }
             }
         }
+    }
+    if(g_ctx->config.stream_rate_calc) {
+        bbl_compute_avg_rate(&stream->rate_packets_rx, stream->rx_packets);
     }
 }
 
