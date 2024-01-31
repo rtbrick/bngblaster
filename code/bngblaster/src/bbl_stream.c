@@ -2730,7 +2730,8 @@ bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), jso
 }
 
 static int
-bbl_stream_ctrl_start_stop(int fd, uint32_t session_id, int session_group_id, uint64_t flow_id, bool status)
+bbl_stream_ctrl_start_stop(int fd, uint32_t session_id, int session_group_id, 
+                           uint64_t flow_id, const char *name, bool status)
 {
     bbl_session_s *session;
     bbl_stream_s *stream = g_ctx->stream_head;
@@ -2747,7 +2748,13 @@ bbl_stream_ctrl_start_stop(int fd, uint32_t session_id, int session_group_id, ui
         if(session) {
             stream = session->streams.head;
             while(stream) {
-                stream->stop = status;
+                if(name) {
+                    if(strcmp(name, stream->config->name) == 0) {
+                        stream->stop = status;
+                    }
+                } else {
+                    stream->stop = status;
+                }
                 stream = stream->session_next;
             }
         } else {
@@ -2756,9 +2763,24 @@ bbl_stream_ctrl_start_stop(int fd, uint32_t session_id, int session_group_id, ui
     } else {
         /* Iterate over all traffic streams */
         while(stream) {
-            if(!(session_group_id && stream->session && 
-                 stream->session->session_group_id != session_group_id)) {
-                stream->stop = status;
+            if(session_group_id >= 0) {
+                if(stream->session && stream->session->session_group_id == session_group_id) {
+                    if(name) {
+                        if(strcmp(name, stream->config->name) == 0) {
+                            stream->stop = status;
+                        }
+                    } else {
+                        stream->stop = status;
+                    }
+                }
+            } else {
+                if(name) {
+                    if(strcmp(name, stream->config->name) == 0) {
+                        stream->stop = status;
+                    }
+                } else {
+                    stream->stop = status;
+                }
             }
             stream = stream->next;
         }
@@ -2772,6 +2794,7 @@ bbl_stream_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
     int session_group_id = -1;
     int number = 0;
     uint64_t flow_id = 0;
+    const char *name = NULL;
 
     if(json_unpack(arguments, "{s:i}", "flow-id", &number) == 0) {
         flow_id = number;
@@ -2781,7 +2804,8 @@ bbl_stream_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
             return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
         }
     }
-    return bbl_stream_ctrl_start_stop(fd, session_id, session_group_id, flow_id, false);
+    json_unpack(arguments, "{s:s}", "name", &name);
+    return bbl_stream_ctrl_start_stop(fd, session_id, session_group_id, flow_id, name, false);
 }
 
 int
@@ -2790,6 +2814,7 @@ bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
     int session_group_id = -1;
     int number = 0;
     uint64_t flow_id = 0;
+    const char *name = NULL;
 
     if(json_unpack(arguments, "{s:i}", "flow-id", &number) == 0) {
         flow_id = number;
@@ -2799,5 +2824,6 @@ bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
             return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
         }
     }
-    return bbl_stream_ctrl_start_stop(fd, session_id, session_group_id, flow_id, true);
+    json_unpack(arguments, "{s:s}", "name", &name);
+    return bbl_stream_ctrl_start_stop(fd, session_id, session_group_id, flow_id, name, true);
 }
