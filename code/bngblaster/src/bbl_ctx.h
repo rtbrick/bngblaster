@@ -345,6 +345,7 @@ typedef struct bbl_ctx_
         bool traffic_stop_verified;
         bool stream_rate_calc; /* Enable/disable stream rate calculation */
         bool stream_delay_calc; /* Enable/disable stream delay calculation */
+        bool stream_udp_checksum; /* Enable/disable stream UDP checksum calculation */
 
         uint8_t stream_max_burst; /* Limit the max packets per TX interval */
 
