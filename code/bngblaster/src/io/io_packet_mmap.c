@@ -161,7 +161,7 @@ io_packet_mmap_tx_job(timer_s *timer)
             }
             io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
 
-            if(ctrl) {
+            if(unlikely(ctrl)) {
                 /* First send all control traffic which has higher priority. */
                 if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
                     ctrl = false;
@@ -169,11 +169,13 @@ io_packet_mmap_tx_job(timer_s *timer)
                 }
             } else {
                 stream = bbl_stream_io_send_iter(io);
-                if(!stream) {
+                if(unlikely(stream == NULL)) {
                     break;
                 }
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
                 io->buf_len = stream->tx_len;
+                stream->tx_packets++;
+                stream->flow_seq++;
             } 
             tphdr->tp_len = io->buf_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
@@ -315,7 +317,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
             }
             io->buf = frame_ptr + TPACKET2_HDRLEN - sizeof(struct sockaddr_ll);
 
-            if(ctrl) {
+            if(unlikely(ctrl)) {
                 /* First send all control traffic which has higher priority. */
                 slot = bbl_txq_read_slot(txq);
                 if(slot) {
@@ -329,11 +331,13 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
             } else {
                 /* Send traffic streams up to allowed burst. */
                 stream = bbl_stream_io_send_iter(io);
-                if(!stream) {
+                if(unlikely(stream == NULL)) {
                     break;
                 }
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
                 io->buf_len = stream->tx_len;
+                stream->tx_packets++;
+                stream->flow_seq++;
             }
 
             tphdr->tp_len = io->buf_len;
