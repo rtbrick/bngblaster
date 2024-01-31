@@ -72,7 +72,7 @@ bbl_checksum(uint8_t *buf, uint16_t len)
     return ~_fold(_checksum(buf, len));
 }
 
-static uint16_t
+uint16_t
 bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len)
 {
     uint32_t result;
@@ -97,7 +97,7 @@ bbl_ipv4_tcp_checksum(uint32_t src, uint32_t dst, uint8_t *tcp, uint16_t tcp_len
     return ~_fold(result);
 }
 
-static uint16_t
+uint16_t
 bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp_len)
 {
     uint32_t result;
@@ -3254,7 +3254,7 @@ decode_udp(uint8_t *buf, uint16_t len,
 
     bbl_udp_s *udp;
 
-    if(len < 8 || sp_len < sizeof(bbl_udp_s)) {
+    if(len < UDP_HDR_LEN || sp_len < sizeof(bbl_udp_s)) {
         return DECODE_ERROR;
     }
 
@@ -3266,8 +3266,12 @@ decode_udp(uint8_t *buf, uint16_t len,
     udp->dst = be16toh(*(uint16_t*)buf);
     BUMP_BUFFER(buf, len, sizeof(uint16_t));
     udp->payload_len = be16toh(*(uint16_t*)buf);
-    udp->payload_len -= 8;
     BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* len + checksum */
+
+    if(udp->payload_len < UDP_HDR_LEN) {
+        return DECODE_ERROR;
+    }
+    udp->payload_len -= UDP_HDR_LEN;
 
     if(udp->payload_len > len) {
         return DECODE_ERROR;

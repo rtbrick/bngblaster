@@ -3358,7 +3358,8 @@ json_parse_config(json_t *root)
         const char *schema[] = {
             "autostart", "stop-verified", "max-burst",
             "stream-rate-calculation",
-            "stream-delay-calculation"
+            "stream-delay-calculation",
+            "udp-checksum"
         };
         if(!schema_validate(section, "traffic", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -3384,6 +3385,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "traffic", "stream-delay-calculation");
         if(value) {
             g_ctx->config.stream_delay_calc = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "traffic", "udp-checksum");
+        if(value) {
+            g_ctx->config.stream_udp_checksum = json_boolean_value(value);
         }
     }
 

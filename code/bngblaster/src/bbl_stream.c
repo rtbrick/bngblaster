@@ -1409,6 +1409,21 @@ bbl_stream_update_tcp(bbl_stream_s *stream)
     }
 }
 
+static void
+bbl_stream_update_udp(bbl_stream_s *stream)
+{
+    uint16_t  udp_len = stream->tx_bbl_hdr_len + UDP_HDR_LEN;
+    uint8_t  *udp_buf = (uint8_t*)(stream->tx_buf + (stream->tx_len - udp_len));
+    uint16_t *checksum = (uint16_t*)(udp_buf+6);
+
+    *checksum = 0;
+    if(stream->ipv6_src && stream->ipv6_dst) {
+        *checksum = bbl_ipv6_udp_checksum(stream->ipv6_src, stream->ipv6_dst, udp_buf, udp_len);
+    } else {
+        *checksum = bbl_ipv4_udp_checksum(stream->ipv4_src, stream->ipv4_dst, udp_buf, udp_len);
+    }
+}
+
 static bool
 bbl_stream_lag(bbl_stream_s *stream)
 {
@@ -1544,6 +1559,8 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     *(uint32_t*)(stream->tx_buf + (stream->tx_len - 4)) = io->timestamp.tv_nsec;
     if(stream->tcp) {
         bbl_stream_update_tcp(stream);
+    } else if(g_ctx->config.stream_udp_checksum) {
+        bbl_stream_update_udp(stream);
     }
     if(unlikely(stream->flow_seq == 1)) {
         stream->tx_first_epoch = io->timestamp.tv_sec;

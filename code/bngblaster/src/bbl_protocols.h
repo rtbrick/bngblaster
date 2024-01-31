@@ -270,6 +270,7 @@
 #define CMF_MA_NAME_FORMAT_STRING       2
 
 #define TCP_HDR_LEN_MIN                 20
+#define UDP_HDR_LEN                     8
 
 #define MAX_VLANS                       3
 
@@ -805,10 +806,10 @@ typedef struct bbl_ipv6_ {
 typedef struct bbl_udp_ {
     uint16_t    src;
     uint16_t    dst;
+    uint16_t    payload_len; /* UDP payload length */
     uint8_t     protocol;
     void       *next; /* next header */
     void       *payload; /* UDP payload */
-    uint16_t    payload_len; /* UDP payload length */
 } bbl_udp_s;
 
 /*
@@ -1027,7 +1028,13 @@ uint16_t
 bbl_checksum(uint8_t *buf, uint16_t len);
 
 uint16_t
+bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len);
+
+uint16_t
 bbl_ipv4_tcp_checksum(uint32_t src, uint32_t dst, uint8_t *tcp, uint16_t tcp_len);
+
+uint16_t
+bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp_len);
 
 uint16_t
 bbl_ipv6_tcp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *tcp, uint16_t tcp_len);
