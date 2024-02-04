@@ -1835,7 +1835,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
             packet = NULL;
 
             id++;
-            if (id > 255) {
+            if (id > MAX_ISIS_FRAGMENT-1) {
                 dict_itor_free(itor);
                 LOG(ERROR, "Exhausted fragments for node %s\n", lsdb_format_node(node));
                 return;
@@ -1949,7 +1949,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
             packet = NULL;
 
             id++;
-            if (id > 255) {
+            if (id > MAX_OSPF_PACKET-1) {
                 dict_itor_free(itor);
                 LOG(ERROR, "Exhausted packets for node %s\n", lsdb_format_node(node));
                 return;
