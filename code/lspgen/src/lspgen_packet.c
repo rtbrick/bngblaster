@@ -85,85 +85,19 @@ void
 lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
     switch (ctx->protocol_id) {
-    case PROTO_ISIS:
-	lspgen_gen_isis_packet_header(ctx, node, packet);
-	break;
-    case PROTO_OSPF2:
-	break;
-    case PROTO_OSPF3:
-	break;
-    default:
-	LOG_NOARG(ERROR, "Unknown protocol\n");
+        case PROTO_ISIS:
+            lspgen_gen_isis_packet_header(ctx, node, packet);
+            break;
+        case PROTO_OSPF2:
+            break;
+        case PROTO_OSPF3:
+            break;
+        default:
+	        LOG_NOARG(ERROR, "Unknown protocol\n");
     }
 }
 
-/*
- * Fletcher checksum verification. should return 0 if embedded checksum is correct.
- * Only used for debug purposes here.
- */
-uint16_t
-validate_fletcher_cksum(const uint8_t *pptr, uint length)
-{
-
-    uint64_t c0, c1;
-    uint idx;
-
-    c0 = 0;
-    c1 = 0;
-
-    for (idx = 0; idx < length; idx++) {
-	c0 = c0 + *(pptr++);
-	c1 += c0;
-    }
-
-    c0 = c0 % 255;
-    c1 = c1 % 255;
-
-    return (c1 << 8 | c0);
-}
-
-/*
- * Creates the OSI Fletcher checksum. See 8473-1, Appendix C, section C.3.
- * The checksum field of the passed PDU does not need to be reset to zero.
- */
-uint16_t
-calculate_fletcher_cksum(const uint8_t *pptr, uint checksum_offset, uint length)
-{
-
-    int64_t c0, c1;
-    uint idx;
-
-    c0 = 0;
-    c1 = 0;
-
-    for (idx = 0; idx < length; idx++) {
-        /*
-         * Ignore the contents of the checksum field.
-         */
-        if (idx == checksum_offset || idx == checksum_offset+1) {
-            c1 += c0;
-            pptr++;
-        } else {
-            c0 = c0 + *(pptr++);
-            c1 += c0;
-        }
-    }
-
-    c0 = c0 % 255;
-    c1 = (c1 - (length - checksum_offset) * c0) % 255;
-    if (c1 <= 0) {
-	c1 += 255;
-    }
-
-    c0 = 255 - c1 - c0;
-    if (c0 <= 0 ) {
-	c0 += 255;
-    }
-
-    return (c0 << 8 | c1);
-}
-
-uint32_t
+static uint32_t
 _checksum(void *buf, ssize_t len)
 {
     uint32_t result = 0;
@@ -179,7 +113,7 @@ _checksum(void *buf, ssize_t len)
     return result;
 }
 
-uint32_t
+static uint32_t
 _fold(uint32_t sum)
 {
     while(sum >> 16) {
@@ -313,10 +247,10 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
      * Calculate Checksum
      */
     write_be_uint(buf->data+24, 2, 0); /* reset checksum field */
-    checksum = calculate_fletcher_cksum(buf->data+12, 12, buf->idx-12);
+    checksum = calculate_fletcher_checksum(buf->data+12, 12, buf->idx-12);
     write_be_uint(buf->data+24, 2, checksum);
-    if (log_id[DEBUG].enable && validate_fletcher_cksum(buf->data+12, buf->idx-12)) {
-	LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+    if (log_id[DEBUG].enable && validate_fletcher_checksum(buf->data+12, buf->idx-12)) {
+	    LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
     }
 }
 
@@ -835,10 +769,10 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update length */
 
 	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
-	    checksum = calculate_fletcher_cksum(buf1->data+2, 14, buf1->idx-2);
+	    checksum = calculate_fletcher_checksum(buf1->data+2, 14, buf1->idx-2);
 	    write_be_uint(buf1->data+16, 2, checksum); /* LSA Checksum */
-	    if (log_id[DEBUG].enable && validate_fletcher_cksum(buf1->data+2, buf1->idx-2)) {
-		LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+	    if (log_id[DEBUG].enable && validate_fletcher_checksum(buf1->data+2, buf1->idx-2)) {
+		    LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
 	    }
 	    break;
 	default:
@@ -1154,10 +1088,10 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    inc_be_uint(buf0->data+40+16, 4); /* Update #LSAs */
 	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update Packet length */
 	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
-	    checksum = calculate_fletcher_cksum(buf1->data+2, 14, buf1->idx-2);
+	    checksum = calculate_fletcher_checksum(buf1->data+2, 14, buf1->idx-2);
 	    write_be_uint(buf1->data+16, 2, checksum); /* Update LSA Checksum */
-	    if (log_id[DEBUG].enable && validate_fletcher_cksum(buf1->data+2, buf1->idx-2)) {
-		LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+	    if (log_id[DEBUG].enable && validate_fletcher_checksum(buf1->data+2, buf1->idx-2)) {
+		    LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
 	    }
 	    break;
 	}

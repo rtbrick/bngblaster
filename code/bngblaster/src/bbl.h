@@ -25,7 +25,6 @@
 #include "bbl_def.h"
 
 #include "bbl_protocols.h"
-#include "bbl_checksum.h"
 #include "io/io_def.h"
 #include "bgp/bgp_def.h"
 #include "isis/isis_def.h"
