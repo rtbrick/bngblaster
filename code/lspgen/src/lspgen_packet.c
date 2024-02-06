@@ -98,7 +98,31 @@ lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *pack
 }
 
 /*
- * From tcpdump.org.
+ * Fletcher checksum verification. should return 0 if embedded checksum is correct.
+ * Only used for debug purposes here.
+ */
+uint16_t
+validate_fletcher_cksum(const uint8_t *pptr, uint length)
+{
+
+    uint64_t c0, c1;
+    uint idx;
+
+    c0 = 0;
+    c1 = 0;
+
+    for (idx = 0; idx < length; idx++) {
+	c0 = c0 + *(pptr++);
+	c1 += c0;
+    }
+
+    c0 = c0 % 255;
+    c1 = c1 % 255;
+
+    return (c1 << 8 | c0);
+}
+
+/*
  * Creates the OSI Fletcher checksum. See 8473-1, Appendix C, section C.3.
  * The checksum field of the passed PDU does not need to be reset to zero.
  */
@@ -106,8 +130,7 @@ uint16_t
 calculate_fletcher_cksum(const uint8_t *pptr, uint checksum_offset, uint length)
 {
 
-    int64_t x, y;
-    uint64_t mul, c0, c1;
+    int64_t c0, c1;
     uint idx;
 
     c0 = 0;
@@ -127,23 +150,17 @@ calculate_fletcher_cksum(const uint8_t *pptr, uint checksum_offset, uint length)
     }
 
     c0 = c0 % 255;
-    c1 = c1 % 255;
+    c1 = (c1 - (length - checksum_offset) * c0) % 255;
+    if (c1 <= 0) {
+	c1 += 255;
+    }
 
-    mul = (length - checksum_offset) * c0;
+    c0 = 255 - c1 - c0;
+    if (c0 <= 0 ) {
+	c0 += 255;
+    }
 
-    x = mul - c0 - c1;
-    y = c1 - mul - 1;
-
-    if ( y > 0 ) y++;
-    if ( x < 0 ) x--;
-
-    x %= 255;
-    y %= 255;
-
-    if (x == 0) x = 255;
-    if (y == 0) y = 1;
-
-    return ((x << 8) | (y & 0xff));
+    return (c0 << 8 | c1);
 }
 
 uint32_t
@@ -298,6 +315,9 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
     write_be_uint(buf->data+24, 2, 0); /* reset checksum field */
     checksum = calculate_fletcher_cksum(buf->data+12, 12, buf->idx-12);
     write_be_uint(buf->data+24, 2, checksum);
+    if (log_id[DEBUG].enable && validate_fletcher_cksum(buf->data+12, buf->idx-12)) {
+	LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+    }
 }
 
 /*
@@ -817,6 +837,9 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
 	    checksum = calculate_fletcher_cksum(buf1->data+2, 14, buf1->idx-2);
 	    write_be_uint(buf1->data+16, 2, checksum); /* LSA Checksum */
+	    if (log_id[DEBUG].enable && validate_fletcher_cksum(buf1->data+2, buf1->idx-2)) {
+		LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+	    }
 	    break;
 	default:
 	    break;
@@ -1133,6 +1156,9 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
 	    checksum = calculate_fletcher_cksum(buf1->data+2, 14, buf1->idx-2);
 	    write_be_uint(buf1->data+16, 2, checksum); /* Update LSA Checksum */
+	    if (log_id[DEBUG].enable && validate_fletcher_cksum(buf1->data+2, buf1->idx-2)) {
+		LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+	    }
 	    break;
 	}
 
