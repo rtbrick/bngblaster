@@ -387,7 +387,7 @@ static bool
 ospf_lsa_verify_checksum(ospf_lsa_header_s *hdr)
 {
     uint16_t checksum = 0;
-    uint16_t checksum_orig = be16toh(hdr->checksum);
+    uint16_t checksum_orig = hdr->checksum;
     uint16_t len = be16toh(hdr->length);
  
     if(len < sizeof(ospf_lsa_header_s)) return false;
@@ -396,7 +396,9 @@ ospf_lsa_verify_checksum(ospf_lsa_header_s *hdr)
                     &hdr->options, 
                     OSPF_LSA_CHECKSUM_OFFSET-OSPF_LSA_AGE_LEN, 
                     len-OSPF_LSA_AGE_LEN);
+    hdr->checksum = checksum_orig;
 
+    checksum_orig = be16toh(checksum_orig);
     if(checksum == checksum_orig) {
         return true;
     } else {
