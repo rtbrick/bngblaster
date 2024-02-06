@@ -108,3 +108,21 @@ ospf_rx_error(bbl_network_interface_s *interface, ospf_pdu_s *pdu, const char *e
     interface->stats.ospf_rx_error++;
 }
 
+char *
+ospf_lsa_hdr_string(ospf_lsa_header_s *hdr)
+{
+    static char buffer[8][OSPF_LSA_HDR_STRING_LEN];
+    static int idx = 0;
+    char *ret;
+    ret = buffer[idx];
+    idx = (idx+1) & 7;
+
+    uint32_t id = hdr->id; 
+    uint32_t router = hdr->router;
+    snprintf(ret, OSPF_LSA_HDR_STRING_LEN, "TYPE%u:%s:%s:%04x", 
+            hdr->type, 
+            format_ipv4_address(&id),
+            format_ipv4_address(&router),
+            be32toh(hdr->seq));
+    return ret;
+}

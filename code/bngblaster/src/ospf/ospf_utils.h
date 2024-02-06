@@ -33,4 +33,7 @@ ospf_pdu_type_string(uint8_t type);
 void
 ospf_rx_error(bbl_network_interface_s *interface, ospf_pdu_s *pdu, const char *error);
 
+char *
+ospf_lsa_hdr_string(ospf_lsa_header_s *hdr);
+
 #endif

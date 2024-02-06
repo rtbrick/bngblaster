@@ -389,12 +389,14 @@ ospf_lsa_verify_checksum(ospf_lsa_header_s *hdr)
  
     if(len < sizeof(ospf_lsa_header_s)) return false;
 
-    checksum = bbl_checksum_fletcher16(&hdr->options, len-OSPF_LSA_AGE_LEN, 14);
+    checksum = bbl_checksum_fletcher16(&hdr->options, len-OSPF_LSA_AGE_LEN, 
+                                       OSPF_LSA_CHECKSUM_OFFSET-OSPF_LSA_AGE_LEN);
     hdr->checksum = checksum_orig;
 
     if(checksum == checksum_orig) {
         return true;
     } else {
+        LOG(ERROR, "OSPF LSA checksum error (expected %04x received %04x)\n", checksum, checksum_orig);
         return false;
     }
 }
@@ -1962,7 +1964,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
     uint16_t lsa_len;
     uint8_t  lsa_type;
 
-     struct timespec now;
+    struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
     while(len >= OSPF_LSA_HDR_LEN && lsa_count) {
@@ -1971,12 +1973,12 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
 
         lsa_type = hdr->type;
         if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
-            LOG(ERROR, "Failed to decode external OSPF LSA (invalid LSA type %u)\n", lsa_type);
+            LOG(ERROR, "Failed to decode external OSPF LSA %s (invalid LSA type %u)\n", ospf_lsa_hdr_string(hdr), lsa_type);
             return false;
         }
         lsa_len = be16toh(hdr->length);
         if(lsa_len > len) {
-            LOG(ERROR, "Failed to decode external OSPF LSA (invalid LSA len %u)\n", lsa_len);
+            LOG(ERROR, "Failed to decode external OSPF LSA %s (invalid LSA len %u)\n", ospf_lsa_hdr_string(hdr), lsa_len);
             return false;
         }
 
@@ -1985,7 +1987,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         lsa_count--;
 
         if(!ospf_lsa_verify_checksum(hdr)) {
-            LOG_NOARG(ERROR, "Failed to decode external OSPF LSA (invalid LSA checksum)\n"); 
+            LOG(ERROR, "Failed to decode external OSPF LSA %s (invalid LSA checksum)\n", ospf_lsa_hdr_string(hdr)); 
             return false;
         }
 
@@ -2000,7 +2002,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
             if(result.inserted) {
                 *result.datum_ptr = lsa;
             } else {
-                LOG_NOARG(OSPF, "Failed to add external OSPF LSA to LSDB\n");
+                LOG(OSPF, "Failed to add external OSPF LSA %s to LSDB\n", ospf_lsa_hdr_string(hdr));
                 return false;
             }
         }
