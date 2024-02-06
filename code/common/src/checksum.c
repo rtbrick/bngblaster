@@ -43,23 +43,49 @@ validate_fletcher_checksum(const uint8_t *pptr, uint length)
  * The checksum field of the passed PDU does not need to be reset to zero.
  */
 uint16_t
-calculate_fletcher_checksum(const uint8_t *pptr, uint checksum_offset, uint length)
+calculate_fletcher_checksum(uint8_t *pptr, uint checksum_offset, uint length)
 {
     int64_t c0, c1;
-    uint idx;
+    int tlen;
 
     c0 = 0;
     c1 = 0;
 
-    for (idx = 0; idx < length; idx++) {
-        /* * Ignore the contents of the checksum field. */
-        if (idx == checksum_offset || idx == checksum_offset+1) {
-            c1 += c0;
-            pptr++;
-        } else {
-            c0 = c0 + *(pptr++);
-            c1 += c0;
-        }
+    /* reset checksum field */
+    *(pptr + checksum_offset) = 0;
+    *(pptr + checksum_offset + 1) = 0;
+
+    /* 10x loop unrolling */
+    tlen = length;
+    while (tlen >= 10) {
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+      c0 += *pptr++;
+      c1 += c0;
+
+      tlen -= 10;
+    }
+
+    /* remainder */
+    while (--tlen >= 0) {
+      c0 += *pptr++;
+      c1 += c0;
     }
 
     c0 = c0 % 255;

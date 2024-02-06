@@ -16,6 +16,6 @@ uint16_t
 validate_fletcher_checksum(const uint8_t *pptr, uint length);
 
 uint16_t
-calculate_fletcher_checksum(const uint8_t *pptr, uint checksum_offset, uint length);
+calculate_fletcher_checksum(uint8_t *pptr, uint checksum_offset, uint length);
 
 #endif
