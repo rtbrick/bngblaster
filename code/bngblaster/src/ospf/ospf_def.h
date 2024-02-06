@@ -66,6 +66,7 @@
 #define OSPF_LSA_MAX_AGE_DIFF               900 /* 15 minutes */
 #define OSPF_LSA_SEQ_INIT                   0x80000000
 #define OSPF_LSA_SEQ_MAX                    0x7fffffff
+#define OSPF_LSA_CHECKSUM_OFFSET            16
 
 #define OSPF_LSA_BORDER_ROUTER              0x01
 #define OSPF_LSA_EXTERNAL_ROUTER            0x02
@@ -162,6 +163,8 @@
 #define OSPF_MD5_DIGEST_LEN                 16
 
 #define OSPFV2_EXT_PREFIX_TLV               1
+
+#define OSPF_LSA_HDR_STRING_LEN             sizeof("TYPE255:255.255.255.255:255.255.255.255:FFFFFFFF")
 
 typedef struct ospf_config_ ospf_config_s;
 typedef struct ospf_instance_ ospf_instance_s;
