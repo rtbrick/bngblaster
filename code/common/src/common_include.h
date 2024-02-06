@@ -15,5 +15,6 @@
 #include "utils.h"
 #include "logging.h"
 #include "timer.h"
+#include "checksum.h"
 
 #endif
