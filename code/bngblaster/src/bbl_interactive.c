@@ -235,11 +235,11 @@ bbl_interactive_read_key_job(timer_s *timer)
             bbl_interactive_init_window();
             break;
         case KEY_F(7):
-            enable_disable_traffic(true);
+            global_traffic_enable(true);
             LOG_NOARG(INFO, "Start traffic\n");
             break;
         case KEY_F(8):
-            enable_disable_traffic(false);
+            global_traffic_enable(false);
             LOG_NOARG(INFO, "Stop traffic\n");
             break;
         case KEY_F(9):

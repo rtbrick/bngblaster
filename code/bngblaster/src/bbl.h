@@ -68,6 +68,6 @@ time_t
 test_duration();
 
 void
-enable_disable_traffic(bool status);
+global_traffic_enable(bool status);
 
 #endif

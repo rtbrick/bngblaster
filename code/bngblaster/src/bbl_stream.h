@@ -74,22 +74,44 @@ typedef struct bbl_stream_group_
     bbl_stream_group_s *next;
 } bbl_stream_group_s;
 
+/**
+ * In the architecture of BNG Blaster, every traffic stream 
+ * corresponds to one or two flows, namely upstream and downstream. 
+ * Each flow is encapsulated within a bbl_stream_s structure and is 
+ * assigned a unique 64-bit flow identifier. The structure is organized 
+ * into three distinct sections, each separated by cache-line aligned 
+ * padding (pad0 and pad1). The first section is dedicated to writes 
+ * by the main thread, the second section by the TX thread, and the 
+ * final section by the RX thread. This design was used to allow 
+ * lock-free but thread-safe access across different threads.
+ */
 typedef struct bbl_stream_
 {
-    uint64_t flow_id;
-    uint64_t flow_seq;
+    uint64_t last_sync_packets_tx;
+    uint64_t last_sync_packets_rx;
+    uint64_t last_sync_loss;
+    uint64_t last_sync_wrong_session;
 
+    uint64_t reset_packets_tx;
+    uint64_t reset_packets_rx;
+    uint64_t reset_loss;
+    uint64_t reset_wrong_session;
+
+    bbl_rate_s rate_packets_tx;
+    bbl_rate_s rate_packets_rx;
+
+    uint64_t flow_id; /* KEY */
     uint8_t type;
     uint8_t sub_type;
     uint8_t direction;
 
+    bool enabled;
+    bool active;
     bool threaded;
     bool session_traffic;
-    bool active;
     bool setup;
     bool verified;
     bool wait;
-    bool stop;
     bool reset;
     bool nat;
     bool tcp;
@@ -124,13 +146,15 @@ typedef struct bbl_stream_
     io_handle_s *io;
     io_bucket_s *io_bucket;
 
-    bbl_access_interface_s *access_interface;
-    bbl_network_interface_s *network_interface;
-    bbl_a10nsp_interface_s *a10nsp_interface;
-
+    bbl_access_interface_s *tx_access_interface;
+    bbl_network_interface_s *tx_network_interface;
+    bbl_a10nsp_interface_s *tx_a10nsp_interface;
     bbl_interface_s *tx_interface; /* TX interface */
     ldp_db_entry_s *ldp_entry;
 
+    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+
+    uint64_t flow_seq;
     uint64_t tx_packets;
     uint64_t tokens;
     uint64_t tokens_burst;
@@ -140,7 +164,7 @@ typedef struct bbl_stream_
 
     struct timespec wait_start;
 
-    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+    char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
     uint64_t rx_packets;
     uint64_t rx_loss;
@@ -176,21 +200,6 @@ typedef struct bbl_stream_
     bbl_access_interface_s *rx_access_interface;
     bbl_network_interface_s *rx_network_interface;
     bbl_a10nsp_interface_s *rx_a10nsp_interface;
-
-    char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
-
-    uint64_t last_sync_packets_tx;
-    uint64_t last_sync_packets_rx;
-    uint64_t last_sync_loss;
-    uint64_t last_sync_wrong_session;
-
-    uint64_t reset_packets_tx;
-    uint64_t reset_packets_rx;
-    uint64_t reset_loss;
-    uint64_t reset_wrong_session;
-
-    bbl_rate_s rate_packets_tx;
-    bbl_rate_s rate_packets_rx;
 
 } bbl_stream_s;
 
