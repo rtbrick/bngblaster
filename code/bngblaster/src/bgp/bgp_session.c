@@ -116,7 +116,7 @@ bgp_raw_update_stop_cb(void *arg)
             session->interface->name,
             session->local_address_str,
             session->peer_address_str);
-        enable_disable_traffic(true);
+        global_traffic_enable(true);
     }
 }
 

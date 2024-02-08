@@ -17,6 +17,18 @@ extern volatile bool g_teardown;
 extern volatile bool g_teardown_request;
 extern volatile bool g_monkey;
 
+static void
+bbl_session_traffic_enable(bool enabled, bbl_session_s *session, uint8_t direction)
+{
+    bbl_stream_s *stream = session->streams.head;
+    while(stream) {
+        if(stream->session_traffic && stream->direction & direction) {
+            stream->enabled = enabled;
+        }
+        stream = stream->session_next;
+    }
+}
+
 const char *
 session_state_string(uint32_t state)
 {
@@ -988,15 +1000,13 @@ bbl_sessions_init()
         }
 
         /* Streams */
-        session->session_traffic.active = access_config->session_traffic_autostart;
         session->streams.group_id = access_config->stream_group_id;
-        session->streams.active = true;
-
         if(!bbl_stream_session_init(session)) {
             LOG_NOARG(ERROR, "Failed to create session traffic stream!\n");
             return false;
         }
-        
+        bbl_session_traffic_enable(access_config->session_traffic_autostart, session, BBL_DIRECTION_BOTH);
+
         if(!bbl_tcp_session_init(session)) {
             LOG_NOARG(ERROR, "Failed to create session TCP interface!\n");
             return false;
@@ -1706,15 +1716,35 @@ bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __at
 }
 
 static int
-bbl_session_ctrl_traffic(int fd, uint32_t session_id, bool status)
+bbl_session_ctrl_traffic(int fd, uint32_t session_id, json_t *arguments, bool enabled)
 {
     bbl_session_s *session;
+    const char *s = NULL;
     uint32_t i;
+    uint8_t direction = BBL_DIRECTION_BOTH;
+
+    int session_group_id = -1;
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "direction", &s) == 0) {
+        if(strcmp(s, "upstream") == 0) {
+            direction = BBL_DIRECTION_UP;
+        } else if(strcmp(s, "downstream") == 0) {
+            direction = BBL_DIRECTION_DOWN;
+        } else if(strcmp(s, "both") == 0) {
+            direction = BBL_DIRECTION_BOTH;
+        } else {
+            return bbl_ctrl_status(fd, "error", 400, "invalid direction");
+        }
+    }
+
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
-            session->session_traffic.active = status;
-            return bbl_ctrl_status(fd, "ok", 200, NULL);
+            bbl_session_traffic_enable(enabled, session, direction);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
@@ -1723,23 +1753,25 @@ bbl_session_ctrl_traffic(int fd, uint32_t session_id, bool status)
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session) {
-                session->session_traffic.active = status;
+                if((session_group_id < 0) || session->session_group_id == session_group_id) {
+                    bbl_session_traffic_enable(enabled, session, direction);
+                }
             }
         }
-        return bbl_ctrl_status(fd, "ok", 200, NULL);
     }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
 int
 bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
 {
-    return bbl_session_ctrl_traffic(fd, session_id, true);
+    return bbl_session_ctrl_traffic(fd, session_id, arguments, true);
 }
 
 int
 bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
 {
-    return bbl_session_ctrl_traffic(fd, session_id, false);
+    return bbl_session_ctrl_traffic(fd, session_id, arguments, false);
 }
 
 int

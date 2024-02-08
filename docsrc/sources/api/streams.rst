@@ -10,35 +10,20 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **stream-summary**                | | Display stream/flow summary information.                           |
 +-----------------------------------+----------------------------------------------------------------------+
-| **stream-traffic-start**          | | Enable/start traffic streams bound to sessions.                    |
-|                                   | |                                                                    |
-|                                   | | **Arguments:**                                                     |
-|                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
-+-----------------------------------+----------------------------------------------------------------------+
-| **stream-traffic-stop**           | | Disable/stop traffic streams bound to sessions.                    |
-|                                   | |                                                                    |
-|                                   | | **Arguments:**                                                     |
-|                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
-+-----------------------------------+----------------------------------------------------------------------+
 | **stream-reset**                  | | Reset all traffic streams.                                         |
 +-----------------------------------+----------------------------------------------------------------------+
-| **stream-start**                  | | Enable/start traffic streams/flows. This command also applies to   |
-|                                   | | RAW stream which are not bould to sessions.                        |
+| **stream-start**                  | | This command can be used to start or stop traffic stream flows.    |
+| **stream-stop**                   | | This command applies to all flows except session-traffic and       |
+|                                   | | multicast. If you provide a specific ``flow-id`` as an argument,   |
+|                                   | | other arguments are ignored. In this particular case, you can also |
+|                                   | | start and stop session-traffic and multicast.                      |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
-|                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
 |                                   | | ``flow-id``                                                        |
-+-----------------------------------+----------------------------------------------------------------------+
-| **stream-stop**                   | | Disable/stop traffic streams/flows. This command also applies to   |
-|                                   | | RAW stream which are not bould to sessions.                        |
-|                                   | |                                                                    |
-|                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
-|                                   | | ``flow-id``                                                        |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
+|                                   | | ``name``                                                           |
+|                                   | | ``direction`` [both(default), upstream, downstream]                |
 +-----------------------------------+----------------------------------------------------------------------+
-| **streams-pending**               | | List flow-id of all pending (not verfied) traffic streams.         |
+| **streams-pending**               | | List flow-id of all pending (not verified) traffic streams.        |
 +-----------------------------------+----------------------------------------------------------------------+

@@ -262,15 +262,11 @@ typedef struct bbl_session_
     uint64_t mc_rx_last_seq;
 
     struct {
-        bool enabled;
-        bool active;
         uint16_t group_id;
         bbl_stream_s *head;
     } streams;
 
     struct {
-        bool enabled;
-        bool active;
         uint8_t flows;
         uint8_t flows_verified;
         bbl_stream_s *ipv4_up;

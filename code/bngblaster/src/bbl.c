@@ -91,21 +91,9 @@ test_duration()
 }
 
 void
-enable_disable_traffic(bool status)
+global_traffic_enable(bool status)
 {
-    bbl_session_s *session;
-    uint32_t i;
-
     g_traffic = status;
-
-    /* Iterate over all sessions */
-    for(i = 0; i < g_ctx->sessions; i++) {
-        session = &g_ctx->session_list[i];
-        if(session) {
-            session->session_traffic.active = status;
-            session->streams.active = status;
-        }
-    }
 }
 
 /*
@@ -615,9 +603,6 @@ main(int argc, char *argv[])
     /* Prevent traffic from autostart. */
     if(g_ctx->config.multicast_traffic_autostart == false) {
         g_ctx->multicast_endpoint = ENDPOINT_ENABLED;
-    }
-    if(g_ctx->config.traffic_autostart == false) {
-        enable_disable_traffic(false);
     }
 
     /* Start threads. */

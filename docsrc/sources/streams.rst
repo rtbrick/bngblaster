@@ -313,22 +313,36 @@ with the new NAT option to verify NAT TCP streams.
 
 For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
 
-Start/Stop Session Stream Traffic
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Start/Stop Traffic
+~~~~~~~~~~~~~~~~~~
 
-Session stream traffic can be started/stopped dynamically
-using the commands ``stream-traffic-enabled`` and ``stream-traffic-disabled``.
+The BNG Blaster provides multiple options to start and stop traffic streams. 
+The commands ``traffic-start`` and ``traffic-stop`` can be used to start or stop all traffic 
+globally and are equal to pressing F7/F8 in the interactive user interface. This command does 
+not alter the current state of a traffic stream. For instance, if a stream has not been started,  
+it can't be started with this command. Instead, this command acts as a global block to control the 
+transmission of traffic streams. 
 
-``$ sudo bngblaster-cli run.sock stream-traffic-disabled session-id 1``
+``$ sudo bngblaster-cli run.sock traffic-start``
 
-Those commands start/stop the traffic for all sessions if invoked without
-session identifier.
+All other commands distinguish between unicast, multicast, and session-traffic streams. 
 
-``$ sudo bngblaster-cli run.sock stream-traffic-disabled``
+The commands ``stream-start`` and ``stream-stop`` can start or stop unicast traffic flows. 
+Those commands do not apply to :ref:`session-traffic <session-traffic>` and multicast. 
+If you provide a specific ``flow-id`` as an argument, other arguments are ignored. In this 
+particular case, you can also start and stop :ref:`session-traffic <session-traffic>` or multicast. 
 
-Alternatively, all the session and stream traffic (including RAW streams)
-can be started or stopped globally using the ``traffic-start`` and
-``traffic-stop`` commands.
+``$ sudo bngblaster-cli run.sock stream-start session-group-id 1 direction upstream``
+
+The commands ``session-traffic-start`` and ``session-traffic-stop`` behave similarly but apply 
+to session-traffic only. 
+
+``$ sudo bngblaster-cli run.sock session-traffic-start session-id 1``
+
+For multicast, the commands ``multicast-traffic-start`` and ``multicast-traffic-stop`` can be used. 
+Those commands apply globally to all multicast traffic. 
+
+``$ sudo bngblaster-cli run.sock multicast-traffic-start``
 
 .. _bbl_header:
 
