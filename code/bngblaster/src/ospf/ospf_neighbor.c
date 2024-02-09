@@ -175,6 +175,7 @@ ospf_neighbor_clear(ospf_neighbor_s *ospf_neighbor)
         hb_tree_clear(ospf_neighbor->lsa_ack_tree[type], ospf_lsa_tree_entry_clear);
     }
     timer_del(ospf_neighbor->timer_lsa_retry);
+    ospf_neighbor->rx.dd = 0;
 }
 
 static void
