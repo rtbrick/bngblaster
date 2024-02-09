@@ -3824,7 +3824,7 @@ json_parse_config(json_t *root)
             sub = json_array_get(section, i);
 
             const char *schema[] = {
-                "name", "secret", "address",
+                "name", "secret", "address", "client-auth-id",
                 "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset",
                 "control-tos", "data-control-tos", "hello-interval",
@@ -3847,6 +3847,9 @@ json_parse_config(json_t *root)
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
                 return false;
+            }
+            if(json_unpack(sub, "{s:s}", "client-auth-id", &s) == 0) {
+                l2tp_server->client_auth_id = strdup(s);
             }
             if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
                 l2tp_server->secret = strdup(s);

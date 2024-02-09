@@ -80,6 +80,7 @@ typedef struct bbl_l2tp_server_
 
     char *secret;
     char *host_name;
+    char *client_auth_id;
 
     /* Pointer to next L2TP server
      * configuration (simple list). */

@@ -156,7 +156,7 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
  *
  * @param l2tp_tunnel L2TP tunnel structure to be deleted.
  */
-void
+static void
 bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
 {
     bbl_l2tp_queue_s *q;
@@ -551,50 +551,55 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
 
     uint8_t l2tp_type;
 
-    while(l2tp_server) {
-        if(l2tp_server->ip == ipv4->dst) {
-            LOG(PACKET, "L2TP (%s) SCCRQ received from %s\n",
-                l2tp_server->host_name,
-                format_ipv4_address(&ipv4->src));
-            /* Init tunnel ... */
-            l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
-            g_ctx->l2tp_tunnels++;
-            CIRCLEQ_INIT(&l2tp_tunnel->txq_qhead);
-            CIRCLEQ_INIT(&l2tp_tunnel->session_qhead);
-            l2tp_tunnel->interface = interface;
-            l2tp_tunnel->server = l2tp_server;
-            l2tp_tunnel->peer_receive_window = 4;
-            l2tp_tunnel->ssthresh = 4;
-            l2tp_tunnel->cwnd = 1;
-            l2tp_tunnel->peer_ip = ipv4->src;
-            l2tp_tunnel->peer_ns = l2tp->ns;
-            l2tp_tunnel->nr = (l2tp->ns + 1);
-            l2tp_tunnel->state = BBL_L2TP_TUNNEL_WAIT_CTR_CONN;
-            l2tp_tunnel->stats.control_rx++;
-            interface->stats.l2tp_control_rx++;
-            /* Decode received attributes and store in tunnel */
-            if(!bbl_l2tp_avp_decode_tunnel(l2tp, l2tp_tunnel)) {
-                bbl_l2tp_tunnel_delete(l2tp_tunnel);
-                return;
-            }
-            if(!l2tp_tunnel->peer_tunnel_id ||
-               !l2tp_tunnel->peer_name) {
-                LOG(ERROR, "L2TP Error (%s) Invalid SCCRQ received from %s\n",
-                           l2tp_server->host_name,
-                           format_ipv4_address(&ipv4->src));
-                bbl_l2tp_tunnel_delete(l2tp_tunnel);
-                return;
-            }
+    /* Init tunnel ... */
+    l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
+    g_ctx->l2tp_tunnels++;
+    CIRCLEQ_INIT(&l2tp_tunnel->txq_qhead);
+    CIRCLEQ_INIT(&l2tp_tunnel->session_qhead);
+    l2tp_tunnel->interface = interface;
+    l2tp_tunnel->peer_receive_window = 4;
+    l2tp_tunnel->ssthresh = 4;
+    l2tp_tunnel->cwnd = 1;
+    l2tp_tunnel->peer_ip = ipv4->src;
+    l2tp_tunnel->peer_ns = l2tp->ns;
+    l2tp_tunnel->nr = (l2tp->ns + 1);
+    l2tp_tunnel->state = BBL_L2TP_TUNNEL_WAIT_CTR_CONN;
+    l2tp_tunnel->stats.control_rx++;
+    interface->stats.l2tp_control_rx++;
 
-            /* Check for SCCRQ retry ... */
-            CIRCLEQ_FOREACH(l2tp_tunnel2, &l2tp_server->tunnel_qhead, tunnel_qnode) {
-                if(l2tp_tunnel2->peer_ip == l2tp_tunnel->peer_ip &&
-                   l2tp_tunnel2->peer_tunnel_id == l2tp_tunnel->peer_tunnel_id) {
-                       /* Seems to be an SCCRQ retry ... */
-                       bbl_l2tp_tunnel_delete(l2tp_tunnel);
-                       return;
-                }
-            }
+    /* Decode received attributes and store in tunnel */
+    if(!bbl_l2tp_avp_decode_tunnel(l2tp, l2tp_tunnel)) {
+        bbl_l2tp_tunnel_delete(l2tp_tunnel);
+        return;
+    }
+    if(!l2tp_tunnel->peer_tunnel_id ||
+        !l2tp_tunnel->peer_name) {
+        LOG(ERROR, "L2TP Error (%s) Invalid SCCRQ received from %s\n",
+                    l2tp_server->host_name,
+                    format_ipv4_address(&ipv4->src));
+        bbl_l2tp_tunnel_delete(l2tp_tunnel);
+        return;
+    }
+
+    /* Check for SCCRQ retry ... */
+    CIRCLEQ_FOREACH(l2tp_tunnel2, &l2tp_server->tunnel_qhead, tunnel_qnode) {
+        if(l2tp_tunnel2->peer_ip == l2tp_tunnel->peer_ip &&
+            l2tp_tunnel2->peer_tunnel_id == l2tp_tunnel->peer_tunnel_id) {
+                /* Seems to be an SCCRQ retry ... */
+                bbl_l2tp_tunnel_delete(l2tp_tunnel);
+                return;
+        }
+    }
+
+    while(l2tp_server) {
+        if(l2tp_server->ip == ipv4->dst && (l2tp_server->client_auth_id == NULL ||
+            (strcmp(l2tp_server->client_auth_id, l2tp_tunnel->peer_name) == 0))) {
+
+            l2tp_tunnel->server = l2tp_server;
+            LOG(PACKET, "L2TP (%s) SCCRQ received from %s (%s)\n",
+                l2tp_server->host_name, l2tp_tunnel->peer_name,
+                format_ipv4_address(&ipv4->src));
+
             /* Add dummy tunnel session, this session is only used
              * to search for tunnel using the same dictionary. */
             l2tp_session = calloc(1, sizeof(bbl_l2tp_session_s));
@@ -681,6 +686,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
         }
         l2tp_server = l2tp_server->next;
     }
+    bbl_l2tp_tunnel_delete(l2tp_tunnel);
 }
 
 static void
