@@ -771,7 +771,7 @@ char *
 lsdb_format_ospf_attr(struct lsdb_attr_ *attr)
 {
     static char buf[128];
-    int len;
+    size_t len;
     uint attr_cp, idx;
 
     /*
@@ -779,62 +779,58 @@ lsdb_format_ospf_attr(struct lsdb_attr_ *attr)
      */
     len = 0;
     for (idx = 0; idx < MAX_MSG_LEVEL; idx++) {
-	attr_cp = attr->key.attr_cp[idx];
+        attr_cp = attr->key.attr_cp[idx];
 
-	if (!attr_cp) {
-	    continue;
-	}
-
-	if (idx == 0) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%s", val2key(ospf_attr_names, attr_cp));
-	} else {
-	    len += snprintf(buf+len, sizeof(buf)-len, ", %s", val2key(ospf_attr_names, attr_cp));
-	}
+        if (attr_cp && len < sizeof(buf)) {
+            if (idx == 0) {
+                len += snprintf(buf+len, sizeof(buf)-len, "%s", val2key(ospf_attr_names, attr_cp));
+            } else {
+                len += snprintf(buf+len, sizeof(buf)-len, ", %s", val2key(ospf_attr_names, attr_cp));
+            }
+        }
     }
 
     /*
      * Custom attribute printing.
      */
     for (idx = 0; idx < MAX_MSG_LEVEL; idx++) {
-	attr_cp = attr->key.attr_cp[idx];
+        attr_cp = attr->key.attr_cp[idx];
 
-	if (!attr_cp) {
-	    continue;
-	}
-
-	switch (attr_cp) {
-	case OSPF_ROUTER_LSA_LINK_PTP:
-	    len += snprintf(buf+len, sizeof(buf)-len, " rmt-node %s, lcl-link %s, rmt-link %s",
-			    format_ipv4_address((uint32_t*)&attr->key.link.remote_node_id),
-			    format_ipv4_address((uint32_t*)&attr->key.link.local_link_id),
-			    format_ipv4_address((uint32_t*)&attr->key.link.remote_link_id));
-	    break;
-	case OSPF_ROUTER_LSA_LINK_STUB:
-	    /* fall through */
-	case OSPF_LSA_EXTERNAL:
-	    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
-			    format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
-			    attr->key.prefix.metric);
-	    break;
-	case OSPF_LSA_INTRA_AREA_PREFIX:
-	case OSPF_LSA_E_INTRA_AREA_PREFIX:
-	    /* fall through */
-	case OSPF_LSA_EXTERNAL6:
-	    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
-			    format_ipv6_prefix(&attr->key.prefix.ipv6_prefix),
-			    attr->key.prefix.metric);
-	    break;
-	case OSPF_TLV_HOSTNAME:
-	    len += snprintf(buf+len, sizeof(buf)-len, ": %s", attr->key.hostname);
-	    break;
-	case OSPF_TLV_SID_LABEL_RANGE:
-	    len += snprintf(buf+len, sizeof(buf)-len, ": base %u, range %u",
-			    attr->key.cap.srgb_base,
-			    attr->key.cap.srgb_range);
-	    break;
-	default:
-	    break;
-	}
+        if (attr_cp && len < sizeof(buf)) {
+            switch (attr_cp) {
+                case OSPF_ROUTER_LSA_LINK_PTP:
+                    len += snprintf(buf+len, sizeof(buf)-len, " rmt-node %s, lcl-link %s, rmt-link %s",
+                            format_ipv4_address((uint32_t*)&attr->key.link.remote_node_id),
+                            format_ipv4_address((uint32_t*)&attr->key.link.local_link_id),
+                            format_ipv4_address((uint32_t*)&attr->key.link.remote_link_id));
+                    break;
+                case OSPF_ROUTER_LSA_LINK_STUB:
+                    /* fall through */
+                case OSPF_LSA_EXTERNAL:
+                    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+                            format_ipv4_prefix(&attr->key.prefix.ipv4_prefix),
+                            attr->key.prefix.metric);
+                    break;
+                case OSPF_LSA_INTRA_AREA_PREFIX:
+                case OSPF_LSA_E_INTRA_AREA_PREFIX:
+                    /* fall through */
+                case OSPF_LSA_EXTERNAL6:
+                    len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+                            format_ipv6_prefix(&attr->key.prefix.ipv6_prefix),
+                            attr->key.prefix.metric);
+                    break;
+                case OSPF_TLV_HOSTNAME:
+                    len += snprintf(buf+len, sizeof(buf)-len, ": %s", attr->key.hostname);
+                    break;
+                case OSPF_TLV_SID_LABEL_RANGE:
+                    len += snprintf(buf+len, sizeof(buf)-len, ": base %u, range %u",
+                            attr->key.cap.srgb_base,
+                            attr->key.cap.srgb_range);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     return buf;
@@ -844,13 +840,13 @@ char *
 lsdb_format_attr(lsdb_ctx_t *ctx, struct lsdb_attr_ *attr)
 {
     switch (ctx->protocol_id) {
-    case PROTO_ISIS:
-	return lsdb_format_isis_attr(attr);
-    case PROTO_OSPF2: /* fall through */
-    case PROTO_OSPF3:
-	return lsdb_format_ospf_attr(attr);
-    default:
-	LOG_NOARG(ERROR, "Unknown protocol\n");
+        case PROTO_ISIS:
+            return lsdb_format_isis_attr(attr);
+        case PROTO_OSPF2: /* fall through */
+        case PROTO_OSPF3:
+            return lsdb_format_ospf_attr(attr);
+        default:
+            LOG_NOARG(ERROR, "Unknown protocol\n");
     }
     return "Unknown protocol";
 }

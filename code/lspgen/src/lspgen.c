@@ -128,18 +128,18 @@ char *
 lspgen_print_arg_options(struct keyval_ *ptr)
 {
     static char buf[128];
-    int len;
+    size_t len;
 
     len = 0;
     buf[0] = 0;
 
     if (!ptr) {
-	return buf;
+	    return buf;
     }
 
-    while (ptr->key) {
-	len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
-	ptr++;
+    while (ptr->key && len < sizeof(buf)) {
+        len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
+        ptr++;
     }
     return buf;
 }
@@ -185,6 +185,11 @@ lspgen_print_version(void)
 {
     if(sizeof(BNGBLASTER_VERSION)-1) {
         printf("Version: %s\n", BNGBLASTER_VERSION);
+    } else {
+        printf("Version: DEV\n");
+    }
+    if(sizeof(COMPILER_ID)-1 + sizeof(COMPILER_VERSION)-1) {
+        printf("Compiler: %s (%s)\n", COMPILER_ID, COMPILER_VERSION);
     }
     if(sizeof(GIT_REF)-1 + sizeof(GIT_SHA)-1) {
         printf("GIT:\n");
@@ -1276,23 +1281,23 @@ main(int argc, char *argv[])
             case 'v':
                 lspgen_print_version();
                 exit(0);
-	    case 'G':
-		ctx->purge = true;
-		break;
-	    case 'P':
-		ctx->protocol_id = key2val(proto_names, optarg);
-		if (ctx->protocol_id == PROTO_OSPF2) {
-		    ctx->no_ipv6 = true;
-		}
-		if (ctx->protocol_id == PROTO_OSPF3) {
-		    ctx->no_ipv4 = true;
-		}
-		if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-		    ctx->topology_id.area = 0; /* reset area */
-		    ctx->sequence = 0x80000001;
-		    ctx->lsp_lifetime = 3600;
-		}
-		break;
+            case 'G':
+                ctx->purge = true;
+                break;
+            case 'P':
+                ctx->protocol_id = key2val(proto_names, optarg);
+                if (ctx->protocol_id == PROTO_OSPF2) {
+                    ctx->no_ipv6 = true;
+                }
+                if (ctx->protocol_id == PROTO_OSPF3) {
+                    ctx->no_ipv4 = true;
+                }
+                if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+                    ctx->topology_id.area = 0; /* reset area */
+                    ctx->sequence = 0x80000001;
+                    ctx->lsp_lifetime = 3600;
+                }
+                break;
             case 'r':
                 if (ctx->config_filename) {
                     ctx->config_write = false;
@@ -1303,21 +1308,21 @@ main(int argc, char *argv[])
                 break;
             case 'w':
                 if (ctx->config_filename) {
-                ctx->config_read = false;
-                free(ctx->config_filename);
+                    ctx->config_read = false;
+                    free(ctx->config_filename);
                 }
                 ctx->config_filename = strdup(optarg);
                 ctx->config_write = true;
                 break;
             case 'a':
-		if (ctx->protocol_id == PROTO_ISIS) {
-		    if (ctx->num_area < 3) {
-			scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
-		    }
-		} else {
-		    /* ospf2 and ospf3 */
-		    scan_ipv4_address(optarg, &ctx->topology_id.area);
-		}
+                if (ctx->protocol_id == PROTO_ISIS) {
+                    if (ctx->num_area < 3) {
+                    scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
+                    }
+                } else {
+                    /* ospf2 and ospf3 */
+                    scan_ipv4_address(optarg, &ctx->topology_id.area);
+                }
                 break;
             case 'M':
                 ctx->lsp_lifetime = atoi(optarg);
@@ -1352,8 +1357,8 @@ main(int argc, char *argv[])
                     ctx->link_multiplier = 150;
                     LOG(ERROR, "Set link-multiplier to maximum %u\n", ctx->link_multiplier);
                 }
-		break;
-	    case 'c':
+		        break;
+	        case 'c':
                 ctx->num_nodes = strtol(optarg, NULL, 10);
                 if (ctx->num_nodes < 5) {
                     ctx->num_nodes = 5;
@@ -1418,11 +1423,11 @@ main(int argc, char *argv[])
                 /* sequence */
                 ctx->sequence = strtol(optarg, NULL, 0);
                 if (ctx->sequence == 0) {
-		    if (ctx->protocol_id == PROTO_ISIS) {
-			ctx->sequence = 1;
-		    } else {
-			ctx->sequence = 0x80000001;
-		    }
+                    if (ctx->protocol_id == PROTO_ISIS) {
+                        ctx->sequence = 1;
+                    } else {
+                        ctx->sequence = 0x80000001;
+                    }
                 }
                 break;
             case 'Q':
@@ -1442,7 +1447,7 @@ main(int argc, char *argv[])
                 if (ctx->protocol_id != PROTO_ISIS) {
                     LOG(ERROR, "Level may not be set for protocol %s\n", lsdb_format_proto(ctx));
                     exit(EXIT_FAILURE);
-		}
+		        }
                 ctx->topology_id.level = atoi(optarg);
                 if (ctx->topology_id.level < 1 || ctx->topology_id.level > 2) {
                     LOG(ERROR, "Level %u is not supported\n", ctx->topology_id.level);
@@ -1455,7 +1460,6 @@ main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
     }
-
 
     /*
      * Read the link-state database from a config file.

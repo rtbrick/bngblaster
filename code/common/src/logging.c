@@ -87,10 +87,10 @@ log_usage()
 {
     static char buf[128];
     struct keyval_ *ptr;
-    int len = 0;
+    size_t len = 0;
 
     ptr = log_names;
-    while(ptr->key) {
+    while(ptr->key && len < sizeof(buf)) {
         len += snprintf(buf+len, sizeof(buf)-len, "%s%s", len ? "|" : " ", ptr->key);
         ptr++;
     }
