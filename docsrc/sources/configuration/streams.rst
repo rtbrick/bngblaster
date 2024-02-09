@@ -35,6 +35,9 @@
 | **length**                     | | Layer 3 (IP header + payload) traffic length.                  |
 |                                | | Default: 128 Range: 76 - 9000                                  |
 +--------------------------------+------------------------------------------------------------------+
+| **ttl**                        | | TTL.                                                           |
+|                                | | Default: 64 Range: 0 - 255                                     |
++--------------------------------+------------------------------------------------------------------+
 | **pps**                        | | Stream traffic rate in packets per second.                     |
 |                                | | This value supports also float numbers like 0.1 or 2.5.        |
 |                                | | In example 0.1 means one packet every 10 seconds.              |

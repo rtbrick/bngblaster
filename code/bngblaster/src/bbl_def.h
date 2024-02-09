@@ -54,6 +54,8 @@
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
 
+#define BBL_DEFAULT_TTL             64
+
 /* Mock Addresses */
 #define MOCK_IP_LOCAL               167772170   /* 10.0.0.10 */
 #define MOCK_IP_REMOTE              168430090   /* 10.10.10.10 */

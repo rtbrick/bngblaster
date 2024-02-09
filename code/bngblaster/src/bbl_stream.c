@@ -161,7 +161,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
             }
-            ipv4.ttl = 64;
+            ipv4.ttl = config->ttl;
             ipv4.tos = config->priority;
             if(stream->tcp) {
                 ipv4.protocol = PROTOCOL_IPV4_TCP;
@@ -197,7 +197,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
                     ipv6.dst = network_interface->ip6.address;
                 }
             }
-            ipv6.ttl = 64;
+            ipv6.ttl = config->ttl;
             ipv6.tos = config->priority;
             if(stream->tcp) {
                 ipv6.protocol = IPV6_NEXT_HEADER_TCP;
@@ -308,7 +308,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
             }
-            ipv4.ttl = 64;
+            ipv4.ttl = config->ttl;
             ipv4.tos = config->priority;
             if(stream->tcp) {
                 ipv4.protocol = PROTOCOL_IPV4_TCP;
@@ -335,7 +335,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
             if(*(uint64_t*)stream->config->ipv6_destination_address) {
                 ipv6.dst = stream->config->ipv6_destination_address;
             }
-            ipv6.ttl = 64;
+            ipv6.ttl = config->ttl;
             ipv6.tos = config->priority;
             if(stream->tcp) {
                 ipv6.protocol = IPV6_NEXT_HEADER_TCP;
@@ -444,7 +444,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
             }
-            ipv4.ttl = 64;
+            ipv4.ttl = config->ttl;
             ipv4.tos = config->priority;
             if(stream->tcp) {
                 ipv4.protocol = PROTOCOL_IPV4_TCP;
@@ -477,7 +477,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
                 }
             }
             ipv6.src = session->link_local_ipv6_address;
-            ipv6.ttl = 64;
+            ipv6.ttl = config->ttl;
             ipv6.tos = config->priority;
             if(stream->tcp) {
                 ipv6.protocol = IPV6_NEXT_HEADER_TCP;
@@ -586,7 +586,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
             }
-            ipv4.ttl = 64;
+            ipv4.ttl = config->ttl;
             ipv4.tos = config->priority;
             if(stream->tcp) {
                 ipv4.protocol = PROTOCOL_IPV4_TCP;
@@ -622,7 +622,7 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
                     ipv6.dst = network_interface->ip6.address;
                 }
             }
-            ipv6.ttl = 64;
+            ipv6.ttl = config->ttl;
             ipv6.tos = config->priority;
             if(stream->tcp) {
                 ipv6.protocol = IPV6_NEXT_HEADER_TCP;
@@ -751,7 +751,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
             }
-            ipv4.ttl = 64;
+            ipv4.ttl = config->ttl;
             ipv4.tos = config->priority;
             if(stream->tcp) {
                 ipv4.protocol = PROTOCOL_IPV4_TCP;
@@ -794,7 +794,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
                     return false;
                 }
             }
-            ipv6.ttl = 64;
+            ipv6.ttl = config->ttl;
             ipv6.tos = config->priority;
             if(stream->tcp) {
                 ipv6.protocol = IPV6_NEXT_HEADER_TCP;
@@ -860,7 +860,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     eth.next = &l2tp_ipv4;
     l2tp_ipv4.dst = l2tp_tunnel->peer_ip;
     l2tp_ipv4.src = l2tp_tunnel->server->ip;
-    l2tp_ipv4.ttl = 64;
+    l2tp_ipv4.ttl = config->ttl;
     l2tp_ipv4.tos = config->priority;
     l2tp_ipv4.protocol = PROTOCOL_IPV4_UDP;
     l2tp_ipv4.next = &l2tp_udp;
@@ -880,7 +880,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     if(config->ipv4_df) {
         ipv4.offset = IPV4_DF;
     }
-    ipv4.ttl = 64;
+    ipv4.ttl = config->ttl;
     ipv4.tos = config->priority;
     if(stream->tcp) {
         ipv4.protocol = PROTOCOL_IPV4_TCP;
@@ -2014,6 +2014,7 @@ bbl_stream_init() {
             config->name = (char*)g_multicast_traffic;
             config->type = BBL_SUB_TYPE_IPV4;
             config->direction = BBL_DIRECTION_DOWN;
+            config->ttl = BBL_DEFAULT_TTL;
             config->pps = g_ctx->config.multicast_traffic_pps;
             config->dst_port = BBL_UDP_PORT;
             config->src_port = BBL_UDP_PORT;
@@ -2047,6 +2048,7 @@ bbl_stream_init() {
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV4;
         config->direction = BBL_DIRECTION_UP;
+        config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv4_pps;
         config->dst_port = BBL_UDP_PORT;
@@ -2059,6 +2061,7 @@ bbl_stream_init() {
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV4;
         config->direction = BBL_DIRECTION_DOWN;
+        config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv4_pps;
         config->dst_port = BBL_UDP_PORT;
@@ -2078,6 +2081,7 @@ bbl_stream_init() {
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6;
         config->direction = BBL_DIRECTION_UP;
+        config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6_pps;
         config->dst_port = BBL_UDP_PORT;
@@ -2090,6 +2094,7 @@ bbl_stream_init() {
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6;
         config->direction = BBL_DIRECTION_DOWN;
+        config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6_pps;
         config->dst_port = BBL_UDP_PORT;
@@ -2109,6 +2114,7 @@ bbl_stream_init() {
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6PD;
         config->direction = BBL_DIRECTION_UP;
+        config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6pd_pps;
         config->dst_port = BBL_UDP_PORT;
@@ -2121,6 +2127,7 @@ bbl_stream_init() {
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6PD;
         config->direction = BBL_DIRECTION_DOWN;
+        config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6pd_pps;
         config->dst_port = BBL_UDP_PORT;

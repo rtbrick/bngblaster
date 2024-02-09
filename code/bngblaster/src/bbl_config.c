@@ -2201,7 +2201,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     const char *schema[] = {
         "name", "stream-group-id", "type",
         "direction", "network-interface", "a10nsp-interface",
-        "source-port", "destination-port", "length",
+        "source-port", "destination-port", "length", "ttl"
         "priority", "vlan-priority", "pps",
         "bps", "Kbps", "Mbps",
         "Gbps", "max-packets", "start-delay",
@@ -2305,6 +2305,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         }
     } else {
         stream_config->length = 128;
+    }
+
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "ttl", 0, 255);
+    if(value) {
+        stream_config->ttl = json_number_value(value);
+    } else {
+        stream_config->ttl = BBL_DEFAULT_TTL;
     }
 
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "priority", 0, 255);
