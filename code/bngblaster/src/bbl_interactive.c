@@ -446,7 +446,7 @@ bbl_interactive_window_job(timer_s *timer)
                     wprintw(stats_win, " %s", network_if->name);
                 }
             }
-            wprintw(stats_win, " )\n  TX Packets                %10lu |%7lu PPS %10lu Kbps %2.3f Gbps\n\n",
+            wprintw(stats_win, " )\n  TX Packets                %10lu |%7lu PPS %10lu Kbps %2.3f Gbps\n",
                 g_network_if->stats.packets_tx, g_network_if->stats.rate_packets_tx.avg,
                 g_network_if->stats.rate_bytes_tx.avg * 8 / 1000,
                 g_network_if->stats.rate_bytes_tx.avg * 8.0 / 1000000000.0);
