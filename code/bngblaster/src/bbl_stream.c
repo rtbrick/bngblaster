@@ -1751,7 +1751,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             }
         }
         stream_up = calloc(1, sizeof(bbl_stream_s));
-        stream_up->enabled = g_ctx->config.traffic_autostart;
+        stream_up->enabled = true;
         stream_up->endpoint = &g_endpoint;
         stream_up->flow_id = g_ctx->flow_id++;
         stream_up->flow_seq = 1;
@@ -1796,7 +1796,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
         stream_down = calloc(1, sizeof(bbl_stream_s));
-        stream_down->enabled = g_ctx->config.traffic_autostart;
+        stream_down->enabled = true;
         stream_down->endpoint = &g_endpoint;
         stream_down->flow_id = g_ctx->flow_id++;
         stream_down->flow_seq = 1;
@@ -1953,7 +1953,7 @@ bbl_stream_init() {
 
             if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
-                stream->enabled = g_ctx->config.traffic_autostart;
+                stream->enabled = true;
                 stream->endpoint = &g_endpoint;
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;

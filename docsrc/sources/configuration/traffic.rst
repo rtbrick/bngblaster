@@ -5,7 +5,9 @@
 +------------------------------+--------------------------------------------------------+
 | Attribute                    | Description                                            |
 +==============================+========================================================+
-| **autostart**                | | Automatically start traffic.                         |
+| **autostart**                | | Automatically start traffic globally.                |
+|                              | | This option control the initial state of the global  |
+|                              | | signal to control transmission of traffic streams.   |
 |                              | | Default: true                                        |
 +------------------------------+--------------------------------------------------------+
 | **stop-verified**            | | Automatically stop traffic streams if verified.      |

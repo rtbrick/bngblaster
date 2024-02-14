@@ -320,10 +320,13 @@ The BNG Blaster provides multiple options to start and stop traffic streams.
 The commands ``traffic-start`` and ``traffic-stop`` can be used to start or stop all traffic 
 globally and are equal to pressing F7/F8 in the interactive user interface. This command does 
 not alter the current state of a traffic stream. For instance, if a stream has not been started,  
-it can't be started with this command. Instead, this command acts as a global block to control the 
+it can't be started with this command. Instead, this command acts as a global signal to control the 
 transmission of traffic streams. 
 
 ``$ sudo bngblaster-cli run.sock traffic-start``
+
+The initial state of the global global signal can be controlled with the configuration option 
+``traffic->autostart`` which is enabled per default.
 
 All other commands distinguish between unicast, multicast, and session-traffic streams. 
 

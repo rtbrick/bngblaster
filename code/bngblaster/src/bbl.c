@@ -600,7 +600,9 @@ main(int argc, char *argv[])
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->smear_timer, "Timer Smearing", 
                        45, 12345678, g_ctx, &bbl_smear_job);
 
+
     /* Prevent traffic from autostart. */
+    global_traffic_enable(g_ctx->config.traffic_autostart);
     if(g_ctx->config.multicast_traffic_autostart == false) {
         g_ctx->multicast_endpoint = ENDPOINT_ENABLED;
     }
