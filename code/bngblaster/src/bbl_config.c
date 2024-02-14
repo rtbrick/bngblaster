@@ -74,46 +74,50 @@ schema_validate(json_t *config, const char *section, const char *const attribute
     return true;
 }
 
+
+
 static void
 add_secondary_ipv4(uint32_t ipv4)
 {
     bbl_secondary_ip_s  *secondary_ip;
-    bbl_interface_s *interface;
-    bbl_network_interface_s *network_interface;
+    bbl_network_config_s *config = g_ctx->config.network_config;
 
-    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        network_interface = interface->network;
-        while(network_interface) {
-            if(ipv4 == network_interface->ip.address) {
-                return;
-            }
-            network_interface = network_interface->next;
-        }
-    }
+    uint32_t mask, ip1, ip2;
 
-    /* Add secondary IP address to be served by ARP */
-    secondary_ip = g_ctx->config.secondary_ip_addresses;
-    if(secondary_ip) {
-        while(secondary_ip) {
-            if(secondary_ip->ip == ipv4) {
-                /* Address is already known ... */
-                break;
-            }
-            if(secondary_ip->next) {
-                /* Check next address ... */
-                secondary_ip = secondary_ip->next;
+    while(config) {
+        mask = be32toh(ipv4_len_to_mask(config->ip.len));
+        ip1 = be32toh(config->ip.address) & mask;
+        ip2 = be32toh(ipv4) & mask;
+
+        if(ip1 == ip2 && ipv4 != config->ip.address) {
+            /* Add secondary IP address to be served by ARP */
+            LOG(DEBUG, "add secondary IPv4 address %s to network interface %s\n", 
+                format_ipv4_address(&ipv4), config->interface);
+            secondary_ip = config->secondary_ip_addresses;
+            if(secondary_ip) {
+                while(secondary_ip) {
+                    if(secondary_ip->ip == ipv4) {
+                        /* Address is already known ... */
+                        break;
+                    }
+                    if(secondary_ip->next) {
+                        /* Check next address ... */
+                        secondary_ip = secondary_ip->next;
+                    } else {
+                        /* Append secondary address ... */
+                        secondary_ip->next = calloc(1, sizeof(bbl_secondary_ip_s));
+                        secondary_ip = secondary_ip->next;
+                        secondary_ip->ip = ipv4;
+                        break;
+                    }
+                }
             } else {
-                /* Append secondary address ... */
-                secondary_ip->next = calloc(1, sizeof(bbl_secondary_ip_s));
-                secondary_ip = secondary_ip->next;
-                secondary_ip->ip = ipv4;
-                break;
+                /* Add first secondary address */
+                config->secondary_ip_addresses = calloc(1, sizeof(bbl_secondary_ip_s));
+                config->secondary_ip_addresses->ip = ipv4;
             }
         }
-    } else {
-        /* Add first secondary address */
-        g_ctx->config.secondary_ip_addresses = calloc(1, sizeof(bbl_secondary_ip_s));
-        g_ctx->config.secondary_ip_addresses->ip = ipv4;
+        config = config->next;
     }
 }
 
@@ -121,42 +125,39 @@ static void
 add_secondary_ipv6(ipv6addr_t ipv6)
 {
     bbl_secondary_ip6_s *secondary_ip6;
-    bbl_interface_s *interface;
-    bbl_network_interface_s *network_interface;
+    bbl_network_config_s *config = g_ctx->config.network_config;
 
-    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        network_interface = interface->network;
-        while(network_interface) {
-            if(memcmp(ipv6, network_interface->ip6.address, IPV6_ADDR_LEN) == 0) {
-                return;
-            }
-            network_interface = network_interface->next;
-        }
-    }
-
-    /* Add secondary IP address to be served by ICMPv6 */
-    secondary_ip6 = g_ctx->config.secondary_ip6_addresses;
-    if(secondary_ip6) {
-        while(secondary_ip6) {
-            if(memcmp(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN) == 0) {
-                /* Address is already known ... */
-                break;
-            }
-            if(secondary_ip6->next) {
-                /* Check next address ... */
-                secondary_ip6 = secondary_ip6->next;
+    while(config) {
+        if((memcmp(ipv6, config->ip6.address, IPV6_ADDR_LEN) != 0) &&
+           (memcmp(ipv6, config->ip6.address, BITS_TO_BYTES(config->ip6.len)) == 0)) {
+            /* Add secondary IP address to be served by ICMPv6 */
+            LOG(DEBUG, "add secondary IPv6 address %s to network interface %s\n", 
+                format_ipv6_address((ipv6addr_t*)&ipv6), config->interface);
+            secondary_ip6 = config->secondary_ip6_addresses;
+            if(secondary_ip6) {
+                while(secondary_ip6) {
+                    if(memcmp(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN) == 0) {
+                        /* Address is already known ... */
+                        break;
+                    }
+                    if(secondary_ip6->next) {
+                        /* Check next address ... */
+                        secondary_ip6 = secondary_ip6->next;
+                    } else {
+                        /* Append secondary address ... */
+                        secondary_ip6->next = calloc(1, sizeof(bbl_secondary_ip6_s));
+                        secondary_ip6 = secondary_ip6->next;
+                        memcpy(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN);
+                        break;
+                    }
+                }
             } else {
-                /* Append secondary address ... */
-                secondary_ip6->next = calloc(1, sizeof(bbl_secondary_ip6_s));
-                secondary_ip6 = secondary_ip6->next;
-                memcpy(secondary_ip6->ip, ipv6, IPV6_ADDR_LEN);
-                break;
+                /* Add first secondary address */
+                config->secondary_ip6_addresses = calloc(1, sizeof(bbl_secondary_ip6_s));
+                memcpy(config->secondary_ip6_addresses->ip, ipv6, IPV6_ADDR_LEN);
             }
         }
-    } else {
-        /* Add first secondary address */
-        g_ctx->config.secondary_ip6_addresses = calloc(1, sizeof(bbl_secondary_ip6_s));
-        memcpy(g_ctx->config.secondary_ip6_addresses->ip, ipv6, IPV6_ADDR_LEN);
+        config = config->next;
     }
 }
 
@@ -2211,7 +2212,8 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "destination-ipv6-address", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
-        "rx-label2", "nat", "raw-tcp", "setup-interval"
+        "rx-label2", "nat", "raw-tcp", "setup-interval",
+        "rx-interface"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2494,6 +2496,9 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->rx_mpls2 = true;
         stream_config->rx_mpls2_label = json_number_value(value);
+    }
+    if(json_unpack(stream, "{s:s}", "rx-interface", &s) == 0) {
+        stream_config->network_interface = strdup(s);
     }
 
     /* NAT configuration */

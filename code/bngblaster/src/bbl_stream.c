@@ -2217,6 +2217,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
 {
     bbl_bbl_s *bbl = eth->bbl;
     bbl_stream_s *stream;
+    bbl_stream_config_s *config;
     bbl_session_s *session;
     bbl_mpls_s *mpls;
 
@@ -2242,6 +2243,14 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
             stream->rx_priority = eth->tos;
             stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
             stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
+
+            config = stream->config;
+            if(config->rx_interface && stream->rx_network_interface) {
+                if(strcmp(config->rx_interface, stream->rx_network_interface->name) != 0) {
+                    return NULL;
+                }
+            }
+
             mpls = eth->mpls;
             if(mpls) {
                 stream->rx_mpls1 = true;
@@ -2256,15 +2265,15 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     stream->rx_mpls2_ttl = mpls->ttl;
                 }
             }
-            if(stream->config->rx_mpls1_label) {
+            if(config->rx_mpls1_label) {
                 /* Check if expected outer label is received ... */
-                if(stream->rx_mpls1_label != stream->config->rx_mpls1_label) {
+                if(stream->rx_mpls1_label != config->rx_mpls1_label) {
                     /* Wrong outer label received! */
                     return NULL;
                 }
-                if(stream->config->rx_mpls2_label) {
+                if(config->rx_mpls2_label) {
                     /* Check if expected inner label is received ... */
-                    if(stream->rx_mpls2_label != stream->config->rx_mpls2_label) {
+                    if(stream->rx_mpls2_label != config->rx_mpls2_label) {
                         /* Wrong inner label received! */
                         return NULL;
                     }
