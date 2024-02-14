@@ -646,6 +646,9 @@ replace_substring(const char* source,
     return result;
 }
 
+/*
+ * Return string or "N/A" if string is NULL.
+ */
 char *
 string_or_na(char *string)
 {
@@ -656,18 +659,26 @@ string_or_na(char *string)
     }
 }
 
+/*
+ * Convert IPv4 netmask (big endian) to CIDR length. 
+ * This function returns zero for invalid netmask. 
+ */
 uint8_t
 ipv4_mask_to_len(uint32_t mask)
 {
     uint8_t l = 0;
-
-    while(mask) {
-        mask = mask >> 1;
-        l++;
+    uint32_t m = be32toh(mask);
+    while(m & 0x80000000) { /* check MSB */
+        l++; 
+        m <<= 1; /* Left shift the mask by one bit */
     }
+    if(m) return 0;
     return l;
 }
 
+/*
+ * Convert IPv4 CIDR length to netmask (big endian).
+ */
 uint32_t
 ipv4_len_to_mask(uint8_t len)
 {

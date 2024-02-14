@@ -234,6 +234,64 @@ test_ipv6_multicast_mac(void **unused) {
     assert_memory_equal(mac_expected, mac, ETH_ADDR_LEN);
 }
 
+static void
+test_ipv4_mask_to_len(void **unused) {
+    (void) unused;
+
+    uint32_t ipv4;
+
+    inet_pton(AF_INET, "0.0.0.0", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 0);
+
+    inet_pton(AF_INET, "255.0.0.0", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 8);
+
+    inet_pton(AF_INET, "255.255.0.0", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 16);
+
+    inet_pton(AF_INET, "255.255.255.0", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 24);
+
+    inet_pton(AF_INET, "255.255.254.0", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 23);
+
+    inet_pton(AF_INET, "255.255.255.252", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 30);
+
+    inet_pton(AF_INET, "255.255.255.255", &ipv4);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 32);
+
+    ipv4 = htobe32(0xff00ff00);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 0);
+
+    ipv4 = htobe32(0xffffff01);
+    assert_int_equal(ipv4_mask_to_len(ipv4), 0);
+}
+
+static void
+test_ipv4_len_to_mask(void **unused) {
+    (void) unused;
+
+    uint32_t mask_a;
+    uint32_t mask_b;
+
+    inet_pton(AF_INET, "0.0.0.0", &mask_a);
+    mask_b = ipv4_len_to_mask(0);
+    assert_int_equal(mask_a, mask_b);
+
+    inet_pton(AF_INET, "255.255.255.0", &mask_a);
+    mask_b = ipv4_len_to_mask(24);
+    assert_int_equal(mask_a, mask_b);
+
+    inet_pton(AF_INET, "255.255.255.252", &mask_a);
+    mask_b = ipv4_len_to_mask(30);
+    assert_int_equal(mask_a, mask_b);
+
+    inet_pton(AF_INET, "255.255.255.255", &mask_a);
+    mask_b = ipv4_len_to_mask(32);
+    assert_int_equal(mask_a, mask_b);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_val2key),
@@ -254,6 +312,8 @@ int main() {
         cmocka_unit_test(test_string_or_na),
         cmocka_unit_test(test_ipv4_multicast_mac),
         cmocka_unit_test(test_ipv6_multicast_mac),
+        cmocka_unit_test(test_ipv4_mask_to_len),
+        cmocka_unit_test(test_ipv4_len_to_mask),
 
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
