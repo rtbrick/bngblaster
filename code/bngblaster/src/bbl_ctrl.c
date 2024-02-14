@@ -35,12 +35,12 @@ extern volatile uint8_t g_teardown_request_count;
 const char *schema_no_args[] = { NULL };
 const char *schema_all_args[] = {
     "session-id", "session-group-id", "direction", "reconnect-delay", 
-    "interface", "flow-id", "id", "name", "file", "reset", "timer"
+    "interface", "flow-id", "id", "name", "file", "reset", "timer",
     "group", "group-iter", "group-count", "source1", "source2", "source3",
     "local-ipv4-address", "peer-ipv4-address",
     "instance", "level", "pdu", "lsa",
     "tunnel-id", "sessions", 
-    "result-code", "error-code", "error-message", 
+    "result-code", "error-code", "error-message",
     "disconnect-code", "disconnect-protocol", 
     "disconnect-direction", "disconnect-message",
     "ldp-instance-id", 
