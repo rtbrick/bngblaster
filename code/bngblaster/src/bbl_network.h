@@ -42,6 +42,9 @@ typedef struct bbl_network_interface_
     ipv6addr_t  gateway6;
     ipv6addr_t  gateway6_solicited_node_multicast;
 
+    bbl_secondary_ip_s *secondary_ip_addresses;
+    bbl_secondary_ip6_s *secondary_ip6_addresses;
+
     bool arp_resolved;
     bool icmpv6_nd_resolved;
     bool gateway_resolve_wait;

@@ -106,6 +106,7 @@ bbl_network_interfaces_add()
             network_interface->ip.address = network_config->ip.address;
             network_interface->ip.len = network_config->ip.len;
             network_interface->gateway = network_config->gateway;
+            network_interface->secondary_ip_addresses = network_config->secondary_ip_addresses;
             /* Send initial ARP request */
             network_interface->send_requests |= BBL_IF_SEND_ARP_REQUEST;
         }
@@ -136,6 +137,7 @@ bbl_network_interfaces_add()
             memcpy(((uint8_t*)&network_interface->gateway6_solicited_node_multicast)+13,
                    ((uint8_t*)&network_interface->gateway6)+13, 3);
 
+            network_interface->secondary_ip6_addresses = network_config->secondary_ip6_addresses;
             /* Send initial ICMPv6 NS */
             network_interface->send_requests |= BBL_IF_SEND_ICMPV6_NS;
         }
@@ -336,7 +338,7 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
         if(arp->target_ip == interface->ip.address) {
             bbl_network_arp_reply(interface, eth, arp);
         } else {
-            secondary_ip = g_ctx->config.secondary_ip_addresses;
+            secondary_ip = interface->secondary_ip_addresses;
             while(secondary_ip) {
                 if(arp->target_ip == secondary_ip->ip) {
                     bbl_network_arp_reply(interface, eth, arp);
@@ -378,7 +380,7 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
         } else if(memcmp(icmpv6->prefix.address, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {
             bbl_network_icmpv6_na(interface, eth, ipv6, icmpv6);
         } else {
-            secondary_ip6 = g_ctx->config.secondary_ip6_addresses;
+            secondary_ip6 = interface->secondary_ip6_addresses;
             while(secondary_ip6) {
                 if(memcmp(icmpv6->prefix.address, secondary_ip6->ip, IPV6_ADDR_LEN) == 0) {
                     bbl_network_icmpv6_na(interface, eth, ipv6, icmpv6);

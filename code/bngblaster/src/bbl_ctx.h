@@ -9,18 +9,6 @@
 #ifndef __BBL_CONTEXT_H__
 #define __BBL_CONTEXT_H__
 
-typedef struct bbl_secondary_ip_
-{
-    uint32_t ip;
-    void *next;
-} bbl_secondary_ip_s;
-
-typedef struct bbl_secondary_ip6_
-{
-    ipv6addr_t ip;
-    void *next;
-} bbl_secondary_ip6_s;
-
 /*
  * BBL context. Top level data structure.
  */
@@ -165,9 +153,6 @@ typedef struct bbl_ctx_
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */
         bool json_report_streams; /* Include streams */
-
-        bbl_secondary_ip_s *secondary_ip_addresses;
-        bbl_secondary_ip6_s *secondary_ip6_addresses;
 
         /* LAG */
         bbl_lag_config_s *lag_config;

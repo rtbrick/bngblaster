@@ -74,8 +74,6 @@ schema_validate(json_t *config, const char *section, const char *const attribute
     return true;
 }
 
-
-
 static void
 add_secondary_ipv4(uint32_t ipv4)
 {

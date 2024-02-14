@@ -9,6 +9,18 @@
 #ifndef __BBL_CONFIG_H__
 #define __BBL_CONFIG_H__
 
+typedef struct bbl_secondary_ip_
+{
+    uint32_t ip;
+    void *next;
+} bbl_secondary_ip_s;
+
+typedef struct bbl_secondary_ip6_
+{
+    ipv6addr_t ip;
+    void *next;
+} bbl_secondary_ip6_s;
+
 typedef struct bbl_access_config_
 {
     bool exhausted;
@@ -107,6 +119,9 @@ typedef struct bbl_network_config_
     bool ipv6_ra;
     ipv6_prefix ip6;
     ipv6addr_t gateway6;
+
+    bbl_secondary_ip_s *secondary_ip_addresses;
+    bbl_secondary_ip6_s *secondary_ip6_addresses;
 
     uint16_t isis_instance_id;
     uint8_t  isis_level;
