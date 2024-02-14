@@ -1141,7 +1141,7 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
     uint8_t options = 0;
     if(config->version == OSPF_VERSION_3) {
         lsa_type = OSPF_LSA_TYPE_12;
-        options = OSPFV3_FSCOPE_AREA;
+        options = OSPFV3_U_BIT|OSPFV3_FSCOPE_AREA;
     }
     
     search = hb_tree_search(ospf_instance->lsdb[lsa_type], &key);

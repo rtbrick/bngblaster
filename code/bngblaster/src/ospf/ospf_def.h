@@ -31,6 +31,7 @@
 #define OSPFV3_FSCOPE_AREA                  0x20
 #define OSPFV3_FSCOPE_AS                    0x40
 #define OSPFV3_FSCOPE_RESERVED              0x60
+#define OSPFV3_U_BIT                        0x80
 
 #define OSPF_PDU_LEN_MIN                    16
 #define OSPF_PDU_LEN_MAX                    UINT16_MAX
