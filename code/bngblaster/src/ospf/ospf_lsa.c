@@ -1748,7 +1748,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
                 LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) overwrite external LSA with seq %u\n",
                     lsa_type, format_ipv4_address(&lsa_id), be32toh(hdr->seq), 
                     format_ipv4_address(&lsa_router), lsa->seq);
-            } else if(lsa_type == OSPF_LSA_TYPE_1 && lsa->source.type == OSPF_SOURCE_SELF) {
+            } else if(lsa->source.type == OSPF_SOURCE_SELF) {
                 lsa->seq = be32toh(hdr->seq);
                 ospf_lsa_self_update(ospf_instance);
                 continue;
