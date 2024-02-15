@@ -34,6 +34,7 @@ ospf_ctrl_append_database_entries(hb_tree *lsdb, json_t *array, struct timespec 
 {
     json_t *entry;
     ospf_lsa_s *lsa;
+    ospf_lsa_header_s *hdr;
     hb_itor *itor;
     bool next;
 
@@ -41,6 +42,9 @@ ospf_ctrl_append_database_entries(hb_tree *lsdb, json_t *array, struct timespec 
     uint16_t age;
 
     uint32_t lsa_id, lsa_router;
+
+    char seq_string[sizeof("0x80000001")];
+    char checksum_string[sizeof("0x0000")];
 
     if(!lsdb) return;
 
@@ -50,7 +54,7 @@ ospf_ctrl_append_database_entries(hb_tree *lsdb, json_t *array, struct timespec 
 
     while(next) {
         lsa = *hb_itor_datum(itor);
-
+        hdr = (ospf_lsa_header_s*)lsa->lsa;
         if(lsa->deleted) {
             /* Ignore deleted LSP. */
             next = hb_itor_next(itor);
@@ -64,11 +68,15 @@ ospf_ctrl_append_database_entries(hb_tree *lsdb, json_t *array, struct timespec 
 
         lsa_id = lsa->key.id;
         lsa_router = lsa->key.router;
-        entry = json_pack("{si ss ss sI si ss ss}", 
+        sprintf(seq_string, "0x%04X", lsa->seq);
+        sprintf(checksum_string, "0x%02X", be16toh(hdr->checksum));
+
+        entry = json_pack("{si ss ss ss ss si ss ss}", 
             "type", lsa->type,
             "id", format_ipv4_address(&lsa_id),
             "router", format_ipv4_address(&lsa_router),
-            "seq", lsa->seq,
+            "seq", seq_string,
+            "checksum", checksum_string,
             "age", age,
             "source-type", ospf_source_string(lsa->source.type),
             "source-router-id", format_ipv4_address(&lsa->source.router_id));
