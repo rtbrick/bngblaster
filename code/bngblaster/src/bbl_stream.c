@@ -1333,10 +1333,7 @@ bbl_stream_ldp_lookup(bbl_stream_s *stream)
 static bool
 bbl_stream_can_send(bbl_stream_s *stream)
 {
-    if(unlikely(stream->reset)) {
-        stream->reset = false;
-        stream->flow_seq = 1;
-    } else if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
+    if(*(stream->endpoint) == ENDPOINT_ACTIVE) {
         if(stream->ldp_lookup) {
             return bbl_stream_ldp_lookup(stream);
         }
@@ -1454,13 +1451,25 @@ protocol_error_t
 bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
 {
     struct timespec time_elapsed;
-    bbl_stream_config_s *config;
     bbl_session_s *session;
     io_bucket_s *io_bucket = stream->io_bucket;
     uint8_t *ptr;
     uint64_t tokens;
 
-    if(!(g_traffic && stream->enabled)) {
+    if(unlikely(stream->reset)) {
+        stream->reset = false;
+        stream->flow_seq = 1;
+        stream->max_packets = stream->tx_packets + stream->config->max_packets;
+        stream->tokens = 0;
+        return STREAM_WAIT;
+    }
+
+    if(unlikely(g_init_phase)) {
+        stream->tokens = 0;
+        return STREAM_WAIT;
+    }
+
+    if(!(g_traffic && stream->enabled && stream->tx_interface->state == INTERFACE_UP)) {
         stream->tokens = 0;
         return STREAM_WAIT;
     }
@@ -1475,20 +1484,14 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         }
     }
     
-    if(g_init_phase || stream->tx_interface->state != INTERFACE_UP) {
-        return STREAM_WAIT;
-    }
-
-    config = stream->config;
-
-    /** Enforce optional stream packet limit ... */
-    if(config->max_packets && stream->tx_packets >= config->max_packets) {
-        return FULL;
-    }
-
     if(!bbl_stream_can_send(stream)) {
         stream->tokens = 0;
         return WRONG_PROTOCOL_STATE;
+    }
+
+    /** Enforce optional stream packet limit ... */
+    if(stream->max_packets && stream->tx_packets >= stream->max_packets) {
+        return FULL;
     }
 
     if(stream->lag) {
@@ -1499,7 +1502,7 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     }
 
     /** Enforce optional stream traffic start delay ... */
-    if(stream->tx_packets == 0 && config->start_delay) {
+    if(stream->tx_packets == 0 && stream->config->start_delay) {
         if(stream->wait_start.tv_sec) {
             timespec_sub(&time_elapsed, &io->timestamp, &stream->wait_start);
             if(time_elapsed.tv_sec <= stream->config->start_delay) {
@@ -1679,6 +1682,7 @@ bbl_stream_add(bbl_stream_s *stream)
         bbl_stream_select_io(stream);
     }
     io_bucket_stream(stream);
+    stream->max_packets = stream->config->max_packets;
     if(stream->config->setup_interval) {
         stream->setup = true;
     }
@@ -2454,7 +2458,7 @@ bbl_stream_summary_json(int session_group_id, const char *name, const char *inte
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
-            "active", stream->active,
+            "active", stream->tokens > 0 ? true : false,
             "verified", stream->verified,
             "interface", stream->tx_interface->name);
         if(jobj) {
@@ -2520,14 +2524,14 @@ bbl_stream_json(bbl_stream_s *stream)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI sI sI sI}",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
-            "active", stream->active,
+            "active", stream->tokens > 0 ? true : false,
             "verified", stream->verified,
             "source-address", src_address,
             "source-port", src_port,
@@ -2561,10 +2565,7 @@ bbl_stream_json(bbl_stream_s *stream)
             "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0,
             "tx-first-epoch", stream->tx_first_epoch,
             "rx-first-epoch", stream->rx_first_epoch,
-            "rx-last-epoch", stream->rx_last_epoch,
-            "tokens", stream->tokens,
-            "bucket", stream->io_bucket->tokens,
-            "burst", stream->tokens_burst
+            "rx-last-epoch", stream->rx_last_epoch
             );
 
         if(stream->config->rx_mpls1) { 
@@ -2602,7 +2603,7 @@ bbl_stream_json(bbl_stream_s *stream)
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
-            "active", stream->active,
+            "active", stream->tokens > 0 ? true : false,
             "tx-interface", tx_interface,
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,

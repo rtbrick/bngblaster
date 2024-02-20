@@ -21,7 +21,7 @@ typedef struct bbl_stream_config_
     bool session_traffic;
 
     double pps;
-    uint32_t max_packets;
+    uint64_t max_packets;
     uint32_t start_delay;
     uint32_t setup_interval;
 
@@ -109,7 +109,6 @@ typedef struct bbl_stream_
     uint8_t direction;
 
     bool enabled;
-    bool active;
     bool threaded;
     bool session_traffic;
     bool setup;
@@ -161,6 +160,7 @@ typedef struct bbl_stream_
     uint64_t tx_packets;
     uint64_t tokens;
     uint64_t tokens_burst;
+    uint64_t max_packets;
     uint32_t lag_select;
 
     __time_t tx_first_epoch;
