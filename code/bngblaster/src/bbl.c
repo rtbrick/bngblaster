@@ -583,7 +583,6 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
-
     /* Setup control job. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 
                        1, 0, g_ctx, &bbl_ctrl_job);

@@ -17,6 +17,7 @@ typedef struct bbl_stream_config_
     uint8_t type;
     uint8_t direction;
 
+    bool autostart;
     bool session_traffic;
 
     double pps;
@@ -264,5 +265,8 @@ bbl_stream_ctrl_start(int fd, uint32_t session_id, json_t *arguments);
 
 int
 bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments);
+
+int
+bbl_stream_ctrl_stop_verfied(int fd, uint32_t session_id, json_t *arguments);
 
 #endif

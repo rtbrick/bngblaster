@@ -1751,7 +1751,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             }
         }
         stream_up = calloc(1, sizeof(bbl_stream_s));
-        stream_up->enabled = true;
+        stream_up->enabled = config->autostart;
         stream_up->endpoint = &g_endpoint;
         stream_up->flow_id = g_ctx->flow_id++;
         stream_up->flow_seq = 1;
@@ -1796,7 +1796,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
         stream_down = calloc(1, sizeof(bbl_stream_s));
-        stream_down->enabled = true;
+        stream_down->enabled = config->autostart;
         stream_down->endpoint = &g_endpoint;
         stream_down->flow_id = g_ctx->flow_id++;
         stream_down->flow_seq = 1;
@@ -1953,7 +1953,7 @@ bbl_stream_init() {
 
             if(config->direction & BBL_DIRECTION_DOWN) {
                 stream = calloc(1, sizeof(bbl_stream_s));
-                stream->enabled = true;
+                stream->enabled = config->autostart;
                 stream->endpoint = &g_endpoint;
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
@@ -1963,6 +1963,7 @@ bbl_stream_init() {
                 if(config->type == BBL_SUB_TYPE_IPV4) {
                     /* All IPv4 multicast addresses start with 1110 */
                     if((config->ipv4_destination_address & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
+                        stream->enabled = true;
                         stream->endpoint = &(g_ctx->multicast_endpoint);
                         stream->type = BBL_TYPE_MULTICAST;
                     }
@@ -2012,6 +2013,7 @@ bbl_stream_init() {
             g_ctx->config.stream_config_multicast = config;
 
             config->name = (char*)g_multicast_traffic;
+            config->autostart = true;
             config->type = BBL_SUB_TYPE_IPV4;
             config->direction = BBL_DIRECTION_DOWN;
             config->ttl = BBL_DEFAULT_TTL;
@@ -2045,6 +2047,7 @@ bbl_stream_init() {
         /* Upstream */
         config = calloc(1, sizeof(bbl_stream_config_s));
         config->name = (char*)g_session_traffic_ipv4;
+        config->autostart = true;
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV4;
         config->direction = BBL_DIRECTION_UP;
@@ -2058,6 +2061,7 @@ bbl_stream_init() {
         /* Downstream */
         config = calloc(1, sizeof(bbl_stream_config_s));
         config->name = (char*)g_session_traffic_ipv4;
+        config->autostart = true;
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV4;
         config->direction = BBL_DIRECTION_DOWN;
@@ -2078,6 +2082,7 @@ bbl_stream_init() {
         /* Upstream */
         config = calloc(1, sizeof(bbl_stream_config_s));
         config->name = (char*)g_session_traffic_ipv6;
+        config->autostart = true;
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6;
         config->direction = BBL_DIRECTION_UP;
@@ -2091,6 +2096,7 @@ bbl_stream_init() {
         /* Downstream */
         config = calloc(1, sizeof(bbl_stream_config_s));
         config->name = (char*)g_session_traffic_ipv6;
+        config->autostart = true;
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6;
         config->direction = BBL_DIRECTION_DOWN;
@@ -2111,6 +2117,7 @@ bbl_stream_init() {
         /* Upstream */
         config = calloc(1, sizeof(bbl_stream_config_s));
         config->name = (char*)g_session_traffic_ipv6pd;
+        config->autostart = true;
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6PD;
         config->direction = BBL_DIRECTION_UP;
@@ -2124,6 +2131,7 @@ bbl_stream_init() {
         /* Downstream */
         config = calloc(1, sizeof(bbl_stream_config_s));
         config->name = (char*)g_session_traffic_ipv6pd;
+        config->autostart = true;
         config->stream_group_id = UINT16_MAX;
         config->type = BBL_SUB_TYPE_IPV6PD;
         config->direction = BBL_DIRECTION_DOWN;
@@ -2336,13 +2344,18 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
  * @param session session object
  * @param name optionally filter by name
  * @param direction optionally filter by direction
+ * @param verified_only optionally match verfied streams only
  */
 static void
 bbl_stream_enable_session(bool enabled, bbl_session_s *session, 
-                          const char *name, uint8_t direction)
+                          const char *name, uint8_t direction,
+                          bool verified_only)
 {
     bbl_stream_s *stream = session->streams.head;
     while(stream) {
+        if(verified_only && stream->verified == false) {
+            stream = stream->session_next; continue;
+        }
         if(stream->session_traffic == false &&
            stream->type != BBL_TYPE_MULTICAST && 
            stream->direction & direction) {
@@ -2371,10 +2384,12 @@ bbl_stream_enable_session(bool enabled, bbl_session_s *session,
  * @param session_group_id session-group-id
  * @param name optionally filter by name
  * @param direction optionally filter by direction
+ * @param verified_only optionally match verfied streams only
  */
 static void
 bbl_streams_enable_filter(bool enabled, int session_group_id, 
-                          const char *name, uint8_t direction)
+                          const char *name, const char *interface, 
+                          uint8_t direction, bool verified_only)
 {
     bbl_stream_s *stream = g_ctx->stream_head;
     bbl_session_s *session;
@@ -2382,16 +2397,23 @@ bbl_streams_enable_filter(bool enabled, int session_group_id,
 
     if(session_group_id < 0) {
         while(stream) {
+            if(verified_only && stream->verified == false) {
+                stream = stream->next; continue;
+            }
             if(stream->session_traffic == false &&
                stream->type != BBL_TYPE_MULTICAST && 
                stream->direction & direction) {
-                if(name) {
-                    if(strcmp(name, stream->config->name) == 0) {
-                        stream->enabled = enabled;
+                if(interface) {
+                    if(strcmp(interface, stream->tx_interface->name) != 0) {
+                        stream = stream->next; continue;
                     }
-                } else {
-                    stream->enabled = enabled;
                 }
+                if(name) {
+                    if(strcmp(name, stream->config->name) != 0) {
+                        stream = stream->next; continue;
+                    }
+                }
+                stream->enabled = enabled;
             }
             stream = stream->next;
         }
@@ -2399,21 +2421,33 @@ bbl_streams_enable_filter(bool enabled, int session_group_id,
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session && session->session_group_id == session_group_id) {
-                bbl_stream_enable_session(enabled, session, name, direction);
+                bbl_stream_enable_session(enabled, session, name, direction, verified_only);
             }
         }
     }
 }
 
 static json_t *
-bbl_stream_summary_json()
+bbl_stream_summary_json(int session_group_id, const char *name, const char *interface, uint8_t direction)
 {
     bbl_stream_s *stream = g_ctx->stream_head;
     json_t *jobj, *jobj_array;
     jobj_array = json_array();
 
     while(stream) {
-        jobj = json_pack("{si ss* ss ss ss sb sb sI sI sI sI sI }",
+
+        if(session_group_id >= 0) {
+            if(!(stream->session && stream->session->session_group_id == session_group_id)) goto NEXT;
+        }
+        if(name) {
+            if(!strcmp(name, stream->config->name) == 0) goto NEXT;
+        }
+        if(interface) {
+            if(!strcmp(interface, stream->tx_interface->name) == 0) goto NEXT;
+        }
+        if(!(stream->direction & direction)) goto NEXT;
+
+        jobj = json_pack("{si ss* ss ss ss sb sb sb ss*}",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2421,11 +2455,8 @@ bbl_stream_summary_json()
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
             "active", stream->active,
-            "tx-packets", stream->tx_packets - stream->reset_packets_tx,
-            "tx-bytes", (stream->tx_packets - stream->reset_packets_tx) * stream->tx_len,
-            "rx-packets", stream->rx_packets - stream->reset_packets_rx,
-            "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
-            "rx-loss", stream->rx_loss - stream->reset_loss);
+            "verified", stream->verified,
+            "interface", stream->tx_interface->name);
         if(jobj) {
             if(stream->session) {
                 json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
@@ -2433,6 +2464,7 @@ bbl_stream_summary_json()
             }
             json_array_append(jobj_array, jobj);
         }
+NEXT:
         stream = stream->next;
     }
     return jobj_array;
@@ -2442,9 +2474,8 @@ json_t *
 bbl_stream_json(bbl_stream_s *stream)
 {
     json_t *root = NULL;
-    char *access_interface_name = NULL;
-    char *network_interface_name = NULL;
-    char *a10nsp_interface_name = NULL;
+    char *tx_interface = NULL;
+    char *rx_interface = NULL;
     char *src_address = NULL;
     char *dst_address = NULL;
     uint16_t src_port = 0;
@@ -2454,14 +2485,15 @@ bbl_stream_json(bbl_stream_s *stream)
         return NULL;
     }
 
-    if(stream->tx_access_interface) {
-        access_interface_name = stream->tx_access_interface->name;
+    if(stream->tx_interface) {
+        tx_interface = stream->tx_interface->name;
     }
-    if(stream->tx_network_interface) {
-        network_interface_name = stream->tx_network_interface->name;
-    }
-    if(stream->tx_a10nsp_interface) {
-        a10nsp_interface_name = stream->tx_a10nsp_interface->name;
+    if(stream->rx_access_interface) {
+        rx_interface = stream->rx_access_interface->name;
+    } else if(stream->rx_network_interface) {
+        rx_interface = stream->rx_network_interface->name;
+    } else if(stream->rx_a10nsp_interface) {
+        rx_interface = stream->rx_a10nsp_interface->name;
     }
 
     if (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) {
@@ -2488,7 +2520,7 @@ bbl_stream_json(bbl_stream_s *stream)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb ss sI ss sI ss ss* ss* ss* sb sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI sI sI sI}",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI sI sI sI}",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2496,15 +2528,14 @@ bbl_stream_json(bbl_stream_s *stream)
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
             "active", stream->active,
+            "verified", stream->verified,
             "source-address", src_address,
             "source-port", src_port,
             "destination-address", dst_address,
             "destination-port", dst_port,
             "protocol", stream->tcp ? "tcp" : "udp",
-            "access-interface", access_interface_name,
-            "network-interface", network_interface_name,
-            "a10nsp-interface", a10nsp_interface_name,
-            "verified", stream->verified,
+            "tx-interface", tx_interface,
+            "rx-interface", rx_interface,
             "rx-first-seq", stream->rx_first_seq,
             "rx-last-seq", stream->rx_last_seq,
             "rx-tos-tc", stream->rx_priority,
@@ -2572,7 +2603,7 @@ bbl_stream_json(bbl_stream_s *stream)
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
             "active", stream->active,
-            "network-interface", network_interface_name,
+            "tx-interface", tx_interface,
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,
             "tx-pps", stream->rate_packets_tx.avg,
@@ -2641,14 +2672,40 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
 }
 
 int
-bbl_stream_ctrl_summary(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+bbl_stream_ctrl_summary(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
+
+    const char *name = NULL;
+    const char *interface = NULL;
+    const char *s = NULL;
+
+    int session_group_id = -1;
+    uint8_t direction = BBL_DIRECTION_BOTH;
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "direction", &s) == 0) {
+        if(strcmp(s, "upstream") == 0) {
+            direction = BBL_DIRECTION_UP;
+        } else if(strcmp(s, "downstream") == 0) {
+            direction = BBL_DIRECTION_DOWN;
+        } else if(strcmp(s, "both") == 0) {
+            direction = BBL_DIRECTION_BOTH;
+        } else {
+            return bbl_ctrl_status(fd, "error", 400, "invalid direction");
+        }
+    }
+    json_unpack(arguments, "{s:s}", "name", &name);
+    json_unpack(arguments, "{s:s}", "interface", &interface);
 
     json_t *root = json_pack("{ss si so*}",
         "status", "ok",
         "code", 200,
-        "stream-summary", bbl_stream_summary_json());
+        "stream-summary", bbl_stream_summary_json(session_group_id, name, interface, direction));
 
     result = json_dumpfd(root, fd, 0);
     json_decref(root);
@@ -2761,11 +2818,13 @@ bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), jso
 }
 
 static int
-bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments, bool enabled)
+bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments, 
+                        bool enabled, bool verified_only)
 {
     bbl_stream_s *stream = g_ctx->stream_head;
     bbl_session_s *session;
     const char *name = NULL;
+    const char *interface = NULL;
     const char *s = NULL;
 
     int session_group_id = -1;
@@ -2801,16 +2860,17 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments, bool ena
         }
     }
     json_unpack(arguments, "{s:s}", "name", &name);
+    json_unpack(arguments, "{s:s}", "interface", &interface);
 
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
-            bbl_stream_enable_session(enabled, session, name, direction);
+            bbl_stream_enable_session(enabled, session, name, direction, verified_only);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
     } else {
-        bbl_streams_enable_filter(enabled, session_group_id, name, direction);
+        bbl_streams_enable_filter(enabled, session_group_id, name, interface, direction, verified_only);
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
@@ -2818,11 +2878,17 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments, bool ena
 int
 bbl_stream_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_enabled(fd, session_id, arguments, true);
+    return bbl_stream_ctrl_enabled(fd, session_id, arguments, true, false);
 }
 
 int
 bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false);
+    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, false);
+}
+
+int
+bbl_stream_ctrl_stop_verfied(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, true);
 }

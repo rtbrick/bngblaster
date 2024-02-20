@@ -2198,7 +2198,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     double bps;
 
     const char *schema[] = {
-        "name", "stream-group-id", "type",
+        "name", "stream-group-id", "type", "autostart",
         "direction", "network-interface", "a10nsp-interface",
         "source-port", "destination-port", "length", "ttl"
         "priority", "vlan-priority", "pps",
@@ -2244,6 +2244,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     } else {
         fprintf(stderr, "JSON config error: Missing value for stream->type\n");
         return false;
+    }
+
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "autostart");
+    if(value) {
+        stream_config->autostart = json_boolean_value(value);
+    } else {
+        stream_config->autostart = g_ctx->config.stream_autostart;
     }
 
     if(json_unpack(stream, "{s:s}", "direction", &s) == 0) {
@@ -2946,7 +2953,7 @@ json_parse_config(json_t *root)
             return false;
         }
 
-        JSON_OBJ_GET_NUMBER(section, value, "ppp", "mru", 1, 65535);
+        JSON_OBJ_GET_NUMBER(section, value, "ppp", "mru", 0, 65535);
         if(value) {
             g_ctx->config.ppp_mru = json_number_value(value);
         }
@@ -3367,6 +3374,7 @@ json_parse_config(json_t *root)
 
         const char *schema[] = {
             "autostart", "stop-verified", "max-burst",
+            "stream-autostart",
             "stream-rate-calculation",
             "stream-delay-calculation",
             "udp-checksum"
@@ -3387,6 +3395,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "traffic", "max-burst", 1, 255);
         if(value) {
             g_ctx->config.stream_max_burst = json_number_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "traffic", "stream-autostart");
+        if(value) {
+            g_ctx->config.stream_autostart = json_boolean_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "traffic", "stream-rate-calculation");
         if(value) {
@@ -4136,6 +4148,7 @@ bbl_config_init_defaults()
     g_ctx->config.igmp_robustness_interval = 1000;
     g_ctx->config.multicast_traffic_pps = 1000;
     g_ctx->config.traffic_autostart = true;
+    g_ctx->config.stream_autostart = true;
     g_ctx->config.stream_rate_calc = true;
     g_ctx->config.stream_max_burst = 16;
     g_ctx->config.multicast_traffic_autostart = true;
