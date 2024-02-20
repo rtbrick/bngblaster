@@ -96,8 +96,36 @@ easily merged with the base configuration.
         "streams": []
     }
 
+Understanding Flows
+~~~~~~~~~~~~~~~~~~~
+
+A flow represents a particular instance of a traffic stream where a stream 
+can consist of one or more flows, depending on its configuration 
+and the number of sessions it is associated with. For example:
+
++ A unidirectional stream is represented by a single flow that sends or receives traffic from one end to another
++ A bidirectional stream is represented by two flows that send and receive traffic in opposite directions
++ A stream that is bound by sessions can be instantiated multiple times for each session and direction
+
+Each flow can be identified by its flow-id, which is a unique number automatically 
+assigned by the BNG Blaster.
+
+.. image:: ../images/bbl_flows.png
+    :alt: BNG Blaster Traffic Flows
+
+You can use the ``stream-info flow-id <id>`` command to get detailed information about a specific flow, 
+such as its configuration, statistics, and state. You can also use the ``stream-summary`` command to get a 
+brief overview of all the flows that are currently active or configured.
+
 Stream Commands
 ~~~~~~~~~~~~~~~
+
+The BNG Blaster provide multiple commands to control and check traffic streams. 
+The command ``stream-summary`` returns a list of all flows with terse informations. 
+This list can be optionally filtered using different arguments like session-group-id, 
+name, interface and direction. This summary output can be used to identify the actual 
+flow-id of a particular stream to query detailed informations using 
+the ``stream-info flow-id <id>`` command. 
 
 The ``session-streams`` command returns detailed stream statistics per session.
 

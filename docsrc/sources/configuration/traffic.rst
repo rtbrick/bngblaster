@@ -16,6 +16,9 @@
 | **max-burst**                | | Stream flow burst size in packets.                   |
 |                              | | Default: 16                                          |
 +------------------------------+--------------------------------------------------------+
+| **stream-autostart**         | | Enable stream autostart.                             |
+|                              | | Default: true                                        |
++------------------------------+--------------------------------------------------------+
 | **stream-rate-calculation**  | | Enable stream rate calculation.                      |
 |                              | | This option should be set to false if massive        |
 |                              | | streams (e.g. more than 1M) are defined but          |
