@@ -20,14 +20,18 @@
 |                                   | | maximum number of packets in the ring buffer.                      |
 |                                   | | Default: 4096                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
+| **io-burst**                      | | IO burst (ring size).                                              |
+|                                   | | Default: 256                                                       |
++-----------------------------------+----------------------------------------------------------------------+
 | **qdisc-bypass**                  | | Bypass the kernel's qdisc layer.                                   |
+|                                   | | It's currently not recommended to change the default (issue #206)! |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-interval**                   | | TX polling interval in milliseconds.                               |
-|                                   | | Default: 1.0 Range: 0.0001 to 1000                                 |
+|                                   | | Default: 0.1 Range: 0.0001 to 1000                                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-interval**                   | | RX polling interval in milliseconds.                               |
-|                                   | | Default: 1.0 Range: 0.0001 to 1000                                 |
+|                                   | | Default: 0.1 Range: 0.0001 to 1000                                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-threads**                    | | Number of TX threads per interface link.                           |
 |                                   | | Default: 0 (main thread)                                           |

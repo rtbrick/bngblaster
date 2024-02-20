@@ -49,5 +49,6 @@
 | **lcp-padding**                           | | Add fixed padding to LCP packets send from LNS.                   |
 |                                           | | Default: 0 Range: 0 - 65535                                       |
 +-------------------------------------------+---------------------------------------------------------------------+
-
-
+| **client-auth-id**                        | | Add optional check based on client-auth-id to support multiple    |
+|                                           | | LNS server configurations with the same IP address.               |
++-------------------------------------------+---------------------------------------------------------------------+

@@ -38,7 +38,7 @@ multiple RX threads but only one TX thread.
 It is also possible to start dedicated threads for TX but remain RX in the main thread or 
 vice versa by setting the number of threads to zero (default). 
 
-With multithreading, you should be able to scale up to at least 1 million PPS bidirectional, depending on 
+With multithreading, you should be able to scale up to 8 million PPS bidirectional, depending on 
 the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over 
 at least 4 TX threads to verify all prefixes of a BGP full table for example.
 
@@ -53,40 +53,53 @@ interfaces.
 
 .. note::
 
-    The BNG Blaster is currently tested for 1 million PPS with 1 million flows, which is not a 
+    The BNG Blaster is currently tested for 8 million PPS with 10 million flows, which is not a 
     hard limitation but everything above should be considered with caution. It is also possible to 
     scale far beyond using DPDK-enabled interfaces. 
 
-A single stream will be always handled by a single thread to prevent re-ordering. The single stream 
-performance is limited by the TX interval multiplied by max bust size (`traffic->max-burst`) which 
-is 32 in the default configuration. Therefore each stream is limited to around 32K PPS per default. 
-This can be increased by changing the TX interval. With a TX interval of `0.1`, the single stream 
-performance increases to 320K PPS. The max burst size is should not be increased to prevent microbursts. 
-
-The following settings are recommended for most tests with 1M PPS or beyond. 
-
-.. code-block:: json
-
-    {
-        "interfaces": {
-            "tx-threads": 4,
-            "tx-interval": 0.01,
-            "rx-threads": 4,
-            "rx-interval": 0.1,
-            "io-slots": 32768
-        }
-    }
+A single stream will be always handled by a single thread to prevent re-ordering. 
 
 It is also recommended to increase the hardware and software queue size of your
 network interface links to the maximum for higher throughput as explained 
 in the :ref:`Operating System Settings <interfaces>`. 
 
+The packet receives performance can be increased by the number of RX threads and IO slots.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "rx-threads": 20,
+            "io-slots": 32768
+        }
+    }
+
 The packet receives performance is also limited by the abilities of your network 
-interfaces to properly distribute the traffic over multiple hardware queues. Some
-network interfaces are not able to distribute traffic based on VLAN or PPPoE session
-identifiers. In this case, all traffic is received by the same hardware queue and 
-corresponding thread. If CPU utilization is not properly distributed over all
-cores, this could be the reason. 
+interfaces to properly distribute the traffic over multiple hardware queues using
+receive side scaling (RSS). This is a technology that allows network applications 
+to distribute the processing of incoming network packets across multiple CPUs, 
+improving performance, RSS uses a hashing function to assign packets to different 
+CPUs based on their source and destination addresses and ports. RSS requires 
+hardware support from the network adapter and the driver.
+
+Some network interfaces are not able to distribute traffic for PPPoE/L2TP or even
+MPLS traffic. Even double-tagged VLANs with default the default type 0x8100 is 
+often not supported. 
+
+Therefore best results can be reached with single tagged IPoE traffic. Depending
+on the actual network adapter, there are different options to address this 
+limitation. For instance, Intel adapters support different 
+Dynamic Device Personalization (DDP) to support RSS for PPPoE traffic. 
+
+You can also boost the performance by adjusting some driver settings. For example,
+we found that the following setting improved the performance for
+`Intel 700 Series <https://www.kernel.org/doc/html/v6.6/networking/device_drivers/ethernet/intel/i40e.html>`_
+in some of our tests. However, these settings may vary depending on your specific
+test environment.
+
+.. code-block:: none
+
+    ethtool -C <interface> adaptive-rx off adaptive-tx off rx-usecs 125 tx-usecs 125
 
 .. note::
 
@@ -111,13 +124,12 @@ in the corresponding :ref:`installation <install-dpdk>` section.
 
     {
         "interfaces": {
-            "tx-interval": 0.1,
-            "rx-interval": 0.1,
+            "io-slots": 32768
             "links": [
                 {
                     "interface": "0000:23:00.0",
                     "io-mode": "dpdk",
-                    "rx-threads": 4,
+                    "rx-threads": 8,
                     "rx-cpuset": [4,5,6,7],
                     "tx-threads": 3,
                     "tx-cpuset": [1,2,3]
@@ -125,7 +137,7 @@ in the corresponding :ref:`installation <install-dpdk>` section.
                 {
                     "interface": "0000:23:00.2",
                     "io-mode": "dpdk",
-                    "rx-threads": 4,
+                    "rx-threads": 8,
                     "rx-cpuset": [12,13,14,15],
                     "tx-threads": 3,
                     "tx-cpuset": [9,10,11]
@@ -168,3 +180,6 @@ in the corresponding :ref:`installation <install-dpdk>` section.
         ]
     }
 
+
+DPDK assigns one hardware queue to each RX thread, so you need to increase 
+the number of threads to utilize more queues and enhance performance.

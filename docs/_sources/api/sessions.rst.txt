@@ -10,45 +10,35 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **sessions-pending**              | | List all sessions not established.                                 |
 +-----------------------------------+----------------------------------------------------------------------+
-| **session-traffic**               | | Display session traffic statistics.                                |
+| **session-start**                 | | Start/stop sessions.                                               |
+| **session-stop**                  | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
 +-----------------------------------+----------------------------------------------------------------------+
-| **session-traffic-start**         | | Enable/start session traffic.                                      |
+| **session-restart**               | | Restart sessions.                                                  |
+|                                   | | The argument ``reconnect-delay`` is only applicable in combination |
+|                                   | | with session reconnect enabled in the configuration. This argument |
+|                                   | | delays the session reconnect by the defined amount of seconds.     |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
-+-----------------------------------+----------------------------------------------------------------------+
-| **session-traffic-stop**          | | Disable/stop session traffic.                                      |
-|                                   | |                                                                    |
-|                                   | | **Arguments:**                                                     |
-|                                   | | ``session-id``                                                     |
-+-----------------------------------+----------------------------------------------------------------------+
-| **session-traffic-reset**         | | Reset all session traffic streams.                                 |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
+|                                   | | ``reconnect-delay``                                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **session-streams**               | | Display session streams.                                           |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id`` Mandatory                                           |
 +-----------------------------------+----------------------------------------------------------------------+
-| **session-start**                 | | Start session manually.                                            |
-|                                   | |                                                                    |
+| **session-traffic**               | | Display session traffic statistics.                                |
++-----------------------------------+----------------------------------------------------------------------+
+| **session-traffic-start**         | | This command can be used to start or stop session-traffic flows.   |
+| **session-traffic-stop**          | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
+|                                   | | ``direction`` (upstream/downstream/both)                           |
 +-----------------------------------+----------------------------------------------------------------------+
-| **session-stop**                  | | Stop sessions manually.                                            |
-|                                   | |                                                                    |
-|                                   | | **Arguments:**                                                     |
-|                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
+| **session-traffic-reset**         | | Reset all session traffic streams.                                 |
 +-----------------------------------+----------------------------------------------------------------------+
-| **session-restart**               | | Restart sessions manually.                                         |
-|                                   | |                                                                    |
-|                                   | | **Arguments:**                                                     |
-|                                   | | ``session-id``                                                     |
-|                                   | | ``session-group-id``                                               |
-|                                   | | ``reconnect-delay``                                                |
-+-----------------------------------+----------------------------------------------------------------------+
-
-The argument ``reconnect-delay`` is only applicable in combination with
-session reconnect enabled in the configuration. This argument delays the 
-session reconnect by the defined amount of seconds. 

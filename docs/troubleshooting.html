@@ -1,19 +1,25 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Troubleshooting &mdash; BNG Blaster 0.8 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=df861e32" />
+
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=a0e24af7"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -26,12 +32,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> BNG Blaster
-            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -75,8 +85,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Troubleshooting</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Troubleshooting</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/troubleshooting.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -87,9 +97,9 @@
            <div itemprop="articleBody">
              
   <section id="troubleshooting">
-<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline"></a></h1>
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h1>
 <section id="logging">
-<span id="id1"></span><h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
+<span id="id1"></span><h2>Logging<a class="headerlink" href="#logging" title="Link to this heading"></a></h2>
 <p>The BNG Blaster can log events to the standard output
 or the logging window of the interactive courses interface.
 Those events could be also logged into files using the argument
@@ -119,7 +129,7 @@ The following list shows all supported logging options.</p>
 </div>
 </section>
 <section id="pcap">
-<span id="capture"></span><h2>PCAP<a class="headerlink" href="#pcap" title="Permalink to this headline"></a></h2>
+<span id="capture"></span><h2>PCAP<a class="headerlink" href="#pcap" title="Link to this heading"></a></h2>
 <p>You can start the BNG Blaster with the argument <code class="docutils literal notranslate"><span class="pre">-P</span> <span class="pre">&lt;file&gt;</span></code>
 to capture all traffic sent and received by the BNG Blaster
 into a single PCAP file. This file includes all traffic from all
@@ -130,17 +140,17 @@ Some network interfaces drop the most outer VLAN which can be easily
 verified using the capture file.</p>
 <p>The configuration option <code class="docutils literal notranslate"><span class="pre">capture-include-streams</span></code> allows to
 include or exclude (default behavior) traffic streams from capture.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;capture-include-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;capture-include-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Traffic streams send or received on threaded interfaces will be also not captured.
 All other traffic is still captured on threaded interfaces.</p>
 <section id="wireshark-plugin">
-<h3>Wireshark Plugin<a class="headerlink" href="#wireshark-plugin" title="Permalink to this headline"></a></h3>
+<h3>Wireshark Plugin<a class="headerlink" href="#wireshark-plugin" title="Link to this heading"></a></h3>
 <p>Traffic streams generated with the BNG Blaster include the
 <a class="reference internal" href="streams.html#bbl-header"><span class="std std-ref">BNG Blaster Header</span></a> which can be analyzed
 with the Wireshark BNG Blaster Header Dissector.</p>
