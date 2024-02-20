@@ -110,7 +110,7 @@ and the number of sessions it is associated with. For example:
 Each flow can be identified by its flow-id, which is a unique number automatically 
 assigned by the BNG Blaster.
 
-.. image:: ../images/bbl_flows.png
+.. image:: images/bbl_flows.png
     :alt: BNG Blaster Traffic Flows
 
 You can use the ``stream-info flow-id <id>`` command to get detailed information about a specific flow, 

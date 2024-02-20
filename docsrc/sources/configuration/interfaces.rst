@@ -21,7 +21,7 @@
 |                                   | | Default: 4096                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **io-burst**                      | | IO burst (ring size).                                              |
-|                                   | | Default: 256                                                      |
+|                                   | | Default: 256                                                       |
 +-----------------------------------+----------------------------------------------------------------------+
 | **qdisc-bypass**                  | | Bypass the kernel's qdisc layer.                                   |
 |                                   | | It's currently not recommended to change the default (issue #206)! |
