@@ -157,7 +157,7 @@ The following steps are required to build the BNG Blaster with experimental
 
 .. note::
 
-    Tested with DPDK version 23.11 (LTS) and Ubuntu 22.04 (LTS)!
+    Tested with DPDK version 22.11.4 and Ubuntu 22.04 (LTS)!
 
 
 Download and install DPDK:
