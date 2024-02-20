@@ -356,7 +356,7 @@ Finally, you can start the BNG Blaster.
 
 .. code-block:: none
 
-    $ sudo bngblaster -C veth1-isis.json -l isis -P test.pcap -S run.sock
+    $ sudo bngblaster -C isis.json -l isis -P test.pcap -S run.sock
     Mar 30 14:56:11.981279 Init IS-IS instance 1
     Mar 30 14:56:11.981314 Load ISIS MRT file isis.mrt
     Mar 30 14:56:11.981335 Init IS-IS instance 2
