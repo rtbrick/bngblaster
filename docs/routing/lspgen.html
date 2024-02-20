@@ -118,31 +118,32 @@ Usage: lspgen [OPTIONS]
 
   -v --version
   -a --area &lt;args&gt;
-  -P --protocol isis|ospf2
+  -P --protocol isis|ospf2|ospf3
   -K --authentication-key &lt;args&gt;
   -T --authentication-type none|simple|md5
-  -r --read-config-file &lt;args&gt;
-  -w --write-config-file &lt;args&gt;
+  -r --read-config-file &lt;filename&gt;
+  -w --write-config-file &lt;filename&gt;
   -C --connector &lt;args&gt;
   -S --control-socket &lt;args&gt;
-  -l --ipv4-link-prefix &lt;args&gt;
-  -L --ipv6-link-prefix &lt;args&gt;
-  -n --ipv4-node-prefix &lt;args&gt;
-  -N --ipv6-node-prefix &lt;args&gt;
-  -x --ipv4-external-prefix &lt;args&gt;
-  -X --ipv6-external-prefix &lt;args&gt;
+  -l --ipv4-link-prefix &lt;ip-prefix&gt;
+  -L --ipv6-link-prefix &lt;ip-prefix&gt;
+  -n --ipv4-node-prefix &lt;ip-prefix&gt;
+  -N --ipv6-node-prefix &lt;ip-prefix&gt;
+  -x --ipv4-external-prefix &lt;ip-prefix&gt;
+  -X --ipv6-external-prefix &lt;ip-prefix&gt;
+  -u --link-multiplier &lt;args&gt;
   -M --lsp-lifetime &lt;args&gt;
   -z --no-ipv4
   -Z --no-ipv6
   -y --no-sr
   -e --external-count &lt;args&gt;
-  -g --graphviz-file &lt;args&gt;
+  -g --graphviz-file &lt;filename&gt;
   -h --help
-  -m --mrt-file &lt;args&gt;
+  -m --mrt-file &lt;filename&gt;
   -c --node-count &lt;args&gt;
-  -p --pcap-file &lt;args&gt;
+  -p --pcap-file &lt;filename&gt;
   -G --purge
-  -f --stream-file &lt;args&gt;
+  -f --stream-file &lt;filename&gt;
   -s --seed &lt;args&gt;
   -q --sequence &lt;args&gt;
   -Q --quit-loop
@@ -240,14 +241,11 @@ manually.</p>
 <section id="topology-from-configuration-file">
 <h2>Topology from Configuration File<a class="headerlink" href="#topology-from-configuration-file" title="Permalink to this headline"></a></h2>
 <p>In addition to randomly generated topologies, it is also possible to
-create them specifically using configuration.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This option is currently supported for ISIS only!</p>
-</div>
-<p>The following example shows the configuration for a topology
-with three nodes.</p>
+create them specifically using configuration. The following example
+shows the configuration for a topology with three nodes.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;instance&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis&quot;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;level1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
 <span class="w">        </span><span class="p">{</span><span class="w"></span>
 <span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001&quot;</span><span class="p">,</span><span class="w"></span>
@@ -375,6 +373,13 @@ with three nodes.</p>
 <span class="w">        </span><span class="p">}</span><span class="w"></span>
 <span class="w">    </span><span class="p">]</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The randomly generated topologies can be also written to a file
+to have an example or starting point for the desired topologies.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lspgen -P isis -w isis.json
+lspgen -P ospf2 -w ospf2.json
+lspgen -P ospf3 -w ospf3.json
 </pre></div>
 </div>
 </section>

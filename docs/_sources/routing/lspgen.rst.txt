@@ -27,39 +27,41 @@ The default protocol is ISIS which can be changed using the argument ``-P ospf2`
       /_____/____/_/    \____/\___/_/ /_/
     
     Usage: lspgen [OPTIONS]
-    
+
       -v --version
       -a --area <args>
-      -P --protocol isis|ospf2
+      -P --protocol isis|ospf2|ospf3
       -K --authentication-key <args>
       -T --authentication-type none|simple|md5
-      -r --read-config-file <args>
-      -w --write-config-file <args>
+      -r --read-config-file <filename>
+      -w --write-config-file <filename>
       -C --connector <args>
       -S --control-socket <args>
-      -l --ipv4-link-prefix <args>
-      -L --ipv6-link-prefix <args>
-      -n --ipv4-node-prefix <args>
-      -N --ipv6-node-prefix <args>
-      -x --ipv4-external-prefix <args>
-      -X --ipv6-external-prefix <args>
+      -l --ipv4-link-prefix <ip-prefix>
+      -L --ipv6-link-prefix <ip-prefix>
+      -n --ipv4-node-prefix <ip-prefix>
+      -N --ipv6-node-prefix <ip-prefix>
+      -x --ipv4-external-prefix <ip-prefix>
+      -X --ipv6-external-prefix <ip-prefix>
+      -u --link-multiplier <args>
       -M --lsp-lifetime <args>
       -z --no-ipv4
       -Z --no-ipv6
       -y --no-sr
       -e --external-count <args>
-      -g --graphviz-file <args>
+      -g --graphviz-file <filename>
       -h --help
-      -m --mrt-file <args>
+      -m --mrt-file <filename>
       -c --node-count <args>
-      -p --pcap-file <args>
+      -p --pcap-file <filename>
       -G --purge
-      -f --stream-file <args>
+      -f --stream-file <filename>
       -s --seed <args>
       -q --sequence <args>
       -Q --quit-loop
       -V --level <args>
-      -t --log normal|debug|lsp|lsdb|packet|ctrl|error 
+      -t --log normal|debug|lsp|lsdb|packet|ctrl|error
+
 
 You can generate random topologies or define a topology manually 
 using configuration files.
@@ -168,18 +170,14 @@ Topology from Configuration File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In addition to randomly generated topologies, it is also possible to 
-create them specifically using configuration. 
-
-.. note::
-
-    This option is currently supported for ISIS only!
-
-The following example shows the configuration for a topology 
-with three nodes.
+create them specifically using configuration. The following example 
+shows the configuration for a topology with three nodes.
 
 .. code-block:: json
 
     {
+        "instance": "default",
+        "protocol": "isis",
         "level1": [
             {
                 "node_id": "1337.0000.0001",
@@ -307,3 +305,12 @@ with three nodes.
             }
         ]
     }
+
+The randomly generated topologies can be also written to a file
+to have an example or starting point for the desired topologies. 
+
+.. code-block:: none
+
+    lspgen -P isis -w isis.json 
+    lspgen -P ospf2 -w ospf2.json 
+    lspgen -P ospf3 -w ospf3.json 
