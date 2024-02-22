@@ -11,8 +11,8 @@
 | **sessions-pending**              | | List all sessions not established.                                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **session-start**                 | | Start/stop sessions.                                               |
-| **session-stop**                  | |                                                                    |
-|                                   | | **Arguments:**                                                     |
+|                                   | |                                                                    |
+| **session-stop**                  | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
 |                                   | | ``session-group-id`` (ignored if session-id is present)            |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -34,8 +34,8 @@
 | **session-traffic**               | | Display session traffic statistics.                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **session-traffic-start**         | | This command can be used to start or stop session-traffic flows.   |
-| **session-traffic-stop**          | |                                                                    |
-|                                   | | **Arguments:**                                                     |
+|                                   | |                                                                    |
+| **session-traffic-stop**          | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
 |                                   | | ``session-group-id`` (ignored if session-id is present)            |
 |                                   | | ``direction`` (upstream/downstream/both)                           |
