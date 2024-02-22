@@ -60,10 +60,6 @@
 |                                   | | signatures for faster processing and more detailed analysis.       |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **multicast-traffic-autostart**   | | Automatically start multicast traffic.                             |
-|                                   | | Only applicable with **send-multicast-traffic** enabled!           |
-|                                   | | Default: true                                                      |
-+-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-length**      | | Multicast traffic IP length.                                       |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |
 |                                   | | Default: 76                                                        |

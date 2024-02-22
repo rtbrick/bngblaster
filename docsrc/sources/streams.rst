@@ -3,17 +3,46 @@
 Traffic Streams
 ===============
 
-Traffic streams allow doing various forwarding verification 
-and QoS tests using BNG Blaster.
+The BNG Blaster can perform various forwarding verifications
+and QoS tests using traffic streams. 
 
 .. image:: images/bbl_streams.png
     :alt: Interactive Streams
 
-Traffic streams are divided into bounded and RAW streams. 
-The first one is bound to an access configuration and derives
-addresses dynamically from the sessions. 
+Traffic streams can be either bounded or RAW. Bounded streams 
+are associated with an access configuration that specifies the 
+session parameters, such as protocols and encapsulations. Those 
+streams are instantiated per session and get their addresses
+automatically from the sessions that they belong to. 
 
-RAW streams are supported from :ref:`network interfaces <network-interface>` only.
+RAW streams are linked to :ref:`network interfaces <network-interface>` 
+that provide the source addresses unless they are manually set.
+
+It is also possible to create traffic streams on :ref:`network interfaces <network-interface>` 
+to or from destinations associated with certain emulated routing topologies. For instance, 
+you can emulate an ISIS network, advertise BGP prefixes with next-hops in this 
+emulated ISIS network, and then send traffic to or from one of those BGP prefixes.
+
+Understanding Flows
+~~~~~~~~~~~~~~~~~~~
+
+A flow represents a particular instance of a traffic stream where a stream 
+can consist of one or more flows, depending on its configuration 
+and the number of sessions it is associated with. For example:
+
++ A unidirectional stream is represented by a single flow that sends or receives traffic from one end to another
++ A bidirectional stream is represented by two flows that send and receive traffic in opposite directions
++ A stream that is bound by sessions can be instantiated multiple times for each session and direction
+
+Each flow can be identified by its flow-id, which is a unique number automatically 
+assigned by the BNG Blaster.
+
+.. image:: images/bbl_flows.png
+    :alt: BNG Blaster Traffic Flows
+
+You can use the ``stream-info flow-id <id>`` command to get detailed information about a specific flow, 
+such as its configuration, statistics, and state. You can also use the ``stream-summary`` command to get a 
+brief overview of all the flows that are currently active or configured.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -96,31 +125,70 @@ easily merged with the base configuration.
         "streams": []
     }
 
-Understanding Flows
-~~~~~~~~~~~~~~~~~~~
+RAW Streams
+~~~~~~~~~~~
 
-A flow represents a particular instance of a traffic stream where a stream 
-can consist of one or more flows, depending on its configuration 
-and the number of sessions it is associated with. For example:
+Streams with default ``stream-group-id`` set to zero are considered raw streams not
+bound to any session which is supported downstream only. For those streams, the
+destination address must be explicitly set.
 
-+ A unidirectional stream is represented by a single flow that sends or receives traffic from one end to another
-+ A bidirectional stream is represented by two flows that send and receive traffic in opposite directions
-+ A stream that is bound by sessions can be instantiated multiple times for each session and direction
+RAW streams can be used for traffic between network interfaces but also to send traffic
+from network to access interfaces.
 
-Each flow can be identified by its flow-id, which is a unique number automatically 
-assigned by the BNG Blaster.
+.. code-block:: json
 
-.. image:: images/bbl_flows.png
-    :alt: BNG Blaster Traffic Flows
+    {
+        "streams": [
+            {
+                "name": "RAW",
+                "type": "ipv4",
+                "direction": "downstream",
+                "priority": 128,
+                "network-ipv4-address": "10.0.0.20",
+                "destination-ipv4-address": "1.1.1.1",
+                "length": 256,
+                "pps": 1
+            }
+        ]
+    }
 
-You can use the ``stream-info flow-id <id>`` command to get detailed information about a specific flow, 
-such as its configuration, statistics, and state. You can also use the ``stream-summary`` command to get a 
-brief overview of all the flows that are currently active or configured.
+
+If ``destination-ipv4-address`` is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
+the BNG Blaster will set the destination MAC address to the corresponding
+multicast MAC address automatically. For unicast traffic the network gateway MAC address is used.
+
+TCP RAW Streams
+~~~~~~~~~~~~~~~
+
+A new option called ``raw-tcp`` is added to the stream configuraton. 
+If enabled, UDP-like traffic with a constant rate is sent using a 
+static (RAW) TCP header.
+
+.. code-block:: json
+
+    {
+        "streams": [
+            {
+                "name": "TCP1",
+                "stream-group-id": 1,
+                "type": "ipv4",
+                "direction": "both",
+                "pps": 1,
+                "raw-tcp": true,
+                "network-ipv4-address": "10.0.0.1"
+            }
+        ]
+    }
+
+This option can be used stand-alone to verify firewall filters or together 
+with the new NAT option to verify NAT TCP streams. 
+
+For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
 
 Stream Commands
 ~~~~~~~~~~~~~~~
 
-The BNG Blaster provide multiple commands to control and check traffic streams. 
+The BNG Blaster provides multiple commands to control and check traffic streams. 
 The command ``stream-summary`` returns a list of all flows with terse informations. 
 This list can be optionally filtered using different arguments like session-group-id, 
 name, interface and direction. This summary output can be used to identify the actual 
@@ -281,99 +349,48 @@ Each flow can be queried separately using jsonpath expression with name and dire
         "rx-mbps-l3": 0.0792
     }
 
-RAW Streams
-~~~~~~~~~~~
-
-Streams with default ``stream-group-id`` set to zero are considered raw streams not
-bound to any session which is supported downstream only. For those streams, the
-destination address must be explicitly set.
-
-RAW streams can be used for traffic between two or network interfaces but also to send traffic
-from network to access interfaces.
-
-.. code-block:: json
-
-    {
-        "streams": [
-            {
-                "name": "RAW",
-                "type": "ipv4",
-                "direction": "downstream",
-                "priority": 128,
-                "network-ipv4-address": "10.0.0.20",
-                "destination-ipv4-address": "1.1.1.1",
-                "length": 256,
-                "pps": 1
-            }
-        ]
-    }
-
-
-If ``destination-ipv4-address`` is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
-the BNG Blaster will set the destination MAC address to the corresponding
-multicast MAC address automatically. For unicast traffic the network gateway MAC address is used.
-
-TCP RAW Streams
-~~~~~~~~~~~~~~~
-
-A new option called ``raw-tcp`` is added to the stream configuraton. 
-If enabled, UDP-like traffic with a constant rate is sent using a 
-static (RAW) TCP header.
-
-.. code-block:: json
-
-    {
-        "streams": [
-            {
-                "name": "TCP1",
-                "stream-group-id": 1,
-                "type": "ipv4",
-                "direction": "both",
-                "pps": 1,
-                "raw-tcp": true,
-                "network-ipv4-address": "10.0.0.1"
-            }
-        ]
-    }
-
-This option can be used stand-alone to verify firewall filters or together 
-with the new NAT option to verify NAT TCP streams. 
-
-For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
-
 Start/Stop Traffic
 ~~~~~~~~~~~~~~~~~~
 
-The BNG Blaster provides multiple options to start and stop traffic streams. 
-The commands ``traffic-start`` and ``traffic-stop`` can be used to start or stop all traffic 
-globally and are equal to pressing F7/F8 in the interactive user interface. This command does 
-not alter the current state of a traffic stream. For instance, if a stream has not been started,  
-it can't be started with this command. Instead, this command acts as a global signal to control the 
-transmission of traffic streams. 
+The BNG Blaster provides multiple options to start, stop and autostart traffic streams
+which are divided into two parts. The global traffic state and the flow state. 
 
-``$ sudo bngblaster-cli run.sock traffic-start``
+The global traffic state determines whether any traffic stream can be sent or not. 
+The flow state is a property of each flow that indicates whether it is enabled or disabled. 
 
-The initial state of the global global signal can be controlled with the configuration option 
-``traffic->autostart`` which is enabled per default.
+Before sending a packet, the BNG Blaster performs several checks to ensure that the 
+flow is ready to send. These checks include:
 
-All other commands distinguish between unicast, multicast, and session-traffic streams. 
+- The global traffic state must be enabled.
+- The flow state must be enabled.
+- The TX interface for the flow must be up.
+- The endpoint for the flow must be active (e.g. PPPoE session still established).
 
-The commands ``stream-start`` and ``stream-stop`` can start or stop unicast traffic flows. 
-Those commands do not apply to :ref:`session-traffic <session-traffic>` and multicast. 
-If you provide a specific ``flow-id`` as an argument, other arguments are ignored. In this 
-particular case, you can also start and stop :ref:`session-traffic <session-traffic>` or multicast. 
+The global traffic state can be changed by multiple methods like the configuration 
+parameter ``{ "traffic": { "autostart": true/false } }``, the commands ``traffic-start/stop``, 
+and the keyboard shortcuts `F7/F8`. All these methods have the same effect of setting 
+the global traffic state. 
+
+The flow state can be changed by different configurations and commands, depending on the traffic type. 
+There are three types of traffic: unicast-streams, multicast-streams, and session-traffic.
+
+The configuration section ``{"streams": []}`` defines two kinds of streams: unicast or multicast. 
+The destination IP address determines the stream type: multicast IP means multicast stream, 
+otherwise unicast stream. The configuration ``{"traffic": {"stream-autostart": true/false}}`` 
+and ``{"traffic": {"multicast-autostart": true/false}}`` control the initial state of unicast 
+and multicast streams, respectively. The commands ``stream-start/stop`` 
+and ``multicast-traffic-start/stop`` can modify the state of these streams at any time.
 
 ``$ sudo bngblaster-cli run.sock stream-start session-group-id 1 direction upstream``
 
-The commands ``session-traffic-start`` and ``session-traffic-stop`` behave similarly but apply 
-to session-traffic only. 
+The configuration ``{"session-traffic": []}`` defines another kind of stream called :ref:`session-traffic <session-traffic>`. 
+The configuration ``{"session-traffic": {"autostart": true/false}}`` controls the initial state 
+of :ref:`session-traffic <session-traffic>`. The commands ``session-traffic-start/stop`` 
+can modify the state of these streams at any time.
 
 ``$ sudo bngblaster-cli run.sock session-traffic-start session-id 1``
 
-For multicast, the commands ``multicast-traffic-start`` and ``multicast-traffic-stop`` can be used. 
-Those commands apply globally to all multicast traffic. 
-
-``$ sudo bngblaster-cli run.sock multicast-traffic-start``
+Details about all commands and their arguments can found int the :ref:`API/CLI <api>` section. 
 
 .. _bbl_header:
 
