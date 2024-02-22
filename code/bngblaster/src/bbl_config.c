@@ -3377,6 +3377,7 @@ json_parse_config(json_t *root)
             "stream-autostart",
             "stream-rate-calculation",
             "stream-delay-calculation",
+            "multicast-autostart",
             "udp-checksum"
         };
         if(!schema_validate(section, "traffic", schema, 
@@ -3407,6 +3408,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "traffic", "stream-delay-calculation");
         if(value) {
             g_ctx->config.stream_delay_calc = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "traffic", "multicast-autostart");
+        if(value) {
+            g_ctx->config.multicast_traffic_autostart = json_boolean_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "traffic", "udp-checksum");
         if(value) {
