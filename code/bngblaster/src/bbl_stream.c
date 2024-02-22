@@ -1459,7 +1459,9 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     if(unlikely(stream->reset)) {
         stream->reset = false;
         stream->flow_seq = 1;
-        stream->max_packets = stream->tx_packets + stream->config->max_packets;
+        if(stream->max_packets) {
+            stream->max_packets = stream->tx_packets + stream->config->max_packets;
+        }
         stream->tokens = 0;
         return STREAM_WAIT;
     }
