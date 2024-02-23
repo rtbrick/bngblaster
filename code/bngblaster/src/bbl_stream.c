@@ -1394,41 +1394,47 @@ bbl_stream_lag(bbl_stream_s *stream)
 {
     bbl_lag_s *lag = stream->tx_interface->lag;
     bbl_stream_s *s;
-    io_handle_s *io;
+    io_handle_s *io, *io_new;
+
     uint8_t key;
 
-    if(!lag->active_count) {
+    if(lag->active_count == 0) {
         return false;
     }
 
     if(lag->select != stream->lag_select) {
+        /* Redistribute streams if LAG state has changed. */
         stream->lag_select = lag->select;
         key = stream->flow_id % lag->active_count;
-        io = lag->active_list[key]->interface->io.tx;
-        if(stream->io != io) {
-            s = stream->io->stream_head;
+        io = stream->io;
+        io_new = lag->active_list[key]->interface->io.tx;
+        if(io_new != io) {
+            s = io->stream_head;
             if(s == stream) {
-                stream->io->stream_head = s->io_next;
+                /* Stream is head. */
+                io->stream_head = s->io_next;
             } else {
+                /* Remove stream from IO stream list. */
                 while(s) {
                     if(s->io_next == stream) {
                         s->io_next = stream->io_next;
                         s = NULL;
+                    } else {
+                        s = s->io_next;
                     }
                 }
             }
-            if(stream->io->stream_pps > stream->config->pps) {
-                stream->io->stream_pps -= stream->config->pps;
+            if(io->stream_count && (io->stream_pps >= stream->config->pps)) {
+                io->stream_pps -= stream->config->pps;
                 io->stream_count--;
             }
-            io->stream_pps += stream->config->pps;
-            io->stream_count++;
-            stream->io = io;
-            stream->io_next = io->stream_head;
-            io->stream_head = stream;
-            io->stream_cur = stream;
-
-            stream->io->stream_cur = stream->io->stream_head;
+            stream->io = io_new;
+            stream->io_next = io_new->stream_head;
+            io_new->stream_head = stream;
+            io_new->stream_cur = stream;
+            io_new->stream_pps += stream->config->pps;
+            io_new->stream_count++;
+            return false;
         }
     }
     return true;
@@ -1471,6 +1477,13 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         return STREAM_WAIT;
     }
 
+    if(stream->lag) {
+        if(!bbl_stream_lag(stream)) {
+            stream->tokens = 0;
+            return WRONG_PROTOCOL_STATE;
+        }
+    }
+
     if(!(g_traffic && stream->enabled && stream->tx_interface->state == INTERFACE_UP)) {
         stream->tokens = 0;
         return STREAM_WAIT;
@@ -1494,13 +1507,6 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     /** Enforce optional stream packet limit ... */
     if(stream->max_packets && stream->tx_packets >= stream->max_packets) {
         return FULL;
-    }
-
-    if(stream->lag) {
-        if(!bbl_stream_lag(stream)) {
-            stream->tokens = 0;
-            return WRONG_PROTOCOL_STATE;
-        }
     }
 
     /** Enforce optional stream traffic start delay ... */
@@ -1567,15 +1573,18 @@ bbl_stream_s*
 bbl_stream_io_send_iter(io_handle_s *io)
 {
     bbl_stream_s *stream = io->stream_cur;
+    bbl_stream_s *stream_next = NULL;
+
     int_fast32_t i = io->stream_count;
 
     while(i > 0) {
         i--;
+        stream_next = stream->io_next ? stream->io_next : io->stream_head;
         if (bbl_stream_io_send(io, stream) == PROTOCOL_SUCCESS) {
-            io->stream_cur = stream->io_next ? stream->io_next : io->stream_head;
+            io->stream_cur = stream_next;
             return stream;
         }
-        stream = stream->io_next ? stream->io_next : io->stream_head;
+        stream = stream_next;
     }
     return NULL;
 }
@@ -1638,16 +1647,21 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
 {
     bbl_lag_s *lag = stream->tx_interface->lag;
     bbl_lag_member_s *member;
+    io_handle_s *io;
 
     stream->lag = true;
-    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
-        if(!stream->io) {
-            stream->io = member->interface->io.tx;
-            stream->io_next = stream->io->stream_head;
-            stream->io->stream_head = stream;
-            stream->io->stream_cur = stream;
-        }
-        member->interface->io.tx->stream_pps += stream->config->pps;
+    member = CIRCLEQ_FIRST(&lag->lag_member_qhead);
+    if(member) {
+        io = member->interface->io.tx;
+        stream->io = io;
+        stream->io_next = io->stream_head;
+        io->stream_head = stream;
+        io->stream_cur = stream;
+        io->stream_pps += stream->config->pps;
+        io->stream_count++;
+    } else {
+        LOG(ERROR, "Failed to add stream %s to LAG %s (no member interfaces)\n", 
+            stream->config->name, lag->interface->name);
     }
 }
 
