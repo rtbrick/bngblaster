@@ -358,11 +358,12 @@ bbl_lag_json(bbl_lag_s *lag)
         }
     }
 
-    jobj_lag = json_pack("{si ss* ss* si so*}",
+    jobj_lag = json_pack("{si ss* ss* si si so*}",
         "id", lag->id,
         "interface", lag->interface->name,
         "state", interface_state_string(lag->interface->state),
         "state-transitions", lag->interface->state_transitions,
+        "members-active", lag->active_count,
         "members", jobj_array);
     
     return jobj_lag;
