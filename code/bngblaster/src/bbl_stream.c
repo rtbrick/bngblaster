@@ -2460,7 +2460,7 @@ bbl_stream_summary_json(int session_group_id, const char *name, const char *inte
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
-            "active", stream->tokens > 0 ? true : false,
+            "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
             "verified", stream->verified,
             "interface", stream->tx_interface->name);
         if(jobj) {
@@ -2533,7 +2533,7 @@ bbl_stream_json(bbl_stream_s *stream)
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
-            "active", stream->tokens > 0 ? true : false,
+            "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
             "verified", stream->verified,
             "source-address", src_address,
             "source-port", src_port,
@@ -2605,7 +2605,7 @@ bbl_stream_json(bbl_stream_s *stream)
             "sub-type", stream_sub_type_string(stream),
             "direction", stream->direction == BBL_DIRECTION_UP ? "upstream" : "downstream",
             "enabled", stream->enabled,
-            "active", stream->tokens > 0 ? true : false,
+            "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
             "tx-interface", tx_interface,
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,
