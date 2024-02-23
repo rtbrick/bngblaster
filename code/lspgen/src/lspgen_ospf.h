@@ -5,7 +5,7 @@
  *
  * Hannes Gredler, July 2023
  *
- * Copyright (C) 2015-2023, RtBrick, Inc.
+ * Copyright (C) 2015-2024, RtBrick, Inc.
  */
 
 /*

@@ -3,7 +3,7 @@
  *
  * Christian Giese, March 2022
  *
- * Copyright (C) 2020-2023, RtBrick, Inc.
+ * Copyright (C) 2020-2024, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __BBL_BGP_RAW_UPDATE_H__

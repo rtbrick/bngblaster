@@ -3,7 +3,7 @@
 # -- Project information
 
 project = 'BNG Blaster'
-copyright = '2020-2023, RtBrick, Inc.'
+copyright = '2020-2024, RtBrick, Inc.'
 author = 'Christian Giese'
 release = '0.8'
 version = '0.8.X'

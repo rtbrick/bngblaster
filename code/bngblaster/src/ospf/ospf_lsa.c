@@ -3,7 +3,7 @@
  *
  * Christian Giese, July 2023
  *
- * Copyright (C) 2020-2023, RtBrick, Inc.
+ * Copyright (C) 2020-2024, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "ospf.h"
