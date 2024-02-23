@@ -354,6 +354,10 @@ bbl_ctrl_socket_thread(void *thread_data)
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
 
+    struct timespec sleep, rem;
+    sleep.tv_sec = 0;
+    sleep.tv_nsec = 10 * MSEC;
+
     ctrl->active = true;
     while(ctrl->active) {
         fd = accept(ctrl->socket, 0, 0);
@@ -481,7 +485,9 @@ CLOSE:
             shutdown(fd, SHUT_WR);
             select(fd + 1, &read_fds, NULL, NULL, &timeout);
             close(fd);
-        }    
+        } else {
+            nanosleep(&sleep, &rem);
+        }
     }
     return NULL;
 }
