@@ -2597,6 +2597,9 @@ bbl_stream_json(bbl_stream_s *stream)
         if(stream->reverse) {
             json_object_set(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
         }
+        if(stream->lag && stream->io && stream->io->interface) {
+            json_object_set(root, "lag-member-interface", json_string(stream->io->interface->name));
+        }
     } else {
         root = json_pack("{sI ss* ss ss ss sb sb ss* sI sI sI sI sf}",
             "flow-id", stream->flow_id,
