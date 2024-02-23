@@ -1,25 +1,19 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Installation &mdash; BNG Blaster 0.8 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=a0e24af7"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -32,16 +26,12 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -90,8 +80,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Installation</li>
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Installation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -102,11 +92,11 @@
            <div itemprop="articleBody">
              
   <section id="installation">
-<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h1>
 <p>The BNG Blaster should run on any modern Linux distribution
 but is primarily tested on Ubuntu 18.04, 20.04 and 22.04 LTS.</p>
 <section id="install-ubuntu">
-<h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Link to this heading"></a></h2>
+<h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Permalink to this headline"></a></h2>
 <p>Install dependencies:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Ubuntu 18.04 and 20.04
 sudo apt install -y libssl1.1 libncurses5 libjansson4
@@ -121,9 +111,9 @@ sudo apt install -y libssl3 libncurses6 libjansson4
 <p>This command installs the BNG Blaster to <cite>/usr/sbin/bngblaster</cite>.</p>
 </section>
 <section id="build-from-sources">
-<h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Link to this heading"></a></h2>
+<h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Permalink to this headline"></a></h2>
 <section id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h3>
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h3>
 <p>The BNG Blaster has dependencies on the RtBrick
 <a class="reference external" href="https://github.com/rtbrick/libdict">libdict fork</a>
 and the following standard dependencies:</p>
@@ -150,7 +140,7 @@ sudo apt install -y cmake \
 </div>
 </section>
 <section id="build">
-<h3>Build<a class="headerlink" href="#build" title="Link to this heading"></a></h3>
+<h3>Build<a class="headerlink" href="#build" title="Permalink to this headline"></a></h3>
 <p>Per default cmake (<cite>cmake .</cite>) will build the BNG Blaster as a release
 version with optimization and without debugging symbols.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/rtbrick/bngblaster.git
@@ -186,7 +176,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw
 </div>
 </section>
 <section id="id1">
-<h3>Install<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<h3>Install<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
 <p>Then BNG Blaster can be installed using the make install target.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo make install
 </pre></div>
@@ -194,7 +184,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw
 <p>This command installs the BNG Blaster to <cite>/usr/sbin/bngblaster</cite>.</p>
 </section>
 <section id="build-and-run-unit-tests">
-<h3>Build and Run Unit Tests<a class="headerlink" href="#build-and-run-unit-tests" title="Link to this heading"></a></h3>
+<h3>Build and Run Unit Tests<a class="headerlink" href="#build-and-run-unit-tests" title="Permalink to this headline"></a></h3>
 <p>Building and running unit tests requires CMocka to be installed:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install libcmocka-dev
 </pre></div>
@@ -219,7 +209,7 @@ Total Test time (real) =   0.00 sec
 </div>
 </section>
 <section id="build-with-dpdk-support">
-<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Link to this heading"></a></h3>
+<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Permalink to this headline"></a></h3>
 <p>The following steps are required to build the BNG Blaster with experimental
 <a class="reference internal" href="performance.html#dpdk-usage"><span class="std std-ref">DPDK</span></a> support.</p>
 <div class="admonition note">
@@ -269,7 +259,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
 </section>
 </section>
 <section id="running-bng-blaster">
-<h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Link to this heading"></a></h2>
+<h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or
 with <cite>sudo</cite>:</p>
@@ -302,7 +292,7 @@ bngblaster -C config.json -I
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020-2023, RtBrick, Inc..</p>
+    <p>&#169; Copyright 2020-2024, RtBrick, Inc..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
