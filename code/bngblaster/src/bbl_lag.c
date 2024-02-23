@@ -320,13 +320,15 @@ static json_t *
 bbl_lag_json(bbl_lag_s *lag)
 {
     bbl_lag_member_s *member;
+    io_handle_s *io;
     json_t *jobj_lag, *jobj_member, *jobj_lacp, *jobj_array;
 
     jobj_array = json_array();
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         if(member->lacp_state) {
-            jobj_lacp = json_pack("{si si si ss* si si si si si ss* si si si si si}",
+            io = member->interface->io.tx;
+            jobj_lacp = json_pack("{si si si ss* si si si si si ss* si si si si si si sf}",
                 "bpdu-rx", member->stats.lacp_rx,
                 "bpdu-tx", member->stats.lacp_tx,
                 "bpdu-dropped", member->stats.lacp_dropped,
@@ -341,7 +343,10 @@ bbl_lag_json(bbl_lag_s *lag)
                 "partner-key", member->partner_key,
                 "partner-port-priority", member->partner_port_priority,
                 "partner-port-id", member->partner_port_id,
-                "partner-state", member->partner_state);
+                "partner-state", member->partner_state,
+                "stream-count", io->stream_count,
+                "stream-pps", io->stream_pps
+                );
         } else {
             jobj_lacp = NULL;
         }
