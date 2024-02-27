@@ -40,6 +40,12 @@ bbl_http_client_start(bbl_http_client_s *client)
         client->state = HTTP_CLIENT_IDLE;
         client->error_string = NULL;
         client->response_idx = 0;
+        client->http.num_headers = 0;
+        client->http.minor_version = 0;
+        client->http.status = 0;
+        client->http.msg = NULL;
+        client->http.msg_len = 0;
+        memset(client->response, 0x0, HTTP_CLIENT_RESPONSE_LIMIT);
     }
 }
 
