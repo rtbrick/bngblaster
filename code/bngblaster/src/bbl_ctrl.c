@@ -44,7 +44,7 @@ const char *schema_all_args[] = {
     "result-code", "error-code", "error-message",
     "disconnect-code", "disconnect-protocol", 
     "disconnect-direction", "disconnect-message",
-    "ldp-instance-id", 
+    "ldp-instance-id", "tcp-flags",
     NULL
 };
 
@@ -212,6 +212,7 @@ struct action actions[] = {
     {"stream-start", bbl_stream_ctrl_start, schema_all_args, true},
     {"stream-stop", bbl_stream_ctrl_stop, schema_all_args, true},
     {"stream-stop-verfied", bbl_stream_ctrl_stop_verfied, schema_all_args, true},
+    {"stream-update", bbl_stream_ctrl_update, schema_all_args, true},
     {"session-traffic-start", bbl_session_ctrl_traffic_start, schema_all_args, true},
     {"session-traffic-stop", bbl_session_ctrl_traffic_stop, schema_all_args, true},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start, schema_all_args, false},

@@ -1366,6 +1366,10 @@ bbl_stream_update_tcp(bbl_stream_s *stream)
     uint8_t  *tcp_buf = (uint8_t*)(stream->tx_buf + (stream->tx_len - tcp_len));
     uint16_t *checksum = (uint16_t*)(tcp_buf+16);
 
+    if(stream->tcp_flags) {
+        *(tcp_buf+13) = stream->tcp_flags & 0x3f;
+    }
+
     *checksum = 0;
     if(stream->ipv6_src && stream->ipv6_dst) {
         *checksum = bbl_ipv6_tcp_checksum(stream->ipv6_src, stream->ipv6_dst, tcp_buf, tcp_len);
@@ -2911,4 +2915,50 @@ int
 bbl_stream_ctrl_stop_verfied(int fd, uint32_t session_id, json_t *arguments)
 {
     return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, true);
+}
+
+int
+bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    bbl_stream_s *stream;
+    const char *s = NULL;
+
+    int number = 0;
+    uint64_t flow_id;
+
+    /* Unpack further arguments */
+    if(json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
+    }
+
+    uint8_t tcp_flags = 0;
+
+    if(json_unpack(arguments, "{s:s}", "tcp-flags", &s) == 0) {
+        if(strcmp(s, "ack") == 0) {
+            tcp_flags = 0x10;
+        } else if(strcmp(s, "fin") == 0) {
+            tcp_flags = 0x01;
+        } else if(strcmp(s, "fin-ack") == 0) {
+            tcp_flags = 0x11;
+        } else if(strcmp(s, "syn") == 0) {
+            tcp_flags = 0x02;
+        } else if(strcmp(s, "syn-ack") == 0) {
+            tcp_flags = 0x12;
+        } else if(strcmp(s, "rst") == 0) {
+            tcp_flags = 0x04;
+        } else {
+            return bbl_ctrl_status(fd, "error", 400, "invalid tcp-flags (ack|fin|fin-ack|syn|syn-ack|rst)");
+        }
+    }
+
+    flow_id = number;
+    stream = bbl_stream_index_get(flow_id);
+    if(stream) {
+        if(tcp_flags) {
+            stream->tcp_flags = tcp_flags;
+        }
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "stream not found");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
