@@ -2938,6 +2938,8 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.pppoe_vlan_priority = json_number_value(value);
         }
+    } else {
+        g_ctx->config.pppoe_reconnect = g_ctx->config.sessions_reconnect;
     }
 
     /* PPP Configuration */
