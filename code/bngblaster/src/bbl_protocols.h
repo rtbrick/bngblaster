@@ -982,10 +982,10 @@ typedef struct bbl_l2tp_ {
 
 typedef struct bbl_qmx_li_ {
     uint32_t     header;
+    uint32_t     liid;
     uint8_t      direction;
     uint8_t      packet_type;
     uint8_t      sub_packet_type;
-    uint32_t     liid;
     void        *next; /* next header */
     void        *payload; /* LI payload */
     uint16_t     payload_len; /* LI payload length */

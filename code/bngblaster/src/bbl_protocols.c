@@ -2476,6 +2476,9 @@ decode_icmp(uint8_t *buf, uint16_t len,
     if(len) {
         icmp->data = buf;
         icmp->data_len = len;
+    } else {
+        icmp->data = NULL;
+        icmp->data_len = 0;
     }
     *_icmp = icmp;
     return PROTOCOL_SUCCESS;
@@ -3357,6 +3360,7 @@ decode_tcp(uint8_t *buf, uint16_t len,
 
     /* Init TCP header */
     tcp = (bbl_tcp_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_tcp_s));
+    memset(tcp, 0x0, sizeof(bbl_tcp_s));
 
     tcp->src = be16toh(*(uint16_t*)buf);
     tcp->dst = be16toh(*(uint16_t*)(buf+sizeof(uint16_t)));
@@ -3388,6 +3392,8 @@ decode_ospf(uint8_t *buf, uint16_t len,
 
     /* Init OSPF */
     ospf = (bbl_ospf_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_isis_s));
+    memset(ospf, 0x0, sizeof(bbl_ospf_s));
+
     ospf->pdu = buf;
     ospf->pdu_len = len;
 
@@ -3540,8 +3546,16 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         return DECODE_ERROR;
     }
 
-    if(header->ip_id) ipv4->id = be16toh(header->ip_id);
-    if(header->ip_off) ipv4->offset = be16toh(header->ip_off);
+    if(header->ip_id) { 
+        ipv4->id = be16toh(header->ip_id);
+    } else {
+        ipv4->id = 0;
+    }
+    if(header->ip_off)  {
+        ipv4->offset = be16toh(header->ip_off);
+    } else {
+        ipv4->offset = 0;
+    }
     ipv4->ttl = header->ip_ttl;
     ipv4->protocol = header->ip_p;
 
@@ -4444,6 +4458,7 @@ decode_arp(uint8_t *buf, uint16_t len,
 
     /* Init ARP header */
     arp = (bbl_arp_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_arp_s));
+    memset(arp, 0x0, sizeof(bbl_arp_s));
 
     BUMP_BUFFER(buf, len, 6);
     arp->code = be16toh(*(uint16_t*)buf);
