@@ -498,18 +498,16 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
     }
 }
 
-static void
+static bool
 bbl_access_rx_icmpv6(bbl_access_interface_s *interface, 
                      bbl_session_s *session, 
                      bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6)
 {
     bbl_icmpv6_s *icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
-    session->stats.icmpv6_rx++;
-
     if(session->access_type == ACCESS_TYPE_PPPOE &&
        session->ip6cp_state != BBL_PPP_OPENED) {
-        return;
+        return false;
     }
 
     if(icmpv6->type == IPV6_ICMPV6_ROUTER_ADVERTISEMENT) {
@@ -548,16 +546,23 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, session->ipv6_address, IPV6_ADDR_LEN) == 0) {
-            bbl_access_icmpv6_na(session, eth, ipv6, icmpv6);
+            if(bbl_access_icmpv6_na(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
+                return true;
+            }
         } else if(memcmp(icmpv6->prefix.address, session->link_local_ipv6_address, IPV6_ADDR_LEN) == 0) {
-            bbl_access_icmpv6_na(session, eth, ipv6, icmpv6);
+            if(bbl_access_icmpv6_na(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
+                return true;
+            }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
-        bbl_access_icmpv6_echo_reply(session, eth, ipv6, icmpv6);
+        if(bbl_access_icmpv6_echo_reply(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
+            return true;
+        }
     }
+    return false;
 }
 
-static void
+static bool
 bbl_access_rx_icmp(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
     bbl_icmp_s *icmp = (bbl_icmp_s*)ipv4->next;
@@ -565,8 +570,11 @@ bbl_access_rx_icmp(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_
        session->ip_address == ipv4->dst &&
        icmp->type == ICMP_TYPE_ECHO_REQUEST) {
         /* Send ICMP reply... */
-        bbl_access_icmp_reply(session, eth, ipv4, icmp);
+        if(bbl_access_icmp_reply(session, eth, ipv4, icmp) == BBL_TXQ_OK) {
+            return true;
+        }
     }
+    return false;
 }
 
 static void
@@ -639,7 +647,10 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
         case PROTOCOL_IPV4_ICMP:
             session->stats.icmp_rx++;
             interface->stats.icmp_rx++;
-            bbl_access_rx_icmp(session, eth, ipv4);
+            if(bbl_access_rx_icmp(session, eth, ipv4)) {
+                session->stats.icmp_tx++;
+                interface->stats.icmp_tx++;
+            }
             return;
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_s*)ipv4->next;
@@ -676,8 +687,12 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
 {
     switch(ipv6->protocol) {
         case IPV6_NEXT_HEADER_ICMPV6:
+            session->stats.icmpv6_rx++;
             interface->stats.icmpv6_rx++;
-            bbl_access_rx_icmpv6(interface, session, eth, ipv6);
+            if(bbl_access_rx_icmpv6(interface, session, eth, ipv6)) {
+                session->stats.icmpv6_tx++;
+                interface->stats.icmpv6_tx++;
+            }
             return;
         case IPV6_NEXT_HEADER_UDP:
             bbl_access_rx_udp_ipv6(interface, session, eth, ipv6);
