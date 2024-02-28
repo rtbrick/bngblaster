@@ -57,46 +57,46 @@ calculate_fletcher_checksum(uint8_t *pptr, uint checksum_offset, uint length)
 
     /* 10x loop unrolling */
     tlen = length;
-    while (tlen >= 10) {
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
-      c0 += *pptr++;
-      c1 += c0;
+    while(tlen >= 10) {
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
 
-      tlen -= 10;
+        tlen -= 10;
     }
 
     /* remainder */
     while (--tlen >= 0) {
-      c0 += *pptr++;
-      c1 += c0;
+        c0 += *pptr++;
+        c1 += c0;
     }
 
     c0 = c0 % 255;
     c1 = (c1 - (length - checksum_offset) * c0) % 255;
     if (c1 <= 0) {
-	    c1 += 255;
+        c1 += 255;
     }
 
     c0 = 255 - c1 - c0;
     if (c0 <= 0 ) {
-	    c0 += 255;
+        c0 += 255;
     }
 
     return (c0 << 8 | c1);
