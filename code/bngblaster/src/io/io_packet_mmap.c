@@ -254,7 +254,9 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
             io->vlan_tci = tphdr->tp_vlan_tci;
             io->vlan_tpid = tphdr->tp_vlan_tpid;
             /* Process packet */
-            io_thread_rx_handler(thread, io);
+            if(io_thread_rx_handler(thread, io) == IO_FULL) {
+                break;
+            }
             /* Return ownership back to kernel */
             tphdr->tp_status = TP_STATUS_KERNEL; 
             /* Get next packet */
