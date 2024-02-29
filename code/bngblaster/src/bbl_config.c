@@ -2210,8 +2210,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "destination-ipv6-address", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
-        "rx-label2", "nat", "raw-tcp", "setup-interval",
-        "rx-interface"
+        "rx-label2", "nat", "raw-tcp", "setup-interval"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2501,9 +2500,6 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->rx_mpls2 = true;
         stream_config->rx_mpls2_label = json_number_value(value);
-    }
-    if(json_unpack(stream, "{s:s}", "rx-interface", &s) == 0) {
-        stream_config->rx_interface = strdup(s);
     }
 
     /* NAT configuration */

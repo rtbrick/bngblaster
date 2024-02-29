@@ -43,7 +43,6 @@ typedef struct bbl_stream_config_
     ipv6addr_t ipv6_destination_address; /* overwrite IPv6 destination address */
     char *network_interface;
     char *a10nsp_interface;
-    char *rx_interface;
 
     bool     ipv4_df;
     bool     tx_mpls1;
