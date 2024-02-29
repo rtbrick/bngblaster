@@ -2503,7 +2503,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->rx_mpls2_label = json_number_value(value);
     }
     if(json_unpack(stream, "{s:s}", "rx-interface", &s) == 0) {
-        stream_config->network_interface = strdup(s);
+        stream_config->rx_interface = strdup(s);
     }
 
     /* NAT configuration */
