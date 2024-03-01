@@ -521,6 +521,7 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     ACTIVATE_ENDPOINT(session->endpoint.ipv6);
                 }
+                session->version++;
                 LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d\n",
                     session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
                 if(icmpv6->dns1) {
@@ -1142,6 +1143,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_access_rx_established_pppoe(interface, session, eth);
                     ACTIVATE_ENDPOINT(session->endpoint.ipv4);
+                    session->version++;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
                         format_ipv4_address(&session->ip_address));
                     break;
@@ -1200,6 +1202,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     session->ipcp_state = BBL_PPP_OPENED;
                     bbl_access_rx_established_pppoe(interface, session, eth);
                     ACTIVATE_ENDPOINT(session->endpoint.ipv4);
+                    session->version++;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->ip_address));
                     break;

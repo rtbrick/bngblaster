@@ -364,7 +364,7 @@ bbl_session_free(bbl_session_s *session)
  * 
  * @param session session
  */
-void
+static void
 bbl_session_reset(bbl_session_s *session) {    
     memset(&session->server_mac, 0xff, ETH_ADDR_LEN); /* init with broadcast MAC */
     session->version++;
@@ -515,6 +515,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
     if(old_state != new_state) {
         /* State has changed ... */
         session->session_state = new_state;
+        session->version++;
         assert(session->session_state > BBL_IDLE && session->session_state < BBL_MAX);
 
         if(old_state == BBL_ESTABLISHED) {

@@ -218,6 +218,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 }
                 /* Update session ... */
                 if(session->dhcp_address != session->ip_address) {
+                    session->version++;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
                         format_ipv4_address(&session->dhcp_address));
                 }

@@ -371,9 +371,6 @@ void
 bbl_session_free(bbl_session_s *session);
 
 void
-bbl_session_reset(bbl_session_s *session);
-
-void
 bbl_session_update_state(bbl_session_s *session, session_state_t state);
 
 void
