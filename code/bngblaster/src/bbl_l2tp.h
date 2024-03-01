@@ -286,6 +286,9 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *e
 void 
 bbl_l2tp_stop_all_tunnel();
 
+json_t *
+l2tp_session_json(bbl_l2tp_session_s *l2tp_session);
+
 int
 bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 

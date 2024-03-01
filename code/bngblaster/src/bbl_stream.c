@@ -2603,6 +2603,7 @@ bbl_stream_json(bbl_stream_s *stream)
         }
         if(stream->session) {
             json_object_set(root, "session-id", json_integer(stream->session->session_id));
+            json_object_set(root, "session-version", json_integer(stream->session_version));
             json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
         }
         if(stream->reverse) {

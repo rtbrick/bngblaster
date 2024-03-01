@@ -709,19 +709,68 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
 }
 
 static void
+bbl_access_l2tp_stream_force_verfied(bbl_session_s *session, bbl_stream_s *stream)
+{
+    if(stream && stream->verified == false) {
+        stream->verified = true;
+        session->session_traffic.flows_verified++;
+        g_ctx->stats.session_traffic_flows_verified++;
+        if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
+            LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+        }
+    }
+}
+
+static void
+bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_message_len)
+{
+    l2tp_key_t key = {0};
+    void **search = NULL;
+
+    char substring[16] = {0};
+    char *tok;
+    char *save = NULL;
+
+    if(!((reply_message_len > 23) && 
+         (strncmp(reply_message, L2TP_REPLY_MESSAGE, 20) == 0))) {
+        return;
+    }
+
+    session->l2tp = true;
+    memcpy(substring, reply_message+21, reply_message_len-21);
+    tok = strtok_r(substring, ":", &save);
+    if(tok) {
+        key.tunnel_id = atoi(tok);
+        tok = strtok_r(0, ":", &save);
+        if(tok) {
+            key.session_id = atoi(tok);
+            search = dict_search(g_ctx->l2tp_session_dict, &key);
+            if(search) {
+                session->l2tp_session = *search;
+                session->l2tp_session->pppoe_session = session;
+                LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
+                    session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
+                /* Currently we do not support IPv6 session traffic for L2TP sessions, 
+                 * therefore if created, we mark them as verified. */
+                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6_up);
+                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6_down);
+                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6pd_up);
+                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6pd_down);
+                return;
+            }
+        }
+    }
+    LOG(ERROR, "L2TP (ID: %u) Failed to get BNG Blaster LNS session\n", session->session_id);
+    return;
+}
+
+static void
 bbl_access_rx_pap(bbl_access_interface_s *interface,
                   bbl_session_s *session, 
                   bbl_ethernet_header_s *eth)
 {
     bbl_pppoe_session_s *pppoes;
     bbl_pap_s *pap;
-
-    char substring[16];
-    char *tok;
-    char *save = NULL;
-
-    l2tp_key_t key = {0};
-    void **search = NULL;
 
     pppoes = (bbl_pppoe_session_s*)eth->next;
     pap = (bbl_pap_s*)pppoes->next;
@@ -733,24 +782,7 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
             case PAP_CODE_ACK:
                 if(pap->reply_message_len > 23) {
                     if(strncmp(pap->reply_message, L2TP_REPLY_MESSAGE, 20) == 0) {
-                        session->l2tp = true;
-                        memset(substring, 0x0, sizeof(substring));
-                        memcpy(substring, pap->reply_message+21, pap->reply_message_len-21);
-                        tok = strtok_r(substring, ":", &save);
-                        if(tok) {
-                            key.tunnel_id = atoi(tok);
-                            tok = strtok_r(0, ":", &save);
-                            if(tok) {
-                                key.session_id = atoi(tok);
-                                search = dict_search(g_ctx->l2tp_session_dict, &key);
-                                if(search) {
-                                    session->l2tp_session = *search;
-                                    session->l2tp_session->pppoe_session = session;
-                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
-                                        session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
-                                }
-                            }
-                        }
+                        bbl_access_l2tp(session, pap->reply_message, pap->reply_message_len);
                     }
                 }
                 if(pap->reply_message_len) {
@@ -798,13 +830,6 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
 
     MD5_CTX md5_ctx;
 
-    char substring[16];
-    char *tok;
-    char *save = NULL;
-
-    l2tp_key_t key = {0};
-    void **search = NULL;
-
     UNUSED(interface);
 
     pppoes = (bbl_pppoe_session_s*)eth->next;
@@ -836,24 +861,7 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
             case CHAP_CODE_SUCCESS:
                 if(chap->reply_message_len > 23) {
                     if(strncmp(chap->reply_message, L2TP_REPLY_MESSAGE, 20) == 0) {
-                        session->l2tp = true;
-                        memset(substring, 0x0, sizeof(substring));
-                        memcpy(substring, chap->reply_message+21, chap->reply_message_len-21);
-                        tok = strtok_r(substring, ":", &save);
-                        if(tok) {
-                            key.tunnel_id = atoi(tok);
-                            tok = strtok_r(0, ":", &save);
-                            if(tok) {
-                                key.session_id = atoi(tok);
-                                search = dict_search(g_ctx->l2tp_session_dict, &key);
-                                if(search) {
-                                    session->l2tp_session = *search;
-                                    session->l2tp_session->pppoe_session = session;
-                                    LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
-                                        session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
-                                }
-                            }
-                        }
+                        bbl_access_l2tp(session, chap->reply_message, chap->reply_message_len);
                     }
                 }
                 if(chap->reply_message_len) {

@@ -585,6 +585,9 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
     CIRCLEQ_FOREACH(l2tp_tunnel2, &l2tp_server->tunnel_qhead, tunnel_qnode) {
         if(l2tp_tunnel2->peer_ip == l2tp_tunnel->peer_ip &&
             l2tp_tunnel2->peer_tunnel_id == l2tp_tunnel->peer_tunnel_id) {
+                if(l2tp_tunnel2->state == BBL_L2TP_TUNNEL_RCVD_STOPCCN) {
+                    bbl_l2tp_tunnel_update_state(l2tp_tunnel2, BBL_L2TP_TUNNEL_TERMINATED);
+                }
                 /* Seems to be an SCCRQ retry ... */
                 bbl_l2tp_tunnel_delete(l2tp_tunnel);
                 return;
@@ -1222,7 +1225,7 @@ bbl_l2tp_stop_all_tunnel()
     }
 }
 
-static json_t *
+json_t *
 l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
 {
     char *proxy_auth_response = NULL;

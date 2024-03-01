@@ -435,6 +435,10 @@ bbl_session_reset(bbl_session_s *session) {
 
     /* L2TP */
     session->l2tp = false;
+    if(session->l2tp_session &&
+       session->l2tp_session->pppoe_session == session) {
+        session->l2tp_session->pppoe_session = NULL;
+    }
     session->l2tp_session = NULL;
 
     /* Session traffic */
@@ -1129,6 +1133,7 @@ bbl_session_json(bbl_session_s *session)
     json_t *root = NULL;
     json_t *session_traffic = NULL;
     json_t *a10nsp_session = NULL;
+    json_t *l2tp_session = NULL;
 
     bbl_stream_s *stream;
 
@@ -1266,13 +1271,17 @@ bbl_session_json(bbl_session_s *session)
             "tx-packets", session->a10nsp_session->stats.packets_tx,
             "rx-packets", session->a10nsp_session->stats.packets_rx);
     }
+    if(session->l2tp_session) {
+        l2tp_session = l2tp_session_json(session->l2tp_session);
+    }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss* si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
             "session-substate", bbl_session_substate_pppoe(session),
+            "session-version", session->version,
             "flapped", session->stats.flapped,
             "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
@@ -1314,7 +1323,8 @@ bbl_session_json(bbl_session_s *session)
             "tx-icmpv6", session->stats.icmpv6_tx,
             "rx-icmpv6", session->stats.icmpv6_rx,
             "session-traffic", session_traffic,
-            "a10nsp", a10nsp_session);
+            "a10nsp", a10nsp_session,
+            "l2tp", l2tp_session);
 
     } else {
         clock_gettime(CLOCK_MONOTONIC, &now);
@@ -1332,11 +1342,12 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss* si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
             "session-substate", bbl_session_substate_ipoe(session),
+            "session-version", session->version,
             "flapped", session->stats.flapped,
             "interface", session->access_interface->name,
             "outer-vlan", session->vlan_key.outer_vlan_id,
