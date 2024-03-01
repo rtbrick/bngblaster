@@ -275,7 +275,7 @@ and control over the initiation and termination of HTTP client instances.</p>
 </pre></div>
 </div>
 <p>The output above demonstrates the responses of two HTTP client instances. However,
-if any of the requests are marked as closed or terminated, it is possible to restart
+if any of the requests are marked as closed, it is possible to restart
 them using the HTTP client start command. This command can be applied to either all
 sessions simultaneously or just a specific session. By initiating the HTTP client
 start command, you can resume the execution of the previously closed requests and
@@ -286,6 +286,15 @@ continue interacting with the server.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock http-clients-stop | jq .
 </pre></div>
 </div>
+<p>HTTP Client States:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">idle</span></code>: session will start on next client interval (less than 1 second delay until connecting)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">connecting</span></code>: TCP session connecting (handshake)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">connected</span></code>: TCP session established</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">closing</span></code>: TCP session teardown</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">session-down</span></code>: underlying PPPoE or IPoE session is not established</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">retry-wait</span></code>: wait random seconds (1-30 seconds) before next connection attempt</p></li>
+</ul>
 </section>
 <section id="http-server">
 <h2>HTTP Server<a class="headerlink" href="#http-server" title="Link to this heading"></a></h2>
