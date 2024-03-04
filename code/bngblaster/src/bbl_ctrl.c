@@ -211,7 +211,7 @@ struct action actions[] = {
     {"traffic-stop", bbl_ctrl_traffic_stop, schema_all_args, false},
     {"stream-start", bbl_stream_ctrl_start, schema_all_args, true},
     {"stream-stop", bbl_stream_ctrl_stop, schema_all_args, true},
-    {"stream-stop-verfied", bbl_stream_ctrl_stop_verfied, schema_all_args, true},
+    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_all_args, true},
     {"stream-update", bbl_stream_ctrl_update, schema_all_args, true},
     {"session-traffic-start", bbl_session_ctrl_traffic_start, schema_all_args, true},
     {"session-traffic-stop", bbl_session_ctrl_traffic_stop, schema_all_args, true},

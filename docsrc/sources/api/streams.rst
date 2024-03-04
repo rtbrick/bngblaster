@@ -22,10 +22,10 @@
 |                                   | | This command applies to all flows except session-traffic and       |
 | **stream-stop**                   | | multicast. If you provide a specific ``flow-id`` as an argument,   |
 |                                   | | other arguments are ignored. In this particular case, you can also |
-| **stream-stop-verfied**           | | start and stop session-traffic and multicast.                      |
+| **stream-stop-verified**          | | start and stop session-traffic and multicast.                      |
 |                                   | |                                                                    |
-|                                   | | The command **stream-stop-verfied** works similar to               |
-|                                   | | **stream-stop** but only verfied streams will be stopped.          |
+|                                   | | The command **stream-stop-verified** works similar to              |
+|                                   | | **stream-stop** but only verified streams will be stopped.         |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``flow-id``                                                        |

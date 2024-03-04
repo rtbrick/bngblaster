@@ -2361,7 +2361,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
  * @param session session object
  * @param name optionally filter by name
  * @param direction optionally filter by direction
- * @param verified_only optionally match verfied streams only
+ * @param verified_only optionally match verified streams only
  */
 static void
 bbl_stream_enable_session(bool enabled, bbl_session_s *session, 
@@ -2401,7 +2401,7 @@ bbl_stream_enable_session(bool enabled, bbl_session_s *session,
  * @param session_group_id session-group-id
  * @param name optionally filter by name
  * @param direction optionally filter by direction
- * @param verified_only optionally match verfied streams only
+ * @param verified_only optionally match verified streams only
  */
 static void
 bbl_streams_enable_filter(bool enabled, int session_group_id, 
@@ -2906,7 +2906,7 @@ bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
 }
 
 int
-bbl_stream_ctrl_stop_verfied(int fd, uint32_t session_id, json_t *arguments)
+bbl_stream_ctrl_stop_verified(int fd, uint32_t session_id, json_t *arguments)
 {
     return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, true);
 }

@@ -709,7 +709,7 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
 }
 
 static void
-bbl_access_l2tp_stream_force_verfied(bbl_session_s *session, bbl_stream_s *stream)
+bbl_access_l2tp_stream_force_verified(bbl_session_s *session, bbl_stream_s *stream)
 {
     if(stream && stream->verified == false) {
         stream->verified = true;
@@ -752,10 +752,10 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
                     session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
                 /* Currently we do not support IPv6 session traffic for L2TP sessions, 
                  * therefore if created, we mark them as verified. */
-                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6_up);
-                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6_down);
-                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6pd_up);
-                bbl_access_l2tp_stream_force_verfied(session, session->session_traffic.ipv6pd_down);
+                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6_up);
+                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6_down);
+                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6pd_up);
+                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6pd_down);
                 return;
             }
         }

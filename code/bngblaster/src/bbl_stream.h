@@ -267,7 +267,7 @@ int
 bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_stream_ctrl_stop_verfied(int fd, uint32_t session_id, json_t *arguments);
+bbl_stream_ctrl_stop_verified(int fd, uint32_t session_id, json_t *arguments);
 
 int
 bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
