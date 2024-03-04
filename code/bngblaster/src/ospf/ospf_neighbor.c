@@ -554,6 +554,11 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
             if(ospf_lsa_compare(hdr, (ospf_lsa_header_s*)lsa->lsa) != 1) {
                 continue;
             }
+            if(lsa->source.type == OSPF_SOURCE_SELF) {
+                lsa->seq = be32toh(hdr->seq);
+                ospf_lsa_self_update(ospf_instance);
+                continue;
+            }
         }
         ospf_lsa_tree_add(NULL, hdr, ospf_neighbor->lsa_request_tree[hdr->type]);
     }
