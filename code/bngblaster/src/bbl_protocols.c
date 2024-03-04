@@ -3129,7 +3129,14 @@ decode_qmx_li(uint8_t *buf, uint16_t len,
     qmx_li->payload = buf;
     qmx_li->payload_len = len;
     *_qmx_li = qmx_li;
-    return decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&qmx_li->next);
+    if(qmx_li->packet_type == 7) {
+        if(decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&qmx_li->next) != PROTOCOL_SUCCESS) {
+            qmx_li->next = NULL;
+        }
+    } else {
+        qmx_li->next = NULL;
+    }
+    return PROTOCOL_SUCCESS;
 }
 
 /*

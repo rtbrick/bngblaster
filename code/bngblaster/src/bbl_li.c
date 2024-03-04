@@ -89,17 +89,22 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
     li_flow->bytes_rx += qmx_li->payload_len;
 
     inner_eth = (bbl_ethernet_header_s*)qmx_li->next;
-    if(inner_eth->type == ETH_TYPE_PPPOE_SESSION) {
-        inner_pppoe = (bbl_pppoe_session_s*)inner_eth->next;
-        if(inner_pppoe->protocol == PROTOCOL_IPV4) {
-            inner_ipv4 = (bbl_ipv4_s*)inner_pppoe->next;
-        } else if(inner_pppoe->protocol == PROTOCOL_IPV6) {
-            inner_ipv6 = (bbl_ipv6_s*)inner_pppoe->next;
+    if(inner_eth) {
+        if(inner_eth->bbl) {
+            li_flow->packets_rx_bbl++;
         }
-    } else if(inner_eth->type == ETH_TYPE_IPV4) {
-        inner_ipv4 = (bbl_ipv4_s*)eth->next;
-    } else if(inner_eth->type == ETH_TYPE_IPV6) {
-        inner_ipv6 = (bbl_ipv6_s*)eth->next;
+        if(inner_eth->type == ETH_TYPE_PPPOE_SESSION) {
+            inner_pppoe = (bbl_pppoe_session_s*)inner_eth->next;
+            if(inner_pppoe->protocol == PROTOCOL_IPV4) {
+                inner_ipv4 = (bbl_ipv4_s*)inner_pppoe->next;
+            } else if(inner_pppoe->protocol == PROTOCOL_IPV6) {
+                inner_ipv6 = (bbl_ipv6_s*)inner_pppoe->next;
+            }
+        } else if(inner_eth->type == ETH_TYPE_IPV4) {
+            inner_ipv4 = (bbl_ipv4_s*)eth->next;
+        } else if(inner_eth->type == ETH_TYPE_IPV6) {
+            inner_ipv6 = (bbl_ipv6_s*)eth->next;
+        }
     }
 
     if(inner_ipv4) {
@@ -154,7 +159,7 @@ bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     for (; dict_itor_valid(itor); dict_itor_next(itor)) {
         li_flow = (bbl_li_flow_t*)*dict_itor_datum(itor);
         if(li_flow) {
-            flow = json_pack("{ss si ss si ss ss ss si sI sI sI sI sI sI sI sI sI sI sI}",
+            flow = json_pack("{ss si ss si ss ss ss si sI sI sI sI sI sI sI sI sI sI sI sI}",
                                 "source-address", format_ipv4_address(&li_flow->src_ipv4),
                                 "source-port", li_flow->src_port,
                                 "destination-address", format_ipv4_address(&li_flow->dst_ipv4),
@@ -165,6 +170,7 @@ bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                                 "liid", li_flow->liid,
                                 "bytes-rx", li_flow->bytes_rx,
                                 "packets-rx", li_flow->packets_rx,
+                                "packets-rx-bbl", li_flow->packets_rx_bbl,
                                 "packets-rx-ipv4", li_flow->packets_rx_ipv4,
                                 "packets-rx-ipv4-tcp", li_flow->packets_rx_ipv4_tcp,
                                 "packets-rx-ipv4-udp", li_flow->packets_rx_ipv4_udp,

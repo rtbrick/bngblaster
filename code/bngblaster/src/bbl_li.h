@@ -26,6 +26,7 @@ typedef struct bbl_li_flow_
 
     uint64_t     packets_rx;
     uint64_t     bytes_rx;
+    uint64_t     packets_rx_bbl;
     uint64_t     packets_rx_ipv4;
     uint64_t     packets_rx_ipv4_tcp;
     uint64_t     packets_rx_ipv4_udp;
