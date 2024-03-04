@@ -687,13 +687,15 @@ ospf_lsa_prefix_v3(ospf_instance_s *ospf_instance)
     iap->ref_router = config->router_id;
 
     while(ospf_interface) {
-        prefix = (ospfv3_lsa_prefix_s*)(lsa->lsa+lsa->lsa_len);
-        prefix->prefix_len = ospf_interface->interface->ip6.len;
-        prefix->prefix_options = 0;
-        prefix->metric = htobe16(ospf_interface->metric);
-        memcpy(prefix->prefix, ospf_interface->interface->ip6.address, sizeof(ipv6addr_t));
-        lsa->lsa_len += (sizeof(ospfv3_lsa_prefix_s) - (sizeof(ipv6addr_t)-BITS_TO_BYTES(prefix->prefix_len)));
-        prefixes++;
+        if(ospf_interface->interface->ip6.len) {
+            prefix = (ospfv3_lsa_prefix_s*)(lsa->lsa+lsa->lsa_len);
+            prefix->prefix_len = ospf_interface->interface->ip6.len;
+            prefix->prefix_options = 0;
+            prefix->metric = htobe16(ospf_interface->metric);
+            memcpy(prefix->prefix, ospf_interface->interface->ip6.address, sizeof(ipv6addr_t));
+            lsa->lsa_len += (sizeof(ospfv3_lsa_prefix_s) - (sizeof(ipv6addr_t)-BITS_TO_BYTES(prefix->prefix_len)));
+            prefixes++;
+        }
         ospf_interface = ospf_interface->next;
     }
     
