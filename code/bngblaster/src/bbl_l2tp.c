@@ -225,7 +225,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t
             if(g_ctx->l2tp_tunnels_established > g_ctx->l2tp_tunnels_established_max) {
                 g_ctx->l2tp_tunnels_established_max = g_ctx->l2tp_tunnels_established;
             }
-            LOG(L2TP, "L2TP Info (%s) Tunnel %u with %s (%s) established\n",
+            LOG(L2TP, "L2TP Info (%s) Tunnel (%u) with %s (%s) established\n",
                       l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
                       l2tp_tunnel->peer_name,
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
