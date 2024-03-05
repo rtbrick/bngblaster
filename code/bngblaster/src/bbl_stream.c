@@ -1531,7 +1531,7 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
 
     if(stream->tokens == 0) {
         stream->tokens = stream->io_bucket->tokens + (rand() % IO_TOKENS_PER_PACKET);
-    } else if(unlikely(tokens > stream->tokens_burst)) {
+    } else if(tokens > stream->tokens_burst) {
         stream->tokens = stream->io_bucket->tokens - stream->tokens_burst;
     }
 
@@ -2488,7 +2488,7 @@ NEXT:
 }
 
 json_t *
-bbl_stream_json(bbl_stream_s *stream)
+bbl_stream_json(bbl_stream_s *stream, bool debug)
 {
     json_t *root = NULL;
     char *tx_interface = NULL;
@@ -2611,6 +2611,7 @@ bbl_stream_json(bbl_stream_s *stream)
         }
         if(stream->lag && stream->io && stream->io->interface) {
             json_object_set(root, "lag-member-interface", json_string(stream->io->interface->name));
+            json_object_set(root, "lag-member-interface-state", json_string(interface_state_string(stream->io->interface->state)));
         }
     } else {
         root = json_pack("{sI ss* ss ss ss sb sb ss* sI sI sI sI sf}",
@@ -2627,6 +2628,21 @@ bbl_stream_json(bbl_stream_s *stream)
             "tx-pps", stream->rate_packets_tx.avg,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
             "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0);
+    }
+    if(root && debug) {
+        /* Add debug informations. */
+        json_object_set(root, "global-traffic", json_boolean(g_traffic));
+        json_object_set(root, "init-phase", json_boolean(g_init_phase));
+        json_object_set(root, "nat", json_boolean(stream->nat));
+        json_object_set(root, "reset", json_boolean(stream->reset));
+        json_object_set(root, "tx-interface-state", json_string(interface_state_string(stream->tx_interface->state)));
+        json_object_set(root, "tx-packets-real", json_integer(stream->tx_packets));
+        json_object_set(root, "max-packets", json_integer(stream->max_packets));
+        json_object_set(root, "bucket", json_integer(stream->io_bucket->tokens));
+        json_object_set(root, "tokens", json_integer(stream->tokens));
+        if(stream->tcp) {
+            json_object_set(root, "tcp-flags", json_integer(stream->tcp_flags));
+        }
     }
     return root;
 }
@@ -2661,17 +2677,20 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     bbl_stream_s *stream;
 
     int number = 0;
+    int debug = 0;
+
     uint64_t flow_id;
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
-    }
+    }    
+    json_unpack(arguments, "{s:b}", "debug", &debug);
 
     flow_id = number;
     stream = bbl_stream_index_get(flow_id);
     if(stream) {
-        json_stream = bbl_stream_json(stream);
+        json_stream = bbl_stream_json(stream, debug);
         root = json_pack("{ss si so*}",
                          "status", "ok",
                          "code", 200,
@@ -2752,7 +2771,7 @@ bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribu
 
         json_streams = json_array();
         while(stream) {
-            json_stream = bbl_stream_json(stream);
+            json_stream = bbl_stream_json(stream, false);
             json_array_append(json_streams, json_stream);
             stream = stream->session_next;
         }

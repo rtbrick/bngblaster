@@ -234,7 +234,7 @@ void
 bbl_stream_reset(bbl_stream_s *stream);
 
 json_t *
-bbl_stream_json(bbl_stream_s *stream);
+bbl_stream_json(bbl_stream_s *stream, bool debug);
 
 int
 bbl_stream_ctrl_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));

@@ -1198,7 +1198,7 @@ bbl_stats_json(bbl_stats_s * stats)
 
         stream = g_ctx->stream_head;
         while(stream) {
-            jobj_sub = bbl_stream_json(stream);
+            jobj_sub = bbl_stream_json(stream, false);
             if(jobj_sub) {
                 json_array_append(jobj_array, jobj_sub);
             }
