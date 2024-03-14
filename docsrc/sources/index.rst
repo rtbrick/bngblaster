@@ -133,6 +133,7 @@ Articles
 YouTube 
 -------
 
+* `DKNOG14 (2024) <https://www.youtube.com/live/WdATdbaveRI?si=lgw1W-HckormViK9&t=13599>`_ 
 * `DENOG15 (2023) <https://youtu.be/4rmwf6livyI>`_ 
 * `UKNOF49 (2022) <https://youtu.be/HTswAl388Gg>`_ 
 * `DENOG13 (2021) <https://youtu.be/LVg6rlVEfNU>`_ 
