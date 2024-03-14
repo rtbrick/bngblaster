@@ -2635,8 +2635,10 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set(root, "init-phase", json_boolean(g_init_phase));
         json_object_set(root, "nat", json_boolean(stream->nat));
         json_object_set(root, "reset", json_boolean(stream->reset));
+        json_object_set(root, "lag", json_boolean(stream->lag));
         json_object_set(root, "tx-interface-state", json_string(interface_state_string(stream->tx_interface->state)));
         json_object_set(root, "tx-packets-real", json_integer(stream->tx_packets));
+        json_object_set(root, "tx-seq", json_integer(stream->flow_seq));
         json_object_set(root, "max-packets", json_integer(stream->max_packets));
         json_object_set(root, "bucket", json_integer(stream->io_bucket->tokens));
         json_object_set(root, "tokens", json_integer(stream->tokens));
