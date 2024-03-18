@@ -109,6 +109,34 @@ This directory contains the following files:
 * `run.stderr`: bngblaster standard error
 * `run.stdout`: bngblaster standard output 
 
+Example:
+
+.. code-block:: none
+
+    curl --location --request PUT 'http://10.10.10.10:8001/api/v1/instances/quickstart_pppoe' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "interfaces": {
+            "a10nsp": [
+                {
+                    "__comment__": "PPPoE Server",
+                    "interface": "veth1.1"
+                }
+            ],
+            "access": [
+                {
+                    "__comment__": "PPPoE Client",
+                    "interface": "veth1.2",
+                    "type": "pppoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan": 7
+                }
+            ]
+        }
+    }'
+
+
 Start Test 
 ~~~~~~~~~~~
 
@@ -131,6 +159,24 @@ defined in the body.
 
 All supported argument options are explained in the OpenAPI schema.
 
+Example:
+
+.. code-block:: none
+
+    curl --location --request POST 'http://10.10.10.10:8001/api/v1/instances/quickstart_pppoe/_start' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "logging": true,
+        "logging_flags": [
+            "debug",
+            "pppoe",
+            "ip"
+        ],
+        "report": true,
+        "session_count": 2
+    }'
+
+
 Status
 ~~~~~~
 
@@ -148,9 +194,11 @@ The JSON body of this API call will be passed to the bngblaster instance
 control socket (`/var/bngbnlaster/<instance-name>/run.sock`). The result will 
 be passed back to the client.
 
+Example:
+
 .. code-block:: none
 
-    curl --location --request POST 'http://<IP>>:8001/api/v1/instances/<instance-name>/_command' \
+    curl --location --request POST 'http://10.10.10.10:8001/api/v1/instances/quickstart_pppoe/_command' \
     --header 'Content-Type: application/json' \
     --data-raw '{
         "command": "session-info",
