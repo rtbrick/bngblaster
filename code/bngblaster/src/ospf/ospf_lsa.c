@@ -1713,9 +1713,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         search = hb_tree_search(ospf_neighbor->lsa_request_tree[lsa_type], key);
         if(search) {
             entry = *search;
-            if(ospf_lsa_compare((ospf_lsa_header_s*)&entry->hdr, hdr) != 1) {
-                ospf_lsa_tree_remove(&entry->key, ospf_neighbor->lsa_request_tree[lsa_type]);
-            }
+            ospf_lsa_tree_remove(&entry->key, ospf_neighbor->lsa_request_tree[lsa_type]);
         }
 
         search = hb_tree_search(ospf_instance->lsdb[lsa_type], key);
