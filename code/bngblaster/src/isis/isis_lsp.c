@@ -246,17 +246,30 @@ isis_lsp_lifetime_job(timer_s *timer)
 {
     isis_lsp_s *lsp = timer->data;
 
-    LOG(ISIS, "ISIS %s-LSP %s (source %s seq %u) lifetime expired (%us)\n", 
-        isis_level_string(lsp->level), 
-        isis_lsp_id_to_str(&lsp->id),
-        isis_source_string(lsp->source.type),
-        lsp->seq, lsp->lifetime);
+    struct timespec ago;
+    uint16_t remaining_lifetime;
 
-    lsp->expired = true;
-    timer_add(&g_ctx->timer_root, 
-              &lsp->timer_lifetime, 
-              "ISIS PURGE", 30, 0, lsp,
-              &isis_lsp_purge_job);
+    timespec_sub(&ago, timer->timestamp, &lsp->timestamp);
+    if(lsp->expired || ago.tv_sec >= lsp->lifetime) {
+        LOG(ISIS, "ISIS %s-LSP %s (source %s seq %u) lifetime expired (%us)\n", 
+            isis_level_string(lsp->level), 
+            isis_lsp_id_to_str(&lsp->id),
+            isis_source_string(lsp->source.type),
+            lsp->seq, lsp->lifetime);
+
+        lsp->expired = true;
+        timer_add(&g_ctx->timer_root, 
+                  &lsp->timer_lifetime, 
+                  "ISIS PURGE", 60, 0, lsp,
+                  &isis_lsp_purge_job);
+
+    } else {
+        remaining_lifetime = lsp->lifetime - ago.tv_sec;
+        timer_add(&g_ctx->timer_root, 
+                  &lsp->timer_lifetime, 
+                  "ISIS LIFETIME", remaining_lifetime, 0, lsp,
+                  &isis_lsp_lifetime_job);
+    }
 }
 
 void
@@ -272,7 +285,7 @@ isis_lsp_lifetime(isis_lsp_s *lsp)
         lsp->expired = true;
         timer_add(&g_ctx->timer_root, 
                   &lsp->timer_lifetime, 
-                  "ISIS PURGE", 30, 0, lsp,
+                  "ISIS PURGE", 60, 0, lsp,
                   &isis_lsp_purge_job);
     }
 }
