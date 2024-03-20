@@ -243,6 +243,43 @@ timer_requeue(timer_s *timer, time_t sec, long nsec)
 
 }
 
+static void
+timer_smear_bucket_internal(timer_bucket_s *timer_bucket)
+{
+    timer_s *timer, *last_timer;
+    struct timespec now, diff, step;
+    long step_nsec;
+
+    /* Found the bucket. Next compute the timespan 
+     * between now and last timer. */
+    last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
+    if(timer_bucket->timers > 1 && last_timer) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        timespec_sub(&diff, &last_timer->expire, &now);
+        step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
+        step.tv_sec = step_nsec / 1e9;
+        step.tv_nsec = step_nsec - (step.tv_sec * 1e9);
+
+#ifdef BNGBLASTER_TIMER_LOGGING
+        LOG(TIMER_DETAIL, "Smear %u timers in bucket %lu.%06lus\n", timer_bucket->timers, timer_bucket->sec, timer_bucket->nsec);
+        LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n",
+            now.tv_sec, now.tv_nsec / 1000,
+            last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000,
+            step.tv_sec, step.tv_nsec / 1000);
+#endif
+
+        /*  Now walk all timers and space them <step> apart. */
+        CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
+            timespec_add(&timer->expire, &now, &step);
+            now = timer->expire;
+#ifdef BNGBLASTER_TIMER_LOGGING
+            LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
+                timer->expire.tv_sec, timer->expire.tv_nsec / 1000);
+#endif
+        }
+    }
+}
+
 /**
  * Smear all the timer of a given bucket to expire equi-distant.
  * Call this function periodically to avoid clustering of timers.
@@ -251,88 +288,25 @@ void
 timer_smear_bucket(timer_root_s *root, time_t sec, long nsec)
 {
     timer_bucket_s *timer_bucket;
-    timer_s *timer, *last_timer;
-    struct timespec now, diff, step;
-    long step_nsec;
 
     /* Find the bucket for smearing. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
         if(timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
             continue;
         }
-
-        /* Found the bucket. Next compute the timespan 
-         * between now and last timer. */
-        last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
-        if(timer_bucket->timers > 1 && last_timer) {
-            clock_gettime(CLOCK_MONOTONIC, &now);
-            timespec_sub(&diff, &last_timer->expire, &now);
-            step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
-            step.tv_sec = step_nsec / 1e9;
-            step.tv_nsec = step_nsec - (step.tv_sec * 1e9);
-
-#ifdef BNGBLASTER_TIMER_LOGGING
-            LOG(TIMER_DETAIL, "Smear %u timers in bucket %lu.%06lus\n", timer_bucket->timers, sec, nsec);
-            LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n",
-                now.tv_sec, now.tv_nsec / 1000,
-                last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000,
-                step.tv_sec, step.tv_nsec / 1000);
-#endif
-
-            /*  Now walk all timers and space them <step> apart. */
-            CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
-                timespec_add(&timer->expire, &now, &step);
-                now = timer->expire;
-#ifdef BNGBLASTER_TIMER_LOGGING
-                LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
-                    timer->expire.tv_sec, timer->expire.tv_nsec / 1000);
-#endif
-            }
-        }
+        timer_smear_bucket_internal(timer_bucket);
         return;
     }
 }
 
-/**
- * Smear all the timer of all buckets to expire equi-distant.
- */
-void
+void 
 timer_smear_all_buckets(timer_root_s *root)
 {
     timer_bucket_s *timer_bucket;
-    timer_s *timer, *last_timer;
-    struct timespec now, diff, step;
-    long step_nsec;
 
-    /* Iterate over all buckets for smearing. */
+    /* Find the bucket for smearing. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-        /* Compute the time span between now and last timer. */
-        last_timer = CIRCLEQ_LAST(&timer_bucket->timer_qhead);
-        if(timer_bucket->timers > 1 && last_timer) {
-            clock_gettime(CLOCK_MONOTONIC, &now);
-            timespec_sub(&diff, &last_timer->expire, &now);
-            step_nsec = (diff.tv_sec * 1e9 + diff.tv_nsec) / (timer_bucket->timers); /* calculate smear step */
-            step.tv_sec = step_nsec / 1e9;
-            step.tv_nsec = step_nsec - (step.tv_sec * 1e9);
-
-#ifdef BNGBLASTER_TIMER_LOGGING
-            LOG(TIMER_DETAIL, "Smear %u timers in bucket %lu.%06lus\n", timer_bucket->timers, timer_bucket->sec, timer_bucket->nsec);
-            LOG(TIMER_DETAIL, "Now %lu.%06lus, last expire %lu.%06lus, step %lu.%06lus\n",
-                now.tv_sec, now.tv_nsec / 1000,
-                last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000,
-                step.tv_sec, step.tv_nsec / 1000);
-#endif
-
-            /* Now walk all timers and space them <step> apart. */
-            CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
-                timespec_add(&timer->expire, &now, &step);
-                now = timer->expire;
-#ifdef BNGBLASTER_TIMER_LOGGING
-                LOG(TIMER_DETAIL, "  Smear %s -> expire %lu.%06lus\n", timer->name,
-                    last_timer->expire.tv_sec, last_timer->expire.tv_nsec / 1000);
-#endif
-            }
-        }
+        timer_smear_bucket_internal(timer_bucket);
     }
 }
 
