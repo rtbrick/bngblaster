@@ -87,7 +87,7 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
     protocol_error_t result;
     ospf_pdu_s pdu = {0};
 
-    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_interface_s *ospf_interface = interface->ospfv2_interface;
     ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
     ospf_config_s *config = ospf_interface->instance->config;
 
@@ -224,7 +224,7 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
     protocol_error_t result;
     ospf_pdu_s pdu = {0};
 
-    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_interface_s *ospf_interface = interface->ospfv3_interface;
     ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
 
     bbl_ospf_s *ospf = ipv6->next;

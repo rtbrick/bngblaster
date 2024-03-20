@@ -28,7 +28,7 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
     bbl_ospf_s ospf = {0};
     ospf_pdu_s pdu = {0};
 
-    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_interface_s *ospf_interface = interface->ospfv2_interface;
     ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
     ospf_instance_s *ospf_instance = ospf_interface->instance;
     ospf_config_s *config = ospf_instance->config;
@@ -122,7 +122,7 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
     ospf_pdu_s pdu = {0};
     uint8_t mac[ETH_ADDR_LEN];
 
-    ospf_interface_s *ospf_interface = interface->ospf_interface;
+    ospf_interface_s *ospf_interface = interface->ospfv3_interface;
     ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
     ospf_instance_s *ospf_instance = ospf_interface->instance;
     ospf_config_s *config = ospf_instance->config;

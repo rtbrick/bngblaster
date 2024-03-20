@@ -250,18 +250,19 @@ ospf_interface_init(bbl_network_interface_s *interface,
                     return false;
                 }
                 ospf_interface = calloc(1, sizeof(ospf_interface_s));
-                interface->ospf_interface = ospf_interface;
                 ospf_interface->interface = interface;
                 ospf_interface->instance = ospf;
                 ospf_interface->version = version;
                 ospf_interface->type = interface_type;
                 ospf_interface->id = interface_id++;
                 if(version == OSPF_VERSION_2) {
+                    interface->ospfv2_interface = ospf_interface;
                     ospf_interface->metric = network_config->ospfv2_metric;
                     ospf_interface->frag_buf = malloc(OSPF_PDU_LEN_MAX);
                     ospf_interface->frag_id = 0;
                     ospf_interface->frag_off = 0;
                 } else {
+                    interface->ospfv3_interface = ospf_interface;
                     ospf_interface->metric = network_config->ospfv3_metric;
                 }
 
