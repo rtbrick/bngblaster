@@ -262,31 +262,33 @@ void
 ospf_lsa_lifetime_job(timer_s *timer)
 {
     ospf_lsa_s *lsa = timer->data;
-    uint32_t lsa_id = lsa->key.id;
     uint32_t lsa_router = lsa->key.router;
+    uint32_t lsa_id = lsa->key.id;
 
-    LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) lifetime expired (max age)\n",
-        lsa->type, format_ipv4_address(&lsa_id), lsa->seq, format_ipv4_address(&lsa_router));
+    ospf_lsa_update_age(lsa, timer->timestamp);
+    ospf_lsa_lifetime(lsa);
 
-    lsa->expired = true;
-    timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
-              "OSPF PURGE", 30, 0, 
-              lsa, &ospf_lsa_purge_job);
+    if(lsa->expired) {
+        LOG(OSPF, "OSPF TYPE-%u-LSA %s (seq %u router %s) lifetime expired (max age)\n",
+            lsa->type, format_ipv4_address(&lsa_id), lsa->seq, format_ipv4_address(&lsa_router));
+    }
 }
 
 void
 ospf_lsa_lifetime(ospf_lsa_s *lsa)
 {
+    time_t sec = 60;
     timer_del(lsa->timer_refresh);
     if(lsa->age < OSPF_LSA_MAX_AGE) {
+        sec = OSPF_LSA_MAX_AGE - lsa->age;
         timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
-                  "OSPF LIFETIME", OSPF_LSA_MAX_AGE-lsa->age, 0, 
+                  "OSPF LIFETIME", sec, 6, 
                   lsa, &ospf_lsa_lifetime_job);
     } else {
         lsa->expired = true;
         timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
-                "OSPF PURGE", 30, 0, 
-                lsa, &ospf_lsa_purge_job);
+                  "OSPF PURGE", sec, 0, 
+                  lsa, &ospf_lsa_purge_job);
     }
 }
 
@@ -1747,9 +1749,21 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
             }
             /* RECEIVED LSA IS NEWER ... */
             if(lsa->source.type == OSPF_SOURCE_EXTERNAL) {
-                LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) overwrite external LSA with seq %u\n",
-                    lsa_type, format_ipv4_address(&lsa_id), be32toh(hdr->seq), 
-                    format_ipv4_address(&lsa_router), lsa->seq);
+                if(ospf_instance->config->external_auto_refresh) {
+                    /* With external-auto-refresh enabled, 
+                     * the sequence number will be increased. */
+                    LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) refresh external LSA with seq %u\n",
+                        lsa_type, format_ipv4_address(&lsa_id), be32toh(hdr->seq), 
+                        format_ipv4_address(&lsa_router), lsa->seq);
+
+                    lsa->seq = be32toh(hdr->seq);
+                    ospf_lsa_refresh(lsa);
+                    continue;
+                } else {
+                    LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) overwrite external LSA with seq %u\n",
+                        lsa_type, format_ipv4_address(&lsa_id), be32toh(hdr->seq), 
+                        format_ipv4_address(&lsa_router), lsa->seq);
+                }
             } else if(lsa->source.type == OSPF_SOURCE_SELF) {
                 lsa->seq = be32toh(hdr->seq);
                 ospf_lsa_self_update(ospf_instance);
@@ -2031,12 +2045,13 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         lsa->expired = false;
         ospf_lsa_update_age(lsa, &now);
         ospf_lsa_flood(lsa);
-        ospf_lsa_lifetime(lsa);
 
         if(ospf_instance->config->external_auto_refresh) {
             timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 
                                "OSPF LSA REFRESH", OSPF_LSA_REFRESH_TIME, 3, lsa, 
                                &ospf_lsa_refresh_job);
+        } else {
+            ospf_lsa_lifetime(lsa);
         }
     }
     return true;
