@@ -23,6 +23,6 @@ typedef struct ospf_mrt_hdr_ {
 } __attribute__ ((__packed__)) ospf_mrt_hdr_t;
 
 bool
-ospf_mrt_load(ospf_instance_s *instance, char *file_path);
+ospf_mrt_load(ospf_instance_s *instance, char *file_path, bool startup);
 
 #endif

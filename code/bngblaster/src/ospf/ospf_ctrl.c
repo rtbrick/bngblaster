@@ -254,7 +254,7 @@ ospf_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *
     if(json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing MRT file");
     }
-    if(!ospf_mrt_load(ospf_instance, file_path)) {
+    if(!ospf_mrt_load(ospf_instance, file_path, false)) {
         return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF MRT file");
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);

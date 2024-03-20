@@ -11,7 +11,7 @@
 extern uint8_t g_pdu_buf[];
 
 bool
-ospf_mrt_load(ospf_instance_s *instance, char *file_path)
+ospf_mrt_load(ospf_instance_s *instance, char *file_path, bool startup)
 {
     FILE *mrt_file = NULL;
     ospf_mrt_hdr_t mrt = {0};
@@ -100,6 +100,11 @@ ospf_mrt_load(ospf_instance_s *instance, char *file_path)
             fclose(mrt_file);
             return false;
         }
+    }
+
+    if(startup) {
+        /* Adding 3 nanoseconds to enforce a dedicated timer bucket. */
+        timer_smear_bucket(&g_ctx->timer_root, OSPF_LSA_REFRESH_TIME, 3);
     }
 
     fclose(mrt_file);

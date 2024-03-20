@@ -53,7 +53,7 @@ ospf_init() {
         }
 
         if(config->external_mrt_file) {
-            if(!ospf_mrt_load(instance, config->external_mrt_file)) {
+            if(!ospf_mrt_load(instance, config->external_mrt_file, true)) {
                 LOG(OSPF, "Failed to load MRT file %s\n", 
                     config->external_mrt_file);
                 return false;
