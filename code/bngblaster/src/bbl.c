@@ -51,12 +51,19 @@ const char banner[] = "\n"
 
 
 void
-teardown_handler(int sig)
+teardown_request()
 {
-    LOG(INFO, "Received signal %s (%d), initiating teardown\n", strsignal(sig), sig);
     g_teardown = true;
     g_teardown_request = true;
     g_teardown_request_count++;
+    LOG(INFO, "Teardown request (%u)\n", g_teardown_request_count);
+}
+
+void
+teardown_handler(int sig)
+{
+    LOG(INFO, "Received signal %s (%d), initiating teardown\n", strsignal(sig), sig);
+    teardown_request();
 }
 
 const char*

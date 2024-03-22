@@ -545,7 +545,7 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Release send\n", session->session_id);
             break;
         default:
-            return WRONG_PROTOCOL_STATE;
+            return IGNORED;
     }
 
     timer_add(&g_ctx->timer_root, &session->timer_dhcpv6, "DHCPv6",

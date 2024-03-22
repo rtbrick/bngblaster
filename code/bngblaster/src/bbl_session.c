@@ -14,7 +14,6 @@
 #include "bbl_dhcpv6.h"
 
 extern volatile bool g_teardown;
-extern volatile bool g_teardown_request;
 extern volatile bool g_monkey;
 
 static void
@@ -682,13 +681,22 @@ bbl_session_clear(bbl_session_s *session)
                 session->send_requests |= BBL_SEND_LCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
                 break;
+            case BBL_TERMINATING:
+            case BBL_TERMINATED:
+                break;
             default:
+                bbl_session_update_state(session, BBL_TERMINATED);
                 break;
         }
     } else {
-        if(session->dhcp_state > BBL_DHCP_SELECTING) {
-            new_state = BBL_TERMINATING;
-            if(session->dhcp_state != BBL_DHCP_RELEASE) {
+        switch(session->dhcp_state) {
+            case BBL_DHCP_SELECTING:
+                session->dhcp_state = BBL_DHCP_INIT;
+                break;
+            case BBL_DHCP_REQUESTING:
+            case BBL_DHCP_BOUND:
+            case BBL_DHCP_RENEWING:
+                new_state = BBL_TERMINATING;
                 session->dhcp_state = BBL_DHCP_RELEASE;
                 session->dhcp_xid = rand();
                 session->dhcp_request_timestamp.tv_sec = 0;
@@ -696,11 +704,21 @@ bbl_session_clear(bbl_session_s *session)
                 session->dhcp_retry = 0;
                 session->send_requests |= BBL_SEND_DHCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
-            }
+                break;
+            case BBL_DHCP_RELEASE:
+                new_state = BBL_TERMINATING;
+                break;
+            default:
+                break;
         }
-        if(session->dhcpv6_state > BBL_DHCP_SELECTING) {
-            new_state = BBL_TERMINATING;
-            if(session->dhcpv6_state != BBL_DHCP_RELEASE) {
+        switch(session->dhcpv6_state) {
+            case BBL_DHCP_SELECTING:
+                session->dhcpv6_state = BBL_DHCP_INIT;
+                break;
+            case BBL_DHCP_REQUESTING:
+            case BBL_DHCP_BOUND:
+            case BBL_DHCP_RENEWING:
+                new_state = BBL_TERMINATING;
                 session->dhcpv6_state = BBL_DHCP_RELEASE;
                 session->dhcpv6_xid = rand() & 0xffffff;
                 session->dhcpv6_request_timestamp.tv_sec = 0;
@@ -708,7 +726,12 @@ bbl_session_clear(bbl_session_s *session)
                 session->dhcpv6_retry = 0;
                 session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
                 bbl_session_tx_qnode_insert(session);
-            }
+                break;
+            case BBL_DHCP_RELEASE:
+                new_state = BBL_TERMINATING;
+                break;
+            default:
+                break;
         }
         bbl_session_update_state(session, new_state);
     }

@@ -28,9 +28,6 @@
 #define BACKLOG 4
 
 extern volatile bool g_monkey;
-extern volatile bool g_teardown;
-extern volatile bool g_teardown_request;
-extern volatile uint8_t g_teardown_request_count;
 
 const char *schema_no_args[] = { NULL };
 const char *schema_all_args[] = {
@@ -97,10 +94,7 @@ bbl_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
         }
     } else {
         /* Terminate all sessions and teardown test ... */
-        g_teardown = true;
-        g_teardown_request = true;
-        g_teardown_request_count++;
-        LOG_NOARG(INFO, "Teardown request\n");
+        teardown_request();
         return bbl_ctrl_status(fd, "ok", 200, "teardown requested");
     }
 }
@@ -120,10 +114,7 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
 int
 bbl_ctrl_test_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
-    g_teardown = true;
-    g_teardown_request = true;
-    g_teardown_request_count++;
-    LOG_NOARG(INFO, "Teardown request\n");
+    teardown_request();
     return bbl_ctrl_status(fd, "ok", 200, "teardown requested");
 }
 

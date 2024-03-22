@@ -201,7 +201,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
     bbl_access_interface_s *interface = session->access_interface;
 
     /* Ignore packets received in wrong state */
-    if(session->dhcpv6_state == BBL_DHCP_INIT) {
+    if(session->dhcpv6_state <= BBL_DHCP_INIT) {
         return;
     }
 

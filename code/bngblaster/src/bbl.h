@@ -61,6 +61,9 @@ extern bbl_ctx_s *g_ctx;
 extern WINDOW *log_win;
 extern WINDOW *stats_win;
 
+void
+teardown_request();
+
 const char*
 test_state();
 

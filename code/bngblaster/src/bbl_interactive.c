@@ -39,8 +39,6 @@ WINDOW *log_win = NULL;
 
 int stats_win_postion;
 
-extern volatile bool g_teardown;
-extern volatile bool g_teardown_request;
 extern bool g_banner;
 extern bool g_interactive;
 
@@ -243,9 +241,7 @@ bbl_interactive_read_key_job(timer_s *timer)
             LOG_NOARG(INFO, "Stop traffic\n");
             break;
         case KEY_F(9):
-            g_teardown = true;
-            g_teardown_request = true;
-            LOG_NOARG(INFO, "Teardown request\n");
+            teardown_request();
             break;
         case KEY_DOWN:
             if(g_view_selected == UI_VIEW_DEFAULT) {

@@ -152,7 +152,7 @@ void
 bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp)
 {
     /* Ignore packets received in wrong state */
-    if(session->dhcp_state == BBL_DHCP_INIT) {
+    if(session->dhcp_state <= BBL_DHCP_INIT) {
         return;
     }
 
