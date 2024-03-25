@@ -165,6 +165,45 @@ Folowing an example configuration.
     }
 
 
+Following a real world example from a system with two CPU sockets (NUMA nodes) and two physical NIC adapters, 
+each connected to another socket (NUMA node). This example was optimized to send loss free 20G from 
+ens2f2np2, ens2f3np3 (NUMA node 0) to ens5f2np2, ens5f3np3 (NUMA node 1).  
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "links": [
+                {
+                    "interface": "ens2f2np2",
+                    "tx-threads": 4,
+                    "tx-cpuset": [0, 36, 1, 37]
+                },
+                {
+                    "interface": "ens2f3np3",
+                    "tx-threads": 4,
+                    "tx-cpuset": [2, 38, 3, 39]
+                },
+                {
+                    "interface": "ens5f2np2",
+                    "rx-threads": 16,
+                    "tx-cpuset": [18, 54, 19, 55, 20, 56, 21, 57, 22, 58, 23, 59, 24, 60, 25, 61],
+                    "io-slots-rx": 32768
+                },
+                {
+                    "interface": "ens5f3np3",
+                    "rx-threads": 16,
+                    "tx-cpuset": [26, 62, 27, 63, 28, 64, 29, 65, 30, 66, 31, 67, 32, 68, 33, 69],
+                    "io-slots-rx": 32768
+                }
+            ]
+        }
+    } 
+
+
+This example shows well that more RX threads are required than TX threads. 
+
+
 .. _dpdk-usage:
 
 DPDK
