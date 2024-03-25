@@ -3392,7 +3392,7 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.traffic_stop_verified = json_boolean_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "traffic", "max-burst", 1, 255);
+        JSON_OBJ_GET_NUMBER(section, value, "traffic", "max-burst", 1, 65535);
         if(value) {
             g_ctx->config.stream_max_burst = json_number_value(value);
         }
@@ -4155,7 +4155,7 @@ bbl_config_init_defaults()
     g_ctx->config.stream_autostart = true;
     g_ctx->config.stream_rate_calc = true;
     g_ctx->config.stream_delay_calc = true;
-    g_ctx->config.stream_max_burst = 16;
+    g_ctx->config.stream_max_burst = 1024;
     g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }
