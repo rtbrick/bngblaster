@@ -20,8 +20,8 @@
 |                                   | | maximum number of packets in the ring buffer.                      |
 |                                   | | Default: 4096                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
-| **io-burst**                      | | IO burst (ring size).                                              |
-|                                   | | Default: 256                                                       |
+| **io-burst**                      | | IO burst (packets).                                                |
+|                                   | | Default: 256 Range: 1 to 65535                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **qdisc-bypass**                  | | Bypass the kernel's qdisc layer.                                   |
 |                                   | | It's currently not recommended to change the default (issue #206)! |
