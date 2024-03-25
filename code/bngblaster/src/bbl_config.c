@@ -479,8 +479,9 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 
     const char *schema[] = {
         "interface", "description", "mac",
-        "io-mode", "io-slots" "io-burst", 
-        "io-slots-tx", "io-slots-rx", "qdisc-bypass", 
+        "io-mode", "io-slots", "io-burst", 
+        "io-slots-tx", "io-slots-rx", 
+        "qdisc-bypass", 
         "tx-interval","rx-interval", 
         "tx-threads", "rx-threads",
         "rx-cpuset", "tx-cpuset", 
