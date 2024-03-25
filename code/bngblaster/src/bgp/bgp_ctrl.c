@@ -57,7 +57,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
 
     root = json_pack("{ss ss ss si si ss ss si si ss ss* ss* so*}",
                      "interface", session->interface->name,
-                     "local-address", session->peer_address_str,
+                     "local-address", session->local_address_str,
                      "local-id", format_ipv4_address(&session->config->id),
                      "local-as", session->config->local_as,
                      "local-hold-time", session->config->hold_time,
