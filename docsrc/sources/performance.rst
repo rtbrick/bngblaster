@@ -106,6 +106,65 @@ test environment.
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
 
+
+NUMA
+----
+
+NUMA, which stands for Non-Uniform Memory Access, is a computer memory design used in multi-processor systems. 
+In a NUMA system, each processor, or a group of processors, has its own local memory. The processors can access 
+their own local memory faster than non-local memory, which is the memory local to another processor or shared 
+between processors.
+
+On such systems, the best performance can be achived by manually assining RX and TX threds to a set of CPU
+to ensure that the corresponding threads of an interface are running on the same NUMA node. The NUMA node
+of the interface can be derived from the file ``/sys/class/net/<interface>/device/numa_node``. 
+
+.. code-block:: none
+
+    cat /sys/class/net/eth0/device/numa_node
+    0
+    cat /sys/class/net/eth1/device/numa_node
+    1
+
+
+The command ``lscpu`` returns the number of NUMA nodes with the associated
+CPU's for each NUMA node. 
+
+.. code-block:: none
+
+    ... 
+    NUMA:
+    NUMA node(s):          2
+    NUMA node0 CPU(s):     0-17,36-53
+    NUMA node1 CPU(s):     18-35,54-71
+
+
+Folowing an example configuration.
+
+.. code-block:: json
+
+  {
+        "interfaces": {
+            "links": [
+                {
+                    "interface": "eth0",
+                    "rx-threads": 4,
+                    "rx-cpuset": [0, 36, 1, 37]
+                    "tx-threads": 4,
+                    "tx-cpuset": [2, 38, 3, 39]
+                },
+                {
+                    "interface": "eth1",
+                    "rx-threads": 4,
+                    "rx-cpuset": [18, 54, 19, 55]
+                    "tx-threads": 4,
+                    "tx-cpuset": [20, 56, 21, 57]
+                }
+            ]
+        }
+    }
+
+
 .. _dpdk-usage:
 
 DPDK
