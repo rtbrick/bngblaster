@@ -4153,6 +4153,7 @@ bbl_config_init_defaults()
     g_ctx->config.traffic_autostart = true;
     g_ctx->config.stream_autostart = true;
     g_ctx->config.stream_rate_calc = true;
+    g_ctx->config.stream_delay_calc = true;
     g_ctx->config.stream_max_burst = 16;
     g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
