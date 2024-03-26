@@ -115,7 +115,7 @@ In a NUMA system, each processor, or a group of processors, has its own local me
 their own local memory faster than non-local memory, which is the memory local to another processor or shared 
 between processors.
 
-On such systems, the best performance can be achived by manually assining RX and TX threds to a set of CPU
+On such systems, the best performance can be achieved by manually assigning RX and TX threads to a set of CPU
 to ensure that the corresponding threads of an interface are running on the same NUMA node. The NUMA node
 of the interface can be derived from the file ``/sys/class/net/<interface>/device/numa_node``. 
 
