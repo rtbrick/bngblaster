@@ -224,7 +224,6 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
         return false;
     }
     return true;
@@ -362,7 +361,6 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
         return false;
     }
     return true;
@@ -504,7 +502,6 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
         return false;
     }
     return true;
@@ -649,7 +646,6 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
         return false;
     }
     return true;
@@ -821,7 +817,6 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
         return false;
     }
     return true;
@@ -918,7 +913,6 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
         return false;
     }
     return true;
@@ -1324,7 +1318,6 @@ bbl_stream_ldp_lookup(bbl_stream_s *stream)
         if(stream->tx_buf) {
             free(stream->tx_buf);
             stream->tx_buf = NULL;
-            stream->tx_len = 0;
         }
     }
     return true;
@@ -1354,7 +1347,6 @@ bbl_stream_can_send(bbl_stream_s *stream)
     if(stream->tx_buf) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
-        stream->tx_len = 0;
     }
     return false;
 }
@@ -1544,7 +1536,6 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         if(stream->tx_buf) {
             free(stream->tx_buf);
             stream->tx_buf = NULL;
-            stream->tx_len = 0;
         }
         stream->session_version = session->version;
     }
@@ -2180,17 +2171,14 @@ bbl_stream_reset(bbl_stream_s *stream)
 {
     if(stream) {
         stream->reset = true;
+        stream->verified = false;
 
         stream->reset_packets_tx = stream->tx_packets;
         stream->reset_packets_rx = stream->rx_packets;
         stream->reset_loss = stream->rx_loss;
-        stream->reset_wrong_session = stream->rx_wrong_session;
-
         stream->rx_min_delay_us = 0;
         stream->rx_max_delay_us = 0;
         stream->rx_len = 0;
-        stream->rx_first_seq = 0;
-        stream->rx_last_seq = 0;
         stream->rx_priority = 0;
         stream->rx_outer_vlan_pbit = 0;
         stream->rx_inner_vlan_pbit = 0;
@@ -2204,8 +2192,9 @@ bbl_stream_reset(bbl_stream_s *stream)
         stream->rx_mpls2_label = 0;
         stream->rx_source_ip = 0;
         stream->rx_source_port = 0;
-        stream->verified = false;
-        if(stream->config->setup_interval) {
+        stream->rx_first_seq = 0;
+        stream->rx_last_seq = 0;
+       if(stream->config->setup_interval) {
             stream->setup = true;
         }
     }
@@ -2254,6 +2243,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
     bbl_mpls_s *mpls;
 
     uint64_t loss = 0;
+    uint64_t flow_seq;
 
     if(!(bbl && bbl->type == BBL_TYPE_UNICAST)) {
         return NULL;
@@ -2261,13 +2251,21 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
 
     stream = bbl_stream_index_get(bbl->flow_id);
     if(stream) {
-        if(stream->rx_first_seq) {
+        flow_seq = bbl->flow_seq; 
+        if(stream->rx_last_seq) {
             /* Stream already verified */
-            if((stream->rx_last_seq +1) < bbl->flow_seq) {
-                loss = bbl->flow_seq - (stream->rx_last_seq +1);
-                stream->rx_loss += loss;
-                LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu\n",
-                    bbl->flow_id, bbl->flow_seq, stream->rx_last_seq);
+            if(flow_seq > stream->rx_last_seq) {
+                if(flow_seq > (stream->rx_last_seq +1)) {
+                    loss = flow_seq - (stream->rx_last_seq +1);
+                    stream->rx_loss += loss;
+                    LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu loss: %lu\n",
+                        bbl->flow_id, flow_seq, stream->rx_last_seq, loss);
+                }
+                stream->rx_last_seq = flow_seq;
+                stream->rx_last_epoch = eth->timestamp.tv_sec;
+                stream->rx_packets++;
+            } else {
+                stream->rx_wrong_order++;
             }
         } else {
             /* Verify stream ... */
@@ -2337,11 +2335,11 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                 bbl_stream_rx_nat(eth, stream);
             }
             stream->rx_first_seq = bbl->flow_seq;
+            stream->rx_last_seq = bbl->flow_seq;
             stream->rx_first_epoch = eth->timestamp.tv_sec;
+            stream->rx_last_epoch = eth->timestamp.tv_sec;
+            stream->rx_packets++;
         }
-        stream->rx_packets++;
-        stream->rx_last_seq = bbl->flow_seq;
-        stream->rx_last_epoch = eth->timestamp.tv_sec;
         if(g_ctx->config.stream_delay_calc) {
             bbl_stream_delay(stream, &eth->timestamp, &bbl->timestamp);
         }
@@ -2565,7 +2563,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-packets", stream->rx_packets - stream->reset_packets_rx,
             "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
             "rx-loss", stream->rx_loss - stream->reset_loss,
-            "rx-wrong-session", stream->rx_wrong_session - stream->reset_wrong_session,
+            "rx-wrong-order", stream->rx_wrong_order,
             "rx-delay-us-min", stream->rx_min_delay_us,
             "rx-delay-us-max", stream->rx_max_delay_us,
             "rx-pps", stream->rate_packets_rx.avg,
@@ -2602,6 +2600,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             json_object_set(root, "rx-source-port", json_integer(stream->rx_source_port));
         }
         if(stream->session) {
+            json_object_set(root, "rx-wrong-session", json_integer(stream->rx_wrong_session));
             json_object_set(root, "session-id", json_integer(stream->session->session_id));
             json_object_set(root, "session-version", json_integer(stream->session_version));
             json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
