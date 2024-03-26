@@ -97,7 +97,6 @@ typedef struct bbl_stream_
     uint64_t reset_packets_tx;
     uint64_t reset_packets_rx;
     uint64_t reset_loss;
-    uint64_t reset_wrong_session;
 
     bbl_rate_s rate_packets_tx;
     bbl_rate_s rate_packets_rx;
@@ -172,6 +171,7 @@ typedef struct bbl_stream_
     uint64_t rx_packets;
     uint64_t rx_loss;
     uint64_t rx_wrong_session;
+    uint64_t rx_wrong_order;
 
     uint64_t rx_min_delay_us;
     uint64_t rx_max_delay_us;
