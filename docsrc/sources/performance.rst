@@ -187,13 +187,13 @@ ens2f2np2, ens2f3np3 (NUMA node 0) to ens5f2np2, ens5f3np3 (NUMA node 1).
                 {
                     "interface": "ens5f2np2",
                     "rx-threads": 16,
-                    "tx-cpuset": [18, 54, 19, 55, 20, 56, 21, 57, 22, 58, 23, 59, 24, 60, 25, 61],
+                    "rx-cpuset": [18, 54, 19, 55, 20, 56, 21, 57, 22, 58, 23, 59, 24, 60, 25, 61],
                     "io-slots-rx": 32768
                 },
                 {
                     "interface": "ens5f3np3",
                     "rx-threads": 16,
-                    "tx-cpuset": [26, 62, 27, 63, 28, 64, 29, 65, 30, 66, 31, 67, 32, 68, 33, 69],
+                    "rx-cpuset": [26, 62, 27, 63, 28, 64, 29, 65, 30, 66, 31, 67, 32, 68, 33, 69],
                     "io-slots-rx": 32768
                 }
             ]
