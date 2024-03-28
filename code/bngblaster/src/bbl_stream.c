@@ -2244,6 +2244,8 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
 
     uint64_t loss = 0;
     uint64_t flow_seq;
+    uint64_t rx_last_seq;
+    static bool log_loss = true;
 
     if(!(bbl && bbl->type == BBL_TYPE_UNICAST)) {
         return NULL;
@@ -2252,20 +2254,25 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
     stream = bbl_stream_index_get(bbl->flow_id);
     if(stream) {
         flow_seq = bbl->flow_seq; 
-        if(stream->rx_last_seq) {
+        rx_last_seq = stream->rx_last_seq;
+        if(rx_last_seq) {
             /* Stream already verified */
-            if(flow_seq > stream->rx_last_seq) {
-                if(flow_seq > (stream->rx_last_seq +1)) {
-                    loss = flow_seq - (stream->rx_last_seq +1);
+            if(flow_seq > rx_last_seq) {
+                if(flow_seq > (rx_last_seq +1)) {
+                    loss = flow_seq - (rx_last_seq +1);
                     stream->rx_loss += loss;
-                    LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu loss: %lu\n",
-                        bbl->flow_id, flow_seq, stream->rx_last_seq, loss);
+                    if(unlikely(log_loss)) {
+                        log_loss = log_id[LOSS].enable;
+                        LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu loss: %lu\n",
+                            bbl->flow_id, flow_seq, rx_last_seq, loss);
+                    }
                 }
                 stream->rx_last_seq = flow_seq;
                 stream->rx_last_epoch = eth->timestamp.tv_sec;
                 stream->rx_packets++;
             } else {
                 stream->rx_wrong_order++;
+                stream->rx_packets++;
             }
         } else {
             /* Verify stream ... */
