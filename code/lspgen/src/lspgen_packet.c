@@ -1319,7 +1319,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 		push_be_uint(buf2, 3, attr->key.cap.srgb_range); /* Range size */
 		push_be_uint(buf2, 1, 0); /* Reserved */
 
-		push_be_uint(buf2, 2, 1); /* SID Type Label */
+		push_be_uint(buf2, 2, 7); /* SID Type Label */
 		push_be_uint(buf2, 2, 3); /* SID Type Length */
 		push_be_uint(buf2, 3, attr->key.cap.srgb_base);
 		push_pad4(buf2);
@@ -1338,16 +1338,6 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf2, 1, 0); /* Flags */
 	    push_be_uint(buf2, 3, 0); /* Reserved */
 	    push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
-
-	    /* Prefix SID - XXX Move this to Level 4*/
-	    push_be_uint(buf2, 2, 2); /* Type */
-	    push_be_uint(buf2, 2, 8); /* Length */
-	    push_be_uint(buf2, 3, 0); /* Flags, Reserved, MT-ID */
-	    push_be_uint(buf2, 1, attr->key.prefix.sid_algo); /* Algorithm */
-	    push_be_uint(buf2, 4, attr->key.prefix.sid); /* SID Index */
-	    push_pad4(buf2);
-
-	    //write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
 	    push_pad4(buf2);
 	    break;
 
@@ -1364,10 +1354,11 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     if (state & OPEN_LEVEL3) {
 	switch(attr->key.attr_cp[3]) {
 	case OSPF_SUBTLV_PREFIX_SID:
-	    push_be_uint(buf3, 2, 2); /* Type */
+	    push_be_uint(buf3, 2, 4); /* Type */
 	    push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf3, 3, 0); /* Flags, Reserved, MT-ID */
+	    push_be_uint(buf3, 1, 0); /* Flags */
 	    push_be_uint(buf3, 1, attr->key.prefix.sid_algo); /* Algorithm */
+	    push_be_uint(buf3, 2, 0); /* Reserved */
 	    push_be_uint(buf3, 4, attr->key.prefix.sid); /* SID Index */
 	    break;
 
