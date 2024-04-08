@@ -126,9 +126,19 @@ static void
 bbl_lag_select(bbl_lag_s *lag)
 {
     bbl_lag_member_s *member;
+    bbl_stream_s *stream = lag->stream_head;
+    io_handle_s *io;
+
     uint8_t active_count = 0;
+    uint8_t key;
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+        io = member->interface->io.tx;
+        io->stream_pps = 0;
+        io->stream_count = 0;
+        io->stream_head = NULL;
+        io->stream_cur = NULL;
+
         member->primary = false;
         if(member->interface->state != INTERFACE_DISABLED) {
             if(member->lacp_state == LACP_CURRENT && 
@@ -153,11 +163,27 @@ bbl_lag_select(bbl_lag_s *lag)
     if(active_count && 
        active_count >= lag->config->lacp_min_active_links) {
         bbl_lag_update_state(lag, INTERFACE_UP);
+        /* Distribute streams */
+        while(stream) {
+            key = stream->flow_id % active_count;
+            io = lag->active_list[key]->interface->io.tx;
+            stream->io = io;
+            stream->io_next = io->stream_head;
+            io->stream_head = stream;
+            io->stream_cur = stream;
+            io->stream_pps += stream->config->pps;
+            io->stream_count++;
+            stream = stream->lag_next;
+        }
     } else {
         bbl_lag_update_state(lag, INTERFACE_DOWN);
+        while(stream) {
+            stream->io = NULL;
+            stream->io_next = NULL;
+            stream = stream->lag_next;
+        }
     }
     lag->active_count = active_count;
-    lag->select++;
 }
 
 void
@@ -188,6 +214,7 @@ bbl_lag_lacp_job(timer_s *timer)
                 member->partner_state = 0;
                 LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
                     member->lag->interface->name, interface->name);
+                bbl_lag_select(member->lag);
             }
         }
     }
@@ -256,7 +283,6 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             member->lacp_state = LACP_DISABLED;
             lag->interface->state = INTERFACE_UP;
             lag->active_list[lag->active_count++] = member;
-            lag->select++;
             if(CIRCLEQ_EMPTY(&lag->lag_member_qhead)) {
                 member->primary = true;
             }
@@ -363,11 +389,12 @@ bbl_lag_json(bbl_lag_s *lag)
         }
     }
 
-    jobj_lag = json_pack("{si ss* ss* si si so*}",
+    jobj_lag = json_pack("{si ss* ss* si sI si so*}",
         "id", lag->id,
         "interface", lag->interface->name,
         "state", interface_state_string(lag->interface->state),
         "state-transitions", lag->interface->state_transitions,
+        "stream-count", lag->stream_count,
         "members-active", lag->active_count,
         "members", jobj_array);
     

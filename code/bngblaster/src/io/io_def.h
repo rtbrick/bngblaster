@@ -41,12 +41,13 @@ typedef enum {
 } __attribute__ ((__packed__)) io_mode_t;
 
 typedef struct io_bucket_ {
+    bool started;
     double pps;
     uint64_t tokens_per_sec;
     uint64_t tokens;
+    struct io_bucket_ *next;
     struct timer_ *timer;
     struct timespec timestamp_start;
-    struct io_bucket_ *next;
 } io_bucket_s;
 
 typedef struct io_handle_ {

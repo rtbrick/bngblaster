@@ -1385,57 +1385,6 @@ bbl_stream_update_udp(bbl_stream_s *stream)
     }
 }
 
-static bool
-bbl_stream_lag(bbl_stream_s *stream)
-{
-    bbl_lag_s *lag = stream->tx_interface->lag;
-    bbl_stream_s *s;
-    io_handle_s *io, *io_new;
-
-    uint8_t key;
-
-    if(lag->active_count == 0) {
-        return false;
-    }
-
-    if(lag->select != stream->lag_select) {
-        /* Redistribute streams if LAG state has changed. */
-        stream->lag_select = lag->select;
-        key = stream->flow_id % lag->active_count;
-        io = stream->io;
-        io_new = lag->active_list[key]->interface->io.tx;
-        if(io_new != io) {
-            s = io->stream_head;
-            if(s == stream) {
-                /* Stream is head. */
-                io->stream_head = s->io_next;
-            } else {
-                /* Remove stream from IO stream list. */
-                while(s) {
-                    if(s->io_next == stream) {
-                        s->io_next = stream->io_next;
-                        s = NULL;
-                    } else {
-                        s = s->io_next;
-                    }
-                }
-            }
-            if(io->stream_count && (io->stream_pps >= stream->config->pps)) {
-                io->stream_pps -= stream->config->pps;
-                io->stream_count--;
-            }
-            stream->io = io_new;
-            stream->io_next = io_new->stream_head;
-            io_new->stream_head = stream;
-            io_new->stream_cur = stream;
-            io_new->stream_pps += stream->config->pps;
-            io_new->stream_count++;
-            return false;
-        }
-    }
-    return true;
-}
-
 static void
 bbl_stream_setup(bbl_stream_s *stream)
 {
@@ -1471,13 +1420,6 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     if(unlikely(g_init_phase)) {
         stream->tokens = 0;
         return STREAM_WAIT;
-    }
-
-    if(stream->lag) {
-        if(!bbl_stream_lag(stream)) {
-            stream->tokens = 0;
-            return WRONG_PROTOCOL_STATE;
-        }
     }
 
     if(!(g_traffic && stream->enabled && stream->tx_interface->state == INTERFACE_UP)) {
@@ -1643,21 +1585,38 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
     bbl_lag_s *lag = stream->tx_interface->lag;
     bbl_lag_member_s *member;
     io_handle_s *io;
+    io_handle_s *io_iter;
 
     stream->lag = true;
+    stream->lag_next = lag->stream_head;
+    lag->stream_head = stream;
+    lag->stream_count++;
+
+    if(lag->config->lacp_enable) {
+        /* With LACP enabled, member interface will be selected
+         * if LAG state becomes operational state UP. */
+        return;
+    }
+
+    /* Without LACP enabled, select member interface with lowest PPS. */
     member = CIRCLEQ_FIRST(&lag->lag_member_qhead);
-    if(member) {
-        io = member->interface->io.tx;
-        stream->io = io;
-        stream->io_next = io->stream_head;
-        io->stream_head = stream;
-        io->stream_cur = stream;
-        io->stream_pps += stream->config->pps;
-        io->stream_count++;
-    } else {
+    if(!member) {
         LOG(ERROR, "Failed to add stream %s to LAG %s (no member interfaces)\n", 
             stream->config->name, lag->interface->name);
     }
+    io = member->interface->io.tx;
+    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+        io_iter = member->interface->io.tx;
+        if(io_iter->stream_pps < io->stream_pps) {
+            io = io_iter;
+        }
+    }
+    stream->io = io;
+    stream->io_next = io->stream_head;
+    io->stream_head = stream;
+    io->stream_cur = stream;
+    io->stream_pps += stream->config->pps;
+    io->stream_count++;
 }
 
 static void
@@ -2496,7 +2455,9 @@ json_t *
 bbl_stream_json(bbl_stream_s *stream, bool debug)
 {
     json_t *root = NULL;
+    io_handle_s *io = stream->io;
     char *tx_interface = NULL;
+    const char *tx_interface_state = NULL;
     char *rx_interface = NULL;
     char *src_address = NULL;
     char *dst_address = NULL;
@@ -2509,6 +2470,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
 
     if(stream->tx_interface) {
         tx_interface = stream->tx_interface->name;
+        tx_interface_state = interface_state_string(stream->tx_interface->state);
     }
     if(stream->rx_access_interface) {
         rx_interface = stream->rx_access_interface->name;
@@ -2542,7 +2504,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2557,6 +2519,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "destination-port", dst_port,
             "protocol", stream->tcp ? "tcp" : "udp",
             "tx-interface", tx_interface,
+            "tx-interface-state", tx_interface_state,
             "rx-interface", rx_interface,
             "rx-first-seq", stream->rx_first_seq,
             "rx-last-seq", stream->rx_last_seq,
@@ -2615,12 +2578,12 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         if(stream->reverse) {
             json_object_set(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
         }
-        if(stream->lag && stream->io && stream->io->interface) {
-            json_object_set(root, "lag-member-interface", json_string(stream->io->interface->name));
-            json_object_set(root, "lag-member-interface-state", json_string(interface_state_string(stream->io->interface->state)));
+        if(stream->lag && io && io->interface) {
+            json_object_set(root, "lag-member-interface", json_string(io->interface->name));
+            json_object_set(root, "lag-member-interface-state", json_string(interface_state_string(io->interface->state)));
         }
     } else {
-        root = json_pack("{sI ss* ss ss ss sb sb ss* sI sI sI sI sf}",
+        root = json_pack("{sI ss* ss ss ss sb sb ss* ss* sI sI sI sI sf}",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2629,6 +2592,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "enabled", stream->enabled,
             "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
             "tx-interface", tx_interface,
+            "tx-interface-state", tx_interface_state,
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,
             "tx-pps", stream->rate_packets_tx.avg,
@@ -2643,7 +2607,6 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set(root, "debug-reset", json_boolean(stream->reset));
         json_object_set(root, "debug-lag", json_boolean(stream->lag));
         json_object_set(root, "debug-tx-pps-config", json_integer(stream->config->pps));
-        json_object_set(root, "debug-tx-interface-state", json_string(interface_state_string(stream->tx_interface->state)));
         json_object_set(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
         json_object_set(root, "debug-tx-seq", json_integer(stream->flow_seq));
         json_object_set(root, "debug-max-packets", json_integer(stream->max_packets));

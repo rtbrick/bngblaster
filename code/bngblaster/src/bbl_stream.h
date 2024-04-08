@@ -137,6 +137,7 @@ typedef struct bbl_stream_
     bbl_stream_s *next; /* Next stream (global) */
     bbl_stream_s *io_next; /* Next stream of same IO handle */
     bbl_stream_s *group_next; /* Next stream of same group */
+    bbl_stream_s *lag_next; /* Next stream of same LAG group */
     bbl_stream_s *session_next; /* Next stream of same session */
     bbl_stream_s *reverse; /* Reverse stream direction */
 
@@ -160,7 +161,6 @@ typedef struct bbl_stream_
     uint64_t tokens;
     uint64_t tokens_burst;
     uint64_t max_packets;
-    uint32_t lag_select;
 
     __time_t tx_first_epoch;
 
