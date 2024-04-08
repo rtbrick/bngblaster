@@ -1198,7 +1198,11 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
         tlv->type = htobe16(OSPF_RI_TLV_SID_LABEL_RANGE);
         tlv->len = htobe16(12);
         *(uint32_t*)tlv->value = htobe32(config->sr_range << 8);
-        *(uint16_t*)(tlv->value+4) = htobe16(1);
+        if(config->version == OSPF_VERSION_3) {
+            *(uint16_t*)(tlv->value+4) = htobe16(7);
+        } else {
+            *(uint16_t*)(tlv->value+4) = htobe16(1);
+        }
         *(uint16_t*)(tlv->value+6) = htobe16(3);
         *(uint32_t*)(tlv->value+8) = htobe32(config->sr_base << 8);
         lsa->lsa_len += 16;
