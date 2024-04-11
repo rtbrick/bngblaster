@@ -1402,9 +1402,9 @@ bbl_stream_setup(bbl_stream_s *stream)
 {
     uint64_t setup_tokens;
     if(stream->tx_packets == 0) {
-        setup_tokens = (rand() % stream->config->setup_interval) * stream->config->pps;
+        setup_tokens = (rand() % stream->config->setup_interval) * stream->pps;
     } else {
-        setup_tokens = stream->config->setup_interval * stream->config->pps;
+        setup_tokens = stream->config->setup_interval * stream->pps;
     }
     if(setup_tokens) setup_tokens--;
     stream->tokens += setup_tokens * IO_TOKENS_PER_PACKET;
@@ -1569,13 +1569,13 @@ bbl_stream_add_group(bbl_stream_s *stream)
 {
     bbl_stream_group_s *group = g_ctx->stream_groups;
     while(group) {
-        if(group->count < 256 && group->pps == stream->config->pps) {
+        if(group->count < 256 && group->pps == stream->pps) {
             break;
         }
         group = group->next;
     }
     if(!group) {
-        group = bbl_stream_group_init(stream->config->pps);
+        group = bbl_stream_group_init(stream->pps);
         group->next = g_ctx->stream_groups;
         g_ctx->stream_groups = group;
     }
@@ -1583,7 +1583,7 @@ bbl_stream_add_group(bbl_stream_s *stream)
     stream->group_next = group->head;
 
     stream->tokens_burst = IO_TOKENS_PER_PACKET;
-    stream->tokens_burst += stream->config->pps * (IO_TOKENS_PER_PACKET/10); /* 100ms burst */
+    stream->tokens_burst += stream->pps * (IO_TOKENS_PER_PACKET/10); /* 100ms burst */
     if(stream->tokens_burst > g_ctx->config.stream_max_burst*IO_TOKENS_PER_PACKET) {
         stream->tokens_burst = g_ctx->config.stream_max_burst*IO_TOKENS_PER_PACKET;
     }
@@ -1627,7 +1627,7 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
     stream->io_next = io->stream_head;
     io->stream_head = stream;
     io->stream_cur = stream;
-    io->stream_pps += stream->config->pps;
+    io->stream_pps += stream->pps;
     io->stream_count++;
 }
 
@@ -1643,7 +1643,7 @@ bbl_stream_select_io(bbl_stream_s *stream)
         }
         io_iter = io_iter->next;
     }
-    io->stream_pps += stream->config->pps;
+    io->stream_pps += stream->pps;
     io->stream_count++;
     stream->io = io;
     stream->io_next = io->stream_head;
@@ -1675,7 +1675,7 @@ bbl_stream_add(bbl_stream_s *stream)
     }
     g_ctx->stream_tail = stream;
     g_ctx->streams++;
-    g_ctx->total_pps += stream->config->pps;
+    g_ctx->total_pps += stream->pps;
 }
 
 static bool 
@@ -1742,6 +1742,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream_up->flow_id = g_ctx->flow_id++;
         stream_up->flow_seq = 1;
         stream_up->config = config;
+        stream_up->pps = config->pps_upstream;
         stream_up->type = BBL_TYPE_UNICAST;
         stream_up->sub_type = config->type;
         stream_up->direction = BBL_DIRECTION_UP;
@@ -1773,11 +1774,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             g_ctx->stats.session_traffic_flows++;
             session->session_traffic.flows++;
             LOG(DEBUG, "Session traffic stream %s (upstream) added to %s (access) with %0.2lf PPS\n", 
-                config->name, access_interface->name, config->pps);
+                config->name, access_interface->name, stream_up->pps);
         } else {
             g_ctx->stats.stream_traffic_flows++;
             LOG(DEBUG, "Traffic stream %s (upstream) added to %s (access) with %0.2lf PPS\n", 
-                config->name, access_interface->name, config->pps);
+                config->name, access_interface->name, stream_up->pps);
         }
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
@@ -1787,6 +1788,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream_down->flow_id = g_ctx->flow_id++;
         stream_down->flow_seq = 1;
         stream_down->config = config;
+        stream_down->pps = config->pps;
         stream_down->type = BBL_TYPE_UNICAST;
         stream_down->sub_type = config->type;
         stream_down->direction = BBL_DIRECTION_DOWN;
@@ -1824,11 +1826,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
                 LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (network) with %0.2lf PPS\n", 
-                    config->name, network_interface->name, config->pps);
+                    config->name, network_interface->name, stream_down->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s (downstream) added to %s (network) with %0.2lf PPS\n", 
-                    config->name, network_interface->name, config->pps);
+                    config->name, network_interface->name, stream_down->pps);
             }
         } else if(a10nsp_interface) {
             stream_down->tx_a10nsp_interface = a10nsp_interface;
@@ -1838,11 +1840,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 g_ctx->stats.session_traffic_flows++;
                 session->session_traffic.flows++;
                 LOG(DEBUG, "Session traffic stream %s (downstream) added to %s (a10nsp) with %0.2lf PPS\n", 
-                    config->name, a10nsp_interface->name, config->pps);
+                    config->name, a10nsp_interface->name, stream_down->pps);
             } else {
                 g_ctx->stats.stream_traffic_flows++;
                 LOG(DEBUG, "Traffic stream %s (downstream) added to %s (a10nsp) with %0.2lf PPS\n", 
-                    config->name, a10nsp_interface->name, config->pps);
+                    config->name, a10nsp_interface->name, stream_down->pps);
             }
         } else {
             LOG(ERROR, "Failed to add stream %s (downstream) because of missing interface\n", config->name);
@@ -1944,6 +1946,7 @@ bbl_stream_init() {
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
                 stream->config = config;
+                stream->pps = config->pps;
                 stream->type = BBL_TYPE_UNICAST;
                 stream->sub_type = config->type;
                 if(config->type == BBL_SUB_TYPE_IPV4) {
@@ -1965,11 +1968,11 @@ bbl_stream_init() {
                 bbl_stream_add(stream);
                 if(stream->type == BBL_TYPE_MULTICAST) {
                     LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %0.2lf PPS\n", 
-                        config->name, network_interface->name, config->pps);
+                        config->name, network_interface->name, stream->pps);
                 } else {
                     g_ctx->stats.stream_traffic_flows++;
                     LOG(DEBUG, "RAW traffic stream %s added to %s with %0.2lf PPS\n", 
-                        config->name, network_interface->name, config->pps);
+                        config->name, network_interface->name, stream->pps);
                 }
             }
         }
@@ -2017,6 +2020,7 @@ bbl_stream_init() {
             stream->flow_id = g_ctx->flow_id++;
             stream->flow_seq = 1;
             stream->config = config;
+            stream->pps = config->pps;
             stream->type = BBL_TYPE_MULTICAST;
             stream->sub_type = config->type;
             stream->direction = BBL_DIRECTION_DOWN;
@@ -2024,7 +2028,7 @@ bbl_stream_init() {
             stream->tx_interface = network_interface->interface;
             bbl_stream_add(stream);
             LOG(DEBUG, "Autogenerated multicast traffic stream added to %s with %0.2lf PPS\n", 
-                network_interface->name, config->pps);
+                network_interface->name, stream->pps);
         }
     }
 
@@ -2040,6 +2044,7 @@ bbl_stream_init() {
         config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv4_pps;
+        config->pps_upstream = config->pps;
         config->dst_port = BBL_UDP_PORT;
         config->src_port = BBL_UDP_PORT;
         config->ipv4_network_address = g_ctx->config.session_traffic_ipv4_address;
@@ -2054,6 +2059,7 @@ bbl_stream_init() {
         config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv4_pps;
+        config->pps_upstream = config->pps;
         config->dst_port = BBL_UDP_PORT;
         config->src_port = BBL_UDP_PORT;
         config->ipv4_network_address = g_ctx->config.session_traffic_ipv4_address;
@@ -2075,6 +2081,7 @@ bbl_stream_init() {
         config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6_pps;
+        config->pps_upstream = config->pps;
         config->dst_port = BBL_UDP_PORT;
         config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
@@ -2089,6 +2096,7 @@ bbl_stream_init() {
         config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6_pps;
+        config->pps_upstream = config->pps;
         config->dst_port = BBL_UDP_PORT;
         config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
@@ -2110,6 +2118,7 @@ bbl_stream_init() {
         config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6pd_pps;
+        config->pps_upstream = config->pps;
         config->dst_port = BBL_UDP_PORT;
         config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
@@ -2124,6 +2133,7 @@ bbl_stream_init() {
         config->ttl = BBL_DEFAULT_TTL;
         config->session_traffic = true;
         config->pps = g_ctx->config.session_traffic_ipv6pd_pps;
+        config->pps_upstream = config->pps;
         config->dst_port = BBL_UDP_PORT;
         config->src_port = BBL_UDP_PORT;
         memcpy(config->ipv6_network_address, g_ctx->config.session_traffic_ipv6_address, IPV6_ADDR_LEN);
@@ -2618,7 +2628,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set(root, "debug-nat", json_boolean(stream->nat));
         json_object_set(root, "debug-reset", json_boolean(stream->reset));
         json_object_set(root, "debug-lag", json_boolean(stream->lag));
-        json_object_set(root, "debug-tx-pps-config", json_integer(stream->config->pps));
+        json_object_set(root, "debug-tx-pps-config", json_integer(stream->pps));
         json_object_set(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
         json_object_set(root, "debug-tx-seq", json_integer(stream->flow_seq));
         json_object_set(root, "debug-max-packets", json_integer(stream->max_packets));

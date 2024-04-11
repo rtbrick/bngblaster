@@ -45,13 +45,13 @@ io_bucket_stream(bbl_stream_s *stream)
 {
     io_bucket_s *io_bucket = g_ctx->io_bucket;
     while(io_bucket) {
-        if(io_bucket->pps == stream->config->pps) {
+        if(io_bucket->pps == stream->pps) {
             break;
         }
         io_bucket = io_bucket->next;
     }
     if(!io_bucket) {
-        io_bucket = io_bucket_add(stream->config->pps);
+        io_bucket = io_bucket_add(stream->pps);
     }
     stream->io_bucket = io_bucket;
 }

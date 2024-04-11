@@ -171,7 +171,7 @@ bbl_lag_select(bbl_lag_s *lag)
             stream->io_next = io->stream_head;
             io->stream_head = stream;
             io->stream_cur = stream;
-            io->stream_pps += stream->config->pps;
+            io->stream_pps += stream->pps;
             io->stream_count++;
             stream = stream->lag_next;
         }

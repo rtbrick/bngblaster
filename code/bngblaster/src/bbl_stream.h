@@ -21,6 +21,8 @@ typedef struct bbl_stream_config_
     bool session_traffic;
 
     double pps;
+    double pps_upstream;
+
     uint64_t max_packets;
     uint32_t start_delay;
     uint32_t setup_interval;
@@ -125,6 +127,8 @@ typedef struct bbl_stream_
     uint32_t ipv4_src;
     uint32_t ipv4_dst;
 
+    double pps;
+    
     uint16_t tx_len; /* TX length */
     uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
     uint8_t *tx_buf; /* TX buffer */

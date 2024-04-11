@@ -2202,8 +2202,9 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "name", "stream-group-id", "type", "autostart",
         "direction", "network-interface", "a10nsp-interface",
         "source-port", "destination-port", "length", "ttl",
-        "priority", "vlan-priority", "pps",
-        "bps", "Kbps", "Mbps",
+        "priority", "vlan-priority", 
+        "pps", "bps", "Kbps", "Mbps",
+        "pps-upstream", "bps-upstream", "Kbps-upstream", "Mbps-upstream",
         "Gbps", "max-packets", "start-delay",
         "ldp-ipv4-lookup-address", "ldp-ipv6-lookup-address", 
         "access-ipv4-source-address", "access-ipv6-source-address",
@@ -2383,6 +2384,54 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         }
     }
     if(stream_config->pps <= 0) stream_config->pps = 1.0;
+
+    value = json_object_get(stream, "pps-upstream");
+    if(value) {
+        stream_config->pps_upstream = json_number_value(value);
+        if(stream_config->pps_upstream <= 0) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->pps-upstream\n");
+            return false;
+        }
+    } else {
+        /* pps config has priority over bps */
+        value = json_object_get(stream, "bps");
+        if(value) {
+            bps = json_number_value(value);
+            if(bps <= 0) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->bps-upstream\n");
+                return false;
+            }
+            stream_config->pps_upstream = bps / (stream_config->length * 8);
+        }
+        value = json_object_get(stream, "Kbps");
+        if(value) {
+            bps = json_number_value(value);
+            if(bps <= 0) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->Kbps-upstream\n");
+                return false;
+            }
+            stream_config->pps_upstream = (bps*1000) / (stream_config->length * 8);
+        }
+        value = json_object_get(stream, "Mbps");
+        if(value) {
+            bps = json_number_value(value);
+            if(bps <= 0) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->Mbps-upstream\n");
+                return false;
+            }
+            stream_config->pps_upstream = (bps*1000000) / (stream_config->length * 8);
+        }
+        value = json_object_get(stream, "Gbps-upstream");
+        if(value) {
+            bps = json_number_value(value);
+            if(bps <= 0) {
+                fprintf(stderr, "JSON config error: Invalid value for stream->Gbps-upstream\n");
+                return false;
+            }
+            stream_config->pps_upstream = (bps*1000000000) / (stream_config->length * 8);
+        }
+    }
+    if(stream_config->pps_upstream <= 0) stream_config->pps_upstream = stream_config->pps;
 
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "max-packets", 0, 4294967295);
     if(value) {
