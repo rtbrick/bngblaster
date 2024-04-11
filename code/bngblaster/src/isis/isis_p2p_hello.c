@@ -170,6 +170,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
     if(!isis_pdu_validate_auth(pdu, auth, key)) {
         LOG(ISIS, "ISIS RX P2P-Hello authentication failed on interface %s\n",
             adjacency->interface->name);
+        return;
     }
     
     peer = adjacency->peer;

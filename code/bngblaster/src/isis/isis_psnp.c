@@ -195,6 +195,7 @@ isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
     if(!isis_pdu_validate_auth(pdu, auth, key)) {
         LOG(ISIS, "ISIS RX %s-PSNP authentication failed on interface %s\n",
             isis_level_string(level), interface->name);
+        return;
     }
 
     /* Get LSDB */

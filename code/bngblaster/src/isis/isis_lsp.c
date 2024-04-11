@@ -664,9 +664,9 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
 
     if(!isis_pdu_validate_auth(pdu, auth, key)) {
         LOG(ISIS, "ISIS RX %s-LSP %s (seq %u) authentication failed on interface %s\n",
-        isis_level_string(level), 
-        isis_lsp_id_to_str(&lsp_id), 
-        seq, interface->name);
+            isis_level_string(level), 
+            isis_lsp_id_to_str(&lsp_id), 
+            seq, interface->name);
         return;
     }
 
