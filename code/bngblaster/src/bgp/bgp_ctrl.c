@@ -197,6 +197,8 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
         }
 
         bgp_session->raw_update = raw_update;
+        bgp_session->update_start_timestamp.tv_sec = 0;
+        bgp_session->update_start_timestamp.tv_nsec = 0;
         timer_add(&g_ctx->timer_root, &bgp_session->update_timer, 
                  "BGP UPDATE", 0, 0, bgp_session,
                  &bgp_session_update_job);
