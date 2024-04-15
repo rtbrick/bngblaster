@@ -56,6 +56,12 @@
 |                                | | For example, ``"Gbps": 1``                                     |
 |                                | | which is equal to ``"bps": 1000000000``.                       |
 +--------------------------------+------------------------------------------------------------------+
+| **pps-upstream**               | | Optionally overwrite PPS in upstream to support bidirectional  |
+|                                | | streams with different rates for upstream and downstream.      |
++--------------------------------+------------------------------------------------------------------+
+| **bps-upstream**               | | Optionally overwrite bps in upstream to support bidirectional  |
+|                                | | streams with different rates for upstream and downstream.      |
++--------------------------------+------------------------------------------------------------------+
 | **setup-interval**             | | Set optional setup interval in seconds. If set, sent max 1     |
 |                                | | packet per setup interval until stream becomes verified.       |
 |                                | | After setup is done, the actual rate will be applied.          |
