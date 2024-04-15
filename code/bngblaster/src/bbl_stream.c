@@ -86,7 +86,8 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     bbl_session_s *session = stream->session;
     bbl_stream_config_s *config = stream->config;
 
-    uint16_t buf_len;
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
 
     bbl_ethernet_header_s eth = {0};
     bbl_pppoe_session_s pppoe = {0};
@@ -221,11 +222,12 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
-    if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         return false;
     }
+    stream->tx_len = tx_len;
     return true;
 }
 
@@ -237,7 +239,8 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     bbl_a10nsp_interface_s *a10nsp_interface;
     bbl_stream_config_s *config = stream->config;
 
-    uint16_t buf_len;
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
 
     bbl_ethernet_header_s eth = {0};
     bbl_pppoe_session_s pppoe = {0};
@@ -358,11 +361,12 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
-    if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         return false;
     }
+    stream->tx_len = tx_len;
     return true;
 }
 
@@ -374,7 +378,8 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     bbl_a10nsp_interface_s *a10nsp_interface;
     bbl_stream_config_s *config = stream->config;
 
-    uint16_t buf_len;
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
 
     bbl_ethernet_header_s eth = {0};
     bbl_ipv4_s ipv4 = {0};
@@ -499,11 +504,12 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
-    if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         return false;
     }
+    stream->tx_len = tx_len;
     return true;
 }
 
@@ -513,7 +519,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     bbl_session_s *session = stream->session;
     bbl_stream_config_s *config = stream->config;
 
-    uint16_t buf_len;
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
 
     bbl_ethernet_header_s eth = {0};
     bbl_ipv4_s ipv4 = {0};
@@ -643,11 +650,12 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
-    if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         return false;
     }
+    stream->tx_len = tx_len;
     return true;
 }
 
@@ -657,7 +665,8 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     bbl_session_s *session = stream->session;
     bbl_stream_config_s *config = stream->config;
 
-    uint16_t buf_len;
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
 
     bbl_ethernet_header_s eth = {0};
     bbl_mpls_s mpls1 = {0};
@@ -814,11 +823,12 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
-    if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         return false;
     }
+    stream->tx_len = tx_len;
     return true;
 }
 
@@ -833,7 +843,8 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
 
     bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
 
-    uint16_t buf_len;
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
 
     bbl_ethernet_header_s eth = {0};
     bbl_ipv4_s l2tp_ipv4 = {0};
@@ -910,11 +921,12 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     stream->tx_bbl_hdr_len = bbl.padding+BBL_HEADER_LEN;
     stream->ipv4_src = ipv4.src;
     stream->ipv4_dst = ipv4.dst;
-    if(encode_ethernet(stream->tx_buf, &stream->tx_len, &eth) != PROTOCOL_SUCCESS) {
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
         return false;
     }
+    stream->tx_len = tx_len;
     return true;
 }
 
@@ -2300,8 +2312,8 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
             if(stream->nat && stream->direction == BBL_DIRECTION_UP) {
                 bbl_stream_rx_nat(eth, stream);
             }
-            stream->rx_first_seq = bbl->flow_seq;
-            stream->rx_last_seq = bbl->flow_seq;
+            stream->rx_first_seq = flow_seq;
+            stream->rx_last_seq = flow_seq;
             stream->rx_first_epoch = eth->timestamp.tv_sec;
             stream->rx_last_epoch = eth->timestamp.tv_sec;
             stream->rx_packets++;
