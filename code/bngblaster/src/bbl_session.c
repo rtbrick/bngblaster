@@ -1299,7 +1299,7 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si so* so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1337,8 +1337,6 @@ bbl_session_json(bbl_session_s *session)
             "rx-accounting-packets", session->stats.accounting_packets_rx,
             "tx-accounting-bytes", session->stats.accounting_bytes_tx,
             "rx-accounting-bytes", session->stats.accounting_bytes_rx,
-            "tx-arp", session->stats.arp_tx,
-            "rx-arp", session->stats.arp_rx,
             "tx-igmp", session->stats.igmp_tx,
             "rx-igmp", session->stats.igmp_rx,
             "tx-icmp", session->stats.icmp_tx,
@@ -1490,7 +1488,7 @@ int
 bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
-    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
+    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
                              "status", "ok",
                              "code", 200,
                              "session-counters",
@@ -1499,6 +1497,7 @@ bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), j
                              "sessions-ipoe", g_ctx->sessions_ipoe,
                              "sessions-established", g_ctx->sessions_established,
                              "sessions-established-max", g_ctx->sessions_established_max,
+                             "sessions-outstanding", g_ctx->sessions_outstanding,
                              "sessions-terminated", g_ctx->sessions_terminated,
                              "sessions-flapped", g_ctx->sessions_flapped,
                              "dhcp-sessions", g_ctx->dhcp_requested,

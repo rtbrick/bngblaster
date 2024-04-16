@@ -252,8 +252,12 @@ bbl_tx_pap_timeout(timer_s *timer)
     bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_AUTH) {
         session->access_interface->stats.pap_timeout++;
-        session->send_requests |= BBL_SEND_PAP_REQUEST;
-        bbl_session_tx_qnode_insert(session);
+        if(session->auth_retries > g_ctx->config.authentication_retry) {
+            bbl_session_clear(session);
+        } else {
+            session->send_requests |= BBL_SEND_PAP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        }
     }
 }
 
@@ -288,7 +292,7 @@ bbl_tx_encode_packet_pap_request(bbl_session_s *session)
     pap.password_len = strlen(session->password);
 
     timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
-              5, 0, session, &bbl_tx_pap_timeout);
+              g_ctx->config.authentication_timeout, 0, session, &bbl_tx_pap_timeout);
 
     access_interface->stats.pap_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
@@ -300,8 +304,12 @@ bbl_tx_chap_timeout(timer_s *timer)
     bbl_session_s *session = timer->data;
     if(session->session_state == BBL_PPP_AUTH) {
         session->access_interface->stats.chap_timeout++;
-        session->send_requests |= BBL_SEND_CHAP_RESPONSE;
-        bbl_session_tx_qnode_insert(session);
+        if(session->auth_retries > g_ctx->config.authentication_retry) {
+            bbl_session_clear(session);
+        } else {
+            session->send_requests |= BBL_SEND_CHAP_RESPONSE;
+            bbl_session_tx_qnode_insert(session);
+        }
     }
 }
 
@@ -337,7 +345,7 @@ bbl_tx_encode_packet_chap_response(bbl_session_s *session)
     chap.name_len = strlen(session->username);
 
     timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout", 
-              5, 0, session, &bbl_tx_chap_timeout);
+              g_ctx->config.authentication_timeout, 0, session, &bbl_tx_chap_timeout);
 
     access_interface->stats.chap_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
