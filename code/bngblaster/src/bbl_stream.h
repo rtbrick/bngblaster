@@ -9,6 +9,12 @@
 #ifndef __BBL_STREAM_H__
 #define __BBL_STREAM_H__
 
+typedef enum {
+    STREAM_STATE_ANY         = 0,
+    STREAM_STATE_VERIFIED    = 1,
+    STREAM_STATE_BIVERIFIED  = 2,
+} stream_state_t;
+
 typedef struct bbl_stream_config_
 {
     char *name;

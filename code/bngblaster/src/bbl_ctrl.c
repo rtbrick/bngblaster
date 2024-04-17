@@ -41,7 +41,8 @@ const char *schema_all_args[] = {
     "result-code", "error-code", "error-message",
     "disconnect-code", "disconnect-protocol", 
     "disconnect-direction", "disconnect-message",
-    "ldp-instance-id", "tcp-flags", "debug",
+    "ldp-instance-id", "tcp-flags", "debug", 
+    "verified-only", "bidirectional-verified-only",
     NULL
 };
 

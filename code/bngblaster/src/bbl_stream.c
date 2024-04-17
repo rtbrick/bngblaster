@@ -2347,17 +2347,20 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
  * @param session session object
  * @param name optionally filter by name
  * @param direction optionally filter by direction
- * @param verified_only optionally match verified streams only
+ * @param state optionally filter by state
  */
 static void
 bbl_stream_enable_session(bool enabled, bbl_session_s *session, 
                           const char *name, uint8_t direction,
-                          bool verified_only)
+                          stream_state_t state)
 {
     bbl_stream_s *stream = session->streams.head;
     while(stream) {
-        if(verified_only && stream->verified == false) {
-            stream = stream->session_next; continue;
+        if(state == STREAM_STATE_VERIFIED || state == STREAM_STATE_BIVERIFIED) {
+            if((stream->verified == false) || 
+               (state == STREAM_STATE_BIVERIFIED && stream->reverse && stream->reverse->verified == false)) {
+                stream = stream->session_next; continue;
+            }
         }
         if(stream->session_traffic == false &&
            stream->type != BBL_TYPE_MULTICAST && 
@@ -2388,11 +2391,12 @@ bbl_stream_enable_session(bool enabled, bbl_session_s *session,
  * @param name optionally filter by name
  * @param direction optionally filter by direction
  * @param verified_only optionally match verified streams only
+ * @param state optionally filter by state
  */
 static void
 bbl_streams_enable_filter(bool enabled, int session_group_id, 
-                          const char *name, const char *interface, 
-                          uint8_t direction, bool verified_only)
+                          const char *name, const char *interface, uint8_t direction, 
+                          stream_state_t state)
 {
     bbl_stream_s *stream = g_ctx->stream_head;
     bbl_session_s *session;
@@ -2400,8 +2404,11 @@ bbl_streams_enable_filter(bool enabled, int session_group_id,
 
     if(session_group_id < 0) {
         while(stream) {
-            if(verified_only && stream->verified == false) {
-                stream = stream->next; continue;
+            if(state == STREAM_STATE_VERIFIED || state == STREAM_STATE_BIVERIFIED) {
+                if((stream->verified == false) || 
+                   (state == STREAM_STATE_BIVERIFIED && stream->reverse && stream->reverse->verified == false)) {
+                    stream = stream->next; continue;
+                }
             }
             if(stream->session_traffic == false &&
                stream->type != BBL_TYPE_MULTICAST && 
@@ -2424,7 +2431,7 @@ bbl_streams_enable_filter(bool enabled, int session_group_id,
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session && session->session_group_id == session_group_id) {
-                bbl_stream_enable_session(enabled, session, name, direction, verified_only);
+                bbl_stream_enable_session(enabled, session, name, direction, state);
             }
         }
     }
@@ -2628,7 +2635,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set(root, "debug-nat", json_boolean(stream->nat));
         json_object_set(root, "debug-reset", json_boolean(stream->reset));
         json_object_set(root, "debug-lag", json_boolean(stream->lag));
-        json_object_set(root, "debug-tx-pps-config", json_integer(stream->pps));
+        json_object_set(root, "debug-tx-pps-config", json_real(stream->pps));
         json_object_set(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
         json_object_set(root, "debug-tx-seq", json_integer(stream->flow_seq));
         json_object_set(root, "debug-max-packets", json_integer(stream->max_packets));
@@ -2848,7 +2855,7 @@ bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), jso
 
 static int
 bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments, 
-                        bool enabled, bool verified_only)
+                        bool enabled, stream_state_t state)
 {
     bbl_stream_s *stream = g_ctx->stream_head;
     bbl_session_s *session;
@@ -2858,6 +2865,7 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
 
     int session_group_id = -1;
     int number = 0;
+    int arg = 0;
     uint64_t flow_id = 0;
     uint8_t direction = BBL_DIRECTION_BOTH;
 
@@ -2891,15 +2899,23 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
     json_unpack(arguments, "{s:s}", "name", &name);
     json_unpack(arguments, "{s:s}", "interface", &interface);
 
+    arg = 0;
+    json_unpack(arguments, "{s:b}", "verified-only", &arg);
+    if(arg) state = STREAM_STATE_VERIFIED;
+
+    arg = 0;
+    json_unpack(arguments, "{s:b}", "bidirectional-verified-only", &arg);
+    if(arg) state = STREAM_STATE_BIVERIFIED;
+
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
-            bbl_stream_enable_session(enabled, session, name, direction, verified_only);
+            bbl_stream_enable_session(enabled, session, name, direction, state);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
     } else {
-        bbl_streams_enable_filter(enabled, session_group_id, name, interface, direction, verified_only);
+        bbl_streams_enable_filter(enabled, session_group_id, name, interface, direction, state);
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
@@ -2907,19 +2923,19 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
 int
 bbl_stream_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_enabled(fd, session_id, arguments, true, false);
+    return bbl_stream_ctrl_enabled(fd, session_id, arguments, true, STREAM_STATE_ANY);
 }
 
 int
 bbl_stream_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, false);
+    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, STREAM_STATE_ANY);
 }
 
 int
 bbl_stream_ctrl_stop_verified(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, true);
+    return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, STREAM_STATE_VERIFIED);
 }
 
 int
