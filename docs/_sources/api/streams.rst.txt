@@ -34,8 +34,6 @@
 |                                   | | ``name`` stream name                                               |
 |                                   | | ``interface`` TX interface name                                    |
 |                                   | | ``direction`` [both(default), upstream, downstream]                |
-|                                   | | ``verified-only``                                                  |
-|                                   | | ``bidirectional-verified-only``                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **streams-pending**               | | List flow-id of all pending (not verified) traffic streams.        |
 +-----------------------------------+----------------------------------------------------------------------+
