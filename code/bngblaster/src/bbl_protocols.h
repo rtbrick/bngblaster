@@ -629,6 +629,8 @@ typedef struct bbl_ethernet_header_ {
     uint8_t   vlan_inner_priority;
 
     uint8_t   tos;    
+    uint8_t   ttl;    
+
     bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
 

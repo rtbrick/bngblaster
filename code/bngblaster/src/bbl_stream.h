@@ -193,6 +193,7 @@ typedef struct bbl_stream_
     __time_t rx_first_epoch;
     __time_t rx_last_epoch;
 
+    uint8_t  rx_ttl; /* IPv4 or IPv6 TTL */
     uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  rx_outer_vlan_pbit;
     uint8_t  rx_inner_vlan_pbit;

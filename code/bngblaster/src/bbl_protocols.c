@@ -3454,6 +3454,7 @@ decode_ipv6(uint8_t *buf, uint16_t len,
     ipv6->protocol = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     ipv6->ttl = *buf;
+    if(!eth->ttl) eth->ttl = ipv6->ttl;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
     ipv6->src = buf;
     BUMP_BUFFER(buf, len, IPV6_ADDR_LEN);
@@ -3564,6 +3565,8 @@ decode_ipv4(uint8_t *buf, uint16_t len,
         ipv4->offset = 0;
     }
     ipv4->ttl = header->ip_ttl;
+    if(!eth->ttl) eth->ttl = ipv4->ttl;
+
     ipv4->protocol = header->ip_p;
 
     ipv4->src = header->ip_src.s_addr;

@@ -2259,6 +2259,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
             /* Verify stream ... */
             stream->rx_len = eth->length;
             stream->rx_priority = eth->tos;
+            stream->rx_ttl = eth->ttl;
             stream->rx_outer_vlan_pbit = eth->vlan_outer_priority;
             stream->rx_inner_vlan_pbit = eth->vlan_inner_priority;
             mpls = eth->mpls;
@@ -2533,7 +2534,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI si si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2553,6 +2554,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-first-seq", stream->rx_first_seq,
             "rx-last-seq", stream->rx_last_seq,
             "rx-tos-tc", stream->rx_priority,
+            "rx-ttl", stream->rx_ttl,
             "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
             "rx-inner-vlan-pbit", stream->rx_inner_vlan_pbit,
             "rx-len", stream->rx_len,
