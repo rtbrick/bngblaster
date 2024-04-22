@@ -133,10 +133,10 @@ bgp_push_open_message(bgp_session_s *session)
         push_mp_capability(buffer, 2, 129); /* ipv6-vpn-multicast */
     }
     if(config->family & BGP_IPv4_FLOW) {
-        push_mp_capability(buffer, 1, 4); /* ipv4-flow */
+        push_mp_capability(buffer, 1, 133); /* ipv4-flow */
     }
     if(config->family & BGP_IPv6_FLOW) {
-        push_mp_capability(buffer, 2, 4); /* ipv6-flow */
+        push_mp_capability(buffer, 2, 133); /* ipv6-flow */
     }
     if(config->family & BGP_EVPN) {
         push_mp_capability(buffer, 25, 70); /* EVPN */
