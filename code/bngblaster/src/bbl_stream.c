@@ -2580,6 +2580,10 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-last-epoch", stream->rx_last_epoch
             );
 
+        if(stream->rx_interface_changes) { 
+            json_object_set(root, "rx-interface-changes", json_integer(stream->rx_interface_changes));
+            json_object_set(root, "rx-interface-changed-epoch", json_integer(stream->rx_interface_changed_epoch));
+        }
         if(stream->config->rx_mpls1) { 
             json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
         }

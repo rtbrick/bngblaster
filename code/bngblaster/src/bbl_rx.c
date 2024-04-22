@@ -17,7 +17,12 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
-        if(stream->rx_network_interface == NULL) {
+        if(stream->rx_network_interface != interface) {
+            if(stream->rx_network_interface) {
+                /* RX interface has changed! */
+                stream->rx_interface_changes++;
+                stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
+            }
             stream->rx_network_interface = interface;
         }
         return true;
