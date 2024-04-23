@@ -812,6 +812,14 @@ bbl_stats_json(bbl_stats_s * stats)
 
     root = json_object();
     jobj = json_object();
+
+    if(sizeof(BNGBLASTER_VERSION)-1) {
+        json_object_set(jobj, "version", json_string(BNGBLASTER_VERSION));
+    } else {
+        json_object_set(jobj, "version", json_string("DEV"));
+    }
+
+    json_object_set(jobj, "test-duration", json_integer(test_duration()));
     if(g_ctx->sessions) {
         json_object_set(jobj, "sessions", json_integer(g_ctx->config.sessions));
         json_object_set(jobj, "sessions-pppoe", json_integer(g_ctx->sessions_pppoe));
