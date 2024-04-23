@@ -92,12 +92,11 @@ void
 bgp_raw_update_stop_cb(void *arg)
 {
     bgp_session_s *session = (bgp_session_s*)arg;
-    struct timespec time_diff;
 
     session->tcpc->idle_cb = NULL;
 
     clock_gettime(CLOCK_MONOTONIC, &session->update_stop_timestamp);
-    timespec_sub(&time_diff, 
+    timespec_sub(&session->update_duration, 
                  &session->update_stop_timestamp, 
                  &session->update_start_timestamp);
 
@@ -109,7 +108,7 @@ bgp_raw_update_stop_cb(void *arg)
         session->interface->name,
         session->local_address_str,
         session->peer_address_str,
-        time_diff.tv_sec);
+        session->update_duration.tv_sec);
 
     if(session->config->start_traffic) {
         LOG(BGP, "BGP (%s %s - %s) start traffic streams\n",

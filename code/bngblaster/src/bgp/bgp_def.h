@@ -152,6 +152,7 @@ typedef struct bgp_session_ {
     struct timespec established_timestamp;
     struct timespec update_start_timestamp;
     struct timespec update_stop_timestamp;
+    struct timespec update_duration;
 
     bool teardown;
     uint8_t error_code;

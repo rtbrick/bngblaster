@@ -55,7 +55,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
         return NULL;
     }
 
-    root = json_pack("{ss ss ss si si ss ss si si ss ss* ss* so*}",
+    root = json_pack("{ss ss ss si si ss ss si si ss ss* ss* si si si so*}",
                      "interface", session->interface->name,
                      "local-address", session->local_address_str,
                      "local-id", format_ipv4_address(&session->config->id),
@@ -68,6 +68,9 @@ bgp_ctrl_session_json(bgp_session_s *session)
                      "state", bgp_session_state_string(session->state),
                      "raw-update-state", raw_update_state(session),
                      "raw-update-file", raw_update_file,
+                     "raw-update-start-epoch", session->update_start_timestamp.tv_sec,
+                     "raw-update-stop-epoch", session->update_stop_timestamp.tv_sec,
+                     "raw-update-duration", session->update_duration.tv_sec,
                      "stats", stats);
 
     if(!root) {
