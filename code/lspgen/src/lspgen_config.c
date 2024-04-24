@@ -1120,7 +1120,6 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
 		metric = 65535; /* 2^16 - 1 */
 	    }
             attr_template.key.link.metric = metric;
-	    attr_template.link_state_id = 1;
 	}
 
 	lsdb_add_node_attr(node, &attr_template);

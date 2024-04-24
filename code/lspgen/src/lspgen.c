@@ -911,7 +911,6 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 		metric = 65535;
 	    }
 	    attr_template.key.link.metric = metric;
-	    attr_template.link_state_id = 1;
 	    lsdb_add_node_attr(node, &attr_template);
 
             /* Generate an IPv6 prefix for each link */

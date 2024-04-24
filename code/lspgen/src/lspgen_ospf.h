@@ -27,7 +27,7 @@ enum {
     OSPF_LSA_OPAQUE_AREA_RI,
     OSPF_LSA_OPAQUE_AREA_EP, /* rfc 7684 */
 
-    /* OSPFv2 Router LSA subtypes */
+    /* Router LSA subtypes */
     OSPF_ROUTER_LSA_LINK_PTP,
     OSPF_ROUTER_LSA_LINK_STUB,
 
