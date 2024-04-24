@@ -1751,8 +1751,17 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
 	 * Do not build router-LSAs larger than IPv6 min MTU.
 	 */
 	if (attr->key.attr_cp[1] == OSPF_LSA_ROUTER &&
-	    packet->buf[2].idx > 1200) {
+	    packet->buf[2].idx > 1170) {
 	    LOG(PACKET, "Max OSPF3 Router LSA size of %u reached\n", packet->buf[2].idx);
+	    return true;
+	}
+
+	/*
+	 * Do not build Intra-Area-Prefix LSAs larger than IPv6 min MTU.
+	 */
+	if (attr->key.attr_cp[1] == OSPF_LSA_INTRA_AREA_PREFIX &&
+	    packet->buf[2].idx > 1170) {
+	    LOG(PACKET, "Max OSPF3 Intra-Area Prefix LSA size of %u reached\n", packet->buf[2].idx);
 	    return true;
 	}
 	break;
