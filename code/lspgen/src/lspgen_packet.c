@@ -1161,7 +1161,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x2001); /* LS-Type  */
 	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
+	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
 	    push_be_uint(buf1, 2, 0xffff); /* Checksum - will be overwritten later */
@@ -1174,7 +1174,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_EXTERNAL6:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
-	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
+	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1194,7 +1194,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_INTRA_AREA_PREFIX:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x2009); /* LS-Type  */
-	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
+	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1204,14 +1204,14 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, 0); /* # Prefixes - will be overwritten later */
 	    push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
 
-	    push_be_uint(buf1, 4, 1); /* Referenced Link State ID */
+	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
 	    break;
 
 	case OSPF_LSA_E_INTRA_AREA_PREFIX:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0xa029); /* LS-Type  */
-	    push_be_uint(buf1, 4, attr->link_state_id); /* Link State ID */
+	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1221,7 +1221,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf1, 2, 0); /* */
 	    push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
 
-	    push_be_uint(buf1, 4, 1); /* Referenced Link State ID */
+	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
 	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
 	    break;
 
@@ -1711,6 +1711,69 @@ lspgen_refresh_interval (lsdb_ctx_t *ctx)
 }
 
 /*
+ * Should we start a new packet ?
+ */
+bool
+lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, struct lsdb_attr_ *attr)
+{
+    uint32_t min_len;
+
+    if (!packet) {
+	return false;
+    }
+
+    min_len = lspgen_calculate_auth_len(ctx);
+    min_len += attr->size;
+
+    /*
+     * Protocols have different max PDU sizes.
+     */
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	min_len =+ TLV_OVERHEAD;
+        if (packet->buf[0].idx > (1465-min_len)) {
+	    return true;
+	}
+	break;
+
+    case PROTO_OSPF2:
+	if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
+	    return true;
+	}
+	break;
+
+    case PROTO_OSPF3:
+	if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
+	    return true;
+	}
+
+	/*
+	 * Do not build router-LSAs larger than IPv6 min MTU.
+	 */
+	if (attr->key.attr_cp[1] == OSPF_LSA_ROUTER &&
+	    packet->buf[2].idx > 1170) {
+	    LOG(PACKET, "Max OSPF3 Router LSA size of %u reached\n", packet->buf[2].idx);
+	    return true;
+	}
+
+	/*
+	 * Do not build Intra-Area-Prefix LSAs larger than IPv6 min MTU.
+	 */
+	if (attr->key.attr_cp[1] == OSPF_LSA_INTRA_AREA_PREFIX &&
+	    packet->buf[2].idx > 1170) {
+	    LOG(PACKET, "Max OSPF3 Intra-Area Prefix LSA size of %u reached\n", packet->buf[2].idx);
+	    return true;
+	}
+	break;
+    default:
+	LOG_NOARG(ERROR, "Unknown protocol\n");
+	break;
+    }
+
+    return false;
+}
+
+/*
  * Walk the graph of the LSDB and serialize IS-IS packets.
  */
 void
@@ -1720,7 +1783,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
     struct lsdb_packet_ *packet;
     struct lsdb_attr_ *attr;
     dict_itor *itor;
-    uint32_t id, last_attr, tlv_start_idx, min_len;
+    uint32_t id, last_attr, tlv_start_idx;
 
     ctx = node->ctx;
 
@@ -1775,9 +1838,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
         /*
          * Space left in this packet ?
          */
-        min_len = lspgen_calculate_auth_len(ctx);
-        min_len += attr->size + TLV_OVERHEAD;
-        if (packet && packet->buf[0].idx > (1465-min_len)) {
+        if (lspgen_should_start_new_packet(ctx, packet, attr)) {
 
             /*
             * No space left. Finalize this packet.
@@ -1837,7 +1898,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
     struct lsdb_packet_ *packet;
     struct lsdb_attr_ *attr;
     dict_itor *itor;
-    uint32_t id, min_len;
+    uint32_t id;
 
     ctx = node->ctx;
 
@@ -1889,9 +1950,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
         /*
          * Space left in this packet ?
          */
-        min_len = lspgen_calculate_auth_len(ctx);
-        min_len += attr->size;
-        if (packet && packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
+        if (lspgen_should_start_new_packet(ctx, packet, attr)) {
 
             /*
 	     * No space left. Finalize this packet.

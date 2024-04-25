@@ -998,17 +998,6 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
          */
         node->attr_count++;
 	attr->parent = node;
-	if (attr_template->link_state_id) {
-	    attr->link_state_id = attr_template->link_state_id;
-	} else {
-
-	    /*
-	     * User does not want to have link_state_id control.
-	     * Use a simple monotonic increasing number and leave the
-	     * first 256 link_state_ids for user allocation.
-	     */
-	    attr->link_state_id = node->attr_count + 256;
-	}
 
         LOG(LSDB, "  Add attr %s, size %u\n",
             lsdb_format_attr(ctx, attr),
