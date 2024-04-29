@@ -1417,7 +1417,7 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     bbl_session_s *session;
     io_bucket_s *io_bucket = stream->io_bucket;
     uint8_t *ptr;
-    uint64_t tokens;
+    uint64_t tokens = 0;
 
     if(unlikely(stream->reset)) {
         stream->reset = false;
