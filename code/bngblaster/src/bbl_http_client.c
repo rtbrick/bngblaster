@@ -262,15 +262,16 @@ bbl_http_client_job(timer_s *timer)
 static bool
 bbl_http_client_add(bbl_http_client_config_s *config, bbl_session_s *session)
 {
-    bbl_http_client_s *client = calloc(1, sizeof(bbl_http_client_s));
-    client->state = HTTP_CLIENT_SESSION_DOWN;
-    client->session = session;
-    client->config = config;
+    bbl_http_client_s *client;
 
     if(!session->netif.state) {
         return false;
     }
 
+    client = calloc(1, sizeof(bbl_http_client_s));
+    client->state = HTTP_CLIENT_SESSION_DOWN;
+    client->session = session;
+    client->config = config;
     client->request = calloc(1, strlen(client->config->url)+sizeof(HTTP_CLIENT_REQUEST_STRING));
     sprintf(client->request, HTTP_CLIENT_REQUEST_STRING, client->config->url);
     
