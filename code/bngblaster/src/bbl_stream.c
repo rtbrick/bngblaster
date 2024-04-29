@@ -1637,6 +1637,7 @@ bbl_stream_select_io(bbl_stream_s *stream)
     io_handle_s *io = stream->tx_interface->io.tx;
     io_handle_s *io_iter = io;
 
+    assert(io);
     while(io_iter) {
         if(io_iter->stream_pps < io->stream_pps) {
             io = io_iter;
