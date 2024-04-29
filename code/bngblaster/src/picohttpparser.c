@@ -565,7 +565,7 @@ ssize_t phr_decode_chunked(struct phr_chunked_decoder *decoder, char *buf, size_
             }
             decoder->_hex_count = 0;
             decoder->_state = CHUNKED_IN_CHUNK_EXT;
-        /* fallthru */
+        /* fallthrough */
         case CHUNKED_IN_CHUNK_EXT:
             /* RFC 7230 A.2 "Line folding in chunk extensions is disallowed" */
             for (;; ++src) {
@@ -584,7 +584,7 @@ ssize_t phr_decode_chunked(struct phr_chunked_decoder *decoder, char *buf, size_
                 }
             }
             decoder->_state = CHUNKED_IN_CHUNK_DATA;
-        /* fallthru */
+        /* fallthrough */
         case CHUNKED_IN_CHUNK_DATA: {
             size_t avail = bufsz - src;
             if (avail < decoder->bytes_left_in_chunk) {
@@ -602,7 +602,7 @@ ssize_t phr_decode_chunked(struct phr_chunked_decoder *decoder, char *buf, size_
             decoder->bytes_left_in_chunk = 0;
             decoder->_state = CHUNKED_IN_CHUNK_CRLF;
         }
-        /* fallthru */
+        /* fallthrough */
         case CHUNKED_IN_CHUNK_CRLF:
             for (;; ++src) {
                 if (src == bufsz)
@@ -627,7 +627,7 @@ ssize_t phr_decode_chunked(struct phr_chunked_decoder *decoder, char *buf, size_
             if (buf[src++] == '\012')
                 goto Complete;
             decoder->_state = CHUNKED_IN_TRAILERS_LINE_MIDDLE;
-        /* fallthru */
+        /* fallthrough */
         case CHUNKED_IN_TRAILERS_LINE_MIDDLE:
             for (;; ++src) {
                 if (src == bufsz)
