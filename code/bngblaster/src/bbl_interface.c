@@ -60,11 +60,17 @@ bbl_interface_lock(char *interface_name)
             snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d", lock_pid);
             if(!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
                 LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
-                if(!g_ctx->config.interface_lock_force) return false;
+                if(!g_ctx->config.interface_lock_force) {
+                    fclose(lock_file);
+                    return false;
+                }
             }
         } else {
             LOG(ERROR, "Invalid interface lock file %s\n", lock_path);
-            if(!g_ctx->config.interface_lock_force) return false;
+            if(!g_ctx->config.interface_lock_force) {
+                fclose(lock_file);
+                return false;
+            }
         }
         fclose(lock_file);
     }
@@ -74,6 +80,7 @@ bbl_interface_lock(char *interface_name)
     if(!lock_file) {
         LOG(ERROR, "Failed to open interface lock file %s %s (%d)\n", 
             lock_path, strerror(errno), errno);
+        fclose(lock_file);
         return false;
     }
     fprintf(lock_file, "%d", lock_pid);
