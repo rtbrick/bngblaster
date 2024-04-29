@@ -56,7 +56,10 @@ bbl_lag_add()
         lag->config = config;
 
         interface = calloc(1, sizeof(bbl_interface_s));
-        if(!interface) return false;
+        if(!interface) {
+            free(lag);
+            return false;
+        }
         lag->interface = interface;
         interface->name = config->interface;
         interface->type = LAG_INTERFACE;
