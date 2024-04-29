@@ -189,6 +189,11 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
     char *secret;
     uint16_t secret_len = 0;
 
+    if(!value) {
+        LOG(L2TP, "L2TP Error (%s) Invalid hidden AVP\n",
+            l2tp_tunnel->server->host_name);
+        return false;
+    }
     if(!(random_vector && l2tp_tunnel->server->secret)) {
         LOG(L2TP, "L2TP Error (%s) Missing random-vector or secret\n",
             l2tp_tunnel->server->host_name);
