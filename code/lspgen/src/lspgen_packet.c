@@ -1731,7 +1731,7 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
 	min_len =+ TLV_OVERHEAD;
-        if (packet->buf[0].idx > (1465-min_len)) {
+        if (packet->buf[0].idx > (1462-min_len)) {
 	    return true;
 	}
 	break;

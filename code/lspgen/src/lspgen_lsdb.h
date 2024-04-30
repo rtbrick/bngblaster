@@ -305,7 +305,7 @@ typedef struct lsdb_attr_ {
 } lsdb_attr_t;
 
 #define MAX_OSPF_PACKET  1000 /* 16384 * 1000 bytes total LSA advertisement size */
-#define MAX_ISIS_FRAGMENT 256 /*  1465 *  256 bytes total LSP advertisement size */
+#define MAX_ISIS_FRAGMENT 256 /*  1462 *  256 bytes total LSP advertisement size */
 
 /*
  * An serialized LSA/LSP hanging off a node.
