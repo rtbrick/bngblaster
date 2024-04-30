@@ -839,6 +839,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(ext_addr6, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
             attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_ext_prefix.len;
             attr_template.key.prefix.metric = 100;
+            attr_template.key.prefix.tag = ext_per_node;
             attr_template.key.prefix.ext_flag = true;
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	    attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL6;

@@ -1174,7 +1174,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	case OSPF_LSA_EXTERNAL6:
 	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
 	    push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
-	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
+	    push_be_uint(buf1, 4, attr->key.prefix.tag); /* Link State ID */
 	    router_id = read_be_uint(node->key.node_id, 4);
 	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
 	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
