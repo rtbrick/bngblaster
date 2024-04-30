@@ -42,17 +42,17 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
         mrt.type = be16toh(mrt.type);
         mrt.subtype = be16toh(mrt.subtype);
         mrt.length = be32toh(mrt.length);
-        //LOG(DEBUG, "MRT type: %u subtype: %u length: %u\n", mrt.type, mrt.subtype, mrt.length);
         if(!(mrt.type == ISIS_MRT_TYPE && 
              mrt.subtype == 0 &&
              mrt.length >= ISIS_HDR_LEN_COMMON &&
              mrt.length <= ISIS_MAX_PDU_LEN)) {
-            LOG(ERROR, "Invalid MRT file %s\n", file_path);
+            LOG(DEBUG, "MRT type: %u subtype: %u length: %u\n", mrt.type, mrt.subtype, mrt.length);
+            LOG(ERROR, "Invalid MRT file (invalid MRT header) %s \n", file_path);
             fclose(mrt_file);
             return false;
         }
         if(fread(pdu_buf, mrt.length, 1, mrt_file) != 1) {
-            LOG(ERROR, "Invalid MRT file %s\n", file_path);
+            LOG(ERROR, "Invalid MRT file (read error) %s\n", file_path);
             fclose(mrt_file);
             return false;
         }
