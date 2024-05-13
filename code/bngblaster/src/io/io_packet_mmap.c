@@ -17,6 +17,9 @@
  */
 #include "io.h"
 
+extern bool g_init_phase;
+extern bool g_traffic;
+
 static void
 poll_kernel(io_handle_s *io, short events)
 {
@@ -168,6 +171,9 @@ io_packet_mmap_tx_job(timer_s *timer)
                     continue;
                 }
             } else {
+                if(!(!g_init_phase && g_traffic && interface->state == INTERFACE_UP)) {
+                    break;
+                }
                 stream = bbl_stream_io_send_iter(io);
                 if(unlikely(stream == NULL)) {
                     break;
@@ -331,6 +337,9 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                     continue;
                 }
             } else {
+                if(!(!g_init_phase && g_traffic && interface->state == INTERFACE_UP)) {
+                    break;
+                }
                 /* Send traffic streams up to allowed burst. */
                 stream = bbl_stream_io_send_iter(io);
                 if(unlikely(stream == NULL)) {

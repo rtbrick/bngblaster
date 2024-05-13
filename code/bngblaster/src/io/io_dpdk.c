@@ -40,6 +40,9 @@
 #define BURST_SIZE_RX 256
 #define BURST_SIZE_TX 32
 
+extern bool g_init_phase;
+extern bool g_traffic;
+
 static struct rte_eth_conf port_conf = {
     .rxmode = {
         .mq_mode = 0,
@@ -309,39 +312,40 @@ io_dpdk_tx_job(timer_s *timer)
             burst = 0;
         }
     }
-
-    while(burst) {
-        /* Send traffic streams up to allowed burst. */
-        if(!io->mbuf) {
-            if(!io_dpdk_mbuf_alloc(io)) {
+    if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+        while(burst) {
+            /* Send traffic streams up to allowed burst. */
+            if(!io->mbuf) {
+                if(!io_dpdk_mbuf_alloc(io)) {
+                    break;
+                }
+            }
+            stream = bbl_stream_io_send_iter(io);
+            if(unlikely(stream == NULL)) {
                 break;
             }
-        }
-        stream = bbl_stream_io_send_iter(io);
-        if(unlikely(stream == NULL)) {
-            break;
-        }
-        /* Transmit the packet. */
-        io->mbuf->data_len = io->buf_len;
-        if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
-            /* Dump the packet into pcap file. */
-            if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
-                pcap = true;
-                pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                          interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+            /* Transmit the packet. */
+            io->mbuf->data_len = io->buf_len;
+            if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
+                /* Dump the packet into pcap file. */
+                if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
+                    pcap = true;
+                    pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
+                                            interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+                }
+                stream->tx_packets++;
+                stream->flow_seq++;
+                io->stats.packets++;
+                io->stats.bytes += io->buf_len;
+                io->mbuf = NULL;
+                io->buf_len = 0;
+                burst--;
+            } else {
+                /* This packet will be retried next interval 
+                * because io->buf_len is not reset to zero. */
+                io->stats.io_errors++;
+                burst = 0;
             }
-            stream->tx_packets++;
-            stream->flow_seq++;
-            io->stats.packets++;
-            io->stats.bytes += io->buf_len;
-            io->mbuf = NULL;
-            io->buf_len = 0;
-            burst--;
-        } else {
-            /* This packet will be retried next interval 
-             * because io->buf_len is not reset to zero. */
-            io->stats.io_errors++;
-            burst = 0;
         }
     }
     if(pcap) {
@@ -443,30 +447,32 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
         /* Get TX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
 
-        while(burst) {
-            /* Send traffic streams up to allowed burst. */
-            if(!io->mbuf) {
-                if(!io_dpdk_mbuf_alloc(io)) {
+        if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+            while(burst) {
+                /* Send traffic streams up to allowed burst. */
+                if(!io->mbuf) {
+                    if(!io_dpdk_mbuf_alloc(io)) {
+                        break;
+                    }
+                }
+                stream = bbl_stream_io_send_iter(io);
+                if(unlikely(stream == NULL)) {
                     break;
                 }
-            }
-            stream = bbl_stream_io_send_iter(io);
-            if(unlikely(stream == NULL)) {
-                break;
-            }
-            /* Transmit the packet. */
-            io->mbuf->data_len = stream->tx_len;
-            memcpy(io->buf, stream->tx_buf, stream->tx_len);
-            if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
-                stream->tx_packets++;
-                stream->flow_seq++;
-                io->stats.packets++;
-                io->stats.bytes += stream->tx_len;
-                io->mbuf = NULL;
-                burst--;
-            } else {
-                io->stats.io_errors++;
-                burst = 0;
+                /* Transmit the packet. */
+                io->mbuf->data_len = stream->tx_len;
+                memcpy(io->buf, stream->tx_buf, stream->tx_len);
+                if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
+                    stream->tx_packets++;
+                    stream->flow_seq++;
+                    io->stats.packets++;
+                    io->stats.bytes += stream->tx_len;
+                    io->mbuf = NULL;
+                    burst--;
+                } else {
+                    io->stats.io_errors++;
+                    burst = 0;
+                }
             }
         }
     }

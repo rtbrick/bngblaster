@@ -8,6 +8,9 @@
  */
 #include "io.h"
 
+extern bool g_init_phase;
+extern bool g_traffic;
+
 /**
  * This job is for RAW RX in main thread!
  */
@@ -144,34 +147,36 @@ io_raw_tx_job(timer_s *timer)
         }
     }
 
-    while(burst) {
-        /* Send traffic streams up to allowed burst. */
-        stream = bbl_stream_io_send_iter(io);
-        if(unlikely(stream == NULL)) {
-            break;
-        }
-        if(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) > 0) {
-            /* Dump the packet into pcap file. */
-            if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
-                pcap = true;
-                pcapng_push_packet_header(&io->timestamp, stream->tx_buf, stream->tx_len,
-                                          interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+    if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+        while(burst) {
+            /* Send traffic streams up to allowed burst. */
+            stream = bbl_stream_io_send_iter(io);
+            if(unlikely(stream == NULL)) {
+                break;
             }
-            stream->tx_packets++;
-            stream->flow_seq++;
-            io->stats.packets++;
-            io->stats.bytes += stream->tx_len;
-            burst--;
-        } else {
-            if(errno == EMSGSIZE) {
-                io->buf_len = stream->tx_len;
-                io_raw_tx_lo_long(io);
-                io->buf_len = 0;
+            if(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) > 0) {
+                /* Dump the packet into pcap file. */
+                if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
+                    pcap = true;
+                    pcapng_push_packet_header(&io->timestamp, stream->tx_buf, stream->tx_len,
+                                            interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+                }
+                stream->tx_packets++;
+                stream->flow_seq++;
+                io->stats.packets++;
+                io->stats.bytes += stream->tx_len;
+                burst--;
             } else {
-                LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                    interface->name, strerror(errno), errno);
-                io->stats.io_errors++;
-                burst = 0;
+                if(errno == EMSGSIZE) {
+                    io->buf_len = stream->tx_len;
+                    io_raw_tx_lo_long(io);
+                    io->buf_len = 0;
+                } else {
+                    LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                        interface->name, strerror(errno), errno);
+                    io->stats.io_errors++;
+                    burst = 0;
+                }
             }
         }
     }
@@ -252,28 +257,30 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
         /* Get TX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
 
-        while(burst) {
-            /* Send traffic streams up to allowed burst. */
-            stream = bbl_stream_io_send_iter(io);
-            if(unlikely(stream == NULL)) {
-                break;
-            }
-            if(unlikely(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) >=0)) {
-                stream->tx_packets++;
-                stream->flow_seq++;
-                io->stats.packets++;
-                io->stats.bytes += stream->tx_len;
-                burst--;
-            } else {
-                if(errno == EMSGSIZE) {
-                    io->buf_len = stream->tx_len;
-                    io_raw_tx_lo_long(io);
-                    io->buf_len = 0;
+        if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+            while(burst) {
+                /* Send traffic streams up to allowed burst. */
+                stream = bbl_stream_io_send_iter(io);
+                if(unlikely(stream == NULL)) {
+                    break;
+                }
+                if(unlikely(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) >=0)) {
+                    stream->tx_packets++;
+                    stream->flow_seq++;
+                    io->stats.packets++;
+                    io->stats.bytes += stream->tx_len;
+                    burst--;
                 } else {
-                    LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
-                        io->interface->name, strerror(errno), errno);
-                    io->stats.io_errors++;
-                    burst = 0;
+                    if(errno == EMSGSIZE) {
+                        io->buf_len = stream->tx_len;
+                        io_raw_tx_lo_long(io);
+                        io->buf_len = 0;
+                    } else {
+                        LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
+                            io->interface->name, strerror(errno), errno);
+                        io->stats.io_errors++;
+                        burst = 0;
+                    }
                 }
             }
         }

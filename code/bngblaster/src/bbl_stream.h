@@ -235,9 +235,6 @@ bbl_stream_init();
 void
 bbl_stream_final();
 
-protocol_error_t
-bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream);
-
 bbl_stream_s*
 bbl_stream_io_send_iter(io_handle_s *io);
 

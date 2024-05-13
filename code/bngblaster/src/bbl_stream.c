@@ -1410,14 +1410,13 @@ bbl_stream_setup(bbl_stream_s *stream)
     stream->tokens += setup_tokens * IO_TOKENS_PER_PACKET;
 }
 
-protocol_error_t
+static protocol_error_t
 bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
 {
     struct timespec time_elapsed;
     bbl_session_s *session;
     io_bucket_s *io_bucket = stream->io_bucket;
     uint8_t *ptr;
-    uint64_t tokens = 0;
 
     if(unlikely(stream->reset)) {
         stream->reset = false;
@@ -1425,32 +1424,17 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         if(stream->max_packets) {
             stream->max_packets = stream->tx_packets + stream->config->max_packets;
         }
-        stream->tokens = 0;
+        stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return STREAM_WAIT;
     }
 
-    if(unlikely(g_init_phase)) {
-        stream->tokens = 0;
+    if(!stream->enabled) {
+        stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return STREAM_WAIT;
-    }
-
-    if(!(g_traffic && stream->enabled && stream->tx_interface->state == INTERFACE_UP)) {
-        stream->tokens = 0;
-        return STREAM_WAIT;
-    }
-
-    if(stream->tokens) {
-        if(io_bucket->tokens < stream->tokens) {
-            return STREAM_WAIT;
-        }
-        tokens = io_bucket->tokens - stream->tokens;
-        if(tokens < IO_TOKENS_PER_PACKET) {
-            return STREAM_WAIT;
-        }
     }
     
     if(!bbl_stream_can_send(stream)) {
-        stream->tokens = 0;
+        stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return WRONG_PROTOCOL_STATE;
     }
 
@@ -1475,10 +1459,11 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         }
     }
 
+    
     if(stream->tokens == 0) {
-        stream->tokens = stream->io_bucket->tokens + (rand() % IO_TOKENS_PER_PACKET);
-    } else if(tokens > stream->tokens_burst) {
-        stream->tokens = stream->io_bucket->tokens - stream->tokens_burst;
+        stream->tokens = io_bucket->tokens + (rand() % IO_TOKENS_PER_PACKET);
+    } else if(io_bucket->tokens - stream->tokens > stream->tokens_burst) {
+        stream->tokens = io_bucket->tokens - stream->tokens_burst;
     }
 
     if(stream->setup) {
@@ -1529,9 +1514,11 @@ bbl_stream_io_send_iter(io_handle_s *io)
     while(i > 0) {
         i--;
         stream_next = stream->io_next ? stream->io_next : io->stream_head;
-        if (bbl_stream_io_send(io, stream) == PROTOCOL_SUCCESS) {
-            io->stream_cur = stream_next;
-            return stream;
+        if(stream->tokens < stream->io_bucket->tokens) {
+            if (bbl_stream_io_send(io, stream) == PROTOCOL_SUCCESS) {
+                io->stream_cur = stream_next;
+                return stream;
+            }
         }
         stream = stream_next;
     }
