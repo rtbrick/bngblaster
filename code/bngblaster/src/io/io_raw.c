@@ -147,10 +147,11 @@ io_raw_tx_job(timer_s *timer)
         }
     }
 
-    if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+    if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
+        stream = io->stream_cur ? io->stream_cur : io->stream_head;
         while(burst) {
             /* Send traffic streams up to allowed burst. */
-            stream = bbl_stream_io_send_iter(io);
+            stream = bbl_stream_io_send_iter(io, stream);
             if(unlikely(stream == NULL)) {
                 break;
             }
@@ -179,6 +180,7 @@ io_raw_tx_job(timer_s *timer)
                 }
             }
         }
+        io->stream_cur = stream;
     }
     if(unlikely(pcap)) {
         pcapng_fflush();
@@ -225,7 +227,7 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
     bbl_stream_s *stream = NULL;
     uint16_t io_burst = interface->config->io_burst;
     uint16_t burst = 0;
-
+            
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
     sleep.tv_nsec = 1000 * io_burst; 
@@ -257,10 +259,11 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
         /* Get TX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
 
-        if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+        if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
+            stream = io->stream_cur ? io->stream_cur : io->stream_head;
             while(burst) {
                 /* Send traffic streams up to allowed burst. */
-                stream = bbl_stream_io_send_iter(io);
+                stream = bbl_stream_io_send_iter(io, stream);
                 if(unlikely(stream == NULL)) {
                     break;
                 }
@@ -283,6 +286,7 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
                     }
                 }
             }
+            io->stream_cur = stream;
         }
     }
 }

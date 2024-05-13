@@ -35,7 +35,7 @@ io_bucket_add(double pps)
     io_bucket->pps = pps;
     io_bucket->tokens_per_sec = pps * IO_TOKENS_PER_PACKET;
     timer_add_periodic(&g_ctx->timer_root, &io_bucket->timer, 
-                       "TB", 0, 1*MSEC+1, io_bucket, &io_tocken_job);
+                       "TB", 0, 100001, io_bucket, &io_tocken_job);
 
     return io_bucket;
 }

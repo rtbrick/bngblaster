@@ -235,8 +235,8 @@ bbl_stream_init();
 void
 bbl_stream_final();
 
-bbl_stream_s*
-bbl_stream_io_send_iter(io_handle_s *io);
+bbl_stream_s *
+bbl_stream_io_send_iter(io_handle_s *io, bbl_stream_s *stream);
 
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac);

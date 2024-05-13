@@ -313,6 +313,7 @@ io_dpdk_tx_job(timer_s *timer)
         }
     }
     if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+        stream = io->stream_cur ? io->stream_cur : io->stream_head;
         while(burst) {
             /* Send traffic streams up to allowed burst. */
             if(!io->mbuf) {
@@ -320,7 +321,7 @@ io_dpdk_tx_job(timer_s *timer)
                     break;
                 }
             }
-            stream = bbl_stream_io_send_iter(io);
+            stream = bbl_stream_io_send_iter(io, stream);
             if(unlikely(stream == NULL)) {
                 break;
             }
@@ -347,6 +348,7 @@ io_dpdk_tx_job(timer_s *timer)
                 burst = 0;
             }
         }
+        io->stream_cur = stream;
     }
     if(pcap) {
         pcapng_fflush();
@@ -448,6 +450,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
 
         if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
+            stream = io->stream_cur ? io->stream_cur : io->stream_head;
             while(burst) {
                 /* Send traffic streams up to allowed burst. */
                 if(!io->mbuf) {
@@ -455,7 +458,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                         break;
                     }
                 }
-                stream = bbl_stream_io_send_iter(io);
+                stream = bbl_stream_io_send_iter(io, stream);
                 if(unlikely(stream == NULL)) {
                     break;
                 }
@@ -474,6 +477,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                     burst = 0;
                 }
             }
+            io->stream_cur = stream;
         }
     }
 }

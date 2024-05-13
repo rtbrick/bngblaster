@@ -1437,6 +1437,12 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return WRONG_PROTOCOL_STATE;
     }
+    
+    if((io_bucket->tokens - stream->tokens) > stream->tokens_burst) {
+        stream->tokens = io_bucket->tokens - stream->tokens_burst;
+    }
+
+    stream->tokens += IO_TOKENS_PER_PACKET;
 
     /** Enforce optional stream packet limit ... */
     if(stream->max_packets && stream->tx_packets >= stream->max_packets) {
@@ -1457,13 +1463,6 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
             stream->wait_start.tv_nsec = io->timestamp.tv_nsec;
             return STREAM_WAIT;
         }
-    }
-
-    
-    if(stream->tokens == 0) {
-        stream->tokens = io_bucket->tokens + (rand() % IO_TOKENS_PER_PACKET);
-    } else if(io_bucket->tokens - stream->tokens > stream->tokens_burst) {
-        stream->tokens = io_bucket->tokens - stream->tokens_burst;
     }
 
     if(stream->setup) {
@@ -1499,29 +1498,21 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     if(stream->flow_seq == 1) {
         stream->tx_first_epoch = io->timestamp.tv_sec;
     }
-    stream->tokens += IO_TOKENS_PER_PACKET;
     return PROTOCOL_SUCCESS;
 }
 
-bbl_stream_s*
-bbl_stream_io_send_iter(io_handle_s *io)
+bbl_stream_s *
+bbl_stream_io_send_iter(io_handle_s *io, bbl_stream_s *stream)
 {
-    bbl_stream_s *stream = io->stream_cur;
-    bbl_stream_s *stream_next = NULL;
-
-    int_fast32_t i = io->stream_count;
-
-    while(i > 0) {
-        i--;
-        stream_next = stream->io_next ? stream->io_next : io->stream_head;
+    while(stream) {
         if(stream->tokens < stream->io_bucket->tokens) {
             if (bbl_stream_io_send(io, stream) == PROTOCOL_SUCCESS) {
-                io->stream_cur = stream_next;
                 return stream;
             }
         }
-        stream = stream_next;
+        stream = stream->io_next;
     }
+
     return NULL;
 }
 
@@ -1613,7 +1604,6 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
     stream->io = io;
     stream->io_next = io->stream_head;
     io->stream_head = stream;
-    io->stream_cur = stream;
     io->stream_pps += stream->pps;
     io->stream_count++;
 }
@@ -1636,7 +1626,6 @@ bbl_stream_select_io(bbl_stream_s *stream)
     stream->io = io;
     stream->io_next = io->stream_head;
     io->stream_head = stream;
-    io->stream_cur = stream;
     if(io->thread) {
         stream->threaded = true;
     }
