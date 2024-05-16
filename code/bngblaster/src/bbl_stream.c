@@ -1400,22 +1400,16 @@ bbl_stream_update_udp(bbl_stream_s *stream)
 static void
 bbl_stream_setup(bbl_stream_s *stream)
 {
-    uint64_t setup_tokens;
-    if(stream->tx_packets == 0) {
-        setup_tokens = (rand() % stream->config->setup_interval) * stream->pps;
-    } else {
-        setup_tokens = stream->config->setup_interval * stream->pps;
-    }
-    if(setup_tokens) setup_tokens--;
-    stream->tokens += setup_tokens * IO_TOKENS_PER_PACKET;
+    /* TODO: NEED TO BE IMPLEMENTED */
+    UNUSED(stream);
 }
 
 static protocol_error_t
-bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
+bbl_stream_io_send(bbl_stream_s *stream)
 {
     struct timespec time_elapsed;
     bbl_session_s *session;
-    io_bucket_s *io_bucket = stream->io_bucket;
+    io_handle_s *io = stream->io;
     uint8_t *ptr;
 
     if(unlikely(stream->reset)) {
@@ -1424,26 +1418,17 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
         if(stream->max_packets) {
             stream->max_packets = stream->tx_packets + stream->config->max_packets;
         }
-        stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return STREAM_WAIT;
     }
 
     if(!stream->enabled) {
-        stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return STREAM_WAIT;
     }
     
     if(!bbl_stream_can_send(stream)) {
-        stream->tokens = io_bucket->tokens + IO_TOKENS_PER_PACKET;
         return WRONG_PROTOCOL_STATE;
     }
     
-    if((io_bucket->tokens - stream->tokens) > stream->tokens_burst) {
-        stream->tokens = io_bucket->tokens - stream->tokens_burst;
-    }
-
-    stream->tokens += IO_TOKENS_PER_PACKET;
-
     /** Enforce optional stream packet limit ... */
     if(stream->max_packets && stream->tx_packets >= stream->max_packets) {
         return FULL;
@@ -1501,18 +1486,51 @@ bbl_stream_io_send(io_handle_s *io, bbl_stream_s *stream)
     return PROTOCOL_SUCCESS;
 }
 
+/**
+ * bbl_stream_io_send_iter
+ *
+ * @param io IO handle
+ * @param now nsec timestamp (CLOCK_MONOTONIC)
+ * @return stream or NULL if nothing to send
+ */
 bbl_stream_s *
-bbl_stream_io_send_iter(io_handle_s *io, bbl_stream_s *stream)
+bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
 {
-    while(stream) {
-        if(stream->tokens < stream->io_bucket->tokens) {
-            if (bbl_stream_io_send(io, stream) == PROTOCOL_SUCCESS) {
-                return stream;
+    io_bucket_s *io_bucket = io->bucket_cur;
+    bbl_stream_s *stream;
+    uint64_t min = now - 100000000; /* now minus 100ms */
+    uint64_t expired;
+
+    while(io_bucket) {
+        if(io_bucket->stream_cur) {
+            stream = io_bucket->stream_cur;
+        } else {
+            stream = io_bucket->stream_head;
+            io_bucket->base += io_bucket->nsec;
+            if(io_bucket->base < min) {
+                io_bucket->base = min;
             }
         }
-        stream = stream->io_next;
+        expired = now - io_bucket->base;
+        while(stream) {
+            if(stream->expired > expired) {
+                io_bucket->stream_cur = stream;
+                break; /* next bucket */
+            }
+            if (bbl_stream_io_send(stream) == PROTOCOL_SUCCESS) {
+                io_bucket->stream_cur = stream->io_next;
+                io->bucket_cur = io_bucket;
+                return stream;
+            }
+            stream = stream->io_next;
+        }
+        if(!stream) {
+            io_bucket->stream_cur = io_bucket->stream_head;
+        } 
+        io_bucket = io_bucket->next;
+        if(!io_bucket) io_bucket = io->bucket_head;
+        if(io_bucket == io->bucket_cur) return NULL;
     }
-
     return NULL;
 }
 
@@ -1560,11 +1578,6 @@ bbl_stream_add_group(bbl_stream_s *stream)
     stream->group = group;
     stream->group_next = group->head;
 
-    stream->tokens_burst = IO_TOKENS_PER_PACKET;
-    stream->tokens_burst += stream->pps * (IO_TOKENS_PER_PACKET/10); /* 100ms burst */
-    if(stream->tokens_burst > g_ctx->config.stream_max_burst*IO_TOKENS_PER_PACKET) {
-        stream->tokens_burst = g_ctx->config.stream_max_burst*IO_TOKENS_PER_PACKET;
-    }
     group->head = stream;
     group->count++;
 }
@@ -1601,11 +1614,7 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
             io = io_iter;
         }
     }
-    stream->io = io;
-    stream->io_next = io->stream_head;
-    io->stream_head = stream;
-    io->stream_pps += stream->pps;
-    io->stream_count++;
+    io_stream_add(io, stream);
 }
 
 static void
@@ -1621,14 +1630,10 @@ bbl_stream_select_io(bbl_stream_s *stream)
         }
         io_iter = io_iter->next;
     }
-    io->stream_pps += stream->pps;
-    io->stream_count++;
-    stream->io = io;
-    stream->io_next = io->stream_head;
-    io->stream_head = stream;
     if(io->thread) {
         stream->threaded = true;
     }
+    io_stream_add(io, stream);
 }
 
 static void
@@ -1640,7 +1645,6 @@ bbl_stream_add(bbl_stream_s *stream)
     } else {
         bbl_stream_select_io(stream);
     }
-    io_bucket_stream(stream);
     stream->max_packets = stream->config->max_packets;
     if(stream->config->setup_interval) {
         stream->setup = true;
@@ -2622,8 +2626,6 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
         json_object_set(root, "debug-tx-seq", json_integer(stream->flow_seq));
         json_object_set(root, "debug-max-packets", json_integer(stream->max_packets));
-        json_object_set(root, "debug-bucket", json_integer(stream->io_bucket->tokens));
-        json_object_set(root, "debug-tokens", json_integer(stream->tokens));
         json_object_set(root, "debug-tcp-flags", json_integer(stream->tcp_flags));
     }
     return root;

@@ -137,6 +137,7 @@ io_packet_mmap_tx_job(timer_s *timer)
 
     bbl_stream_s *stream = NULL;
     uint16_t burst = interface->config->io_burst;
+    uint64_t now;
 
     bool ctrl = true;
     bool pcap = false;
@@ -156,7 +157,7 @@ io_packet_mmap_tx_job(timer_s *timer)
         //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
         io->timestamp.tv_sec = timer->timestamp->tv_sec;
         io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-        stream = io->stream_cur ? io->stream_cur : io->stream_head;
+        now = timespec_to_nsec(timer->timestamp);
         while(burst) {
             /* Check if this slot available for writing. */
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
@@ -172,10 +173,10 @@ io_packet_mmap_tx_job(timer_s *timer)
                     continue;
                 }
             } else {
-                if(!(!g_init_phase && g_traffic && interface->state == INTERFACE_UP)) {
+                if(!(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP)) {
                     break;
                 }
-                stream = bbl_stream_io_send_iter(io, stream);
+                stream = bbl_stream_io_send_iter(io, now);
                 if(unlikely(stream == NULL)) {
                     break;
                 }
@@ -204,7 +205,6 @@ io_packet_mmap_tx_job(timer_s *timer)
             frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
         }
-        io->stream_cur = stream;
         if(pcap) {
             pcapng_fflush();
         }
@@ -291,6 +291,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
     bbl_stream_s *stream = NULL;
     uint16_t io_burst = interface->config->io_burst;
     uint16_t burst = 0;
+    uint64_t now;
 
     bool ctrl = true;
 
@@ -319,7 +320,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
         
         burst = io_burst;
         ctrl = true;
-        stream = io->stream_cur ? io->stream_cur : io->stream_head;
+        now = timespec_to_nsec(&io->timestamp);
         while(burst) {
             if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
@@ -340,11 +341,11 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                     continue;
                 }
             } else {
-                if(!(!g_init_phase && g_traffic && interface->state == INTERFACE_UP)) {
+                if(!(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP)) {
                     break;
                 }
                 /* Send traffic streams up to allowed burst. */
-                stream = bbl_stream_io_send_iter(io, stream);
+                stream = bbl_stream_io_send_iter(io, now);
                 if(unlikely(stream == NULL)) {
                     break;
                 }
@@ -367,7 +368,6 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
             frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
         }
-        io->stream_cur = stream;
 
         if(io->queued) {
             /* Notify kernel. */

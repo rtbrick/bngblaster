@@ -19,7 +19,7 @@
 #include "../bbl_txq.h"
 
 #include "io_def.h"
-#include "io_bucket.h"
+#include "io_stream.h"
 #include "io_socket.h"
 #include "io_interface.h"
 #include "io_thread.h"

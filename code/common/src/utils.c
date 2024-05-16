@@ -686,3 +686,9 @@ ipv4_len_to_mask(uint8_t len)
     if(len == 0) return 0;
     return htobe32(~((1 << (32 - len)) - 1));
 }
+
+uint64_t
+timespec_to_nsec(struct timespec *timestamp)
+{
+    return (timestamp->tv_sec * 1000000000) + timestamp->tv_nsec;
+}

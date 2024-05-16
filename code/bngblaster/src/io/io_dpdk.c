@@ -267,7 +267,7 @@ io_dpdk_tx_job(timer_s *timer)
 
     bbl_stream_s *stream = NULL;
     uint16_t burst = interface->config->io_burst;
-
+    uint64_t now;
     bool pcap = false;
 
     assert(io->mode == IO_MODE_DPDK);
@@ -312,8 +312,8 @@ io_dpdk_tx_job(timer_s *timer)
             burst = 0;
         }
     }
-    if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
-        stream = io->stream_cur ? io->stream_cur : io->stream_head;
+    if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
+        now = timespec_to_nsec(timer->timestamp);
         while(burst) {
             /* Send traffic streams up to allowed burst. */
             if(!io->mbuf) {
@@ -321,7 +321,7 @@ io_dpdk_tx_job(timer_s *timer)
                     break;
                 }
             }
-            stream = bbl_stream_io_send_iter(io, stream);
+            stream = bbl_stream_io_send_iter(io, now);
             if(unlikely(stream == NULL)) {
                 break;
             }
@@ -348,7 +348,6 @@ io_dpdk_tx_job(timer_s *timer)
                 burst = 0;
             }
         }
-        io->stream_cur = stream;
     }
     if(pcap) {
         pcapng_fflush();
@@ -408,6 +407,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
     bbl_stream_s *stream = NULL;
     uint16_t io_burst = interface->config->io_burst;
     uint16_t burst = 0;
+    uint64_t now;
 
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
@@ -449,8 +449,8 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
         /* Get TX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
 
-        if(!g_init_phase && g_traffic && interface->state == INTERFACE_UP) {
-            stream = io->stream_cur ? io->stream_cur : io->stream_head;
+        if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
+            now = timespec_to_nsec(&io->timestamp);
             while(burst) {
                 /* Send traffic streams up to allowed burst. */
                 if(!io->mbuf) {
@@ -458,7 +458,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                         break;
                     }
                 }
-                stream = bbl_stream_io_send_iter(io, stream);
+                stream = bbl_stream_io_send_iter(io, now);
                 if(unlikely(stream == NULL)) {
                     break;
                 }
@@ -477,7 +477,6 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                     burst = 0;
                 }
             }
-            io->stream_cur = stream;
         }
     }
 }

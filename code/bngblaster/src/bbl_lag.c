@@ -137,10 +137,7 @@ bbl_lag_select(bbl_lag_s *lag)
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         io = member->interface->io.tx;
-        io->stream_pps = 0;
-        io->stream_count = 0;
-        io->stream_head = NULL;
-        io->stream_cur = NULL;
+        io_stream_clear(io);
 
         member->primary = false;
         if(member->interface->state != INTERFACE_DISABLED) {
@@ -170,21 +167,15 @@ bbl_lag_select(bbl_lag_s *lag)
         while(stream) {
             key = stream->flow_id % active_count;
             io = lag->active_list[key]->interface->io.tx;
-            stream->io = io;
-            stream->io_next = io->stream_head;
-            io->stream_head = stream;
-            io->stream_cur = stream;
-            io->stream_pps += stream->pps;
-            io->stream_count++;
+            io_stream_add(io, stream);
             stream = stream->lag_next;
+        }
+        for(key=0; key <active_count; key++) {
+            io = lag->active_list[key]->interface->io.tx;
+            io_stream_smear(io);
         }
     } else {
         bbl_lag_update_state(lag, INTERFACE_DOWN);
-        while(stream) {
-            stream->io = NULL;
-            stream->io_next = NULL;
-            stream = stream->lag_next;
-        }
     }
     lag->active_count = active_count;
 }

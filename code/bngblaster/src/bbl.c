@@ -613,6 +613,9 @@ main(int argc, char *argv[])
         g_ctx->multicast_endpoint = ENDPOINT_ENABLED;
     }
 
+    /* Smear all stream buckets. */
+    io_stream_smear_all();
+
     /* Start threads. */
     io_thread_start_all();
 

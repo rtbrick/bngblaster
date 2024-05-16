@@ -41,13 +41,15 @@ typedef enum {
 } __attribute__ ((__packed__)) io_mode_t;
 
 typedef struct io_bucket_ {
-    bool started;
     double pps;
-    uint64_t tokens_per_sec;
-    uint64_t tokens;
+    uint64_t nsec;
+    uint64_t base;
+
     struct io_bucket_ *next;
-    struct timer_ *timer;
-    struct timespec timestamp_start;
+
+    bbl_stream_s *stream_head;
+    bbl_stream_s *stream_cur;
+    uint32_t stream_count;
 } io_bucket_s;
 
 typedef struct io_handle_ {
@@ -73,6 +75,10 @@ typedef struct io_handle_ {
     unsigned int queued;
 
     io_thread_s *thread;
+
+    io_bucket_s *bucket_head;
+    io_bucket_s *bucket_cur;
+
     bbl_interface_s *interface;
     bbl_ethernet_header_s *eth;
 
@@ -81,11 +87,9 @@ typedef struct io_handle_ {
     uint16_t vlan_tci;
     uint16_t vlan_tpid;
 
-    double stream_pps;
     uint32_t stream_count;
-    bbl_stream_s *stream_head;
-    bbl_stream_s *stream_cur;
-
+    double stream_pps;
+    
     struct timespec timestamp; /* user space timestamps */
 
     struct {

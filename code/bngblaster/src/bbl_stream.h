@@ -134,7 +134,8 @@ typedef struct bbl_stream_
     uint32_t ipv4_dst;
 
     double pps;
-    
+    uint64_t expired;
+
     uint16_t tx_len; /* TX length */
     uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
     uint8_t *tx_buf; /* TX buffer */
@@ -145,7 +146,7 @@ typedef struct bbl_stream_
     bbl_stream_config_s *config;
 
     bbl_stream_s *next; /* Next stream (global) */
-    bbl_stream_s *io_next; /* Next stream of same IO handle */
+    bbl_stream_s *io_next; /* Next stream of same IO bucket */
     bbl_stream_s *group_next; /* Next stream of same group */
     bbl_stream_s *lag_next; /* Next stream of same LAG group */
     bbl_stream_s *session_next; /* Next stream of same session */
@@ -156,7 +157,6 @@ typedef struct bbl_stream_
     endpoint_state_t *endpoint;
 
     io_handle_s *io;
-    io_bucket_s *io_bucket;
 
     bbl_access_interface_s *tx_access_interface;
     bbl_network_interface_s *tx_network_interface;
@@ -168,8 +168,6 @@ typedef struct bbl_stream_
 
     uint64_t flow_seq;
     uint64_t tx_packets;
-    uint64_t tokens;
-    uint64_t tokens_burst;
     uint64_t max_packets;
 
     __time_t tx_first_epoch;
@@ -236,7 +234,7 @@ void
 bbl_stream_final();
 
 bbl_stream_s *
-bbl_stream_io_send_iter(io_handle_s *io, bbl_stream_s *stream);
+bbl_stream_io_send_iter(io_handle_s *io, uint64_t now);
 
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac);
