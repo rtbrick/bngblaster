@@ -1397,13 +1397,6 @@ bbl_stream_update_udp(bbl_stream_s *stream)
     }
 }
 
-static void
-bbl_stream_setup(bbl_stream_s *stream)
-{
-    /* TODO: NEED TO BE IMPLEMENTED */
-    UNUSED(stream);
-}
-
 static protocol_error_t
 bbl_stream_io_send(bbl_stream_s *stream)
 {
@@ -1441,6 +1434,8 @@ bbl_stream_io_send(bbl_stream_s *stream)
             if(time_elapsed.tv_sec <= stream->config->start_delay) {
                 /** Wait ... */
                 return STREAM_WAIT;
+            } else {
+                stream->wait_start.tv_sec = 0;
             }
         } else {
             /** Start wait window ... */
@@ -1450,8 +1445,17 @@ bbl_stream_io_send(bbl_stream_s *stream)
         }
     }
 
+    /** Enforce optional stream traffic setup interval ... */
     if(stream->setup) {
-        bbl_stream_setup(stream);
+        if(stream->wait_start.tv_sec) {
+            timespec_sub(&time_elapsed, &io->timestamp, &stream->wait_start);
+            if(time_elapsed.tv_sec <= stream->config->setup_interval) {
+                /** Wait ... */
+                return STREAM_WAIT;
+            }
+        } 
+        stream->wait_start.tv_sec = io->timestamp.tv_sec;
+        stream->wait_start.tv_nsec = io->timestamp.tv_nsec;
     }
     
     session = stream->session;
