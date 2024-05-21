@@ -687,6 +687,19 @@ ipv4_len_to_mask(uint8_t len)
     return htobe32(~((1 << (32 - len)) - 1));
 }
 
+/*
+ * Return true if address belongs to network.
+ */
+bool
+ipv4_addr_in_network(uint32_t address, ipv4_prefix *network)
+{
+    uint32_t mask = ipv4_len_to_mask(network->len);
+    if((address & mask) == (network->address & mask)) {
+        return true;
+    }
+    return false;
+}
+
 uint64_t
 timespec_to_nsec(struct timespec *timestamp)
 {

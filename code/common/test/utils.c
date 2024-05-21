@@ -292,6 +292,23 @@ test_ipv4_len_to_mask(void **unused) {
     assert_int_equal(mask_a, mask_b);
 }
 
+static void
+test_ipv4_addr_in_network(void **unused) {
+    (void) unused;
+
+    uint32_t address;
+    ipv4_prefix network;
+
+    inet_pton(AF_INET, "10.10.10.200", &address);
+    inet_pton(AF_INET, "10.10.10.1", &network.address);
+
+    network.len = 24;
+    assert_true(ipv4_addr_in_network(address, &network));
+
+    network.len = 25;
+    assert_false(ipv4_addr_in_network(address, &network));
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_val2key),
@@ -314,6 +331,7 @@ int main() {
         cmocka_unit_test(test_ipv6_multicast_mac),
         cmocka_unit_test(test_ipv4_mask_to_len),
         cmocka_unit_test(test_ipv4_len_to_mask),
+        cmocka_unit_test(test_ipv4_addr_in_network),
 
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
