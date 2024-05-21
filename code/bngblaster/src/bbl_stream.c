@@ -749,6 +749,10 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             } else {
                 if(session) {
                     ipv4.dst = session->ip_address;
+                    if(session->access_type == ACCESS_TYPE_IPOE && 
+                       ipv4_addr_in_network(ipv4.dst, &network_interface->ip)) {
+                        eth.dst = session->client_mac;       
+                    }
                 } else {
                     return false;
                 }
