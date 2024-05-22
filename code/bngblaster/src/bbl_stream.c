@@ -1415,6 +1415,9 @@ bbl_stream_io_send(bbl_stream_s *stream)
         if(stream->max_packets) {
             stream->max_packets = stream->tx_packets + stream->config->max_packets;
         }
+        if(stream->config->setup_interval) {
+            stream->setup = true;
+        }
         return STREAM_WAIT;
     }
 
@@ -2136,38 +2139,36 @@ bbl_stream_init() {
     return true;
 }
 
-void __attribute__((optimize("O0")))
+void
 bbl_stream_reset(bbl_stream_s *stream)
 {
-    if(stream) {
-        stream->reset = true;
-        stream->verified = false;
+    if(!stream) return;
 
-        stream->reset_packets_tx = stream->tx_packets;
-        stream->reset_packets_rx = stream->rx_packets;
-        stream->reset_loss = stream->rx_loss;
-        stream->rx_min_delay_us = 0;
-        stream->rx_max_delay_us = 0;
-        stream->rx_len = 0;
-        stream->rx_priority = 0;
-        stream->rx_outer_vlan_pbit = 0;
-        stream->rx_inner_vlan_pbit = 0;
-        stream->rx_mpls1 = false;
-        stream->rx_mpls1_exp = 0;
-        stream->rx_mpls1_ttl = 0;
-        stream->rx_mpls1_label = 0;
-        stream->rx_mpls2 = false;
-        stream->rx_mpls2_exp = 0;
-        stream->rx_mpls2_ttl = 0;
-        stream->rx_mpls2_label = 0;
-        stream->rx_source_ip = 0;
-        stream->rx_source_port = 0;
-        stream->rx_first_seq = 0;
-        stream->rx_last_seq = 0;
-       if(stream->config->setup_interval) {
-            stream->setup = true;
-        }
-    }
+    stream->reset_packets_tx = stream->tx_packets;
+    stream->reset_packets_rx = stream->rx_packets;
+    stream->reset_loss = stream->rx_loss;
+
+    stream->rx_min_delay_us = 0;
+    stream->rx_max_delay_us = 0;
+    stream->rx_len = 0;
+    stream->rx_priority = 0;
+    stream->rx_outer_vlan_pbit = 0;
+    stream->rx_inner_vlan_pbit = 0;
+    stream->rx_mpls1 = false;
+    stream->rx_mpls1_exp = 0;
+    stream->rx_mpls1_ttl = 0;
+    stream->rx_mpls1_label = 0;
+    stream->rx_mpls2 = false;
+    stream->rx_mpls2_exp = 0;
+    stream->rx_mpls2_ttl = 0;
+    stream->rx_mpls2_label = 0;
+    stream->rx_source_ip = 0;
+    stream->rx_source_port = 0;
+    stream->rx_first_seq = 0;
+    stream->rx_last_seq = 0;
+
+    stream->reset = true;
+    stream->verified = false;
 }
 
 const char *

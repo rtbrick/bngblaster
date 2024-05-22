@@ -115,13 +115,14 @@ typedef struct bbl_stream_
     uint8_t direction;
     uint8_t tcp_flags;
 
-    bool enabled;
+    volatile bool enabled;
+    volatile bool verified;
+    volatile bool reset;
+
     bool threaded;
     bool session_traffic;
     bool setup;
-    bool verified;
     bool wait;
-    bool reset;
     bool nat;
     bool tcp;
     bool lag;
@@ -166,8 +167,9 @@ typedef struct bbl_stream_
 
     char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
+    volatile uint64_t tx_packets;
+
     uint64_t flow_seq;
-    uint64_t tx_packets;
     uint64_t max_packets;
 
     __time_t tx_first_epoch;
@@ -176,8 +178,9 @@ typedef struct bbl_stream_
 
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
 
-    uint64_t rx_packets;
-    uint64_t rx_loss;
+    volatile uint64_t rx_packets;
+    volatile uint64_t rx_loss;
+    
     uint64_t rx_wrong_session;
     uint64_t rx_wrong_order;
 
