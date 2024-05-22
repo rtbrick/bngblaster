@@ -48,14 +48,19 @@ static void
 bucket_smear(io_bucket_s *io_bucket, uint64_t start_nsec)
 {
     uint64_t nsec = 0;
-    uint64_t step_nsec = io_bucket->nsec / io_bucket->stream_count;
-    bbl_stream_s *stream = io_bucket->stream_head;
+    uint64_t step_nsec;
+    bbl_stream_s *stream;
 
-    io_bucket->base = start_nsec;
-    while(stream) {
-        nsec += step_nsec;
-        stream->expired = nsec;
-        stream = stream->io_next;
+    if(io_bucket && io_bucket->stream_count) {
+        step_nsec = io_bucket->nsec / io_bucket->stream_count;
+        io_bucket->base = start_nsec;
+
+        stream = io_bucket->stream_head;
+        while(stream) {
+            nsec += step_nsec;
+            stream->expired = nsec;
+            stream = stream->io_next;
+        }
     }
 }
 
