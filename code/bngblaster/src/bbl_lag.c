@@ -129,7 +129,7 @@ static void
 bbl_lag_select(bbl_lag_s *lag)
 {
     bbl_lag_member_s *member;
-    bbl_stream_s *stream = lag->stream_head;
+    bbl_stream_s *stream;
     io_handle_s *io;
 
     uint8_t active_count = 0;
@@ -164,6 +164,7 @@ bbl_lag_select(bbl_lag_s *lag)
        active_count >= lag->config->lacp_min_active_links) {
         bbl_lag_update_state(lag, INTERFACE_UP);
         /* Distribute streams */
+        stream = lag->stream_head;
         while(stream) {
             key = stream->flow_id % active_count;
             io = lag->active_list[key]->interface->io.tx;
