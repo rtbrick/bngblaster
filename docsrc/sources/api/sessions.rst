@@ -41,4 +41,8 @@
 |                                   | | ``direction`` (upstream/downstream/both)                           |
 +-----------------------------------+----------------------------------------------------------------------+
 | **session-traffic-reset**         | | Reset all session traffic streams.                                 |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
 +-----------------------------------+----------------------------------------------------------------------+

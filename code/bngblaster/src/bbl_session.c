@@ -1809,10 +1809,19 @@ bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __a
 }
 
 int
-bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments)
 {
     bbl_session_s *session;
     uint32_t i;
+
+    int session_group_id = -1;
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
@@ -1834,6 +1843,10 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments __
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session) {
+                if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                    /* Skip sessions with wrong session-group-id if present. */
+                    continue;
+                }
                 if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
                     g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
                 }
