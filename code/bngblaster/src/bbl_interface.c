@@ -74,13 +74,12 @@ bbl_interface_lock(char *interface_name)
         }
         fclose(lock_file);
     }
-    /* crate lock file */
+    /* create lock file */
     lock_pid = pid;
     lock_file = fopen(lock_path, "w");
     if(!lock_file) {
         LOG(ERROR, "Failed to open interface lock file %s %s (%d)\n", 
             lock_path, strerror(errno), errno);
-        fclose(lock_file);
         return false;
     }
     fprintf(lock_file, "%d", lock_pid);
