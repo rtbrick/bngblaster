@@ -1511,7 +1511,6 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
     bbl_stream_s *stream;
     uint64_t min = now - 100000000; /* now minus 100ms */
     uint64_t expired;
-
     while(io_bucket) {
         if(io_bucket->stream_cur) {
             stream = io_bucket->stream_cur;
@@ -1526,7 +1525,7 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
         while(stream) {
             if(stream->expired > expired) {
                 io_bucket->stream_cur = stream;
-                break; /* next bucket */
+                goto NEXT_BUCKET;
             }
             if (bbl_stream_io_send(stream) == PROTOCOL_SUCCESS) {
                 io_bucket->stream_cur = stream->io_next;
@@ -1535,9 +1534,8 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
             }
             stream = stream->io_next;
         }
-        if(!stream) {
-            io_bucket->stream_cur = io_bucket->stream_head;
-        } 
+        io_bucket->stream_cur = NULL;
+NEXT_BUCKET:
         io_bucket = io_bucket->next;
         if(!io_bucket) io_bucket = io->bucket_head;
         if(io_bucket == io->bucket_cur) return NULL;
