@@ -1809,7 +1809,7 @@ bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __a
 }
 
 int
-bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments)
+bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     bbl_session_s *session;
     uint32_t i;
@@ -1822,9 +1822,14 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments)
         }
     }
 
-    if(session_id) {
-        session = bbl_session_get(session_id);
+    /* Iterate over all sessions */
+    for(i = 0; i < g_ctx->sessions; i++) {
+        session = &g_ctx->session_list[i];
         if(session) {
+            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                /* Skip sessions with wrong session-group-id if present. */
+                continue;
+            }
             if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
                 g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
             }
@@ -1835,31 +1840,8 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments)
             bbl_stream_reset(session->session_traffic.ipv6_down);
             bbl_stream_reset(session->session_traffic.ipv6pd_up);
             bbl_stream_reset(session->session_traffic.ipv6pd_down);
-        } else {
-            return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
-    } else {
-        /* Iterate over all sessions */
-        for(i = 0; i < g_ctx->sessions; i++) {
-            session = &g_ctx->session_list[i];
-            if(session) {
-                if(session_group_id >= 0 && session->session_group_id != session_group_id) {
-                    /* Skip sessions with wrong session-group-id if present. */
-                    continue;
-                }
-                if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
-                    g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
-                }
-                session->session_traffic.flows_verified = 0;
-                bbl_stream_reset(session->session_traffic.ipv4_up);
-                bbl_stream_reset(session->session_traffic.ipv4_down);
-                bbl_stream_reset(session->session_traffic.ipv6_up);
-                bbl_stream_reset(session->session_traffic.ipv6_down);
-                bbl_stream_reset(session->session_traffic.ipv6pd_up);
-                bbl_stream_reset(session->session_traffic.ipv6pd_down);
-            }
-        }   
-    }
+    }   
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
