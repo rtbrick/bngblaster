@@ -160,7 +160,7 @@ io_raw_tx_job(timer_s *timer)
                 if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
                     pcap = true;
                     pcapng_push_packet_header(&io->timestamp, stream->tx_buf, stream->tx_len,
-                                            interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+                                              interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
                 }
                 stream->tx_packets++;
                 stream->flow_seq++;

@@ -53,7 +53,7 @@ bucket_smear(io_bucket_s *io_bucket, uint64_t start_nsec)
 
     if(io_bucket && io_bucket->stream_count) {
         step_nsec = io_bucket->nsec / io_bucket->stream_count;
-        io_bucket->base = start_nsec;
+        io_bucket->base = start_nsec - io_bucket->nsec;
 
         stream = io_bucket->stream_head;
         while(stream) {
@@ -97,7 +97,6 @@ io_stream_clear(io_handle_s *io)
         io_bucket = io_bucket->next;
     }
 }
-
 
 void
 io_stream_smear(io_handle_s *io)
