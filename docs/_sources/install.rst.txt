@@ -39,6 +39,8 @@ and the following standard dependencies:
 
 .. code-block:: none
 
+    sudo apt install -y unzip
+
     # install libdict for Ubuntu 18.04 LTS
     wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
     unzip libdict-debian.zip
@@ -57,7 +59,8 @@ and the following standard dependencies:
         libcunit1-dev \
         libncurses5-dev \
         libssl-dev \
-        libjansson-dev
+        libjansson-dev \
+        libnuma-dev
 
 Build
 ^^^^^
@@ -157,7 +160,7 @@ The following steps are required to build the BNG Blaster with experimental
 
 .. note::
 
-    Tested with DPDK version 22.11.4 and Ubuntu 22.04 (LTS)!
+    Tested with DPDK version 22.11.5 and Ubuntu 22.04 (LTS)!
 
 
 Download and install DPDK:
@@ -166,12 +169,12 @@ https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
 .. code-block:: none
 
     # install meson 
-    sudo apt install meson ninja-build
+    sudo apt install meson ninja-build 
 
     # download DPDK
-    wget https://fast.dpdk.org/rel/dpdk-22.11.4.tar.xz
-    tar xJf dpdk-22.11.4.tar.xz
-    cd dpdk-stable-22.11.4
+    wget https://fast.dpdk.org/rel/dpdk-22.11.5.tar.xz
+    tar xJf dpdk-22.11.5.tar.xz
+    cd dpdk-stable-22.11.5
 
     # build with driver SDK
     meson -Denable_driver_sdk=true build
@@ -196,7 +199,7 @@ If DPDK is installed correctly, cmake should show the following output:
     -- Build bngblaster with DPDK support
     -- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.0")
     -- Checking for module 'libdpdk'
-    --   Found libdpdk, version 22.11.4
+    --   Found libdpdk, version 22.11.5
     -- Found DPDK via pkg-config
 
 The installed version should now show `dpdk` as new IO mode. 

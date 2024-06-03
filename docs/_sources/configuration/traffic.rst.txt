@@ -13,9 +13,6 @@
 | **stop-verified**               | | Automatically stop traffic streams if verified.      |
 |                                 | | Default: false                                       |
 +---------------------------------+--------------------------------------------------------+
-| **max-burst**                   | | Maximum stream flow burst size in packets.           |
-|                                 | | Default: 1024 Range: 1 to 65535                      |
-+---------------------------------+--------------------------------------------------------+
 | **stream-autostart**            | | Enable stream autostart.                             |
 |                                 | | Default: true                                        |
 +---------------------------------+--------------------------------------------------------+
