@@ -1519,6 +1519,8 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
             io_bucket->base += io_bucket->nsec;
             if(io_bucket->base < min) {
                 io_bucket->base = min;
+            } else if(io_bucket->base > now) {
+                io_bucket->base = now;
             }
         }
         expired = now - io_bucket->base;
@@ -2634,6 +2636,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set(root, "debug-tx-seq", json_integer(stream->flow_seq));
         json_object_set(root, "debug-max-packets", json_integer(stream->max_packets));
         json_object_set(root, "debug-tcp-flags", json_integer(stream->tcp_flags));
+        json_object_set(root, "debug-expired", json_integer(stream->expired));
     }
     return root;
 }
