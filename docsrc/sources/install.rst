@@ -4,7 +4,7 @@ Installation
 ============
 
 The BNG Blaster should run on any modern Linux distribution
-but is primarily tested on Ubuntu 18.04, 20.04 and 22.04 LTS.
+but is primarily tested on Ubuntu 22.04 LTS.
 
 Install Ubuntu
 --------------
@@ -66,7 +66,7 @@ Build
 ^^^^^
 
 Per default cmake (`cmake .`) will build the BNG Blaster as a release
-version with optimization and without debugging symbols.
+version with optimization and debug symbols (RelWithDebInfo).
 
 .. code-block:: none
 
@@ -74,11 +74,11 @@ version with optimization and without debugging symbols.
     cd bngblaster
     mkdir build
     cd build
-    cmake -DCMAKE_BUILD_TYPE=Release ..
+    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
     make all
 
-Alternative it is also possible to build a debug
-version for detailed troubleshooting using gdb.
+Alternative it is also possible to build a debug version without 
+optimization for detailed troubleshooting using gdb.
 
 .. code-block:: none
 
