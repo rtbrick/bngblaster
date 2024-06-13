@@ -30,4 +30,7 @@ isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *
 int
 isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
+int
+isis_ctrl_update_priority(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
 #endif

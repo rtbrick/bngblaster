@@ -158,6 +158,7 @@ isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s 
     isis_lsp_s *lsp;
     isis_lsp_entry_s *lsp_entry;
 
+    dict_insert_result result;
     dict_remove_result removed;
     void **search = NULL;
 
@@ -192,6 +193,28 @@ isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s 
                             if(lsp->refcount) lsp->refcount--;
                             free(removed.datum);
                         }
+                        /* Peer has newer version of LSP, let's request
+                         * them to update. */
+                        if(seq > lsp->seq) {
+                            isis_psnp_tree_add(adjacency, lsp);
+                        }
+                    }
+                } else {
+                    if(lsp_entry->seq && lsp_entry->lifetime) {
+                        /* Create new LSP. */
+                        lsp = isis_lsp_new(lsp_id, adjacency->level, adjacency->instance);
+                        result = hb_tree_insert(lsdb,  &lsp->id);
+                        if(result.inserted) {
+                            *result.datum_ptr = lsp;
+                            lsp->level = adjacency->level;
+                            lsp->source.type = ISIS_SOURCE_ADJACENCY;
+                            lsp->source.adjacency = adjacency;
+                            lsp->instance = adjacency->instance;
+                            isis_psnp_tree_add(adjacency, lsp);
+                        } else {
+                            free(lsp);
+                            LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
+                        }
                     }
                 }
             }
@@ -199,7 +222,6 @@ isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s 
         tlv = isis_pdu_next_tlv(pdu);
     }
 }
-
 
 void
 isis_lsp_retry_job(timer_s *timer)
@@ -321,6 +343,79 @@ isis_lsp_tx_job(timer_s *timer)
     isis_adjacency_s *adjacency = timer->data;
     isis_flood_entry_s *entry;
     isis_lsp_s *lsp;
+    uint16_t window = adjacency->window_size;
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_isis_s isis = {0};
+
+    struct timespec now;
+    struct timespec ago;
+    uint16_t remaining_lifetime = 0;
+
+    uint64_t lsp_id_zero = 0;
+    dict_remove_result removed;
+    void **search = NULL;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    eth.type = ISIS_PROTOCOL_IDENTIFIER;
+    eth.next = &isis;
+    eth.src = adjacency->interface->mac;
+    eth.vlan_outer = adjacency->interface->vlan;
+    if(adjacency->level == ISIS_LEVEL_1) {
+        eth.dst = g_isis_mac_all_l1;
+        isis.type = ISIS_PDU_L1_LSP;
+    } else {
+        eth.dst = g_isis_mac_all_l2;
+        isis.type = ISIS_PDU_L2_LSP;
+    }
+    
+    search = hb_tree_search_ge(adjacency->flood_tree, &lsp_id_zero);
+    while(search) {
+        entry = *search;
+        lsp = entry->lsp;
+
+        LOG(PACKET, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
+            isis_level_string(adjacency->level), 
+            isis_lsp_id_to_str(&lsp->id), 
+            lsp->seq,
+            adjacency->interface->name);
+
+        /* Update lifetime */
+        timespec_sub(&ago, &now, &lsp->timestamp);
+        if(ago.tv_sec < lsp->lifetime) {
+            remaining_lifetime = lsp->lifetime - ago.tv_sec;
+        }
+        isis_pdu_update_lifetime(&lsp->pdu, remaining_lifetime);
+
+        isis.pdu = lsp->pdu.pdu;
+        isis.pdu_len = lsp->pdu.pdu_len;
+        if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) != BBL_TXQ_OK) {
+            break;
+        }
+        adjacency->stats.lsp_tx++;
+        adjacency->interface->stats.isis_tx++;
+
+        /* Remove from flood tree and get next. */
+        removed = hb_tree_remove(adjacency->flood_tree, &lsp->id);
+        if(removed.removed) {
+            assert(lsp->refcount);
+            if(lsp->refcount) lsp->refcount--;
+            free(removed.datum);
+        }
+        search = hb_tree_search_ge(adjacency->flood_tree, &lsp_id_zero);
+
+        if(window) window--;
+        if(window == 0) break;
+    }
+}
+
+void
+isis_lsp_tx_p2p_job(timer_s *timer)
+{
+    isis_adjacency_s *adjacency = timer->data;
+    isis_flood_entry_s *entry;
+    isis_lsp_s *lsp;
     hb_itor *itor;
     bool next;
     uint16_t window = adjacency->window_size;
@@ -408,7 +503,7 @@ isis_lsp_final(isis_lsp_s *lsp)
 }
 
 static isis_lsp_s *
-isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint8_t fragment, bool purge)
+isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint16_t fragment, bool purge)
 {
     isis_config_s *config = instance->config;
 
@@ -493,6 +588,60 @@ isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint8_t fragment, bo
     return lsp;
 }
 
+static void
+isis_lsp_self_dis_purge(isis_adjacency_s *adjacency)
+{
+    isis_instance_s *instance   = adjacency->instance;
+    isis_config_s   *config     = instance->config;
+    isis_lsp_s      *lsp;
+
+    hb_tree *lsdb;
+    void **search = NULL;
+
+    uint16_t fragment = adjacency->pseudo_node_id << 8;
+    uint64_t lsp_id = htobe64(fragment);
+    memcpy(&lsp_id, &config->system_id, ISIS_SYSTEM_ID_LEN);
+    lsp_id = be64toh(lsp_id);
+
+    lsdb = instance->level[adjacency->level-1].lsdb;
+    search = hb_tree_search(lsdb, &lsp_id);
+    if(search) {
+        lsp = *search;
+        isis_lsp_purge(lsp);
+    }
+}
+
+static void
+isis_lsp_self_dis(isis_adjacency_s *adjacency)
+{
+    isis_instance_s *instance   = adjacency->instance;
+    isis_config_s   *config     = instance->config;
+    isis_peer_s     *peer;
+
+    isis_lsp_s *lsp;
+    isis_pdu_s *pdu;
+
+    uint16_t fragment = adjacency->pseudo_node_id << 8;
+    
+    if(adjacency->dis) return;
+
+    lsp = isis_lsp_fragment(instance, adjacency->level, fragment, false);
+    if(!lsp) return;
+    pdu = &lsp->pdu;
+
+    isis_pdu_add_tlv_ext_reachability(pdu, config->system_id, 0, 0);
+
+    peer = adjacency->peer;
+    while(peer) {
+        if(peer->state == ISIS_PEER_STATE_UP && ISIS_PDU_REMAINING(pdu) >= 13) {
+            isis_pdu_add_tlv_ext_reachability(pdu, peer->system_id, 0, 0);
+        }
+        peer = peer->next;
+    }
+    isis_lsp_final(lsp);
+    isis_lsp_flood(lsp);
+}
+
 /**
  * This function adds/updates 
  * the self originated LSP entries. 
@@ -510,7 +659,7 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     isis_lsp_s *lsp;
     isis_pdu_s *pdu;
 
-    uint8_t  fragment = 0;
+    uint16_t fragment = 0;
     
     ipv4_prefix loopback_prefix;
 
@@ -576,9 +725,28 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
                 &adjacency->interface->ip6, 
                 adjacency->metric);
         }
-        isis_pdu_add_tlv_ext_reachability(pdu, 
-            adjacency->peer->system_id, 
-            adjacency->metric);
+        if(adjacency->p2p) {
+            isis_pdu_add_tlv_ext_reachability(pdu, 
+                adjacency->peer->system_id, 0,
+                adjacency->metric);
+        } else {
+            if(adjacency->dis) {
+                isis_pdu_add_tlv_ext_reachability(pdu, 
+                    adjacency->dis->system_id, 
+                    adjacency->dis->pseudo_node_id,
+                    adjacency->metric);
+
+                isis_lsp_self_dis_purge(adjacency);
+            } else {
+                isis_pdu_add_tlv_ext_reachability(pdu, 
+                    config->system_id,
+                    adjacency->pseudo_node_id,
+                    adjacency->metric);
+
+                isis_lsp_self_dis(adjacency);
+            }
+        }
+
 NEXT:
         adjacency = adjacency->next;
     }
@@ -595,7 +763,7 @@ NEXT:
         }
 
         isis_pdu_add_tlv_ext_reachability(pdu, 
-            external_connection->system_id, 
+            external_connection->system_id, 0,
             external_connection->level[level-1].metric);
         external_connection = external_connection->next;
     }
@@ -735,16 +903,9 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     isis_lsp_flood(lsp);
 
 ACK:
-    /* Add LSP to adjacency PSNP tree for acknowledgement. */
-    result = hb_tree_insert(adjacency->psnp_tree, &lsp->id);
-    if(result.inserted) {
-        *result.datum_ptr = lsp;
-        lsp->refcount++;
-        if(!adjacency->timer_psnp_started) {
-            adjacency->timer_psnp_started = true;
-            timer_add(&g_ctx->timer_root, &adjacency->timer_psnp_next, 
-                      "ISIS PSNP", 1, 0, adjacency, &isis_psnp_job);
-        }
+    if(adjacency->p2p) {
+        /* Add LSP to adjacency PSNP tree for acknowledgement. */
+        isis_psnp_tree_add(adjacency, lsp);
     }
     return;
 }

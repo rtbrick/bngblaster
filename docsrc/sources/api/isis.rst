@@ -36,5 +36,12 @@
 |                                   | | ``timer`` Optional flap timer (default 30s)                        |
 |                                   | | ``id`` Mandatory LSP identifier                                    |
 +-----------------------------------+----------------------------------------------------------------------+
+| **isis-update-priority**          | | Update ISIS interface priority.                                    |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``interface`` Mandatory                                            |
+|                                   | | ``level`` Mandatory                                                |
+|                                   | | ``priority`` Mandatory priority (0-127)                            |
++-----------------------------------+----------------------------------------------------------------------+
 | **isis-teardown**                 | | Teardown ISIS.                                                     |
 +-----------------------------------+----------------------------------------------------------------------+

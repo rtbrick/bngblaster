@@ -53,4 +53,6 @@ bool ipv4_addr_in_network(uint32_t address, ipv4_prefix *network);
 
 uint64_t timespec_to_nsec(struct timespec *timestamp);
 
+int compare_mac_addresses(uint8_t *mac1, uint8_t *mac2);
+
 #endif

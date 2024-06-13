@@ -665,9 +665,10 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     const char *schema[] = {
         "interface", "address", "gateway",
         "address-ipv6", "gateway-ipv6", "ipv6-router-advertisement",
-        "gateway-mac", "vlan", "mtu",
-        "gateway-resolve-wait", "isis-instance-id", "isis-level",
-        "isis-p2p", "isis-l1-metric", "isis-l2-metric",
+        "gateway-mac", "vlan", "mtu", "gateway-resolve-wait", 
+        "isis-instance-id", "isis-level", "isis-p2p", 
+        "isis-l1-metric", "isis-l2-metric",
+        "isis-l1-priority", "isis-l2-priority",
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
         "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
         "ldp-instance-id"
@@ -773,6 +774,18 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             network_config->isis_l2_metric = json_number_value(value);
         } else {
             network_config->isis_l2_metric = 10;
+        }
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l1-priority", 0, 127);
+        if(value) {
+            network_config->isis_l1_priority = json_number_value(value);
+        } else {
+            network_config->isis_l1_priority = 10;
+        }
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l2-priority", 0, 127);
+        if(value) {
+            network_config->isis_l2_priority = json_number_value(value);
+        } else {
+            network_config->isis_l2_priority = 10;
         }
     }
 
