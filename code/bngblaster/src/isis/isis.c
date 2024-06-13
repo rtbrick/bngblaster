@@ -126,6 +126,12 @@ isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) 
         isis_pdu_type_string(pdu.pdu_type), interface->name);
 
     switch(pdu.pdu_type) {
+        case ISIS_PDU_L1_HELLO:
+            isis_hello_handler_rx(interface, eth, &pdu, ISIS_LEVEL_1);
+            break;
+        case ISIS_PDU_L2_HELLO:
+            isis_hello_handler_rx(interface, eth, &pdu, ISIS_LEVEL_2);
+            break;
         case ISIS_PDU_P2P_HELLO:
             isis_p2p_hello_handler_rx(interface, &pdu);
             break;
@@ -160,7 +166,7 @@ isis_teardown_job(timer_s *timer) {
     for(int i=0; i<ISIS_LEVELS; i++) {
         adjacency = instance->level[i].adjacency;
         while(adjacency) {
-            isis_adjacency_down(adjacency);
+            isis_adjacency_down(adjacency, "teardown");
             adjacency = adjacency->next;
         }
     }

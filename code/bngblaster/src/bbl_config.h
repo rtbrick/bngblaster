@@ -128,6 +128,8 @@ typedef struct bbl_network_config_
     bool     isis_p2p;
     uint32_t isis_l1_metric;
     uint32_t isis_l2_metric;
+    uint8_t  isis_l1_priority;
+    uint8_t  isis_l2_priority;
 
     uint16_t ospfv2_instance_id;
     uint32_t ospfv2_metric;

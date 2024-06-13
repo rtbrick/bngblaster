@@ -16,6 +16,9 @@ const char *
 isis_level_string(uint8_t level);
 
 const char *
+isis_peer_state_string(uint8_t state);
+
+const char *
 isis_p2p_adjacency_state_string(uint8_t state);
 
 const char *
