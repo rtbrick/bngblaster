@@ -15,41 +15,6 @@ isis_p2p_hello_timeout(timer_s *timer)
     interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
 }
 
-void
-isis_p2p_hold_timeout(timer_s *timer)
-{
-    isis_adjacency_s *adjacency = timer->data;
-
-    if(adjacency->state == ISIS_ADJACENCY_STATE_DOWN) {
-        return;
-    }
-
-    LOG(ISIS, "ISIS %s hold timeout to %s on interface %s\n",
-        isis_level_string(adjacency->level), 
-        isis_system_id_to_str(adjacency->peer->system_id),
-        adjacency->interface->name);
-
-    isis_adjacency_down(adjacency);
-    isis_lsp_self_update(adjacency->instance, adjacency->level);
-
-    adjacency->interface->isis_adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
-}
-
-static void
-isis_p2p_restart_hold_timers(bbl_network_interface_s *interface)
-{
-    isis_adjacency_s *adjacency;
-
-    for(int i=0; i<ISIS_LEVELS; i++) {
-        adjacency = interface->isis_adjacency[i];
-        if(adjacency) {
-            timer_add(&g_ctx->timer_root, &adjacency->timer_hold, 
-                      "ISIS Hold", adjacency->peer->hold_time, 0, adjacency, 
-                      &isis_p2p_hold_timeout);
-        }
-    }
-}
-
 /**
  * isis_p2p_hello_encode
  *
@@ -76,14 +41,14 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     char *key = NULL;
 
     /* Start next timer ... */
-    timer_add(&g_ctx->timer_root, &interface->timer_isis_hello, 
+    timer_add(&g_ctx->timer_root, &adjacency->timer_hello, 
               "ISIS Hello", config->hello_interval, 0, interface, 
               &isis_p2p_hello_timeout);
 
-    if((adjacency->level & ISIS_LEVEL_1) && config->level1_auth_hello) {
+    if((interface->isis_adjacency[ISIS_LEVEL_1_IDX]) && config->level1_auth_hello) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if((adjacency->level & ISIS_LEVEL_2) && config->level2_auth_hello) {
+    } else if((interface->isis_adjacency[ISIS_LEVEL_2_IDX]) && config->level2_auth_hello) {
         auth = config->level2_auth;
         key = config->level2_key;
     }
@@ -138,53 +103,59 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
 void
 isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
 {
-    isis_adjacency_p2p_s *adjacency = interface->isis_adjacency_p2p;
-    isis_instance_s *instance  = NULL;
-    isis_config_s *config    = NULL;
-
+    isis_adjacency_p2p_s *adjacency_p2p = interface->isis_adjacency_p2p;
+    isis_adjacency_s *adjacency;
+    isis_instance_s *instance;
+    isis_config_s *config;
     isis_peer_s *peer;
     isis_tlv_s *tlv;
-
-    uint8_t *state = NULL;
-    uint8_t new_state = ISIS_P2P_ADJACENCY_STATE_UP;
-
+    
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
-    if(!adjacency) {
+    uint8_t new_state = ISIS_PEER_STATE_UP;
+
+    if(!adjacency_p2p) {
+        LOG(ISIS, "ISIS RX P2P-Hello on broadcast interface %s\n", interface->name);
         return;
     }
-    instance = adjacency->instance;
+    peer = adjacency_p2p->peer;
+    instance = adjacency_p2p->instance;
     config = instance->config;
 
-    adjacency->stats.hello_rx++;
+    adjacency_p2p->stats.hello_rx++;
 
-    if((adjacency->level & ISIS_LEVEL_1) && config->level1_auth_hello) {
+    if((interface->isis_adjacency[ISIS_LEVEL_1_IDX]) && config->level1_auth_hello) {
         auth = config->level1_auth;
         key = config->level1_key;
-    } else if((adjacency->level & ISIS_LEVEL_2) && config->level2_auth_hello) {
+    } else if((interface->isis_adjacency[ISIS_LEVEL_2_IDX]) && config->level2_auth_hello) {
         auth = config->level2_auth;
         key = config->level2_key;
     }
 
     if(!isis_pdu_validate_auth(pdu, auth, key)) {
         LOG(ISIS, "ISIS RX P2P-Hello authentication failed on interface %s\n",
-            adjacency->interface->name);
+            interface->name);
         return;
     }
     
-    peer = adjacency->peer;
-    peer->level = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEVEL) & 0x03;
-    memcpy(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN);
-    peer->hold_time = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_HOLD_TIME));
-
-    isis_p2p_restart_hold_timers(interface);
+    isis_peer_update(peer, pdu);
 
     tlv = isis_pdu_first_tlv(pdu);
     while(tlv) {
-        switch (tlv->type) {
+        switch(tlv->type) {
             case ISIS_TLV_P2P_ADJACENCY_STATE:
-                state = tlv->value;
+                switch(*tlv->value) {
+                    case ISIS_P2P_ADJACENCY_STATE_UP:
+                    case ISIS_P2P_ADJACENCY_STATE_INIT:
+                        new_state = ISIS_PEER_STATE_UP;
+                        break;
+                    case ISIS_P2P_ADJACENCY_STATE_DOWN:
+                        new_state = ISIS_PEER_STATE_INIT;
+                        break;
+                    default:
+                        break;
+                }
                 break;
             default:
                 break;
@@ -192,32 +163,19 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
         tlv = isis_pdu_next_tlv(pdu);
     }
 
-    if(state) {
-        switch(*state) {
-            case ISIS_P2P_ADJACENCY_STATE_UP:
-                new_state = ISIS_P2P_ADJACENCY_STATE_UP;
-                break;
-            case ISIS_P2P_ADJACENCY_STATE_INIT:
-                new_state = ISIS_P2P_ADJACENCY_STATE_UP;
-                break;
-            case ISIS_P2P_ADJACENCY_STATE_DOWN:
-                new_state = ISIS_P2P_ADJACENCY_STATE_INIT;
-                break;
-            default:
-                break;
-        }
-    }
-
-    if(adjacency->state != new_state) {
+    if(peer->state != new_state) {
+        peer->state = new_state;
         interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
-        if(new_state == ISIS_P2P_ADJACENCY_STATE_UP) {
-            for(int i=0; i<ISIS_LEVELS; i++) {
-                if(interface->isis_adjacency[i]) {
-                    isis_adjacency_up(interface->isis_adjacency[i]);
-                    isis_lsp_self_update(adjacency->instance, i+1);
+        for(int i=0; i<ISIS_LEVELS; i++) {
+            adjacency = interface->isis_adjacency[i];
+            if(adjacency) {
+                if(new_state == ISIS_PEER_STATE_UP) {
+                    isis_adjacency_up(adjacency);
+                } else {
+                    isis_adjacency_down(adjacency, "hello goodby");
                 }
+                isis_lsp_self_update(instance, adjacency->level);
             }
         }
-        adjacency->state = new_state;
     }
 }

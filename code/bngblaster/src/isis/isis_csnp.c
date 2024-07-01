@@ -43,6 +43,9 @@ isis_csnp_job(timer_s *timer)
     struct timespec ago;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
+    /* Return if we are not the DIS */
+    if(adjacency->dis) return;
+
     /* Build PDU */
     if(level == ISIS_LEVEL_1) {
         isis_pdu_init(&pdu, ISIS_PDU_L1_CSNP);

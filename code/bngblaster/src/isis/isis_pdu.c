@@ -47,7 +47,7 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
             if(hdr_len != ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO) {
                 return DECODE_ERROR;
             }
-            pdu_len = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEN));
+            pdu_len = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEN));
             break;
         case ISIS_PDU_L1_CSNP:
         case ISIS_PDU_L2_CSNP:
@@ -134,7 +134,13 @@ isis_pdu_update_len(isis_pdu_s *pdu)
         case ISIS_PDU_P2P_HELLO:
             pdu->tlv_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO;
             *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO;
-            *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_P2P_HELLO_LEN) = htobe16(pdu->pdu_len);
+            *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEN) = htobe16(pdu->pdu_len);
+            break;
+        case ISIS_PDU_L1_HELLO:
+        case ISIS_PDU_L2_HELLO:
+            pdu->tlv_offset = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_HELLO;
+            *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HDR_LEN) = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_HELLO;
+            *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEN) = htobe16(pdu->pdu_len);
             break;
         case ISIS_PDU_L1_CSNP:
         case ISIS_PDU_L2_CSNP:
@@ -444,6 +450,27 @@ isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state)
 }
 
 void
+isis_pdu_add_tlv_is_neighbor(isis_pdu_s *pdu, isis_adjacency_s *adjacency) 
+{
+    isis_peer_s *peer = adjacency->peer;
+    isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
+    uint8_t *tlv_cur = tlv->value;
+    tlv->type = ISIS_TLV_IS_NEIGHBOR;
+    tlv->len = 0;
+    while(peer) {
+        if(peer->state != ISIS_PEER_STATE_DOWN) {
+            memcpy(tlv_cur, peer->mac, ETH_ADDR_LEN);
+            tlv_cur += ETH_ADDR_LEN;
+            tlv->len += ETH_ADDR_LEN;
+        }
+        peer = peer->next;
+    }
+    if(tlv->len) {
+        ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
+    }
+}
+
+void
 isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uint32_t metric, isis_sub_tlv_t *stlv)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
@@ -525,7 +552,9 @@ isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 }
 
 void
-isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint32_t metric)
+isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, 
+                                  uint8_t pseudo_node, 
+                                  uint32_t metric)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
@@ -534,6 +563,7 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint32_t 
     memcpy(tlv_cur, system_id, ISIS_SYSTEM_ID_LEN);
     tlv_cur += ISIS_SYSTEM_ID_LEN; 
     *(uint32_t*)tlv_cur = htobe32(metric);
+    *tlv_cur = pseudo_node;
     tlv_cur += sizeof(metric);
     *tlv_cur = 0; 
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);

@@ -31,6 +31,17 @@ isis_level_string(uint8_t level)
 }
 
 const char *
+isis_peer_state_string(uint8_t state)
+{
+    switch(state) {
+        case ISIS_PEER_STATE_DOWN: return "Down";
+        case ISIS_PEER_STATE_INIT: return "Init";
+        case ISIS_PEER_STATE_UP: return "Up";
+        default: return "INVALID";
+    }
+}
+
+const char *
 isis_p2p_adjacency_state_string(uint8_t state)
 {
     switch(state) {
@@ -45,8 +56,8 @@ const char *
 isis_adjacency_state_string(uint8_t state)
 {
     switch(state) {
-        case ISIS_ADJACENCY_STATE_DOWN: return "Up";
-        case ISIS_ADJACENCY_STATE_UP: return "Down";
+        case ISIS_ADJACENCY_STATE_DOWN: return "Down";
+        case ISIS_ADJACENCY_STATE_UP: return "Up";
         default: return "INVALID";
     }
 }

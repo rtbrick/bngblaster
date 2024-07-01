@@ -14,6 +14,7 @@
 #define ISIS_PROTOCOL_IDENTIFIER        0x83
 
 #define ISIS_HDR_LEN_COMMON             8
+#define ISIS_HDR_LEN_HELLO              19
 #define ISIS_HDR_LEN_P2P_HELLO          12
 #define ISIS_HDR_LEN_CSNP               25
 #define ISIS_HDR_LEN_PSNP               9
@@ -22,10 +23,13 @@
 #define ISIS_OFFSET_HDR_LEN             1
 #define ISIS_OFFSET_HDR_SYSTEM_ID_LEN   3
 
-#define ISIS_OFFSET_P2P_HELLO_LEVEL     8
-#define ISIS_OFFSET_P2P_HELLO_SYSTEM_ID 9
-#define ISIS_OFFSET_P2P_HELLO_HOLD_TIME 15
-#define ISIS_OFFSET_P2P_HELLO_LEN       17
+#define ISIS_OFFSET_HELLO_LEVEL         8
+#define ISIS_OFFSET_HELLO_SYSTEM_ID     9
+#define ISIS_OFFSET_HELLO_HOLD_TIME     15
+#define ISIS_OFFSET_HELLO_LEN           17
+#define ISIS_OFFSET_HELLO_PRIORITY      19
+#define ISIS_OFFSET_HELLO_DIS           20
+#define ISIS_OFFSET_HELLO_DIS_PSEUDO    26
 
 #define ISIS_OFFSET_CSNP_LEN            8
 #define ISIS_OFFSET_CSNP_SOURCE_ID      10
@@ -95,9 +99,15 @@ typedef struct isis_adjacency_p2p_ isis_adjacency_p2p_s;
 
 /* ENUMS ... */
 
+typedef enum isis_peer_state_ {
+    ISIS_PEER_STATE_DOWN            = 0,
+    ISIS_PEER_STATE_INIT            = 1,
+    ISIS_PEER_STATE_UP              = 2
+} isis_peer_state;  
+
 typedef enum isis_adjacency_state_ {
-    ISIS_ADJACENCY_STATE_DOWN   = 0,
-    ISIS_ADJACENCY_STATE_UP     = 1
+    ISIS_ADJACENCY_STATE_DOWN       = 0,
+    ISIS_ADJACENCY_STATE_UP         = 1
 } isis_adjacency_state;    
 
 typedef enum isis_p2p_adjacency_state_ {
@@ -107,9 +117,9 @@ typedef enum isis_p2p_adjacency_state_ {
 } isis_p2p_adjacency_state;
 
 typedef enum isis_auth_type_{
-    ISIS_AUTH_NONE              = 0,
-    ISIS_AUTH_CLEARTEXT         = 1,
-    ISIS_AUTH_HMAC_MD5          = 54  
+    ISIS_AUTH_NONE                  = 0,
+    ISIS_AUTH_CLEARTEXT             = 1,
+    ISIS_AUTH_HMAC_MD5              = 54  
 } __attribute__ ((__packed__)) isis_auth_type;
 
 typedef enum isis_lsp_source_{
@@ -135,6 +145,7 @@ typedef enum isis_pdu_type_ {
  */
 typedef enum isis_tlv_type_ {   
     ISIS_TLV_AREA_ADDRESSES         = 1,
+    ISIS_TLV_IS_NEIGHBOR            = 6,
     ISIS_TLV_PADDING                = 8,
     ISIS_TLV_LSP_ENTRIES            = 9,
     ISIS_TLV_AUTH                   = 10,
@@ -248,17 +259,34 @@ typedef struct isis_config_ {
     struct isis_config_ *next; 
 } isis_config_s;
 
+/* ISIS peer/neighbor structure. */
 typedef struct isis_peer_ {
     uint8_t  level;
     uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
+    uint8_t  pseudo_node_id;
+    uint8_t  state;
+    uint8_t  priority; 
+    uint8_t  mac[ETH_ADDR_LEN]; 
+
     uint16_t hold_time;
     char    *hostname;
+
+    struct timer_ *timer_hold;
+    struct isis_adjacency_ *adjacency;
+    struct isis_adjacency_p2p_ *adjacency_p2p;
+
+    /* Pointer to next peer */
+    struct isis_peer_ *next; 
 } isis_peer_s;
 
 typedef struct isis_adjacency_ {
     bbl_network_interface_s *interface;
     isis_instance_s *instance;
     isis_peer_s *peer;
+    isis_peer_s *dis;
+    uint8_t priority; /* local priority */
+
+    bool p2p;
 
     /* Pointer to next adjacency of 
      * corresponding instance with 
@@ -273,14 +301,16 @@ typedef struct isis_adjacency_ {
     struct timer_   *timer_csnp;
     struct timer_   *timer_csnp_next;
     struct timer_   *timer_psnp_next;
-    struct timer_   *timer_hold;
+    struct timer_   *timer_hello;
 
     bool timer_psnp_started;
 
-    uint8_t  level;
+    uint8_t  pseudo_node_id;
+    uint8_t  level; /* adjacency level (L1 or L2) */
+    uint8_t  levels; /* interface levels (L1, L2 or L1L2) */ 
     uint8_t  state;
-    uint16_t window_size;
-
+    uint16_t window_size; /* lsp-tx-window-size */
+    
     uint32_t metric;
     uint64_t csnp_start;
 
@@ -302,6 +332,8 @@ typedef struct isis_adjacency_p2p_ {
     isis_instance_s *instance;
     isis_peer_s *peer;
     
+    struct timer_ *timer_hello;
+
     uint8_t level;
     uint8_t state;
 
@@ -315,6 +347,7 @@ typedef struct isis_adjacency_p2p_ {
 typedef struct isis_instance_ {
     isis_config_s  *config;
     bool            overload;
+    uint8_t         next_pseudo_node_id;
 
     bool            teardown;
     struct timer_  *timer_teardown;

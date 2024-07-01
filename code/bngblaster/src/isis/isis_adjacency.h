@@ -18,6 +18,6 @@ void
 isis_adjacency_up(isis_adjacency_s *adjacency);
 
 void
-isis_adjacency_down(isis_adjacency_s *adjacency);
+isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason);
 
 #endif

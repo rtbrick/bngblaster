@@ -40,13 +40,14 @@
 static json_t *
 isis_ctrl_adjacency(isis_adjacency_s *adjacency)
 {
+    isis_peer_s *peer;
     json_t *root = NULL;
-    json_t *peer = NULL;
+    json_t *peers = NULL;
     json_t *stats = NULL;
     if(!adjacency) {
         return NULL;
     }
-
+    
     stats = json_object();
     if(adjacency->level == ISIS_LEVEL_1) {
         json_object_set(stats, "l1-hello-rx", json_integer(adjacency->stats.hello_rx));
@@ -68,23 +69,38 @@ isis_ctrl_adjacency(isis_adjacency_s *adjacency)
         json_object_set(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     }
 
-    peer = json_pack("{ss si}",
-                     "system-id", isis_system_id_to_str(adjacency->peer->system_id),
-                     "hold-timer", adjacency->peer->hold_time);
+    peers = json_array();
+
+    peer = adjacency->peer;
+    while(peer) {
+        json_array_append(peers, json_pack("{ss ss si si ss}",
+                          "system-id", isis_system_id_to_str(peer->system_id),
+                          "mac", format_mac_address(peer->mac),
+                          "priority", peer->priority,
+                          "hold-timer", peer->hold_time,
+                          "state", isis_peer_state_string(peer->state)));
+        peer = peer->next;
+    }
 
     root = json_pack("{ss ss ss si ss so so}",
                 "interface", adjacency->interface->name,
-                "type", "LAN",
+                "type", "Broadcast",
                 "level", isis_level_string(adjacency->level),
                 "instance-id", adjacency->instance->config->id,
                 "adjacency-state", isis_adjacency_state_string(adjacency->state),
-                "peer", peer,
+                "peers", peers,
                 "stats", stats);
 
     if(!root) {
-        if(peer) json_decref(peer);
+        if(peers) json_decref(peers);
+        if(stats) json_decref(stats);
+    } else {
+        if(adjacency->dis) {
+            json_object_set(root, "dis", json_string(isis_system_id_to_str(adjacency->dis->system_id)));
+        } else {
+            json_object_set(root, "dis", json_string(adjacency->instance->config->system_id_str));
+        }
     }
-
     return root;
 }
 
@@ -124,9 +140,10 @@ isis_ctrl_adjacency_p2p(bbl_network_interface_s *network_interface)
         json_object_set(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     }
 
-    peer = json_pack("{ss si}",
+    peer = json_pack("{ss si ss}",
                      "system-id", isis_system_id_to_str(p2p_adjacency->peer->system_id),
-                     "hold-timer", p2p_adjacency->peer->hold_time);
+                     "hold-timer", p2p_adjacency->peer->hold_time,
+                     "state", isis_peer_state_string(p2p_adjacency->peer->state));
 
     root = json_pack("{ss ss, ss si ss so so}",
                      "interface", p2p_adjacency->interface->name,
@@ -459,5 +476,42 @@ int
 isis_ctrl_teardown(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused))) 
 {
     isis_teardown();
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+isis_ctrl_update_priority(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments) 
+{
+    int level = 0;
+    int priority = 0;
+    char *ifname;
+    bbl_network_interface_s *interface = NULL;
+    isis_adjacency_s *adjacency;
+
+    /* Unpack further arguments */
+    if(json_unpack(arguments, "{s:s}", "interface", &ifname) != 0) {
+        return bbl_ctrl_status(fd, "error", 400, "missing argument interface");
+    }
+    interface = bbl_network_interface_get(ifname);
+    if(!interface) {
+        return bbl_ctrl_status(fd, "error", 404, "interface not found");
+    }
+
+    if(json_unpack(arguments, "{s:i}", "priority", &priority) != 0) { \
+        return bbl_ctrl_status(fd, "error", 400, "missing argument priority");
+    }
+    if(priority < 0 || priority > 127) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid priority (0-127)");
+    }
+
+    ISIS_CTRL_ARG_LEVEL(arguments, fd, level);
+    adjacency = interface->isis_adjacency[level-1];
+    if(!adjacency) {
+        return bbl_ctrl_status(fd, "error", 404, "adjacency not found");
+    }
+
+    adjacency->priority = priority;    
+    isis_peer_dis_elect(adjacency);
+    isis_lsp_self_update(adjacency->instance, adjacency->level);
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

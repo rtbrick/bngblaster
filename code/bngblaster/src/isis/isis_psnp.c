@@ -9,7 +9,7 @@
 #include "isis.h"
 
 void
-isis_psnp_job (timer_s *timer)
+isis_psnp_job(timer_s *timer)
 {
     isis_adjacency_s *adjacency = timer->data;
     isis_instance_s *instance = adjacency->instance;
@@ -111,10 +111,16 @@ isis_psnp_job (timer_s *timer)
         }
         tlv->len+=sizeof(isis_lsp_entry_s);
         entry = (isis_lsp_entry_s *)ISIS_PDU_CURSOR(&pdu);
-        entry->lifetime = htobe16(remaining_lifetime);
         entry->lsp_id = htobe64(lsp->id);
-        entry->seq = htobe32(lsp->seq);
-        entry->checksum = *(uint16_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
+        if(lsp->seq == 0) {
+            entry->lifetime = 0;
+            entry->seq = 0;
+            entry->checksum = 0;
+        } else {
+            entry->lifetime = htobe16(remaining_lifetime);
+            entry->seq = htobe32(lsp->seq);
+            entry->checksum = *(uint16_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
+        }
         ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
 
@@ -202,4 +208,23 @@ isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
     lsdb = adjacency->instance->level[level-1].lsdb;
     isis_lsp_process_entries(adjacency, lsdb, pdu, 0);
     return;
+}
+
+
+/**
+ * isis_psnp_tree_add 
+ */
+void
+isis_psnp_tree_add(isis_adjacency_s *adjacency, isis_lsp_s *lsp)
+{
+    dict_insert_result result = hb_tree_insert(adjacency->psnp_tree, &lsp->id);
+    if(result.inserted) {
+        *result.datum_ptr = lsp;
+        lsp->refcount++;
+        if(!adjacency->timer_psnp_started) {
+            adjacency->timer_psnp_started = true;
+            timer_add(&g_ctx->timer_root, &adjacency->timer_psnp_next, 
+                        "ISIS PSNP", 1, 0, adjacency, &isis_psnp_job);
+        }
+    }
 }

@@ -92,6 +92,9 @@ void
 isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state);
 
 void
+isis_pdu_add_tlv_is_neighbor(isis_pdu_s *pdu, isis_adjacency_s *adjacency);
+
+void
 isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uint32_t metric, isis_sub_tlv_t *stlv);
 
 void
@@ -101,7 +104,7 @@ void
 isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key);
 
 void
-isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint32_t metric);
+isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint8_t pseudo_node, uint32_t metric);
 
 void
 isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id, 

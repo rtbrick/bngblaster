@@ -104,6 +104,8 @@ static const ipv6_prefix mock_ipv6_ia_pd = {
 #define BBL_IF_SEND_LDP_HELLO_IPV6  0x00000020
 #define BBL_IF_SEND_OSPFV2_HELLO    0x00000040
 #define BBL_IF_SEND_OSPFV3_HELLO    0x00000080
+#define BBL_IF_SEND_ISIS_L1_HELLO   0x00000100
+#define BBL_IF_SEND_ISIS_L2_HELLO   0x00000200
 
 #define BBL_AVG_SAMPLES             5
 #define BBL_MAX_STREAM_OVERHEAD     128

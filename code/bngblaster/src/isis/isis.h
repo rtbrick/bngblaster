@@ -14,6 +14,8 @@
 #include "isis_utils.h"
 #include "isis_pdu.h"
 #include "isis_adjacency.h"
+#include "isis_peer.h"
+#include "isis_hello.h"
 #include "isis_p2p_hello.h"
 #include "isis_csnp.h"
 #include "isis_psnp.h"

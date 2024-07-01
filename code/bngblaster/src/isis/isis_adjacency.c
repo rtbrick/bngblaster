@@ -43,6 +43,8 @@ isis_adjacency_init(bbl_network_interface_s *interface,
         adjacency_p2p->level = interface_config->isis_level;
         adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
         interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
+    } else {
+        instance->next_pseudo_node_id++;
     }
 
     /* Init adjacency levels. */
@@ -58,10 +60,10 @@ isis_adjacency_init(bbl_network_interface_s *interface,
         adjacency->instance = instance;
         if(interface_config->isis_p2p) {
             if(!adjacency_p2p) return false;
+            adjacency->p2p = true;
             adjacency->peer = adjacency_p2p->peer;
         } else {
-            adjacency->peer = calloc(1, sizeof(isis_peer_s));
-            if(!adjacency->peer) return false;
+            adjacency->pseudo_node_id = instance->next_pseudo_node_id;
         }
         if(instance->level[i].adjacency) {
             adjacency->next = instance->level[i].adjacency;
@@ -70,12 +72,17 @@ isis_adjacency_init(bbl_network_interface_s *interface,
 
         adjacency->flood_tree = hb_tree_new((dict_compare_func)isis_lsp_id_compare);
         adjacency->psnp_tree = hb_tree_new((dict_compare_func)isis_lsp_id_compare);
+        adjacency->levels = interface_config->isis_level;
         adjacency->level = level;
         adjacency->window_size = config->lsp_tx_window_size;
         if(level == ISIS_LEVEL_1) {
+            adjacency->priority = interface_config->isis_l1_priority;
             adjacency->metric = interface_config->isis_l1_metric;
+            interface->send_requests |= BBL_IF_SEND_ISIS_L1_HELLO;
         } else {
+            adjacency->priority = interface_config->isis_l2_priority;
             adjacency->metric = interface_config->isis_l2_metric;
+            interface->send_requests |= BBL_IF_SEND_ISIS_L2_HELLO;
         }
     }
     return true;
@@ -102,17 +109,22 @@ isis_adjacency_up(isis_adjacency_s *adjacency)
 
     adjacency->state = ISIS_ADJACENCY_STATE_UP;
 
-    timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_tx, 
-        "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_tx_job);
-
-    timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_retry, 
-        "ISIS RETRY", config->lsp_retry_interval, 0, adjacency, &isis_lsp_retry_job);
-
     timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_csnp, 
         "ISIS CSNP", config->csnp_interval, 0, adjacency, &isis_csnp_job);
 
     timer_add(&g_ctx->timer_root, &adjacency->timer_csnp_next, 
         "ISIS CSNP", 0, 10 * MSEC, adjacency, &isis_csnp_job);
+
+    if(adjacency->p2p) {
+        timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_tx, 
+            "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_tx_p2p_job);
+
+        timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_retry, 
+            "ISIS RETRY", config->lsp_retry_interval, 0, adjacency, &isis_lsp_retry_job);
+    } else {
+        timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_tx, 
+            "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_tx_job);
+    }
 
     g_ctx->routing_sessions++;
 }
@@ -123,25 +135,22 @@ isis_adjacency_up(isis_adjacency_s *adjacency)
  * @param adjacency IS-IS adjacency
  */
 void
-isis_adjacency_down(isis_adjacency_s *adjacency)
+isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason)
 {
-
     if(adjacency->state == ISIS_ADJACENCY_STATE_DOWN) {
         return;
     }
+    adjacency->state = ISIS_ADJACENCY_STATE_DOWN;
 
-    LOG(ISIS, "ISIS %s adjacency DOWN to %s on interface %s \n", 
+    LOG(ISIS, "ISIS %s adjacency DOWN to %s on interface %s (%s)\n", 
         isis_level_string(adjacency->level), 
         isis_system_id_to_str(adjacency->peer->system_id),
-        adjacency->interface->name);
-
-    adjacency->state = ISIS_ADJACENCY_STATE_DOWN;
+        adjacency->interface->name, reason);
 
     timer_del(adjacency->timer_tx);
     timer_del(adjacency->timer_retry);
     timer_del(adjacency->timer_csnp);
     timer_del(adjacency->timer_csnp_next);
-    timer_del(adjacency->timer_hold);
 
     if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
 }

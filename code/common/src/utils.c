@@ -705,3 +705,20 @@ timespec_to_nsec(struct timespec *timestamp)
 {
     return (timestamp->tv_sec * 1000000000) + timestamp->tv_nsec;
 }
+
+/* 
+ * Compare two MAC addresses and return
+ * 1 if mac1 is larger, -1 if mac2 is larger,
+ * and 0 if both MAC addresses are equal. 
+ */
+int 
+compare_mac_addresses(uint8_t *mac1, uint8_t *mac2)
+{
+    for(int i = 0; i < ETH_ADDR_LEN; i++) {
+        if (mac1[i] > mac2[i])
+            return 1; /* mac1 is larger */
+        else if (mac1[i] < mac2[i])
+            return -1; /* mac2 is larger */
+    }
+    return 0; /* MAC addresses are equal */
+}
