@@ -67,6 +67,7 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
     bbl_pppoe_session_s pppoe = {0};
     bbl_ipv4_s ipv4 = {0};
     bbl_igmp_s igmp = {0};
+    uint8_t mac[ETH_ADDR_LEN];
 
     bbl_igmp_group_record_s *gr;
     int i, i2;
@@ -106,6 +107,8 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
             session->send_requests &= ~BBL_SEND_IGMP;
             return WRONG_PROTOCOL_STATE;
         }
+        ipv4_multicast_mac(IPV4_MC_IGMP, mac);
+        eth.dst = mac;
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ipv4;
     }
@@ -189,6 +192,11 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
             } else {
                 ipv4.dst = group->group;
                 igmp.group = group->group;
+                if(session->access_type != ACCESS_TYPE_PPPOE) {
+                    /* IPoE */
+                    ipv4_multicast_mac(group->group, mac);
+                    eth.dst = mac;
+                }
                 if(session->igmp_version == IGMP_VERSION_2) {
                     igmp.version = IGMP_VERSION_2;
                     if(group->state == IGMP_GROUP_LEAVING) {
