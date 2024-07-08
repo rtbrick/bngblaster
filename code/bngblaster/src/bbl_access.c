@@ -908,39 +908,6 @@ bbl_access_session_timeout(timer_s *timer)
     }
 }
 
-void
-bbl_access_lcp_echo(timer_s *timer)
-{
-    bbl_session_s *session = timer->data;
-    bbl_access_interface_s *interface = session->access_interface;
-
-    if(session->session_state == BBL_ESTABLISHED) {
-        if(session->lcp_retries) {
-            interface->stats.lcp_echo_timeout++;
-        }
-        if(session->lcp_retries > g_ctx->config.lcp_keepalive_retry) {
-            LOG(PPPOE, "LCP ECHO TIMEOUT (ID: %u)\n", session->session_id);
-            /* Force terminate session after timeout. */
-            session->lcp_state = BBL_PPP_CLOSED;
-            if(session->ipcp_state > BBL_PPP_DISABLED) {
-                session->ipcp_state = BBL_PPP_CLOSED;
-            }
-            if(session->ip6cp_state > BBL_PPP_DISABLED) {
-                session->ip6cp_state = BBL_PPP_CLOSED;
-            }
-            session->send_requests = BBL_SEND_DISCOVERY;
-            bbl_session_update_state(session, BBL_TERMINATING);
-            bbl_session_tx_qnode_insert(session);
-        } else {
-            session->lcp_request_code = PPP_CODE_ECHO_REQUEST;
-            session->lcp_identifier++;
-            session->lcp_options_len = 0;
-            session->send_requests |= BBL_SEND_LCP_REQUEST;
-            bbl_session_tx_qnode_insert(session);
-        }
-    }
-}
-
 static bool
 bbl_access_ncp_success(uint8_t state)
 {
@@ -978,10 +945,6 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
                 g_ctx->stats.last_session_established.tv_nsec = eth->timestamp.tv_nsec;
             }
             bbl_session_update_state(session, BBL_ESTABLISHED);
-            if(g_ctx->config.lcp_keepalive_interval) {
-                /* Start LCP echo request / keep alive */
-                timer_add_periodic(&g_ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", g_ctx->config.lcp_keepalive_interval, 1, session, &bbl_access_lcp_echo);
-            }
             if(g_ctx->config.pppoe_session_time) {
                 /* Start Session Timer */
                 timer_add(&g_ctx->timer_root, &session->timer_session, "Session", g_ctx->config.pppoe_session_time, 0, session, &bbl_access_session_timeout);
@@ -1274,6 +1237,56 @@ bbl_access_rx_lcp_conf_reject(bbl_session_s *session, bbl_lcp_s *lcp)
     return;
 }
 
+void
+bbl_access_lcp_echo(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    bbl_access_interface_s *interface = session->access_interface;
+
+    if(session->session_state == BBL_ESTABLISHED) {
+        if(session->lcp_retries) {
+            interface->stats.lcp_echo_timeout++;
+        }
+        if(session->lcp_retries > g_ctx->config.lcp_keepalive_retry) {
+            LOG(PPPOE, "LCP ECHO TIMEOUT (ID: %u)\n", session->session_id);
+            /* Force terminate session after timeout. */
+            session->lcp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state > BBL_PPP_DISABLED) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
+            if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
+            session->send_requests = BBL_SEND_DISCOVERY;
+            bbl_session_update_state(session, BBL_TERMINATING);
+            bbl_session_tx_qnode_insert(session);
+        } else {
+            session->lcp_request_code = PPP_CODE_ECHO_REQUEST;
+            session->lcp_identifier++;
+            session->lcp_options_len = 0;
+            session->send_requests |= BBL_SEND_LCP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        }
+    }
+}
+
+static void
+bbl_access_lcp_opened(bbl_session_s *session)
+{
+    session->lcp_state = BBL_PPP_OPENED;
+    bbl_session_update_state(session, BBL_PPP_AUTH);
+    if(session->auth_protocol == PROTOCOL_PAP) {
+        session->send_requests |= BBL_SEND_PAP_REQUEST;
+        bbl_session_tx_qnode_insert(session);
+    }
+    if(g_ctx->config.lcp_keepalive_interval) {
+        /* Start LCP echo request / keep alive */
+        timer_add_periodic(&g_ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", 
+                            g_ctx->config.lcp_keepalive_interval, 1, 
+                            session, &bbl_access_lcp_echo);
+    }
+}
+
 static void
 bbl_access_rx_lcp(bbl_access_interface_s *interface,
                   bbl_session_s *session, 
@@ -1383,12 +1396,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                     session->lcp_state = BBL_PPP_PEER_ACK;
                     break;
                 case BBL_PPP_LOCAL_ACK:
-                    session->lcp_state = BBL_PPP_OPENED;
-                    bbl_session_update_state(session, BBL_PPP_AUTH);
-                    if(session->auth_protocol == PROTOCOL_PAP) {
-                        session->send_requests |= BBL_SEND_PAP_REQUEST;
-                        bbl_session_tx_qnode_insert(session);
-                    }
+                    bbl_access_lcp_opened(session);
                     break;
                 default:
                     break;
@@ -1405,12 +1413,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                     session->lcp_state = BBL_PPP_LOCAL_ACK;
                     break;
                 case BBL_PPP_PEER_ACK:
-                    session->lcp_state = BBL_PPP_OPENED;
-                    bbl_session_update_state(session, BBL_PPP_AUTH);
-                    if(session->auth_protocol == PROTOCOL_PAP) {
-                        session->send_requests |= BBL_SEND_PAP_REQUEST;
-                        bbl_session_tx_qnode_insert(session);
-                    }
+                    bbl_access_lcp_opened(session);
                     break;
                 default:
                     break;
