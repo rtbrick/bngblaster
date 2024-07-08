@@ -19,9 +19,13 @@
 |                                | | Default: true                                                  |
 +--------------------------------+------------------------------------------------------------------+
 | **source-port**                | | Overwrite the default source port.                             |
+|                                | | For bidirectional streams (direction `both`), this is applied  |
+|                                | | as source port in upstream and destination port in downstream. |
 |                                | | Default: 65056 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
 | **destination-port**           | | Overwrite the default destination port.                        |
+|                                | | For bidirectional streams (direction `both`), this is applied  |
+|                                | | as destination port in upstream and source port in downstream. |
 |                                | | Default: 65056 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
 | **ipv4-df**                    | | Set IPv4 DF bit.                                               |

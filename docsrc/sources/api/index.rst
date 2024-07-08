@@ -132,6 +132,14 @@ for interactive communication with the BNG Blaster.
     }
 
 
+Here's a more complex example that chains CLI commands. The first command 
+returns a list of all pending sessions. Then, it extracts the session.id 
+from those sessions into a flat list. Finally, it iterates over this list, 
+using each session-id as an argument for the session-restart command.
+
+``$ sudo bngblaster-cli run.sock sessions-pending | jq '.["sessions-pending"][]["session-id"]' | while read line; do sudo bngblaster-cli run.sock session-restart session-id $line; done
+
+
 Test
 ----
 
