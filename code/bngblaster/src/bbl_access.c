@@ -1274,11 +1274,34 @@ static void
 bbl_access_lcp_opened(bbl_session_s *session)
 {
     session->lcp_state = BBL_PPP_OPENED;
-    bbl_session_update_state(session, BBL_PPP_AUTH);
-    if(session->auth_protocol == PROTOCOL_PAP) {
-        session->send_requests |= BBL_SEND_PAP_REQUEST;
-        bbl_session_tx_qnode_insert(session);
+    switch(session->auth_protocol) {
+        case PROTOCOL_PAP:
+            bbl_session_update_state(session, BBL_PPP_AUTH);
+            session->send_requests |= BBL_SEND_PAP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+            break;
+        case PROTOCOL_CHAP:
+            bbl_session_update_state(session, BBL_PPP_AUTH);
+            break;
+        default:
+            /* Authentication disabled */
+            bbl_session_update_state(session, BBL_PPP_NETWORK);
+            if(session->access_config->ipcp_enable) {
+                session->ipcp_state = BBL_PPP_INIT;
+                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
+            }
+            if(session->access_config->ip6cp_enable) {
+                session->ip6cp_state = BBL_PPP_INIT;
+                session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+                session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
+            }
+            bbl_session_tx_qnode_insert(session);
+            break;
     }
+
     if(g_ctx->config.lcp_keepalive_interval) {
         /* Start LCP echo request / keep alive */
         timer_add_periodic(&g_ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO", 
@@ -1350,34 +1373,37 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                 bbl_access_rx_lcp_conf_reject(session, lcp);
                 return;
             }
-            session->auth_protocol = lcp->auth;
-            if(session->access_config->authentication_protocol) {
-                if(session->access_config->authentication_protocol != lcp->auth) {
-                    lcp->auth = session->access_config->authentication_protocol;
-                    session->auth_protocol = 0;
-                }
-            } else {
-                lcp->auth = PROTOCOL_PAP;
-            }
-            if(!(session->auth_protocol == PROTOCOL_CHAP || session->auth_protocol == PROTOCOL_PAP)) {
-                /* Reject authentication protocol */
-                if(lcp->auth == PROTOCOL_CHAP) {
-                    session->lcp_options[0] = 3;
-                    session->lcp_options[1] = 5;
-                    *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_CHAP);
-                    session->lcp_options[4] = 5;
-                    session->lcp_options_len = 5;
+            if(lcp->auth || session->access_config->authentication_protocol) {
+                /* Negotiate authentication protocol */
+                session->auth_protocol = lcp->auth;
+                if(session->access_config->authentication_protocol) {
+                    if(session->access_config->authentication_protocol != lcp->auth) {
+                        lcp->auth = session->access_config->authentication_protocol;
+                        session->auth_protocol = 0;
+                    }
                 } else {
-                    session->lcp_options[0] = 3;
-                    session->lcp_options[1] = 4;
-                    *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_PAP);
-                    session->lcp_options_len = 4;
+                    lcp->auth = PROTOCOL_PAP;
                 }
-                session->lcp_peer_identifier = lcp->identifier;
-                session->lcp_response_code = PPP_CODE_CONF_NAK;
-                session->send_requests |= BBL_SEND_LCP_RESPONSE;
-                bbl_session_tx_qnode_insert(session);
-                return;
+                if(!(session->auth_protocol == PROTOCOL_CHAP || session->auth_protocol == PROTOCOL_PAP)) {
+                    /* Reject authentication protocol */
+                    if(lcp->auth == PROTOCOL_CHAP) {
+                        session->lcp_options[0] = 3;
+                        session->lcp_options[1] = 5;
+                        *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_CHAP);
+                        session->lcp_options[4] = 5;
+                        session->lcp_options_len = 5;
+                    } else {
+                        session->lcp_options[0] = 3;
+                        session->lcp_options[1] = 4;
+                        *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_PAP);
+                        session->lcp_options_len = 4;
+                    }
+                    session->lcp_peer_identifier = lcp->identifier;
+                    session->lcp_response_code = PPP_CODE_CONF_NAK;
+                    session->send_requests |= BBL_SEND_LCP_RESPONSE;
+                    bbl_session_tx_qnode_insert(session);
+                    return;
+                }
             }
             if(lcp->mru) {
                 session->peer_mru = lcp->mru;

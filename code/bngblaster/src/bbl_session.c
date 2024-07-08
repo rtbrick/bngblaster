@@ -374,6 +374,10 @@ bbl_session_reset(bbl_session_s *session) {
 
     session->pppoe_retries = 0;
     session->lcp_retries = 0;
+    session->lcp_options_len = 0;
+    session->lcp_response_code = 0;
+    session->lcp_request_code = 0;
+    session->auth_protocol = 0;
     session->auth_retries = 0;
     session->ipcp_retries = 0;
     session->ipcp_request_dns1 = g_ctx->config.ipcp_request_dns1;
