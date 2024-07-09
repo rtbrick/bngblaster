@@ -40,6 +40,7 @@ isis_adjacency_init(bbl_network_interface_s *interface,
         adjacency_p2p->instance  = instance; 
         adjacency_p2p->peer = calloc(1, sizeof(isis_peer_s));
         if(!adjacency_p2p->peer) return false;
+        adjacency_p2p->peer->adjacency_p2p = adjacency_p2p;
         adjacency_p2p->level = interface_config->isis_level;
         adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
         interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
