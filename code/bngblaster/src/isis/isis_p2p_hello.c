@@ -113,7 +113,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
-    uint8_t new_state = ISIS_PEER_STATE_UP;
+    uint8_t peer_state = ISIS_PEER_STATE_UP;
 
     if(!adjacency_p2p) {
         LOG(ISIS, "ISIS RX P2P-Hello on broadcast interface %s\n", interface->name);
@@ -148,10 +148,10 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
                 switch(*tlv->value) {
                     case ISIS_P2P_ADJACENCY_STATE_UP:
                     case ISIS_P2P_ADJACENCY_STATE_INIT:
-                        new_state = ISIS_PEER_STATE_UP;
+                        peer_state = ISIS_PEER_STATE_UP;
                         break;
                     case ISIS_P2P_ADJACENCY_STATE_DOWN:
-                        new_state = ISIS_PEER_STATE_INIT;
+                        peer_state = ISIS_PEER_STATE_INIT;
                         break;
                     default:
                         break;
@@ -163,13 +163,17 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
         tlv = isis_pdu_next_tlv(pdu);
     }
 
-    if(peer->state != new_state) {
-        peer->state = new_state;
-        interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
+    if(peer->state != peer_state) {
+        peer->state = peer_state;
+        if(peer_state == ISIS_PEER_STATE_UP) {
+            adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_UP;
+        } else {
+            adjacency_p2p->state = ISIS_PEER_STATE_INIT;
+        } 
         for(int i=0; i<ISIS_LEVELS; i++) {
             adjacency = interface->isis_adjacency[i];
             if(adjacency) {
-                if(new_state == ISIS_PEER_STATE_UP) {
+                if(peer_state == ISIS_PEER_STATE_UP) {
                     isis_adjacency_up(adjacency);
                 } else {
                     isis_adjacency_down(adjacency, "hello goodby");
@@ -177,5 +181,6 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
                 isis_lsp_self_update(instance, adjacency->level);
             }
         }
+        interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
     }
 }
