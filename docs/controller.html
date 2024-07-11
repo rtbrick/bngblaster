@@ -1,19 +1,25 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Controller &mdash; BNG Blaster 0.8 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  <title>Controller &mdash; BNG Blaster 0.9 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
+
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=049aceee"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -26,12 +32,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> BNG Blaster
-            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -84,8 +94,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Controller</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Controller</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/controller.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -96,7 +106,7 @@
            <div itemprop="articleBody">
              
   <section id="controller">
-<span id="id1"></span><h1>Controller<a class="headerlink" href="#controller" title="Permalink to this headline"></a></h1>
+<span id="id1"></span><h1>Controller<a class="headerlink" href="#controller" title="Link to this heading"></a></h1>
 <p>The BNG Blaster controller offers a convenient REST API that allows users to start and stop
 multiple test instances with ease. The REST API serves as an interface to the BNG Blaster’s
 underlying functionality, providing a simplified way to interact with the controller and
@@ -118,7 +128,7 @@ the testing process and facilitates seamless interaction with the BNG Blaster’
 <p><a class="reference external" href="https://github.com/rtbrick/bngblaster-controller">https://github.com/rtbrick/bngblaster-controller</a></p>
 <img alt="BNG Blaster Controller" src="_images/controller.png" />
 <section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
 <p>The BNG Blaster controller should run on any modern Linux distribution
 but is primarily tested on Ubuntu 18.04 LTS, Ubuntu 20.04 LTS and
 Ubuntu 22.04 LTS (recommended).</p>
@@ -160,10 +170,10 @@ Usage of bngblasterctrl:
 </div>
 </section>
 <section id="api">
-<h2>API<a class="headerlink" href="#api" title="Permalink to this headline"></a></h2>
+<h2>API<a class="headerlink" href="#api" title="Link to this heading"></a></h2>
 <p>OpenAPI: <a class="reference external" href="https://rtbrick.github.io/bngblaster-controller/">https://rtbrick.github.io/bngblaster-controller/</a></p>
 <section id="create-test-instance">
-<h3>Create Test Instance<a class="headerlink" href="#create-test-instance" title="Permalink to this headline"></a></h3>
+<h3>Create Test Instance<a class="headerlink" href="#create-test-instance" title="Link to this heading"></a></h3>
 <p><cite>PUT /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>This API endpoint creates a test instance if not already created. The body of this request
 is stored as bngblaster configuration (<cite>config.json</cite>).</p>
@@ -207,19 +217,19 @@ This directory contains the following files:</p>
 </div>
 </section>
 <section id="start-test">
-<h3>Start Test<a class="headerlink" href="#start-test" title="Permalink to this headline"></a></h3>
+<h3>Start Test<a class="headerlink" href="#start-test" title="Link to this heading"></a></h3>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_start</cite></p>
 <p>The start API endpoint will start the bngblaster with the argument options
 defined in the body.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;debug&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;ip&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">],</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;session_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="s2">&quot;debug&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;ip&quot;</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;session_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>All supported argument options are explained in the OpenAPI schema.</p>
@@ -240,13 +250,13 @@ defined in the body.</p>
 </div>
 </section>
 <section id="status">
-<h3>Status<a class="headerlink" href="#status" title="Permalink to this headline"></a></h3>
+<h3>Status<a class="headerlink" href="#status" title="Link to this heading"></a></h3>
 <p><cite>GET /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>The status API endpoint returns the status of the test which can be either
 <cite>started</cite> or <cite>stopped</cite>.</p>
 </section>
 <section id="command">
-<h3>Command<a class="headerlink" href="#command" title="Permalink to this headline"></a></h3>
+<h3>Command<a class="headerlink" href="#command" title="Link to this heading"></a></h3>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_command</cite></p>
 <p>The JSON body of this API call will be passed to the bngblaster instance
 control socket (<cite>/var/bngbnlaster/&lt;instance-name&gt;/run.sock</cite>). The result will
@@ -262,41 +272,41 @@ be passed back to the client.</p>
 }&#39;
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;session-info&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;session-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Established&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;...&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;session-info&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;session-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Established&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;...&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The result code is passed as HTTP response status code.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
 <section id="stop-test">
-<h3>Stop Test<a class="headerlink" href="#stop-test" title="Permalink to this headline"></a></h3>
+<h3>Stop Test<a class="headerlink" href="#stop-test" title="Link to this heading"></a></h3>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_stop</cite></p>
 <p>The stop API endpoint will send the SIGINT signal to the corresponding
 BNG blaster instance (<cite>kill -INT &lt;pid&gt;</cite>).</p>
 </section>
 <section id="delete-test-instance">
-<h3>Delete Test Instance<a class="headerlink" href="#delete-test-instance" title="Permalink to this headline"></a></h3>
+<h3>Delete Test Instance<a class="headerlink" href="#delete-test-instance" title="Link to this heading"></a></h3>
 <p><cite>DELETE /api/v1/instances/&lt;instance-name&gt;</cite></p>
 <p>This API endpoint deletes the test instance directory. The corresponding
 test run is forcefully terminated (<cite>kill -9 &lt;pid&gt;</cite>) if running.</p>
 </section>
 <section id="reports">
-<h3>Reports<a class="headerlink" href="#reports" title="Permalink to this headline"></a></h3>
+<h3>Reports<a class="headerlink" href="#reports" title="Link to this heading"></a></h3>
 <p>The BNG Blaster can generate detailed <a class="reference internal" href="reports.html#reports"><span class="std std-ref">reports</span></a>
 at the end of the test execution. Those reports must be enabled
 during the start with the argument option <cite>report</cite>. This detailed
@@ -306,13 +316,13 @@ report may be large if <cite>streams</cite> flag is enabled in combination with
 a huge amount of streams (around 500MB report file for one million streams).</p>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_start</cite></p>
 <blockquote>
-<div><div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">   </span><span class="nt">&quot;report_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">       </span><span class="s2">&quot;sessions&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">       </span><span class="s2">&quot;streams&quot;</span><span class="w"></span>
-<span class="w">   </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div><div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">   </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;report_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">       </span><span class="s2">&quot;sessions&quot;</span><span class="p">,</span>
+<span class="w">       </span><span class="s2">&quot;streams&quot;</span>
+<span class="w">   </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -324,21 +334,21 @@ has gracefully stopped. This can be verified using the status command.
 As soon as the status becomes stopped, the report file should be available.</p>
 </section>
 <section id="logs">
-<h3>Logs<a class="headerlink" href="#logs" title="Permalink to this headline"></a></h3>
+<h3>Logs<a class="headerlink" href="#logs" title="Link to this heading"></a></h3>
 <p>The BNG Blaster supports extensive <a class="reference internal" href="troubleshooting.html#logging"><span class="std std-ref">logging</span></a>
 during the test execution. This log file must be enabled
 during the start with the argument option <cite>logging</cite>. The optional
 argument <cite>logging_flags</cite> allows for enabling log categories.</p>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_start</cite></p>
 <blockquote>
-<div><div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">   </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">       </span><span class="s2">&quot;bgp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">       </span><span class="s2">&quot;isis&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">       </span><span class="s2">&quot;ip&quot;</span><span class="w"></span>
-<span class="w">   </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div><div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">   </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">       </span><span class="s2">&quot;bgp&quot;</span><span class="p">,</span>
+<span class="w">       </span><span class="s2">&quot;isis&quot;</span><span class="p">,</span>
+<span class="w">       </span><span class="s2">&quot;ip&quot;</span>
+<span class="w">   </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -353,15 +363,15 @@ for troubleshooting purposes.</p>
 <cite>GET /api/v1/instances/&lt;instance-name&gt;/run.stdout</cite></p>
 </section>
 <section id="pcap">
-<h3>PCAP<a class="headerlink" href="#pcap" title="Permalink to this headline"></a></h3>
+<h3>PCAP<a class="headerlink" href="#pcap" title="Link to this heading"></a></h3>
 <p>The BNG Blaster supports to <a class="reference internal" href="troubleshooting.html#capture"><span class="std std-ref">capture</span></a> all traffic
 sent and received by the BNG Blaster which must be enabled during
 the start with the argument option <cite>pcap_capture</cite>.</p>
 <p><cite>POST /api/v1/instances/&lt;instance-name&gt;/_start</cite></p>
 <blockquote>
-<div><div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">   </span><span class="nt">&quot;pcap_capture&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div><div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">   </span><span class="nt">&quot;pcap_capture&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div></blockquote>
@@ -370,7 +380,7 @@ after the test has finally stopped.</p>
 <p><cite>GET /api/v1/instances/&lt;instance-name&gt;/run.pcap</cite></p>
 </section>
 <section id="metrics">
-<h3>Metrics<a class="headerlink" href="#metrics" title="Permalink to this headline"></a></h3>
+<h3>Metrics<a class="headerlink" href="#metrics" title="Link to this heading"></a></h3>
 <p><cite>GET /metrics</cite></p>
 <p>This endpoint returns metrics for all instances in Prometheus text format.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># HELP instances_running The number of running instances
@@ -387,17 +397,17 @@ present and <cite>instances_running</cite> shows how many of them are running.</
 <p>Per default, there are no metrics per instance. This has to be explicitly
 enabled during instance start (<cite>/api/v1/instances/&lt;instance-name&gt;/_start</cite>)
 using the new  <cite>metric_flags</cite> option.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;error&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;ip&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">],</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;metric_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;session_counters&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;interfaces&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;logging&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;logging_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="s2">&quot;error&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;ip&quot;</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;metric_flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="s2">&quot;session_counters&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;interfaces&quot;</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Currently, the following metrics are supported:</p>

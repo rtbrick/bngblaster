@@ -126,7 +126,7 @@ reachability to node ``B1``.
 Adjacencies
 ~~~~~~~~~~~
 
-The BNG Blaster supports P2P adjacencies with 3-way-handshake only.
+The BNG Blaster supports broadcast and P2P (default) adjacencies with 3-way-handshake only. 
 
 ``$ sudo bngblaster-cli run.sock isis-adjacencies``
 
@@ -227,8 +227,7 @@ system-id equal to the source system-id of the LSP.
 Limitations
 ~~~~~~~~~~~
 
-Currently, only ISIS P2P links are supported. There is also
-no support for route leaking between levels. 
+Currently there is no support for route leaking between levels. 
 
 LSP Update Command
 ~~~~~~~~~~~~~~~~~~

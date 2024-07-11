@@ -1,19 +1,25 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API/CLI &mdash; BNG Blaster 0.8 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <title>API/CLI &mdash; BNG Blaster 0.9 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=411f5019" />
+
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=049aceee"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -26,12 +32,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html" class="icon icon-home"> BNG Blaster
-            <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -86,8 +96,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>API/CLI</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API/CLI</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/api/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -98,7 +108,7 @@
            <div itemprop="articleBody">
              
   <link rel="stylesheet" type="text/css" href="_static/custom.css"><section id="api-cli">
-<h1>API/CLI<a class="headerlink" href="#api-cli" title="Permalink to this headline"></a></h1>
+<h1>API/CLI<a class="headerlink" href="#api-cli" title="Link to this heading"></a></h1>
 <p>The control socket is an unix domain stream socket that
 allows interacting with the BNG Blaster using JSON RPC.</p>
 <p>We developed this interface for the BNG Blaster Controller
@@ -109,32 +119,32 @@ interactive communication with the BNG Blaster.</p>
 the control socket file with the argument <code class="docutils literal notranslate"><span class="pre">-S</span></code> (<code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-S</span> <span class="pre">run.sock</span></code>).</p>
 <p>Each request must contain at least the <code class="docutils literal notranslate"><span class="pre">command</span></code> element which carries
 the actual command with optional arguments.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;&lt;command&gt;&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;&lt;argument-key&gt;&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;argument-value&gt;&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;&lt;command&gt;&quot;</span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;&lt;argument-key&gt;&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;argument-value&gt;&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Following an example RPC request with corresponding response.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-counters&quot;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-counters&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">sudo</span> <span class="pre">nc</span> <span class="pre">-U</span> <span class="pre">run.sock</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The response contains at least the status element with the
@@ -142,11 +152,11 @@ value <code class="docutils literal notranslate"><span class="pre">ok</span></co
 The status can be also set to <code class="docutils literal notranslate"><span class="pre">warning</span></code> or <code class="docutils literal notranslate"><span class="pre">error</span></code> with
 corresponding error code and an optional error message.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">sudo</span> <span class="pre">nc</span> <span class="pre">-U</span> <span class="pre">test.socket</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">session-id</span></code> is the same as used for <code class="docutils literal notranslate"><span class="pre">{session-global}</span></code> in the
@@ -162,19 +172,19 @@ interface is automatically used if the argument <code class="docutils literal no
 is not present in the command.</p>
 <p>This is not supported for N:1 sessions because multiple
 sessions can be assigned to a single VLAN.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-info&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-info&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div>
 <section id="bng-blaster-cli">
-<h2>BNG Blaster CLI<a class="headerlink" href="#bng-blaster-cli" title="Permalink to this headline"></a></h2>
+<h2>BNG Blaster CLI<a class="headerlink" href="#bng-blaster-cli" title="Link to this heading"></a></h2>
 <p>The python script <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code> provides a simple CLI tool
 for interactive communication with the BNG Blaster.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli
@@ -190,26 +200,27 @@ Examples:
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-counters</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
+<p>Here’s a more complex example that chains CLI commands. The first command
+returns a list of all pending sessions. Then, it extracts the session.id
+from those sessions into a flat list. Finally, it iterates over this list,
+using each session-id as an argument for the session-restart command.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">sessions-pending</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">'.[&quot;sessions-pending&quot;][][&quot;session-id&quot;]'</span> <span class="pre">|</span> <span class="pre">while</span> <span class="pre">read</span> <span class="pre">line;</span> <span class="pre">do</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-restart</span> <span class="pre">session-id</span> <span class="pre">$line;</span> <span class="pre">done</span></code></p>
 </section>
 <section id="test">
-<h2>Test<a class="headerlink" href="#test" title="Permalink to this headline"></a></h2>
+<h2>Test<a class="headerlink" href="#test" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -250,14 +261,10 @@ Examples:
 </table>
 </section>
 <section id="interfaces">
-<h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h2>
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../interfaces.html#interfaces"><span class="std std-ref">interfaces</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -316,12 +323,8 @@ Examples:
 </table>
 </section>
 <section id="sessions">
-<h2>Sessions<a class="headerlink" href="#sessions" title="Permalink to this headline"></a></h2>
+<h2>Sessions<a class="headerlink" href="#sessions" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -417,14 +420,10 @@ Examples:
 </table>
 </section>
 <section id="ppp">
-<h2>PPP<a class="headerlink" href="#ppp" title="Permalink to this headline"></a></h2>
+<h2>PPP<a class="headerlink" href="#ppp" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../access/pppoe.html#pppoe"><span class="std std-ref">PPPoE</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -471,14 +470,10 @@ Examples:
 </table>
 </section>
 <section id="l2tp">
-<h2>L2TP<a class="headerlink" href="#l2tp" title="Permalink to this headline"></a></h2>
+<h2>L2TP<a class="headerlink" href="#l2tp" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../access/l2tp.html#l2tp"><span class="std std-ref">L2TP</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -543,18 +538,18 @@ Examples:
 </table>
 <p>The L2TP CSURQ command expects the local tunnel-id and a list of remote
 session-id for which a connect speed update is requested.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2tp-csurq&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tunnel-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="mi">4</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2tp-csurq&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;tunnel-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">            </span><span class="mi">4</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>This command can be executed as shown below using the CLI tool.</p>
@@ -563,12 +558,8 @@ session-id for which a connect speed update is requested.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">l2tp-session-terminate</span> <span class="pre">session-id</span> <span class="pre">1</span> <span class="pre">result-code</span> <span class="pre">2</span> <span class="pre">error-message</span> <span class="pre">&quot;LCP</span> <span class="pre">request&quot;</span> <span class="pre">disconnect-code</span> <span class="pre">3</span> <span class="pre">disconnect-message</span> <span class="pre">&quot;LCP</span> <span class="pre">terminate</span> <span class="pre">request&quot;</span></code></p>
 </section>
 <section id="igmp">
-<h2>IGMP<a class="headerlink" href="#igmp" title="Permalink to this headline"></a></h2>
+<h2>IGMP<a class="headerlink" href="#igmp" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -652,12 +643,8 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="traffic">
-<h2>Traffic<a class="headerlink" href="#traffic" title="Permalink to this headline"></a></h2>
+<h2>Traffic<a class="headerlink" href="#traffic" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -690,14 +677,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="streams">
-<h2>Streams<a class="headerlink" href="#streams" title="Permalink to this headline"></a></h2>
+<h2>Streams<a class="headerlink" href="#streams" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../streams.html#streams"><span class="std std-ref">streams</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -781,14 +764,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="isis">
-<h2>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h2>
+<h2>ISIS<a class="headerlink" href="#isis" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../routing/isis.html#isis"><span class="std std-ref">ISIS</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -854,7 +833,18 @@ session-id for which a connect speed update is requested.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-teardown</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-update-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">Update ISIS interface priority.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">interface</span></code> Mandatory</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">level</span></code> Mandatory</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">priority</span></code> Mandatory priority (0-127)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>isis-teardown</strong></p></td>
 <td><div class="line-block">
 <div class="line">Teardown ISIS.</div>
 </div>
@@ -864,14 +854,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="ospf">
-<h2>OSPF<a class="headerlink" href="#ospf" title="Permalink to this headline"></a></h2>
+<h2>OSPF<a class="headerlink" href="#ospf" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../routing/ospf.html#ospf"><span class="std std-ref">OSPF</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -946,14 +932,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="bgp">
-<h2>BGP<a class="headerlink" href="#bgp" title="Permalink to this headline"></a></h2>
+<h2>BGP<a class="headerlink" href="#bgp" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../routing/bgp.html#bgp"><span class="std std-ref">BGP</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1007,14 +989,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="ldp">
-<h2>LDP<a class="headerlink" href="#ldp" title="Permalink to this headline"></a></h2>
+<h2>LDP<a class="headerlink" href="#ldp" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../routing/ldp.html#ldp"><span class="std std-ref">LDP</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1089,12 +1067,8 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="cfm">
-<h2>CFM<a class="headerlink" href="#cfm" title="Permalink to this headline"></a></h2>
+<h2>CFM<a class="headerlink" href="#cfm" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1141,14 +1115,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="legal-interception-li">
-<h2>Legal Interception (LI)<a class="headerlink" href="#legal-interception-li" title="Permalink to this headline"></a></h2>
+<h2>Legal Interception (LI)<a class="headerlink" href="#legal-interception-li" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../access/li.html#li"><span class="std std-ref">Legal Interception (LI)</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1165,14 +1135,10 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="http">
-<h2>HTTP<a class="headerlink" href="#http" title="Permalink to this headline"></a></h2>
+<h2>HTTP<a class="headerlink" href="#http" title="Link to this heading"></a></h2>
 <p>This is explained detailed in the
 <a class="reference internal" href="../http.html#http"><span class="std std-ref">HTTP</span></a> section.</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
