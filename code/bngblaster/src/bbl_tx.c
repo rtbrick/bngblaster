@@ -1071,7 +1071,14 @@ bbl_dhcp_timeout(timer_s *timer)
             session->send_requests |= BBL_SEND_DHCP_REQUEST;
             bbl_session_tx_qnode_insert(session);
         } else {
-            bbl_dhcp_restart(session);
+            if(session->dhcp_state == BBL_DHCP_RELEASE) {
+                session->dhcp_state = BBL_DHCP_INIT;
+                if(session->session_state == BBL_TERMINATING) {
+                    bbl_session_clear(session);
+                }
+            } else {
+                bbl_dhcp_restart(session);
+            }
         }
     }
 }

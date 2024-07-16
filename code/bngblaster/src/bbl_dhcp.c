@@ -298,6 +298,11 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 bbl_dhcp_restart(session);
             }
             break;
+        case BBL_DHCP_RELEASE:
+            session->dhcp_state = BBL_DHCP_INIT;
+            if(session->session_state == BBL_TERMINATING) {
+                bbl_session_clear(session);
+            }
         default:
             break;
     }
