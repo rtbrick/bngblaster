@@ -2244,6 +2244,10 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_s *cfm)
 static protocol_error_t
 encode_isis(uint8_t *buf, uint16_t *len, bbl_isis_s *isis)
 {
+    if(isis->pdu_len < ISIS_HDR_LEN_COMMON) {
+        return ENCODE_ERROR;
+    }
+
     /* LLC header ... */
     *(uint16_t*)buf = 0xfefe;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));

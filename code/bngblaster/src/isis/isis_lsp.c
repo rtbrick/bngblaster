@@ -374,27 +374,30 @@ isis_lsp_tx_job(timer_s *timer)
     while(search) {
         entry = *search;
         lsp = entry->lsp;
+        if(lsp->pdu.pdu_len >= ISIS_HDR_LEN_COMMON) {
+            /* Update lifetime. */
+            timespec_sub(&ago, &now, &lsp->timestamp);
+            if(ago.tv_sec < lsp->lifetime) {
+                remaining_lifetime = lsp->lifetime - ago.tv_sec;
+            }
+            isis_pdu_update_lifetime(&lsp->pdu, remaining_lifetime);
 
-        LOG(PACKET, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
-            isis_level_string(adjacency->level), 
-            isis_lsp_id_to_str(&lsp->id), 
-            lsp->seq,
-            adjacency->interface->name);
+            /* TX LSP. */
+            isis.pdu = lsp->pdu.pdu;
+            isis.pdu_len = lsp->pdu.pdu_len;
+            if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) != BBL_TXQ_OK) {
+                break;
+            }
 
-        /* Update lifetime */
-        timespec_sub(&ago, &now, &lsp->timestamp);
-        if(ago.tv_sec < lsp->lifetime) {
-            remaining_lifetime = lsp->lifetime - ago.tv_sec;
+            LOG(PACKET, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
+                isis_level_string(adjacency->level), 
+                isis_lsp_id_to_str(&lsp->id), 
+                lsp->seq,
+                adjacency->interface->name);
+
+            adjacency->stats.lsp_tx++;
+            adjacency->interface->stats.isis_tx++;
         }
-        isis_pdu_update_lifetime(&lsp->pdu, remaining_lifetime);
-
-        isis.pdu = lsp->pdu.pdu;
-        isis.pdu_len = lsp->pdu.pdu_len;
-        if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) != BBL_TXQ_OK) {
-            break;
-        }
-        adjacency->stats.lsp_tx++;
-        adjacency->interface->stats.isis_tx++;
 
         /* Remove from flood tree and get next. */
         removed = hb_tree_remove(adjacency->flood_tree, &lsp->id);
@@ -447,33 +450,36 @@ isis_lsp_tx_p2p_job(timer_s *timer)
         entry = *hb_itor_datum(itor);
         if(!entry->wait_ack) {
             lsp = entry->lsp;
+            if(lsp->pdu.pdu_len >= ISIS_HDR_LEN_COMMON) {
+                /* Update lifetime */
+                timespec_sub(&ago, &now, &lsp->timestamp);
+                if(ago.tv_sec < lsp->lifetime) {
+                    remaining_lifetime = lsp->lifetime - ago.tv_sec;
+                }
+                isis_pdu_update_lifetime(&lsp->pdu, remaining_lifetime);
 
-            LOG(PACKET, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
-                isis_level_string(adjacency->level), 
-                isis_lsp_id_to_str(&lsp->id), 
-                lsp->seq,
-                adjacency->interface->name);
+                /* TX LSP. */
+                isis.pdu = lsp->pdu.pdu;
+                isis.pdu_len = lsp->pdu.pdu_len;
+                if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) != BBL_TXQ_OK) {
+                    break;
+                }
+                entry->wait_ack = true;
+                entry->tx_count++;
+                entry->tx_timestamp.tv_sec = now.tv_sec;
+                entry->tx_timestamp.tv_nsec = now.tv_nsec;
 
-            /* Update lifetime */
-            timespec_sub(&ago, &now, &lsp->timestamp);
-            if(ago.tv_sec < lsp->lifetime) {
-                remaining_lifetime = lsp->lifetime - ago.tv_sec;
+                LOG(PACKET, "ISIS TX %s-LSP %s (seq %u) on interface %s\n", 
+                    isis_level_string(adjacency->level), 
+                    isis_lsp_id_to_str(&lsp->id), 
+                    lsp->seq,
+                    adjacency->interface->name);
+
+                adjacency->stats.lsp_tx++;
+                adjacency->interface->stats.isis_tx++;
+                if(window) window--;
+                if(window == 0) break;
             }
-            isis_pdu_update_lifetime(&lsp->pdu, remaining_lifetime);
-
-            isis.pdu = lsp->pdu.pdu;
-            isis.pdu_len = lsp->pdu.pdu_len;
-            if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) != BBL_TXQ_OK) {
-                break;
-            }
-            entry->wait_ack = true;
-            entry->tx_count++;
-            entry->tx_timestamp.tv_sec = now.tv_sec;
-            entry->tx_timestamp.tv_nsec = now.tv_nsec;
-            adjacency->stats.lsp_tx++;
-            adjacency->interface->stats.isis_tx++;
-            if(window) window--;
-            if(window == 0) break;
         }
         next = hb_itor_next(itor);
     }

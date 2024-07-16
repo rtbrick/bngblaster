@@ -42,6 +42,10 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
     switch (pdu->pdu_type) {
         case ISIS_PDU_L1_HELLO:
         case ISIS_PDU_L2_HELLO:
+            if(hdr_len != ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_HELLO) {
+                return DECODE_ERROR;
+            }
+            pdu_len = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEN));
             break;
         case ISIS_PDU_P2P_HELLO:
             if(hdr_len != ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_P2P_HELLO) {
