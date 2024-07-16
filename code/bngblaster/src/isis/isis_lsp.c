@@ -79,6 +79,10 @@ isis_lsp_flood_adjacency(isis_lsp_s *lsp, isis_adjacency_s *adjacency)
     dict_insert_result result; 
     isis_flood_entry_s *flood;
 
+    if(lsp->seq == 0) {
+        return;
+    }
+
     /* Add to flood tree if not already present. */
     search = hb_tree_search(adjacency->flood_tree, &lsp->id);
     if(search) {

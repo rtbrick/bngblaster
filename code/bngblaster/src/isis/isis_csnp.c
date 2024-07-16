@@ -83,8 +83,8 @@ isis_csnp_job(timer_s *timer)
     while(next) {
         lsp = *hb_itor_datum(itor);
 
-        if(lsp->deleted) {
-            /* Ignore deleted LSP. */
+        if(lsp->deleted || lsp->seq == 0) {
+            /* Ignore deleted or requested LSP. */
             next = hb_itor_next(itor);
             continue;
         }
