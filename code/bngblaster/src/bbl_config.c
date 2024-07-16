@@ -1788,6 +1788,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
     }
 
+    isis_config->external_purge = true;
     sub = json_object_get(isis, "external");
     if(json_is_object(sub)) {
 
