@@ -236,3 +236,13 @@ appending to an existing file.
     bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib -s streams.json --stream-append
 
 There are several options supported to further define the traffic streams like PPS and expected RX labels.
+
+BGP Convergence Testing
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The following project demonstrates how to measure the convergence between the BGP Control-Plane (CP) 
+and the Data-Plane (DP) using the BNG Blaster. By utilizing BNG Blaster, we can analyze and monitor 
+the time it takes for routing changes to propagate from the control-plane, where BGP updates occur, 
+to the data-plane, where actual data packet forwarding happens.
+
+https://github.com/rtbrick/BGP-CP-DP-Testing
