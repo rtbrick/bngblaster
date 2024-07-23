@@ -30,6 +30,8 @@ The following list shows all supported logging options.
 * ``tcp``: log TCP events
 * ``lag``: log link aggregation (LAG) events
 * ``dpdk``: log DPDK events
+* ``packet``: log packet events
+* ``http``: log HTTP events
 
 .. code-block:: none
     
