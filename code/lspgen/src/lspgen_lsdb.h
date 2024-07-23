@@ -98,7 +98,8 @@ typedef struct lsdb_ctx_
     uint32_t nodecount;
     uint32_t linkcount;
 
-    /* BNG blaster Control socket */
+    /* BNG Blaster Control socket */
+    uint8_t ctrl_instance; /* ISIS or OSPF instance-id */
     char *ctrl_socket_path;
     timer_s *ctrl_socket_connect_timer;
     timer_s *ctrl_socket_wakeup_timer; /* dummy timer */

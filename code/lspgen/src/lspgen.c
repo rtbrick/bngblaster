@@ -47,6 +47,7 @@ static struct option long_options[] = {
     {"write-config-file", required_argument, NULL, 'w'},
     {"connector", required_argument, NULL, 'C'},
     {"control-socket", required_argument, NULL, 'S'},
+    {"control-instance", required_argument, NULL, 'I'},
     {"ipv4-link-prefix", required_argument, NULL, 'l'},
     {"ipv6-link-prefix", required_argument, NULL, 'L'},
     {"ipv4-node-prefix", required_argument, NULL, 'n'},
@@ -992,6 +993,8 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     ctx->srgb_base = 10000;
     ctx->srgb_range = 2000;
 
+    ctx->ctrl_instance = 1;
+
     /* MRT must haves */
     time(&ctx->now);
 }
@@ -1275,7 +1278,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vha:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -1442,12 +1445,16 @@ main(int argc, char *argv[])
                 /* open control socket to BNG Blaster */
                 ctx->ctrl_socket_path = strdup(optarg);
                 break;
+            case 'I':
+                /* routing instance-id used by BNG Blaster */
+                ctx->ctrl_instance = strtol(optarg, NULL, 0);
+                break;
             case 'V':
                 /* level */
                 if (ctx->protocol_id != PROTO_ISIS) {
                     LOG(ERROR, "Level may not be set for protocol %s\n", lsdb_format_proto(ctx));
                     exit(EXIT_FAILURE);
-		        }
+                }
                 ctx->topology_id.level = atoi(optarg);
                 if (ctx->topology_id.level < 1 || ctx->topology_id.level > 2) {
                     LOG(ERROR, "Level %u is not supported\n", ctx->topology_id.level);
