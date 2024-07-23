@@ -1,25 +1,19 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traffic Streams &mdash; BNG Blaster 0.9 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=049aceee"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -32,16 +26,12 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -96,8 +86,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Traffic Streams</li>
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Traffic Streams</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/streams.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -108,7 +98,7 @@
            <div itemprop="articleBody">
              
   <section id="traffic-streams">
-<span id="streams"></span><h1>Traffic Streams<a class="headerlink" href="#traffic-streams" title="Link to this heading"></a></h1>
+<span id="streams"></span><h1>Traffic Streams<a class="headerlink" href="#traffic-streams" title="Permalink to this headline"></a></h1>
 <p>The BNG Blaster can perform various forwarding verifications
 and QoS tests using traffic streams.</p>
 <img alt="Interactive Streams" src="_images/bbl_streams.png" />
@@ -124,7 +114,7 @@ to or from destinations associated with certain emulated routing topologies. For
 you can emulate an ISIS network, advertise BGP prefixes with next-hops in this
 emulated ISIS network, and then send traffic to or from one of those BGP prefixes.</p>
 <section id="understanding-flows">
-<h2>Understanding Flows<a class="headerlink" href="#understanding-flows" title="Link to this heading"></a></h2>
+<h2>Understanding Flows<a class="headerlink" href="#understanding-flows" title="Permalink to this headline"></a></h2>
 <p>A flow represents a particular instance of a traffic stream where a stream
 can consist of one or more flows, depending on its configuration
 and the number of sessions it is associated with. For example:</p>
@@ -141,70 +131,74 @@ such as its configuration, statistics, and state. You can also use the <code cla
 brief overview of all the flows that are currently active or configured.</p>
 </section>
 <section id="configuration">
-<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
 <p>Following a simple PPPoE example with streams.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Voice&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;vlan-priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.10&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;address-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::1/64&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;gateway-ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fc66:1337:7331::2&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">},</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Voice&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;vlan-priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.10&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <tbody>
 <tr class="row-odd"><td><p>Attribute</p></td>
 <td><p>Description</p></td>
@@ -496,39 +490,39 @@ brief overview of all the flows that are currently active or configured.</p>
 </table>
 </section>
 <section id="stream-configuration-file">
-<h2>Stream Configuration File<a class="headerlink" href="#stream-configuration-file" title="Link to this heading"></a></h2>
+<h2>Stream Configuration File<a class="headerlink" href="#stream-configuration-file" title="Permalink to this headline"></a></h2>
 <p>The command line argument <code class="docutils literal notranslate"><span class="pre">-T</span> <span class="pre">&lt;filename&gt;</span></code> allows the include
 of streams defined in a separate file. The format is equal to
 streams defined in the actual configuration file. Such stream
 configuration files could be generated by scripts and
 easily merged with the base configuration.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
 <section id="raw-streams">
-<h2>RAW Streams<a class="headerlink" href="#raw-streams" title="Link to this heading"></a></h2>
+<h2>RAW Streams<a class="headerlink" href="#raw-streams" title="Permalink to this headline"></a></h2>
 <p>Streams with default <code class="docutils literal notranslate"><span class="pre">stream-group-id</span></code> set to zero are considered raw streams not
 bound to any session which is supported downstream only. For those streams, the
 destination address must be explicitly set.</p>
 <p>RAW streams can be used for traffic between network interfaces but also to send traffic
 from network to access interfaces.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RAW&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.20&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;RAW&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.20&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1.1.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">256</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>If <code class="docutils literal notranslate"><span class="pre">destination-ipv4-address</span></code> is set to a multicast IP address (224.0.0.0 - 239.255.255.255),
@@ -536,23 +530,23 @@ the BNG Blaster will set the destination MAC address to the corresponding
 multicast MAC address automatically. For unicast traffic the network gateway MAC address is used.</p>
 </section>
 <section id="tcp-raw-streams">
-<h2>TCP RAW Streams<a class="headerlink" href="#tcp-raw-streams" title="Link to this heading"></a></h2>
+<h2>TCP RAW Streams<a class="headerlink" href="#tcp-raw-streams" title="Permalink to this headline"></a></h2>
 <p>A new option called <code class="docutils literal notranslate"><span class="pre">raw-tcp</span></code> is added to the stream configuraton.
 If enabled, UDP-like traffic with a constant rate is sent using a
 static (RAW) TCP header.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TCP1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;raw-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TCP1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;raw-tcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>This option can be used stand-alone to verify firewall filters or together
@@ -560,7 +554,7 @@ with the new NAT option to verify NAT TCP streams.</p>
 <p>For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.</p>
 </section>
 <section id="stream-commands">
-<h2>Stream Commands<a class="headerlink" href="#stream-commands" title="Link to this heading"></a></h2>
+<h2>Stream Commands<a class="headerlink" href="#stream-commands" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster provides multiple commands to control and check traffic streams.
 The command <code class="docutils literal notranslate"><span class="pre">stream-summary</span></code> returns a list of all flows with terse informations.
 This list can be optionally filtered using different arguments like session-group-id,
@@ -569,100 +563,100 @@ flow-id of a particular stream to query detailed informations using
 the <code class="docutils literal notranslate"><span class="pre">stream-info</span> <span class="pre">flow-id</span> <span class="pre">&lt;id&gt;</span></code> command.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">session-streams</span></code> command returns detailed stream statistics per session.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-streams</span> <span class="pre">session-id</span> <span class="pre">1</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;session-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">59670</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54610</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rx-accounting-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">59655</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;tx-accounting-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1100</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9028800</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8240000</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">9.0288</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.24</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">            </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;upstream&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">362</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54593</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1030</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54232</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98595</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8240000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8112000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.24</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.112</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span>
-<span class="w">            </span><span class="p">},</span>
-<span class="w">            </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">362</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54593</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1026</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54232</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">43</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98903</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8112000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8208000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.112</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.208</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span>
-<span class="w">            </span><span class="p">},</span>
-<span class="w">            </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Voice&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5458</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1026</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5422</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5458</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">41</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">96548</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">811200</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820800</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">800000</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8112</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8208</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span>
-<span class="w">            </span><span class="p">}</span>
-<span class="w">        </span><span class="p">]</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;session-streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">59670</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54610</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-accounting-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">59655</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-accounting-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1100</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9028800</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8240000</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">9.0288</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.24</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;upstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">362</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54593</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1030</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54232</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98595</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8240000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8112000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.24</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.112</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BestEffort&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">362</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54593</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1026</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54232</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">54594</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">43</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98903</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8112000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8208000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.112</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.208</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span><span class="w"></span>
+<span class="w">            </span><span class="p">},</span><span class="w"></span>
+<span class="w">            </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Voice&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5458</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1026</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1014</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5422</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5458</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">41</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">96548</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">811200</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">820800</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">800000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8112</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8208</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">rx-outer-vlan-pbit</span></code> might be wrong depending on the network interface driver and
@@ -684,36 +678,36 @@ accounting of the BNG, meaning session RX/TX packets excluding control traffic.<
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock session-streams session-id 1 | jq &#39;.&quot;session-streams&quot;.streams[] | select(.name == &quot;BE&quot; and .direction == &quot;downstream&quot; )&#39;
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BE&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27040</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">213</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">126</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">114</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27008</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27040</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10561</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90288</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99792</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">79200</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.090288</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.099792</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0792</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BE&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;flow-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-first-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-last-seq&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27040</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-tos-tc&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">213</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-outer-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-inner-vlan-pbit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">126</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;tx-len&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">114</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27008</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">27040</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-loss&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-delay-us-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-delay-us-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10561</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;tx-pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;tx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">90288</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-bps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">99792</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-bps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">79200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;tx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.090288</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-mbps-l2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.099792</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;rx-mbps-l3&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0792</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
 <section id="start-stop-traffic">
-<h2>Start/Stop Traffic<a class="headerlink" href="#start-stop-traffic" title="Link to this heading"></a></h2>
+<h2>Start/Stop Traffic<a class="headerlink" href="#start-stop-traffic" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster provides multiple options to start, stop and autostart traffic streams
 which are divided into two parts. The global traffic state and the flow state.</p>
 <p>The global traffic state determines whether any traffic stream can be sent or not.
@@ -747,7 +741,7 @@ can modify the state of these streams at any time.</p>
 <p>Details about all commands and their arguments can found int the <a class="reference internal" href="api/index.html#api"><span class="std std-ref">API/CLI</span></a> section.</p>
 </section>
 <section id="bng-blaster-traffic">
-<span id="bbl-header"></span><h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Link to this heading"></a></h2>
+<span id="bbl-header"></span><h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Permalink to this headline"></a></h2>
 <p><em>Blaster Header and Fast Decode Signature</em></p>
 <p>The 48 Byte fixed size BNG Blaster Header is added to all data packets
 for traffic validation and fast decoding. The header is expected on the
@@ -755,7 +749,7 @@ last 48 bytes of the packet.</p>
 <p>The type is set to 1 for all unicast session traffic and 2 for
 IPv4 multicast traffic.</p>
 <section id="unicast-session-traffic">
-<h3>Unicast Session Traffic<a class="headerlink" href="#unicast-session-traffic" title="Link to this heading"></a></h3>
+<h3>Unicast Session Traffic<a class="headerlink" href="#unicast-session-traffic" title="Permalink to this headline"></a></h3>
 <p>The 64-bit session key is used for all traffic from access (upstream)
 and to access (downstream) interfaces to identify the corresponding
 session which has sent or should receive the packet.</p>
@@ -786,7 +780,7 @@ session which has sent or should receive the packet.</p>
 <img alt="BNG Blaster Header" src="_images/bbl_header.png" />
 </section>
 <section id="multicast-traffic">
-<h3>Multicast Traffic<a class="headerlink" href="#multicast-traffic" title="Link to this heading"></a></h3>
+<h3>Multicast Traffic<a class="headerlink" href="#multicast-traffic" title="Permalink to this headline"></a></h3>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 | BNG Blaster Magic Sequence                                    |
@@ -819,7 +813,7 @@ stored in host byte order for faster processing
 </div>
 </section>
 <section id="bng-blaster-magic-sequence">
-<h3>BNG Blaster Magic Sequence<a class="headerlink" href="#bng-blaster-magic-sequence" title="Link to this heading"></a></h3>
+<h3>BNG Blaster Magic Sequence<a class="headerlink" href="#bng-blaster-magic-sequence" title="Permalink to this headline"></a></h3>
 <p>The 64-bit magic sequence is the word <code class="docutils literal notranslate"><span class="pre">RtBrick!</span></code> decoded as ASCII:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0x5274427269636b21
 </pre></div>
@@ -828,18 +822,18 @@ stored in host byte order for faster processing
 of blaster traffic.</p>
 </section>
 <section id="flow-identifier">
-<h3>Flow Identifier<a class="headerlink" href="#flow-identifier" title="Link to this heading"></a></h3>
+<h3>Flow Identifier<a class="headerlink" href="#flow-identifier" title="Permalink to this headline"></a></h3>
 <p>The 64-bit flow identifier is a globally unique number that identifies
 the flow.</p>
 </section>
 <section id="flow-sequence-number">
-<h3>Flow Sequence Number<a class="headerlink" href="#flow-sequence-number" title="Link to this heading"></a></h3>
+<h3>Flow Sequence Number<a class="headerlink" href="#flow-sequence-number" title="Permalink to this headline"></a></h3>
 <p>The 64-bit flow sequence number is a sequential number starting with 1
 and incremented per packet primary used to identify packet loss.</p>
 <p>This number 0 means that sequencing is disabled.</p>
 </section>
 <section id="nanosecond-send-timestamps">
-<h3>Nanosecond Send Timestamps<a class="headerlink" href="#nanosecond-send-timestamps" title="Link to this heading"></a></h3>
+<h3>Nanosecond Send Timestamps<a class="headerlink" href="#nanosecond-send-timestamps" title="Permalink to this headline"></a></h3>
 <p>The 64-bit nanoseconds send timestamp is used for optional latency and
 jitter calculations.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
