@@ -316,7 +316,6 @@ io_raw_init(io_handle_s *io)
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->io.tx_job, "TX", 0, 
                 config->tx_interval, io, &io_raw_tx_job);
-            interface->io.tx_job->reset = false;
         }
     }
     return true;
