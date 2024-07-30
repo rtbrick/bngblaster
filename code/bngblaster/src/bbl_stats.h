@@ -16,6 +16,7 @@ typedef struct bbl_rate_
     uint64_t diff_value[BBL_AVG_SAMPLES];
     uint32_t cursor;
     uint64_t last_value;
+    uint64_t sum;
     uint64_t avg;
     uint64_t avg_max;
 } bbl_rate_s;

@@ -1228,21 +1228,20 @@ bbl_stats_json(bbl_stats_s * stats)
 void
 bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value)
 {
-    uint8_t idx;
-    uint64_t sum;
+    if (current_value == 0) return;
 
-    if(current_value == 0) return;
+    uint64_t diff = current_value - rate->last_value;
+    uint64_t old_diff = rate->diff_value[rate->cursor];
 
-    rate->diff_value[rate->cursor] = current_value - rate->last_value;
+    rate->diff_value[rate->cursor] = diff;
+    rate->cursor = (rate->cursor + 1) % BBL_AVG_SAMPLES;
 
-    sum = 0;
-    for(idx = 0; idx < BBL_AVG_SAMPLES; idx++) {
-        sum += rate->diff_value[idx];
-    }
-    rate->avg = sum / BBL_AVG_SAMPLES;
-    if(rate->avg > rate->avg_max) {
+    rate->sum = rate->sum - old_diff + diff;
+    rate->avg = rate->sum / BBL_AVG_SAMPLES;
+
+    if (rate->avg > rate->avg_max) {
         rate->avg_max = rate->avg;
     }
-    rate->cursor = (rate->cursor + 1) % BBL_AVG_SAMPLES;
+
     rate->last_value = current_value;
 }
