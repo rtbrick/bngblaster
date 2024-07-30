@@ -1227,6 +1227,7 @@ bbl_stream_ctrl(bbl_stream_s *stream)
     bbl_session_s *session = stream->session;
 
     uint64_t packets;
+    uint64_t loss;
     uint64_t packets_delta;
     uint64_t bytes_delta;
     uint64_t loss_delta;
@@ -1239,8 +1240,8 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         stream->last_sync_packets_tx = packets;
         bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
     }
-    if(g_ctx->config.stream_rate_calc) {
-        bbl_compute_avg_rate(&stream->rate_packets_tx, stream->tx_packets);
+    if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
+        bbl_compute_avg_rate(&stream->rate_packets_tx, packets);
     }
     if(unlikely(stream->type == BBL_TYPE_MULTICAST)) {
         return;
@@ -1252,9 +1253,9 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         bytes_delta = packets_delta * stream->rx_len;
         stream->last_sync_packets_rx = packets;
         /* Calculate RX loss since last sync. */
-        packets = stream->rx_loss;
-        loss_delta = packets - stream->last_sync_loss;
-        stream->last_sync_loss = packets;
+        loss = stream->rx_loss;
+        loss_delta = loss - stream->last_sync_loss;
+        stream->last_sync_loss = loss;
         bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
         if(unlikely(stream->rx_wrong_session)) {
             bbl_stream_rx_wrong_session(stream);
@@ -1287,8 +1288,8 @@ bbl_stream_ctrl(bbl_stream_s *stream)
             }
         }
     }
-    if(g_ctx->config.stream_rate_calc) {
-        bbl_compute_avg_rate(&stream->rate_packets_rx, stream->rx_packets);
+    if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
+        bbl_compute_avg_rate(&stream->rate_packets_rx, packets);
     }
 }
 
