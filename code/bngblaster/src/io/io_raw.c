@@ -175,6 +175,7 @@ io_raw_tx_job(timer_s *timer)
                 } else {
                     LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
                         interface->name, strerror(errno), errno);
+                    io->bucket_cur->stream_cur = stream;
                     io->stats.io_errors++;
                     burst = 0;
                 }
@@ -280,6 +281,7 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
                     } else {
                         LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n", 
                             io->interface->name, strerror(errno), errno);
+                        io->bucket_cur->stream_cur = stream;
                         io->stats.io_errors++;
                         burst = 0;
                     }
