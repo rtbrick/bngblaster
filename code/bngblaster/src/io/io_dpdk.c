@@ -648,7 +648,6 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->io.tx_job, "TX", 0, 
                 config->tx_interval, io, &io_dpdk_tx_job);
-            interface->io.tx_job->reset = false;
         }
         io->queue = queue;
         if(!io_dpdk_add_mbuf_pool(io)) {
