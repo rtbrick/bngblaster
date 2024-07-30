@@ -40,8 +40,30 @@ bucket_stream_add(io_bucket_s *io_bucket, bbl_stream_s *stream)
 {
     stream->io_next = io_bucket->stream_head;
     io_bucket->stream_head = stream;
-    io_bucket->stream_cur = stream;
     io_bucket->stream_count++;
+}
+
+static void
+bucket_shuffle(io_bucket_s *io_bucket)
+{
+    bbl_stream_s *stream;
+    bbl_stream_s *next;
+
+    if(io_bucket && io_bucket->stream_count) {
+        stream = io_bucket->stream_head;
+        while(stream) {
+            next = stream->io_next;
+            if(next && next->flow_id%3==0) {
+                stream->io_next = next->io_next;
+                stream = next->io_next;
+                next->io_next = io_bucket->stream_head;
+                io_bucket->stream_head = next;
+            } else {
+                stream = next;
+            }
+        }
+    }
+    io_bucket->stream_cur = NULL;
 }
 
 static void
@@ -108,6 +130,7 @@ io_stream_smear(io_handle_s *io)
     clock_gettime(CLOCK_MONOTONIC, &now);
     now_nsec = timespec_to_nsec(&now);
     while(io_bucket) {
+        bucket_shuffle(io_bucket);
         bucket_smear(io_bucket, now_nsec);
         io_bucket = io_bucket->next;
     }
