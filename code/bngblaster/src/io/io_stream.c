@@ -40,7 +40,6 @@ bucket_stream_add(io_bucket_s *io_bucket, bbl_stream_s *stream)
 {
     stream->io_next = io_bucket->stream_head;
     io_bucket->stream_head = stream;
-    io_bucket->stream_cur = stream;
     io_bucket->stream_count++;
 }
 
