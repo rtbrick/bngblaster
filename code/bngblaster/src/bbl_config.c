@@ -1541,7 +1541,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "hostname", "router-id", "system-id",
         "area", "sr-base", "sr-range",
         "sr-node-sid", "teardown-time", "external",
-        "external-auto-refresh"
+        "external-auto-refresh", "lsp-buffer-size"
     };
     if(!schema_validate(isis, "isis", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1862,6 +1862,15 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     JSON_OBJ_GET_BOOL(isis, value, "isis", "external-auto-refresh");
     if(value) {
         isis_config->external_auto_refresh  = json_boolean_value(value);
+    }
+
+    /* Value range choosen from smallest configurable on IOS-XR (lsp-mtu) and maximum on JunOS (max-lsp-size) */
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", 128, 9192);
+    if(value) {
+        isis_config->lsp_buffer_size = json_number_value(value);
+    }
+    else {
+	isis_config->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
     }
     return true;
 }

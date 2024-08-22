@@ -83,6 +83,9 @@ void
 isis_pdu_add_tlv_te_router_id(isis_pdu_s *pdu, ipv4addr_t addr);
 
 void
+isis_pdu_add_tlv_lsp_buffer_size(isis_pdu_s *pdu, uint16_t buffer_size);
+
+void
 isis_pdu_add_tlv_hostname(isis_pdu_s *pdu, char *hostname);
 
 void

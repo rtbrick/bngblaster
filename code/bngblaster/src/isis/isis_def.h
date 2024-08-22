@@ -75,6 +75,7 @@
 #define ISIS_DEFAULT_LSP_WINDOWS_SIZE   1
 
 #define ISIS_DEFAULT_TEARDOWN_TIME      5
+#define ISIS_DEFAULT_LSP_BUFFER_SIZE	1492
 
 #define ISIS_LSP_GC_INTERVAL            30
 #define ISIS_LSP_GC_DELETE_MAX          256
@@ -149,6 +150,7 @@ typedef enum isis_tlv_type_ {
     ISIS_TLV_PADDING                = 8,
     ISIS_TLV_LSP_ENTRIES            = 9,
     ISIS_TLV_AUTH                   = 10,
+    ISIS_TLV_LSP_BUFFER_SIZE        = 14,
     ISIS_TLV_EXT_REACHABILITY       = 22,
     ISIS_TLV_PROTOCOLS              = 129,
     ISIS_TLV_IPV4_INT_ADDRESS       = 132,
@@ -244,6 +246,7 @@ typedef struct isis_config_ {
     uint16_t            lsp_tx_interval;    /* LSP TX interval in MS (default 10ms) */
     uint16_t            lsp_retry_interval; /* LSP retry interval in seconds (default 5s) */
     uint16_t            csnp_interval;      /* CSNP interval in seconds (default 5s) */
+    uint16_t            lsp_buffer_size;  
 
     uint32_t            sr_base;
     uint32_t            sr_range;

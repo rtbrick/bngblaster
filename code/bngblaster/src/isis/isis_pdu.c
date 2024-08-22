@@ -424,6 +424,15 @@ isis_pdu_add_tlv_te_router_id(isis_pdu_s *pdu, ipv4addr_t addr) {
 }
 
 void
+isis_pdu_add_tlv_lsp_buffer_size(isis_pdu_s *pdu, uint16_t buffer_size) {
+    isis_tlv_s *tlv =  (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
+    tlv->type = ISIS_TLV_LSP_BUFFER_SIZE;
+    tlv->len = sizeof(buffer_size);
+    *(uint16_t*)tlv->value = be16toh(buffer_size);
+    ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
+}
+
+void
 isis_pdu_add_tlv_hostname(isis_pdu_s *pdu, char *hostname)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
