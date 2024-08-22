@@ -707,7 +707,7 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     if(config->sr_base && config->sr_range) {
         isis_pdu_add_tlv_router_cap(pdu, config->router_id, 
             config->protocol_ipv4, config->protocol_ipv6, 
-            config->sr_base, config->sr_range);
+            config->sr_base, config->sr_range, config->sr_algo_count, config->sr_algo);
     }
 
     /* Add link networks */

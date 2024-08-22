@@ -1541,7 +1541,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "hostname", "router-id", "system-id",
         "area", "sr-base", "sr-range",
         "sr-node-sid", "teardown-time", "external",
-        "external-auto-refresh", "lsp-buffer-size"
+        "external-auto-refresh", "lsp-buffer-size", "sr-algo"
     };
     if(!schema_validate(isis, "isis", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1778,6 +1778,24 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     JSON_OBJ_GET_NUMBER(isis, value, "isis", "sr-node-sid", 0, 1048575);
     if(value) {
         isis_config->sr_node_sid = json_number_value(value);
+    }
+
+    value = json_object_get(isis, "sr-algo");
+    if(json_is_array(value)) {
+        isis_config->sr_algo_count = json_array_size(value);
+        isis_config->sr_algo = calloc(isis_config->sr_algo_count, sizeof(uint8_t));
+        for(i = 0; i < isis_config->sr_algo_count; i++) {
+	    sub = json_array_get(value, i);
+	    if(json_is_number(sub)) {
+		isis_config->sr_algo[i] = json_number_value(sub);
+            }
+        }
+    } else if(json_is_number(value)) {
+        isis_config->sr_algo = calloc(1, sizeof(uint8_t));
+	isis_config->sr_algo[0] = json_number_value(value);
+        isis_config->sr_algo_count = 1;
+    } else {
+        isis_config->sr_algo_count = 0;
     }
 
     value = json_object_get(isis, "teardown-time");
