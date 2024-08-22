@@ -253,6 +253,7 @@ typedef struct isis_config_ {
     uint32_t            sr_node_sid;
     uint8_t            *sr_algo;
     uint8_t             sr_algo_count;
+    bool                adjacency_sid;
     
     /* External */
     bool external_purge;

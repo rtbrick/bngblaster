@@ -567,18 +567,36 @@ isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 void
 isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, 
                                   uint8_t pseudo_node, 
-                                  uint32_t metric)
+                                  uint32_t metric, bool adjacency_sid)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
     tlv->type = ISIS_TLV_EXT_REACHABILITY;
-    tlv->len = 11;
+    if(adjacency_sid && pseudo_node == 0) {
+        tlv->len = 18;
+    } else {
+	tlv->len = 11;
+    }
     memcpy(tlv_cur, system_id, ISIS_SYSTEM_ID_LEN);
     tlv_cur += ISIS_SYSTEM_ID_LEN; 
     *(uint32_t*)tlv_cur = htobe32(metric);
     *tlv_cur = pseudo_node;
     tlv_cur += sizeof(metric);
-    *tlv_cur = 0; 
+    /* implementation only for SubTLV 31 (non-DIS case), TODO for SubTLV 32 */
+    if(adjacency_sid && pseudo_node == 0) {
+	 *tlv_cur = 7;
+	 tlv_cur += sizeof(uint8_t);
+	 *tlv_cur++ = 31;
+	 *tlv_cur++ = 5;
+	 /* set V and L flag always */
+	 *tlv_cur++ = 0x30;
+	 *tlv_cur++ = 0;
+	 /* generate random adjacency SID but avoid reserved ranges 0-255 */
+	 *tlv_cur++ = 0;
+	 *(uint16_t*)tlv_cur = htobe16(rand() % 4096 + 256);
+    } else {
+	 *tlv_cur = 0;
+    }
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 
@@ -597,7 +615,7 @@ isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id,
         tlv->len = 16;
     }
     *(ipv4addr_t*)tlv_cur = router_id;
-    tlv_cur+=sizeof(ipv4addr_t);
+    tlv_cur += sizeof(ipv4addr_t);
     *tlv_cur++ = 0;
     *tlv_cur++ = 2;
     *tlv_cur++ = 9;
@@ -605,12 +623,12 @@ isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id,
     *tlv_cur = 0;
     if(ipv4) *tlv_cur |= 128;
     if(ipv6) *tlv_cur |= 64;
-    tlv_cur+=sizeof(uint32_t);
+    tlv_cur += sizeof(uint32_t);
     *tlv_cur++ = 1;
     *(uint32_t*)tlv_cur = htobe32(sr_base);
     *tlv_cur = 3;
     if(sr_algo_count > 0) {
-	tlv_cur+=sizeof(uint32_t);
+	tlv_cur += sizeof(uint32_t);
         *tlv_cur++ = 19;
         *tlv_cur++ = sr_algo_count;
         for(int i = 0; i < sr_algo_count; i++) {

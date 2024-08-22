@@ -1541,7 +1541,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "hostname", "router-id", "system-id",
         "area", "sr-base", "sr-range",
         "sr-node-sid", "teardown-time", "external",
-        "external-auto-refresh", "lsp-buffer-size", "sr-algo"
+        "external-auto-refresh", "lsp-buffer-size", "sr-algo",
+        "adjacency-sid"
     };
     if(!schema_validate(isis, "isis", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1796,6 +1797,13 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->sr_algo_count = 1;
     } else {
         isis_config->sr_algo_count = 0;
+    }
+
+    JSON_OBJ_GET_BOOL(isis, value, "isis", "adjacency-sid");
+    if(value) {
+        isis_config->adjacency_sid  = json_boolean_value(value);
+    } else {
+        isis_config->adjacency_sid  = false;
     }
 
     value = json_object_get(isis, "teardown-time");
