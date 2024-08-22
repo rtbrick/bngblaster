@@ -107,7 +107,7 @@ void
 isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key);
 
 void
-isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint8_t pseudo_node, uint32_t metric);
+isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint8_t pseudo_node, uint32_t metric, bool adjacency_sid);
 
 void
 isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id, 
