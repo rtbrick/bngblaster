@@ -585,12 +585,17 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
 void
 isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id, 
                             bool ipv4, bool ipv6, 
-                            uint32_t sr_base, uint32_t sr_range)
+                            uint32_t sr_base, uint32_t sr_range, uint8_t sr_algo_count, uint8_t *sr_algo)
 {
+
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
     tlv->type = ISIS_TLV_ROUTER_CAPABILITY;
-    tlv->len = 16;
+    if(sr_algo_count > 0) {
+        tlv->len = 18 + sr_algo_count;
+    } else {
+        tlv->len = 16;
+    }
     *(ipv4addr_t*)tlv_cur = router_id;
     tlv_cur+=sizeof(ipv4addr_t);
     *tlv_cur++ = 0;
@@ -604,6 +609,14 @@ isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id,
     *tlv_cur++ = 1;
     *(uint32_t*)tlv_cur = htobe32(sr_base);
     *tlv_cur = 3;
+    if(sr_algo_count > 0) {
+	tlv_cur+=sizeof(uint32_t);
+        *tlv_cur++ = 19;
+        *tlv_cur++ = sr_algo_count;
+        for(int i = 0; i < sr_algo_count; i++) {
+            *tlv_cur++ = sr_algo[i];
+        }
+    }
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 
