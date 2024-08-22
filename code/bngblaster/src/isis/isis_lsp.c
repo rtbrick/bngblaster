@@ -685,6 +685,7 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     isis_pdu_add_tlv_hostname(pdu, (char*)config->hostname);
     isis_pdu_add_tlv_ipv4_int_address(pdu, config->router_id);
     isis_pdu_add_tlv_te_router_id(pdu, config->router_id);
+    isis_pdu_add_tlv_lsp_buffer_size(pdu, config->lsp_buffer_size);
 
     loopback_prefix.address = config->router_id;
     loopback_prefix.len = 32;
