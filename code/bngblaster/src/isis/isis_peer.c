@@ -19,7 +19,7 @@ isis_peer_dis_elect(isis_adjacency_s *adjacency)
     isis_peer_s *dis = NULL;
     isis_peer_s *peer = adjacency->peer;
     while(peer) {
-        if(peer->state == ISIS_PEER_STATE_UP && 
+        if(peer->pseudo_node_id && peer->state == ISIS_PEER_STATE_UP && 
            (peer->priority > priority ||
            (peer->priority == priority && 
             compare_mac_addresses(peer->mac, mac)))) {
@@ -32,8 +32,8 @@ isis_peer_dis_elect(isis_adjacency_s *adjacency)
     if(dis != adjacency->dis) {
         LOG(ISIS, "ISIS %s DIS changed from %s to %s on interface %s\n",
             isis_level_string(adjacency->level), 
-            adjacency->dis ? isis_system_id_to_str(adjacency->dis->system_id) : "self",
-            dis ? isis_system_id_to_str(dis->system_id) : "self",
+            adjacency->dis ? isis_pseudo_node_id_to_str(adjacency->dis->system_id, adjacency->dis->pseudo_node_id) : "self",
+            dis ? isis_pseudo_node_id_to_str(dis->system_id, dis->pseudo_node_id) : "self",
             adjacency->interface->name);
         adjacency->dis = dis;
         return true;

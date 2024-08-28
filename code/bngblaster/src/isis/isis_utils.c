@@ -209,6 +209,31 @@ isis_system_id_to_str(uint8_t *system_id)
 }
 
 /**
+ * isis_pseudo_node_id_to_str
+ *
+ * @param system_id IS-IS system-id (6 bytes)
+ * @param pseudo_node_id IS-IS pseudo-node-id (1 byte)
+ * @return IS-IS pseudo-node-id string
+ */
+char *
+isis_pseudo_node_id_to_str(uint8_t *system_id, uint8_t pseudo_node_id)
+{
+    static char buffer[4][ISIS_PSEUDO_NODE_ID_STR_LEN];
+    static int idx = 0;
+    char *ret;
+    ret = buffer[idx];
+    idx = (idx+1) & 3;
+
+    snprintf(ret, ISIS_PSEUDO_NODE_ID_STR_LEN, "%04x.%04x.%04x.%u",
+             be16toh(((uint16_t*)system_id)[0]), 
+             be16toh(((uint16_t*)system_id)[1]), 
+             be16toh(((uint16_t*)system_id)[2]),
+             pseudo_node_id);
+
+    return ret;
+}
+
+/**
  * isis_str_to_lsp_id
  *
  * @param str IS-IS lsp-id string

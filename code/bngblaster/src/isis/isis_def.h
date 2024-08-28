@@ -54,6 +54,7 @@
 #define ISIS_SOURCE_ID_LEN              7
 #define ISIS_SYSTEM_ID_LEN              6
 #define ISIS_SYSTEM_ID_STR_LEN          15
+#define ISIS_PSEUDO_NODE_ID_STR_LEN     19
 
 #define ISIS_LSP_ID_STR_LEN             21
 #define ISIS_LSP_ENTRY_LEN              16
