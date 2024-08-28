@@ -1197,7 +1197,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             session->stats.dhcp_tx_request++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
             eth.dst = session->dhcp_server_mac;
-            ipv4.dst = session->dhcp_server;
+            ipv4.dst = session->dhcp_server_identifier;
             header.ciaddr = session->ip_address;
             break;
         case BBL_DHCP_RELEASE:
@@ -1205,7 +1205,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             session->stats.dhcp_tx_release++;
             LOG(DHCP, "DHCP (ID: %u) DHCP-Release send\n", session->session_id);
             eth.dst = session->dhcp_server_mac;
-            ipv4.dst = session->dhcp_server;
+            ipv4.dst = session->dhcp_server_identifier;
             header.ciaddr = session->ip_address;
             dhcp.option_server_identifier = true;
             dhcp.server_identifier = session->dhcp_server_identifier;
