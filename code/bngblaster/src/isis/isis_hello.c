@@ -76,7 +76,7 @@ isis_hello_encode(bbl_network_interface_s *interface,
     isis_pdu_add_u8(&pdu, adjacency->priority);
     if(adjacency->dis) {
         isis_pdu_add_bytes(&pdu, adjacency->dis->system_id, ISIS_SYSTEM_ID_LEN);
-        isis_pdu_add_u8(&pdu, adjacency->pseudo_node_id);
+        isis_pdu_add_u8(&pdu, adjacency->dis->pseudo_node_id);
     } else {
         /* Advertise myself as DIS */
         isis_pdu_add_bytes(&pdu, config->system_id, ISIS_SYSTEM_ID_LEN);
