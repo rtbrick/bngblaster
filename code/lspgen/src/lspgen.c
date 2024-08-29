@@ -434,6 +434,13 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lsdb_add_node_attr(node, &attr_template);
         }
 
+	/* LSP Buffer size */
+        lsdb_reset_attr_template(&attr_template);
+	attr_template.key.ordinal = 1;
+	attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
+        attr_template.key.lsp_buffer_size = 1492;
+	lsdb_add_node_attr(node, &attr_template);
+
         /* IPv4 loopback address */
         lsdb_reset_attr_template(&attr_template);
         addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
@@ -962,6 +969,7 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     ctx->authentication_type = ISIS_AUTH_NONE;
     ctx->seed = 0x74522142; /* RtB! */
     ctx->lsp_lifetime = 65535;
+    ctx->lsp_buffer_size = 1492;
 
     ctx->link_multiplier = 1;
 
@@ -1061,6 +1069,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 	    LOG(NORMAL, " Area %s\n", format_iso_prefix(&ctx->area[idx]));
 	}
 	LOG(NORMAL, " Level %u\n", ctx->topology_id.level);
+	LOG(NORMAL, " LSP Buffer size %u\n", ctx->lsp_buffer_size);
 
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
 	    LOG(NORMAL, " Area %s\n", format_ipv4_address(&ctx->topology_id.area));

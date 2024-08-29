@@ -462,6 +462,9 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
             push_data(buf, (uint8_t *)attr->key.hostname, attr_len);
             break;
+	case ISIS_TLV_LSP_BUFFER_SIZE:
+            push_be_uint(buf, 2, attr->key.lsp_buffer_size);
+            break;
         case ISIS_TLV_INT_IPV4_REACH: /* fall through */
         case ISIS_TLV_EXT_IPV4_REACH:
             metric = attr->key.prefix.metric;

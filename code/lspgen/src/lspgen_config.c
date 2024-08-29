@@ -213,7 +213,8 @@ lspgen_write_node_common_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *node
 	}
 	if (node->attach) {
 	    json_object_set_new(node_obj, "attach", json_boolean(1));
-	}
+	}	
+        json_object_set_new(node_obj, "lsp_buffer_size", json_integer(1492));
 	break;
     case PROTO_OSPF2:
     case PROTO_OSPF3: /* fall through */
@@ -555,6 +556,8 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
             break;
         case ISIS_TLV_HOSTNAME: /* already generated above */
             break;
+	case ISIS_TLV_LSP_BUFFER_SIZE: /* already generated above */
+	    break;
         case ISIS_TLV_CAP:
             if (!cap_arr) {
                 cap_arr = json_array();
@@ -1186,6 +1189,23 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         value = json_object_get(node_obj, "lsp_lifetime");
         if (value && json_is_integer(value)) {
             node->lsp_lifetime = json_integer_value(value);
+        }
+
+        if (ctx->protocol_id == PROTO_ISIS) {
+            value = json_object_get(node_obj, "lsp_buffer_size");
+            lsdb_reset_attr_template(&attr_template);
+            attr_template.key.ordinal = 1;
+            attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
+	    if (value && json_is_integer(value)) {
+               node->lsp_buffer_size = json_integer_value(value);
+	       attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
+	       lsdb_add_node_attr(node, &attr_template);
+            }
+	    else {
+	       node->lsp_buffer_size = 1492;
+	       attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
+	       lsdb_add_node_attr(node, &attr_template);
+	    }
         }
 
 	if (ctx->protocol_id == PROTO_ISIS) {

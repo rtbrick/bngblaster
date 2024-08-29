@@ -86,6 +86,7 @@ typedef struct lsdb_ctx_
     bool no_ipv6;
     bool purge;
     uint16_t lsp_lifetime;
+    uint16_t lsp_buffer_size;
 
     uint32_t node_index;
     uint32_t link_index;
@@ -146,6 +147,7 @@ typedef struct lsdb_node_ {
 
     uint32_t sequence;
     uint16_t lsp_lifetime;
+    uint16_t lsp_buffer_size;
 
     timer_s *refresh_timer;
 
@@ -297,6 +299,7 @@ typedef struct lsdb_attr_ {
 	    uint8_t ipv6_addr[IPV6_ADDR_LEN];
 	    uint32_t srlg;
 	    char hostname[36];
+	    uint16_t lsp_buffer_size;
 	    uint8_t protocol;
 	};
     } key;
