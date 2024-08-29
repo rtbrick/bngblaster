@@ -39,6 +39,7 @@ enum {
 #define ISIS_TLV_CAP             242
 
 #define ISIS_SUBTLV_CAP_SR         2
+#define ISIS_SUBTLV_SR_ALGORITHM   19
 
 #define ISIS_SUBTLV_PREFIX_TAG     1
 #define ISIS_SUBTLV_PREFIX_SID     3

@@ -550,6 +550,11 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
                 push_be_uint(buf, 1, 3); /* SID Type Length */
                 push_be_uint(buf, 3, attr->key.cap.srgb_base);
             }
+	    if (attr->key.cap.sr_algo) {
+		push_be_uint(buf, 1, ISIS_SUBTLV_SR_ALGORITHM); /* subTLV Type */
+                push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* Area Length in bytes */
+                push_data(buf, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
+	    }
             break;
         case ISIS_TLV_BINDING:
             flags = 0;

@@ -977,6 +977,8 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
     struct lsdb_ctx_ *ctx;
     struct lsdb_attr_ attr_template;
     json_t *value;
+    json_t *arr;
+    uint32_t num_arr, idx;
     char *s;
 
     ctx = node->ctx;
@@ -1012,6 +1014,18 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
 	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
 	attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
 	attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
+    }
+
+    if (ctx->protocol_id == PROTO_ISIS) {
+        arr = json_object_get(obj, "sr_algo_list");
+        if (arr && json_is_array(arr)) {
+            num_arr = json_array_size(arr);
+	    attr_template.key.cap.sr_algo_len = num_arr;
+	    attr_template.key.cap.sr_algo = (uint8_t *)malloc((num_arr) * sizeof(uint8_t));
+            for (idx = 0; idx < num_arr; idx++) {
+                attr_template.key.cap.sr_algo[idx] = (uint8_t) json_integer_value(json_array_get(arr, idx));
+            }
+        }
     }
 
     attr_template.key.ordinal = 1;
