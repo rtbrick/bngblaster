@@ -1099,6 +1099,15 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
 		    metric = 16777215; /* 2^24 - 1 */
 		}
 		attr_template.key.link.metric = metric;
+
+ 		value = json_object_get(link_obj, "adjacency_sid");
+                if (value && json_is_boolean(value)) {
+		    /* ensure proper random seed */
+		    struct timespec ts;
+                    clock_gettime(CLOCK_MONOTONIC, &ts);
+		    srand((time_t)ts.tv_nsec);
+                    attr_template.key.link.adjacency_sid = rand() % 3840 + 256;
+                }	
 	    }
 
 	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);

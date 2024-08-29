@@ -450,7 +450,18 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
         case ISIS_TLV_EXTD_IS_REACH:
             push_data(buf, attr->key.link.remote_node_id, 7);
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
-            push_be_uint(buf, 1, 0); /* subTLV length */
+	    if(attr->key.link.adjacency_sid > 0) {
+  	        push_be_uint(buf, 1, 7);
+		push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ADJ_SID);
+		push_be_uint(buf, 1, 5);
+		push_be_uint(buf, 1, 0x30); /* set V and L flag always */
+		push_be_uint(buf, 1, 0);
+		push_be_uint(buf, 1, 0);
+	        push_be_uint(buf, 2, attr->key.link.adjacency_sid);
+	    }
+	    else {
+		push_be_uint(buf, 1, 0); /* subTLV length */
+            }
             break;
         case ISIS_TLV_IPV4_ADDR:
             push_data(buf, attr->key.ipv4_addr, 4);
@@ -551,7 +562,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
                 push_be_uint(buf, 3, attr->key.cap.srgb_base);
             }
 	    if (attr->key.cap.sr_algo) {
-		push_be_uint(buf, 1, ISIS_SUBTLV_SR_ALGORITHM); /* subTLV Type */
+		push_be_uint(buf, 1, ISIS_SUBTLV_CAP_SR_ALGO); /* subTLV Type */
                 push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* Area Length in bytes */
                 push_data(buf, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
 	    }
