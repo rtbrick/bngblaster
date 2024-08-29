@@ -722,7 +722,6 @@ typedef struct bbl_ipcp_ {
     bool        option_address;
     bool        option_dns1;
     bool        option_dns2;
-    uint8_t    *option[PPP_MAX_OPTIONS];
     bool        unknown_options;
 } bbl_ipcp_s;
 
@@ -735,7 +734,6 @@ typedef struct bbl_ip6cp_ {
     uint8_t    *options;
     uint8_t     options_len;
     uint64_t    ipv6_identifier;
-    uint8_t    *option[PPP_MAX_OPTIONS];
     bool        unknown_options;
 } bbl_ip6cp_s;
 
