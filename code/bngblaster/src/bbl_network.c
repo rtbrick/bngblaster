@@ -559,7 +559,7 @@ bbl_network_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)),
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         network_interface = interface->network;
         while(network_interface) {
-            json_array_append(interfaces, bbl_network_interface_json(network_interface));
+            json_array_append_new(interfaces, bbl_network_interface_json(network_interface));
             network_interface = network_interface->next;
         }
     }

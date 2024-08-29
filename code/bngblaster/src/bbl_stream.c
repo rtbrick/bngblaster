@@ -2459,10 +2459,10 @@ bbl_stream_summary_json(int session_group_id, const char *name, const char *inte
             "interface", stream->tx_interface->name);
         if(jobj) {
             if(stream->session) {
-                json_object_set(jobj, "session-id", json_integer(stream->session->session_id));
-                json_object_set(jobj, "session-traffic", json_boolean(stream->session_traffic));
+                json_object_set_new(jobj, "session-id", json_integer(stream->session->session_id));
+                json_object_set_new(jobj, "session-traffic", json_boolean(stream->session_traffic));
             }
-            json_array_append(jobj_array, jobj);
+            json_array_append_new(jobj_array, jobj);
         }
 NEXT:
         stream = stream->next;
@@ -2570,41 +2570,41 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             );
 
         if(stream->rx_interface_changes) { 
-            json_object_set(root, "rx-interface-changes", json_integer(stream->rx_interface_changes));
-            json_object_set(root, "rx-interface-changed-epoch", json_integer(stream->rx_interface_changed_epoch));
+            json_object_set_new(root, "rx-interface-changes", json_integer(stream->rx_interface_changes));
+            json_object_set_new(root, "rx-interface-changed-epoch", json_integer(stream->rx_interface_changed_epoch));
         }
         if(stream->config->rx_mpls1) { 
-            json_object_set(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
+            json_object_set_new(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));
         }
         if(stream->rx_mpls1) {
-            json_object_set(root, "rx-mpls1", json_integer(stream->rx_mpls1_label));
-            json_object_set(root, "rx-mpls1-exp", json_integer(stream->rx_mpls1_exp));
-            json_object_set(root, "rx-mpls1-ttl", json_integer(stream->rx_mpls1_ttl));
+            json_object_set_new(root, "rx-mpls1", json_integer(stream->rx_mpls1_label));
+            json_object_set_new(root, "rx-mpls1-exp", json_integer(stream->rx_mpls1_exp));
+            json_object_set_new(root, "rx-mpls1-ttl", json_integer(stream->rx_mpls1_ttl));
         }
         if(stream->config->rx_mpls2) { 
-            json_object_set(root, "rx-mpls2-expected", json_integer(stream->config->rx_mpls2_label));
+            json_object_set_new(root, "rx-mpls2-expected", json_integer(stream->config->rx_mpls2_label));
         }
         if(stream->rx_mpls2) {
-            json_object_set(root, "rx-mpls2", json_integer(stream->rx_mpls2_label));
-            json_object_set(root, "rx-mpls2-exp", json_integer(stream->rx_mpls2_exp));
-            json_object_set(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
+            json_object_set_new(root, "rx-mpls2", json_integer(stream->rx_mpls2_label));
+            json_object_set_new(root, "rx-mpls2-exp", json_integer(stream->rx_mpls2_exp));
+            json_object_set_new(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
         }
         if(stream->rx_source_ip) {
-            json_object_set(root, "rx-source-ip", json_string(format_ipv4_address(&stream->rx_source_ip)));
-            json_object_set(root, "rx-source-port", json_integer(stream->rx_source_port));
+            json_object_set_new(root, "rx-source-ip", json_string(format_ipv4_address(&stream->rx_source_ip)));
+            json_object_set_new(root, "rx-source-port", json_integer(stream->rx_source_port));
         }
         if(stream->session) {
-            json_object_set(root, "rx-wrong-session", json_integer(stream->rx_wrong_session));
-            json_object_set(root, "session-id", json_integer(stream->session->session_id));
-            json_object_set(root, "session-version", json_integer(stream->session_version));
-            json_object_set(root, "session-traffic", json_boolean(stream->session_traffic));
+            json_object_set_new(root, "rx-wrong-session", json_integer(stream->rx_wrong_session));
+            json_object_set_new(root, "session-id", json_integer(stream->session->session_id));
+            json_object_set_new(root, "session-version", json_integer(stream->session_version));
+            json_object_set_new(root, "session-traffic", json_boolean(stream->session_traffic));
         }
         if(stream->reverse) {
-            json_object_set(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
+            json_object_set_new(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
         }
         if(stream->lag && io && io->interface) {
-            json_object_set(root, "lag-member-interface", json_string(io->interface->name));
-            json_object_set(root, "lag-member-interface-state", json_string(interface_state_string(io->interface->state)));
+            json_object_set_new(root, "lag-member-interface", json_string(io->interface->name));
+            json_object_set_new(root, "lag-member-interface-state", json_string(interface_state_string(io->interface->state)));
         }
     } else {
         root = json_pack("{sI ss* ss ss ss sb sb ss* ss* sI sI sI sI sf}",
@@ -2625,17 +2625,17 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     }
     if(root && debug) {
         /* Add debug informations. */
-        json_object_set(root, "debug-global-traffic", json_boolean(g_traffic));
-        json_object_set(root, "debug-init-phase", json_boolean(g_init_phase));
-        json_object_set(root, "debug-nat", json_boolean(stream->nat));
-        json_object_set(root, "debug-reset", json_boolean(stream->reset));
-        json_object_set(root, "debug-lag", json_boolean(stream->lag));
-        json_object_set(root, "debug-tx-pps-config", json_real(stream->pps));
-        json_object_set(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
-        json_object_set(root, "debug-tx-seq", json_integer(stream->flow_seq));
-        json_object_set(root, "debug-max-packets", json_integer(stream->max_packets));
-        json_object_set(root, "debug-tcp-flags", json_integer(stream->tcp_flags));
-        json_object_set(root, "debug-expired", json_integer(stream->expired));
+        json_object_set_new(root, "debug-global-traffic", json_boolean(g_traffic));
+        json_object_set_new(root, "debug-init-phase", json_boolean(g_init_phase));
+        json_object_set_new(root, "debug-nat", json_boolean(stream->nat));
+        json_object_set_new(root, "debug-reset", json_boolean(stream->reset));
+        json_object_set_new(root, "debug-lag", json_boolean(stream->lag));
+        json_object_set_new(root, "debug-tx-pps-config", json_real(stream->pps));
+        json_object_set_new(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
+        json_object_set_new(root, "debug-tx-seq", json_integer(stream->flow_seq));
+        json_object_set_new(root, "debug-max-packets", json_integer(stream->max_packets));
+        json_object_set_new(root, "debug-tcp-flags", json_integer(stream->tcp_flags));
+        json_object_set_new(root, "debug-expired", json_integer(stream->expired));
     }
     return root;
 }
@@ -2765,7 +2765,7 @@ bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribu
         json_streams = json_array();
         while(stream) {
             json_stream = bbl_stream_json(stream, false);
-            json_array_append(json_streams, json_stream);
+            json_array_append_new(json_streams, json_stream);
             stream = stream->session_next;
         }
         root = json_pack("{ss si s{si sI sI sI sI sI sI sI sI sf sf so*}}",
@@ -2828,7 +2828,7 @@ bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), jso
     /* Iterate over all traffic streams */
     while(stream) {
         if(!stream->verified) {
-            json_array_append(json_streams, json_integer(stream->flow_id));
+            json_array_append_new(json_streams, json_integer(stream->flow_id));
         }
         stream = stream->next;
     }

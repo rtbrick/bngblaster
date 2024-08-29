@@ -82,7 +82,7 @@ ospf_ctrl_append_database_entries(hb_tree *lsdb, json_t *array, struct timespec 
             "source-router-id", format_ipv4_address(&lsa->source.router_id));
 
         if(entry) {
-            json_array_append(array, entry);
+            json_array_append_new(array, entry);
         }
         next = hb_itor_next(itor);
     }
@@ -164,7 +164,7 @@ ospf_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t
             "ls-ack-rx", ospf_interface->stats.ls_ack_rx,
             "ls-ack-tx", ospf_interface->stats.ls_ack_tx);
         if(interface) {
-            json_array_append(interfaces, interface);
+            json_array_append_new(interfaces, interface);
         }
         ospf_interface = ospf_interface->next;
     }
@@ -219,7 +219,7 @@ ospf_ctrl_neighbors(int fd, uint32_t session_id __attribute__((unused)), json_t 
                 "retry-tree-entries", retries,
                 "request-tree-entries", requests);
             if(neighbor) {
-                json_array_append(neighbors, neighbor);
+                json_array_append_new(neighbors, neighbor);
             }
             ospf_neighbor = ospf_neighbor->next;
         }

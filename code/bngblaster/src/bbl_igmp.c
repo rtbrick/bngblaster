@@ -366,7 +366,7 @@ bbl_igmp_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__(
                 sources = json_array();
                 for(i2=0; i2 < IGMP_MAX_SOURCES; i2++) {
                     if(group->source[i2]) {
-                        json_array_append(sources, json_string(format_ipv4_address(&group->source[i2])));
+                        json_array_append_new(sources, json_string(format_ipv4_address(&group->source[i2])));
                     }
                 }
                 record = json_pack("{ss so sI sI}",
@@ -377,42 +377,42 @@ bbl_igmp_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__(
 
                 switch (group->state) {
                     case IGMP_GROUP_IDLE:
-                        json_object_set(record, "state", json_string("idle"));
+                        json_object_set_new(record, "state", json_string("idle"));
                         if(group->last_mc_rx_time.tv_sec && group->leave_tx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->last_mc_rx_time, &group->leave_tx_time);
                             ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
                             if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
                             delay = (time_diff.tv_sec * 1000) + ms;
-                            json_object_set(record, "leave-delay-ms", json_integer(delay));
+                            json_object_set_new(record, "leave-delay-ms", json_integer(delay));
                         }
                         break;
                     case IGMP_GROUP_LEAVING:
-                        json_object_set(record, "state", json_string("leaving"));
+                        json_object_set_new(record, "state", json_string("leaving"));
                         break;
                     case IGMP_GROUP_ACTIVE:
-                        json_object_set(record, "state", json_string("active"));
+                        json_object_set_new(record, "state", json_string("active"));
                         if(group->first_mc_rx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
                             ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
                             if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
                             delay = (time_diff.tv_sec * 1000) + ms;
-                            json_object_set(record, "join-delay-ms", json_integer(delay));
+                            json_object_set_new(record, "join-delay-ms", json_integer(delay));
                         }
                         break;
                     case IGMP_GROUP_JOINING:
-                        json_object_set(record, "state", json_string("joining"));
+                        json_object_set_new(record, "state", json_string("joining"));
                         if(group->first_mc_rx_time.tv_sec) {
                             timespec_sub(&time_diff, &group->first_mc_rx_time, &group->join_tx_time);
                             ms = time_diff.tv_nsec / 1000000; /* convert nanoseconds to milliseconds */
                             if(time_diff.tv_nsec % 1000000) ms++; /* simple roundup function */
                             delay = (time_diff.tv_sec * 1000) + ms;
-                            json_object_set(record, "join-delay-ms", json_integer(delay));
+                            json_object_set_new(record, "join-delay-ms", json_integer(delay));
                         }
                         break;
                     default:
                         break;
                 }
-                json_array_append(groups, record);
+                json_array_append_new(groups, record);
             }
         }
         root = json_pack("{ss si so}",

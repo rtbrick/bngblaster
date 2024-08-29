@@ -1288,7 +1288,7 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
         search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
         if(search) {
             l2tp_session = *search;
-            json_array_append(sessions, l2tp_session_json(l2tp_session));
+            json_array_append_new(sessions, l2tp_session_json(l2tp_session));
         } else {
             result = bbl_ctrl_status(fd, "warning", 404, "session not found");
             json_decref(sessions);
@@ -1302,7 +1302,7 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
             l2tp_tunnel = l2tp_session->tunnel;
             CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
                 if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
-                json_array_append(sessions, l2tp_session_json(l2tp_session));
+                json_array_append_new(sessions, l2tp_session_json(l2tp_session));
             }
         } else {
             result = bbl_ctrl_status(fd, "warning", 404, "tunnel not found");
@@ -1314,7 +1314,7 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
             CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_server->tunnel_qhead, tunnel_qnode) {
                 CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
                     if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
-                    json_array_append(sessions, l2tp_session_json(l2tp_session));
+                    json_array_append_new(sessions, l2tp_session_json(l2tp_session));
                 }
             }
             l2tp_server = l2tp_server->next;
@@ -1527,7 +1527,7 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
                                 "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
                                 "data-packets-rx", l2tp_tunnel->stats.data_rx,
                                 "data-packets-tx", l2tp_tunnel->stats.data_tx);
-            json_array_append(tunnels, tunnel);
+            json_array_append_new(tunnels, tunnel);
         }
         l2tp_server = l2tp_server->next;
     }

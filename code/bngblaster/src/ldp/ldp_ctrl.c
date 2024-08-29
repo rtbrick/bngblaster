@@ -58,7 +58,7 @@ ldp_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t
                                   "rx-discovery-error", ldp_adjacency->interface->stats.ldp_udp_rx_error,
                                   "tx-discovery", ldp_adjacency->interface->stats.ldp_udp_tx);
             if(adjacency) {
-                json_array_append(adjacencies, adjacency);
+                json_array_append_new(adjacencies, adjacency);
             }
             ldp_adjacency = ldp_adjacency->next;
         }
@@ -180,7 +180,7 @@ ldp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
             }
             session = ldp_ctrl_session_json(ldp_session);
             if(session) {
-                json_array_append(sessions, session);
+                json_array_append_new(sessions, session);
             }
             ldp_session = ldp_session->next;
         }
@@ -318,7 +318,7 @@ ldp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
                            "pdu", raw_update->pdu,
                            "messages", raw_update->messages);
         if(update) {
-            json_array_append(updates, update);
+            json_array_append_new(updates, update);
         }
         raw_update = raw_update->next;
     }
@@ -443,7 +443,7 @@ ldb_ctrl_database_entries(ldp_instance_s *instance)
             "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
 
         if(json_entry) {
-            json_array_append(json_database, json_entry);
+            json_array_append_new(json_database, json_entry);
         }
         next = hb_itor_next(itor);
     }
@@ -462,7 +462,7 @@ ldb_ctrl_database_entries(ldp_instance_s *instance)
             "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
 
         if(json_entry) {
-            json_array_append(json_database, json_entry);
+            json_array_append_new(json_database, json_entry);
         }
         next = hb_itor_next(itor);
     }

@@ -380,7 +380,7 @@ bbl_lag_json(bbl_lag_s *lag)
             "lacp-state", lacp_state_string(member->lacp_state),
             "lacp", jobj_lacp);
         if(jobj_member) {
-            json_array_append(jobj_array, jobj_member);
+            json_array_append_new(jobj_array, jobj_member);
         }
     }
 
@@ -418,7 +418,7 @@ bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *a
         }
         jobj = bbl_lag_json(lag);
         if(jobj) {
-            json_array_append(jobj_array, jobj);
+            json_array_append_new(jobj_array, jobj);
         }
     }
 

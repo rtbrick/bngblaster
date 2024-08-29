@@ -116,7 +116,7 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
 
         session = bgp_ctrl_session_json(bgp_session);
         if(session) {
-            json_array_append(sessions, session);
+            json_array_append_new(sessions, session);
         }
         bgp_session = bgp_session->next;
     }
@@ -242,7 +242,7 @@ bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
                            "len", raw_update->len,
                            "updates", raw_update->updates);
         if(update) {
-            json_array_append(updates, update);
+            json_array_append_new(updates, update);
         }
         raw_update = raw_update->next;
     }
