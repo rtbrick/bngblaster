@@ -214,7 +214,7 @@ lspgen_write_node_common_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *node
 	if (node->attach) {
 	    json_object_set_new(node_obj, "attach", json_boolean(1));
 	}	
-        json_object_set_new(node_obj, "lsp_buffer_size", json_integer(1492));
+        json_object_set_new(node_obj, "lsp_buffer_size", json_integer(ISIS_DEFAULT_LSP_BUFFER_SIZE));
 	break;
     case PROTO_OSPF2:
     case PROTO_OSPF3: /* fall through */
@@ -1202,7 +1202,7 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
 	       lsdb_add_node_attr(node, &attr_template);
             }
 	    else {
-	       node->lsp_buffer_size = 1492;
+	       node->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
 	       attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
 	       lsdb_add_node_attr(node, &attr_template);
 	    }

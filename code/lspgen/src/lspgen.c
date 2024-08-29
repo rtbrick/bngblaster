@@ -438,7 +438,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         lsdb_reset_attr_template(&attr_template);
 	attr_template.key.ordinal = 1;
 	attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
-        attr_template.key.lsp_buffer_size = 1492;
+        attr_template.key.lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
 	lsdb_add_node_attr(node, &attr_template);
 
         /* IPv4 loopback address */
@@ -969,7 +969,7 @@ lspgen_init_ctx(struct lsdb_ctx_ *ctx)
     ctx->authentication_type = ISIS_AUTH_NONE;
     ctx->seed = 0x74522142; /* RtB! */
     ctx->lsp_lifetime = 65535;
-    ctx->lsp_buffer_size = 1492;
+    ctx->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
 
     ctx->link_multiplier = 1;
 
