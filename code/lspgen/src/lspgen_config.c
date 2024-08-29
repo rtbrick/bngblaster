@@ -1102,11 +1102,7 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
 
  		value = json_object_get(link_obj, "adjacency_sid");
                 if (value && json_is_boolean(value)) {
-		    /* ensure proper random seed */
-		    struct timespec ts;
-                    clock_gettime(CLOCK_MONOTONIC, &ts);
-		    srand((time_t)ts.tv_nsec);
-                    attr_template.key.link.adjacency_sid = rand() % 3840 + 256;
+	            attr_template.key.link.adjacency_sid = json_boolean_value(value);
                 }	
 	    }
 
