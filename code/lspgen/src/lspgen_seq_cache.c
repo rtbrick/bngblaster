@@ -26,8 +26,7 @@ lspgen_write_node_seq_cache(lsdb_node_t *node, json_t *level_arr)
         json_object_set_new(node_obj, "sequence", json_string(seq));
     }
 
-    json_array_append(level_arr, node_obj);
-    json_decref(node_obj);
+    json_array_append_new(level_arr, node_obj);
 }
 
 char *

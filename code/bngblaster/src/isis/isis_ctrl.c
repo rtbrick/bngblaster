@@ -50,30 +50,30 @@ isis_ctrl_adjacency(isis_adjacency_s *adjacency)
     
     stats = json_object();
     if(adjacency->level == ISIS_LEVEL_1) {
-        json_object_set(stats, "l1-hello-rx", json_integer(adjacency->stats.hello_rx));
-        json_object_set(stats, "l1-hello-tx", json_integer(adjacency->stats.hello_tx));
-        json_object_set(stats, "l1-csnp-rx", json_integer(adjacency->stats.csnp_rx));
-        json_object_set(stats, "l1-csnp-tx", json_integer(adjacency->stats.csnp_tx));
-        json_object_set(stats, "l1-psnp-rx", json_integer(adjacency->stats.psnp_rx));
-        json_object_set(stats, "l1-psnp-tx", json_integer(adjacency->stats.psnp_tx));
-        json_object_set(stats, "l1-lsp-rx", json_integer(adjacency->stats.lsp_rx));
-        json_object_set(stats, "l1-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+        json_object_set_new(stats, "l1-hello-rx", json_integer(adjacency->stats.hello_rx));
+        json_object_set_new(stats, "l1-hello-tx", json_integer(adjacency->stats.hello_tx));
+        json_object_set_new(stats, "l1-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set_new(stats, "l1-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set_new(stats, "l1-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set_new(stats, "l1-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set_new(stats, "l1-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set_new(stats, "l1-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     } else {
-        json_object_set(stats, "l2-hello-rx", json_integer(adjacency->stats.hello_rx));
-        json_object_set(stats, "l2-hello-tx", json_integer(adjacency->stats.hello_tx));
-        json_object_set(stats, "l2-csnp-rx", json_integer(adjacency->stats.csnp_rx));
-        json_object_set(stats, "l2-csnp-tx", json_integer(adjacency->stats.csnp_tx));
-        json_object_set(stats, "l2-psnp-rx", json_integer(adjacency->stats.psnp_rx));
-        json_object_set(stats, "l2-psnp-tx", json_integer(adjacency->stats.psnp_tx));
-        json_object_set(stats, "l2-lsp-rx", json_integer(adjacency->stats.lsp_rx));
-        json_object_set(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+        json_object_set_new(stats, "l2-hello-rx", json_integer(adjacency->stats.hello_rx));
+        json_object_set_new(stats, "l2-hello-tx", json_integer(adjacency->stats.hello_tx));
+        json_object_set_new(stats, "l2-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set_new(stats, "l2-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set_new(stats, "l2-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set_new(stats, "l2-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set_new(stats, "l2-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set_new(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     }
 
     peers = json_array();
 
     peer = adjacency->peer;
     while(peer) {
-        json_array_append(peers, json_pack("{ss ss si si ss}",
+        json_array_append_new(peers, json_pack("{ss ss si si ss}",
                           "system-id", isis_system_id_to_str(peer->system_id),
                           "mac", format_mac_address(peer->mac),
                           "priority", peer->priority,
@@ -96,9 +96,9 @@ isis_ctrl_adjacency(isis_adjacency_s *adjacency)
         if(stats) json_decref(stats);
     } else {
         if(adjacency->dis) {
-            json_object_set(root, "dis", json_string(isis_system_id_to_str(adjacency->dis->system_id)));
+            json_object_set_new(root, "dis", json_string(isis_system_id_to_str(adjacency->dis->system_id)));
         } else {
-            json_object_set(root, "dis", json_string(adjacency->instance->config->system_id_str));
+            json_object_set_new(root, "dis", json_string(adjacency->instance->config->system_id_str));
         }
     }
     return root;
@@ -119,25 +119,25 @@ isis_ctrl_adjacency_p2p(bbl_network_interface_s *network_interface)
     }
 
     stats = json_object();
-    json_object_set(stats, "p2p-hello-rx", json_integer(p2p_adjacency->stats.hello_rx));
-    json_object_set(stats, "p2p-hello-tx", json_integer(p2p_adjacency->stats.hello_tx));
+    json_object_set_new(stats, "p2p-hello-rx", json_integer(p2p_adjacency->stats.hello_rx));
+    json_object_set_new(stats, "p2p-hello-tx", json_integer(p2p_adjacency->stats.hello_tx));
     if(p2p_adjacency->level & ISIS_LEVEL_1) {
         adjacency = network_interface->isis_adjacency[ISIS_LEVEL_1_IDX];
-        json_object_set(stats, "l1-csnp-rx", json_integer(adjacency->stats.csnp_rx));
-        json_object_set(stats, "l1-csnp-tx", json_integer(adjacency->stats.csnp_tx));
-        json_object_set(stats, "l1-psnp-rx", json_integer(adjacency->stats.psnp_rx));
-        json_object_set(stats, "l1-psnp-tx", json_integer(adjacency->stats.psnp_tx));
-        json_object_set(stats, "l1-lsp-rx", json_integer(adjacency->stats.lsp_rx));
-        json_object_set(stats, "l1-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+        json_object_set_new(stats, "l1-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set_new(stats, "l1-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set_new(stats, "l1-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set_new(stats, "l1-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set_new(stats, "l1-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set_new(stats, "l1-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     } 
     if(p2p_adjacency->level & ISIS_LEVEL_2) {
         adjacency = network_interface->isis_adjacency[ISIS_LEVEL_2_IDX];
-        json_object_set(stats, "l2-csnp-rx", json_integer(adjacency->stats.csnp_rx));
-        json_object_set(stats, "l2-csnp-tx", json_integer(adjacency->stats.csnp_tx));
-        json_object_set(stats, "l2-psnp-rx", json_integer(adjacency->stats.psnp_rx));
-        json_object_set(stats, "l2-psnp-tx", json_integer(adjacency->stats.psnp_tx));
-        json_object_set(stats, "l2-lsp-rx", json_integer(adjacency->stats.lsp_rx));
-        json_object_set(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
+        json_object_set_new(stats, "l2-csnp-rx", json_integer(adjacency->stats.csnp_rx));
+        json_object_set_new(stats, "l2-csnp-tx", json_integer(adjacency->stats.csnp_tx));
+        json_object_set_new(stats, "l2-psnp-rx", json_integer(adjacency->stats.psnp_rx));
+        json_object_set_new(stats, "l2-psnp-tx", json_integer(adjacency->stats.psnp_tx));
+        json_object_set_new(stats, "l2-lsp-rx", json_integer(adjacency->stats.lsp_rx));
+        json_object_set_new(stats, "l2-lsp-tx", json_integer(adjacency->stats.lsp_tx));
     }
 
     peer = json_pack("{ss si ss}",
@@ -176,13 +176,13 @@ isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_
             if(network_interface->isis_adjacency_p2p) {
                 adjacency = isis_ctrl_adjacency_p2p(network_interface);
                 if(adjacency) {
-                    json_array_append(adjacencies, adjacency);
+                    json_array_append_new(adjacencies, adjacency);
                 }
             } else {
                 for(level=0; level<ISIS_LEVELS; level++) {
                     adjacency = isis_ctrl_adjacency(network_interface->isis_adjacency[level]);
                     if(adjacency) {
-                        json_array_append(adjacencies, adjacency);
+                        json_array_append_new(adjacencies, adjacency);
                     }
                 }
             }
@@ -258,7 +258,7 @@ isis_ctrl_database_entries(hb_tree *lsdb)
             "source-system-id", source_system_id);
 
         if(entry) {
-            json_array_append(database, entry);
+            json_array_append_new(database, entry);
         }
         next = hb_itor_next(itor);
     }

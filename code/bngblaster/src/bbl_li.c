@@ -180,7 +180,7 @@ bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                                 "packets-rx-ipv6-udp", li_flow->packets_rx_ipv6_udp,
                                 "packets-rx-ipv6-host-internal", li_flow->packets_rx_ipv6_internal,
                                 "packets-rx-ipv6-no-next-header", li_flow->packets_rx_ipv6_no_next_header);
-            json_array_append(flows, flow);
+            json_array_append_new(flows, flow);
         }
     }
     dict_itor_free(itor);

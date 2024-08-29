@@ -1972,7 +1972,7 @@ bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), 
     interfaces = json_array();
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         if(interface->access) {
-            json_array_append(interfaces, bbl_access_interface_json(interface->access));
+            json_array_append_new(interfaces, bbl_access_interface_json(interface->access));
         }
     }
     root = json_pack("{ss si so}",

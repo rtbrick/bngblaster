@@ -350,7 +350,7 @@ bbl_http_client_json(bbl_http_client_s *client)
             strncpy(header_value, client->http.headers[i].value, sizeof(header_value)-1);
         }
 
-        json_array_append(headers, json_pack("{ss* ss*}",
+        json_array_append_new(headers, json_pack("{ss* ss*}",
             "name", header_name,
             "value", header_value));
     }
@@ -379,7 +379,6 @@ bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute_
     int result = 0;
     json_t *root;
     json_t *json_clients = NULL;
-    json_t *json_client = NULL;
     uint32_t i;
 
     bbl_session_s *session;
@@ -392,8 +391,7 @@ bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute_
         if(session) {
             client = session->http_client;
             while(client) {
-                json_client = bbl_http_client_json(client);
-                json_array_append(json_clients, json_client);
+                json_array_append_new(json_clients, bbl_http_client_json(client));
                 client = client->next;
             }
         }
@@ -402,8 +400,7 @@ bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute_
             session = &g_ctx->session_list[i];
             client = session->http_client;
             while(client) {
-                json_client = bbl_http_client_json(client);
-                json_array_append(json_clients, json_client);
+                json_array_append_new(json_clients, bbl_http_client_json(client));
                 client = client->next;
             }
         }

@@ -18,8 +18,7 @@ lspgen_write_area_config(json_t *arr, lsdb_attr_t *attr)
     json_t *str;
 
     str = json_string(format_iso_prefix(&attr->key.area));
-    json_array_append(arr, str);
-    json_decref(str);
+    json_array_append_new(arr, str);
 }
 
 void
@@ -53,8 +52,7 @@ lspgen_write_link_config(lsdb_ctx_t *ctx, json_t *arr, lsdb_attr_t *attr)
     }
 
     json_object_set_new(obj, "metric", json_integer(attr->key.link.metric));
-    json_array_append(arr, obj);
-    json_decref(obj);
+    json_array_append_new(arr, obj);
 }
 
 void
@@ -79,8 +77,7 @@ lspgen_write_cap_config(json_t *arr, lsdb_attr_t *attr)
     }
     json_object_set_new(obj, "srgb_base", json_integer(attr->key.cap.srgb_base));
     json_object_set_new(obj, "srgb_range", json_integer(attr->key.cap.srgb_range));
-    json_array_append(arr, obj);
-    json_decref(obj);
+    json_array_append_new(arr, obj);
 }
 
 /*
@@ -120,8 +117,7 @@ lspgen_write_ipv4_addr_config(json_t *arr, lsdb_attr_t *attr)
     json_t *str;
 
     str = json_string(format_ipv4_address((uint32_t*)attr->key.ipv4_addr));
-    json_array_append(arr, str);
-    json_decref(str);
+    json_array_append_new(arr, str);
 }
 
 /*
@@ -139,8 +135,7 @@ lspgen_write_protocol_config(json_t *arr, lsdb_attr_t *attr)
     json_t *str;
 
     str = json_string(val2key(isis_nlpid_names, attr->key.protocol));
-    json_array_append(arr, str);
-    json_decref(str);
+    json_array_append_new(arr, str);
 }
 
 void
@@ -152,8 +147,7 @@ lspgen_write_ipv4_prefix_config(json_t *arr, lsdb_attr_t *attr)
     str = json_string(format_ipv4_prefix(&attr->key.prefix.ipv4_prefix));
     json_object_set_new(obj, "ipv4_prefix", str);
     lspgen_write_common_prefix_config(obj, attr);
-    json_array_append(arr, obj);
-    json_decref(obj);
+    json_array_append_new(arr, obj);
 }
 
 void
@@ -162,8 +156,7 @@ lspgen_write_ipv6_addr_config(json_t *arr, lsdb_attr_t *attr)
     json_t *str;
 
     str = json_string(format_ipv6_address((ipv6addr_t*)attr->key.ipv6_addr));
-    json_array_append(arr, str);
-    json_decref(str);
+    json_array_append_new(arr, str);
 }
 
 void
@@ -175,8 +168,7 @@ lspgen_write_ipv6_prefix_config(json_t *arr, lsdb_attr_t *attr)
     str = json_string(format_ipv6_prefix(&attr->key.prefix.ipv6_prefix));
     json_object_set_new(obj, "ipv6_prefix", str);
     lspgen_write_common_prefix_config(obj, attr);
-    json_array_append(arr, obj);
-    json_decref(obj);
+    json_array_append_new(arr, obj);
 }
 
 void
@@ -193,8 +185,7 @@ lspgen_write_label_binding_config(json_t *arr, lsdb_attr_t *attr)
         json_object_set_new(obj, "ipv4_prefix", str);
     }
     lspgen_write_common_prefix_config(obj, attr);
-    json_array_append(arr, obj);
-    json_decref(obj);
+    json_array_append_new(arr, obj);
 }
 
 void
@@ -375,8 +366,7 @@ lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
 
     } while (dict_itor_next(itor));
 
-    json_array_append(level_arr, node_obj);
-    json_decref(node_obj);
+    json_array_append_new(level_arr, node_obj);
 
     dict_itor_free(itor);
 }
@@ -498,8 +488,7 @@ lspgen_write_node_ospf3_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
 
     } while (dict_itor_next(itor));
 
-    json_array_append(level_arr, node_obj);
-    json_decref(node_obj);
+    json_array_append_new(level_arr, node_obj);
 
     dict_itor_free(itor);
 }
@@ -613,8 +602,7 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
         }
     } while (dict_itor_next(itor));
 
-    json_array_append(level_arr, node_obj);
-    json_decref(node_obj);
+    json_array_append_new(level_arr, node_obj);
 
     dict_itor_free(itor);
 }

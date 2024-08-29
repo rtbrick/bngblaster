@@ -21,8 +21,7 @@ lspgen_dump_ipv4_stream(json_t *dest_arr, ipv4_prefix *prefix)
     obj = json_object();
     str = json_string(format_ipv4_address(&prefix->address));
     json_object_set_new(obj, "destination-ipv4-address", str);
-    json_array_append(dest_arr, obj);
-    json_decref(obj);
+    json_array_append_new(dest_arr, obj);
 }
 
 void
@@ -33,8 +32,7 @@ lspgen_dump_ipv6_stream(json_t *dest_arr, ipv6_prefix *prefix)
     obj = json_object();
     str = json_string(format_ipv6_address(&prefix->address));
     json_object_set_new(obj, "destination-ipv6-address", str);
-    json_array_append(dest_arr, obj);
-    json_decref(obj);
+    json_array_append_new(dest_arr, obj);
 }
 
 void

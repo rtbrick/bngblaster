@@ -319,7 +319,7 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
             "rx-packets", rx_packets,
             "rx-bytes", rx_bytes);
         if(jobj) {
-            json_array_append(jobj_array, jobj);
+            json_array_append_new(jobj_array, jobj);
         }
     }
 
