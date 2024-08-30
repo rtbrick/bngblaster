@@ -575,7 +575,7 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
     if(adjacency_sid && pseudo_node == 0) {
         tlv->len = 18;
     } else {
-	    tlv->len = 11;
+        tlv->len = 11;
     }
     memcpy(tlv_cur, system_id, ISIS_SYSTEM_ID_LEN);
     tlv_cur += ISIS_SYSTEM_ID_LEN; 
@@ -591,15 +591,11 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
         /* set V and L flag always */
         *tlv_cur++ = 0x30;
         *tlv_cur++ = 0;
-        /* ensure proper random seed */
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        srand((time_t)ts.tv_nsec);
         *tlv_cur++ = 0;
         /* generate random adjacency SID but avoid reserved ranges 0-255 */
         *(uint16_t*)tlv_cur = htobe16(rand() % 3840 + 256);
     } else {
-	     *tlv_cur = 0;
+        *tlv_cur = 0;
     }
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
