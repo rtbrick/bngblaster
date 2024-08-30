@@ -456,10 +456,6 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 		push_be_uint(buf, 1, 5);
 		push_be_uint(buf, 1, 0x30); /* set V and L flag always */
 		push_be_uint(buf, 1, 0);
-                /* ensure proper random seed */
-                struct timespec ts;
-                clock_gettime(CLOCK_MONOTONIC, &ts);
-                srand((time_t)ts.tv_nsec);
 		push_be_uint(buf, 1, 0);
                 /* generate random adjacency SID but avoid reserved ranges 0-255 */
 	        push_be_uint(buf, 2, (uint16_t) rand() % 3840 + 256);

@@ -1009,7 +1009,7 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
         if (arr && json_is_array(arr)) {
             num_arr = json_array_size(arr);
 	    attr_template.key.cap.sr_algo_len = num_arr;
-	    attr_template.key.cap.sr_algo = (uint8_t *)malloc((num_arr) * sizeof(uint8_t));
+	    attr_template.key.cap.sr_algo = calloc(num_arr, sizeof(uint8_t));
             for (idx = 0; idx < num_arr; idx++) {
                 attr_template.key.cap.sr_algo[idx] = (uint8_t) json_integer_value(json_array_get(arr, idx));
             }
