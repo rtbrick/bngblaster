@@ -25,6 +25,8 @@
 #include "lspgen.h"
 #include "lspgen_lsdb.h"
 
+#define MAX_SUBGRAPH_SIZE 1000 /* nodes */
+
 int weights[13] = { 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000 };
 
 /*
@@ -281,8 +283,8 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
      * For a large number of nodes do not create a v^2 matrix, but rather
      * break it down to smaller v=1000 matrixes and connect them.
      */
-    if (v > 10) {
-	v = 10;
+    if (v > MAX_SUBGRAPH_SIZE) {
+	v = MAX_SUBGRAPH_SIZE;
 	e = v*2;
     }
 
@@ -317,20 +319,6 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
     }
 
     /*
-     * First lookup the root node.
-     */
-    memset(&node_template, 0, sizeof(node_template));
-    memcpy(&node_template.key, ctx->root_node_id, sizeof(node_template.key));
-    node = lsdb_get_node(ctx, &node_template);
-    if (!node) {
-        LOG(ERROR, "Could not find root node %s\n", lsdb_format_node_id(node_template.key.node_id));
-	goto cleanup;
-    }
-
-    LOG(NORMAL, " Root node %s\n", lsdb_format_node(node));
-    node->is_root = true;
-
-    /*
      * Are there outstanding nodes that have not yet been created in the first pass ?
      */
     while (remaining_nodes > 0) {
@@ -357,6 +345,20 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
 	remaining_nodes -= v;
 	base += v;
     }
+
+    /*
+     * First lookup the root node.
+     */
+    memset(&node_template, 0, sizeof(node_template));
+    memcpy(&node_template.key, ctx->root_node_id, sizeof(node_template.key));
+    node = lsdb_get_node(ctx, &node_template);
+    if (!node) {
+        LOG(ERROR, "Could not find root node %s\n", lsdb_format_node_id(node_template.key.node_id));
+	goto cleanup;
+    }
+
+    LOG(NORMAL, " Root node %s\n", lsdb_format_node(node));
+    node->is_root = true;
 
     /*
      * Add connectors to the topology
