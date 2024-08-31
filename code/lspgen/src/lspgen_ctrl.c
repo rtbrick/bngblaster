@@ -277,8 +277,8 @@ lspgen_ctrl_write_cb(timer_s *timer)
             return;
         }
         json_header = malloc(128);
-        snprintf(json_header, 128, 
-                 "{\n\"command\": \"%s\",\n\"arguments\": {\n\"instance\": %u,\n\"pdu\": [", 
+        snprintf(json_header, 128-1,
+                 "{\n\"command\": \"%s\",\n\"arguments\": {\n\"instance\": %u,\n\"pdu\": [",
                  json_command, ctx->ctrl_instance);
         push_data(&ctx->ctrl_io_buf, (uint8_t *)json_header, strlen(json_header));
         free(json_header);

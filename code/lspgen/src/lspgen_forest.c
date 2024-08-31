@@ -71,8 +71,8 @@ init_array(int *a, int end)
     }
 }
 
-void
-print_graph(lsdb_ctx_t *ctx, int v, int e, int *adj_matrix)
+unsigned int
+convert_matrix_graph(lsdb_ctx_t *ctx, int v, int *adj_matrix)
 {
     struct lsdb_node_ node_template;
     struct lsdb_link_ link_template;
@@ -82,8 +82,6 @@ print_graph(lsdb_ctx_t *ctx, int v, int e, int *adj_matrix)
     uint32_t link_index;
     unsigned int root = 0;
     __uint128_t addr;
-
-    UNUSED(e);
 
     memset(&node_template, 0, sizeof(node_template));
     memset(&link_template, 0, sizeof(link_template));
@@ -166,39 +164,90 @@ print_graph(lsdb_ctx_t *ctx, int v, int e, int *adj_matrix)
         }
     }
 
-    /*
-     * Store root.
-     */
-    switch (ctx->protocol_id) {
-    case PROTO_ISIS:
-	/* BCD notation for IS-IS */
-	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + root - 1;
-	lspgen_store_bcd_addr(addr, ctx->root_node_id, 4);
-	break;
-    default:
-	/* dotted decimal notation for everybody else */
-	memcpy(&ctx->root_node_id, &ctx->ipv4_node_prefix.address, 4);
-	break;
-    }
+    return root;
 }
 
 /*
- * This function generates a random connected simple graph with v vertices and max(v-1,e) edges.  The graph can be
- * weighted (weight_flag == 1) or unweighted (weight_flag != 1). If it is weighted, the weights are in the range 1 to
- * max_wgt. It is assumed that e <= v(v-1)/2. (In this program, this assured because of the call to
- * fix_imbalanced_graph.)
+ * This function generates a random connected simple graph with v vertices and max(v-1,e) edges.
+ * The graph can be weighted (weight_flag == 1) or unweighted (weight_flag != 1).
+ * If it is weighted, the weights are in the range 1 to max_wgt.
+ * It is assumed that e <= v(v-1)/2. (In this program, this assured because of the call to fix_imbalanced_graph.)
  *
- * To generate a random connected graph, we begin by generating a random spanning tree.  To generate a random spanning
- * tree, we first generate a random permutation tree[0],...,tree[v-1]. (v = number of vertices.) We then iteratively
- * add edges to form a tree.  We begin with the tree consisting of vertex tree[0] and no edges.  At the iterative step,
- * we assume that tree[0],tree[1],...,tree[i-1] are in the tree.  We then add vertex tree[i] to the tree by adding the
- * edge (tree[i],tree[rand(i)]). (This construction is similar to that of Prim's algorithm.) Finally, we add random
- * edges to produce the desired number of edges.
+ * To generate a random connected graph, we begin by generating a random spanning tree.
+ * To generate a random spanning tree, we first generate a random permutation tree[0],...,tree[v-1].
+ * (v = number of vertices.) We then iteratively add edges to form a tree.
+ * We begin with the tree consisting of vertex tree[0] and no edges.  At the iterative step,
+ * we assume that tree[0],tree[1],...,tree[i-1] are in the tree.
+ * We then add vertex tree[i] to the tree by adding the edge (tree[i],tree[rand(i)]).
+ * (This construction is similar to that of Prim's algorithm.)
+ * Finally, we add random edges to produce the desired number of edges.
+ *
+ * Returns root node index.
  */
-static void
-lsdb_random_connected_graph(lsdb_ctx_t *ctx, int v, int e, int max_wgt, int weight_flag)
+unsigned int
+lsdb_random_connected_graph(lsdb_ctx_t *ctx, int *tree, int *adj_matrix,
+			    int v, int e, int max_wgt, int weight_flag)
 {
-    int i, j, count, index, *adj_matrix, *tree;
+    int i, j, count, index;
+
+    /*
+     * Generate a random permutation in the array tree.
+     */
+    init_array(tree, v);
+    permute(tree, v);
+
+    /*
+     * Next generate a random spanning tree. The algorithm is:
+     *
+     * Assume that vertices tree[ 0 ],...,tree[ i - 1 ] are in the tree.
+     * Add an edge incident on tree[ i ] and a
+     * random vertex in the set {tree[ 0 ],...,tree[ i - 1 ]}.
+     */
+    for (i = 1; i < v; i++) {
+        j = ran(i);
+        adj_matrix[tree[i] * v + tree[j]] =
+	    adj_matrix[tree[j] * v + tree[i]] = weight_flag ? 1 + ran(max_wgt) : 1;
+    }
+
+    /*
+     * Add additional random edges until achieving at least desired number
+     */
+    for (count = v - 1; count < e;) {
+        i = ran(v);
+        j = ran(v);
+
+        if (i == j) {
+            continue;
+	}
+
+        if (i > j) {
+            swap(&i, &j);
+	}
+
+        index = i * v + j;
+        if (!adj_matrix[index]) {
+            adj_matrix[index] = weight_flag ? 1 + ran(max_wgt) : 1;
+            count++;
+        }
+    }
+
+    return (convert_matrix_graph(ctx, v, adj_matrix));
+}
+
+void
+lsdb_init_graph(lsdb_ctx_t *ctx)
+{
+    int v, e, *adj_matrix, *tree;
+    struct lsdb_node_ node_template;
+    struct lsdb_link_ link_template;
+    struct lsdb_node_ *node;
+    uint32_t idx, root;
+    __uint128_t addr;
+
+    srand(ctx->seed);
+
+    v = ctx->num_nodes;
+    e = ctx->num_nodes*2;
 
     LOG(NORMAL, "Generating a graph of %d nodes and %d links\n", v, e);
 
@@ -213,61 +262,22 @@ lsdb_random_connected_graph(lsdb_ctx_t *ctx, int v, int e, int max_wgt, int weig
         return;
     }
 
+    root = lsdb_random_connected_graph(ctx, tree, adj_matrix, v, e,
+				       sizeof(weights) / sizeof(int) - 1, 1);
     /*
-     * Generate a random permutation in the array tree.
+     * Store root.
      */
-    init_array(tree, v);
-    permute(tree, v);
-
-    /*
-     * Next generate a random spanning tree. The algorithm is:
-     *
-     * Assume that vertices tree[ 0 ],...,tree[ i - 1 ] are in the tree.  Add an edge incident on tree[ i ] and a
-     * random vertex in the set {tree[ 0 ],...,tree[ i - 1 ]}.
-     */
-    for (i = 1; i < v; i++) {
-        j = ran(i);
-        adj_matrix[tree[i] * v + tree[j]] = adj_matrix[tree[j] * v + tree[i]] = weight_flag ? 1 + ran(max_wgt) : 1;
+    switch (ctx->protocol_id) {
+    case PROTO_ISIS:
+	/* BCD notation for IS-IS */
+	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + root - 1;
+	lspgen_store_bcd_addr(addr, ctx->root_node_id, 4);
+	break;
+    default:
+	/* dotted decimal notation for everybody else */
+	memcpy(&ctx->root_node_id, &ctx->ipv4_node_prefix.address, 4);
+	break;
     }
-
-    /*
-     * Add additional random edges until achieving at least desired number
-     */
-    for (count = v - 1; count < e;) {
-        i = ran(v);
-        j = ran(v);
-
-        if (i == j)
-            continue;
-
-        if (i > j)
-            swap(&i, &j);
-
-        index = i * v + j;
-        if (!adj_matrix[index]) {
-            adj_matrix[index] = weight_flag ? 1 + ran(max_wgt) : 1;
-            count++;
-        }
-    }
-
-    print_graph(ctx, v, count, adj_matrix);
-
-    free(tree);
-    free(adj_matrix);
-}
-
-void
-lsdb_init_graph(lsdb_ctx_t *ctx)
-{
-    struct lsdb_node_ node_template;
-    struct lsdb_link_ link_template;
-    struct lsdb_node_ *node;
-    uint32_t idx;
-
-    srand(ctx->seed);
-
-    lsdb_random_connected_graph(ctx, ctx->num_nodes, ctx->num_nodes << 1,
-                sizeof(weights) / sizeof(int) - 1, 1);
 
     /*
      * First lookup the root node.
@@ -277,7 +287,7 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
     node = lsdb_get_node(ctx, &node_template);
     if (!node) {
         LOG(ERROR, "Could not find root node %s\n", lsdb_format_node_id(node_template.key.node_id));
-        return;
+	goto cleanup;
     }
 
     LOG(NORMAL, " Root node %s\n", lsdb_format_node(node));
@@ -304,4 +314,10 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
             lsdb_add_link(ctx, node, &link_template);
         }
     }
+
+cleanup:
+
+    free(tree);
+    free(adj_matrix);
+
 }
