@@ -1069,6 +1069,36 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
 }
 
 static void
+bbl_access_rx_ipcp_conf_reject(bbl_session_s *session, bbl_ipcp_s *ipcp)
+{
+    uint16_t len = ipcp->options_len;
+    uint8_t *buf = ipcp->options;
+    uint8_t option_type = 0;
+    uint8_t option_len = 0;
+
+    LOG(PPPOE, "IPCP (ID: %u) conf-reject send\n", session->session_id);
+
+    session->ipcp_options_len = 0;
+    while(len >= 2) {
+        option_type = *buf;
+        option_len = *(buf+1);
+        if(option_type != PPP_IPCP_OPTION_ADDRESS) {
+            if((session->ipcp_options_len + option_len) <= PPP_OPTIONS_BUFFER) {
+                memcpy(session->ipcp_options+session->ipcp_options_len, buf, option_len);
+                session->ipcp_options_len += option_len;
+            }
+        }
+        buf = buf+option_len;
+        len -= option_len;
+    }
+
+    session->ipcp_peer_identifier = ipcp->identifier;
+    session->ipcp_response_code = PPP_CODE_CONF_REJECT;
+    session->send_requests |= BBL_SEND_IPCP_RESPONSE;
+    bbl_session_tx_qnode_insert(session);
+}
+
+static void
 bbl_access_rx_ipcp(bbl_access_interface_s *interface, 
                    bbl_session_s *session, 
                    bbl_ethernet_header_s *eth)
@@ -1097,6 +1127,10 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
 
     switch(ipcp->code) {
         case PPP_CODE_CONF_REQUEST:
+            if(ipcp->option_dns1 || ipcp->option_dns2 || ipcp->unknown_options) {
+                bbl_access_rx_ipcp_conf_reject(session, ipcp);
+                return;
+            }
             if(ipcp->address) {
                 session->peer_ip_address = ipcp->address;
             }
@@ -1184,6 +1218,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
         case PPP_CODE_TERM_REQUEST:
             session->ipcp_peer_identifier = ipcp->identifier;
             session->ipcp_response_code = PPP_CODE_TERM_ACK;
+            session->ipcp_options_len = 0;
             session->send_requests |= BBL_SEND_IPCP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
             break;

@@ -592,6 +592,7 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
         *tlv_cur++ = 0x30;
         *tlv_cur++ = 0;
         *tlv_cur++ = 0;
+
         /* generate random adjacency SID but avoid reserved ranges 0-255 */
         *(uint16_t*)tlv_cur = htobe16(rand() % 3840 + 256);
     } else {

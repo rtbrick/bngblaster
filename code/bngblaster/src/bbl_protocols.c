@@ -3746,7 +3746,6 @@ decode_ppp_ip6cp(uint8_t *buf, uint16_t len,
     uint16_t ip6cp_len = 0;
     uint8_t  ip6cp_option_type = 0;
     uint8_t  ip6cp_option_len = 0;
-    uint8_t  ip6cp_option_index = 0;
 
     if(len < 4 || sp_len < sizeof(bbl_ip6cp_s)) {
         return DECODE_ERROR;
@@ -3786,9 +3785,6 @@ decode_ppp_ip6cp(uint8_t *buf, uint16_t len,
         case PPP_CODE_CONF_ACK:
         case PPP_CODE_CONF_NAK:
             while(ip6cp_len >= 2) {
-                if(ip6cp_option_index < PPP_MAX_OPTIONS) {
-                    ip6cp->option[ip6cp_option_index++] = buf;
-                }
                 ip6cp_option_type = *buf;
                 BUMP_BUFFER(buf, ip6cp_len, sizeof(uint8_t));
                 ip6cp_option_len = *buf;
@@ -3835,7 +3831,6 @@ decode_ppp_ipcp(uint8_t *buf, uint16_t len,
     uint16_t ipcp_len = 0;
     uint8_t  ipcp_option_type = 0;
     uint8_t  ipcp_option_len = 0;
-    uint8_t  ipcp_option_index = 0;
 
     if(len < 4 || sp_len < sizeof(bbl_ipcp_s)) {
         return DECODE_ERROR;
@@ -3876,9 +3871,6 @@ decode_ppp_ipcp(uint8_t *buf, uint16_t len,
         case PPP_CODE_CONF_NAK:
         case PPP_CODE_CONF_REJECT:
             while(ipcp_len >= 2) {
-                if(ipcp_option_index < PPP_MAX_OPTIONS) {
-                    ipcp->option[ipcp_option_index++] = buf;
-                }
                 ipcp_option_type = *buf;
                 BUMP_BUFFER(buf, ipcp_len, sizeof(uint8_t));
                 ipcp_option_len = *buf;
@@ -3914,6 +3906,7 @@ decode_ppp_ipcp(uint8_t *buf, uint16_t len,
                         break;
                     default:
                         ipcp->unknown_options = true;
+                        
                         break;
                 }
                 BUMP_BUFFER(buf, ipcp_len, ipcp_option_len);
