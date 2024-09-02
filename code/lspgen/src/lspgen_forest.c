@@ -281,12 +281,14 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
 
     /*
      * For a large number of nodes do not create a v^2 matrix, but rather
-     * break it down to smaller v=1000 matrixes and connect them.
+     * break it down to smaller maximum v=1000 matrixes and connect them.
      */
-    if (v > MAX_SUBGRAPH_SIZE) {
+    if (v > MAX_SUBGRAPH_SIZE && v < MAX_SUBGRAPH_SIZE*2) {
+	v = (v+1)/2;
+    } else if (v > MAX_SUBGRAPH_SIZE) {
 	v = MAX_SUBGRAPH_SIZE;
-	e = v*2;
     }
+    e = v*2;
 
     if ((adj_matrix = (int *) malloc(v * v * sizeof(int))) == NULL) {
         LOG(ERROR, "Not enough room for %d nodes %d links graph\n", v, e);
@@ -323,12 +325,18 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
      */
     while (remaining_nodes > 0) {
 
+	/* split on penultimate pass ? */
+	if (remaining_nodes > MAX_SUBGRAPH_SIZE &&
+	    remaining_nodes < MAX_SUBGRAPH_SIZE*2) {
+	    v = (remaining_nodes+1)/2;
+	}
+
 	/* last pass ? */
 	if (remaining_nodes < v) {
 	    v = remaining_nodes;
-	    e = v*2;
 	}
 
+	e = v*2;
 	lsdb_random_connected_graph(ctx, tree, adj_matrix, base, v, e, max_wgt, 1);
 
 	/*
