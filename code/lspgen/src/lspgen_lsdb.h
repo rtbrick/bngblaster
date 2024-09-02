@@ -251,7 +251,7 @@ typedef struct lsdb_attr_link_ {
     uint8_t remote_link_id[4];
     uint8_t remote_node_id[LSDB_MAX_NODE_ID_SIZE];
     uint32_t metric;
-    bool adjacency_sid;
+    uint16_t adjacency_sid;
     bool small_metrics; /* old-style 6-bit metrics */
 
 } lsdb_attr_link_t;

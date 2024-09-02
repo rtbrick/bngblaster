@@ -130,6 +130,7 @@ typedef struct bbl_network_config_
     uint32_t isis_l2_metric;
     uint8_t  isis_l1_priority;
     uint8_t  isis_l2_priority;
+    uint16_t isis_adjacency_sid;
 
     uint16_t ospfv2_instance_id;
     uint32_t ospfv2_metric;

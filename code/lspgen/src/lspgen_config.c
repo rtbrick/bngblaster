@@ -1022,7 +1022,7 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
 }
 
 void
-lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
+lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, uint16_t adj_sid)
 {
     struct lsdb_link_ link_template;
     struct lsdb_attr_ attr_template;
@@ -1088,10 +1088,9 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj)
 		}
 		attr_template.key.link.metric = metric;
 
- 		value = json_object_get(link_obj, "adjacency_sid");
-                if (value && json_is_boolean(value)) {
-	            attr_template.key.link.adjacency_sid = json_boolean_value(value);
-                }	
+		if (adj_sid > 0) {
+		    attr_template.key.link.adjacency_sid = adj_sid;
+		}
 	    }
 
 	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);
@@ -1145,6 +1144,7 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
     json_t *value;
     json_t *arr;
     uint32_t num_arr, idx;
+    uint16_t adj_sid;
     char *s;
 
     /*
@@ -1198,7 +1198,15 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
             node->lsp_lifetime = json_integer_value(value);
         }
 
-        if (ctx->protocol_id == PROTO_ISIS) {
+        value = json_object_get(node_obj, "adjacency_sid_base");
+        if (value && json_is_integer(value)) {
+	    adj_sid = json_integer_value(value);
+        }
+	else {
+	    adj_sid = 0;
+	}
+
+	if (ctx->protocol_id == PROTO_ISIS) {
             value = json_object_get(node_obj, "lsp_buffer_size");
             lsdb_reset_attr_template(&attr_template);
             attr_template.key.ordinal = 1;
@@ -1283,7 +1291,10 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         if (arr && json_is_array(arr)) {
             num_arr = json_array_size(arr);
             for (idx = 0; idx < num_arr; idx++) {
-                lspgen_read_link_config(ctx, node, json_array_get(arr, idx));
+                lspgen_read_link_config(ctx, node, json_array_get(arr, idx), adj_sid);
+		if (adj_sid > 0) {
+		    adj_sid++;
+		}
             }
         }
 

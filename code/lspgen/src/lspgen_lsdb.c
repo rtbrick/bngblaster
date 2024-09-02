@@ -737,9 +737,17 @@ lsdb_format_isis_attr(struct lsdb_attr_ *attr)
             len += snprintf(buf+len, sizeof(buf)-len, " 0x%x", attr->key.protocol);
             break;
         case ISIS_TLV_EXTD_IS_REACH:
-            len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+	    if (attr->key.link.adjacency_sid > 0) {
+                len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u, adj_sid %u",
+                    lsdb_format_node_id(attr->key.link.remote_node_id),
+                    attr->key.link.metric,
+		    attr->key.link.adjacency_sid);
+	    }
+            else {
+                len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
                     lsdb_format_node_id(attr->key.link.remote_node_id),
                     attr->key.link.metric);
+	    }
             break;
         case ISIS_TLV_IPV4_ADDR:
             len += snprintf(buf+len, sizeof(buf)-len, " %s",

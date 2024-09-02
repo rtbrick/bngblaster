@@ -198,6 +198,7 @@ typedef struct isis_external_connection_ {
     struct {
         uint32_t metric;
     } level[ISIS_LEVELS];
+    uint16_t adjacency_sid;
 
     struct isis_external_connection_ *next;
 } isis_external_connection_s;
@@ -254,7 +255,7 @@ typedef struct isis_config_ {
     uint32_t            sr_node_sid;
     uint8_t            *sr_algo;
     uint8_t             sr_algo_count;
-    bool                adjacency_sid;
+    uint16_t            adjacency_sid;
     
     /* External */
     bool external_purge;
@@ -319,6 +320,7 @@ typedef struct isis_adjacency_ {
     uint16_t window_size; /* lsp-tx-window-size */
     
     uint32_t metric;
+    uint16_t adjacency_sid;
     uint64_t csnp_start;
 
     struct {

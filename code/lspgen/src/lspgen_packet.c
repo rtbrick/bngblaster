@@ -450,15 +450,14 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
         case ISIS_TLV_EXTD_IS_REACH:
             push_data(buf, attr->key.link.remote_node_id, 7);
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
-	    if(attr->key.link.adjacency_sid == true) {
+	    if(attr->key.link.adjacency_sid > 0) {
                 push_be_uint(buf, 1, 7); /* subTLVs length */
 		push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ADJ_SID);
 		push_be_uint(buf, 1, 5);
 		push_be_uint(buf, 1, 0x30); /* set V and L flag always */
 		push_be_uint(buf, 1, 0);
 		push_be_uint(buf, 1, 0);
-                /* generate random adjacency SID but avoid reserved ranges 0-255 */
-	        push_be_uint(buf, 2, (uint16_t) rand() % 3840 + 256);
+	        push_be_uint(buf, 2, attr->key.link.adjacency_sid);
 	    }
 	    else {
 		push_be_uint(buf, 1, 0); /* subTLV length */
