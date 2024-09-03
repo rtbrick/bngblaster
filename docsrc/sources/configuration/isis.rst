@@ -90,8 +90,8 @@
 | **sr-node-sid**                  | | ISIS SR node SID.                                               |
 |                                  | | Default: 0 Range: 0 - 1048575                                   |
 +----------------------------------+-------------------------------------------------------------------+
-| **adjacency-sid**                | | Enable/disable Adjacency SID generation.                        |
-|                                  | | Default: false                                                  |
+| **adjacency-sid-base**           | | Enable Adjacency SID generation.                                |
+|                                  | | Default: disabled Range 256 - 4096                              |
 +----------------------------------+-------------------------------------------------------------------+
 | **teardown-time**                | | ISIS teardown time in seconds.                                  |
 |                                  | | Default: 5 Range: 0 - 65535                                     |

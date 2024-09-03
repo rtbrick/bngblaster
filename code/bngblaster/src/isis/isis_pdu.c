@@ -567,15 +567,15 @@ isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 void
 isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, 
                                   uint8_t pseudo_node, 
-                                  uint32_t metric, bool adjacency_sid)
+                                  uint32_t metric, uint16_t adjacency_sid)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
     tlv->type = ISIS_TLV_EXT_REACHABILITY;
-    if(adjacency_sid && pseudo_node == 0) {
+    if(adjacency_sid > 0 && pseudo_node == 0) {
         tlv->len = 18;
     } else {
-	    tlv->len = 11;
+        tlv->len = 11;
     }
     memcpy(tlv_cur, system_id, ISIS_SYSTEM_ID_LEN);
     tlv_cur += ISIS_SYSTEM_ID_LEN; 
@@ -583,7 +583,7 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
     *tlv_cur = pseudo_node;
     tlv_cur += sizeof(metric);
     /* implementation only for SubTLV 31 (non-DIS case), TODO for SubTLV 32 */
-    if(adjacency_sid && pseudo_node == 0) {
+    if(adjacency_sid > 0 && pseudo_node == 0) {
         *tlv_cur = 7;
         tlv_cur += sizeof(uint8_t);
         *tlv_cur++ = 31;
@@ -591,11 +591,10 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
         /* set V and L flag always */
         *tlv_cur++ = 0x30;
         *tlv_cur++ = 0;
-        /* generate random adjacency SID but avoid reserved ranges 0-255 */
         *tlv_cur++ = 0;
-        *(uint16_t*)tlv_cur = htobe16(rand() % 3840 + 256);
+        *(uint16_t*)tlv_cur = htobe16(adjacency_sid);
     } else {
-	     *tlv_cur = 0;
+        *tlv_cur = 0;
     }
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }

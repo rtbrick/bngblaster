@@ -85,6 +85,9 @@ isis_adjacency_init(bbl_network_interface_s *interface,
             adjacency->metric = interface_config->isis_l2_metric;
             if(!interface_config->isis_p2p) interface->send_requests |= BBL_IF_SEND_ISIS_L2_HELLO;
         }
+	if(interface_config->isis_adjacency_sid > 0) {
+	    adjacency->adjacency_sid = interface_config->isis_adjacency_sid;
+	}
     }
     return true;
 }

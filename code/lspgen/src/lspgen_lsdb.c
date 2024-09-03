@@ -719,6 +719,7 @@ struct keyval_ isis_attr_names[] = {
     { ISIS_TLV_EXTD_IPV4_REACH, "IPv4 Prefix" },
     { ISIS_TLV_EXTD_IPV6_REACH, "IPv6 Prefix" },
     { ISIS_TLV_HOSTNAME, "Hostname" },
+    { ISIS_TLV_LSP_BUFFER_SIZE, "LSP Buffer Size" },
     { ISIS_TLV_CAP, "Capability" },
     { 0, NULL}
 };
@@ -736,9 +737,17 @@ lsdb_format_isis_attr(struct lsdb_attr_ *attr)
             len += snprintf(buf+len, sizeof(buf)-len, " 0x%x", attr->key.protocol);
             break;
         case ISIS_TLV_EXTD_IS_REACH:
-            len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
+	    if (attr->key.link.adjacency_sid > 0) {
+                len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u, adj_sid %u",
+                    lsdb_format_node_id(attr->key.link.remote_node_id),
+                    attr->key.link.metric,
+		    attr->key.link.adjacency_sid);
+	    }
+            else {
+                len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
                     lsdb_format_node_id(attr->key.link.remote_node_id),
                     attr->key.link.metric);
+	    }
             break;
         case ISIS_TLV_IPV4_ADDR:
             len += snprintf(buf+len, sizeof(buf)-len, " %s",
@@ -760,6 +769,9 @@ lsdb_format_isis_attr(struct lsdb_attr_ *attr)
             break;
         case ISIS_TLV_HOSTNAME:
             len += snprintf(buf+len, sizeof(buf)-len, " '%s'", attr->key.hostname);
+            break;
+        case ISIS_TLV_LSP_BUFFER_SIZE:
+            len += snprintf(buf+len, sizeof(buf)-len, " %u", attr->key.lsp_buffer_size);
             break;
         default:
             break;

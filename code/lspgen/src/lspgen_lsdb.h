@@ -86,6 +86,7 @@ typedef struct lsdb_ctx_
     bool no_ipv6;
     bool purge;
     uint16_t lsp_lifetime;
+    uint16_t lsp_buffer_size;
 
     uint32_t node_index;
     uint32_t link_index;
@@ -146,6 +147,7 @@ typedef struct lsdb_node_ {
 
     uint32_t sequence;
     uint16_t lsp_lifetime;
+    uint16_t lsp_buffer_size;
 
     timer_s *refresh_timer;
 
@@ -249,6 +251,7 @@ typedef struct lsdb_attr_link_ {
     uint8_t remote_link_id[4];
     uint8_t remote_node_id[LSDB_MAX_NODE_ID_SIZE];
     uint32_t metric;
+    uint16_t adjacency_sid;
     bool small_metrics; /* old-style 6-bit metrics */
 
 } lsdb_attr_link_t;
@@ -261,6 +264,8 @@ typedef struct lsdb_attr_cap_ {
     s_flag:1,
     mpls_ipv4_flag:1,
     mpls_ipv6_flag:1;
+    uint8_t sr_algo[8];
+    uint8_t sr_algo_len;
 } lsdb_attr_cap_t;
 
 #define MAX_MSG_LEVEL 4
@@ -297,6 +302,7 @@ typedef struct lsdb_attr_ {
 	    uint8_t ipv6_addr[IPV6_ADDR_LEN];
 	    uint32_t srlg;
 	    char hostname[36];
+	    uint16_t lsp_buffer_size;
 	    uint8_t protocol;
 	};
     } key;
