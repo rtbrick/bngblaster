@@ -1008,8 +1008,10 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
         arr = json_object_get(obj, "sr_algo_list");
         if (arr && json_is_array(arr)) {
             num_arr = json_array_size(arr);
-	    attr_template.key.cap.sr_algo_len = num_arr;
-	    attr_template.key.cap.sr_algo = calloc(num_arr, sizeof(uint8_t));
+            if(num_arr > sizeof(attr_template.key.cap.sr_algo)) {
+                num_arr = sizeof(attr_template.key.cap.sr_algo);
+            }
+            attr_template.key.cap.sr_algo_len = num_arr;
             for (idx = 0; idx < num_arr; idx++) {
                 attr_template.key.cap.sr_algo[idx] = (uint8_t) json_integer_value(json_array_get(arr, idx));
             }

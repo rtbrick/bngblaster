@@ -1889,8 +1889,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          * Start a fresh TLV ?
          */
         if ((last_attr != attr->key.attr_type) ||
-            (lspgen_calculate_tlv_space(&packet->buf[0], tlv_start_idx) < attr->size) ||
-	    attr->key.start_tlv) {
+            (lspgen_calculate_tlv_space(&packet->buf[0], tlv_start_idx) < attr->size) || attr->key.start_tlv) {
             tlv_start_idx = packet->buf[0].idx;
             push_be_uint(&packet->buf[0], 1, attr->key.attr_type); /* Type */
             push_be_uint(&packet->buf[0], 1, 0); /* Length */
@@ -1900,11 +1899,6 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
         lspgen_update_tlv_length(&packet->buf[0], tlv_start_idx);
 
         last_attr = attr->key.attr_type;
-
-	/* free sr_algo after its not used anymore */
-        if (attr->key.cap.sr_algo_len > 0) {
-            free(attr->key.cap.sr_algo);
-        }
 
     } while (dict_itor_next(itor));
 

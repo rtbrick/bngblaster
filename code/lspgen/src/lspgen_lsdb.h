@@ -264,7 +264,7 @@ typedef struct lsdb_attr_cap_ {
     s_flag:1,
     mpls_ipv4_flag:1,
     mpls_ipv6_flag:1;
-    uint8_t *sr_algo;
+    uint8_t sr_algo[8];
     uint8_t sr_algo_len;
 } lsdb_attr_cap_t;
 
