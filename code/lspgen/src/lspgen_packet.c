@@ -450,7 +450,18 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
         case ISIS_TLV_EXTD_IS_REACH:
             push_data(buf, attr->key.link.remote_node_id, 7);
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
-            push_be_uint(buf, 1, 0); /* subTLV length */
+	    if(attr->key.link.adjacency_sid > 0) {
+                push_be_uint(buf, 1, 7); /* subTLVs length */
+		push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ADJ_SID);
+		push_be_uint(buf, 1, 5);
+		push_be_uint(buf, 1, 0x30); /* set V and L flag always */
+		push_be_uint(buf, 1, 0);
+		push_be_uint(buf, 1, 0);
+	        push_be_uint(buf, 2, attr->key.link.adjacency_sid);
+	    }
+	    else {
+		push_be_uint(buf, 1, 0); /* subTLV length */
+            }
             break;
         case ISIS_TLV_IPV4_ADDR:
             push_data(buf, attr->key.ipv4_addr, 4);
@@ -461,6 +472,9 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
         case ISIS_TLV_HOSTNAME:
             attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
             push_data(buf, (uint8_t *)attr->key.hostname, attr_len);
+            break;
+	case ISIS_TLV_LSP_BUFFER_SIZE:
+            push_be_uint(buf, 2, attr->key.lsp_buffer_size);
             break;
         case ISIS_TLV_INT_IPV4_REACH: /* fall through */
         case ISIS_TLV_EXT_IPV4_REACH:
@@ -547,6 +561,11 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
                 push_be_uint(buf, 1, 3); /* SID Type Length */
                 push_be_uint(buf, 3, attr->key.cap.srgb_base);
             }
+	    if (attr->key.cap.sr_algo_len > 0) {
+		push_be_uint(buf, 1, ISIS_SUBTLV_CAP_SR_ALGO); /* subTLV Type */
+                push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* Area Length in bytes */
+                push_data(buf, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
+	    }
             break;
         case ISIS_TLV_BINDING:
             flags = 0;
@@ -1881,6 +1900,11 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
         lspgen_update_tlv_length(&packet->buf[0], tlv_start_idx);
 
         last_attr = attr->key.attr_type;
+
+	/* free sr_algo after its not used anymore */
+        if (attr->key.cap.sr_algo_len > 0) {
+            free(attr->key.cap.sr_algo);
+        }
 
     } while (dict_itor_next(itor));
 

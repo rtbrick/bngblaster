@@ -639,12 +639,12 @@ isis_lsp_self_dis(isis_adjacency_s *adjacency)
     if(!lsp) return;
     pdu = &lsp->pdu;
 
-    isis_pdu_add_tlv_ext_reachability(pdu, config->system_id, 0, 0, config->adjacency_sid);
+    isis_pdu_add_tlv_ext_reachability(pdu, config->system_id, 0, 0, adjacency->adjacency_sid);
 
     peer = adjacency->peer;
     while(peer) {
         if(peer->state == ISIS_PEER_STATE_UP && ISIS_PDU_REMAINING(pdu) >= 13) {
-            isis_pdu_add_tlv_ext_reachability(pdu, peer->system_id, 0, 0, config->adjacency_sid);
+            isis_pdu_add_tlv_ext_reachability(pdu, peer->system_id, 0, 0, adjacency->adjacency_sid);
         }
         peer = peer->next;
     }
@@ -739,20 +739,20 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
         if(adjacency->p2p) {
             isis_pdu_add_tlv_ext_reachability(pdu, 
                 adjacency->peer->system_id, 0,
-                adjacency->metric, config->adjacency_sid);
+                adjacency->metric, adjacency->adjacency_sid);
         } else {
             if(adjacency->dis) {
                 isis_pdu_add_tlv_ext_reachability(pdu, 
                     adjacency->dis->system_id, 
                     adjacency->dis->pseudo_node_id,
-                    adjacency->metric, config->adjacency_sid);
+                    adjacency->metric, adjacency->adjacency_sid);
 
                 isis_lsp_self_dis_purge(adjacency);
             } else {
                 isis_pdu_add_tlv_ext_reachability(pdu, 
                     config->system_id,
                     adjacency->pseudo_node_id,
-                    adjacency->metric, config->adjacency_sid);
+                    adjacency->metric, adjacency->adjacency_sid);
 
                 isis_lsp_self_dis(adjacency);
             }
@@ -775,7 +775,7 @@ NEXT:
 
         isis_pdu_add_tlv_ext_reachability(pdu, 
             external_connection->system_id, 0,
-            external_connection->level[level-1].metric, config->adjacency_sid);
+            external_connection->level[level-1].metric, external_connection->adjacency_sid);
         external_connection = external_connection->next;
     }
 

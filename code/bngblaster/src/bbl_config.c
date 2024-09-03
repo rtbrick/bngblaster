@@ -656,7 +656,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 }
 
 static bool
-json_parse_network_interface(json_t *network_interface, bbl_network_config_s *network_config)
+json_parse_network_interface(json_t *network_interface, bbl_network_config_s *network_config, isis_config_s *isis_config)
 {
     json_t *value = NULL;
     const char *s = NULL;
@@ -787,6 +787,9 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         } else {
             network_config->isis_l2_priority = 10;
         }
+	if (isis_config->adjacency_sid > 0) {
+            network_config->isis_adjacency_sid = isis_config->adjacency_sid;
+	}
     }
 
     /* OSPF interface configuration */
@@ -1542,7 +1545,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "area", "sr-base", "sr-range",
         "sr-node-sid", "teardown-time", "external",
         "external-auto-refresh", "lsp-buffer-size", "sr-algo",
-        "adjacency-sid"
+        "adjacency-sid-base"
     };
     if(!schema_validate(isis, "isis", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1799,11 +1802,11 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->sr_algo_count = 0;
     }
 
-    JSON_OBJ_GET_BOOL(isis, value, "isis", "adjacency-sid");
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "adjacency-sid-base", 256, 4096);
     if(value) {
-        isis_config->adjacency_sid  = json_boolean_value(value);
+        isis_config->adjacency_sid  = json_integer_value(value);
     } else {
-        isis_config->adjacency_sid  = false;
+        isis_config->adjacency_sid  = 0;
     }
 
     value = json_object_get(isis, "teardown-time");
@@ -1879,7 +1882,11 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                     connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
                 } else {
                     connection->level[ISIS_LEVEL_2_IDX].metric = 10;
-                }
+		}
+		if (isis_config->adjacency_sid > 0) {
+		    connection->adjacency_sid = isis_config->adjacency_sid;
+		    isis_config->adjacency_sid++;
+		}
             }
         }
     }
@@ -3850,9 +3857,14 @@ json_parse_config(json_t *root)
                     network_config->next = calloc(1, sizeof(bbl_network_config_s));
                     network_config = network_config->next;
                 }
-                if(!json_parse_network_interface(json_array_get(sub, i), network_config)) {
+                if(!json_parse_network_interface(json_array_get(sub, i), network_config, isis_config)) {
                     return false;
                 }
+		else {
+		    if (isis_config->adjacency_sid > 0) {
+                        isis_config->adjacency_sid++;
+		    }
+	        }
             }
         } else if(json_is_object(sub)) {
             /* Config is provided as object (single network interface) */
@@ -3860,9 +3872,14 @@ json_parse_config(json_t *root)
             if(!g_ctx->config.network_config) {
                 g_ctx->config.network_config = network_config;
             }
-            if(!json_parse_network_interface(sub, network_config)) {
+            if(!json_parse_network_interface(sub, network_config, isis_config)) {
                 return false;
             }
+	    else {
+                if (isis_config->adjacency_sid > 0) {
+                    isis_config->adjacency_sid++;
+                }
+	    }
         }
 
         /* Access Interface Configuration Section */
