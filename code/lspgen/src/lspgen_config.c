@@ -1022,7 +1022,7 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
 }
 
 void
-lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, uint16_t adj_sid)
+lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, uint16_t *adj_sid)
 {
     struct lsdb_link_ link_template;
     struct lsdb_attr_ attr_template;
@@ -1088,8 +1088,9 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
 		}
 		attr_template.key.link.metric = metric;
 
-		if (adj_sid > 0) {
-		    attr_template.key.link.adjacency_sid = adj_sid;
+		if ((uint16_t) *adj_sid > 0) {
+		    attr_template.key.link.adjacency_sid = (uint16_t) *adj_sid;
+                    (*adj_sid)++;
 		}
 	    }
 
@@ -1291,10 +1292,7 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         if (arr && json_is_array(arr)) {
             num_arr = json_array_size(arr);
             for (idx = 0; idx < num_arr; idx++) {
-                lspgen_read_link_config(ctx, node, json_array_get(arr, idx), adj_sid);
-		if (adj_sid > 0) {
-		    adj_sid++;
-		}
+                lspgen_read_link_config(ctx, node, json_array_get(arr, idx), &adj_sid);
             }
         }
 
