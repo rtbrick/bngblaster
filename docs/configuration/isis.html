@@ -180,7 +180,7 @@
 </tr>
 <tr class="row-even"><td><p><strong>hello-interval</strong></p></td>
 <td><div class="line-block">
-<div class="line">Hello interval in seconds</div>
+<div class="line">Hello interval in seconds.</div>
 <div class="line">Default: 10 Range: 1 - 65535</div>
 </div>
 </td>
@@ -199,98 +199,119 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-lifetime</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-buffer-size</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS LSPBufferSize in bytes.</div>
+<div class="line">Default: 1492 Range: 128 - 9192</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>lsp-lifetime</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP lifetime in seconds.</div>
 <div class="line">Default: 65535 Range: 330 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-refresh-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-refresh-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP refresh interval in seconds.</div>
 <div class="line">Default: 300 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-retry-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-retry-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP retry interval in seconds.</div>
 <div class="line">Default: 5 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-tx-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-tx-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX interval in ms (time between LSP send windows).</div>
 <div class="line">Default: 10 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-tx-window-size</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-tx-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX window size (LSP send per window).</div>
 <div class="line">Default: 1 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>csnp-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>csnp-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS CSNP interval in seconds.</div>
 <div class="line">Default: 30 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>hostname</strong></p></td>
+<tr class="row-even"><td><p><strong>hostname</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS hostname</div>
+<div class="line">ISIS hostname.</div>
 <div class="line">Default: bngblaster</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>router-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>router-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS router identifier.</div>
 <div class="line">Default: 10.10.10.10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>system-id</strong></p></td>
+<tr class="row-even"><td><p><strong>system-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS system identifier.</div>
 <div class="line">Default: 0100.1001.0010</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>area</strong></p></td>
+<tr class="row-odd"><td><p><strong>area</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS area(s)</div>
+<div class="line">ISIS area(s).</div>
 <div class="line">Default: 49.0001/24</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>sr-algo</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS SR algorithm(s), multiple possible.</div>
+<div class="line">Default: disabled Range: 0 - 255</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>sr-base</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS SR base</div>
+<div class="line">ISIS SR base.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>sr-range</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS SR range</div>
+<div class="line">ISIS SR range.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>sr-node-sid</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS SR node SID</div>
+<div class="line">ISIS SR node SID.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
+<tr class="row-even"><td><p><strong>adjacency-sid-base</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable Adjacency SID generation.</div>
+<div class="line">Default: disabled Range 256 - 4096</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS teardown time in seconds.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
