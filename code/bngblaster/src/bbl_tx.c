@@ -456,6 +456,10 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     bbl_dhcpv6_s dhcpv6 = {0};
     bbl_dhcpv6_s dhcpv6_relay = {0};
     access_line_s access_line = {0};
+    struct timespec now;
+    struct timespec time_diff;
+    time_t elapsed = 0;
+
     uint8_t mac[ETH_ADDR_LEN];
 
     if(session->dhcpv6_state == BBL_DHCP_INIT ||
@@ -522,6 +526,20 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     udp.dst = DHCPV6_UDP_SERVER;
     udp.src = DHCPV6_UDP_CLIENT;
     udp.protocol = UDP_PROTOCOL_DHCPV6;
+
+    /* The 'elapsed' option message SHOULD represent the
+     * amount of time since the client began its current 
+     * DHCP transaction. This time is expressed in hundredths 
+     * of a second. */
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if(session->dhcpv6_request_timestamp.tv_sec) {
+        timespec_sub(&time_diff, &now, &session->dhcpv6_request_timestamp);
+        elapsed = (time_diff.tv_sec * 100) + (time_diff.tv_nsec / 10000000);
+        if(elapsed > UINT16_MAX) elapsed = UINT16_MAX;
+    } else {
+        session->dhcpv6_request_timestamp.tv_sec = now.tv_sec;
+    }
+    dhcpv6.elapsed = elapsed;
     dhcpv6.xid = session->dhcpv6_xid;
     dhcpv6.client_duid = session->dhcpv6_duid;
     dhcpv6.client_duid_len = DUID_LEN;
@@ -543,6 +561,10 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             dhcpv6.ia_na_option_len = 0;
             dhcpv6.ia_pd_option_len = 0;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
+            if(!g_ctx->stats.first_session_tx.tv_sec) {
+                g_ctx->stats.first_session_tx.tv_sec = now.tv_sec;
+                g_ctx->stats.first_session_tx.tv_nsec = now.tv_nsec;
+            }
             break;
         case BBL_DHCP_REQUESTING:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
@@ -1095,6 +1117,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     bbl_dhcp_s dhcp = {0};
     access_line_s access_line = {0};
     struct timespec now;
+    time_t secs = 0;
 
     if(session->dhcp_state == BBL_DHCP_INIT ||
        session->dhcp_state == BBL_DHCP_BOUND) {
@@ -1131,12 +1154,15 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
         header.flags = htobe16(1 << 15);
     }
     memcpy(header.chaddr, session->client_mac, ETH_ADDR_LEN);
+
     /* The 'secs' field of a BOOTREQUEST message SHOULD represent the
      * elapsed time, in seconds, since the client sent its first
      * BOOTREQUEST message. */
     clock_gettime(CLOCK_MONOTONIC, &now);
     if(session->dhcp_request_timestamp.tv_sec) {
-        header.secs = htobe16(now.tv_sec - session->dhcp_request_timestamp.tv_sec);
+        secs = now.tv_sec - session->dhcp_request_timestamp.tv_sec;
+        if(secs > UINT16_MAX) secs = UINT16_MAX;
+        header.secs = htobe16(secs);
     } else {
         header.secs = 0;
         session->dhcp_request_timestamp.tv_sec = now.tv_sec;

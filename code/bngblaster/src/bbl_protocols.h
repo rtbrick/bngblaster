@@ -873,6 +873,7 @@ typedef struct bbl_icmpv6_ {
 typedef struct bbl_dhcpv6_ {
     uint8_t        type;
     uint8_t        hops;
+    uint16_t       elapsed;
     uint32_t       xid;
     uint8_t       *interface_id;
     uint8_t        interface_id_len;

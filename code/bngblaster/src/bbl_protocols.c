@@ -299,7 +299,7 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(sizeof(uint16_t));
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint16_t*)buf = 0;
+        *(uint16_t*)buf = htobe16(dhcpv6->elapsed);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     }
 
