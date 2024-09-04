@@ -1809,14 +1809,14 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->sr_algo_count = json_array_size(value);
         isis_config->sr_algo = calloc(isis_config->sr_algo_count, sizeof(uint8_t));
         for(i = 0; i < isis_config->sr_algo_count; i++) {
-	    sub = json_array_get(value, i);
-	    if(json_is_number(sub)) {
-		isis_config->sr_algo[i] = json_number_value(sub);
+            sub = json_array_get(value, i);
+            if(json_is_number(sub)) {
+            isis_config->sr_algo[i] = json_number_value(sub);
             }
         }
     } else if(json_is_number(value)) {
         isis_config->sr_algo = calloc(1, sizeof(uint8_t));
-	isis_config->sr_algo[0] = json_number_value(value);
+        isis_config->sr_algo[0] = json_number_value(value);
         isis_config->sr_algo_count = 1;
     } else {
         isis_config->sr_algo_count = 0;
@@ -1900,7 +1900,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                     connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
                 } else {
                     connection->level[ISIS_LEVEL_2_IDX].metric = 10;
-		        }
+                }
                 if(isis_config->adjacency_sid) {
                     connection->adjacency_sid = isis_config->adjacency_sid++;
                 }
@@ -1920,7 +1920,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->lsp_buffer_size = json_number_value(value);
     }
     else {
-	isis_config->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
+        isis_config->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
     }
     return true;
 }
