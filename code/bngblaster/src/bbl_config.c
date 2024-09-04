@@ -159,6 +159,17 @@ add_secondary_ipv6(ipv6addr_t ipv6)
     }
 }
 
+static isis_config_s *
+get_isis_config_by_id(uint16_t id)
+{
+    isis_config_s *isis_config = g_ctx->config.isis_config;
+    while(isis_config) {
+        if(isis_config->id == id) return isis_config;
+        isis_config = isis_config->next;
+    }
+    return NULL;
+}
+
 static bool
 json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profile)
 {
@@ -656,11 +667,13 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
 }
 
 static bool
-json_parse_network_interface(json_t *network_interface, bbl_network_config_s *network_config, isis_config_s *isis_config)
+json_parse_network_interface(json_t *network_interface, bbl_network_config_s *network_config)
 {
     json_t *value = NULL;
     const char *s = NULL;
     ipv4addr_t ipv4 = {0};
+
+    isis_config_s *isis_config;
 
     const char *schema[] = {
         "interface", "address", "gateway",
@@ -753,6 +766,13 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-instance-id", 0, 65535);
     if(value) {
         network_config->isis_instance_id = json_number_value(value);
+
+        isis_config = get_isis_config_by_id(network_config->isis_instance_id);
+        if(!isis_config) {
+            fprintf(stderr, "JSON config error: Instance not found for network->isis-instance-id\n");
+            return false;
+        }
+
         network_config->isis_level = 3;
         JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-level", 1, 3);
         if(value) {
@@ -787,9 +807,9 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         } else {
             network_config->isis_l2_priority = 10;
         }
-	if (isis_config->adjacency_sid > 0) {
-            network_config->isis_adjacency_sid = isis_config->adjacency_sid;
-	}
+        if(isis_config->adjacency_sid) {
+            network_config->isis_adjacency_sid = isis_config->adjacency_sid++;
+        }
     }
 
     /* OSPF interface configuration */
@@ -1804,9 +1824,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 
     JSON_OBJ_GET_NUMBER(isis, value, "isis", "adjacency-sid-base", 256, 4096);
     if(value) {
-        isis_config->adjacency_sid  = json_integer_value(value);
-    } else {
-        isis_config->adjacency_sid  = 0;
+        isis_config->adjacency_sid = json_integer_value(value);
     }
 
     value = json_object_get(isis, "teardown-time");
@@ -1882,11 +1900,10 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                     connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
                 } else {
                     connection->level[ISIS_LEVEL_2_IDX].metric = 10;
-		}
-		if (isis_config->adjacency_sid > 0) {
-		    connection->adjacency_sid = isis_config->adjacency_sid;
-		    isis_config->adjacency_sid++;
-		}
+		        }
+                if(isis_config->adjacency_sid) {
+                    connection->adjacency_sid = isis_config->adjacency_sid++;
+                }
             }
         }
     }
@@ -3857,14 +3874,9 @@ json_parse_config(json_t *root)
                     network_config->next = calloc(1, sizeof(bbl_network_config_s));
                     network_config = network_config->next;
                 }
-                if(!json_parse_network_interface(json_array_get(sub, i), network_config, isis_config)) {
+                if(!json_parse_network_interface(json_array_get(sub, i), network_config)) {
                     return false;
                 }
-		else {
-		    if (isis_config->adjacency_sid > 0) {
-                        isis_config->adjacency_sid++;
-		    }
-	        }
             }
         } else if(json_is_object(sub)) {
             /* Config is provided as object (single network interface) */
@@ -3872,14 +3884,9 @@ json_parse_config(json_t *root)
             if(!g_ctx->config.network_config) {
                 g_ctx->config.network_config = network_config;
             }
-            if(!json_parse_network_interface(sub, network_config, isis_config)) {
+            if(!json_parse_network_interface(sub, network_config)) {
                 return false;
             }
-	    else {
-                if (isis_config->adjacency_sid > 0) {
-                    isis_config->adjacency_sid++;
-                }
-	    }
         }
 
         /* Access Interface Configuration Section */
