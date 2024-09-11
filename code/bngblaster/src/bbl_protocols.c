@@ -2315,6 +2315,7 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
         /* Add labels ... */
         mpls = eth->mpls;
         while(mpls) {
+            *(uint32_t*)buf = 0;
             *(buf+2) = mpls->exp << 1;
             *(buf+3) = mpls->ttl;
             *(uint32_t*)buf |= htobe32(mpls->label << 12);
