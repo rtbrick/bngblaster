@@ -321,6 +321,7 @@ bbl_ctrl_job(timer_s *timer)
         while(!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
             session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
             if(rate > 0) {
+                rate--;
                 if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
                     g_ctx->sessions_outstanding++;
                     /* Start session */
