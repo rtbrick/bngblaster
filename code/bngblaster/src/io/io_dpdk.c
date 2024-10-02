@@ -348,6 +348,8 @@ io_dpdk_tx_job(timer_s *timer)
                 burst = 0;
             }
         }
+    } else {
+        bbl_stream_io_stop(io);
     }
     if(pcap) {
         pcapng_fflush();
@@ -477,6 +479,8 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                     burst = 0;
                 }
             }
+        } else {
+            bbl_stream_io_stop(io);
         }
     }
 }

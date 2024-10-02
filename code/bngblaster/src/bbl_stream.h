@@ -236,6 +236,9 @@ bbl_stream_init();
 void
 bbl_stream_final();
 
+void
+bbl_stream_io_stop(io_handle_s *io);
+
 bbl_stream_s *
 bbl_stream_io_send_iter(io_handle_s *io, uint64_t now);
 

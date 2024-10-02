@@ -67,7 +67,7 @@ bucket_shuffle(io_bucket_s *io_bucket)
 }
 
 static void
-bucket_smear(io_bucket_s *io_bucket, uint64_t start_nsec)
+bucket_smear(io_bucket_s *io_bucket)
 {
     uint64_t nsec = 0;
     uint64_t step_nsec;
@@ -75,8 +75,8 @@ bucket_smear(io_bucket_s *io_bucket, uint64_t start_nsec)
 
     if(io_bucket && io_bucket->stream_count) {
         step_nsec = io_bucket->nsec / io_bucket->stream_count;
-        io_bucket->base = start_nsec - io_bucket->nsec;
-
+        io_bucket->base = 0;
+        io_bucket->stream_cur = NULL;
         stream = io_bucket->stream_head;
         while(stream) {
             nsec += step_nsec;
@@ -124,14 +124,9 @@ void
 io_stream_smear(io_handle_s *io)
 {
     io_bucket_s *io_bucket = io->bucket_head;
-    struct timespec now;
-    uint64_t now_nsec;
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    now_nsec = timespec_to_nsec(&now);
     while(io_bucket) {
         bucket_shuffle(io_bucket);
-        bucket_smear(io_bucket, now_nsec);
+        bucket_smear(io_bucket);
         io_bucket = io_bucket->next;
     }
 }

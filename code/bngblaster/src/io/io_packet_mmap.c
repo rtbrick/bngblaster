@@ -174,6 +174,7 @@ io_packet_mmap_tx_job(timer_s *timer)
                 }
             } else {
                 if(!(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP)) {
+                    bbl_stream_io_stop(io);
                     break;
                 }
                 stream = bbl_stream_io_send_iter(io, now);
@@ -342,6 +343,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 }
             } else {
                 if(!(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP)) {
+                    bbl_stream_io_stop(io);
                     break;
                 }
                 /* Send traffic streams up to allowed burst. */

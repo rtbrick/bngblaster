@@ -181,6 +181,8 @@ io_raw_tx_job(timer_s *timer)
                 }
             }
         }
+    } else {
+        bbl_stream_io_stop(io);
     }
     if(unlikely(pcap)) {
         pcapng_fflush();
@@ -287,6 +289,8 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
                     }
                 }
             }
+        } else {
+            bbl_stream_io_stop(io);
         }
     }
 }

@@ -1491,6 +1491,22 @@ bbl_stream_io_send(bbl_stream_s *stream)
 }
 
 /**
+ * bbl_stream_io_stop
+ *
+ * @param io IO handle
+ */
+void
+bbl_stream_io_stop(io_handle_s *io)
+{
+    io_bucket_s *io_bucket = io->bucket_head;
+    while(io_bucket) {
+        io_bucket->base = 0;
+        io_bucket->stream_cur = NULL;
+        io_bucket = io_bucket->next;
+    }
+}
+
+/**
  * bbl_stream_io_send_iter
  *
  * @param io IO handle
@@ -1510,9 +1526,13 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
         } else {
             stream = io_bucket->stream_head;
             io_bucket->stream_cur = stream;
-            io_bucket->base += io_bucket->nsec;
-            if(io_bucket->base < min) {
-                io_bucket->base = min;
+            if(io_bucket->base) {
+                io_bucket->base += io_bucket->nsec;
+                if(io_bucket->base < min) {
+                    io_bucket->base = min;
+                }
+            } else {
+                io_bucket->base = now - io_bucket->nsec;
             }
         }
         if(io_bucket->base >= now) {
