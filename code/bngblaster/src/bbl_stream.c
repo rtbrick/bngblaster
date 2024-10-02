@@ -1956,6 +1956,9 @@ bbl_stream_init() {
                     *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
                     stream->ldp_lookup = true;
                 }
+                if(config->raw_tcp) {
+                    stream->tcp = true;
+                }
                 bbl_stream_add(stream);
                 if(stream->type == BBL_TYPE_MULTICAST) {
                     LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %0.2lf PPS\n", 
