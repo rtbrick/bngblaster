@@ -254,16 +254,20 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                     session->dhcp_domain_name = calloc(1, dhcp->domain_name_len +1);
                     strncpy(session->dhcp_domain_name, dhcp->domain_name, dhcp->domain_name_len);
                 }
+
                 if (dhcp->option_t1) {
                     session->dhcp_t1 = dhcp->t1;
                 } else {
-                    session->dhcp_t1 = 0.5 * session->dhcp_lease_time; if(!session->dhcp_t1) session->dhcp_t1 = 1;
+                    session->dhcp_t1 = 0.5 * session->dhcp_lease_time;
                 }
+                if(!session->dhcp_t1) session->dhcp_t1 = 1;
+
                 if (dhcp->option_t2) {
                     session->dhcp_t2 = dhcp->t2;
                 } else {
-                    session->dhcp_t2 = 0.875 * session->dhcp_lease_time; if(!session->dhcp_t2) session->dhcp_t2 = 1;
+                    session->dhcp_t2 = 0.875 * session->dhcp_lease_time;
                 }
+                if(!session->dhcp_t2) session->dhcp_t2 = 1;
 
                 session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
                 if(!session->dhcp_established) {
