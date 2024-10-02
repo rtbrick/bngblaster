@@ -3498,6 +3498,7 @@ json_parse_config(json_t *root)
             "stream-autostart",
             "stream-rate-calculation",
             "stream-delay-calculation",
+            "stream-burst-ms",
             "multicast-autostart",
             "udp-checksum"
         };
@@ -3525,6 +3526,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "traffic", "stream-delay-calculation");
         if(value) {
             g_ctx->config.stream_delay_calc = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(section, value, "traffic", "stream-burst-ms", 1, 1000);
+        if(value) {
+            g_ctx->config.stream_burst_ms = json_number_value(value) * MSEC;
         }
         JSON_OBJ_GET_BOOL(section, value, "traffic", "multicast-autostart");
         if(value) {
@@ -4273,6 +4278,7 @@ bbl_config_init_defaults()
     g_ctx->config.stream_autostart = true;
     g_ctx->config.stream_rate_calc = true;
     g_ctx->config.stream_delay_calc = true;
+    g_ctx->config.stream_burst_ms = 100 * MSEC;
     g_ctx->config.multicast_traffic_autostart = true;
     g_ctx->config.session_traffic_autostart = true;
 }

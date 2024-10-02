@@ -1502,7 +1502,7 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
 {
     io_bucket_s *io_bucket = io->bucket_cur;
     bbl_stream_s *stream;
-    uint64_t min = now - 100 * MSEC; /* now minus 100ms */
+    uint64_t min = now - g_ctx->config.stream_burst_ms;
     uint64_t expired;
     while(io_bucket) {
         if(io_bucket->stream_cur) {

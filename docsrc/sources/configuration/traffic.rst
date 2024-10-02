@@ -28,6 +28,25 @@
 |                                 | | per-stream delay measurements are not required.      |
 |                                 | | Default: true                                        |
 +---------------------------------+--------------------------------------------------------+
+| **stream-burst-ms**             | | This option controls the maximum burst size per      |
+|                                 | | stream, measured in milliseconds. It regulates       |
+|                                 | | how data is sent in bursts over a stream within the  |
+|                                 | | specified time interval. Setting this option         |
+|                                 | | determines the balance between throughput consistency|
+|                                 | | and burst behavior. The value directly influences the|
+|                                 | | distribution of traffic bursts within a stream,      |
+|                                 | | affecting how closely the stream rate adheres to the |
+|                                 | | desired target. A smaller burst size can lead to     |
+|                                 | | smoother traffic, reducing the risk of micro-bursts, |
+|                                 | | but may result in the stream rate falling below the  |
+|                                 | | intended target. A larger burst size increases the   |
+|                                 | | risk of micro-bursts. This value should be based     |
+|                                 | | on the tolerance for traffic bursts and the required |
+|                                 | | stream rate. Testing different values is recommended |
+|                                 | | to find the optimal balance between maintaining the  |
+|                                 | | target rate and preventing large bursts.             |
+|                                 | | Default: 100 Range: 1 - 1000                         |
++---------------------------------+--------------------------------------------------------+
 | **multicast-traffic-autostart** | | Automatically start multicast traffic.               |
 |                                 | | Default: true                                        |
 +---------------------------------+--------------------------------------------------------+
