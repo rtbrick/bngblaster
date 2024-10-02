@@ -1532,7 +1532,7 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
                     io_bucket->base = min;
                 }
             } else {
-                io_bucket->base = now - io_bucket->nsec;
+                io_bucket->base = now;
             }
         }
         if(io_bucket->base >= now) {
