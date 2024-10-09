@@ -469,6 +469,9 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
             } else if(ipv4->protocol == PROTOCOL_IPV4_OSPF && interface->ospfv2_interface) {
                 ospf_handler_rx_ipv4(interface, eth, ipv4);
                 return;
+            } else if(ipv4->offset & ~IPV4_DF) {
+                interface->stats.ipv4_fragmented_rx++;
+                bbl_fragment_rx(NULL, interface, eth, ipv4);
             }
             break;
         case ETH_TYPE_IPV6:

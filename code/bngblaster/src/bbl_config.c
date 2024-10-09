@@ -3499,6 +3499,7 @@ json_parse_config(json_t *root)
             "stream-rate-calculation",
             "stream-delay-calculation",
             "stream-burst-ms",
+            "reassemble-fragments",
             "multicast-autostart",
             "udp-checksum"
         };
@@ -3530,6 +3531,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "traffic", "stream-burst-ms", 1, 1000);
         if(value) {
             g_ctx->config.stream_burst_ms = json_number_value(value) * MSEC;
+        }
+        JSON_OBJ_GET_BOOL(section, value, "traffic", "reassemble-fragments");
+        if(value) {
+            g_ctx->config.traffic_reassemble_fragments = json_boolean_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "traffic", "multicast-autostart");
         if(value) {

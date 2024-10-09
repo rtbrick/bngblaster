@@ -1084,11 +1084,12 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
     if(packets == 0) return;
     if(stream->rx_access_interface) {
         access_interface = stream->rx_access_interface;
-        access_interface->stats.packets_rx += packets;
-        access_interface->stats.bytes_rx += bytes;
         access_interface->stats.stream_rx += packets;
         access_interface->stats.stream_loss += loss;
-        session = stream->session;
+        if(!stream->rx_fragments) {
+            access_interface->stats.packets_rx += packets;
+            access_interface->stats.bytes_rx += bytes;
+        }
         if(session) {
             session->stats.packets_rx += packets;
             session->stats.bytes_rx += bytes;
@@ -1115,10 +1116,12 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
         }
     } else if(stream->rx_network_interface) {
         network_interface = stream->rx_network_interface;
-        network_interface->stats.packets_rx += packets;
-        network_interface->stats.bytes_rx += bytes;
         network_interface->stats.stream_rx += packets;
         network_interface->stats.stream_loss += loss;
+        if(!stream->rx_fragments) {
+            network_interface->stats.packets_rx += packets;
+            network_interface->stats.bytes_rx += bytes;
+        }
         if(session) {
             if(session->l2tp_session) {
                 network_interface->stats.l2tp_data_rx += packets;
@@ -2173,6 +2176,9 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->rx_min_delay_us = 0;
     stream->rx_max_delay_us = 0;
     stream->rx_len = 0;
+    stream->rx_fragments = 0;
+    stream->rx_fragment_offset = 0;
+    stream->rx_ttl = 0;
     stream->rx_priority = 0;
     stream->rx_outer_vlan_pbit = 0;
     stream->rx_inner_vlan_pbit = 0;
@@ -2595,6 +2601,10 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         if(stream->rx_interface_changes) { 
             json_object_set_new(root, "rx-interface-changes", json_integer(stream->rx_interface_changes));
             json_object_set_new(root, "rx-interface-changed-epoch", json_integer(stream->rx_interface_changed_epoch));
+        }
+        if(stream->rx_fragments) {
+            json_object_set_new(root, "rx-fragments", json_integer(stream->rx_fragments));
+            json_object_set_new(root, "rx-fragment-offset", json_integer(stream->rx_fragment_offset));
         }
         if(stream->config->rx_mpls1) { 
             json_object_set_new(root, "rx-mpls1-expected", json_integer(stream->config->rx_mpls1_label));

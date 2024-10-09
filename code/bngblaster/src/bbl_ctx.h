@@ -21,6 +21,7 @@ typedef struct bbl_ctx_
     struct timer_ *keyboard_timer;
 
     struct timer_ *tcp_timer;
+    struct timer_ *fragmentation_timer;
 
     struct timespec timestamp_start;
     struct timespec timestamp_stop;
@@ -92,6 +93,8 @@ typedef struct bbl_ctx_
     ospf_instance_s *ospf_instances;
     ldp_instance_s *ldp_instances;
     ldp_raw_update_s *ldp_raw_updates;
+
+    bbl_fragment_s *ipv4_fragments;
 
     /* Scratchpad memory */
     uint8_t *sp;
@@ -328,6 +331,7 @@ typedef struct bbl_ctx_
         /* Global Traffic */
         bool traffic_autostart;
         bool traffic_stop_verified;
+        bool traffic_reassemble_fragments;
 
         /* Stream Traffic */
         bool stream_autostart;

@@ -631,11 +631,11 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
     bbl_udp_s *udp;
 
     if(ipv4->offset & ~IPV4_DF) {
-        /* Reassembling of fragmented IPv4 packets is currently not supported. */
         session->stats.accounting_packets_rx++;
         session->stats.accounting_bytes_rx += eth->length;
         session->stats.ipv4_fragmented_rx++;
         interface->stats.ipv4_fragmented_rx++;
+        bbl_fragment_rx(interface, NULL, eth, ipv4);
         return;
     }
 

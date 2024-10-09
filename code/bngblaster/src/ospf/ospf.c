@@ -100,6 +100,7 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
         /* The following code provides very simplified support for 
          * reassembling of fragmented IPv4 OSPFv2 packets.
          * This code supports only in order fragments from single source. */
+        interface->stats.ipv4_fragmented_rx++;
         LOG(OSPF, "OSPFv2 RX PDU fragment on interface %s\n", interface->name);
         if(ipv4->id == ospf_interface->frag_id) {
             if(ospf_interface->frag_off == 0 ||
