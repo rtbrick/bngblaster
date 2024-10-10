@@ -50,6 +50,7 @@
 #include "bbl_tcp.h"
 #include "bbl_http_client.h"
 #include "bbl_http_server.h"
+#include "bbl_fragment.h"
 
 #include "io/io.h"
 #include "bgp/bgp.h"

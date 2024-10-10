@@ -53,3 +53,8 @@
 | **udp-checksum**                | | Enable UDP checksums.                                |
 |                                 | | Default: false                                       |
 +---------------------------------+--------------------------------------------------------+
+| **reassemble-fragments**        | | Enable reassembly of fragmented IPv4 stream packets. |
+|                                 | | Currently, this is restricted to BBL stream traffic  |
+|                                 | | only!                                                |
+|                                 | | Default: false                                       |
++---------------------------------+--------------------------------------------------------+

@@ -244,5 +244,6 @@ typedef struct bbl_http_client_ bbl_http_client_s;
 typedef struct bbl_http_server_config_ bbl_http_server_config_s;
 typedef struct bbl_http_server_ bbl_http_server_s;
 typedef struct bbl_http_server_connection_ bbl_http_server_connection_s;
+typedef struct bbl_fragment_ bbl_fragment_s;
 
 #endif

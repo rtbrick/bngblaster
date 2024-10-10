@@ -197,6 +197,9 @@ typedef struct bbl_stream_
     __time_t rx_interface_changed_epoch;
     uint8_t  rx_interface_changes;
 
+    uint8_t  rx_fragments;
+    uint16_t rx_fragment_offset; /* Max fragmentation offset received */
+
     uint8_t  rx_ttl; /* IPv4 or IPv6 TTL */
     uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  rx_outer_vlan_pbit;
