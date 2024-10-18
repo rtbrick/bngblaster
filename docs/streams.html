@@ -61,6 +61,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#tcp-raw-streams">TCP RAW Streams</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#stream-commands">Stream Commands</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#start-stop-traffic">Start/Stop Traffic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fragmentation">Fragmentation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#bng-blaster-traffic">BNG Blaster Traffic</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#unicast-session-traffic">Unicast Session Traffic</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#multicast-traffic">Multicast Traffic</a></li>
@@ -745,6 +746,41 @@ of <a class="reference internal" href="access/traffic.html#session-traffic"><spa
 can modify the state of these streams at any time.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-traffic-start</span> <span class="pre">session-id</span> <span class="pre">1</span></code></p>
 <p>Details about all commands and their arguments can found int the <a class="reference internal" href="api/index.html#api"><span class="std std-ref">API/CLI</span></a> section.</p>
+</section>
+<section id="fragmentation">
+<h2>Fragmentation<a class="headerlink" href="#fragmentation" title="Link to this heading"></a></h2>
+<p>The BNG Blaster offers optional support for reassembling fragmented IPv4 traffic streams.
+This reassembly feature is currently limited to access and network interfaces and is specifically
+designed for BNG Blaster stream traffic. While the BNG Blaster does not fragment packets itself,
+it can reassemble packets fragmented by the device under test if the feature is enabled.</p>
+<p>The following configuration is necessary to enable the reassembly of fragmented IPv4 traffic streams:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;reassemble-fragments&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The stream-info command returns the field <code class="docutils literal notranslate"><span class="pre">rx-fragments</span></code>, which tracks the number of fragments
+used to reassemble a packet. This value has a minimum of 2, as fragmented packets consist of at
+least two fragments. Typically, it ranges between 2 and 3.</p>
+<p>Another field, <code class="docutils literal notranslate"><span class="pre">rx-fragment-offset</span></code>, indicates the largest offset value among all fragments.
+This value, when added to the size of the IPv4 header, should always be less than or equal to
+the configured MTU.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock stream-info flow-id 1
+{
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;code&quot;: 200,
+    &quot;stream-info&quot;: {
+        &quot;flow-id&quot;: 1,
+        ...
+        &quot;rx-fragments&quot;: 2,
+        &quot;rx-fragment-offset&quot;: 1472, &lt;&lt;&lt;&lt; 1472 + 20 byte IPv4 header == 1492 (MTU)
+        ...
+    }
+}
+</pre></div>
+</div>
 </section>
 <section id="bng-blaster-traffic">
 <span id="bbl-header"></span><h2>BNG Blaster Traffic<a class="headerlink" href="#bng-blaster-traffic" title="Link to this heading"></a></h2>

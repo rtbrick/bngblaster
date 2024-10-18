@@ -392,6 +392,49 @@ can modify the state of these streams at any time.
 
 Details about all commands and their arguments can found int the :ref:`API/CLI <api>` section. 
 
+Fragmentation
+~~~~~~~~~~~~~
+
+The BNG Blaster offers optional support for reassembling fragmented IPv4 traffic streams. 
+This reassembly feature is currently limited to access and network interfaces and is specifically 
+designed for BNG Blaster stream traffic. While the BNG Blaster does not fragment packets itself, 
+it can reassemble packets fragmented by the device under test if the feature is enabled.
+
+The following configuration is necessary to enable the reassembly of fragmented IPv4 traffic streams:
+
+.. code-block:: json
+
+    {
+        "traffic": {
+            "reassemble-fragments": true
+        }
+    }
+
+
+The stream-info command returns the field ``rx-fragments``, which tracks the number of fragments 
+used to reassemble a packet. This value has a minimum of 2, as fragmented packets consist of at 
+least two fragments. Typically, it ranges between 2 and 3. 
+
+Another field, ``rx-fragment-offset``, indicates the largest offset value among all fragments. 
+This value, when added to the size of the IPv4 header, should always be less than or equal to 
+the configured MTU.
+
+.. code-block:: none
+
+    $ sudo bngblaster-cli run.sock stream-info flow-id 1
+    {
+        "status": "ok",
+        "code": 200,
+        "stream-info": {
+            "flow-id": 1,
+            ...
+            "rx-fragments": 2,
+            "rx-fragment-offset": 1472, <<<< 1472 + 20 byte IPv4 header == 1492 (MTU)
+            ...
+        }
+    }
+
+
 .. _bbl_header:
 
 BNG Blaster Traffic
