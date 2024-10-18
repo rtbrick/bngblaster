@@ -1757,7 +1757,7 @@ bbl_access_session_id_from_vlan(bbl_access_interface_s *interface,
     key.inner_vlan_id = eth->vlan_inner;
 
     search = dict_search(g_ctx->vlan_session_dict, &key);
-    if(search) {
+    if(search && *search) {
         session = *search;
         session_id = session->session_id;
     }

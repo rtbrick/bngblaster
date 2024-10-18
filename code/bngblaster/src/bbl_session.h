@@ -379,12 +379,6 @@ bbl_session_clear(bbl_session_s *session);
 bool
 bbl_sessions_init();
 
-uint32_t
-bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_s *eth);
-
-uint32_t
-bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s *eth);
-
 json_t *
 bbl_session_json(bbl_session_s *session);
 

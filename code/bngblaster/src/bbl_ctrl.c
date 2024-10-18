@@ -438,7 +438,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                             }
                             if(key.outer_vlan_id) {
                                 search = dict_search(g_ctx->vlan_session_dict, &key);
-                                if(search) {
+                                if(search && *search) {
                                     session = *search;
                                     session_id = session->session_id;
                                 } else {

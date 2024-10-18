@@ -782,6 +782,7 @@ bbl_sessions_init()
     bbl_access_config_s *access_config;
     bbl_access_line_profile_s *access_line_profile;
     dict_insert_result result;
+    void **search;
 
     uint32_t i = 1;  /* BNG Blaster internal session identifier */
 
@@ -1024,10 +1025,25 @@ bbl_sessions_init()
         }
 
         if(access_config->vlan_mode == VLAN_MODE_11) {
-            /* Add 1:1 sessions to VLAN/session dictionary */
             result = dict_insert(g_ctx->vlan_session_dict, &session->vlan_key);
             if(result.inserted) {
                 *result.datum_ptr = session;
+            } else {
+                LOG(ERROR, "Failed to create session %u due to VLAN conflict!\n", i);
+                return false;
+            }
+        } else {
+            search = dict_search(g_ctx->vlan_session_dict, &session->vlan_key);
+            if(search) {
+                if(*search) {
+                    LOG(ERROR, "Failed to create session %u due to VLAN conflict!\n", i);
+                    return false;
+                }
+            } else {
+                result = dict_insert(g_ctx->vlan_session_dict, &session->vlan_key);
+                if(result.inserted) {
+                    *result.datum_ptr = NULL;
+                }
             }
         }
 
@@ -1077,52 +1093,6 @@ NEXT:
         }
     }
     return true;
-}
-
-uint32_t
-bbl_session_id_from_vlan(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
-{
-    uint32_t session_id = 0;
-    vlan_session_key_t key = {0};
-    bbl_session_s *session;
-    void **search;
-
-    key.ifindex = interface->ifindex;
-    key.outer_vlan_id = eth->vlan_outer;
-    key.inner_vlan_id = eth->vlan_inner;
-
-    search = dict_search(g_ctx->vlan_session_dict, &key);
-    if(search) {
-        session = *search;
-        session_id = session->session_id;
-    }
-    return session_id;
-}
-
-uint32_t
-bbl_session_id_from_broadcast(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
-{
-    uint32_t session_id = 0;
-    bbl_ipv4_s *ipv4;
-    bbl_udp_s *udp;
-    bbl_dhcp_s *dhcp;
-
-    if(eth->type == ETH_TYPE_IPV4) {
-        ipv4 = (bbl_ipv4_s*)eth->next;
-        if(ipv4->protocol == PROTOCOL_IPV4_UDP) {
-            udp = (bbl_udp_s*)ipv4->next;
-            if(udp->protocol == UDP_PROTOCOL_DHCP) {
-                dhcp = (bbl_dhcp_s*)udp->next;
-                session_id |= ((uint8_t*)(dhcp->header->chaddr))[5];
-                session_id |= ((uint8_t*)(dhcp->header->chaddr))[4] << 8;
-                session_id |= ((uint8_t*)(dhcp->header->chaddr))[3] << 16;
-            }
-        }
-    }
-    if(!session_id) {
-        return(bbl_session_id_from_vlan(interface, eth));
-    }
-    return session_id;
 }
 
 const char *
