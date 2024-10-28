@@ -152,6 +152,7 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
     isis_tlv_s *tlv;
 
     uint8_t new_state = ISIS_PEER_STATE_INIT;
+    uint8_t dis_pseudo_node_id = 0;
 
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
@@ -187,8 +188,17 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
         return;
     }
 
+
+    if(adjacency->dis) dis_pseudo_node_id = adjacency->dis->pseudo_node_id;
+
     peer = isis_peer(adjacency, eth->src);
     isis_peer_update(peer, pdu);
+
+    if(adjacency->dis && adjacency->dis->pseudo_node_id != dis_pseudo_node_id) {
+        /* This check is required to handle the case where DIS remains 
+         * but pseudo-node-id of DIS has changed. */
+        self_update = true;
+    }
 
     tlv = isis_pdu_first_tlv(pdu);
     while(tlv) {
