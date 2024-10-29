@@ -2195,6 +2195,9 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->rx_first_seq = 0;
     stream->rx_last_seq = 0;
 
+    stream->rate_packets_tx.avg_max = 0;
+    stream->rate_packets_rx.avg_max = 0;
+
     stream->reset = true;
     stream->verified = false;
 }
@@ -2552,7 +2555,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI si si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI si si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2587,6 +2590,8 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-delay-us-max", stream->rx_max_delay_us,
             "rx-pps", stream->rate_packets_rx.avg,
             "tx-pps", stream->rate_packets_tx.avg,
+            "rx-pps-max", stream->rate_packets_rx.avg_max,
+            "tx-pps-max", stream->rate_packets_tx.avg_max,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
             "rx-bps-l2", stream->rate_packets_rx.avg * stream->rx_len * 8,
             "rx-bps-l3", stream->rate_packets_rx.avg * stream->config->length * 8,
@@ -2640,7 +2645,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             json_object_set_new(root, "lag-member-interface-state", json_string(interface_state_string(io->interface->state)));
         }
     } else {
-        root = json_pack("{sI ss* ss ss ss sb sb ss* ss* sI sI sI sI sf}",
+        root = json_pack("{sI ss* ss ss ss sb sb ss* ss* sI sI sI sI sI sf}",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2653,6 +2658,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,
             "tx-pps", stream->rate_packets_tx.avg,
+            "tx-pps-max", stream->rate_packets_tx.avg_max,
             "tx-bps-l2", stream->rate_packets_tx.avg * stream->tx_len * 8,
             "tx-mbps-l2", (double)(stream->rate_packets_tx.avg * stream->tx_len * 8) / 1000000.0);
     }
