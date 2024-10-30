@@ -328,7 +328,10 @@ def main():
                 label_index = 0
                 label = args.label_base
 
-        prefix = ipaddress.ip_network("%s/%s" % (prefix.broadcast_address+1, prefix.prefixlen))
+        try:
+            prefix = ipaddress.ip_network("%s/%s" % (prefix.broadcast_address+1, prefix.prefixlen))
+        except:
+            break
 
     if args.streams:
         log.info("write %s streams to file %s", len(streams), args.streams)
