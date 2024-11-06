@@ -168,7 +168,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
         if(peer_state == ISIS_PEER_STATE_UP) {
             adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_UP;
         } else {
-            adjacency_p2p->state = ISIS_PEER_STATE_INIT;
+            adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_INIT;
         } 
         for(int i=0; i<ISIS_LEVELS; i++) {
             adjacency = interface->isis_adjacency[i];

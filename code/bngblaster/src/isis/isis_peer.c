@@ -53,7 +53,8 @@ isis_peer_hold_timeout_p2p(timer_s *timer)
         return;
     }
     peer->state = ISIS_PEER_STATE_DOWN;
-    
+    adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
+
     LOG(ISIS, "ISIS P2P hold timeout to %s on interface %s\n",
         isis_system_id_to_str(peer->system_id), interface->name);
 
