@@ -68,6 +68,21 @@ l2tp_session_state_string(l2tp_session_state_t state)
 }
 
 /**
+ * bbl_l2tp_tx_qnode_remove
+ * 
+ * Remove L2TP packet from interface TX queue. 
+ */
+void
+bbl_l2tp_tx_qnode_remove(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q)
+{
+    if(CIRCLEQ_NEXT(q, tx_qnode)) {
+        CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
+        CIRCLEQ_NEXT(q, tx_qnode) = NULL;
+        CIRCLEQ_PREV(q, tx_qnode) = NULL;
+    }
+}
+
+/**
  * bbl_l2tp_force_stop
  */
 static void
@@ -90,9 +105,7 @@ bbl_l2tp_force_stop(bbl_l2tp_tunnel_s *l2tp_tunnel)
             q_del = q;
             q = CIRCLEQ_NEXT(q, txq_qnode);
             CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
-            if(CIRCLEQ_NEXT(q_del, tx_qnode)) {
-                CIRCLEQ_REMOVE(&l2tp_tunnel->interface->l2tp_tx_qhead, q_del, tx_qnode);
-            }
+            bbl_l2tp_tx_qnode_remove(l2tp_tunnel->interface, q_del);
             free(q_del);
         } else {
             q = CIRCLEQ_NEXT(q, txq_qnode);
@@ -184,13 +197,11 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
             q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
             CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q, txq_qnode);
             CIRCLEQ_NEXT(q, txq_qnode) = NULL;
-            if(CIRCLEQ_NEXT(q, tx_qnode) != NULL) {
-                CIRCLEQ_REMOVE(&l2tp_tunnel->interface->l2tp_tx_qhead, q, tx_qnode);
-                CIRCLEQ_NEXT(q, tx_qnode) = NULL;
-            }
+            bbl_l2tp_tx_qnode_remove(l2tp_tunnel->interface, q);
             free(q);
         }
         if(l2tp_tunnel->zlb_qnode) {
+            bbl_l2tp_tx_qnode_remove(l2tp_tunnel->interface, l2tp_tunnel->zlb_qnode);
             free(l2tp_tunnel->zlb_qnode);
         }
         /* Free tunnel memory */
@@ -273,9 +284,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
             q_del = q;
             q = CIRCLEQ_NEXT(q, txq_qnode);
             CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
-            if(CIRCLEQ_NEXT(q_del, tx_qnode)) {
-                CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q_del, tx_qnode);
-            }
+            bbl_l2tp_tx_qnode_remove(interface, q_del);
             free(q_del);
             continue;
         }

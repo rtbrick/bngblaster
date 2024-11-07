@@ -271,6 +271,9 @@ l2tp_tunnel_state_string(l2tp_tunnel_state_t state);
 const char*
 l2tp_session_state_string(l2tp_session_state_t state);
 
+void
+bbl_l2tp_tx_qnode_remove(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q);
+
 void 
 bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session);
 

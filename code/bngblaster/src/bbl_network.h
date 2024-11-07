@@ -150,7 +150,10 @@ typedef struct bbl_network_interface_
     struct timer_ *rate_job;
 
     CIRCLEQ_ENTRY(bbl_network_interface_) network_interface_qnode;
-    CIRCLEQ_HEAD(l2tp_tx_, bbl_l2tp_queue_ ) l2tp_tx_qhead; /* list of messages that want to transmit */
+
+    /* The following ordered list includes all L2TP messages 
+     * that are ready and queued, awaiting transmission. */
+    CIRCLEQ_HEAD(l2tp_tx_, bbl_l2tp_queue_ ) l2tp_tx_qhead;
 
 } bbl_network_interface_s;
 
