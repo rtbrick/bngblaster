@@ -1493,11 +1493,13 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_ECHO_REQUEST:
-            session->lcp_peer_identifier = lcp->identifier;
-            session->lcp_response_code = PPP_CODE_ECHO_REPLY;
-            session->lcp_options_len = 0;
-            session->send_requests |= BBL_SEND_LCP_RESPONSE;
-            bbl_session_tx_qnode_insert(session);
+            if(!session->lcp_echo_request_ignore) {
+                session->lcp_peer_identifier = lcp->identifier;
+                session->lcp_response_code = PPP_CODE_ECHO_REPLY;
+                session->lcp_options_len = 0;
+                session->send_requests |= BBL_SEND_LCP_RESPONSE;
+                bbl_session_tx_qnode_insert(session);
+            }
             break;
         case PPP_CODE_ECHO_REPLY:
             session->lcp_retries = 0;

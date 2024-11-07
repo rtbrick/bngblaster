@@ -1661,10 +1661,19 @@ bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
 }
 
 static int
-bbl_session_ctrl_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipcp)
+bbl_session_ctrl_ncp_open_close(int fd, uint32_t session_id, json_t *arguments, bool open, bool ipcp)
 {
     bbl_session_s *session;
     uint32_t i;
+
+    int session_group_id = -1;
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
@@ -1685,13 +1694,15 @@ bbl_session_ctrl_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipc
         /* Iterate over all sessions */
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
-            if(session) {
-                if(session->access_type == ACCESS_TYPE_PPPOE) {
-                    if(open) {
-                        bbl_session_ncp_open(session, ipcp);
-                    } else {
-                        bbl_session_ncp_close(session, ipcp);
-                    }
+            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                /* Skip sessions with wrong session-group-id if present. */
+                continue;
+            }
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                if(open) {
+                    bbl_session_ncp_open(session, ipcp);
+                } else {
+                    bbl_session_ncp_close(session, ipcp);
                 }
             }
         }
@@ -1700,27 +1711,81 @@ bbl_session_ctrl_ncp_open_close(int fd, uint32_t session_id, bool open, bool ipc
 }
 
 int
-bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_session_ctrl_ncp_open_close(fd, session_id, true, true);
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, arguments, true, true);
 }
 
 int
-bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_session_ctrl_ncp_open_close(fd, session_id, false, true);
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, arguments, false, true);
 }
 
 int
-bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_session_ctrl_ncp_open_close(fd, session_id, true, false);
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, arguments, true, false);
 }
 
 int
-bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments)
 {
-    return bbl_session_ctrl_ncp_open_close(fd, session_id, false, false);
+    return bbl_session_ctrl_ncp_open_close(fd, session_id, arguments, false, false);
+}
+
+static int
+bbl_session_ctrl_lcp_echo_request(int fd, uint32_t session_id, json_t *arguments, bool ignore)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    int session_group_id = -1;
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                session->lcp_echo_request_ignore = ignore;
+            } else {
+                return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
+            }
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                /* Skip sessions with wrong session-group-id if present. */
+                continue;
+            }
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                session->lcp_echo_request_ignore = ignore;
+            }
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_session_ctrl_lcp_echo_request_ignore(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_session_ctrl_lcp_echo_request(fd, session_id, arguments, true);
+}
+
+int
+bbl_session_ctrl_lcp_echo_request_accept(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_session_ctrl_lcp_echo_request(fd, session_id, arguments, false);
 }
 
 static int
@@ -1771,13 +1836,13 @@ bbl_session_ctrl_traffic(int fd, uint32_t session_id, json_t *arguments, bool en
 }
 
 int
-bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments)
 {
     return bbl_session_ctrl_traffic(fd, session_id, arguments, true);
 }
 
 int
-bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments)
 {
     return bbl_session_ctrl_traffic(fd, session_id, arguments, false);
 }

@@ -284,6 +284,8 @@ struct action actions[] = {
     {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_all_args, false},
     {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_all_args, false},
     {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_all_args, false},
+    {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_all_args, true},
+    {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_all_args, true},
     /* DEPRECATED */
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_all_args, true},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_all_args, true},

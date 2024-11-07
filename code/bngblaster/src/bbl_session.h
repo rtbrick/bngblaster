@@ -146,6 +146,7 @@ typedef struct bbl_session_
     uint8_t     lcp_identifier;
     uint8_t     lcp_peer_identifier;
     uint8_t     lcp_retries;
+    bool        lcp_echo_request_ignore;
     uint32_t    magic_number;
     uint32_t    peer_magic_number;
     uint16_t    mru;
@@ -401,33 +402,33 @@ int
 bbl_session_ctrl_start(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_ipcp_open(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_ipcp_close(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_ip6cp_open(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_lcp_echo_request_ignore(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_lcp_echo_request_accept(int fd, uint32_t session_id, json_t *arguments);
 
 int
-bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+bbl_session_ctrl_traffic_start(int fd, uint32_t session_id, json_t *arguments);
+
+int
+bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments);
+
+int
+bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int
 bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
-
-int
-bbl_session_ctrl_monkey_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
-
-int
-bbl_session_ctrl_monkey_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif
