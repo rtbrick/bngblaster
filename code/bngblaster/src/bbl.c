@@ -200,10 +200,9 @@ bbl_print_version (void)
 static void
 bbl_print_usage(void)
 {
-    int idx;
     printf("%s", banner);
     printf("Usage: bngblaster [OPTIONS]\n\n");
-     for(idx = 0; ; idx++) {
+    for(int idx = 0; ; idx++) {
         if(long_options[idx].name == NULL) {
             break;
         }

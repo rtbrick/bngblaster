@@ -45,7 +45,7 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     if(!g_ctx->config.traffic_reassemble_fragments) return;
 
     bbl_fragment_s *fragment = g_ctx->ipv4_fragments;
-    bbl_stream_s *stream;
+    bbl_stream_s *stream = NULL;
 
     uint8_t  *bbl_start;
     bbl_bbl_s bbl;
@@ -129,22 +129,18 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
 
             if(access_interface) {
                 stream = bbl_stream_rx(eth, NULL);
-                if(stream) {
-                    if(stream->rx_access_interface == NULL) {
-                        stream->rx_access_interface = access_interface;
-                    }
+                if(stream && stream->rx_access_interface == NULL) {
+                    stream->rx_access_interface = access_interface;
                 }
             } else if (network_interface) {
                 stream = bbl_stream_rx(eth, network_interface->mac);
-                if(stream) {
-                    if(stream->rx_network_interface != network_interface) {
-                        if(stream->rx_network_interface) {
-                            /* RX interface has changed! */
-                            stream->rx_interface_changes++;
-                            stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
-                        }
-                        stream->rx_network_interface = network_interface;
+                if(stream && stream->rx_network_interface != network_interface) {
+                    if(stream->rx_network_interface) {
+                        /* RX interface has changed! */
+                        stream->rx_interface_changes++;
+                        stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
                     }
+                    stream->rx_network_interface = network_interface;
                 }
             }
             if(stream) {

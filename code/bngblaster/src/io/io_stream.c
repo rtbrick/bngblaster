@@ -49,7 +49,9 @@ bucket_shuffle(io_bucket_s *io_bucket)
     bbl_stream_s *stream;
     bbl_stream_s *next;
 
-    if(io_bucket && io_bucket->stream_count) {
+    if(!io_bucket) return;
+
+    if(io_bucket->stream_count) {
         stream = io_bucket->stream_head;
         while(stream) {
             next = stream->io_next;

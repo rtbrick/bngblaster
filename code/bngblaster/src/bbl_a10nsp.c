@@ -213,7 +213,7 @@ bbl_a10nsp_lcp_handler(bbl_a10nsp_interface_s *interface,
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
     bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
     bbl_lcp_s *lcp = (bbl_lcp_s*)pppoes->next;
-    bbl_lcp_s lcp_request = {0};
+    static bbl_lcp_s lcp_request = {0};
 
     switch(lcp->code) {
         case PPP_CODE_CONF_REQUEST:
@@ -221,6 +221,7 @@ bbl_a10nsp_lcp_handler(bbl_a10nsp_interface_s *interface,
             if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
                 a10nsp_session->stats.packets_tx++;
             }
+            memset(&lcp_request, 0x0, sizeof(bbl_lcp_s));
             lcp_request.code = PPP_CODE_CONF_REQUEST;
             lcp_request.identifier = 1;
             lcp_request.auth = PROTOCOL_PAP;
@@ -256,8 +257,9 @@ bbl_a10nsp_pap_handler(bbl_a10nsp_interface_s *interface,
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
     bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
     bbl_pap_s *pap = (bbl_pap_s*)pppoes->next;
-    bbl_pap_s pap_response = {0};
+    static bbl_pap_s pap_response = {0};
 
+    memset(&pap_response, 0x0, sizeof(bbl_pap_s));
     pap_response.code = PAP_CODE_ACK;
     pap_response.identifier = pap->identifier;
     pap_response.reply_message = A10NSP_REPLY_MESSAGE;
@@ -276,7 +278,7 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
     bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
     bbl_ipcp_s *ipcp = (bbl_ipcp_s*)pppoes->next;
-    bbl_ipcp_s ipcp_request = {0};
+    static bbl_ipcp_s ipcp_request = {0};
 
     UNUSED(session);
 
@@ -300,6 +302,7 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
             if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
                 a10nsp_session->stats.packets_tx++;
             }
+            memset(&ipcp_request, 0x0, sizeof(bbl_ipcp_s));
             ipcp_request.code = PPP_CODE_CONF_REQUEST;
             ipcp_request.identifier = 1;
             ipcp_request.address = MOCK_IP_LOCAL;
@@ -328,7 +331,7 @@ bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
     bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
     bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
     bbl_ip6cp_s *ip6cp = (bbl_ip6cp_s*)pppoes->next;
-    bbl_ip6cp_s ip6cp_request = {0};
+    static bbl_ip6cp_s ip6cp_request = {0};
 
     UNUSED(session);
 
@@ -338,6 +341,7 @@ bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
             if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
                 a10nsp_session->stats.packets_tx++;
             }
+            memset(&ip6cp_request, 0x0, sizeof(bbl_ip6cp_s));
             ip6cp_request.code = PPP_CODE_CONF_REQUEST;
             ip6cp_request.identifier = 1;
             ip6cp_request.ipv6_identifier = 1;
