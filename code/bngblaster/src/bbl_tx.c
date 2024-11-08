@@ -1700,15 +1700,13 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         }
         /* L2TP packets. */
         if(!CIRCLEQ_EMPTY(&network_interface->l2tp_tx_qhead)) {
-            /* Pop element from queue. */
+            /* Get first packet from queue. */
             l2tpq = CIRCLEQ_FIRST(&network_interface->l2tp_tx_qhead);
             /* Copy packet from queue to ring buffer. */
             memcpy(buf, l2tpq->packet, l2tpq->packet_len);
             *len = l2tpq->packet_len;
-            bbl_l2tp_tx_qnode_remove(network_interface, l2tpq);
-            if(l2tpq->data) {
-                free(l2tpq);
-            }
+            /* Delete packet from queue. */
+            bbl_l2tp_interface_txq_remove(network_interface, l2tpq);
             network_interface->stats.packets_tx++;
             network_interface->stats.bytes_tx += *len;
             return PROTOCOL_SUCCESS;

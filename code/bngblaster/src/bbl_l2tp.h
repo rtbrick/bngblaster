@@ -97,11 +97,23 @@ typedef struct l2tp_key_ {
     uint16_t session_id;
 } __attribute__ ((__packed__)) l2tp_key_t;
 
-/* L2TP Control TX Queue Entry */
+/* L2TP Control TX Queue Entry (TXQ)
+ * 
+ * L2TP packets are sent using TXQ objects, 
+ * which have two separate queue handles.
+ * One is for the tunnel (tunnel_tx_qnode) 
+ * and the other for the network interface 
+ * (interface_tx_qnode). The interface queue 
+ * is used to initiate packet transmission, 
+ * allowing the interface TX function to pop 
+ * packets from this queue and send them out. 
+ * The tunnel TXQ, on the other hand, manages 
+ * control packets and ensures packets are 
+ * retried until they are acknowledged. */
 typedef struct bbl_l2tp_queue_
 {
-    bool data; /* l2tp data packets */
     uint16_t ns;
+    uint8_t  refcount; /* free() if refcount becomes zero */
     uint8_t  ns_offset;
     uint8_t  nr_offset;
     uint8_t  retries;
@@ -109,8 +121,8 @@ typedef struct bbl_l2tp_queue_
     uint16_t packet_len;
     struct timespec last_tx_time;
     struct bbl_l2tp_tunnel_ *tunnel;
-    CIRCLEQ_ENTRY(bbl_l2tp_queue_) txq_qnode; /* TX queue */
-    CIRCLEQ_ENTRY(bbl_l2tp_queue_) tx_qnode; /* TX request */
+    CIRCLEQ_ENTRY(bbl_l2tp_queue_) tunnel_tx_qnode; /* Tunnel TX queue (ctrl packets only) */
+    CIRCLEQ_ENTRY(bbl_l2tp_queue_) interface_tx_qnode; /* Interface TX queue */
 } bbl_l2tp_queue_s;
 
 /* L2TP Tunnel Instance */
@@ -119,7 +131,7 @@ typedef struct bbl_l2tp_tunnel_
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
 
     CIRCLEQ_HEAD(session_, bbl_l2tp_session_) session_qhead;
-    CIRCLEQ_HEAD(txq_, bbl_l2tp_queue_) txq_qhead;
+    CIRCLEQ_HEAD(txq_, bbl_l2tp_queue_) tx_qhead;
 
     /* Pointer to corresponding network interface */
     bbl_network_interface_s *interface;
@@ -271,8 +283,8 @@ l2tp_tunnel_state_string(l2tp_tunnel_state_t state);
 const char*
 l2tp_session_state_string(l2tp_session_state_t state);
 
-void
-bbl_l2tp_tx_qnode_remove(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q);
+bool
+bbl_l2tp_interface_txq_remove(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q);
 
 void 
 bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session);

@@ -67,18 +67,51 @@ l2tp_session_state_string(l2tp_session_state_t state)
     }
 }
 
-/**
- * bbl_l2tp_tx_qnode_remove
- * 
- * Remove L2TP packet from interface TX queue. 
- */
-void
-bbl_l2tp_tx_qnode_remove(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q)
+/* Append TXQ to the L2TP interface queue and return true if added. */
+static bool
+bbl_l2tp_interface_txq_append(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q)
 {
-    if(CIRCLEQ_NEXT(q, tx_qnode)) {
-        CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, tx_qnode);
-        CIRCLEQ_NEXT(q, tx_qnode) = NULL;
-        CIRCLEQ_PREV(q, tx_qnode) = NULL;
+    if(CIRCLEQ_NEXT(q, interface_tx_qnode)) {
+        return false;
+    }
+    CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, interface_tx_qnode);
+    q->refcount++;
+    return true;
+}
+
+/* Remove TXQ from the L2TP interface queue and return true if the memory was freed. */
+bool
+bbl_l2tp_interface_txq_remove(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q)
+{
+    if(q->refcount && CIRCLEQ_NEXT(q, interface_tx_qnode)) {
+        CIRCLEQ_REMOVE(&interface->l2tp_tx_qhead, q, interface_tx_qnode);
+        CIRCLEQ_NEXT(q, interface_tx_qnode) = NULL;
+        CIRCLEQ_PREV(q, interface_tx_qnode) = NULL;
+        q->refcount--;
+    }
+    if(q->refcount) {
+        return false;
+    } else {
+        free(q);
+        return true;
+    }
+}
+
+/* Remove TXQ from the L2TP tunnel/interface queues and return true if the memory was freed. */
+static bool
+bbl_l2tp_tunnel_txq_remove(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_queue_s *q)
+{
+    if(q->refcount && CIRCLEQ_NEXT(q, tunnel_tx_qnode)) {
+        CIRCLEQ_REMOVE(&l2tp_tunnel->tx_qhead, q, tunnel_tx_qnode);
+        CIRCLEQ_NEXT(q, tunnel_tx_qnode) = NULL;
+        CIRCLEQ_PREV(q, tunnel_tx_qnode) = NULL;
+        q->refcount--;
+    }
+    if(q->refcount) {
+        return bbl_l2tp_interface_txq_remove(l2tp_tunnel->interface, q);
+    } else {
+        free(q);
+        return true;
     }
 }
 
@@ -89,27 +122,23 @@ static void
 bbl_l2tp_force_stop(bbl_l2tp_tunnel_s *l2tp_tunnel)
 {
     bbl_l2tp_queue_s *q = NULL;
-    bbl_l2tp_queue_s *q_del = NULL;
+    bbl_l2tp_queue_s *next = NULL;
 
     uint16_t ns = l2tp_tunnel->ns;
 
     /* Remove all packets from TX queue never 
      * send out and reset Ns. number. */
-    q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
-    while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
+    q = CIRCLEQ_FIRST(&l2tp_tunnel->tx_qhead);
+    while(q != (const void *)(&l2tp_tunnel->tx_qhead)) {
+        next = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
         if(!q->retries) {
             /* Packet was never send out! */
             if(q->ns < ns) {
                 ns = q->ns;
             }
-            q_del = q;
-            q = CIRCLEQ_NEXT(q, txq_qnode);
-            CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
-            bbl_l2tp_tx_qnode_remove(l2tp_tunnel->interface, q_del);
-            free(q_del);
-        } else {
-            q = CIRCLEQ_NEXT(q, txq_qnode);
+            bbl_l2tp_tunnel_txq_remove(l2tp_tunnel, q);
         }
+        q = next;
     }
     /* Reset Ns. number. */
     l2tp_tunnel->ns = ns;
@@ -193,17 +222,18 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
             CIRCLEQ_NEXT(l2tp_tunnel, tunnel_qnode) = NULL;
         }
         /* Cleanup send queues */
-        while (!CIRCLEQ_EMPTY(&l2tp_tunnel->txq_qhead)) {
-            q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
-            CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q, txq_qnode);
-            CIRCLEQ_NEXT(q, txq_qnode) = NULL;
-            bbl_l2tp_tx_qnode_remove(l2tp_tunnel->interface, q);
-            free(q);
+        while (!CIRCLEQ_EMPTY(&l2tp_tunnel->tx_qhead)) {
+            q = CIRCLEQ_FIRST(&l2tp_tunnel->tx_qhead);
+            bbl_l2tp_tunnel_txq_remove(l2tp_tunnel, q);
         }
-        if(l2tp_tunnel->zlb_qnode) {
-            bbl_l2tp_tx_qnode_remove(l2tp_tunnel->interface, l2tp_tunnel->zlb_qnode);
-            free(l2tp_tunnel->zlb_qnode);
+
+        q = l2tp_tunnel->zlb_qnode;
+        if(q && q->refcount) {
+            q->refcount--;
+            bbl_l2tp_tunnel_txq_remove(l2tp_tunnel, q);
         }
+        l2tp_tunnel->zlb_qnode = NULL;
+
         /* Free tunnel memory */
         if(l2tp_tunnel->challenge) free(l2tp_tunnel->challenge);
         if(l2tp_tunnel->peer_challenge) free(l2tp_tunnel->peer_challenge);
@@ -270,22 +300,20 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
 
     l2tp_tunnel->timer_tx_active = false;
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_SEND_STOPCCN) {
-        if(CIRCLEQ_EMPTY(&l2tp_tunnel->txq_qhead)) {
+        if(CIRCLEQ_EMPTY(&l2tp_tunnel->tx_qhead)) {
             bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_TERMINATED);
         }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    q = CIRCLEQ_FIRST(&l2tp_tunnel->txq_qhead);
-    while (q != (const void *)(&l2tp_tunnel->txq_qhead)) {
+    q = CIRCLEQ_FIRST(&l2tp_tunnel->tx_qhead);
+    while(q != (const void *)(&l2tp_tunnel->tx_qhead)) {
         if(L2TP_SEQ_LT(q->ns, l2tp_tunnel->peer_nr)) {
             /* Delete acknowledged messages from queue. */
             q_del = q;
-            q = CIRCLEQ_NEXT(q, txq_qnode);
-            CIRCLEQ_REMOVE(&l2tp_tunnel->txq_qhead, q_del, txq_qnode);
-            bbl_l2tp_tx_qnode_remove(interface, q_del);
-            free(q_del);
+            q = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
+            bbl_l2tp_tunnel_txq_remove(l2tp_tunnel, q_del);
             continue;
         }
         if(L2TP_SEQ_LT(q->ns, max_ns)) {
@@ -293,16 +321,18 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
                 timespec_sub(&time_diff, &now, &q->last_tx_time);
                 backoff = 1 << (q->retries - 1);
                 if(time_diff.tv_sec < backoff) {
-                    q = CIRCLEQ_NEXT(q, txq_qnode);
+                    q = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
                     continue;
                 }
             }
-            CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
-            l2tp_tunnel->stats.control_tx++;
-            interface->stats.l2tp_control_tx++;
+            if(bbl_l2tp_interface_txq_append(interface, q)) {
+                l2tp_tunnel->stats.control_tx++;
+                interface->stats.l2tp_control_tx++;
+            }
             l2tp_tunnel->zlb = false;
             q->last_tx_time.tv_sec = now.tv_sec;
             q->last_tx_time.tv_nsec = now.tv_nsec;
+
             /* Update Nr. ... */
             *(uint16_t*)(q->packet + q->nr_offset) = htobe16(l2tp_tunnel->nr);
             if(q->retries) {
@@ -325,22 +355,22 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
                 l2tp_tunnel->cwcount = 0;
             }
             q->retries++;
-            q = CIRCLEQ_NEXT(q, txq_qnode);
+            q = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
         } else {
             break;
         }
     }
-    if(l2tp_tunnel->zlb) {
+
+    q = l2tp_tunnel->zlb_qnode;
+    if(q && l2tp_tunnel->zlb) {
         l2tp_tunnel->zlb = false;
-        /* Update Ns. ... */
-        *(uint16_t*)(q->packet + q->nr_offset) = htobe16(l2tp_tunnel->ns);
-        /* Update Nr. ... */
+        /* Update Ns./Nr. */
+        *(uint16_t*)(q->packet + q->ns_offset) = htobe16(l2tp_tunnel->ns);
         *(uint16_t*)(q->packet + q->nr_offset) = htobe16(l2tp_tunnel->nr);
-        CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, l2tp_tunnel->zlb_qnode, tx_qnode);
-        l2tp_tunnel->stats.control_tx++;
-        interface->stats.l2tp_control_tx++;
-        *(uint16_t*)(l2tp_tunnel->zlb_qnode->packet + l2tp_tunnel->zlb_qnode->ns_offset) = htobe16(l2tp_tunnel->ns);
-        *(uint16_t*)(l2tp_tunnel->zlb_qnode->packet + l2tp_tunnel->zlb_qnode->nr_offset) = htobe16(l2tp_tunnel->nr);
+        if(bbl_l2tp_interface_txq_append(interface, q)) {
+            l2tp_tunnel->stats.control_tx++;
+            interface->stats.l2tp_control_tx++;
+        }
     }
 }
 
@@ -463,10 +493,12 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
             if(l2tp_tunnel->zlb_qnode) {
                 free(q);
             } else {
+                q->refcount++;
                 l2tp_tunnel->zlb_qnode = q;
             }
         } else {
-            CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->txq_qhead, q, txq_qnode);
+            CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->tx_qhead, q, tunnel_tx_qnode);
+            q->refcount++;
             if(!l2tp_tunnel->timer_tx_active) {
                 timer_add(&g_ctx->timer_root, &l2tp_tunnel->timer_tx, "L2TP TX", 0, L2TP_TX_WAIT_MS * MSEC, l2tp_tunnel, &bbl_l2tp_tunnel_tx_job);
                 l2tp_tunnel->timer_tx_active = true;
@@ -528,10 +560,9 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
         ipv4.tos = l2tp_tunnel->server->data_control_tos;
     }
     l2tp.next = next;
-    q->data = true;
     if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
         q->packet_len = len;
-        CIRCLEQ_INSERT_TAIL(&interface->l2tp_tx_qhead, q, tx_qnode);
+        bbl_l2tp_interface_txq_append(interface, q);
         l2tp_tunnel->stats.data_tx++;
         l2tp_session->stats.data_tx++;
         interface->stats.l2tp_data_tx++;
@@ -563,7 +594,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
     /* Init tunnel ... */
     l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
     g_ctx->l2tp_tunnels++;
-    CIRCLEQ_INIT(&l2tp_tunnel->txq_qhead);
+    CIRCLEQ_INIT(&l2tp_tunnel->tx_qhead);
     CIRCLEQ_INIT(&l2tp_tunnel->session_qhead);
     l2tp_tunnel->interface = interface;
     l2tp_tunnel->peer_receive_window = 4;
