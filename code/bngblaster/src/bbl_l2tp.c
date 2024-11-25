@@ -1087,6 +1087,11 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
     l2tp_key_t key = {0};
     void **search = NULL;
 
+    if(!g_ctx->config.l2tp_server) {
+        /* No L2TP server configuration found! */
+        return;
+    }
+
     if(l2tp->type == L2TP_MESSAGE_SCCRQ) {
         bbl_l2tp_sccrq_rx(interface, eth, l2tp);
         return;
