@@ -308,9 +308,10 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
             io = io->next;
         }
 
-        jobj = json_pack("{ss si ss* ss* si sI sI sI sI }",
+        jobj = json_pack("{ss si si ss* ss* si sI sI sI sI }",
             "name", interface->name,
             "ifindex", interface->ifindex,
+            "ifindex-kernel", interface->kernel_index,
             "type", interface_type_string(interface->type),
             "state", interface_state_string(interface->state),
             "state-transitions", interface->state_transitions,

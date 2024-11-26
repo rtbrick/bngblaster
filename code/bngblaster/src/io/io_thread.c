@@ -241,7 +241,7 @@ io_thread_init(io_handle_s *io)
 
     io->thread = thread;
     thread->io = io;
-    io->fanout_id = interface->ifindex+1;
+    io->fanout_id = interface->kernel_index;
     io->fanout_type = PACKET_FANOUT_HASH;
 
     /* Allocate thread scratchpad memory */
