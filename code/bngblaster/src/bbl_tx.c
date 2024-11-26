@@ -1168,10 +1168,14 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
         session->dhcp_request_timestamp.tv_sec = now.tv_sec;
     }
 
-    /* Option 82 ... */
+    /* TR-101 R-124:
+     * The Access Node, when performing the function of a 
+     * Layer 2 DHCP Relay Agent (this is what we emulate here), 
+     * MUST add option-82 with the „circuit-id’ and/or ‘remote-id’ 
+     * sub-options to all DHCP messages sent by the client before 
+     * forwarding to the BNG. */
     if(g_ctx->config.dhcp_access_line && 
-       (session->agent_circuit_id || session->agent_remote_id) && 
-       session->dhcp_state != BBL_DHCP_RELEASE) {
+       (session->agent_circuit_id || session->agent_remote_id)) {
         access_line.aci = session->agent_circuit_id;
         access_line.ari = session->agent_remote_id;
         access_line.aaci = session->access_aggregation_circuit_id;
