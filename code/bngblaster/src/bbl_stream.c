@@ -1558,7 +1558,14 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
             }
             stream = stream->io_next;
         }
-        if(!stream) io_bucket->stream_cur = NULL;
+        if(!stream) {
+            if(io_bucket->stream_cur == io_bucket->stream_head) {
+                /* We can reset bucket base if none of the streams 
+                 * in the bucket is active. */
+                io_bucket->base = 0;
+            }
+            io_bucket->stream_cur = NULL;
+        }
         /* next bucket */
         io_bucket = io_bucket->next;
         if(!io_bucket) io_bucket = io->bucket_head;
