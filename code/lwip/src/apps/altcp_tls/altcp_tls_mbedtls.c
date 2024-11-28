@@ -3,6 +3,8 @@
  * Application layered TCP/TLS connection API (to be used from TCPIP thread)
  *
  * This file provides a TLS layer using mbedTLS
+ * 
+ * This version is currently compatible with the 2.x.x branch (current LTS).
  */
 
 /*
@@ -46,7 +48,7 @@
  *   GOOD custom entropy
  *
  * Missing things / @todo:
- * - some unhandled/untested things migh be caught by LWIP_ASSERTs...
+ * - some unhandled/untested things might be caught by LWIP_ASSERTs...
  */
 
 #include "lwip/opt.h"
@@ -130,6 +132,15 @@ static err_t altcp_mbedtls_lower_recv_process(struct altcp_pcb *conn, altcp_mbed
 static err_t altcp_mbedtls_handle_rx_appldata(struct altcp_pcb *conn, altcp_mbedtls_state_t *state);
 static int altcp_mbedtls_bio_send(void *ctx, const unsigned char *dataptr, size_t size);
 
+
+static void
+altcp_mbedtls_flush_output(altcp_mbedtls_state_t* state)
+{
+  int flushed = mbedtls_ssl_flush_output(&state->ssl_context);
+  if (flushed) {
+    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_ssl_flush_output failed: %d\n", flushed));
+  }
+}
 
 /* callback functions from inner/lower connection: */
 
@@ -529,7 +540,7 @@ altcp_mbedtls_lower_sent(void *arg, struct altcp_pcb *inner_conn, u16_t len)
     /* remove ACKed bytes from overhead adjust counter */
     state->overhead_bytes_adjust -= len;
     /* try to send more if we failed before (may increase overhead adjust counter) */
-    mbedtls_ssl_flush_output(&state->ssl_context);
+    altcp_mbedtls_flush_output(state);
     /* remove calculated overhead from ACKed bytes len */
     app_len = len - (u16_t)overhead;
     /* update application write counter and inform application */
@@ -557,7 +568,7 @@ altcp_mbedtls_lower_poll(void *arg, struct altcp_pcb *inner_conn)
     if (conn->state) {
       altcp_mbedtls_state_t *state = (altcp_mbedtls_state_t *)conn->state;
       /* try to send more if we failed before */
-      mbedtls_ssl_flush_output(&state->ssl_context);
+      altcp_mbedtls_flush_output(state);
       if (altcp_mbedtls_handle_rx_appldata(conn, state) == ERR_ABRT) {
         return ERR_ABRT;
       }
@@ -715,7 +726,7 @@ altcp_mbedtls_debug(void *ctx, int level, const char *file, int line, const char
   LWIP_UNUSED_ARG(str);
 
   if (level >= ALTCP_MBEDTLS_LIB_DEBUG_LEVEL_MIN) {
-    LWIP_DEBUGF(ALTCP_MBEDTLS_LIB_DEBUG, ("%s:%04d: %s", file, line, str));
+    LWIP_DEBUGF(ALTCP_MBEDTLS_LIB_DEBUG, ("%s:%04d: %s\n", file, line, str));
   }
 }
 #endif
@@ -957,7 +968,7 @@ altcp_tls_create_config_client_common(const u8_t *ca, size_t ca_len, int is_2way
     mbedtls_x509_crt_init(conf->ca);
     ret = mbedtls_x509_crt_parse(conf->ca, ca, ca_len);
     if (ret != 0) {
-      LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_x509_crt_parse ca failed: %d 0x%x", ret, -1*ret));
+      LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_x509_crt_parse ca failed: %d 0x%x\n", ret, -1*ret));
       altcp_tls_free_config(conf);
       return NULL;
     }
@@ -982,7 +993,7 @@ altcp_tls_create_config_client_2wayauth(const u8_t *ca, size_t ca_len, const u8_
   struct altcp_tls_config *conf;
 
   if (!cert || !privkey) {
-    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("altcp_tls_create_config_client_2wayauth: certificate and priv key required"));
+    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("altcp_tls_create_config_client_2wayauth: certificate and priv key required\n"));
     return NULL;
   }
 
@@ -995,7 +1006,7 @@ altcp_tls_create_config_client_2wayauth(const u8_t *ca, size_t ca_len, const u8_
   mbedtls_x509_crt_init(conf->cert);
   ret = mbedtls_x509_crt_parse(conf->cert, cert, cert_len);
   if (ret != 0) {
-    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_x509_crt_parse cert failed: %d 0x%x", ret, -1*ret));
+    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_x509_crt_parse cert failed: %d 0x%x\n", ret, -1*ret));
     altcp_tls_free_config(conf);
     return NULL;
   }
@@ -1003,14 +1014,14 @@ altcp_tls_create_config_client_2wayauth(const u8_t *ca, size_t ca_len, const u8_
   mbedtls_pk_init(conf->pkey);
   ret = mbedtls_pk_parse_key(conf->pkey, privkey, privkey_len, privkey_pass, privkey_pass_len);
   if (ret != 0) {
-    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_pk_parse_key failed: %d 0x%x", ret, -1*ret));
+    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_pk_parse_key failed: %d 0x%x\n", ret, -1*ret));
     altcp_tls_free_config(conf);
     return NULL;
   }
 
   ret = mbedtls_ssl_conf_own_cert(&conf->conf, conf->cert, conf->pkey);
   if (ret != 0) {
-    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_ssl_conf_own_cert failed: %d 0x%x", ret, -1*ret));
+    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("mbedtls_ssl_conf_own_cert failed: %d 0x%x\n", ret, -1*ret));
     altcp_tls_free_config(conf);
     return NULL;
   }
@@ -1089,7 +1100,7 @@ altcp_mbedtls_recved(struct altcp_pcb *conn, u16_t len)
   }
   lower_recved = len;
   if (lower_recved > state->rx_passed_unrecved) {
-    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("bogus recved count (len > state->rx_passed_unrecved / %d / %d)",
+    LWIP_DEBUGF(ALTCP_MBEDTLS_DEBUG, ("bogus recved count (len > state->rx_passed_unrecved / %d / %d)\n",
                                       len, state->rx_passed_unrecved));
     lower_recved = (u16_t)state->rx_passed_unrecved;
   }
@@ -1231,7 +1242,7 @@ altcp_mbedtls_write(struct altcp_pcb *conn, const void *dataptr, u16_t len, u8_t
      allow sending more if this succeeded (this is a hack because neither
      returning 0 nor MBEDTLS_ERR_SSL_WANT_WRITE worked for me) */
   if (state->ssl_context.out_left) {
-    mbedtls_ssl_flush_output(&state->ssl_context);
+    altcp_mbedtls_flush_output(state);
     if (state->ssl_context.out_left) {
       return ERR_MEM;
     }

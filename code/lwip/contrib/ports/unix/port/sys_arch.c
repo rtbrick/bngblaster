@@ -70,6 +70,11 @@
 #include "lwip/stats.h"
 #include "lwip/tcpip.h"
 
+#if LWIP_NETCONN_SEM_PER_THREAD
+/* pthread key to *our* thread local storage entry */
+static pthread_key_t sys_thread_sem_key;
+#endif
+
 /* Return code for an interrupted timed wait */
 #define SYS_ARCH_INTR 0xfffffffeUL
 
@@ -212,7 +217,7 @@ sys_thread_new(const char *name, lwip_thread_fn function, void *arg, int stacksi
   }
 
   if (NULL == st) {
-    LWIP_DEBUGF(SYS_DEBUG, ("sys_thread_new: pthread_create %d, st = 0x%lx",
+    LWIP_DEBUGF(SYS_DEBUG, ("sys_thread_new: pthread_create %d, st = 0x%lx\n",
                        code, (unsigned long)st));
     abort();
   }
@@ -666,6 +671,67 @@ sys_mutex_free(struct sys_mutex **mutex)
 
 #endif /* !NO_SYS */
 
+#if LWIP_NETCONN_SEM_PER_THREAD
+/*-----------------------------------------------------------------------------------*/
+/* Semaphore per thread located TLS */
+
+static void
+sys_thread_sem_free(void* data)
+{
+  sys_sem_t *sem = (sys_sem_t*)(data);
+
+  if (sem) {
+    sys_sem_free(sem);
+    free(sem);
+  }
+}
+
+static sys_sem_t*
+sys_thread_sem_alloc(void)
+{
+  sys_sem_t *sem;
+  err_t err;
+  int ret;
+
+  sem = (sys_sem_t*)malloc(sizeof(sys_sem_t*));
+  LWIP_ASSERT("failed to allocate memory for TLS semaphore", sem != NULL);
+  err = sys_sem_new(sem, 0);
+  LWIP_ASSERT("failed to initialise TLS semaphore", err == ERR_OK);
+  ret = pthread_setspecific(sys_thread_sem_key, sem);
+  LWIP_ASSERT("failed to initialise TLS semaphore storage", ret == 0);
+  return sem;
+}
+
+sys_sem_t*
+sys_arch_netconn_sem_get(void)
+{
+  sys_sem_t* sem = (sys_sem_t*)pthread_getspecific(sys_thread_sem_key);
+  if (!sem) {
+    sem = sys_thread_sem_alloc();
+  }
+  LWIP_DEBUGF(SYS_DEBUG, ("sys_thread_sem_get s=%p\n", (void*)sem));
+  return sem;
+}
+
+void
+sys_arch_netconn_sem_alloc(void)
+{
+  sys_sem_t* sem = sys_thread_sem_alloc();
+  LWIP_DEBUGF(SYS_DEBUG, ("sys_thread_sem created s=%p\n", (void*)sem));
+}
+
+void
+sys_arch_netconn_sem_free(void)
+{
+  int ret;
+
+  sys_sem_t *sem = (sys_sem_t *)pthread_getspecific(sys_thread_sem_key);
+  sys_thread_sem_free(sem);
+  ret = pthread_setspecific(sys_thread_sem_key, NULL);
+  LWIP_ASSERT("failed to de-init TLS semaphore storage", ret == 0);
+}
+#endif /* LWIP_NETCONN_SEM_PER_THREAD */
+
 /*-----------------------------------------------------------------------------------*/
 /* Time */
 u32_t
@@ -697,6 +763,9 @@ sys_jiffies(void)
 void
 sys_init(void)
 {
+#if LWIP_NETCONN_SEM_PER_THREAD
+  pthread_key_create(&sys_thread_sem_key, sys_thread_sem_free);
+#endif
 }
 
 /*-----------------------------------------------------------------------------------*/

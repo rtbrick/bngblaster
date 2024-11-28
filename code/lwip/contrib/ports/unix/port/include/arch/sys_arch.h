@@ -32,6 +32,10 @@
 #ifndef LWIP_ARCH_SYS_ARCH_H
 #define LWIP_ARCH_SYS_ARCH_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SYS_MBOX_NULL NULL
 #define SYS_SEM_NULL  NULL
 
@@ -59,6 +63,15 @@ typedef struct sys_mbox * sys_mbox_t;
 struct sys_thread;
 typedef struct sys_thread * sys_thread_t;
 
+#if LWIP_NETCONN_SEM_PER_THREAD
+sys_sem_t* sys_arch_netconn_sem_get(void);
+void sys_arch_netconn_sem_alloc(void);
+void sys_arch_netconn_sem_free(void);
+#define LWIP_NETCONN_THREAD_SEM_GET()   sys_arch_netconn_sem_get()
+#define LWIP_NETCONN_THREAD_SEM_ALLOC() sys_arch_netconn_sem_alloc()
+#define LWIP_NETCONN_THREAD_SEM_FREE()  sys_arch_netconn_sem_free()
+#endif /* #if LWIP_NETCONN_SEM_PER_THREAD */
+
 #define LWIP_EXAMPLE_APP_ABORT() lwip_unix_keypressed()
 int lwip_unix_keypressed(void);
 
@@ -76,6 +89,10 @@ void sys_lock_tcpip_core(void);
 #define LOCK_TCPIP_CORE()          sys_lock_tcpip_core()
 void sys_unlock_tcpip_core(void);
 #define UNLOCK_TCPIP_CORE()        sys_unlock_tcpip_core()
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* LWIP_ARCH_SYS_ARCH_H */

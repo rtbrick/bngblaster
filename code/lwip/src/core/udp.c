@@ -988,7 +988,7 @@ udp_bind(struct udp_pcb *pcb, const ip_addr_t *ipaddr, u16_t port)
     for (ipcb = udp_pcbs; ipcb != NULL; ipcb = ipcb->next) {
       if (pcb != ipcb) {
         /* By default, we don't allow to bind to a port that any other udp
-           PCB is already bound to, unless *all* PCBs with that port have tha
+           PCB is already bound to, unless *all* PCBs with that port have the
            REUSEADDR flag set. */
 #if SO_REUSE
         if (!ip_get_option(pcb, SOF_REUSEADDR) ||
@@ -1238,6 +1238,7 @@ udp_new(void)
 #if LWIP_MULTICAST_TX_OPTIONS
     udp_set_multicast_ttl(pcb, UDP_TTL);
 #endif /* LWIP_MULTICAST_TX_OPTIONS */
+    pcb_tci_init(pcb);
   }
   return pcb;
 }

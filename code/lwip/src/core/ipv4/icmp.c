@@ -171,7 +171,7 @@ icmp_input(struct pbuf *p, struct netif *inp)
           goto icmperr;
         }
         if (r->len < hlen + sizeof(struct icmp_echo_hdr)) {
-          LWIP_DEBUGF(ICMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("first pbuf cannot hold the ICMP header"));
+          LWIP_DEBUGF(ICMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("first pbuf cannot hold the ICMP header\n"));
           pbuf_free(r);
           goto icmperr;
         }
@@ -185,7 +185,7 @@ icmp_input(struct pbuf *p, struct netif *inp)
         }
         /* copy the rest of the packet without ip header */
         if (pbuf_copy(r, p) != ERR_OK) {
-          LWIP_DEBUGF(ICMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("icmp_input: copying to new pbuf failed"));
+          LWIP_DEBUGF(ICMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("icmp_input: copying to new pbuf failed\n"));
           pbuf_free(r);
           goto icmperr;
         }
@@ -206,13 +206,14 @@ icmp_input(struct pbuf *p, struct netif *inp)
        * setting the icmp type to ECHO_RESPONSE and updating the checksum. */
       iecho = (struct icmp_echo_hdr *)p->payload;
       if (pbuf_add_header(p, hlen)) {
-        LWIP_DEBUGF(ICMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("Can't move over header in packet"));
+        LWIP_DEBUGF(ICMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("Can't move over header in packet\n"));
       } else {
         err_t ret;
         struct ip_hdr *iphdr = (struct ip_hdr *)p->payload;
         ip4_addr_copy(iphdr->src, *src);
         ip4_addr_copy(iphdr->dest, *ip4_current_src_addr());
         ICMPH_TYPE_SET(iecho, ICMP_ER);
+        p->if_idx = NETIF_NO_INDEX; /* we're reusing this pbuf, so reset its if_idx */
 #if CHECKSUM_GEN_ICMP
         IF__NETIF_CHECKSUM_ENABLED(inp, NETIF_CHECKSUM_GEN_ICMP) {
           /* adjust the checksum */
@@ -351,7 +352,9 @@ icmp_send_response(struct pbuf *p, u8_t type, u8_t code)
 
   /* Keep IP header + up to 8 bytes */
   response_pkt_len = IP_HLEN + ICMP_DEST_UNREACH_DATASIZE;
-  if (p->tot_len < response_pkt_len) response_pkt_len = p->tot_len;
+  if (p->tot_len < response_pkt_len) {
+    response_pkt_len = p->tot_len;
+  }
 
   /* ICMP header + part of original packet */
   q = pbuf_alloc(PBUF_IP, sizeof(struct icmp_hdr) + response_pkt_len, PBUF_RAM);

@@ -384,6 +384,7 @@ raw_sendto(struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *ipaddr)
   if (netif == NULL) {
     LWIP_DEBUGF(RAW_DEBUG | LWIP_DBG_LEVEL_WARNING, ("raw_sendto: No route to "));
     ip_addr_debug_print(RAW_DEBUG | LWIP_DBG_LEVEL_WARNING, ipaddr);
+    LWIP_DEBUGF(RAW_DEBUG | LWIP_DBG_LEVEL_WARNING, ("\n"));
     return ERR_RTE;
   }
 
@@ -609,6 +610,7 @@ raw_new(u8_t proto)
 #if LWIP_MULTICAST_TX_OPTIONS
     raw_set_multicast_ttl(pcb, RAW_TTL);
 #endif /* LWIP_MULTICAST_TX_OPTIONS */
+    pcb_tci_init(pcb);
     pcb->next = raw_pcbs;
     raw_pcbs = pcb;
   }

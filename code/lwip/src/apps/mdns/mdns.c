@@ -672,8 +672,10 @@ mdns_lexicographical_comparison(struct mdns_packet *pkt_a, struct mdns_packet *p
     }
     LWIP_DEBUGF(MDNS_DEBUG, ("mDNS: domain a: len = %d, name = ", domain_a.name[0]));
     mdns_domain_debug_print(&domain_a);
+    LWIP_DEBUGF(MDNS_DEBUG, ("\n"));
     LWIP_DEBUGF(MDNS_DEBUG, ("mDNS: domain b: len = %d, name = ", domain_b.name[0]));
     mdns_domain_debug_print(&domain_b);
+    LWIP_DEBUGF(MDNS_DEBUG, ("\n"));
     /* Compare names pairwise */
     len = LWIP_MIN(domain_a.length, domain_b.length);
     for (i = 0; i < len; i++) {
@@ -1747,7 +1749,7 @@ mdns_conflict_save_time(struct netif *netif)
   /* Print timestamp list */
   LWIP_DEBUGF(MDNS_DEBUG, ("mDNS: conflict timestamp list, insert index = %d\n", mdns->index));
   for(i = 0; i < MDNS_PROBE_MAX_CONFLICTS_BEFORE_RATE_LIMIT; i++) {
-    LWIP_DEBUGF(MDNS_DEBUG, ("mDNS: time no. %d = %d\n", i, mdns->conflict_time[i]));
+    LWIP_DEBUGF(MDNS_DEBUG, ("mDNS: time no. %d = %"U32_F"\n", i, mdns->conflict_time[i]));
   }
   /* Check if we had enough conflicts, minimum 15 */
   if (mdns->num_conflicts >= MDNS_PROBE_MAX_CONFLICTS_BEFORE_RATE_LIMIT) {
@@ -1790,7 +1792,7 @@ mdns_probe_conflict(struct netif *netif, s8_t slot)
 }
 
 /**
- * Loockup matching request for response MDNS packet
+ * Lookup matching request for response MDNS packet
  */
 #if LWIP_MDNS_SEARCH
 static struct mdns_request *
@@ -1889,6 +1891,10 @@ mdns_handle_response(struct mdns_packet *pkt, struct netif *netif)
           flags = MDNS_SEARCH_RESULT_FIRST | MDNS_SEARCH_RESULT_LAST;
       }
       p = pbuf_skip(pkt->pbuf, ans.rd_offset, &offset);
+      if (p == NULL) {
+        LWIP_DEBUGF(MDNS_DEBUG, ("MDNS: Malformed response packet, aborting\n"));
+        return;
+      }
       if (ans.info.type == DNS_RRTYPE_PTR || ans.info.type == DNS_RRTYPE_SRV) {
         /* Those RR types have compressed domain name. Must uncompress here,
            since cannot be done without pbuf. */
@@ -1931,7 +1937,7 @@ mdns_handle_response(struct mdns_packet *pkt, struct netif *netif)
 
       res = mdns_build_host_domain(&domain, mdns);
       if (res == ERR_OK && mdns_domain_eq(&ans.info.domain, &domain)) {
-        LWIP_DEBUGF(MDNS_DEBUG, ("MDNS: Probe response matches host domain!"));
+        LWIP_DEBUGF(MDNS_DEBUG, ("MDNS: Probe response matches host domain!\n"));
         mdns_probe_conflict(netif, 0);
         break;
       }
@@ -1943,7 +1949,7 @@ mdns_handle_response(struct mdns_packet *pkt, struct netif *netif)
         }
         res = mdns_build_service_domain(&domain, service, 1);
         if ((res == ERR_OK) && mdns_domain_eq(&ans.info.domain, &domain)) {
-          LWIP_DEBUGF(MDNS_DEBUG, ("MDNS: Probe response matches service domain!"));
+          LWIP_DEBUGF(MDNS_DEBUG, ("MDNS: Probe response matches service domain!\n"));
           mdns_probe_conflict(netif, i + 1);
           break;
         }

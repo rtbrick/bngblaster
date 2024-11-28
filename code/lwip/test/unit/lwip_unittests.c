@@ -5,6 +5,7 @@
 #include "udp/test_udp.h"
 #include "tcp/test_tcp.h"
 #include "tcp/test_tcp_oos.h"
+#include "tcp/test_tcp_state.h"
 #include "core/test_def.h"
 #include "core/test_dns.h"
 #include "core/test_mem.h"
@@ -16,6 +17,7 @@
 #include "mdns/test_mdns.h"
 #include "mqtt/test_mqtt.h"
 #include "api/test_sockets.h"
+#include "ppp/test_pppos.h"
 
 #include "lwip/init.h"
 #if !NO_SYS
@@ -56,9 +58,15 @@ void lwip_check_ensure_no_alloc(unsigned int skip)
   }
   for (i = 0, mask = 1; i < MEMP_MAX; i++, mask <<= 1) {
     if (!(skip & mask)) {
+#if defined(LWIP_DEBUG) || LWIP_STATS_DISPLAY
       fail_unless(lwip_stats.memp[i]->used == 0,
         "memp pool '%s' still has %d entries allocated",
         lwip_stats.memp[i]->name, lwip_stats.memp[i]->used);
+#else
+      fail_unless(lwip_stats.memp[i]->used == 0,
+        "memp pool %d still has %d entries allocated",
+        i, lwip_stats.memp[i]->used);
+#endif
     }
   }
 }
@@ -78,6 +86,7 @@ int main(void)
     udp_suite,
     tcp_suite,
     tcp_oos_suite,
+    tcp_state_suite,
     def_suite,
     dns_suite,
     mem_suite,
@@ -89,6 +98,9 @@ int main(void)
     mdns_suite,
     mqtt_suite,
     sockets_suite
+#if PPP_SUPPORT && PPPOS_SUPPORT
+    , pppos_suite
+#endif /* PPP_SUPPORT && PPPOS_SUPPORT */
   };
   size_t num = sizeof(suites)/sizeof(void*);
   LWIP_ASSERT("No suites defined", num > 0);

@@ -14,7 +14,7 @@ endif()
 
 set(LWIP_VERSION_MAJOR    "2")
 set(LWIP_VERSION_MINOR    "2")
-set(LWIP_VERSION_REVISION "0")
+set(LWIP_VERSION_REVISION "1")
 # LWIP_VERSION_RC is set to LWIP_RC_RELEASE for official releases
 # LWIP_VERSION_RC is set to LWIP_RC_DEVELOPMENT for Git versions
 # Numbers 1..31 are reserved for release candidates
@@ -171,6 +171,63 @@ set(lwipsnmp_SRCS
     ${LWIP_DIR}/src/apps/snmp/snmp_traps.c
 )
 
+# HTTP server + client
+set(lwiphttp_SRCS
+    ${LWIP_DIR}/src/apps/http/altcp_proxyconnect.c
+    ${LWIP_DIR}/src/apps/http/fs.c
+    ${LWIP_DIR}/src/apps/http/http_client.c
+    ${LWIP_DIR}/src/apps/http/httpd.c
+)
+
+# MAKEFSDATA HTTP server host utility
+set(lwipmakefsdata_SRCS
+    ${LWIP_DIR}/src/apps/http/makefsdata/makefsdata.c
+)
+
+# IPERF server
+set(lwipiperf_SRCS
+    ${LWIP_DIR}/src/apps/lwiperf/lwiperf.c
+)
+
+# SMTP client
+set(lwipsmtp_SRCS
+    ${LWIP_DIR}/src/apps/smtp/smtp.c
+)
+
+# SNTP client
+set(lwipsntp_SRCS
+    ${LWIP_DIR}/src/apps/sntp/sntp.c
+)
+
+# MDNS responder
+set(lwipmdns_SRCS
+    ${LWIP_DIR}/src/apps/mdns/mdns.c
+    ${LWIP_DIR}/src/apps/mdns/mdns_out.c
+    ${LWIP_DIR}/src/apps/mdns/mdns_domain.c
+)
+
+# NetBIOS name server
+set(lwipnetbios_SRCS
+    ${LWIP_DIR}/src/apps/netbiosns/netbiosns.c
+)
+
+# TFTP server files
+set(lwiptftp_SRCS
+    ${LWIP_DIR}/src/apps/tftp/tftp.c
+)
+
+# MQTT client files
+set(lwipmqtt_SRCS
+    ${LWIP_DIR}/src/apps/mqtt/mqtt.c
+)
+
+# ARM MBEDTLS related files of lwIP rep
+set(lwipmbedtls_SRCS
+    ${LWIP_DIR}/src/apps/altcp_tls/altcp_tls_mbedtls.c
+    ${LWIP_DIR}/src/apps/altcp_tls/altcp_tls_mbedtls_mem.c
+    ${LWIP_DIR}/src/apps/snmp/snmpv3_mbedtls.c
+)
+
 # All LWIP files without apps
 set(lwipnoapps_SRCS
     ${lwipcore_SRCS}
@@ -224,3 +281,13 @@ add_library(lwipcore EXCLUDE_FROM_ALL ${lwipnoapps_SRCS})
 target_compile_options(lwipcore PRIVATE ${LWIP_COMPILER_FLAGS})
 target_compile_definitions(lwipcore PRIVATE ${LWIP_DEFINITIONS}  ${LWIP_MBEDTLS_DEFINITIONS})
 target_include_directories(lwipcore PRIVATE ${LWIP_INCLUDE_DIRS} ${LWIP_MBEDTLS_INCLUDE_DIRS})
+
+add_library(lwipallapps EXCLUDE_FROM_ALL ${lwipallapps_SRCS})
+target_compile_options(lwipallapps PRIVATE ${LWIP_COMPILER_FLAGS})
+target_compile_definitions(lwipallapps PRIVATE ${LWIP_DEFINITIONS}  ${LWIP_MBEDTLS_DEFINITIONS})
+target_include_directories(lwipallapps PRIVATE ${LWIP_INCLUDE_DIRS} ${LWIP_MBEDTLS_INCLUDE_DIRS})
+
+add_library(lwipmbedtls EXCLUDE_FROM_ALL ${lwipmbedtls_SRCS})
+target_compile_options(lwipmbedtls PRIVATE ${LWIP_COMPILER_FLAGS})
+target_compile_definitions(lwipmbedtls PRIVATE ${LWIP_DEFINITIONS}  ${LWIP_MBEDTLS_DEFINITIONS})
+target_include_directories(lwipmbedtls PRIVATE ${LWIP_INCLUDE_DIRS} ${LWIP_MBEDTLS_INCLUDE_DIRS})

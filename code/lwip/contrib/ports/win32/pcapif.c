@@ -679,12 +679,17 @@ pcapif_shutdown(struct netif *netif)
 #endif /* PCAPIF_RX_USE_THREAD */
     if (pa->adapter) {
       pcap_breakloop(pa->adapter);
-      pcap_close(pa->adapter);
     }
 #if PCAPIF_RX_USE_THREAD
     /* wait for rxthread to end */
-    while(pa->rx_running);
+    while (pa->rx_running) {
+      Sleep(100);
+    }
 #endif /* PCAPIF_RX_USE_THREAD */
+    if (pa->adapter) {
+      pcap_close(pa->adapter);
+      pa->adapter = NULL;
+    }
 #if PCAPIF_HANDLE_LINKSTATE
     pcapifh_linkstate_close(pa->link_state);
 #endif /* PCAPIF_HANDLE_LINKSTATE */
@@ -1057,6 +1062,9 @@ pcapif_init(struct netif *netif)
 
   int local_index;
   SYS_ARCH_DECL_PROTECT(lev);
+
+  pcapifh_init_npcap();
+
   SYS_ARCH_PROTECT(lev);
   local_index = ethernetif_index++;
   SYS_ARCH_UNPROTECT(lev);
