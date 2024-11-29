@@ -8,7 +8,7 @@ on:
       - pages
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: RelWithDebInfo
 
 jobs:
   build:
@@ -16,18 +16,18 @@ jobs:
     runs-on: ${{matrix.os}}
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Download RtBrick libdict
       shell: bash
-      run: wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-${{matrix.os}}.zip
+      run: wget https://github.com/rtbrick/libdict/releases/download/1.0.4/libdict-${{matrix.os}}.zip
 
     - name: Install RtBrick libdict
       shell: bash
-      run: unzip libdict-${{matrix.os}}.zip; sudo dpkg -i libdict_1.0.3_amd64.deb; sudo dpkg -i libdict-dev_1.0.3_amd64.deb
+      run: unzip libdict-${{matrix.os}}.zip; sudo dpkg -i libdict_1.0.4_amd64.deb; sudo dpkg -i libdict-dev_1.0.4_amd64.deb
 
     - name: Install Dependencies
       shell: bash
