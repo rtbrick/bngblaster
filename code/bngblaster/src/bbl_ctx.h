@@ -87,6 +87,7 @@ typedef struct bbl_ctx_
     bool tcp;
     bool dpdk;
 
+    bbl_icmp_client_s *icmp_clients;
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
     isis_instance_s *isis_instances;
@@ -196,6 +197,9 @@ typedef struct bbl_ctx_
 
         /* LDP Instances */
         ldp_config_s *ldp_config;
+
+        /* ICMP Client Instances */
+        bbl_icmp_client_config_s *icmp_client_config;
 
         /* HTTP Client/Server Instances */
         bbl_http_client_config_s *http_client_config;

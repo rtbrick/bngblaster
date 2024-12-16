@@ -894,8 +894,9 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "access-line-profile-id", "ipcp", "dhcp",
         "ipv4", "ip6cp", "dhcpv6",
         "dhcpv6-ldra", "ipv6", "igmp-autostart",
-        "igmp-version", "session-traffic-autostart", "session-group-id",
-        "stream-group-id",  "http-client-group-id",
+        "igmp-version", "session-traffic-autostart", 
+        "session-group-id", "stream-group-id",
+        "http-client-group-id", "icmp-client-group-id",
         "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name"
     };
     if(!schema_validate(access_interface, "access", schema, 
@@ -1222,6 +1223,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     if(value) {
         access_config->http_client_group_id = json_number_value(value);
         access_config->tcp = true;
+    }
+
+    value = json_object_get(access_interface, "icmp-client-group-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "icmp-client-group-id", 0, 65535);
+    if(value) {
+        access_config->icmp_client_group_id = json_number_value(value);
     }
 
     JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
@@ -2719,6 +2726,124 @@ json_parse_config_streams(json_t *root)
 }
 
 static bool
+json_parse_icmp_client_config(json_t *icmp, bbl_icmp_client_config_s *icmp_client_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    const char *schema[] = {
+        "icmp-client-group-id", "network-interface",
+        "autostart", "start-delay", 
+        "count", "results", 
+        "interval", "size", "ttl", 
+        "df", "tos",
+        "source-address",
+        "destination-address"
+    };
+
+    if(!schema_validate(icmp, "icmp-client", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "icmp-client-group-id", 1, 65535);
+    if(value) {
+        icmp_client_config->icmp_client_group_id = json_number_value(value);
+    }
+    if(json_unpack(icmp, "{s:s}", "network-interface", &s) == 0) {
+        if(icmp_client_config->icmp_client_group_id) {
+            fprintf(stderr, "JSON config error: At most one icmp-client-group-id or network-interface must be specified for icmp-clients.\n");
+            return false;
+        }
+        icmp_client_config->network_interface = strdup(s);
+    } else if (!icmp_client_config->icmp_client_group_id) {
+        fprintf(stderr, "JSON config error: Missing value for icmp-client, either icmp-client-group-id or network-interface is required\n");
+        return false;
+    }
+
+    JSON_OBJ_GET_BOOL(icmp, value, "icmp-client", "autostart");
+    if(value) {
+        icmp_client_config->autostart = json_boolean_value(value);
+    } else {
+        icmp_client_config->autostart = true;
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "start-delay", 0, 65535);
+    if(value) {
+        icmp_client_config->start_delay = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "count", 0, 65535);
+    if(value) {
+        icmp_client_config->count = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "size", 0, 65507);
+    if(value) {
+        icmp_client_config->size = json_number_value(value);
+    } else {
+        icmp_client_config->size = 8;
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "ttl", 1, 255);
+    if(value) {
+        icmp_client_config->ttl = json_number_value(value);
+    } else {
+        icmp_client_config->ttl = 64;
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "tos", 0, 255);
+    if(value) {
+        icmp_client_config->tos = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_BOOL(icmp, value, "icmp-client", "df");
+    if(value) {
+        icmp_client_config->df = json_boolean_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "results", 0, 65535);
+    if(value) {
+        icmp_client_config->results = json_number_value(value);
+    } else {
+        icmp_client_config->results = icmp_client_config->count;
+    }
+    if(!icmp_client_config->results) icmp_client_config->results = 3;
+
+    value = json_object_get(icmp, "interval");
+    if(value) {
+        icmp_client_config->interval = json_number_value(value);
+        if(icmp_client_config->interval <= 0) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
+            return false;
+        }
+        icmp_client_config->interval_sec = icmp_client_config->interval;
+        icmp_client_config->interval_nsec = (icmp_client_config->interval - icmp_client_config->interval_sec) * SEC;
+    } else {
+        icmp_client_config->interval = 1.0;
+        icmp_client_config->interval_sec = 1;
+    }
+
+    if(json_unpack(icmp, "{s:s}", "destination-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &icmp_client_config->dst)) {
+            fprintf(stderr, "JSON config error: Invalid value for icmp-client->destination-address\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for icmp-client->destination-address\n");
+        return false;
+    }
+    if(json_unpack(icmp, "{s:s}", "source-address", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &icmp_client_config->src)) {
+            fprintf(stderr, "JSON config error: Invalid value for icmp-client->source-address\n");
+            return false;
+        }
+    }
+    return true;
+}
+
+
+static bool
 json_parse_http_client_config(json_t *http, bbl_http_client_config_s *http_client_config)
 {
     json_t *value = NULL;
@@ -2877,6 +3002,7 @@ json_parse_config(json_t *root)
     ospf_config_s               *ospf_config            = NULL;
     ldp_config_s                *ldp_config             = NULL;
 
+    bbl_icmp_client_config_s    *icmp_client_config     = NULL;
     bbl_http_client_config_s    *http_client_config     = NULL;
     bbl_http_server_config_s    *http_server_config     = NULL;
 
@@ -2893,7 +3019,7 @@ json_parse_config(json_t *root)
         "isis", "ospf",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
-        "l2tp-server", 
+        "l2tp-server", "icmp-client",
         "http-client", "http-server"
     };
     if(!schema_validate(root, "root", root_schema, 
@@ -4091,6 +4217,34 @@ json_parse_config(json_t *root)
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+    }
+
+    /* ICMP Client Configuration */
+    sub = json_object_get(root, "icmp-client");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple ICMP clients) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!icmp_client_config) {
+                g_ctx->config.icmp_client_config = calloc(1, sizeof(bbl_icmp_client_config_s));
+                icmp_client_config = g_ctx->config.icmp_client_config;
+            } else {
+                icmp_client_config->next = calloc(1, sizeof(bbl_icmp_client_config_s));
+                icmp_client_config = icmp_client_config->next;
+            }
+            if(!json_parse_icmp_client_config(json_array_get(sub, i), icmp_client_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single ICMP client) */
+        icmp_client_config = calloc(1, sizeof(bbl_icmp_client_config_s));
+        if(!g_ctx->config.icmp_client_config) {
+            g_ctx->config.icmp_client_config = icmp_client_config;
+        }
+        if(!json_parse_icmp_client_config(sub, icmp_client_config)) {
+            return false;
+        }
     }
 
     /* HTTP Client Configuration */

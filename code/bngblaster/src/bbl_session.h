@@ -112,6 +112,9 @@ typedef struct bbl_session_
 
     void *access_line_profile;
 
+    /* ICMP */
+    bbl_icmp_client_s *icmp_client;
+
     /* TCP */
     bbl_http_client_s *http_client;
     struct netif netif; /* LwIP interface */

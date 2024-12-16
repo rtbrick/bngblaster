@@ -72,9 +72,6 @@ typedef struct bbl_http_client_
 bool
 bbl_http_client_session_init(bbl_session_s *session);
 
-bool
-bbl_http_server_init(bbl_network_interface_s *network_interface);
-
 int
 bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
 
@@ -83,8 +80,5 @@ bbl_http_client_ctrl_start(int fd, uint32_t session_id, json_t *arguments __attr
 
 int
 bbl_http_client_ctrl_stop(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
-
-bool
-bbl_http_server_init(bbl_network_interface_s *network_interface);
 
 #endif

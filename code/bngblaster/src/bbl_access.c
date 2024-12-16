@@ -567,12 +567,16 @@ static bool
 bbl_access_rx_icmp(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
     bbl_icmp_s *icmp = (bbl_icmp_s*)ipv4->next;
-    if(session->ip_address &&
-       session->ip_address == ipv4->dst &&
-       icmp->type == ICMP_TYPE_ECHO_REQUEST) {
-        /* Send ICMP reply... */
-        if(bbl_access_icmp_reply(session, eth, ipv4, icmp) == BBL_TXQ_OK) {
-            return true;
+    if(session->ip_address && session->ip_address == ipv4->dst) {
+        if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+            /* Send ICMP reply... */
+            if(bbl_access_icmp_reply(session, eth, ipv4, icmp) == BBL_TXQ_OK) {
+                session->stats.icmp_tx++;
+                session->access_interface->stats.icmp_tx++;
+                return true;
+            }
+        } else {
+            return bbl_icmp_client_rx(session, NULL, eth, ipv4, icmp);
         }
     }
     return false;
@@ -648,10 +652,7 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
         case PROTOCOL_IPV4_ICMP:
             session->stats.icmp_rx++;
             interface->stats.icmp_rx++;
-            if(bbl_access_rx_icmp(session, eth, ipv4)) {
-                session->stats.icmp_tx++;
-                interface->stats.icmp_tx++;
-            }
+            bbl_access_rx_icmp(session, eth, ipv4);
             return;
         case PROTOCOL_IPV4_UDP:
             udp = (bbl_udp_s*)ipv4->next;

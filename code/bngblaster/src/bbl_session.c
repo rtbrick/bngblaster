@@ -1060,6 +1060,11 @@ bbl_sessions_init()
             return false;
         }
 
+        if(!bbl_icmp_client_session_init(session)) {
+            LOG_NOARG(ERROR, "Failed to create session ICMP client!\n");
+            return false;
+        }
+
         if(!bbl_http_client_session_init(session)) {
             LOG_NOARG(ERROR, "Failed to create session HTTP client!\n");
             return false;

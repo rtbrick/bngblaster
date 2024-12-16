@@ -32,6 +32,7 @@ enum {
     ERROR,
     PCAP,
     IP,
+    ICMP,
     LOSS,
     L2TP,
     DHCP,

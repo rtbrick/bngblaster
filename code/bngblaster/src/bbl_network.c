@@ -150,9 +150,15 @@ bbl_network_interfaces_add()
             return false;
         }
 
-        /* Init HTTP server */
+        /* Init HTTP servers */
         if(!bbl_http_server_init(network_interface)) {
-            LOG(ERROR, "Failed to init HTTP server for network interface %s\n", ifname);
+            LOG(ERROR, "Failed to init HTTP servers for network interface %s\n", ifname);
+            return false;
+        }
+
+        /* Init ICMP clients */
+        if(!bbl_icmp_client_network_interface_init(network_interface)) {
+            LOG(ERROR, "Failed to init ICMP clients for network interface %s\n", ifname);
             return false;
         }
 
@@ -403,7 +409,11 @@ bbl_network_rx_icmp(bbl_network_interface_s *interface,
     bbl_icmp_s *icmp = (bbl_icmp_s*)ipv4->next;
     if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
         /* Send ICMP reply... */
-        bbl_network_icmp_reply(interface, eth, ipv4, icmp);
+        if(bbl_network_icmp_reply(interface, eth, ipv4, icmp) == BBL_TXQ_OK) {
+            interface->stats.icmp_tx++;
+        }
+    }  else {
+        bbl_icmp_client_rx(NULL, interface, eth, ipv4, icmp);
     }
     interface->stats.icmp_rx++;
 }

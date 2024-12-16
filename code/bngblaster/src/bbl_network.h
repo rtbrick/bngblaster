@@ -58,6 +58,9 @@ typedef struct bbl_network_interface_
     uint64_t mc_packet_seq;
     uint16_t mc_packet_cursor;
 
+    /* ICMP */
+    bbl_icmp_client_s *icmp_client;
+
     /* TCP */
     bbl_http_server_s *http_server;
     struct netif netif; /* LwIP interface */

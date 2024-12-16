@@ -140,6 +140,7 @@ struct keyval_ log_names[] = {
     { INFO,          "info" },
     { PCAP,          "pcap" },
     { IP,            "ip" },
+    { ICMP,          "icmp" },
     { LOSS,          "loss" },
     { L2TP,          "l2tp" },
     { DHCP,          "dhcp" },

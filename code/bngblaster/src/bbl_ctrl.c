@@ -41,7 +41,7 @@ const char *schema_all_args[] = {
     "result-code", "error-code", "error-message",
     "disconnect-code", "disconnect-protocol", 
     "disconnect-direction", "disconnect-message",
-    "ldp-instance-id", "tcp-flags", "debug", 
+    "ldp-instance-id", "tcp-flags", "debug", "detail",
     "verified-only", "bidirectional-verified-only",
     NULL
 };
@@ -277,6 +277,9 @@ struct action actions[] = {
     {"monkey-start", bbl_ctrl_monkey_start, schema_all_args, false},
     {"monkey-stop", bbl_ctrl_monkey_stop, schema_all_args, false},
     {"lag-info", bbl_lag_ctrl_info, schema_all_args, true},
+    {"icmp-clients", bbl_icmp_client_ctrl, schema_all_args, true},
+    {"icmp-clients-start", bbl_icmp_client_ctrl_start, schema_all_args, false},
+    {"icmp-clients-stop", bbl_icmp_client_ctrl_stop, schema_all_args, false},
     {"http-clients", bbl_http_client_ctrl, schema_all_args, true},
     {"http-clients-start", bbl_http_client_ctrl_start, schema_all_args, false},
     {"http-clients-stop", bbl_http_client_ctrl_stop, schema_all_args, false},
