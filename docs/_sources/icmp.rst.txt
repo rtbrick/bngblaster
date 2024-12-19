@@ -72,3 +72,15 @@ of the ICMP client group identifier (icmp-client-group-id).
 It is mandatory to set either ICMP client group identifier or network interface
 but only one as those attributes are mutually exclusive. 
 
+The ICMP logging flag (``-l icmp``) enables detailed ICMP logging:
+
+.. code-block:: none
+
+    # network interfaces
+    Dec 18 15:58:22.394677 ICMP (eth1:10) send echo-request addr=10.0.1.2 id=2 seq=21
+    Dec 18 15:58:22.395566 ICMP (eth1:10) fragmentation needed addr=10.0.1.2 id=2 seq=21 mtu=1492
+    # sessions
+    Dec 18 15:58:22.727988 ICMP (ID: 1) send echo-request addr=10.0.1.2 id=1 seq=21
+    Dec 18 15:58:22.728992 ICMP (ID: 1) received echo-reply addr=10.0.1.2 id=1 seq=21 size=8 ttl=63 rtt=1ms
+    Dec 18 15:58:22.927569 ICMP (ID: 2) send echo-request addr=10.0.1.2 id=1 seq=21
+    Dec 18 15:58:22.928480 ICMP (ID: 2) TTL exceeded addr=10.0.1.2 id=1 seq=21
