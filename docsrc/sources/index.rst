@@ -145,6 +145,7 @@ Trainings and Examples:
 -----------------------
 
 * https://github.com/rtbrick/bngblaster-training
+* https://github.com/rtbrick/BGP-CP-DP-Testing
 
 Sources
 -------
