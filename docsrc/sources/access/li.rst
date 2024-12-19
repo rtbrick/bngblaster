@@ -24,8 +24,6 @@ mediation device as shown in the following example.
 
     {
         "interfaces": {
-            "tx-interval": 10,
-            "rx-interval": 1,
             "network": {
                 "interface": "eth2",
                 "address": "100.0.0.10/24",

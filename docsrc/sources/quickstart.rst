@@ -467,9 +467,6 @@ BNG Blaster configuration files needed.
 
     {
         "interfaces": {
-            "tx-interval": 1,
-            "rx-interval": 1,
-            "io-slots": 4096,
             "network": {
                 "interface": "veth1.2",
                 "address": "192.168.92.2/24",
