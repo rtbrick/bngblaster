@@ -64,6 +64,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#tcp-raw-streams">TCP RAW Streams</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stream-setup-interval">Stream Setup interval</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#http-nat-extension">HTTP NAT Extension</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#icmp-client">ICMP Client</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#scaling">Scaling</a></li>
 </ul>
 </li>
@@ -426,6 +427,12 @@ where X-Client-Ip and Port shows the IP address and port assigned from the NAT g
 </div>
 <p>Unfortunately HTTP client/server scaling is limited, therefore raw-TCP
 streams is the better option to test NAT on scale.</p>
+</section>
+<section id="icmp-client">
+<h3>ICMP Client<a class="headerlink" href="#icmp-client" title="Link to this heading"></a></h3>
+<p>The <a class="reference internal" href="icmp.html#icmp"><span class="std std-ref">ICMP client</span></a> makes it possible to initiate pings from NATed sessions to network
+interfaces or other endpoint, allowing you to verify that ICMP traffic is correctly translated
+by the NAT device under test.</p>
 </section>
 <section id="scaling">
 <h3>Scaling<a class="headerlink" href="#scaling" title="Link to this heading"></a></h3>

@@ -1,4 +1,4 @@
-# RtBrick BNG Blaster
+# RtBrick - Routing Protocol and BNG Blaster
 
 ![Build](https://github.com/rtbrick/bngblaster/workflows/Build/badge.svg?branch=main)
 [![Linux](https://img.shields.io/badge/OS-linux-lightgrey)](https://rtbrick.github.io/bngblaster/install)
@@ -8,7 +8,7 @@
 
 **The open network tester for the IP networking community.**
 
-The **BNG Blaster** is an open-source network tester for **access** and **routing** protocols.
+The **Routing Protocol and BNG Blaster** is an open-source network tester for **routing** and **access** protocols.
 
 Originally developed as an access protocol tester, the BNG Blaster has undergone a 
 significant evolution, transforming into a comprehensive network testing tool that 

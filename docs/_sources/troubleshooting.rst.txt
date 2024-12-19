@@ -32,6 +32,7 @@ The following list shows all supported logging options.
 * ``dpdk``: log DPDK events
 * ``packet``: log packet events
 * ``http``: log HTTP events
+* ``icmp``: log ICMP events
 
 .. code-block:: none
     

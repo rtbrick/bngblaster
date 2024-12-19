@@ -171,6 +171,7 @@ NAT gateway.
 
 TCP RAW Streams
 ~~~~~~~~~~~~~~~
+
 A new option called **raw-tcp** is added to the stream configuraton. 
 If enabled, UDP-like traffic with a constant rate is sent using a 
 static (RAW) TCP header.
@@ -348,6 +349,13 @@ where X-Client-Ip and Port shows the IP address and port assigned from the NAT g
 
 Unfortunately HTTP client/server scaling is limited, therefore raw-TCP
 streams is the better option to test NAT on scale. 
+
+ICMP Client
+~~~~~~~~~~~
+
+The :ref:`ICMP client <icmp>` makes it possible to initiate pings from NATed sessions to network 
+interfaces or other endpoint, allowing you to verify that ICMP traffic is correctly translated 
+by the NAT device under test.
 
 Scaling
 ~~~~~~~

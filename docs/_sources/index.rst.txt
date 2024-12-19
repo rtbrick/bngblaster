@@ -1,9 +1,10 @@
-BNG Blaster
-===========
+RtBrick - Routing Protocol and BNG Blaster
+==========================================
 
 **The open network tester for the IP networking community.**
 
-The **BNG Blaster** is an open-source network tester for **access** and **routing** protocols.
+The **Routing Protocol and BNG Blaster** is an open-source 
+network tester for **routing** and **access** protocols.
 
 Originally developed as an access protocol tester, the BNG Blaster has undergone a 
 significant evolution, transforming into a comprehensive network testing tool that 
@@ -139,6 +140,11 @@ YouTube
 * `UKNOF49 (2022) <https://youtu.be/HTswAl388Gg>`_ 
 * `DENOG13 (2021) <https://youtu.be/LVg6rlVEfNU>`_ 
 * `Introduction (2021) <https://youtu.be/EHJ70p0_Sw0>`_
+
+Trainings and Examples:
+-----------------------
+
+* https://github.com/rtbrick/bngblaster-training
 
 Sources
 -------
