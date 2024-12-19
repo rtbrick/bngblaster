@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICMP &mdash; BNG Blaster 0.9 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=049aceee"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="HTTP Emulation" href="http.html" />
+    <link rel="prev" title="Traffic Streams" href="streams.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="access/index.html">Access Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="routing/index.html">Routing Protocols</a></li>
+<li class="toctree-l1"><a class="reference internal" href="streams.html">Traffic Streams</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ICMP</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#icmp-client">ICMP Client</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nat.html">NAT / CGNAT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">ICMP</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/icmp.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="icmp">
+<span id="id1"></span><h1>ICMP<a class="headerlink" href="#icmp" title="Link to this heading"></a></h1>
+<p>The BNG Blaster responds to ICMP echo-requests (PING) on all interfaces,
+allowing you to ping PPPoE and IPoE sessions, as well as network interfaces.
+When it comes to network interfaces, the BNG Blaster replies to any request
+with matching MAC address. This means you can ping all advertised prefixes
+over those interfaces.</p>
+<p>Beyond simply responding to echo-requests, the BNG Blaster also includes
+an ICMP client. With this client, you can initiate ICMP echo-requests (PING)
+from PPPoE and IPoE sessions and network interfaces. Each client instance
+maintains its result tracking. Consequently, if the client receives
+ICMP unreachable, TTL exceeded, or fragmentation needed messages, these are
+properly logged and made accessible through the associated ICMP commands.</p>
+<section id="icmp-client">
+<h2>ICMP Client<a class="headerlink" href="#icmp-client" title="Link to this heading"></a></h2>
+<p>Following is a basic ICMP client configuration example.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;icmp-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;icmp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;ping from session&quot;</span>
+<span class="w">            </span><span class="nt">&quot;icmp-client-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.10&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;ping from network interface&quot;</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1:10&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;icmp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>icmp-client-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP client identifier.</div>
+<div class="line">This identifier is used to create ICMP clients for sessions.</div>
+<div class="line">Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP client network-interface.</div>
+<div class="line">Use <strong>network-interface</strong> instead of <strong>icmp-client-group-id</strong> when</div>
+<div class="line">creating ICMP clients on a network interface. These two options</div>
+<div class="line">are mutually exclusive, but at least one of them is required.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>destination-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory destination IPv4 address.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>source-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional source IPv4 address.</div>
+<div class="line">Default: session/interface address</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>size</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP data size.</div>
+<div class="line">Default: 8 Range: 0 - 65507</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP send interval in seconds.</div>
+<div class="line">Default: 1.0</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>count</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP requests to send before stopping.</div>
+<div class="line">Default: 0 (infinity)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>results</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP request to track results for.</div>
+<div class="line">Default: 3 or <strong>count</strong> if set</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ttl</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPv4 header TTL value.</div>
+<div class="line">Default: 64</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>tos</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPv4 header TOS value.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>df</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPv4 header dont-fragement (DF) bit.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Autostart ICMP client after session reconnects. This applies only</div>
+<div class="line">to ICMP clients that are bound to access sessions.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>start-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP client start delay in seconds.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The association between the ICMP client and sessions is established through
+the use of the ICMP client group identifier (icmp-client-group-id). Multiple
+ICMP clients can be defined with the same ICMP client group identifier.</p>
+<p>For instance, if you define 4 ICMP clients with the same ICMP client group
+identifier and bind them to 100 sessions each, the BNG Blaster will generate
+a total of 400 ICMP client instances.</p>
+<p>It is also possible to setup ICMP clients over network interfaces, in this
+case the network interface name (network-interface) must be defined instead
+of the ICMP client group identifier (icmp-client-group-id).</p>
+<p>It is mandatory to set either ICMP client group identifier or network interface
+but only one as those attributes are mutually exclusive.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="streams.html" class="btn btn-neutral float-left" title="Traffic Streams" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="http.html" class="btn btn-neutral float-right" title="HTTP Emulation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2024, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

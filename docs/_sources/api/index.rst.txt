@@ -242,3 +242,10 @@ This is explained detailed in the
 :ref:`HTTP <http>` section.
 
 .. include:: http.rst
+
+ICMP
+----
+This is explained detailed in the 
+:ref:`ICMP <icmp>` section.
+
+.. include:: icmp.rst

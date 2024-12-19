@@ -80,7 +80,7 @@
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
       <li class="breadcrumb-item active">&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/configuration/interfaces.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/configuration/icmp_client.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -88,7 +88,7 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;icmp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
@@ -98,84 +98,96 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong>io-mode</strong></p></td>
+<tr class="row-even"><td><p><strong>icmp-client-group-id</strong></p></td>
 <td><div class="line-block">
-<div class="line">IO mode.</div>
-<div class="line">The supported IO modes are listed with <code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-v</span></code></div>
-<div class="line">but except <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> all other modes are currently</div>
-<div class="line">considered experimental. In the default mode (<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>)</div>
-<div class="line">all packets are received in a Packet MMAP ring buffer and sent</div>
-<div class="line">directly through RAW packet sockets.</div>
-<div class="line">Default: packet_mmap_raw</div>
+<div class="line">ICMP client identifier.</div>
+<div class="line">This identifier is used to create ICMP clients for sessions.</div>
+<div class="line">Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>io-slots</strong></p></td>
+<tr class="row-odd"><td><p><strong>network-interface</strong></p></td>
 <td><div class="line-block">
-<div class="line">IO slots (ring size).</div>
-<div class="line">It might be also needed to increase the <strong>io-slots</strong> to</div>
-<div class="line">reach the desired throughput. The actual meaning of IO slots</div>
-<div class="line">depends on the selected IO mode. For Packet MMAP, it defines the</div>
-<div class="line">maximum number of packets in the ring buffer.</div>
-<div class="line">Default: 4096</div>
+<div class="line">ICMP client network-interface.</div>
+<div class="line">Use <strong>network-interface</strong> instead of <strong>icmp-client-group-id</strong> when</div>
+<div class="line">creating ICMP clients on a network interface. These two options</div>
+<div class="line">are mutually exclusive, but at least one of them is required.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>io-burst</strong></p></td>
+<tr class="row-even"><td><p><strong>destination-address</strong></p></td>
 <td><div class="line-block">
-<div class="line">IO burst (packets).</div>
-<div class="line">Default: 256 Range: 1 to 65535</div>
+<div class="line">Mandatory destination IPv4 address.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>qdisc-bypass</strong></p></td>
+<tr class="row-odd"><td><p><strong>source-address</strong></p></td>
 <td><div class="line-block">
-<div class="line">Bypass the kernel’s qdisc layer.</div>
-<div class="line">It’s currently not recommended to change the default (issue #206)!</div>
-<div class="line">Default: true</div>
+<div class="line">Optional source IPv4 address.</div>
+<div class="line">Default: session/interface address</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>size</strong></p></td>
 <td><div class="line-block">
-<div class="line">TX polling interval in milliseconds.</div>
-<div class="line">Default: 0.1 Range: 0.0001 to 1000</div>
+<div class="line">ICMP data size.</div>
+<div class="line">Default: 8 Range: 0 - 65507</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rx-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>interval</strong></p></td>
 <td><div class="line-block">
-<div class="line">RX polling interval in milliseconds.</div>
-<div class="line">Default: 0.1 Range: 0.0001 to 1000</div>
+<div class="line">ICMP send interval in seconds.</div>
+<div class="line">Default: 1.0</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-threads</strong></p></td>
+<tr class="row-even"><td><p><strong>count</strong></p></td>
 <td><div class="line-block">
-<div class="line">Number of TX threads per interface link.</div>
-<div class="line">Default: 0 (main thread)</div>
+<div class="line">ICMP requests to send before stopping.</div>
+<div class="line">Default: 0 (infinity)</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rx-threads</strong></p></td>
+<tr class="row-odd"><td><p><strong>results</strong></p></td>
 <td><div class="line-block">
-<div class="line">Number of RX threads per interface link.</div>
-<div class="line">Default: 0 (main thread)</div>
+<div class="line">ICMP request to track results for.</div>
+<div class="line">Default: 3 or <strong>count</strong> if set</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>capture-include-streams</strong></p></td>
+<tr class="row-even"><td><p><strong>ttl</strong></p></td>
 <td><div class="line-block">
-<div class="line">Include traffic streams in the capture.</div>
+<div class="line">IPv4 header TTL value.</div>
+<div class="line">Default: 64</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>tos</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPv4 header TOS value.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>df</strong></p></td>
+<td><div class="line-block">
+<div class="line">IPv4 header dont-fragement (DF) bit.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>mac-modifier</strong></p></td>
+<tr class="row-odd"><td><p><strong>autostart</strong></p></td>
 <td><div class="line-block">
-<div class="line">Third byte of access session MAC address (0-255). This option</div>
-<div class="line">allows to run multiple BNG Blaster instances with disjoint session</div>
-<div class="line">MAC addresses.</div>
+<div class="line">Autostart ICMP client after session reconnects. This applies only</div>
+<div class="line">to ICMP clients that are bound to access sessions.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>start-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">ICMP client start delay in seconds.</div>
 <div class="line">Default: 0</div>
 </div>
 </td>

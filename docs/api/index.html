@@ -54,6 +54,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../icmp.html">ICMP</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
@@ -75,6 +76,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#cfm">CFM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#legal-interception-li">Legal Interception (LI)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#http">HTTP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#icmp">ICMP</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
@@ -1191,6 +1193,47 @@ session-id for which a connect speed update is requested.</p>
 <tr class="row-even"><td><p><strong>http-clients-stop</strong></p></td>
 <td><div class="line-block">
 <div class="line">Stop all HTTP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="icmp">
+<h2>ICMP<a class="headerlink" href="#icmp" title="Link to this heading"></a></h2>
+<p>This is explained detailed in the
+<a class="reference internal" href="../icmp.html#icmp"><span class="std std-ref">ICMP</span></a> section.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>icmp-clients</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display all ICMP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>icmp-clients-start</strong></p></td>
+<td><div class="line-block">
+<div class="line">Start all ICMP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>icmp-clients-stop</strong></p></td>
+<td><div class="line-block">
+<div class="line">Stop all ICMP client instances.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>

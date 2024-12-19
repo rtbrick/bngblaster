@@ -208,3 +208,7 @@ HTTP-Client
 HTTP-Server
 -----------
 .. include:: http_server.rst
+
+ICMP-Client
+-----------
+.. include:: icmp_client.rst

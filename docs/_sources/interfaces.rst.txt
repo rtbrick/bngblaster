@@ -209,9 +209,6 @@ as shown in the example below.
 
     {
         "interfaces": {
-            "tx-interval": 1,
-            "rx-interval": 1,
-            "io-slots": 4096,
             "network": [
                 {
                     "interface": "eth2",
@@ -498,8 +495,6 @@ as shown in the example below.
 
     {
         "interfaces": {
-            "tx-interval": 1,
-            "rx-interval": 1,
             "a10nsp": [
                 {
                     "interface": "eth4",
