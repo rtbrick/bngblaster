@@ -39,6 +39,7 @@ typedef struct bbl_stream_config_
     uint16_t length;
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
     uint8_t  vlan_priority;
+    uint8_t  vlan_inner_priority;
     uint8_t  ttl;
 
     uint32_t ipv4_ldp_lookup_address;

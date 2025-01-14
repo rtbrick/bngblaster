@@ -2282,7 +2282,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "name", "stream-group-id", "type", "autostart",
         "direction", "network-interface", "a10nsp-interface",
         "source-port", "destination-port", "length", "ttl",
-        "priority", "vlan-priority", 
+        "priority", "vlan-priority", "inner-vlan-priority",
         "pps", "bps", "Kbps", "Mbps",
         "pps-upstream", "bps-upstream", "Kbps-upstream", "Mbps-upstream",
         "Gbps", "max-packets", "start-delay",
@@ -2410,6 +2410,13 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "vlan-priority", 0, 7);
     if(value) {
         stream_config->vlan_priority = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "inner-vlan-priority", 0, 7);
+    if(value) {
+        stream_config->vlan_inner_priority = json_number_value(value);
+    } else {
+        stream_config->vlan_inner_priority = stream_config->vlan_priority;
     }
 
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "setup-interval", 0, 900);

@@ -119,7 +119,7 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_inner_priority = config->vlan_priority;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
@@ -279,7 +279,7 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
-    eth.vlan_inner_priority = config->vlan_priority;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
@@ -417,7 +417,7 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
-    eth.vlan_inner_priority = config->vlan_priority;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = stream->type;
@@ -543,8 +543,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_inner_priority = config->vlan_priority;
     eth.vlan_outer_priority = config->vlan_priority;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
 
     udp.src = config->src_port;
     udp.dst = config->dst_port;
