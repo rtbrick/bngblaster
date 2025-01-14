@@ -427,8 +427,18 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
     //*(uint32_t*)buf = htobe32(RTBRICK);
     //BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
 
+    if(dhcpv6->interface_id) {
+        /* DHCPv6 Interface-Id Option (18) */
+        *(uint16_t*)buf = htobe16(DHCPV6_OPTION_INTERFACE_ID);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        *(uint16_t*)buf = htobe16(dhcpv6->interface_id_len);
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        memcpy(buf, dhcpv6->interface_id, dhcpv6->interface_id_len);
+        BUMP_WRITE_BUFFER(buf, len, dhcpv6->interface_id_len);
+    }
+
     if(dhcpv6->access_line) {
-        if(dhcpv6->access_line->aci) {
+        if(!dhcpv6->interface_id && dhcpv6->access_line->aci) {
             /* DHCPv6 Interface-Id Option (18) */
             *(uint16_t*)buf = htobe16(DHCPV6_OPTION_INTERFACE_ID);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -2789,6 +2799,9 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     uint16_t option;
     uint16_t option_len;
 
+    uint8_t *relay_msg = NULL;
+    uint16_t relay_msg_len = 0;
+
     if(len < 8 || sp_len < sizeof(bbl_dhcpv6_s)) {
         return DECODE_ERROR;
     }
@@ -2796,6 +2809,11 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
     /* Init DHCPv6 structure */
     dhcpv6 = (bbl_dhcpv6_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_dhcpv6_s));
     memset(dhcpv6, 0x0, sizeof(bbl_dhcpv6_s));
+
+    if(!(relay && sp_len < sizeof(access_line_s))) {
+        dhcpv6->access_line = (access_line_s*)sp;
+        BUMP_BUFFER(sp, sp_len, sizeof(access_line_s));
+    }
 
     dhcpv6->type = *buf;
     if(dhcpv6->type == DHCPV6_MESSAGE_RELAY_FORW || 
@@ -2855,19 +2873,41 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
             case DHCPV6_OPTION_INTERFACE_ID:
                 dhcpv6->interface_id = buf;
                 dhcpv6->interface_id_len = option_len;
+                if(dhcpv6->access_line && sp_len > option_len) {
+                    dhcpv6->access_line->aci = (void*)sp;
+                    memcpy(sp, buf, option_len);
+                    /* zero terminate string */
+                    sp += option_len; *sp = 0; sp++; sp_len -= (option_len+1);
+                }
+                break;
+            case DHCPV6_OPTION_REMOTE_ID:
+                if(dhcpv6->access_line && sp_len > option_len && option_len >= 4) {
+                    dhcpv6->access_line->ari = (void*)(sp+4);
+                    memcpy(sp, buf, option_len);
+                    /* zero terminate string */
+                    sp += option_len; *sp = 0; sp++; sp_len -= (option_len+1);
+                }
                 break;
             case DHCPV6_OPTION_RELAY_MSG:
                 if(!(dhcpv6->type == DHCPV6_MESSAGE_RELAY_FORW || dhcpv6->type == DHCPV6_MESSAGE_RELAY_REPL)) {
                     return DECODE_ERROR;
                 }
-                if(decode_dhcpv6(buf, option_len, sp, sp_len, (bbl_dhcpv6_s**)&dhcpv6->relay_message, true) != PROTOCOL_SUCCESS) {
-                    return DECODE_ERROR;
-                }
+                relay_msg = buf;
+                relay_msg_len = option_len;
+                break;
             default:
                 break;
         }
         BUMP_BUFFER(buf, len, option_len);
     }
+
+    /* The DHCP relay message option must be parsed last due to scratchpad memory handling. */
+    if(relay_msg) {
+        if(decode_dhcpv6(relay_msg, relay_msg_len, sp, sp_len, (bbl_dhcpv6_s**)&dhcpv6->relay_message, true) != PROTOCOL_SUCCESS) {
+            return DECODE_ERROR;
+        }
+    }
+
     *_dhcpv6 = dhcpv6;
     return ret_val;
 }
@@ -2902,7 +2942,7 @@ decode_dhcp_agent(uint8_t *buf, uint16_t len,
                     access_line->aci = (void*)sp;
                     memcpy(sp, buf, tlv_length);
                     /* zero terminate string */
-                    sp += tlv_length; *sp = 0; sp++;
+                    sp += tlv_length; *sp = 0; sp++; sp_len -= (tlv_length+1);
                 } else {
                     return DECODE_ERROR;
                 }
@@ -2912,7 +2952,7 @@ decode_dhcp_agent(uint8_t *buf, uint16_t len,
                     access_line->ari = (void*)sp;
                     memcpy(sp, buf, tlv_length);
                     /* zero terminate string */
-                    sp += tlv_length; *sp = 0; sp++;
+                    sp += tlv_length; *sp = 0; sp++; sp_len -= (tlv_length+1);
                 } else {
                     return DECODE_ERROR;
                 }
@@ -4275,7 +4315,7 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
                     access_line->aci = (void*)sp;
                     memcpy(sp, buf, tlv_length);
                     /* zero terminate string */
-                    sp += tlv_length; *sp = 0; sp++;
+                    sp += tlv_length; *sp = 0; sp++; sp_len -= (tlv_length+1);
                 } else {
                     return DECODE_ERROR;
                 }
@@ -4285,7 +4325,7 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
                     access_line->ari = (void*)sp;
                     memcpy(sp, buf, tlv_length);
                     /* zero terminate string */
-                    sp += tlv_length; *sp = 0; sp++;
+                    sp += tlv_length; *sp = 0; sp++;  sp_len -= (tlv_length+1);
                 } else {
                     return DECODE_ERROR;
                 }
