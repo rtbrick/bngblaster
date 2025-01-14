@@ -508,7 +508,7 @@ bbl_a10nsp_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
             if(a10nsp_session->dhcpv6_aci) {
                 free(a10nsp_session->dhcpv6_aci);
             }
-            a10nsp_session->dhcp_aci = strdup(dhcpv6_outer->access_line->aci);
+            a10nsp_session->dhcpv6_aci = strdup(dhcpv6_outer->access_line->aci);
         }
         if(dhcpv6_outer->access_line->ari) {
             if(a10nsp_session->dhcpv6_ari) {
