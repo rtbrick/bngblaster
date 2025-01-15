@@ -394,7 +394,7 @@ bbl_l2tp_tunnel_control_job(timer_s *timer)
             break;
         case BBL_L2TP_TUNNEL_ESTABLISHED:
             if(l2tp_tunnel->server->hello_interval) {
-                if(l2tp_tunnel->state_seconds % l2tp_tunnel->server->hello_interval == 0) {
+                if(l2tp_tunnel->state_seconds % l2tp_tunnel->server->hello_interval == 0 && CIRCLEQ_EMPTY(&l2tp_tunnel->tx_qhead)) {
                     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_HELLO);
                 }
             }
