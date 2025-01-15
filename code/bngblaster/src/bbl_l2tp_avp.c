@@ -422,6 +422,13 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                         random_vector = avp.value;
                         random_vector_len = avp.len;
                         break;
+                    case L2TP_AVP_PPP_DISCONNECT_CODE:
+                        if(avp.len >= 5 && l2tp_session->disconnect_code == 0) {
+                            l2tp_session->disconnect_code = be16toh(*(uint16_t*)avp.value);
+                            l2tp_session->disconnect_protocol = be16toh(*(uint16_t*)(avp.value+2));
+                            l2tp_session->disconnect_direction = be16toh(*(avp.value+4));
+                        }
+                        break;
                     case L2TP_AVP_CONNECT_SPEED_UPDATE_ENABLE:
                         /* See RFC5515 */
                         l2tp_session->connect_speed_update_enabled = true;
