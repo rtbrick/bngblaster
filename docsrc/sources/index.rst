@@ -166,4 +166,4 @@ Copyright
 ---------
 .. |copy|   unicode:: U+000A9 .. COPYRIGHT SIGN
 
-Copyright |copy| 2020-2024, RtBrick, Inc.
+Copyright |copy| 2020-2025, RtBrick, Inc.
