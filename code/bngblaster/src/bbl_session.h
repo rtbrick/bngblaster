@@ -112,6 +112,9 @@ typedef struct bbl_session_
 
     void *access_line_profile;
 
+    /* ARP */
+    bbl_arp_client_s *arp_client;
+
     /* ICMP */
     bbl_icmp_client_s *icmp_client;
 

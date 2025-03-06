@@ -38,6 +38,7 @@ typedef struct bbl_access_config_
     uint16_t session_group_id;
     uint16_t http_client_group_id;
     uint16_t icmp_client_group_id;
+    uint16_t arp_client_group_id;
 
     uint16_t access_outer_vlan;
     uint16_t access_outer_vlan_min;

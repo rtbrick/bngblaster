@@ -897,6 +897,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "igmp-version", "session-traffic-autostart", 
         "session-group-id", "stream-group-id",
         "http-client-group-id", "icmp-client-group-id",
+        "arp-client-group-id",
         "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name"
     };
     if(!schema_validate(access_interface, "access", schema, 
@@ -1229,6 +1230,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "icmp-client-group-id", 0, 65535);
     if(value) {
         access_config->icmp_client_group_id = json_number_value(value);
+    }
+
+    value = json_object_get(access_interface, "arp-client-group-id");
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "arp-client-group-id", 0, 65535);
+    if(value) {
+        access_config->arp_client_group_id = json_number_value(value);
     }
 
     JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
@@ -2733,6 +2740,55 @@ json_parse_config_streams(json_t *root)
 }
 
 static bool
+json_parse_arp_client_config(json_t *arp, bbl_arp_client_config_s *arp_client_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    const char *schema[] = {
+        "arp-client-group-id",
+        "interval", "vlan-priority", "target-ip"
+    };
+
+    if(!schema_validate(arp, "arp-client", schema, 
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(arp, value, "arp-client", "arp-client-group-id", 1, 65535);
+    if(value) {
+        arp_client_config->arp_client_group_id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for arp-client->arp-client-group-id\n");
+        return false;
+
+    }
+
+    JSON_OBJ_GET_NUMBER(arp, value, "arp-client", "interval", 1, 255);
+    if(value) {
+        arp_client_config->interval = json_number_value(value);
+    } else {
+        arp_client_config->interval = 1;
+    }
+
+    JSON_OBJ_GET_NUMBER(arp, value, "arp-client", "vlan-priority", 0, 7);
+    if(value) {
+        arp_client_config->vlan_priority = json_number_value(value);
+    }
+
+    if(json_unpack(arp, "{s:s}", "target-ip", &s) == 0) {
+        if(!inet_pton(AF_INET, s, &arp_client_config->target_ip)) {
+            fprintf(stderr, "JSON config error: Invalid value for arp-client->target-ip\n");
+            return false;
+        }
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for arp-client->target-ip\n");
+        return false;
+    }
+    return true;
+}
+
+static bool
 json_parse_icmp_client_config(json_t *icmp, bbl_icmp_client_config_s *icmp_client_config)
 {
     json_t *value = NULL;
@@ -3009,6 +3065,7 @@ json_parse_config(json_t *root)
     ospf_config_s               *ospf_config            = NULL;
     ldp_config_s                *ldp_config             = NULL;
 
+    bbl_arp_client_config_s     *arp_client_config      = NULL;
     bbl_icmp_client_config_s    *icmp_client_config     = NULL;
     bbl_http_client_config_s    *http_client_config     = NULL;
     bbl_http_server_config_s    *http_server_config     = NULL;
@@ -3027,7 +3084,8 @@ json_parse_config(json_t *root)
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
         "l2tp-server", "icmp-client",
-        "http-client", "http-server"
+        "http-client", "http-server",
+        "arp-client"
     };
     if(!schema_validate(root, "root", root_schema, 
        sizeof(root_schema)/sizeof(root_schema[0]))) {
@@ -4224,6 +4282,34 @@ json_parse_config(json_t *root)
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+    }
+
+    /* ARP Client Configuration */
+    sub = json_object_get(root, "arp-client");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple ARP clients) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!arp_client_config) {
+                g_ctx->config.arp_client_config = calloc(1, sizeof(bbl_arp_client_config_s));
+                arp_client_config = g_ctx->config.arp_client_config;
+            } else {
+                arp_client_config->next = calloc(1, sizeof(bbl_arp_client_config_s));
+                arp_client_config = arp_client_config->next;
+            }
+            if(!json_parse_arp_client_config(json_array_get(sub, i), arp_client_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single ARP client) */
+        icmp_client_config = calloc(1, sizeof(bbl_arp_client_config_s));
+        if(!g_ctx->config.arp_client_config) {
+            g_ctx->config.arp_client_config = arp_client_config;
+        }
+        if(!json_parse_arp_client_config(sub, arp_client_config)) {
+            return false;
+        }
     }
 
     /* ICMP Client Configuration */
