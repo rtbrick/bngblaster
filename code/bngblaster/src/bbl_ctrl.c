@@ -283,6 +283,8 @@ struct action actions[] = {
     {"http-clients", bbl_http_client_ctrl, schema_all_args, true},
     {"http-clients-start", bbl_http_client_ctrl_start, schema_all_args, false},
     {"http-clients-stop", bbl_http_client_ctrl_stop, schema_all_args, false},
+    {"arp-clients", bbl_arp_client_ctrl, schema_all_args, true},
+    {"arp-clients-reset", bbl_arp_client_ctrl_reset, schema_all_args, false},
     {"cfm-cc-start", bbl_cfm_ctrl_cc_start, schema_all_args, false},
     {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_all_args, false},
     {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_all_args, false},

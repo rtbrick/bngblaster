@@ -1744,6 +1744,7 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
             }
         }
     }
+    bbl_arp_client_rx(session, arp);
 }
 
 static uint32_t
