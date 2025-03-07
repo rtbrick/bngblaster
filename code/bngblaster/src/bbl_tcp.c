@@ -153,13 +153,15 @@ err_t
 bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
     bbl_tcp_ctx_s *tcpc = arg;
-    uint16_t tx = tcp_sndbuf(tpcb);
+    uint16_t tx;
     err_t result = ERR_OK;
 
     UNUSED(len);
 
     if(tcpc->tx.offset < tcpc->tx.len) {
+        tx = tcp_sndbuf(tpcb);
         if(tx) {
+            if(tx > 4096) tx = 4096;
             if((tcpc->tx.offset + tx) > tcpc->tx.len) {
                 tx = tcpc->tx.len - tcpc->tx.offset;
             }

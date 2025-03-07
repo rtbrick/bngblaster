@@ -70,7 +70,7 @@ extern unsigned char debug_flags;
 
 /* MEM_SIZE: the size of the heap memory. If the application will send
    a lot of data that needs to be copied, this should be set high. */
-#define MEM_SIZE                 65534
+#define MEM_SIZE                 4*1024*1024
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
@@ -83,13 +83,13 @@ extern unsigned char debug_flags;
 #define MEMP_NUM_UDP_PCB         4
 /* MEMP_NUM_TCP_PCB: the number of simultaneously active TCP
    connections. */
-#define MEMP_NUM_TCP_PCB         32768
+#define MEMP_NUM_TCP_PCB         1024
 /* MEMP_NUM_TCP_PCB_LISTEN: the number of listening TCP
    connections. */
 #define MEMP_NUM_TCP_PCB_LISTEN  256
 /* MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP
    segments. */
-#define MEMP_NUM_TCP_SEG         256
+#define MEMP_NUM_TCP_SEG         2048
 /* MEMP_NUM_SYS_TIMEOUT: the number of simultaneously active
    timeouts. */
 #define MEMP_NUM_SYS_TIMEOUT     257
@@ -108,7 +108,7 @@ extern unsigned char debug_flags;
 
 /* ---------- Pbuf options ---------- */
 /* PBUF_POOL_SIZE: the number of buffers in the pbuf pool. */
-#define PBUF_POOL_SIZE          120
+#define PBUF_POOL_SIZE           2048
 
 /* PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. */
 #define PBUF_POOL_BUFSIZE       256
@@ -125,42 +125,42 @@ extern unsigned char debug_flags;
 #define SYS_LIGHTWEIGHT_PROT           1
 
 /* ---------- TCP options ---------- */
-#define LWIP_TCP                1
-#define TCP_TTL                 255
+#define LWIP_TCP                 1
+#define TCP_TTL                  255
 
 /* Controls if TCP should queue segments that arrive out of
    order. Define to 0 if your device is low on memory. */
-#define TCP_QUEUE_OOSEQ         0
+#define TCP_QUEUE_OOSEQ          0
 
 /* TCP Maximum segment size. */
-#define TCP_MSS                 1024
+#define TCP_MSS                  1024
 
 /* TCP sender buffer space (bytes). */
-#define TCP_SND_BUF             (8 * TCP_MSS)
+#define TCP_SND_BUF              (32 * TCP_MSS)
 
 /* TCP sender buffer space (pbufs). This must be at least = 2 *
    TCP_SND_BUF/TCP_MSS for things to work. */
-#define TCP_SND_QUEUELEN        (8 * TCP_SND_BUF/TCP_MSS)
+#define TCP_SND_QUEUELEN         (8 * TCP_SND_BUF/TCP_MSS)
 
 /* TCP writable space (bytes). This must be less than or equal
    to TCP_SND_BUF. It is the amount of space which must be
    available in the tcp snd_buf for select to return writable */
-#define TCP_SNDLOWAT		    (TCP_SND_BUF/2)
+#define TCP_SNDLOWAT             (TCP_SND_BUF/2)
 
 /* TCP receive window. */
-#define TCP_WND                 16384
+#define TCP_WND                  (32 * TCP_MSS)
 
 /* Maximum number of retransmissions of data segments. */
-#define TCP_MAXRTX              12
+#define TCP_MAXRTX               12
 
 /* Maximum number of retransmissions of SYN segments. */
-#define TCP_SYNMAXRTX           12
+#define TCP_SYNMAXRTX            12
 
-#define TCP_LISTEN_BACKLOG      1
-#define LWIP_CALLBACK_API       1
+#define TCP_LISTEN_BACKLOG       1
+#define LWIP_CALLBACK_API        1
 
 /* ---------- ARP options ---------- */
-#define LWIP_ARP                1
+#define LWIP_ARP                 1
 
 /* ---------- IP options ---------- */
 /* Define IP_FORWARD to 1 if you wish to have the ability to forward
