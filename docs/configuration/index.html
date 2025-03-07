@@ -102,6 +102,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#http-client">HTTP-Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#http-server">HTTP-Server</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#icmp-client">ICMP-Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#arp-client">ARP-Client</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
@@ -937,20 +938,6 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>session-group-id</strong></p></td>
-<td><div class="line-block">
-<div class="line">Set session group identifier.</div>
-<div class="line">Default: 0 Range: 0 - 65535</div>
-</div>
-</td>
-</tr>
-<tr class="row-odd"><td><p><strong>stream-group-id</strong></p></td>
-<td><div class="line-block">
-<div class="line">Set stream group identifier.</div>
-<div class="line">Default: 0 Range: 0 - 65535</div>
-</div>
-</td>
-</tr>
 <tr class="row-even"><td><p><strong>access-line-profile-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set access-line-profile identifier.</div>
@@ -990,6 +977,41 @@ for interface links referenced by interface functions.</p>
 <td><div class="line-block">
 <div class="line">Enable monkey testing.</div>
 <div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>session-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set session group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>stream-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set stream group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>arp-client-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set ARP group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>icmp-client-group-id”,</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set ICMP group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>http-client-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set HTTP group identifier.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
@@ -3677,6 +3699,49 @@ provided here.</p>
 </tbody>
 </table>
 </section>
+<section id="arp-client">
+<h2>ARP-Client<a class="headerlink" href="#arp-client" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;arp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>arp-client-group-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">ARP client identifier.</div>
+<div class="line">This identifier is used to create ARP clients for IPoE sessions.</div>
+<div class="line">Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>target-ip</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory IPv4 address to be resolved.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">ARP request interval in seconds.</div>
+<div class="line">Default: 1.0</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN priority.</div>
+<div class="line">Default: 0 Range: 0 - 7</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 
 
@@ -3690,7 +3755,7 @@ provided here.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020-2024, RtBrick, Inc..</p>
+    <p>&#169; Copyright 2020-2025, RtBrick, Inc..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

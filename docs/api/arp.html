@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MPLS &mdash; BNG Blaster 0.9 documentation</title>
+  <title>&lt;no title&gt; &mdash; BNG Blaster 0.9 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
       <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
@@ -22,9 +22,7 @@
         <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="BGP" href="bgp.html" />
-    <link rel="prev" title="OSPF" href="ospf.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -47,27 +45,19 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <ul class="current">
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Routing Protocols</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="isis.html">ISIS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ospf.html">OSPF</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">MPLS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bgp.html">BGP</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="../routing/index.html">Routing Protocols</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../icmp.html">ICMP</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
@@ -88,10 +78,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Routing Protocols</a></li>
-      <li class="breadcrumb-item active">MPLS</li>
+      <li class="breadcrumb-item active">&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/routing/mpls.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/api/arp.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -99,19 +88,38 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="mpls">
-<h1>MPLS<a class="headerlink" href="#mpls" title="Link to this heading"></a></h1>
-<p>The BNG Blaster can send and receive traffic with
-up to two MPLS labels.</p>
-</section>
+  <table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>arp-clients</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display all ARP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>arp-clients-reset</strong></p></td>
+<td><div class="line-block">
+<div class="line">Reset all ARP client instances.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
 
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ospf.html" class="btn btn-neutral float-left" title="OSPF" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="bgp.html" class="btn btn-neutral float-right" title="BGP" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

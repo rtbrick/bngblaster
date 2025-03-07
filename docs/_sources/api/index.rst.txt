@@ -249,3 +249,8 @@ This is explained detailed in the
 :ref:`ICMP <icmp>` section.
 
 .. include:: icmp.rst
+
+ARP
+----
+
+.. include:: arp.rst
