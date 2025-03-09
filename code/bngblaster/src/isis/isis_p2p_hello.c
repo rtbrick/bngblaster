@@ -71,7 +71,7 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     if(config->protocol_ipv6) {
         isis_pdu_add_tlv_ipv6_int_address(&pdu, &interface->ip6_ll);
     }
-    isis_pdu_add_tlv_p2p_adjacency_state(&pdu, adjacency->state);
+    isis_pdu_add_tlv_p2p_adjacency_state(&pdu, adjacency->state, interface->ifindex);
     if(config->hello_padding) {
         isis_pdu_padding(&pdu);
     }
