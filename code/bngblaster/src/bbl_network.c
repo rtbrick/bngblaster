@@ -83,6 +83,8 @@ bbl_network_interfaces_add()
         network_interface->name = strdup(ifname);
         network_interface->interface = interface;
         network_interface->ifindex = interface->ifindex;
+        network_interface->vlindex = interface->ifindex << 12;
+        network_interface->vlindex |= network_config->vlan;
 
         /* Init TXQ */
         network_interface->txq = calloc(1, sizeof(bbl_txq_s));

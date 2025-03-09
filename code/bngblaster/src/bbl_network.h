@@ -13,7 +13,8 @@
 typedef struct bbl_network_interface_
 {
     char *name; /* interface name */
-    uint32_t ifindex; /* interface index */
+    uint32_t ifindex; /* link interface index */
+    uint32_t vlindex; /* vlan interface index */
 
     /* parent */
     bbl_interface_s *interface; 

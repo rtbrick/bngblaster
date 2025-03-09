@@ -453,12 +453,13 @@ isis_pdu_add_tlv_ipv6_int_address(isis_pdu_s *pdu, ipv6addr_t *addr)
 }
 
 void
-isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state) 
+isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state, uint32_t vlindex)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_P2P_ADJACENCY_STATE;
-    tlv->len = sizeof(state);
+    tlv->len = sizeof(state) + sizeof(vlindex);
     *tlv->value = state;
+    *(uint32_t*)(&tlv->value[1]) = htobe32(vlindex);
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 

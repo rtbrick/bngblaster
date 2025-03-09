@@ -92,7 +92,7 @@ void
 isis_pdu_add_tlv_ipv6_int_address(isis_pdu_s *pdu, ipv6addr_t *addr);
 
 void
-isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state);
+isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state, uint32_t vlindex);
 
 void
 isis_pdu_add_tlv_is_neighbor(isis_pdu_s *pdu, isis_adjacency_s *adjacency);
