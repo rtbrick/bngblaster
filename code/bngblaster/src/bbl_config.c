@@ -885,9 +885,9 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "outer-vlan-min", "outer-vlan-max", "outer-vlan-step",
         "inner-vlan", "inner-vlan-min", "inner-vlan-max",
         "inner-vlan-step", "third-vlan", "ppp-mru",
-        "address", "address-iter", "gateway",
-        "gateway-iter", "username", "password",
-        "authentication-protocol", 
+        "address", "address-iter", "gateway", "gateway-iter", 
+        "ipv6-link-local",
+        "username", "password", "authentication-protocol", 
         "agent-circuit-id", "agent-remote-id",
         "access-aggregation-circuit-id",
         "rate-up", "rate-down", "dsl-type",
@@ -1072,6 +1072,13 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             return false;
         }
         access_config->static_gateway_iter = ipv4;
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "ipv6-link-local", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &access_config->static_ip6_ll)) {
+            fprintf(stderr, "JSON config error: Invalid value for access->ipv6-link-local\n");
+            return false;
+        }
     }
 
     /* Optionally overload some settings per range */

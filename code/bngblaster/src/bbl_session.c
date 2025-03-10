@@ -1000,6 +1000,9 @@ bbl_sessions_init()
             }
             if(access_config->ipv6_enable) {
                 session->endpoint.ipv6 = ENDPOINT_ENABLED;
+                if(ipv6_addr_not_zero(&access_config->static_ip6_ll)) {
+                    memcpy(&session->link_local_ipv6_address, &access_config->static_ip6_ll, sizeof(ipv6addr_t));
+                }
                 if(access_config->dhcpv6_enable) {
                     session->dhcpv6_state = BBL_DHCP_INIT;
                     session->endpoint.ipv6pd = ENDPOINT_ENABLED;

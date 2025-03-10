@@ -60,6 +60,8 @@ typedef struct bbl_access_config_
     uint32_t static_gateway;
     uint32_t static_gateway_iter;
 
+    ipv6addr_t static_ip6_ll;
+
     /* Authentication */
     const char *username;
     const char *password;
