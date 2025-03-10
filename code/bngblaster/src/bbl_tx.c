@@ -1281,6 +1281,10 @@ bbl_tx_encode_packet_arp_request(bbl_session_s *session)
     bbl_ethernet_header_s eth = {0};
     bbl_arp_s arp = {0};
 
+    if(!(session->ip_address && session->peer_ip_address)) {
+        return IGNORED;
+    }
+
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
