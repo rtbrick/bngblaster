@@ -1,10 +1,10 @@
 # RtBrick - Routing Protocol and BNG Blaster
 
-![Build](https://github.com/rtbrick/bngblaster/workflows/Build/badge.svg?branch=main)
+![Build](https://github.com/rtbrick/bngblaster/actions/workflows/build.yml/badge.svg?branch=main)
 [![Linux](https://img.shields.io/badge/OS-linux-lightgrey)](https://rtbrick.github.io/bngblaster/install)
-[![License](https://img.shields.io/badge/License-BSD-lightgrey)](https://github.com/rtbrick/bngblaster/blob/main/LICENSE)
-[![Documentation](https://img.shields.io/badge/Documentation-lightgrey)](https://rtbrick.github.io/bngblaster)
-[![Chat](https://img.shields.io/badge/Chat-lightgrey)](https://matrix.to/#/#bngblaster:matrix.org)
+[![License](https://img.shields.io/badge/License-BSD-yellow)](https://github.com/rtbrick/bngblaster/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/Documentation-blue)](https://rtbrick.github.io/bngblaster)
+[![Chat](https://img.shields.io/badge/Chat-darkgreen)](https://matrix.to/#/#bngblaster:matrix.org)
 
 **The open network tester for the IP networking community.**
 
