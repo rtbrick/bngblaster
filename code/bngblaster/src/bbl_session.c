@@ -801,6 +801,11 @@ bbl_sessions_init()
      * and outer VLAN's, we loop first over all configurations and
      * second over VLAN ranges as per configuration. */
     while(i <= g_ctx->config.sessions) {
+        if(access_config->exhausted) goto NEXT;
+        if(access_config->sessions_max && access_config->sessions >= access_config->sessions_max) {
+            access_config->exhausted = true;
+            goto NEXT;
+        }
         if(access_config->vlan_mode == VLAN_MODE_N1) {
             if(access_config->access_outer_vlan_min) {
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
@@ -813,7 +818,6 @@ bbl_sessions_init()
                 access_config->access_inner_vlan = access_config->access_inner_vlan_max;
             }
         } else {
-            if(access_config->exhausted) goto NEXT;
             if(access_config->access_outer_vlan == 0) {
                 /* The outer VLAN is initial 0 */
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;

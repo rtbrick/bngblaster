@@ -25,6 +25,7 @@ typedef struct bbl_access_config_
 {
     bool exhausted;
     uint32_t sessions; /* per access config session counter */
+    uint32_t sessions_max; /* per access config session limit */
 
     uint8_t lag_id;
     char *interface;

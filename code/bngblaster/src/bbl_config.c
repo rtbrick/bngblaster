@@ -896,8 +896,8 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "dhcpv6-ldra", "ipv6", "igmp-autostart",
         "igmp-version", "session-traffic-autostart", 
         "session-group-id", "stream-group-id",
+        "session-limit", "arp-client-group-id",
         "http-client-group-id", "icmp-client-group-id",
-        "arp-client-group-id",
         "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name"
     };
     if(!schema_validate(access_interface, "access", schema, 
@@ -946,6 +946,11 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->i2_step = json_number_value(value);
     } else {
         access_config->i2_step = 1;
+    }
+
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "session-limit", 0, 10000000);
+    if(value) {
+        access_config->sessions_max = json_number_value(value);
     }
 
     if(json_unpack(access_interface, "{s:s}", "type", &s) == 0) {
