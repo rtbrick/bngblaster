@@ -2106,16 +2106,19 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
 
     pppoe_len = *len;
 
+    if(pppoe->raw_len) {
+        memcpy(buf, pppoe->next, pppoe->raw_len);
+        BUMP_WRITE_BUFFER(buf, len, pppoe->raw_len);
 #ifdef BNGBLASTER_LWIP
-    if(pppoe->lwip) {
+    } else if(pppoe->lwip) {
         struct pbuf *p = pppoe->next; 
         while(p) {
             memcpy(buf, p->payload, p->len);
             BUMP_WRITE_BUFFER(buf, len, p->len);
             p = p->next;
         }
-    } else {
 #endif
+    } else {
         /* Add protocol */
         switch(pppoe->protocol) {
             case PROTOCOL_LCP:
@@ -2143,9 +2146,7 @@ encode_pppoe_session(uint8_t *buf, uint16_t *len,
                 result = UNKNOWN_PROTOCOL;
                 break;
         }
-#ifdef BNGBLASTER_LWIP
     }
-#endif
 
     pppoe_len = *len - pppoe_len;
     pppoe_len += 2; /* PPP header */
@@ -2351,6 +2352,12 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
         /* Add ethertype */
         *(uint16_t*)buf = htobe16(eth->type);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+    }
+
+    if(eth->raw_len) {
+        memcpy(buf, eth->next, eth->raw_len);
+        BUMP_WRITE_BUFFER(buf, len, eth->raw_len);
+        return PROTOCOL_SUCCESS;
     }
 #ifdef BNGBLASTER_LWIP
     if(eth->lwip) {
@@ -4457,7 +4464,7 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
 
     /* Init PPPoE header */
     pppoe = (bbl_pppoe_session_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_pppoe_session_s));
-    pppoe->lwip = false;
+    *(uint64_t*)pppoe = 0; /* set first 8 byte to zero */
 
     header = (struct pppoe_ppp_session_header*)buf;
     BUMP_BUFFER(buf, len, sizeof(struct pppoe_ppp_session_header));

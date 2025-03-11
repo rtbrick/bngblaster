@@ -648,6 +648,7 @@ typedef struct bbl_ethernet_header_ {
     bbl_mpls_s *mpls; /* MPLS */
     void       *next; /* next header */
 
+    uint16_t raw_len; /* raw packet */
     struct timespec timestamp; /* receive timestamp */
 } bbl_ethernet_header_s;
 
@@ -678,10 +679,9 @@ typedef struct bbl_pppoe_discovery_ {
 typedef struct bbl_pppoe_session_ {
     uint16_t  session_id;
     uint16_t  protocol;
+    uint16_t  raw_len; /* raw packet */
     bool      lwip;
     void     *next; /* next header */
-    void     *payload; /* PPP payload */
-    uint16_t  payload_len; /* PPP payload length */
 } bbl_pppoe_session_s;
 
 

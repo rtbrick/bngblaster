@@ -147,3 +147,7 @@
 | **http-client-group-id**          | | Set HTTP group identifier.                                         |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
+| **tun**                           | | Create a dedicated TUN interface for each session. Use this option |
+|                                   | | with caution since it can significantly impact scalability.        |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+

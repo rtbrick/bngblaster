@@ -534,6 +534,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             ENABLE_ENDPOINT(session->endpoint.ipv4);
             ENABLE_ENDPOINT(session->endpoint.ipv6);
             ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+            bbl_tun_session_down(session);
         }
         
         /* Update outstanding session count. */
@@ -551,6 +552,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 LOG_NOARG(INFO, "ALL SESSIONS ESTABLISHED\n");
                 clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_established);
             }
+            bbl_tun_session_up(session);
         } else if(new_state == BBL_PPP_TERMINATING) {
             if(session->ipcp_state > BBL_PPP_DISABLED) {
                 session->ipcp_state = BBL_PPP_CLOSED;
@@ -1079,6 +1081,11 @@ bbl_sessions_init()
 
         if(!bbl_http_client_session_init(session)) {
             LOG_NOARG(ERROR, "Failed to create session HTTP client!\n");
+            return false;
+        }
+
+        if(!bbl_tun_session_init(session)) {
+            LOG_NOARG(ERROR, "Failed to create session TUN interface!\n");
             return false;
         }
 

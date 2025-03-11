@@ -32,6 +32,7 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/select.h>
 
 #include <common.h>
 

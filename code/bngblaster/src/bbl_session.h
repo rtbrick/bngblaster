@@ -65,6 +65,7 @@ typedef struct bbl_session_
     struct timer_ *timer_cfm_cc;
     struct timer_ *timer_reconnect;
     struct timer_ *timer_monkey;
+    struct timer_ *timer_tun;
 
     access_type_t access_type;
 
@@ -81,6 +82,9 @@ typedef struct bbl_session_
     } vlan_key;
 
     uint16_t access_third_vlan;
+
+    int tun_fd;
+    char *tun_dev;
 
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;

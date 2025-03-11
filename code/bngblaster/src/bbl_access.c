@@ -634,6 +634,11 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
 {
     bbl_udp_s *udp;
 
+    if(session->tun_fd) {
+        /* Send to TUN interface */
+        ssize_t ret __attribute__((unused)) = write(session->tun_fd, ipv4->hdr, ipv4->len);
+    }
+
     if(ipv4->offset & ~IPV4_DF) {
         session->stats.accounting_packets_rx++;
         session->stats.accounting_bytes_rx += eth->length;
@@ -687,6 +692,11 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
                    bbl_session_s *session,
                    bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6)
 {
+    if(session->tun_fd) {
+        /* Send to TUN interface */
+        ssize_t ret __attribute__((unused)) = write(session->tun_fd, ipv6->hdr, ipv6->len);
+    }
+
     switch(ipv6->protocol) {
         case IPV6_NEXT_HEADER_ICMPV6:
             session->stats.icmpv6_rx++;

@@ -54,6 +54,7 @@ typedef struct bbl_access_config_
     bool monkey; /* enable monkey testing */
     bool qinq; /* use ethertype 0x88a8 */
     bool tcp;
+    bool tun;
 
     /* Static */
     uint32_t static_ip;

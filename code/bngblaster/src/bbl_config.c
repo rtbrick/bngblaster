@@ -881,7 +881,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "interface", "network-interface", "a10nsp-interface",
         "i1-start", "i1-step", "i2-start",
         "i2-step", "type", "vlan-mode",
-        "monkey", "qinq", "outer-vlan",
+        "tun", "monkey", "qinq", "outer-vlan",
         "outer-vlan-min", "outer-vlan-max", "outer-vlan-step",
         "inner-vlan", "inner-vlan-min", "inner-vlan-max",
         "inner-vlan-step", "third-vlan", "ppp-mru",
@@ -975,6 +975,11 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             fprintf(stderr, "JSON config error: Invalid value for access->vlan-mode\n");
             return false;
         }
+    }
+
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "tun");
+    if(value) {
+        access_config->tun = json_boolean_value(value);
     }
 
     JSON_OBJ_GET_BOOL(access_interface, value, "access", "monkey");
