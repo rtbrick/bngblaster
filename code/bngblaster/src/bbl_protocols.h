@@ -973,6 +973,7 @@ typedef struct bbl_dhcp_ {
     access_line_s *access_line;
     uint8_t *client_identifier;
     uint8_t client_identifier_len;
+    char       *vendor_class_id;
 } bbl_dhcp_s;
 
 typedef struct bbl_l2tp_ {
