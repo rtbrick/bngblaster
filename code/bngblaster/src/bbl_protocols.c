@@ -612,6 +612,16 @@ encode_dhcp(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = htobe32(dhcp->lease_time);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
+    /* Vendor Class ID Option (60) */
+    if(dhcp->vendor_class_id) {
+        *buf = DHCP_OPTION_VENDOR_CLASS_IDENTIFIER;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        value_len = strnlen(dhcp->vendor_class_id, UINT8_MAX);
+        *buf = value_len;
+        BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+        memcpy(buf, dhcp->vendor_class_id, value_len);
+        BUMP_WRITE_BUFFER(buf, len, value_len);
+    }
     if(dhcp->access_line) {
         /* RFC3046 Relay Agent Information Option (82) */
         *buf = DHCP_OPTION_RELAY_AGENT_INFORMATION;

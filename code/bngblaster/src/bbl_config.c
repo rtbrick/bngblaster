@@ -890,6 +890,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "username", "password", "authentication-protocol", 
         "agent-circuit-id", "agent-remote-id",
         "access-aggregation-circuit-id",
+        "vendor-class-id",
         "rate-up", "rate-down", "dsl-type",
         "access-line-profile-id", "ipcp", "dhcp",
         "ipv4", "ip6cp", "dhcpv6",
@@ -1139,6 +1140,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     } else {
         if(g_ctx->config.access_aggregation_circuit_id) {
             access_config->access_aggregation_circuit_id = strdup(g_ctx->config.access_aggregation_circuit_id);
+        }
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "vendor-class-id", &s) == 0) {
+        access_config->vendor_class_id = strdup(s);
+    } else {
+        if(g_ctx->config.vendor_class_id) {
+            access_config->vendor_class_id = strdup(g_ctx->config.vendor_class_id);
         }
     }
 
@@ -3647,6 +3656,7 @@ json_parse_config(json_t *root)
 
         const char *schema[] = {
            "agent-circuit-id",  "agent-remote-id", "access-aggregation-circuit-id",
+           "vendor-class-id",
            "rate-up", "rate-down", "dsl-type"
         };
         if(!schema_validate(section, "access-line", schema, 
@@ -3662,6 +3672,9 @@ json_parse_config(json_t *root)
         }
         if(json_unpack(section, "{s:s}", "access-aggregation-circuit-id", &s) == 0) {
             g_ctx->config.access_aggregation_circuit_id = strdup(s);
+        }
+        if(json_unpack(section, "{s:s}", "vendor-class-id", &s) == 0) {
+            g_ctx->config.vendor_class_id = strdup(s);
         }
 
         JSON_OBJ_GET_NUMBER(section, value, "access-line", "rate-up", 0, 4294967295);
