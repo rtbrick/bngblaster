@@ -646,8 +646,20 @@ bbl_interactive_window_job(timer_s *timer)
             if(session->agent_remote_id) {
                 wprintw(stats_win, "       ARI: %s \n", session->agent_remote_id);
             }
-            if(session->agent_remote_id) {
+            if(session->agent_circuit_id) {
                 wprintw(stats_win, "       ACI: %s \n", session->agent_circuit_id);
+            }
+            if(session->vendor_class_id) {
+                wprintw(stats_win, " Vendor ID: %s \n", session->vendor_class_id);
+            }
+            if(session->ip_address) {
+                wprintw(stats_win, "      IPv4: %s \n", format_ipv4_address(&session->ip_address));
+            }
+            if(session->ipv6_prefix.len) {
+                wprintw(stats_win, "      IPv6: %s \n", format_ipv6_address(&session->ipv6_prefix.address));
+            }
+            if(session->delegated_ipv6_prefix.len) {
+                wprintw(stats_win, "   IPv6 PD: %s \n", format_ipv6_prefix(&session->delegated_ipv6_prefix));
             }
             if(session->connections_status_message || session->reply_message) {
                 wprintw(stats_win, "\n");

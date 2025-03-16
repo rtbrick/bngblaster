@@ -326,6 +326,10 @@ bbl_session_free(bbl_session_s *session)
         free(session->access_aggregation_circuit_id);
         session->access_aggregation_circuit_id = NULL;
     }
+    if(session->vendor_class_id) {
+        free(session->vendor_class_id);
+        session->vendor_class_id = NULL;
+    }
     if(session->cfm_ma_name) {
         free(session->cfm_ma_name);
         session->cfm_ma_name = NULL;
@@ -926,6 +930,9 @@ bbl_sessions_init()
         /* Update Access-Aggregation-Circuit-ID */
         update_strings(&session->access_aggregation_circuit_id, access_config->access_aggregation_circuit_id, NULL, NULL);
 
+        /* Update Vendor Class ID */
+        update_strings(&session->vendor_class_id, access_config->vendor_class_id, NULL, NULL);
+
         /* Update CFM */
         if(access_config->cfm_cc) {
             session->cfm_cc = true;
@@ -1361,7 +1368,7 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1374,6 +1381,7 @@ bbl_session_json(bbl_session_s *session)
             "mac", format_mac_address(session->client_mac),
             "agent-circuit-id", session->agent_circuit_id,
             "agent-remote-id", session->agent_remote_id,
+            "vendor-class-id", session->vendor_class_id,
             "ipv4-address", ipv4,
             "ipv4-netmask", ipv4_netmask,
             "ipv4-gateway", ipv4_gw,
