@@ -1344,7 +1344,10 @@ bbl_tx_encode_packet_cfm_cc(bbl_session_s *session)
     bbl_ethernet_header_s eth = {0};
     bbl_cfm_s cfm = {0};
 
-    eth.dst = session->server_mac;
+    uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x30 };
+    mac[ETH_ADDR_LEN-1] |= session->cfm_level;
+
+    eth.dst = mac;
     eth.src = session->client_mac;
     eth.qinq = session->access_config->qinq;
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
