@@ -7,7 +7,7 @@
 Configuration
 =============
 
-The BNG Blastert configuration is presented as a JSON file. 
+The BNG Blaster configuration is presented as a JSON file. 
 This configuration must include at least one interface function.
 
 .. code-block:: json
