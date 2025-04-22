@@ -11,8 +11,9 @@
 #define __COMMON_TIMER_H__
 #include "common.h"
 
-#define MSEC 1000000 /* 1 million nanoseconds == 1 msec */
-#define SEC 1000000000 /* 1 billion nanoseconds == 1 sec */
+#define MSEC    1000000UL       /* 1 million nanoseconds == 1 milliseconds */
+#define MSEC100 100000000UL     /* 100 million nanoseconds == 100 milliseconds */
+#define SEC     1000000000UL    /* 1 billion nanoseconds == 1 second */
 
 /*  Top level data structure for timers. */
 typedef struct timer_root_

@@ -3190,11 +3190,11 @@ json_parse_config(json_t *root)
         }
         JSON_OBJ_GET_NUMBER(section, value, "sessions", "start-rate", 1, 65535);
         if(value) {
-            g_ctx->config.sessions_start_rate = json_number_value(value);
+            g_ctx->config.sessions_start_period_ns = SEC / json_number_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "sessions", "stop-rate", 1, 65535);
         if(value) {
-            g_ctx->config.sessions_stop_rate = json_number_value(value);
+            g_ctx->config.sessions_stop_period_ns = SEC / json_number_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "sessions", "iterate-vlan-outer");
         if(value) {
@@ -3281,12 +3281,12 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "pppoe", "start-rate", 1, 65535);
         if(value) {
             fprintf(stderr, "JSON config warning: Deprecated configuration pppoe->start-rate\n");
-            g_ctx->config.sessions_start_rate = json_number_value(value);
+            g_ctx->config.sessions_start_period_ns = SEC / json_number_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "pppoe", "stop-rate", 1, 65535);
         if(value) {
             fprintf(stderr, "JSON config warning: Deprecated configuration pppoe->stop-rate\n");
-            g_ctx->config.sessions_stop_rate = json_number_value(value);
+            g_ctx->config.sessions_stop_period_ns = SEC / json_number_value(value);
         }
         /* ... Deprecated */
     
@@ -4540,8 +4540,8 @@ bbl_config_init_defaults()
     g_ctx->config.qdisc_bypass = true;
     g_ctx->config.sessions = 1;
     g_ctx->config.sessions_max_outstanding = 800;
-    g_ctx->config.sessions_start_rate = 400;
-    g_ctx->config.sessions_stop_rate = 400;
+    g_ctx->config.sessions_start_period_ns = 2500000; /* 400/s */
+    g_ctx->config.sessions_stop_period_ns = 2500000; /* 400/s */
     g_ctx->config.sessions_autostart = true;
     g_ctx->config.monkey_autostart = true;
     g_ctx->config.pppoe_discovery_timeout = 5;

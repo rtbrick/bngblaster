@@ -19,6 +19,8 @@
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
 
+static unsigned int ctrl_job_period_ns = MSEC100;
+
 /* Global Context */
 bbl_ctx_s *g_ctx = NULL;
 
@@ -235,7 +237,6 @@ bbl_ctrl_job(timer_s *timer)
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
 
-    int rate = 0;
     uint32_t i;
 
     struct timespec timestamp;
@@ -292,11 +293,13 @@ bbl_ctrl_job(timer_s *timer)
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
-            rate = g_ctx->config.sessions_stop_rate;
+            if(g_ctx->sessions_stop_credits < g_ctx->config.sessions_stop_period_ns)
+		        g_ctx->sessions_stop_credits += ctrl_job_period_ns;
             while(!CIRCLEQ_EMPTY(&g_ctx->sessions_teardown_qhead)) {
                 session = CIRCLEQ_FIRST(&g_ctx->sessions_teardown_qhead);
-                if(rate > 0) {
-                    if(session->session_state != BBL_IDLE) rate--;
+                if(g_ctx->sessions_stop_credits >= g_ctx->config.sessions_stop_period_ns) {
+                    if(session->session_state != BBL_IDLE)
+                        g_ctx->sessions_stop_credits -= g_ctx->config.sessions_stop_period_ns;
                     bbl_session_clear(session);
                     /* Remove from teardown queue. */
                     CIRCLEQ_REMOVE(&g_ctx->sessions_teardown_qhead, session, session_teardown_qnode);
@@ -321,11 +324,12 @@ bbl_ctrl_job(timer_s *timer)
          * outstanding and setup rate. Sessions started will be removed
          * from idle list. */
         bbl_stats_update_cps();
-        rate = g_ctx->config.sessions_start_rate;
+	if(g_ctx->sessions_start_credits < g_ctx->config.sessions_start_period_ns)
+            g_ctx->sessions_start_credits += ctrl_job_period_ns;
         while(!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
             session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
-            if(rate > 0) {
-                rate--;
+            if(g_ctx->sessions_start_credits >= g_ctx->config.sessions_start_period_ns) {
+                g_ctx->sessions_start_credits -= g_ctx->config.sessions_start_period_ns;
                 if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
                     g_ctx->sessions_outstanding++;
                     /* Start session */
@@ -602,7 +606,7 @@ main(int argc, char *argv[])
 
     /* Setup control job. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 
-                       1, 0, g_ctx, &bbl_ctrl_job);
+                       0, ctrl_job_period_ns, g_ctx, &bbl_ctrl_job);
 
     /* Setup control socket and job */
     if(g_ctx->ctrl_socket_path) {
