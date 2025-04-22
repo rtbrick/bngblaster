@@ -2871,7 +2871,6 @@ bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), jso
     json_streams = json_array();
 
     /* Iterate over all traffic streams */
-    /* Iterate over all traffic streams */
     while(stream) {
         if(!stream->verified) {
             json_array_append_new(json_streams, json_integer(stream->flow_id));
@@ -3007,8 +3006,12 @@ bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json
             tcp_flags = 0x12;
         } else if(strcmp(s, "rst") == 0) {
             tcp_flags = 0x04;
+        } else if(strcmp(s, "push") == 0) {
+            tcp_flags = 0x08;
+        } else if(strcmp(s, "push-ack") == 0) {
+            tcp_flags = 0x18;
         } else {
-            return bbl_ctrl_status(fd, "error", 400, "invalid tcp-flags (ack|fin|fin-ack|syn|syn-ack|rst)");
+            return bbl_ctrl_status(fd, "error", 400, "invalid tcp-flags (ack|fin|fin-ack|syn|syn-ack|rst|push|push-ack)");
         }
     }
 
