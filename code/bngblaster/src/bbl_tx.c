@@ -1168,8 +1168,8 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
         session->dhcp_request_timestamp.tv_sec = now.tv_sec;
     }
 
-    if (session->vendor_class_id) {
-        dhcp.vendor_class_id=session->vendor_class_id;
+    if (session->dhcp_vendor_class_id) {
+        dhcp.vendor_class_id=session->dhcp_vendor_class_id;
     }
 
     /* TR-101 R-124:

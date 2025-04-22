@@ -72,7 +72,6 @@ typedef struct bbl_access_config_
     /* Access Line */
     char *agent_remote_id;
     char *agent_circuit_id;
-    char *vendor_class_id;
     char *access_aggregation_circuit_id;
     uint32_t rate_up;
     uint32_t rate_down;
@@ -81,16 +80,20 @@ typedef struct bbl_access_config_
     uint16_t access_line_profile_id;
 
     /* Protocols */
-    bool ipcp_enable;
-    bool ip6cp_enable;
     bool ipv4_enable;
-    bool ipv6_enable;
+    bool ipcp_enable;
     bool dhcp_enable;
+    char *dhcp_vendor_class_id;
+
+    bool ipv6_enable;
+    bool ip6cp_enable;
     bool dhcpv6_enable;
     bool dhcpv6_ldra;
+
+    bool session_traffic_autostart;
+
     bool igmp_autostart;
     uint8_t igmp_version;
-    bool session_traffic_autostart;
 
     /* CFM CC */
     bool cfm_cc;

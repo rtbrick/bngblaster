@@ -326,9 +326,9 @@ bbl_session_free(bbl_session_s *session)
         free(session->access_aggregation_circuit_id);
         session->access_aggregation_circuit_id = NULL;
     }
-    if(session->vendor_class_id) {
-        free(session->vendor_class_id);
-        session->vendor_class_id = NULL;
+    if(session->dhcp_vendor_class_id) {
+        free(session->dhcp_vendor_class_id);
+        session->dhcp_vendor_class_id = NULL;
     }
     if(session->cfm_ma_name) {
         free(session->cfm_ma_name);
@@ -931,7 +931,7 @@ bbl_sessions_init()
         update_strings(&session->access_aggregation_circuit_id, access_config->access_aggregation_circuit_id, NULL, NULL);
 
         /* Update Vendor Class ID */
-        update_strings(&session->vendor_class_id, access_config->vendor_class_id, NULL, NULL);
+        update_strings(&session->dhcp_vendor_class_id, access_config->dhcp_vendor_class_id, NULL, NULL);
 
         /* Update CFM */
         if(access_config->cfm_cc) {
@@ -1381,7 +1381,6 @@ bbl_session_json(bbl_session_s *session)
             "mac", format_mac_address(session->client_mac),
             "agent-circuit-id", session->agent_circuit_id,
             "agent-remote-id", session->agent_remote_id,
-            "vendor-class-id", session->vendor_class_id,
             "ipv4-address", ipv4,
             "ipv4-netmask", ipv4_netmask,
             "ipv4-gateway", ipv4_gw,
@@ -1393,6 +1392,7 @@ bbl_session_json(bbl_session_s *session)
             "ipv6-dns2", ipv6_dns2,
             "dhcp-state", dhcp_state_string(session->dhcp_state),
             "dhcp-server", format_ipv4_address(&session->dhcp_server_identifier),
+            "dhcp-vendor-class-id", session->dhcp_vendor_class_id,
             "dhcp-lease-time", session->dhcp_lease_time,
             "dhcp-lease-expire", dhcp_lease_expire,
             "dhcp-lease-expire-t1", dhcp_lease_expire_t1,

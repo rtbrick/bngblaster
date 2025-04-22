@@ -234,7 +234,6 @@ typedef struct bbl_ctx_
         const char *agent_remote_id;
         const char *agent_circuit_id;
         const char *access_aggregation_circuit_id;
-        const char *vendor_class_id;
         uint32_t rate_up;
         uint32_t rate_down;
         uint32_t dsl_type;
@@ -300,6 +299,7 @@ typedef struct bbl_ctx_
         uint8_t dhcp_release_retry;
         uint8_t dhcp_tos;
         uint8_t dhcp_vlan_priority;
+        const char *dhcp_vendor_class_id;
 
         /* DHCPv6 */
         bool dhcpv6_enable;

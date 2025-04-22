@@ -649,8 +649,8 @@ bbl_interactive_window_job(timer_s *timer)
             if(session->agent_circuit_id) {
                 wprintw(stats_win, "       ACI: %s \n", session->agent_circuit_id);
             }
-            if(session->vendor_class_id) {
-                wprintw(stats_win, " Vendor ID: %s \n", session->vendor_class_id);
+            if(session->dhcp_vendor_class_id) {
+                wprintw(stats_win, " Vendor ID: %s \n", session->dhcp_vendor_class_id);
             }
             if(session->ip_address) {
                 wprintw(stats_win, "      IPv4: %s \n", format_ipv4_address(&session->ip_address));

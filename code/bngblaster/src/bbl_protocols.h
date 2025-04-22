@@ -971,9 +971,9 @@ typedef struct bbl_dhcp_ {
     bool         option_t2;
 
     access_line_s *access_line;
+    char *vendor_class_id;
     uint8_t *client_identifier;
     uint8_t client_identifier_len;
-    char       *vendor_class_id;
 } bbl_dhcp_s;
 
 typedef struct bbl_l2tp_ {
