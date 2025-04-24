@@ -15,7 +15,7 @@ Install dependencies:
 
     # Ubuntu 18.04 and 20.04
     sudo apt install -y libssl1.1 libncurses5 libjansson4
-    # Ubuntu 22.04
+    # Ubuntu 22.04 and newer
     sudo apt install -y libssl3 libncurses6 libjansson4
 
 
