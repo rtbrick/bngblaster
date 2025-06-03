@@ -66,6 +66,9 @@ typedef struct bbl_network_interface_
     bbl_http_server_s *http_server;
     struct netif netif; /* LwIP interface */
 
+    /* CFM */
+    bbl_cfm_session_s *cfm;
+
     isis_adjacency_p2p_s *isis_adjacency_p2p;
     isis_adjacency_s     *isis_adjacency[ISIS_LEVELS];
     ldp_adjacency_s      *ldp_adjacency;

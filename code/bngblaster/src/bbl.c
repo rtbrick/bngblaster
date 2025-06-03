@@ -325,9 +325,7 @@ bbl_ctrl_job(timer_s *timer)
                 if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
                     g_ctx->sessions_outstanding++;
                     /* Start session */
-                    if(session->cfm_cc) {
-                        bbl_cfm_cc_start(session);
-                    }
+                    if(session->cfm) bbl_cfm_cc_start(session->cfm);
                     switch(session->access_type) {
                         case ACCESS_TYPE_PPPOE:
                             /* PPP over Ethernet (PPPoE) */

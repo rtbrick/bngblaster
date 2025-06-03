@@ -37,8 +37,6 @@ typedef struct bbl_access_interface_
         /* Packet Stats */
         uint32_t arp_tx;
         uint32_t arp_rx;
-        uint32_t cfm_cc_tx;
-        uint32_t cfm_cc_rx;
         uint32_t padi_tx;
         uint32_t pado_rx;
         uint32_t padr_tx;

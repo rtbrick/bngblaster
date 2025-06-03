@@ -107,6 +107,7 @@ static const ipv6_prefix mock_ipv6_ia_pd = {
 #define BBL_IF_SEND_OSPFV3_HELLO    0x00000080
 #define BBL_IF_SEND_ISIS_L1_HELLO   0x00000100
 #define BBL_IF_SEND_ISIS_L2_HELLO   0x00000200
+#define BBL_IF_SEND_CFM_CC          0x00000400
 
 #define BBL_AVG_SAMPLES             5
 #define BBL_MAX_STREAM_OVERHEAD     128
@@ -250,5 +251,6 @@ typedef struct bbl_http_server_config_ bbl_http_server_config_s;
 typedef struct bbl_http_server_ bbl_http_server_s;
 typedef struct bbl_http_server_connection_ bbl_http_server_connection_s;
 typedef struct bbl_fragment_ bbl_fragment_s;
+typedef struct bbl_cfm_session_ bbl_cfm_session_s;
 
 #endif

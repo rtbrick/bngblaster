@@ -1343,13 +1343,16 @@ bbl_tx_encode_packet_arp_reply(bbl_session_s *session)
 }
 
 static protocol_error_t
-bbl_tx_encode_packet_cfm_cc(bbl_session_s *session)
+bbl_tx_encode_packet_cfm_cc_session(bbl_session_s *session)
 {
     bbl_ethernet_header_s eth = {0};
-    bbl_cfm_s cfm = {0};
+    bbl_cfm_s cfm_hdr = {0}; 
+    bbl_cfm_session_s *cfm = session->cfm;
 
     uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x30 };
-    mac[ETH_ADDR_LEN-1] |= session->cfm_level;
+    
+    if(!cfm) return IGNORED;
+    mac[ETH_ADDR_LEN-1] |= cfm->cfm_level;
 
     eth.dst = mac;
     eth.src = session->client_mac;
@@ -1358,21 +1361,55 @@ bbl_tx_encode_packet_cfm_cc(bbl_session_s *session)
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.type = ETH_TYPE_CFM;
-    eth.next = &cfm;
-    cfm.type = CFM_TYPE_CCM;
-    cfm.seq = session->cfm_seq++;
-    cfm.rdi = session->cfm_rdi;
-    cfm.md_level = session->cfm_level;
-    cfm.md_name_format = CMF_MD_NAME_FORMAT_NONE;
-    cfm.ma_id = session->cfm_ma_id;
-    cfm.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
-    if(session->cfm_ma_name) {
-        cfm.ma_name_len = strlen(session->cfm_ma_name);
-        cfm.ma_name = (uint8_t*)session->cfm_ma_name;
+    eth.next = &cfm_hdr;
+    cfm_hdr.type = CFM_TYPE_CCM;
+    cfm_hdr.seq = cfm->cfm_seq++;
+    cfm_hdr.rdi = cfm->cfm_rdi;
+    cfm_hdr.md_level = cfm->cfm_level;
+    cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    cfm_hdr.ma_id = cfm->cfm_ma_id;
+    cfm_hdr.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
+    if(session->cfm->cfm_ma_name) {
+        cfm_hdr.ma_name_len = strlen(cfm->cfm_ma_name);
+        cfm_hdr.ma_name = (uint8_t*)cfm->cfm_ma_name;
     }
-
-    session->access_interface->stats.cfm_cc_tx++;
+    cfm->cfm_cc_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+}
+
+static protocol_error_t
+bbl_tx_encode_packet_cfm_cc(bbl_network_interface_s *interface, 
+                     uint8_t *buf, uint16_t *len, 
+                     bbl_ethernet_header_s *eth)
+{
+    protocol_error_t result;
+    bbl_cfm_s cfm_hdr = {0}; 
+    bbl_cfm_session_s *cfm = interface->cfm;
+
+    uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x30 };
+    
+    if(!cfm) return IGNORED;
+    mac[ETH_ADDR_LEN-1] |= cfm->cfm_level;
+    eth->dst = mac;
+    eth->type = ETH_TYPE_CFM;
+    eth->next = &cfm_hdr;
+    cfm_hdr.type = CFM_TYPE_CCM;
+    cfm_hdr.seq = cfm->cfm_seq++;
+    cfm_hdr.rdi = cfm->cfm_rdi;
+    cfm_hdr.md_level = cfm->cfm_level;
+    cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    cfm_hdr.ma_id = cfm->cfm_ma_id;
+    cfm_hdr.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
+    if(cfm->cfm_ma_name) {
+        cfm_hdr.ma_name_len = strlen(cfm->cfm_ma_name);
+        cfm_hdr.ma_name = (uint8_t*)cfm->cfm_ma_name;
+    }
+    
+    result = encode_ethernet(buf, len, eth);
+    if(result == PROTOCOL_SUCCESS) {
+        cfm->cfm_cc_tx++;
+    }
+    return result;
 }
 
 static protocol_error_t
@@ -1435,7 +1472,7 @@ bbl_tx_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len)
         result = bbl_tx_encode_packet_dhcp(session);
         session->send_requests &= ~BBL_SEND_DHCP_REQUEST;
     } else if(session->send_requests & BBL_SEND_CFM_CC) {
-        result = bbl_tx_encode_packet_cfm_cc(session);
+        result = bbl_tx_encode_packet_cfm_cc_session(session);
         session->send_requests &= ~BBL_SEND_CFM_CC;
     } else {
         session->send_requests = 0;
@@ -1560,6 +1597,9 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
     } else if(interface->send_requests & BBL_IF_SEND_OSPFV3_HELLO) {
         interface->send_requests &= ~BBL_IF_SEND_OSPFV3_HELLO;
         result = ospf_hello_v3_encode(interface, buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_CFM_CC) {
+        interface->send_requests &= ~BBL_IF_SEND_CFM_CC;
+        result = bbl_tx_encode_packet_cfm_cc(interface, buf, len, &eth);
     } else {
         interface->send_requests = 0;
     }

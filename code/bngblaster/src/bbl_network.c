@@ -211,6 +211,17 @@ bbl_network_interfaces_add()
             return false;
         }
 
+        /* Init CFM */
+        if(network_config->cfm_cc) {
+            network_interface->cfm = calloc(1, sizeof(bbl_cfm_session_s));
+            network_interface->cfm->cfm_cc = true;
+            network_interface->cfm->cfm_level = network_config->cfm_level;
+            network_interface->cfm->cfm_ma_id = network_config->cfm_ma_id;
+            network_interface->cfm->cfm_ma_name = network_config->cfm_ma_name;
+            network_interface->cfm->network_interface = network_interface;
+            bbl_cfm_cc_start(network_interface->cfm);
+        }
+
         /* TX list init */
         CIRCLEQ_INIT(&network_interface->l2tp_tx_qhead);
 

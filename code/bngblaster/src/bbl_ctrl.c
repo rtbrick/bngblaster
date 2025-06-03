@@ -43,6 +43,7 @@ const char *schema_all_args[] = {
     "disconnect-direction", "disconnect-message",
     "ldp-instance-id", "tcp-flags", "debug", "detail",
     "verified-only", "bidirectional-verified-only",
+    "network-interface",
     NULL
 };
 

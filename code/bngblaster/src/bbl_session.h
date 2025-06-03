@@ -62,7 +62,6 @@ typedef struct bbl_session_
     struct timer_ *timer_icmpv6;
     struct timer_ *timer_session;
     struct timer_ *timer_rate;
-    struct timer_ *timer_cfm_cc;
     struct timer_ *timer_reconnect;
     struct timer_ *timer_monkey;
     struct timer_ *timer_tun;
@@ -131,12 +130,7 @@ typedef struct bbl_session_
     uint8_t client_mac[ETH_ADDR_LEN];
 
     /* CFM */
-    bool cfm_cc;
-    bool cfm_rdi;
-    uint32_t cfm_seq;
-    uint8_t cfm_level;
-    uint16_t cfm_ma_id;
-    char *cfm_ma_name;
+    bbl_cfm_session_s *cfm;
 
     /* PPPoE */
     uint16_t pppoe_session_id;

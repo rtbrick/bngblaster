@@ -684,6 +684,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "isis-l1-priority", "isis-l2-priority",
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
         "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
+        "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name",
         "ldp-instance-id"
     };
     if(!schema_validate(network_interface, "network", schema, 
@@ -862,6 +863,25 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ldp-instance-id", 0, 65535);
     if(value) {
         network_config->ldp_instance_id = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "cfm-cc");
+    if(value) {
+        network_config->cfm_cc = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-level", 0, 7);
+    if(value) {
+        network_config->cfm_level = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-ma-id", 0, 65535);
+    if(value) {
+        network_config->cfm_ma_id = json_number_value(value);
+    }
+    if(json_unpack(network_interface, "{s:s}", "cfm-ma-name", &s) == 0) {
+        network_config->cfm_ma_name = strdup(s);
+    } else if(network_config->cfm_cc) {
+        fprintf(stderr, "JSON config error: Missing network->cfm-ma-name\n");
+        return false;
     }
 
     return true;

@@ -152,6 +152,12 @@ typedef struct bbl_network_config_
 
     uint16_t ldp_instance_id;
 
+    /* CFM CC */
+    bool cfm_cc;
+    uint8_t cfm_level;
+    uint16_t cfm_ma_id;
+    char *cfm_ma_name;
+
     void *next; /* pointer to next network config element */
     bbl_network_interface_s *network_interface;
 } bbl_network_config_s;

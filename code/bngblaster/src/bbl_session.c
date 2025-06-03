@@ -330,9 +330,9 @@ bbl_session_free(bbl_session_s *session)
         free(session->dhcp_vendor_class_id);
         session->dhcp_vendor_class_id = NULL;
     }
-    if(session->cfm_ma_name) {
-        free(session->cfm_ma_name);
-        session->cfm_ma_name = NULL;
+    if(session->cfm) {
+        free(session->cfm);
+        session->cfm = NULL;
     }
 
     if(session->pppoe_ac_cookie) {
@@ -935,10 +935,12 @@ bbl_sessions_init()
 
         /* Update CFM */
         if(access_config->cfm_cc) {
-            session->cfm_cc = true;
-            session->cfm_level = access_config->cfm_level;
-            session->cfm_ma_id = access_config->cfm_ma_id;
-            update_strings(&session->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);
+            session->cfm = calloc(1, sizeof(bbl_cfm_session_s));
+            session->cfm->cfm_cc = true;
+            session->cfm->cfm_level = access_config->cfm_level;
+            session->cfm->cfm_ma_id = access_config->cfm_ma_id;
+            update_strings(&session->cfm->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);
+            session->cfm->session = session;
         }
 
         /* Update access rates ... */
