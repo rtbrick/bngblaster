@@ -240,7 +240,7 @@ bbl_tcp_error_cb(void *arg, err_t err)
         LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) error %d (%s)\n",
             tcpc->ifname,
             format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
-            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->remote_port,
+            format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr), tcpc->remote_port,
             err, tcp_err_string(err));
     }
 
