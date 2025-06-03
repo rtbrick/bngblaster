@@ -63,6 +63,8 @@ typedef struct io_handle_ {
     struct tpacket_req req;
     struct sockaddr_ll addr;
 
+    volatile bool update_streams;
+
 #ifdef BNGBLASTER_DPDK
     struct rte_eth_dev_tx_buffer *tx_buffer;
     struct rte_mempool *mbuf_pool;

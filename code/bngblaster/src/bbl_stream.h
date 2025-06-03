@@ -119,6 +119,7 @@ typedef struct bbl_stream_
     volatile bool enabled;
     volatile bool verified;
     volatile bool reset;
+    volatile bool update_pps;
 
     bool threaded;
     bool session_traffic;

@@ -2981,6 +2981,8 @@ int
 bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     bbl_stream_s *stream;
+    json_t *value = NULL;
+
     const char *s = NULL;
 
     int number = 0;
@@ -3014,12 +3016,20 @@ bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json
             return bbl_ctrl_status(fd, "error", 400, "invalid tcp-flags (ack|fin|fin-ack|syn|syn-ack|rst|push|push-ack)");
         }
     }
+    double pps = 0;
+    value = json_object_get(arguments, "pps");
+    if(value) pps = json_number_value(value);
 
     flow_id = number;
     stream = bbl_stream_index_get(flow_id);
     if(stream) {
         if(tcp_flags) {
             stream->tcp_flags = tcp_flags;
+        }
+        if(pps) {
+            stream->update_pps = true;
+            stream->pps = pps;
+            stream->io->update_streams = true;
         }
     } else {
         return bbl_ctrl_status(fd, "warning", 404, "stream not found");

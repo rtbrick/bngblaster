@@ -21,4 +21,7 @@ io_stream_smear(io_handle_s *io);
 void
 io_stream_smear_all();
 
+void
+io_stream_update_pps(io_handle_s *io);
+
 #endif

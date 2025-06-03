@@ -33,7 +33,7 @@ const char *schema_no_args[] = { NULL };
 const char *schema_all_args[] = {
     "interface", "outer-vlan", "inner-vlan",
     "session-id", "session-group-id", "direction", "reconnect-delay", 
-    "flow-id", "id", "name", "file", "reset", "timer",
+    "flow-id", "id", "name", "file", "reset", "timer", "pps",
     "group", "group-iter", "group-count", "source1", "source2", "source3",
     "local-ipv4-address", "peer-ipv4-address",
     "instance", "level", "pdu", "lsa",

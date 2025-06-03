@@ -146,6 +146,10 @@ io_packet_mmap_tx_job(timer_s *timer)
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
+    if(io->update_streams) {
+        io_stream_update_pps(io);
+    }
+
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
     if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
@@ -306,6 +310,9 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 
     while(thread->active) {
         nanosleep(&sleep, &rem);
+        if(io->update_streams) {
+            io_stream_update_pps(io);
+        }
 
         frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
         tphdr = (struct tpacket2_hdr *)frame_ptr;

@@ -109,6 +109,10 @@ io_raw_tx_job(timer_s *timer)
     assert(io->direction == IO_EGRESS);
     assert(io->thread == NULL);
 
+    if(io->update_streams) {
+        io_stream_update_pps(io);
+    }
+
     /* Get TX timestamp */
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
@@ -241,6 +245,9 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
 
     while(thread->active) {
         nanosleep(&sleep, &rem);
+        if(io->update_streams) {
+            io_stream_update_pps(io);
+        }
         burst = io_burst;
 
         /* First send all control traffic which has higher priority. */
