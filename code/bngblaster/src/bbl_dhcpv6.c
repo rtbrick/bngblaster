@@ -115,6 +115,9 @@ bbl_dhcpv6_start(bbl_session_s *session)
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
 
         LOG(DHCP, "DHCPv6 (ID: %u) Start DHCPv6\n", session->session_id);
+        if(session->access_type == ACCESS_TYPE_IPOE) {
+            bbl_session_update_state(session, BBL_IPOE_SETUP);
+        }
     }
 }
 

@@ -535,9 +535,11 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 g_ctx->sessions_established--;
                 g_ctx->timestamp_established.tv_sec = 0;
             }
-            ENABLE_ENDPOINT(session->endpoint.ipv4);
-            ENABLE_ENDPOINT(session->endpoint.ipv6);
-            ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+            if(session->access_type == ACCESS_TYPE_PPPOE) {
+                ENABLE_ENDPOINT(session->endpoint.ipv4);
+                ENABLE_ENDPOINT(session->endpoint.ipv6);
+                ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+            }
             bbl_tun_session_down(session);
         }
         

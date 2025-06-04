@@ -98,6 +98,9 @@ bbl_dhcp_start(bbl_session_s *session)
         session->send_requests |= BBL_SEND_DHCP_REQUEST;
 
         LOG(DHCP, "DHCP (ID: %u) Start DHCP\n", session->session_id);
+        if(session->access_type == ACCESS_TYPE_IPOE) {
+            bbl_session_update_state(session, BBL_IPOE_SETUP);
+        }
     }
 }
 
