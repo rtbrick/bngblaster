@@ -4348,7 +4348,7 @@ json_parse_config(json_t *root)
         }
     } else if(json_is_object(sub)) {
         /* Config is provided as object (single ARP client) */
-        icmp_client_config = calloc(1, sizeof(bbl_arp_client_config_s));
+        arp_client_config = calloc(1, sizeof(bbl_arp_client_config_s));
         if(!g_ctx->config.arp_client_config) {
             g_ctx->config.arp_client_config = arp_client_config;
         }
