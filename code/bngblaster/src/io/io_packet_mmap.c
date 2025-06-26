@@ -75,9 +75,9 @@ io_packet_mmap_rx_job(timer_s *timer)
         io->stats.bytes += io->buf_len;
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
-            vlan = tphdr->tp_vlan_tci & BBL_ETH_VLAN_ID_MAX;
-            if(vlan && eth->vlan_outer != vlan) {
-                /* The outer VLAN is stripped from header */
+            if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
+                vlan = tphdr->tp_vlan_tci & BBL_ETH_VLAN_ID_MAX;
+                /* Restore stripped outer VLAN tag */
                 eth->vlan_inner = eth->vlan_outer;
                 eth->vlan_inner_priority = eth->vlan_outer_priority;
                 eth->vlan_outer = vlan;
@@ -264,8 +264,12 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
         while(tphdr->tp_status & TP_STATUS_USER) {
             io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
             io->buf_len = tphdr->tp_len;
-            io->vlan_tci = tphdr->tp_vlan_tci;
-            io->vlan_tpid = tphdr->tp_vlan_tpid;
+            if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
+                io->vlan_tci = tphdr->tp_vlan_tci;
+                io->vlan_tpid = tphdr->tp_vlan_tpid;
+            } else {
+                io->vlan_tci = 0;
+            }
             /* Process packet */
             if(io_thread_rx_handler(thread, io) == IO_FULL) {
                 break;
