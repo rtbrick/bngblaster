@@ -3091,7 +3091,6 @@ json_parse_config(json_t *root)
     const char *s;
     uint32_t ipv4;
     int i, size;
-    double number;
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
@@ -4254,14 +4253,9 @@ json_parse_config(json_t *root)
             } else {
                 l2tp_server->receive_window = 16;
             }
-            value = json_object_get(sub, "max-retry");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 1 || number > UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->max-retry\n");
-                    return false;
-                }
-                l2tp_server->max_retry = number;
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "max-retry", 1, 65535);
+            if(value) {
+                l2tp_server->max_retry = json_number_value(value);
             } else {
                 l2tp_server->max_retry = 5;
             }
@@ -4279,51 +4273,37 @@ json_parse_config(json_t *root)
             } else {
                 l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
             }
-            value = json_object_get(sub, "data-control-priority");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-control-priority");
+            if(value) {
                 l2tp_server->data_control_priority = json_boolean_value(value);
             }
-            value = json_object_get(sub, "data-length");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-length");
+            if(value) {
                 l2tp_server->data_length = json_boolean_value(value);
             }
-            value = json_object_get(sub, "data-offset");
-            if(json_is_boolean(value)) {
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-offset");
+            if(value) {
                 l2tp_server->data_offset = json_boolean_value(value);
             }
-            value = json_object_get(sub, "control-tos");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 0 || number > UINT8_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->control-tos\n");
-                    return false;
-                }
-                l2tp_server->control_tos = number;
-            }
-            value = json_object_get(sub, "data-control-tos");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 0 || number > UINT8_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->data-control-tos\n");
-                    return false;
-                }
-                l2tp_server->data_control_tos = number;
-            }
-            value = json_object_get(sub, "hello-interval");
-            if(json_is_number(value)) {
-                number = json_number_value(value);
-                if(number < 0 || number > UINT16_MAX) {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->hello-interval\n");
-                    return false;
-                }
-                l2tp_server->hello_interval = number;
+
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "control-tos", 0, 255);
+            if(value) {
+                l2tp_server->control_tos = json_number_value(value);
+            } 
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "data-control-tos", 0, 255);
+            if(value) {
+                l2tp_server->data_control_tos = json_number_value(value);
+            } 
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "hello-interval", 0, 65535);
+            if(value) {
+                l2tp_server->hello_interval = json_number_value(value);
             } else {
                 l2tp_server->hello_interval = 30;
             }
-            value = json_object_get(sub, "lcp-padding");
-            if(json_is_number(value)) {
-                l2tp_server->lcp_padding = json_number_value(value);;
-            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-padding", 0, 65535);
+            if(value) {
+                l2tp_server->lcp_padding = json_number_value(value);
+            } 
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
