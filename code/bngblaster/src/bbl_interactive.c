@@ -30,6 +30,7 @@ typedef enum {
     UI_VIEW_DEFAULT = 0,
     UI_VIEW_ACCESS_IF_STATS,
     UI_VIEW_SESSION,
+    UI_VIEW_RAW_STREAMS,
     UI_VIEW_MAX,
 } __attribute__ ((__packed__)) bbl_ui_view;
 
@@ -179,11 +180,15 @@ bbl_interactive_read_key_job(timer_s *timer)
                 switch(g_view_selected) {
                     case UI_VIEW_ACCESS_IF_STATS:
                     case UI_VIEW_SESSION:
-                        g_view_selected = UI_VIEW_DEFAULT;
+                        g_view_selected = UI_VIEW_RAW_STREAMS;
                         break;
                     default:
                         break;
                 }
+            }
+            if(g_view_selected == UI_VIEW_RAW_STREAMS && 
+               g_ctx->stats.raw_traffic_flows == 0) {
+                g_view_selected = UI_VIEW_DEFAULT;
             }
             bbl_interactive_init_window();
             break;
@@ -250,6 +255,9 @@ bbl_interactive_read_key_job(timer_s *timer)
                 }
                 bbl_interactive_init_window();
             } else if(g_view_selected == UI_VIEW_SESSION) {
+                stats_win_postion++;
+                bbl_interactive_init_window();
+            } else if(g_view_selected == UI_VIEW_RAW_STREAMS) {
                 stats_win_postion++;
                 bbl_interactive_init_window();
             }
@@ -736,6 +744,46 @@ bbl_interactive_window_job(timer_s *timer)
                 wprintw(stats_win, "                   | down      | %7lu | %10lu | %7lu | %10lu | %8lu\n",
                         stream_sum_down_tx_pps, stream_sum_down_tx_kbps, stream_sum_down_rx_pps, stream_sum_down_rx_kbps, stream_sum_down_loss);
             }
+        }
+    } else if(g_view_selected == UI_VIEW_RAW_STREAMS) {
+        wprintw(stats_win, "\nNetwork Interface RAW Streams (");
+        CIRCLEQ_FOREACH(network_if, &g_ctx->network_interface_qhead, network_interface_qnode) {
+            if(network_if == g_network_if) {
+                wattron(stats_win, COLOR_PAIR(COLOR_GREEN));
+                wprintw(stats_win, " %s", network_if->name);
+                wattroff(stats_win, COLOR_PAIR(COLOR_GREEN));
+            } else {
+                wprintw(stats_win, " %s", network_if->name);
+            }
+        }
+        wprintw(stats_win, " )\n\n  Stream           | Flow-Id   | TX PPS  | TX Kbps    | RX PPS  | RX Kbps    | Loss\n");
+        wprintw(stats_win, "  -------------------------------------------------------------------------------------\n");
+
+        uint64_t tx_kbps;
+        uint64_t rx_kbps;
+
+        bbl_stream_s *stream = g_ctx->stream_head;
+        i = 0;
+        while(stream) {
+            if((!stream->session) && stream->tx_network_interface == g_network_if) {
+                tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
+                if(stream->rate_packets_tx.avg && tx_kbps == 0) {
+                    tx_kbps = 1;
+                }
+                rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
+                if(stream->rate_packets_rx.avg && rx_kbps == 0) {
+                    rx_kbps = 1;
+                }
+                if(i >= stats_win_postion && i < 32+stats_win_postion) {
+                    wprintw(stats_win, "  %-16.16s | %9lu | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, stream->flow_id,
+                            stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
+                } else if(i == 32+stats_win_postion) {   
+                    wprintw(stats_win, "  ...\n");
+                    break;
+                }
+                i++;
+            }
+            stream = stream->next;
         }
     }
     wrefresh(stats_win);

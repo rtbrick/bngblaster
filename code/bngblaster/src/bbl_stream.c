@@ -1998,6 +1998,7 @@ bbl_stream_init() {
                     LOG(DEBUG, "RAW traffic stream %s added to %s with %0.2lf PPS\n", 
                         config->name, network_interface->name, stream->pps);
                 }
+                g_ctx->stats.raw_traffic_flows++;
             }
         }
         config = config->next;

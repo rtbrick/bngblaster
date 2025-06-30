@@ -129,6 +129,7 @@ typedef struct bbl_ctx_
         uint32_t stream_traffic_flows_verified;
         uint32_t multicast_traffic_flows;
         uint32_t multicast_traffic_flows_verified;
+        uint32_t raw_traffic_flows;
     } stats;
 
     endpoint_state_t multicast_endpoint;
