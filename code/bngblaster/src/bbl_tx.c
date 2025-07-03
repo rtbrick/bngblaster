@@ -86,8 +86,6 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         /* Check session and IPCP (PPP IPv4) state to prevent sending IGMP request
@@ -97,6 +95,7 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
             return WRONG_PROTOCOL_STATE;
         }
         eth.type = ETH_TYPE_PPPOE_SESSION;
+        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.next = &pppoe;
         pppoe.session_id = session->pppoe_session_id;
         pppoe.protocol = PROTOCOL_IPV4;
@@ -112,6 +111,7 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ipv4;
     }
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     ipv4.dst = IPV4_MC_IGMP;
     ipv4.src = session->ip_address;
     ipv4.ttl = 1;
@@ -386,13 +386,12 @@ bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         if(session->ip6cp_state != BBL_PPP_OPENED) {
             return WRONG_PROTOCOL_STATE;
         }
         eth.dst = session->server_mac;
+        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.type = ETH_TYPE_PPPOE_SESSION;
         eth.next = &pppoe;
 
@@ -406,6 +405,7 @@ bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     ipv6.dst = (void*)ipv6_multicast_all_routers;
     ipv6.src = (void*)session->link_local_ipv6_address;
     ipv6.ttl = 255;
