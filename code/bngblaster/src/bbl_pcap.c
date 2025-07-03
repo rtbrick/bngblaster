@@ -150,15 +150,18 @@ pcapng_free()
 
     pcapng_fflush();
 
-    if(g_ctx->pcap.fd != -1) {
-        close(g_ctx->pcap.fd);
-        g_ctx->pcap.fd = -1;
-        return;
-    }
-
     if(g_ctx->pcap.write_buf) {
         free(g_ctx->pcap.write_buf);
         g_ctx->pcap.write_buf = NULL;
+    }
+
+    if(g_ctx->pcap.fd != -1) {
+        close(g_ctx->pcap.fd);
+        g_ctx->pcap.fd = -1;
+    }
+
+    if(g_ctx->pcap.filename) {
+        chmod(g_ctx->pcap.filename, 0666);
     }
 }
 

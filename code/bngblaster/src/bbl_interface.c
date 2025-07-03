@@ -84,6 +84,7 @@ bbl_interface_lock(char *interface_name)
     }
     fprintf(lock_file, "%d", lock_pid);
     fclose(lock_file);
+    chmod(lock_path, 0666);
     return true;
 }
 

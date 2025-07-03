@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <sys/queue.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 
 /* Common Definitions */
 

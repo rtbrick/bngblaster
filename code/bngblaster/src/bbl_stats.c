@@ -1219,6 +1219,7 @@ bbl_stats_json(bbl_stats_s * stats)
     if(json_dump_file(root, g_ctx->config.json_report_filename, JSON_REAL_PRECISION(4)) != 0) {
         LOG(ERROR, "Failed to create JSON report file %s\n", g_ctx->config.json_report_filename);
     }
+    chmod(g_ctx->config.json_report_filename, 0666);
     json_decref(root);
 }
 

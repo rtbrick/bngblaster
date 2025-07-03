@@ -76,6 +76,10 @@ log_close()
     if(g_log_fp) {
         fclose(g_log_fp);
         g_log_fp = NULL;
+
+    }
+    if(g_log_file) {
+        chmod(g_log_file, 0666);
     }
 }
 
