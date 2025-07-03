@@ -165,6 +165,33 @@ bbl_access_icmpv6_na(bbl_session_s *session,
 }
 
 static bbl_txq_result_t
+bbl_access_icmpv6_ns(bbl_session_s *session,
+                     bbl_ethernet_header_s *eth,
+                     bbl_ipv6_s *ipv6,
+                     bbl_icmpv6_s *icmpv6)
+{
+    ipv6addr_t ipv6_dst;
+    memcpy(ipv6_dst, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
+    ((uint8_t*)ipv6_dst)[13] = ((uint8_t*)ipv6->src)[13];
+    ((uint8_t*)ipv6_dst)[14] = ((uint8_t*)ipv6->src)[14];
+    ((uint8_t*)ipv6_dst)[15] = ((uint8_t*)ipv6->src)[15];
+
+    bbl_access_update_eth(session, eth);
+    ipv6->ttl = 255;
+    icmpv6->type = IPV6_ICMPV6_NEIGHBOR_SOLICITATION;
+    icmpv6->mac = session->client_mac;
+    memcpy(icmpv6->prefix.address, ipv6->src, IPV6_ADDR_LEN);
+    icmpv6->flags = 0;
+    icmpv6->data = NULL;
+    icmpv6->data_len = 0;
+    icmpv6->dns1 = NULL;
+    icmpv6->dns2 = NULL;
+    ipv6->dst = ipv6_dst;
+    ipv6->src = session->link_local_ipv6_address;
+    return bbl_txq_to_buffer(session->access_interface->txq, eth);
+}
+
+static bbl_txq_result_t
 bbl_access_icmpv6_echo_reply(bbl_session_s *session,
                              bbl_ethernet_header_s *eth,
                              bbl_ipv6_s *ipv6,
@@ -536,6 +563,7 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_access_rx_established_ipoe(interface, session, eth);
+                bbl_access_icmpv6_ns(session, eth, ipv6, icmpv6);
             } else if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
                 if(icmpv6->flags & (ICMPV6_FLAGS_MANAGED|ICMPV6_FLAGS_OTHER_CONFIG)) {
                     bbl_dhcpv6_start(session);
