@@ -64,6 +64,10 @@ teardown_handler(int sig)
 {
     LOG(INFO, "Received signal %s (%d), initiating teardown\n", strsignal(sig), sig);
     teardown_request();
+
+    if(sig == SIGHUP || sig == SIGTERM) {
+        g_teardown_request_count = BBL_TEARDOWN_REQUSTS_MAX;
+    }
 }
 
 const char*
@@ -630,10 +634,12 @@ main(int argc, char *argv[])
     }
 
     signal(SIGINT, teardown_handler);
+    signal(SIGHUP, teardown_handler);
+    signal(SIGTERM, teardown_handler);
 
     /* Start event loop ... */
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
-    while(g_teardown_request_count < 10) {
+    while(g_teardown_request_count < BBL_TEARDOWN_REQUSTS_MAX) {
         if(g_teardown) {
             /* If teardown has requested, wait for all L2TP 
              * tunnels and routing sessions to be terminated. */

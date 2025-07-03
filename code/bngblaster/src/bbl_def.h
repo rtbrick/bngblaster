@@ -57,6 +57,8 @@
 
 #define BBL_DEFAULT_TTL             64
 
+#define BBL_TEARDOWN_REQUSTS_MAX    10
+
 /* Mock Addresses */
 #define MOCK_IP_LOCAL               167772170   /* 10.0.0.10 */
 #define MOCK_IP_REMOTE              168430090   /* 10.10.10.10 */
