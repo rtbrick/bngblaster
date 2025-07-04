@@ -939,6 +939,7 @@ bbl_sessions_init()
         if(access_config->cfm_cc) {
             session->cfm = calloc(1, sizeof(bbl_cfm_session_s));
             session->cfm->cfm_cc = true;
+            if(access_config->cfm_seq) session->cfm->cfm_seq = 1;
             session->cfm->cfm_level = access_config->cfm_level;
             session->cfm->cfm_ma_id = access_config->cfm_ma_id;
             update_strings(&session->cfm->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);

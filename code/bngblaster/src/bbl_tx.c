@@ -1363,7 +1363,10 @@ bbl_tx_encode_packet_cfm_cc_session(bbl_session_s *session)
     eth.type = ETH_TYPE_CFM;
     eth.next = &cfm_hdr;
     cfm_hdr.type = CFM_TYPE_CCM;
-    cfm_hdr.seq = cfm->cfm_seq++;
+    if(cfm->cfm_seq) {
+        cfm_hdr.seq = cfm->cfm_seq++;
+        if(!cfm->cfm_seq) cfm->cfm_seq = 1;
+    }
     cfm_hdr.rdi = cfm->cfm_rdi;
     cfm_hdr.md_level = cfm->cfm_level;
     cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
@@ -1394,7 +1397,10 @@ bbl_tx_encode_packet_cfm_cc(bbl_network_interface_s *interface,
     eth->type = ETH_TYPE_CFM;
     eth->next = &cfm_hdr;
     cfm_hdr.type = CFM_TYPE_CCM;
-    cfm_hdr.seq = cfm->cfm_seq++;
+    if(cfm->cfm_seq) {
+        cfm_hdr.seq = cfm->cfm_seq++;
+        if(!cfm->cfm_seq) cfm->cfm_seq = 1;
+    }
     cfm_hdr.rdi = cfm->cfm_rdi;
     cfm_hdr.md_level = cfm->cfm_level;
     cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;

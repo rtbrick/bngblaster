@@ -97,6 +97,7 @@ typedef struct bbl_access_config_
 
     /* CFM CC */
     bool cfm_cc;
+    bool cfm_seq;
     uint8_t cfm_level;
     uint16_t cfm_ma_id;
     char *cfm_ma_name;
@@ -154,6 +155,7 @@ typedef struct bbl_network_config_
 
     /* CFM CC */
     bool cfm_cc;
+    bool cfm_seq;
     uint8_t cfm_level;
     uint16_t cfm_ma_id;
     char *cfm_ma_name;

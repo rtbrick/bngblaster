@@ -74,6 +74,9 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name**                   | | Set EOAM CFM maintenance association short name (string).          |
 +-----------------------------------+----------------------------------------------------------------------+
+| **cfm-seq**                       | | Enable EOAM CFM CC sequence numbers.                               |
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
 | **username**                      | | Overwrite the username from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **password**                      | | Overwrite the password from the authentication section.            |

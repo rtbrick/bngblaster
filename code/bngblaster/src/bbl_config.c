@@ -684,7 +684,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "isis-l1-priority", "isis-l2-priority",
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
         "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
-        "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name",
+        "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name", "cfm-seq",
         "ldp-instance-id"
     };
     if(!schema_validate(network_interface, "network", schema, 
@@ -869,6 +869,12 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     if(value) {
         network_config->cfm_cc = json_boolean_value(value);
     }
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "cfm-seq");
+    if(value) {
+        network_config->cfm_seq = json_boolean_value(value);
+    } else {
+        network_config->cfm_seq = true;
+    }
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-level", 0, 7);
     if(value) {
         network_config->cfm_level = json_number_value(value);
@@ -919,7 +925,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "session-group-id", "stream-group-id",
         "session-limit", "arp-client-group-id",
         "http-client-group-id", "icmp-client-group-id",
-        "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name"
+        "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name", "cfm-seq"
     };
     if(!schema_validate(access_interface, "access", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1283,6 +1289,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
     if(value) {
         access_config->cfm_cc = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-seq");
+    if(value) {
+        access_config->cfm_seq = json_boolean_value(value);
+    } else {
+        access_config->cfm_seq = true;
     }
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-level", 0, 7);
     if(value) {
