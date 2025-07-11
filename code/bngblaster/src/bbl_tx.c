@@ -1534,7 +1534,7 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
         arp.target_ip = interface->gateway;
         if(interface->arp_resolved) {
             timer_add(&g_ctx->timer_root, &interface->timer_arp, "ARP timeout", 
-                      300, 0, interface, &bbl_tx_network_arp_timeout);
+                      60, 0, interface, &bbl_tx_network_arp_timeout);
         } else {
             timer_add(&g_ctx->timer_root, &interface->timer_arp, "ARP timeout", 
                       1, 0, interface, &bbl_tx_network_arp_timeout);
@@ -1560,7 +1560,7 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
         icmpv6.mac = interface->mac;
         if(interface->icmpv6_nd_resolved) {
             timer_add(&g_ctx->timer_root, &interface->timer_nd, "ND timeout", 
-                      300, 0, interface, &bbl_tx_network_nd_timeout);
+                      60, 0, interface, &bbl_tx_network_nd_timeout);
         } else {
             timer_add(&g_ctx->timer_root, &interface->timer_nd, "ND timeout", 
                       1, 0, interface, &bbl_tx_network_nd_timeout);
