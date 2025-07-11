@@ -1070,7 +1070,7 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     bbl_ethernet_header_s eth = {0};
     UNUSED(ipaddr);
 
-    eth.dst = interface->gateway_mac;
+    eth.dst = interface->gateway6_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
     eth.type = ETH_TYPE_IPV6;

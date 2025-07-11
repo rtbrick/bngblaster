@@ -102,6 +102,7 @@ bbl_network_interfaces_add()
 
         /* Copy gateway MAC from config (default 00:00:00:00:00:00) */
         memcpy(network_interface->gateway_mac, network_config->gateway_mac, ETH_ADDR_LEN);
+        memcpy(network_interface->gateway6_mac, network_config->gateway_mac, ETH_ADDR_LEN);
 
         /* Init IPv4 */
         if(network_config->ip.address && network_config->gateway) {
@@ -350,7 +351,7 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
     bbl_arp_s *arp = (bbl_arp_s*)eth->next;
     if(arp->sender_ip == interface->gateway) {
         interface->arp_resolved = true;
-        if(*(uint32_t*)interface->gateway_mac == 0) {
+        if(memcmp(interface->gateway_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) == 0) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
         }
     }
@@ -385,13 +386,13 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
     if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
         if(memcmp(icmpv6->prefix.address, interface->gateway6, IPV6_ADDR_LEN) == 0) {
             interface->icmpv6_nd_resolved = true;
-            if(*(uint32_t*)interface->gateway_mac == 0) {
+            if(memcmp(interface->gateway6_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) == 0) {
                 if(icmpv6->dst_mac == NULL) {
                     gw_mac = eth->src;
                 } else {
                     gw_mac = icmpv6->dst_mac;
                 }
-                memcpy(interface->gateway_mac, gw_mac, ETH_ADDR_LEN);
+                memcpy(interface->gateway6_mac, gw_mac, ETH_ADDR_LEN);
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {

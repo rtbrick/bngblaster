@@ -676,7 +676,6 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
         return false;
     }
 
-    eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
@@ -723,6 +722,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     bbl.direction = BBL_DIRECTION_DOWN;
     switch(stream->sub_type) {
         case BBL_SUB_TYPE_IPV4:
+            eth.dst = network_interface->gateway_mac;
             eth.type = ETH_TYPE_IPV4;
             eth.next = &ipv4;
 
@@ -773,6 +773,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             break;
         case BBL_SUB_TYPE_IPV6:
         case BBL_SUB_TYPE_IPV6PD:
+            eth.dst = network_interface->gateway6_mac;
             eth.type = ETH_TYPE_IPV6;
             eth.next = &ipv6;
             /* Source address */

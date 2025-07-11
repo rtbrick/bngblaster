@@ -30,6 +30,7 @@ typedef struct bbl_network_interface_
     
     uint8_t mac[ETH_ADDR_LEN];
     uint8_t gateway_mac[ETH_ADDR_LEN];
+    uint8_t gateway6_mac[ETH_ADDR_LEN];
 
     uint32_t send_requests;
 
