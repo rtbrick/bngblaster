@@ -28,6 +28,9 @@ typedef struct bbl_ctx_
     struct timespec timestamp_resolved;
     struct timespec timestamp_established;
 
+    uint32_t sessions_start_credits;
+    uint32_t sessions_stop_credits;
+
     uint32_t interfaces;
     uint32_t sessions;
     uint32_t sessions_pppoe;
@@ -213,8 +216,8 @@ typedef struct bbl_ctx_
         /* Global Session Settings */
         uint32_t sessions;
         uint32_t sessions_max_outstanding;
-        uint16_t sessions_start_rate;
-        uint16_t sessions_stop_rate;
+        uint32_t sessions_start_period_ns;
+        uint32_t sessions_stop_period_ns;
         uint16_t sessions_start_delay;
         bool sessions_reconnect;
         bool sessions_autostart;
