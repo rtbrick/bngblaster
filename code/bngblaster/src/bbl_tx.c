@@ -488,8 +488,10 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         }
         dhcpv6_relay.access_line = &access_line;
         udp.next = &dhcpv6_relay;
+        udp.src = DHCPV6_UDP_SERVER;
     } else {
         udp.next = &dhcpv6;
+        udp.src = DHCPV6_UDP_CLIENT;
     }
 
     eth.src = session->client_mac;
@@ -524,7 +526,6 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     ipv6.protocol = IPV6_NEXT_HEADER_UDP;
     ipv6.next = &udp;
     udp.dst = DHCPV6_UDP_SERVER;
-    udp.src = DHCPV6_UDP_CLIENT;
     udp.protocol = UDP_PROTOCOL_DHCPV6;
 
     /* The 'elapsed' option message SHOULD represent the

@@ -483,6 +483,9 @@ bbl_a10nsp_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
         }
         dhcpv6 = dhcpv6->relay_message;
         dhcpv6_outer->type = DHCPV6_MESSAGE_RELAY_REPL;
+        udp->dst = DHCPV6_UDP_SERVER;
+    } else {
+        udp->dst = DHCPV6_UDP_CLIENT;
     }
 
     switch(dhcpv6->type) {
@@ -523,7 +526,6 @@ bbl_a10nsp_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
     ipv6->src = (void*)ipv6_link_local_address;
     ipv6->ttl = 255;
     udp->src = DHCPV6_UDP_SERVER;
-    udp->dst = DHCPV6_UDP_CLIENT;
 
     dhcpv6->server_duid = (void*)mock_dhcpv6_server_duid;
     dhcpv6->server_duid_len = sizeof(mock_dhcpv6_server_duid);
