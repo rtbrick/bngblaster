@@ -353,6 +353,9 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
         interface->arp_resolved = true;
         if(memcmp(interface->gateway_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) == 0) {
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
+            if(!ipv6_addr_not_zero(&interface->gateway6)) {
+                memcpy(interface->gateway6_mac, interface->gateway_mac, ETH_ADDR_LEN);
+            }
         }
     }
     if(arp->code == ARP_REQUEST) {
