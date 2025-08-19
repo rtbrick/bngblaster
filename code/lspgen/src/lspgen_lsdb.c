@@ -553,12 +553,14 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
         node->ctx = ctx;
 
 	/*
-	 * Default sequence number to inherit from context.
+	 * Default values to inherit from context.
 	 */
 	node->sequence = ctx->sequence;
+	node->lsp_lifetime = ctx->lsp_lifetime;
 
-        LOG(LSDB, "  Add node %s (%s)\n", lsdb_format_node(node),
-            lsdb_format_node_id(node->key.node_id));
+
+        LOG(LSDB, "  Add node %s (%s), seq 0x%08x, lifetime %us\n", lsdb_format_node(node),
+            lsdb_format_node_id(node->key.node_id), node->sequence, node->lsp_lifetime);
 
         return node;
     }
