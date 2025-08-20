@@ -22,6 +22,8 @@
 #define LSDB_NODE_HSIZE 997    /* hash table initial bucket size */
 #define LSDB_LINK_HSIZE 9973   /* hash table initial bucket size */
 
+#define LSP_LIFETIME_MIN 120 /* secs */
+
 typedef enum {
     PROTO_UNKNOWN = 0,
     PROTO_ISIS = 1,

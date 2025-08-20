@@ -204,7 +204,7 @@ lspgen_write_node_common_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *node
 	}
 	if (node->attach) {
 	    json_object_set_new(node_obj, "attach", json_boolean(1));
-	}	
+	}
         json_object_set_new(node_obj, "lsp_buffer_size", json_integer(ISIS_DEFAULT_LSP_BUFFER_SIZE));
 	break;
     case PROTO_OSPF2:
@@ -647,6 +647,7 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     root_obj = json_object();
     json_object_set_new(root_obj, "instance", json_string(ctx->instance_name));
     json_object_set_new(root_obj, "protocol", json_string(lsdb_format_proto(ctx)));
+    json_object_set_new(root_obj, "lsp_lifetime", json_integer(ctx->lsp_lifetime));
     arr = json_array();
 
     switch (ctx->protocol_id) {
@@ -1160,7 +1161,17 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         if (json_unpack(node_obj, "{s:s}", "hostname", &s) == 0) {
             node_template.node_name = s;
         }
-        node = lsdb_add_node(ctx, &node_template);
+
+        if (json_unpack(node_obj, "{s:s}", "sequence", &s) == 0) {
+            node_template.sequence = strtol(s, NULL, 0);
+        }
+
+        value = json_object_get(node_obj, "lsp_lifetime");
+        if (value && json_is_integer(value)) {
+            node_template.lsp_lifetime = json_integer_value(value);
+        }
+
+	node = lsdb_add_node(ctx, &node_template);
 
         if (node_template.node_name) {
             lsdb_reset_attr_template(&attr_template);
@@ -1191,15 +1202,6 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
 		node->attach = json_boolean_value(value);
 	    }
 	}
-
-        if (json_unpack(node_obj, "{s:s}", "sequence", &s) == 0) {
-            node->sequence = strtol(s, NULL, 0);
-        }
-
-        value = json_object_get(node_obj, "lsp_lifetime");
-        if (value && json_is_integer(value)) {
-            node->lsp_lifetime = json_integer_value(value);
-        }
 
         value = json_object_get(node_obj, "adjacency_sid_base");
         if (value && json_is_integer(value)) {
@@ -1324,7 +1326,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
 {
     json_t *root_obj;
     json_error_t error;
-    json_t *protocol, *instance;
+    json_t *protocol, *instance, *lsp_lifetime;
     json_t *lsdb;
     bool lsdb_found;
     const char *key;
@@ -1382,6 +1384,23 @@ lspgen_read_config(lsdb_ctx_t *ctx)
 	free(ctx->instance_name);
     }
     ctx->instance_name = strdup(json_string_value(instance));
+
+    /*
+     * LSP lifetime. Optional.
+     */
+    lsp_lifetime = json_object_get(root_obj, "lsp_lifetime");
+    if (lsp_lifetime) {
+	if (!json_is_integer(lsp_lifetime)) {
+	    LOG(ERROR, "Error reading config file %s, lsp_lifetime attribute is not an integer\n",
+		ctx->config_filename);
+	    goto cleanup;
+	}
+	ctx->lsp_lifetime = json_integer_value(lsp_lifetime);
+	if (ctx->lsp_lifetime < LSP_LIFETIME_MIN) {
+	    ctx->lsp_lifetime = LSP_LIFETIME_MIN;
+	    LOG(ERROR, "Set lsp-lifetime to min %us\n", ctx->lsp_lifetime);
+	}
+    }
 
     /* Iterate through all top level objects */
     lsdb_found = false;
