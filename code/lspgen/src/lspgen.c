@@ -1338,8 +1338,8 @@ main(int argc, char *argv[])
                 break;
             case 'M':
                 ctx->lsp_lifetime = atoi(optarg);
-                if (ctx->lsp_lifetime < 120) {
-                    ctx->lsp_lifetime = 120;
+                if (ctx->lsp_lifetime < LSP_LIFETIME_MIN) {
+                    ctx->lsp_lifetime = LSP_LIFETIME_MIN;
                     LOG(ERROR, "Set lsp-lifetime to min %us\n", ctx->lsp_lifetime);
                 }
                 break;

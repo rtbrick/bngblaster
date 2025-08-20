@@ -1396,6 +1396,10 @@ lspgen_read_config(lsdb_ctx_t *ctx)
 	    goto cleanup;
 	}
 	ctx->lsp_lifetime = json_integer_value(lsp_lifetime);
+	if (ctx->lsp_lifetime < LSP_LIFETIME_MIN) {
+	    ctx->lsp_lifetime = LSP_LIFETIME_MIN;
+	    LOG(ERROR, "Set lsp-lifetime to min %us\n", ctx->lsp_lifetime);
+	}
     }
 
     /* Iterate through all top level objects */
