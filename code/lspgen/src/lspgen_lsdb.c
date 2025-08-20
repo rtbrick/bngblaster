@@ -553,11 +553,19 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
         node->ctx = ctx;
 
 	/*
-	 * Default values to inherit from context.
+	 * Get values from template if set, else read default values from context.
 	 */
-	node->sequence = ctx->sequence;
-	node->lsp_lifetime = ctx->lsp_lifetime;
+	if (node_template->sequence) {
+	    node->sequence = node_template->sequence;
+	} else {
+	    node->sequence = ctx->sequence;
+	}
 
+	if (node_template->lsp_lifetime) {
+	    node->lsp_lifetime = node_template->lsp_lifetime;
+	} else {
+	    node->lsp_lifetime = ctx->lsp_lifetime;
+	}
 
         LOG(LSDB, "  Add node %s (%s), seq 0x%08x, lifetime %us\n", lsdb_format_node(node),
             lsdb_format_node_id(node->key.node_id), node->sequence, node->lsp_lifetime);
