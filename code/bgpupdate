@@ -44,6 +44,7 @@ MPLS_LABEL_MAX = 1048575
 
 BGP_UPDATE_MIN_LEN = 34
 BGP_LOCAL_PREF_LEN = 7
+BGP_MED_LEN = 7
 BGP_MP_REACH_IPV4_FIXED_HDR_LEN = 14
 BGP_MP_REACH_IPV6_FIXED_HDR_LEN = 26
 
@@ -177,6 +178,7 @@ def main():
     parser.add_argument('-f', '--file', type=str, default="out.bgp", help='output file')
     parser.add_argument('-w', '--withdraw', action="store_true", help="withdraw prefixes")
     parser.add_argument('-s', '--streams', type=str, help="generate BNG Blaster traffic stream file")
+    parser.add_argument('--med', type=int, help="MED")
     parser.add_argument('--stream-tx-label', metavar='LABEL', type=label_type, help="stream TX outer label")
     parser.add_argument('--stream-tx-inner-label', metavar='LABEL', type=label_type, help="stream TX inner label")
     parser.add_argument('--stream-rx-label', metavar='LABEL', type=label_type, help="stream RX label")
@@ -358,6 +360,9 @@ def main():
         if args.local_pref is not None:
             local_pref_attr = BGPPathAttr(type_flags=64, type_code="LOCAL_PREF", attribute=BGPPALocalPref(local_pref=args.local_pref))
 
+        if args.med is not None:
+            med_attr = BGPPathAttr(type_flags="Optional", type_code="MULTI_EXIT_DISC", attribute=BGPPAMultiExitDisc(med=args.med))
+
         while len(prefixes):
             for nh_index in list(prefixes.keys()):
                 prefix_list = prefixes[nh_index]
@@ -372,6 +377,10 @@ def main():
                 if args.local_pref is not None:
                     remaining -= BGP_LOCAL_PREF_LEN
                     path_attr.append(local_pref_attr)
+
+                if args.med is not None:
+                    remaining -= BGP_MED_LEN
+                    path_attr.append(med_attr)
 
                 if ip_version == 4:
                     if labeled:
