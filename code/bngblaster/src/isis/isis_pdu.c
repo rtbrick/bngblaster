@@ -491,6 +491,7 @@ isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uin
     uint8_t *tlv_cur = tlv->value;
     uint8_t *stlv_len = NULL;
     uint8_t prefix_bytes = BITS_TO_BYTES(prefix->len);
+    ipv4addr_t network;
     tlv->type = ISIS_TLV_EXT_IPV4_REACHABILITY;
     tlv->len = sizeof(metric) + sizeof(prefix->len) + prefix_bytes;
     *(uint32_t*)tlv_cur = htobe32(metric);
@@ -500,7 +501,8 @@ isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uin
     } else {
         *tlv_cur++ = prefix->len;
     }
-    memcpy(tlv_cur, &prefix->address, prefix_bytes);
+    network = prefix->address & ipv4_len_to_mask(prefix->len);
+    memcpy(tlv_cur, &network, prefix_bytes);
     if(stlv) {
         tlv_cur += prefix_bytes;
         stlv_len = tlv_cur++;
@@ -512,8 +514,6 @@ isis_pdu_add_tlv_ext_ipv4_reachability(isis_pdu_s *pdu, ipv4_prefix *prefix, uin
             memcpy(tlv_cur, stlv->value, stlv->len);
             tlv_cur += stlv->len;
             stlv = stlv->next;
-
-
         }
         tlv->len += 1 + *stlv_len;
     }
