@@ -822,6 +822,9 @@ bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t
 void
 bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4) {
     struct pbuf *pbuf;
+    bbl_tcp_s *tcp;
+    bgp_session_s *session;
+
     UNUSED(eth);
 
     if(!g_ctx->tcp) {
@@ -830,13 +833,25 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     }
     interface->stats.tcp_rx++;
 
+    tcp = (bbl_tcp_s*)ipv4->next;
+
 #if BNGBLASTER_TCP_DEBUG
-    bbl_tcp_s *tcp = (bbl_tcp_s*)ipv4->next;
     LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
         interface->name,
         format_ipv4_address(&ipv4->dst), tcp->dst,
         format_ipv4_address(&ipv4->src), tcp->src);
 #endif
+
+    if(tcp->dst == BGP_PORT || tcp->src == BGP_PORT) {
+        session = g_ctx->bgp_sessions;
+        while(session) {
+            if(session->ipv4_local_address == ipv4->dst && 
+               session->ipv4_peer_address == ipv4->src) {
+                interface = session->interface;
+            }
+            session = session->next;
+        }
+    }
 
     ip_data.current_netif = &interface->netif;
     ip_data.current_input_netif = &interface->netif;
