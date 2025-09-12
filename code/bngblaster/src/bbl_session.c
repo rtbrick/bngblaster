@@ -70,7 +70,11 @@ dhcp_state_string(uint32_t state)
         case BBL_DHCP_DISABLED: return "Disabled";
         case BBL_DHCP_INIT: return "Init";
         case BBL_DHCP_SELECTING: return "Selecting";
+        case BBL_DHCP_SELECTING_IA_NA: return "Selecting (IA_NA)";
+        case BBL_DHCP_SELECTING_IA_PD: return "Selecting (IA_PD)";
         case BBL_DHCP_REQUESTING: return "Requesting";
+        case BBL_DHCP_REQUESTING_IA_NA: return "Requesting (IA_NA)";
+        case BBL_DHCP_REQUESTING_IA_PD: return "Requesting (IA_PD)";
         case BBL_DHCP_BOUND: return "Bound";
         case BBL_DHCP_RENEWING: return "Renewing";
         case BBL_DHCP_RELEASE: return "Releasing";
@@ -725,9 +729,13 @@ bbl_session_clear(bbl_session_s *session)
         }
         switch(session->dhcpv6_state) {
             case BBL_DHCP_SELECTING:
+            case BBL_DHCP_SELECTING_IA_NA:
+            case BBL_DHCP_SELECTING_IA_PD:
                 session->dhcpv6_state = BBL_DHCP_INIT;
                 break;
             case BBL_DHCP_REQUESTING:
+            case BBL_DHCP_REQUESTING_IA_NA:
+            case BBL_DHCP_REQUESTING_IA_PD:
             case BBL_DHCP_BOUND:
             case BBL_DHCP_RENEWING:
                 new_state = BBL_TERMINATING;

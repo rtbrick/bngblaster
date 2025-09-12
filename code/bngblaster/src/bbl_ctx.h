@@ -307,6 +307,7 @@ typedef struct bbl_ctx_
         bool dhcpv6_ldra;
         bool dhcpv6_ia_na;
         bool dhcpv6_ia_pd;
+        bool dhcpv6_ia_separate;
         bool dhcpv6_rapid_commit;
         bool dhcpv6_access_line;
         uint16_t dhcpv6_timeout;

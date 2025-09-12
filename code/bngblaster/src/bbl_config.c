@@ -3531,7 +3531,7 @@ json_parse_config(json_t *root)
 
         const char *schema[] = {
             "enable", "ldra", "ia-na", "timeout",
-            "ia-pd", "rapid-commit",
+            "ia-pd", "rapid-commit", "ia-separate",
             "retry", "access-line"
         };
         if(!schema_validate(section, "dhcpv6", schema, 
@@ -3558,6 +3558,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "dhcpv6", "rapid-commit");
         if(value) {
             g_ctx->config.dhcpv6_rapid_commit = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "dhcpv6", "ia-separate");
+        if(value) {
+            g_ctx->config.dhcpv6_ia_separate = json_boolean_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "dhcpv6", "timeout", 1, 65535);
         if(value) {

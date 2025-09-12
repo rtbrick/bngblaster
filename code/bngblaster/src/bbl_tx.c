@@ -555,6 +555,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     dhcpv6.oro = true;
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
+        case BBL_DHCP_SELECTING_IA_NA:
+        case BBL_DHCP_SELECTING_IA_PD:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
             session->stats.dhcpv6_tx_solicit++;
             dhcpv6.rapid = g_ctx->config.dhcpv6_rapid_commit;
@@ -568,6 +570,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             }
             break;
         case BBL_DHCP_REQUESTING:
+        case BBL_DHCP_REQUESTING_IA_NA:
+        case BBL_DHCP_REQUESTING_IA_PD:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
             session->stats.dhcpv6_tx_request++;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
@@ -585,6 +589,23 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             break;
         default:
             return IGNORED;
+    }
+
+    switch (session->dhcpv6_state) {
+        case BBL_DHCP_SELECTING_IA_NA:
+        case BBL_DHCP_REQUESTING_IA_NA:
+            dhcpv6.ia_pd_iaid = 0;
+            dhcpv6.ia_pd_option = NULL;
+            dhcpv6.ia_pd_option_len = 0;
+            break;
+        case BBL_DHCP_SELECTING_IA_PD:
+        case BBL_DHCP_REQUESTING_IA_PD:
+            dhcpv6.ia_na_iaid = 0;
+            dhcpv6.ia_na_option = NULL;
+            dhcpv6.ia_na_option_len = 0;
+            break;
+        default:
+            break;
     }
 
     timer_add(&g_ctx->timer_root, &session->timer_dhcpv6, "DHCPv6",
