@@ -1187,6 +1187,7 @@ bbl_session_json(bbl_session_s *session)
     const char *dns2 = NULL;
     const char *ipv6 = NULL;
     const char *ipv6pd = NULL;
+    const char *ipv6ll = NULL;
     const char *ipv6_dns1 = NULL;
     const char *ipv6_dns2 = NULL;
     const char *dhcpv6_dns1 = NULL;
@@ -1224,6 +1225,9 @@ bbl_session_json(bbl_session_s *session)
     }
     if(session->delegated_ipv6_prefix.len) {
         ipv6pd = format_ipv6_prefix(&session->delegated_ipv6_prefix);
+    }
+    if(*(uint64_t*)session->link_local_ipv6_address) {
+        ipv6ll = format_ipv6_address(&session->link_local_ipv6_address);
     }
     if(*(uint64_t*)session->ipv6_dns1) {
         ipv6_dns1 = format_ipv6_address(&session->ipv6_dns1);
@@ -1381,7 +1385,7 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1401,6 +1405,7 @@ bbl_session_json(bbl_session_s *session)
             "ipv4-dns2", dns2,
             "ipv6-prefix", ipv6,
             "ipv6-delegated-prefix", ipv6pd,
+            "ipv6-link-local", ipv6ll,
             "ipv6-dns1", ipv6_dns1,
             "ipv6-dns2", ipv6_dns2,
             "dhcp-state", dhcp_state_string(session->dhcp_state),
@@ -1944,4 +1949,30 @@ bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused
         json_decref(root);
     }
     return result;
+}
+
+int
+bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments)
+{
+    ipv6addr_t ipv6;
+    bbl_session_s *session;
+    const char *s = NULL;
+
+    if(!session_id) {
+        return bbl_ctrl_status(fd, "warning", 400, "missing session-id");
+    }
+    session = bbl_session_get(session_id);
+    if(!session) {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+
+    if(json_unpack(arguments, "{s:s}", "ipv6-link-local", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid ipv6-link-local");
+        }
+        memcpy(&session->link_local_ipv6_address, &ipv6, sizeof(ipv6addr_t));
+    }
+
+    session->version++;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

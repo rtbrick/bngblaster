@@ -436,4 +436,7 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused
 int
 bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
+int
+bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments);
+
 #endif
