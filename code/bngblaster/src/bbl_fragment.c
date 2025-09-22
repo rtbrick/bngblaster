@@ -111,10 +111,10 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl.outer_vlan_id = *(uint16_t*)(bbl_start+20);
                 bbl.inner_vlan_id = *(uint16_t*)(bbl_start+22);
                 bbl.mc_source = 0;
-                bbl.mc_source = 0;
+                bbl.mc_group = 0;
             } else {
                 bbl.mc_source = *(uint32_t*)(bbl_start+16);
-                bbl.mc_source = *(uint32_t*)(bbl_start+20);
+                bbl.mc_group = *(uint32_t*)(bbl_start+20);
                 bbl.ifindex = 0;
                 bbl.outer_vlan_id = 0;
                 bbl.inner_vlan_id = 0;
