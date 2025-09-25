@@ -3850,34 +3850,6 @@ json_parse_config(json_t *root)
         }
     }
 
-    /* BGP Configuration */
-    sub = json_object_get(root, "bgp");
-    if(json_is_array(sub)) {
-        /* Config is provided as array (multiple BGP sessions) */
-        size = json_array_size(sub);
-        for(i = 0; i < size; i++) {
-            if(!bgp_config) {
-                g_ctx->config.bgp_config = calloc(1, sizeof(bgp_config_s));
-                bgp_config = g_ctx->config.bgp_config;
-            } else {
-                bgp_config->next = calloc(1, sizeof(bgp_config_s));
-                bgp_config = bgp_config->next;
-            }
-            if(!json_parse_bgp_config(json_array_get(sub, i), bgp_config)) {
-                return false;
-            }
-        }
-    } else if(json_is_object(sub)) {
-        /* Config is provided as object (single BGP session) */
-        bgp_config = calloc(1, sizeof(bgp_config_s));
-        if(!g_ctx->config.bgp_config) {
-            g_ctx->config.bgp_config = bgp_config;
-        }
-        if(!json_parse_bgp_config(sub, bgp_config)) {
-            return false;
-        }
-    }
-
     /* Pre-Load BGP RAW update files */
     sub = json_object_get(root, "bgp-raw-update-files");
     if(json_is_array(sub)) {
@@ -4208,6 +4180,34 @@ json_parse_config(json_t *root)
     } else {
         fprintf(stderr, "JSON config error: Missing interfaces section\n");
         return false;
+    }
+
+    /* BGP Configuration */
+    sub = json_object_get(root, "bgp");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple BGP sessions) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!bgp_config) {
+                g_ctx->config.bgp_config = calloc(1, sizeof(bgp_config_s));
+                bgp_config = g_ctx->config.bgp_config;
+            } else {
+                bgp_config->next = calloc(1, sizeof(bgp_config_s));
+                bgp_config = bgp_config->next;
+            }
+            if(!json_parse_bgp_config(json_array_get(sub, i), bgp_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single BGP session) */
+        bgp_config = calloc(1, sizeof(bgp_config_s));
+        if(!g_ctx->config.bgp_config) {
+            g_ctx->config.bgp_config = bgp_config;
+        }
+        if(!json_parse_bgp_config(sub, bgp_config)) {
+            return false;
+        }
     }
 
     /* L2TP Server Configuration (LNS) */
