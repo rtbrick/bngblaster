@@ -245,6 +245,11 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         return;
     }
 
+    if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE && 
+       session->dhcpv6_state >= BBL_DHCP_REQUESTING) {
+        return;
+    }
+
     if(dhcpv6->server_duid_len && dhcpv6->server_duid_len < DHCPV6_BUFFER) {
         memcpy(session->dhcpv6_server_duid, dhcpv6->server_duid, dhcpv6->server_duid_len);
         session->dhcpv6_server_duid_len = dhcpv6->server_duid_len;
