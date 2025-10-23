@@ -153,6 +153,10 @@ typedef struct bbl_network_config_
 
     uint16_t ldp_instance_id;
 
+    /* A10NSP switch emulation */
+    bool a10nsp;
+    uint32_t a10nsp_tx_label;
+
     /* CFM CC */
     bool cfm_cc;
     bool cfm_seq;

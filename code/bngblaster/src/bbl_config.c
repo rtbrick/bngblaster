@@ -685,7 +685,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
         "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
         "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name", "cfm-seq",
-        "ldp-instance-id"
+        "ldp-instance-id", "a10nsp", "a10nsp-tx-label"
     };
     if(!schema_validate(network_interface, "network", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -890,6 +890,14 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         return false;
     }
 
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "a10nsp");
+    if(value) {
+        network_config->a10nsp = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "a10nsp-tx-label", 0, 1048575);
+    if(value) {
+        network_config->a10nsp_tx_label = json_number_value(value);
+    }
     return true;
 }
 

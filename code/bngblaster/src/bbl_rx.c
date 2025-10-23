@@ -105,6 +105,15 @@ bbl_rx_handler(bbl_interface_s *interface,
         return;
     }
 
+    /* Traffic for emulated A10NSP switches (over network interfaces). */
+    if(interface->a10nsp && eth->mpls && eth->type == ETH_TYPE_ETH) {
+        ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
+        if(!bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next)) {
+            bbl_a10nsp_rx_handler(interface->a10nsp, (bbl_ethernet_header_s*)eth->next);
+        }
+        return;
+    }
+
     network_interface = interface->network_vlan[eth->vlan_outer];
     if(network_interface) {
         if(!bbl_rx_stream_network(network_interface, eth)) {

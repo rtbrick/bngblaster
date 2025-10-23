@@ -232,6 +232,40 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
 }
 
 static bool
+bbl_stream_encode_a10nsp_mpls(bbl_a10nsp_interface_s *interface,
+                              bbl_a10nsp_session_s *a10nsp_session,
+                              bbl_stream_s *stream,
+                              bbl_ethernet_header_s *eth)
+{
+    bbl_ethernet_header_s eth_mpls = {0};
+    bbl_mpls_s mpls_transport = {0};
+    bbl_mpls_s mpls_service = {0};
+    uint16_t tx_len = 0;
+
+    eth_mpls.dst = interface->network_interface->gateway6_mac;
+    eth_mpls.src = interface->mac;
+    eth_mpls.type = ETH_TYPE_ETH;
+    eth_mpls.next = eth;
+    mpls_service.label = a10nsp_session->label;
+    mpls_service.ttl = 64;
+    if(interface->tx_label) {
+        mpls_transport.label = interface->tx_label;
+        mpls_transport.ttl = 64;
+        mpls_transport.next = &mpls_service;
+        eth_mpls.mpls = &mpls_transport;
+    } else {
+        eth_mpls.mpls = &mpls_service;
+    }
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth_mpls) != PROTOCOL_SUCCESS) {
+        free(stream->tx_buf);
+        stream->tx_buf = NULL;
+        return false;
+    }
+    stream->tx_len = tx_len;
+    return true;
+}
+
+static bool
 bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
 {
     bbl_session_s *session = stream->session;
@@ -361,6 +395,11 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
+
+    if(a10nsp_interface->network_interface && stream->direction == BBL_DIRECTION_DOWN) {
+        return bbl_stream_encode_a10nsp_mpls(a10nsp_interface, a10nsp_session, stream, &eth);
+    }
+
     if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
@@ -496,6 +535,11 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
     stream->ipv4_dst = ipv4.dst;
     stream->ipv6_src = ipv6.src;
     stream->ipv6_dst = ipv6.dst;
+
+    if(a10nsp_interface->network_interface && stream->direction == BBL_DIRECTION_DOWN) {
+        return bbl_stream_encode_a10nsp_mpls(a10nsp_interface, a10nsp_session, stream, &eth);
+    }
+
     if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;

@@ -2346,6 +2346,9 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             }
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         }
+        if(eth->type == ETH_TYPE_ETH) {
+            return encode_ethernet(buf, len, (bbl_ethernet_header_s*)eth->next);
+        }
     } else if(eth->type == ISIS_PROTOCOL_IDENTIFIER) {
         /* Remember ethernet length field position */
         eth_len_ptr = (uint16_t*)buf;
@@ -4691,7 +4694,13 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 eth->type = NB_ETH_TYPE_IPV6; 
                 break;
             default: 
-                return UNKNOWN_PROTOCOL;
+                /* Try to decode as ethernet */
+                if(decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&eth->next) == PROTOCOL_SUCCESS) {
+                    eth->type = ETH_TYPE_ETH;
+                    return PROTOCOL_SUCCESS;
+                } else {
+                    return UNKNOWN_PROTOCOL;
+                }
         }
     }
 

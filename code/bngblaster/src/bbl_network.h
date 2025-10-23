@@ -22,6 +22,9 @@ typedef struct bbl_network_interface_
     /* next network interface with same parent */
     struct bbl_network_interface_ *next;
 
+    /* A10NSP interface emulate over network interface */
+    bbl_a10nsp_interface_s *a10nsp;
+
     bbl_txq_s *txq;
 
     uint16_t mtu;

@@ -152,6 +152,45 @@ bbl_a10nsp_session_free(bbl_session_s *session)
         session->a10nsp_session = NULL;
     }
 }
+static void
+bbl_a10nsp_tx_mpls(bbl_a10nsp_interface_s *interface,
+                   bbl_a10nsp_session_s *a10nsp_session,
+                   bbl_ethernet_header_s *eth) 
+{
+    bbl_ethernet_header_s eth_mpls = {0};
+    bbl_mpls_s mpls_transport = {0};
+    bbl_mpls_s mpls_service = {0};
+
+    eth_mpls.dst = interface->network_interface->gateway6_mac;
+    eth_mpls.src = interface->mac;
+    eth_mpls.type = ETH_TYPE_ETH;
+    eth_mpls.next = eth;
+    mpls_service.label = a10nsp_session->label;
+    mpls_service.ttl = 64;
+    if(interface->tx_label) {
+        mpls_transport.label = interface->tx_label;
+        mpls_transport.ttl = 64;
+        mpls_transport.next = &mpls_service;
+        eth_mpls.mpls = &mpls_transport;
+    } else {
+        eth_mpls.mpls = &mpls_service;
+    }
+    if(bbl_txq_to_buffer(interface->txq, &eth_mpls) == BBL_TXQ_OK) {
+        a10nsp_session->stats.packets_tx++;
+    }
+}
+
+static void
+bbl_a10nsp_tx(bbl_a10nsp_interface_s *interface,
+              bbl_a10nsp_session_s *a10nsp_session,
+              bbl_ethernet_header_s *eth) 
+{
+    if(interface->network_interface) {
+        bbl_a10nsp_tx_mpls(interface, a10nsp_session, eth);
+    } else if (bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+        a10nsp_session->stats.packets_tx++;
+    }
+}
 
 static void
 bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
@@ -199,9 +238,7 @@ bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
     pppoed->service_name_len = sizeof(A10NSP_PPPOE_SERVICE_NAME)-1;
     pppoed->ac_name = (uint8_t*)A10NSP_PPPOE_AC_NAME;
     pppoed->ac_name_len = sizeof(A10NSP_PPPOE_AC_NAME)-1;
-    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-        a10nsp_session->stats.packets_tx++;
-    }
+    bbl_a10nsp_tx(interface, a10nsp_session, eth);
     return;
 }
 
@@ -218,9 +255,7 @@ bbl_a10nsp_lcp_handler(bbl_a10nsp_interface_s *interface,
     switch(lcp->code) {
         case PPP_CODE_CONF_REQUEST:
             lcp->code = PPP_CODE_CONF_ACK;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             memset(&lcp_request, 0x0, sizeof(bbl_lcp_s));
             lcp_request.code = PPP_CODE_CONF_REQUEST;
             lcp_request.identifier = 1;
@@ -228,21 +263,15 @@ bbl_a10nsp_lcp_handler(bbl_a10nsp_interface_s *interface,
             lcp_request.mru = PPPOE_DEFAULT_MRU;
             lcp_request.magic = lcp->magic+1;
             pppoes->next = &lcp_request;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         case PPP_CODE_ECHO_REQUEST:
             lcp->code = PPP_CODE_ECHO_REPLY;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         case PPP_CODE_TERM_REQUEST:
             lcp->code = PPP_CODE_TERM_ACK;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         default:
             break;
@@ -265,9 +294,7 @@ bbl_a10nsp_pap_handler(bbl_a10nsp_interface_s *interface,
     pap_response.reply_message = A10NSP_REPLY_MESSAGE;
     pap_response.reply_message_len = sizeof(A10NSP_REPLY_MESSAGE)-1;
     pppoes->next = &pap_response;
-    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-        a10nsp_session->stats.packets_tx++;
-    }
+    bbl_a10nsp_tx(interface, a10nsp_session, eth);
 }
 
 static void
@@ -299,24 +326,18 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
                     ipcp->dns2 = MOCK_DNS2;
                 }
             }
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             memset(&ipcp_request, 0x0, sizeof(bbl_ipcp_s));
             ipcp_request.code = PPP_CODE_CONF_REQUEST;
             ipcp_request.identifier = 1;
             ipcp_request.address = MOCK_IP_LOCAL;
             ipcp_request.option_address = true;
             pppoes->next = &ipcp_request;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         case PPP_CODE_TERM_REQUEST:
             ipcp->code = PPP_CODE_TERM_ACK;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         default:
             break;
@@ -338,23 +359,17 @@ bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
     switch(ip6cp->code) {
         case PPP_CODE_CONF_REQUEST:
             ip6cp->code = PPP_CODE_CONF_ACK;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             memset(&ip6cp_request, 0x0, sizeof(bbl_ip6cp_s));
             ip6cp_request.code = PPP_CODE_CONF_REQUEST;
             ip6cp_request.identifier = 1;
             ip6cp_request.ipv6_identifier = 1;
             pppoes->next = &ip6cp_request;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         case PPP_CODE_TERM_REQUEST:
             ip6cp->code = PPP_CODE_TERM_ACK;
-            if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-                a10nsp_session->stats.packets_tx++;
-            }
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         default:
             break;
@@ -399,9 +414,7 @@ bbl_a10nsp_arp_handler(bbl_a10nsp_interface_s *interface,
         arp->target_ip = arp->sender_ip;
         arp->sender = interface->mac;
         arp->sender_ip = target_ip;
-        if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-            session->a10nsp_session->stats.packets_tx++;
-        }
+        bbl_a10nsp_tx(interface, session->a10nsp_session, eth);
     }
 }
 
@@ -459,9 +472,7 @@ bbl_a10nsp_dhcp_handler(bbl_a10nsp_interface_s *interface,
     dhcp->router = MOCK_IP_LOCAL;
     dhcp->option_lease_time = true;
     dhcp->lease_time = 120;
-    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-        a10nsp_session->stats.packets_tx++;
-    }
+    bbl_a10nsp_tx(interface, a10nsp_session, eth);
 }
 
 static void
@@ -549,10 +560,7 @@ bbl_a10nsp_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
         dhcpv6->ia_pd_preferred_lifetime = 900;
         dhcpv6->ia_pd_valid_lifetime = 1800;
     }
-
-    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-        a10nsp_session->stats.packets_tx++;
-    }
+    bbl_a10nsp_tx(interface, a10nsp_session, eth);
 }
 
 static void
@@ -577,9 +585,7 @@ bbl_a10nsp_icmpv6_handler(bbl_a10nsp_interface_s *interface,
     ipv6->src = (void*)ipv6_link_local_address;
     ipv6->dst = (void*)ipv6_multicast_all_nodes;
     ipv6->ttl = 255;
-    if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
-        a10nsp_session->stats.packets_tx++;
-    }
+    bbl_a10nsp_tx(interface, a10nsp_session, eth);
 }
 
 static void
@@ -625,6 +631,38 @@ bbl_a10nsp_ipv6_handler(bbl_a10nsp_interface_s *interface,
     }
 }
 
+static void
+bbl_a10nsp_session_init(bbl_a10nsp_interface_s *interface,
+                        bbl_session_s *session,
+                        bbl_ethernet_header_s *eth)
+{
+    bbl_mpls_s *mpls;
+    bbl_a10nsp_session_s *a10nsp_session;
+
+    session->a10nsp_interface = interface;
+
+    a10nsp_session = calloc(1, sizeof(bbl_a10nsp_session_s));
+    a10nsp_session->session = session;
+    a10nsp_session->ipv4_address = bbl_a10nsp_ipv4_address();
+    a10nsp_session->a10nsp_interface = interface;
+    a10nsp_session->s_vlan = eth->vlan_outer;
+    a10nsp_session->qinq_received = eth->qinq;
+    if(eth->mpls) {
+        mpls = eth->mpls;
+        while(mpls->next) {
+            mpls = mpls->next;
+        }
+        a10nsp_session->label = mpls->label; 
+        LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d and MPLS label %u\n",
+            session->session_id, interface->name, eth->vlan_outer, mpls->label);
+    } else {
+        LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n",
+            session->session_id, interface->name, eth->vlan_outer);
+    }
+    session->a10nsp_session = a10nsp_session;
+    return;
+}
+
 /**
  * bbl_a10nsp_rx
  *
@@ -642,15 +680,7 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
 {
     /* Create A10NSP session if not already present */
     if(!session->a10nsp_session) {
-        LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n",
-            session->session_id, interface->name, eth->vlan_outer);
-        session->a10nsp_session = calloc(1, sizeof(bbl_a10nsp_session_s));
-        session->a10nsp_session->session = session;
-        session->a10nsp_session->ipv4_address = bbl_a10nsp_ipv4_address();
-        session->a10nsp_session->a10nsp_interface = interface;
-        session->a10nsp_session->s_vlan = eth->vlan_outer;
-        session->a10nsp_session->qinq_received = eth->qinq;
-        session->a10nsp_interface = interface;
+        bbl_a10nsp_session_init(interface, session, eth);
     }
     session->a10nsp_session->stats.packets_rx++;
 
@@ -658,6 +688,7 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
     eth->dst = eth->src;
     eth->src = interface->mac;
     eth->qinq = interface->qinq;
+    eth->mpls = NULL;
     switch(eth->type) {
         case ETH_TYPE_PPPOE_DISCOVERY:
             bbl_a10nsp_pppoed_handler(interface, session, eth);
