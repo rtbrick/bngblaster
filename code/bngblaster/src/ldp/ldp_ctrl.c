@@ -190,7 +190,7 @@ ldp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                 ldp_session = ldp_session->next;
                 continue;
             }
-            if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(ldp_session->local.ipv6_address, sizeof(ipv6addr_t)) != 0) {
+            if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(ldp_session->local.ipv6_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
                 ldp_session = ldp_session->next;
                 continue;
             }
@@ -300,7 +300,7 @@ ldp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
                 filtered++;
                 continue;
             }
-            if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(ldp_session->local.ipv6_address, sizeof(ipv6addr_t)) != 0) {
+            if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(ldp_session->local.ipv6_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
                 ldp_session = ldp_session->next;
                 filtered++;
                 continue;
