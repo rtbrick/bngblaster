@@ -90,8 +90,8 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     const char *s;
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
-    ipv6addr_t ipv6_local_address;
-    ipv6addr_t ipv6_peer_address;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
@@ -181,8 +181,8 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
 
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
-    ipv6addr_t ipv6_local_address;
-    ipv6addr_t ipv6_peer_address;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
@@ -319,8 +319,8 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
 
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
-    ipv6addr_t ipv6_local_address;
-    ipv6addr_t ipv6_peer_address;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
