@@ -125,11 +125,11 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
             bgp_session = bgp_session->next;
             continue;
         }
-        if(ipv6_local_address && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+        if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             continue;
         }
-        if(ipv6_peer_address && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
+        if((memcmp(ipv6_peer_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             continue;
         }
@@ -226,12 +226,12 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
             filtered++;
             continue;
         }
-        if(ipv6_local_address && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+        if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             filtered++;
             continue;
         }
-        if(ipv6_peer_address && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
+        if((memcmp(ipv6_peer_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             filtered++;
             continue;
@@ -355,12 +355,12 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
             filtered++;
             continue;
         }
-        if(ipv6_local_address && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+        if((memcmp(ipv6_local_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             filtered++;
             continue;
         }
-        if(ipv6_peer_address && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
+        if((memcmp(ipv6_peer_address, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(ipv6addr_t)) == 0) && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             filtered++;
             continue;
