@@ -563,7 +563,9 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_access_rx_established_ipoe(interface, session, eth);
-                bbl_access_icmpv6_ns(session, eth, ipv6, icmpv6);
+                if(bbl_access_icmpv6_ns(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
+                    return true;
+                }
             } else if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
                 if(icmpv6->flags & (ICMPV6_FLAGS_MANAGED|ICMPV6_FLAGS_OTHER_CONFIG)) {
                     bbl_dhcpv6_start(session);
@@ -586,6 +588,20 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         if(bbl_access_icmpv6_echo_reply(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
             return true;
+        }
+    } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
+        if(ipv6_addr_not_zero(&session->icmpv6_ns_request) && 
+           memcmp(icmpv6->prefix.address, session->icmpv6_ns_request, IPV6_ADDR_LEN) == 0) {
+            memset(session->icmpv6_ns_request, 0x0, IPV6_ADDR_LEN);
+            if(memcmp(icmpv6->prefix.address, session->access_config->static_gateway6, IPV6_ADDR_LEN) == 0) {
+                if(!session->icmpv6_ra_received) {
+                    session->icmpv6_ra_received = true;
+                }
+                if(!session->arp_resolved) {
+                    memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
+                }
+                bbl_access_rx_established_ipoe(interface, session, eth);
+            }
         }
     }
     return false;

@@ -423,7 +423,10 @@ bbl_session_reset(bbl_session_s *session) {
     session->dhcpv6_established = false;
     session->dhcpv6_ia_na_option_len = 0;
     session->dhcpv6_ia_pd_option_len = 0;
-    memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+
+    if(!ipv6_addr_not_zero(&session->access_config->static_ip6)) {
+        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+    }
     memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
     memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
     memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
@@ -623,7 +626,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 if(session->ip6cp_state > BBL_PPP_DISABLED) {
                     session->ip6cp_state = BBL_PPP_CLOSED;
                 }
-            }
+            } 
             ENABLE_ENDPOINT(session->endpoint.ipv4);
             ENABLE_ENDPOINT(session->endpoint.ipv6);
             ENABLE_ENDPOINT(session->endpoint.ipv6pd);
@@ -640,6 +643,11 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 session->stats.flapped++;
                 g_ctx->sessions_flapped++;
 
+                if(session->access_type == ACCESS_TYPE_IPOE) {
+                    if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {
+                        memcpy(&session->icmpv6_ns_request, &session->access_config->static_gateway6, sizeof(ipv6addr_t));
+                    }
+                }
                 /* Reconnect */
                 if(!session->reconnect_disabled && 
                    ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
@@ -1032,6 +1040,12 @@ bbl_sessions_init()
                 if(access_config->dhcpv6_enable) {
                     session->dhcpv6_state = BBL_DHCP_INIT;
                     session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+                }
+                if(ipv6_addr_not_zero(&access_config->static_gateway6)) {
+                    memcpy(&session->icmpv6_ns_request, &access_config->static_gateway6, sizeof(ipv6addr_t));
+                }
+                if(ipv6_addr_not_zero(&access_config->static_ip6)) {
+                    memcpy(&session->ipv6_address, &access_config->static_ip6, sizeof(ipv6addr_t));
                 }
             }
         }

@@ -348,7 +348,12 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         }
         if(session->access_type == ACCESS_TYPE_IPOE) {
             bbl_access_rx_established_ipoe(interface, session, eth);
-            session->send_requests |= BBL_SEND_ICMPV6_RS;
+            if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {
+                memcpy(&session->icmpv6_ns_request, &session->access_config->static_gateway6, sizeof(ipv6addr_t));
+                session->send_requests |= BBL_SEND_ICMPV6_NS;
+            } else {
+                session->send_requests |= BBL_SEND_ICMPV6_RS;
+            }
             bbl_session_tx_qnode_insert(session);
         }
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {

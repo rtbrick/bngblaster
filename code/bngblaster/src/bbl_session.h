@@ -196,6 +196,7 @@ typedef struct bbl_session_
     /* IPv6 */
     bool        icmpv6_nd_resolved;
     bool        icmpv6_ra_received;
+    ipv6addr_t  icmpv6_ns_request;
     ipv6addr_t  link_local_ipv6_address;
     ipv6_prefix ipv6_prefix;
     ipv6addr_t  ipv6_address;

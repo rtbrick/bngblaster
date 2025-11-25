@@ -356,7 +356,12 @@ bbl_ctrl_job(timer_s *timer)
                                     bbl_dhcpv6_start(session);
                                 } else {
                                     /* Start IPoE session by sending RS. */
-                                    session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                    if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {
+                                        memcpy(&session->icmpv6_ns_request, &session->access_config->static_gateway6, sizeof(ipv6addr_t));
+                                        session->send_requests |= BBL_SEND_ICMPV6_NS;
+                                    } else {
+                                        session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                    }
                                 }
                             }
                             break;

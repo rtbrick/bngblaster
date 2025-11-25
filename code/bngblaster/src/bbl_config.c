@@ -920,7 +920,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "inner-vlan", "inner-vlan-min", "inner-vlan-max",
         "inner-vlan-step", "third-vlan", "ppp-mru",
         "address", "address-iter", "gateway", "gateway-iter", 
-        "ipv6-link-local",
+        "ipv6-link-local", "address-ipv6", "gateway-ipv6",
         "username", "password", "authentication-protocol", 
         "agent-circuit-id", "agent-remote-id",
         "access-aggregation-circuit-id",
@@ -1122,6 +1122,20 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     if(json_unpack(access_interface, "{s:s}", "ipv6-link-local", &s) == 0) {
         if(!inet_pton(AF_INET6, s, &access_config->static_ip6_ll)) {
             fprintf(stderr, "JSON config error: Invalid value for access->ipv6-link-local\n");
+            return false;
+        }
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "address-ipv6", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &access_config->static_ip6)) {
+            fprintf(stderr, "JSON config error: Invalid value for access->address-ipv6\n");
+            return false;
+        }
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "gateway-ipv6", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &access_config->static_gateway6)) {
+            fprintf(stderr, "JSON config error: Invalid value for access->gateway-ipv6\n");
             return false;
         }
     }
