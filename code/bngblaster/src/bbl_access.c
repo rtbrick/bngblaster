@@ -1791,7 +1791,6 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
                   bbl_ethernet_header_s *eth)
 {
     bbl_arp_s *arp = (bbl_arp_s*)eth->next;
-
     if(arp->sender_ip == session->peer_ip_address) {
         if(arp->code == ARP_REQUEST) {
             if(arp->target_ip == session->ip_address) {
@@ -1809,6 +1808,22 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
                     timer_del(session->timer_arp);
                 }
             }
+        }
+    } else if(arp->code == ARP_REQUEST && 
+              arp->target_ip == session->ip_address) {
+        eth->dst = eth->src;
+        eth->src = session->client_mac;
+        eth->qinq = session->access_config->qinq;
+        eth->vlan_outer = session->vlan_key.outer_vlan_id;
+        eth->vlan_inner = session->vlan_key.inner_vlan_id;
+        eth->vlan_three = session->access_third_vlan;
+        arp->code = ARP_REPLY;
+        arp->target = arp->sender;
+        arp->target_ip = arp->sender_ip;
+        arp->sender = session->client_mac;
+        arp->sender_ip = session->ip_address;
+        if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+            session->access_interface->stats.arp_tx++;
         }
     }
     bbl_arp_client_rx(session, arp);
