@@ -1465,7 +1465,11 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             }
             if(lcp->auth || session->access_config->authentication_protocol) {
                 /* Negotiate authentication protocol */
-                session->auth_protocol = lcp->auth;
+                if(lcp->auth == PROTOCOL_CHAP && lcp->alg != PROTOCOL_CHAP_ALG_MD5) {
+                    session->auth_protocol = 0;
+                } else {
+                    session->auth_protocol = lcp->auth;
+                }
                 if(session->access_config->authentication_protocol) {
                     if(session->access_config->authentication_protocol != lcp->auth) {
                         lcp->auth = session->access_config->authentication_protocol;
@@ -1480,7 +1484,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                         session->lcp_options[0] = 3;
                         session->lcp_options[1] = 5;
                         *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_CHAP);
-                        session->lcp_options[4] = 5;
+                        session->lcp_options[4] = PROTOCOL_CHAP_ALG_MD5;
                         session->lcp_options_len = 5;
                     } else {
                         session->lcp_options[0] = 3;

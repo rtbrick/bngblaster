@@ -126,6 +126,7 @@
 #define PROTOCOL_IPV6                   0x0057
 #define PROTOCOL_PAP                    0xc023 /* Password Authentication Protocol */
 #define PROTOCOL_CHAP                   0xc223 /* Challenge Handshake Authentication Protocol */
+#define PROTOCOL_CHAP_ALG_MD5           0x05
 #define PROTOCOL_IPV4_ICMP              0x01
 #define PROTOCOL_IPV4_IGMP              0x02
 #define PROTOCOL_IPV4_TCP               0x06
@@ -704,6 +705,7 @@ typedef struct bbl_lcp_ {
     uint8_t     options_len;
     uint16_t    mru;
     uint16_t    auth;
+    uint8_t     alg;
     uint16_t    protocol;
     uint32_t    magic;
     uint8_t     vendor_oui[OUI_LEN];

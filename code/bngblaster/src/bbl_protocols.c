@@ -1504,11 +1504,24 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
             if(lcp->auth) {
                 *buf = PPP_LCP_OPTION_AUTH;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint16_t*)buf = htobe16(lcp->auth);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-                lcp_len += 4;
+                if(lcp->auth == PROTOCOL_CHAP) {
+                    *buf = 5;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint16_t*)buf = htobe16(lcp->auth);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+                    if(lcp->alg) {
+                        *buf = lcp->alg;
+                    } else {
+                        *buf = PROTOCOL_CHAP_ALG_MD5;
+                    }
+                    lcp_len += 5;
+                } else {
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint16_t*)buf = htobe16(lcp->auth);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+                    lcp_len += 4;
+                }
             }
             if(lcp->magic) {
                 *buf = PPP_LCP_OPTION_MAGIC;
@@ -4103,19 +4116,22 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
                 }
                 switch (lcp_option_type) {
                     case PPP_LCP_OPTION_MRU:
-                        if(lcp_len < sizeof(uint16_t)) {
+                        if(lcp_option_len < sizeof(uint16_t)) {
                             return DECODE_ERROR;
                         }
                         lcp->mru = be16toh(*(uint16_t*)buf);
                         break;
                     case PPP_LCP_OPTION_AUTH:
-                        if(lcp_len < sizeof(uint16_t)) {
+                        if(lcp_option_len < sizeof(uint16_t)) {
                             return DECODE_ERROR;
                         }
                         lcp->auth = be16toh(*(uint16_t*)buf);
+                        if(lcp_option_len > sizeof(uint16_t)) {
+                            lcp->alg = *(buf+sizeof(uint16_t));
+                        }
                         break;
                     case PPP_LCP_OPTION_MAGIC:
-                        if(lcp_len < sizeof(uint32_t)) {
+                        if(lcp_option_len < sizeof(uint32_t)) {
                             return DECODE_ERROR;
                         }
                         lcp->magic = *(uint32_t*)buf;
