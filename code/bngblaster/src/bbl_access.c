@@ -1622,6 +1622,11 @@ bbl_access_rx_session(bbl_access_interface_s *interface,
     bbl_pppoe_session_s *pppoes;
 
     pppoes = (bbl_pppoe_session_s*)eth->next;
+    if(pppoes->session_id != session->pppoe_session_id ||
+       memcmp(session->server_mac, eth->src, ETH_ADDR_LEN) != 0) {
+        return;
+    }
+
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
             bbl_access_rx_lcp(interface, session, eth);
@@ -1757,14 +1762,18 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                     }
                 } else {
                     LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADS\n", session->session_id);
-                    return;
                 }
             }
             break;
         case PPPOE_PADT:
             interface->stats.padt_rx++;
-            bbl_session_update_state(session, BBL_TERMINATED);
-            session->send_requests = 0;
+            if(pppoed->session_id == session->pppoe_session_id &&
+               memcmp(eth->src, session->server_mac, ETH_ADDR_LEN) == 0) {
+                bbl_session_update_state(session, BBL_TERMINATED);
+                session->send_requests = 0;
+            } else {
+                LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADT with wrong session-id or source MAC\n", session->session_id);
+            }
             break;
         default:
             interface->stats.unknown++;
