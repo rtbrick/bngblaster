@@ -110,6 +110,7 @@ typedef struct bbl_ctx_
         char *filename;
         uint8_t *write_buf;
         uint32_t write_idx;
+        bool filename_optarg;
         bool wrote_header;
         bool include_streams;
     } pcap;

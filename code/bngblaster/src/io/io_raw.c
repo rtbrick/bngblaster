@@ -52,7 +52,7 @@ io_raw_rx_job(timer_s *timer)
             if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                 pcap = true;
                 pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                        interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                                          interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
             }
             bbl_rx_handler(interface, eth);
         } else {

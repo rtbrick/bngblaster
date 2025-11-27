@@ -47,4 +47,13 @@ void
 pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
                           uint32_t ifindex, uint32_t direction);
 
+void
+pcapng_push_packet_header_tphdr(struct timespec *ts, struct tpacket2_hdr *tphdr, uint32_t ifindex);
+
+int
+pcapng_ctrl_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+pcapng_ctrl_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
 #endif

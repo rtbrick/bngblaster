@@ -294,6 +294,8 @@ struct action actions[] = {
     {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_all_args, true},
     {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_all_args, true},
     {"session-update", bbl_session_ctrl_update, schema_all_args, false},
+    {"pcap-start", pcapng_ctrl_start, schema_all_args, false},
+    {"pcap-stop", pcapng_ctrl_stop, schema_no_args, false},
     /* DEPRECATED */
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_all_args, true},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_all_args, true},

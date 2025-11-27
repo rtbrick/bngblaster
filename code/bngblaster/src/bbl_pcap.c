@@ -163,6 +163,9 @@ pcapng_free()
     if(g_ctx->pcap.filename) {
         chmod(g_ctx->pcap.filename, 0666);
     }
+
+    g_ctx->pcap.wrote_header = false;
+    g_ctx->pcap.write_idx = 0;
 }
 
 /*
@@ -269,28 +272,24 @@ pcapng_push_interface_header(uint32_t dlt, const char *if_name)
     bbl_pcap_push_le_uint(4, total_length); /* block total_length */
 }
 
-/*
- * Write a pcapng enhanced packet block.
- */
-void
-pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
-                          uint32_t ifindex, uint32_t direction)
+static void
+pcapng_section_header()
 {
     bbl_interface_s *interface;
-    uint32_t start_idx, total_length;
-    uint64_t ts_usec;
-
     if(!g_ctx->pcap.wrote_header) {
         pcapng_push_section_header();
-
         /* Push a list of interfaces. */
         CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
             pcapng_push_interface_header(DLT_EN10MB, interface->name);
         }
         g_ctx->pcap.wrote_header = true;
     }
+}
 
-    start_idx = g_ctx->pcap.write_idx;
+static void
+pcapng_packet_header(struct timespec *ts, uint32_t ifindex)
+{
+    uint64_t ts_usec;
 
     bbl_pcap_push_le_uint(4, PCAPNG_EPB); /* block type */
     bbl_pcap_push_le_uint(4, 0); /* block total_length */
@@ -299,6 +298,20 @@ pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_le
     ts_usec = ts->tv_sec * 1000000 + ts->tv_nsec/1000;
     bbl_pcap_push_le_uint(4, ts_usec>>32); /* timestamp usec msb */
     bbl_pcap_push_le_uint(4, ts_usec & 0xffffffff); /* timestamp usec lsb */
+}
+
+/*
+ * Write a pcapng enhanced packet block.
+ */
+void
+pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
+                          uint32_t ifindex, uint32_t direction)
+{
+    uint32_t start_idx, total_length;
+
+    pcapng_section_header();
+    start_idx = g_ctx->pcap.write_idx;
+    pcapng_packet_header(ts, ifindex);
 
     bbl_pcap_push_le_uint(4, packet_length); /* captured packet length */
     bbl_pcap_push_le_uint(4, packet_length); /* original packet length */
@@ -325,4 +338,106 @@ pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_le
     if(g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
         pcapng_fflush();
     }
+}
+
+/*
+ * Write a pcapng enhanced packet block from tphdr.
+ */
+void
+pcapng_push_packet_header_tphdr(struct timespec *ts, struct tpacket2_hdr *tphdr, uint32_t ifindex)
+{
+    uint8_t *data = (uint8_t*)tphdr + tphdr->tp_mac;
+    uint32_t packet_length = tphdr->tp_len;
+    uint32_t data_length = packet_length;
+
+    uint32_t start_idx, total_length;
+
+    pcapng_section_header();
+    start_idx = g_ctx->pcap.write_idx;
+    pcapng_packet_header(ts, ifindex);
+
+    if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
+        /* Restore outer VLAN from TPHDR. */
+        packet_length += BBL_ETH_VLAN_LEN;
+        bbl_pcap_push_le_uint(4, packet_length); /* captured packet length */
+        bbl_pcap_push_le_uint(4, packet_length); /* original packet length */
+        /* Copy ethernet source and destination address */
+        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, ETH_SRC_DST_ADDR_LEN);
+        g_ctx->pcap.write_idx += ETH_SRC_DST_ADDR_LEN; 
+        data += ETH_SRC_DST_ADDR_LEN; data_length -= ETH_SRC_DST_ADDR_LEN;
+        /* Restore outer VLAN */
+        *(uint16_t*)(g_ctx->pcap.write_buf+g_ctx->pcap.write_idx) = htobe16(tphdr->tp_vlan_tpid);
+        g_ctx->pcap.write_idx += sizeof(uint16_t);
+        *(uint16_t*)(g_ctx->pcap.write_buf+g_ctx->pcap.write_idx) = htobe16(tphdr->tp_vlan_tci);
+        g_ctx->pcap.write_idx += sizeof(uint16_t);
+        /* Copy remaining packet. */
+        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, data_length);
+        g_ctx->pcap.write_idx += data_length;
+    } else {
+        bbl_pcap_push_le_uint(4, packet_length); /* captured packet length */
+        bbl_pcap_push_le_uint(4, packet_length); /* original packet length */
+        /* Copy packet. */
+        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, packet_length);
+        g_ctx->pcap.write_idx += packet_length;
+    }
+    bbl_pcap_push_le_uint(calc_pad(packet_length), 0); /* write pad bytes */
+
+    /* Write epb_flags option for storing packet direction. */
+    bbl_pcap_push_le_uint(2, PCAPNG_EPB_FLAGS_OPTION); /* option_type */
+    bbl_pcap_push_le_uint(2, 4); /* option_length */
+    bbl_pcap_push_le_uint(4, PCAPNG_EPB_FLAGS_INBOUND & 0x3); /* direction */
+
+    /* Calculate total length field. It occurs twice. Overwrite and append. */
+    total_length = g_ctx->pcap.write_idx - start_idx + 4;
+    write_le_uint(g_ctx->pcap.write_buf+start_idx+4, 4, total_length); /* block total_length */
+    bbl_pcap_push_le_uint(4, total_length); /* block total_length */
+
+    LOG(PCAP, "wrote %u bytes pcap packet data, buffer fill %u/%u\n",
+        packet_length, g_ctx->pcap.write_idx, PCAPNG_WRITEBUFSIZE);
+
+    /* Buffer about to be overrun? */
+    if(g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
+        pcapng_fflush();
+    }
+}
+
+int
+pcapng_ctrl_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    const char *s;
+
+    if(g_ctx->pcap.write_buf) {
+        return bbl_ctrl_status(fd, "error", 400, "PCAP already active");
+    }
+
+    /* Update PCAP filename */
+    if(json_unpack(arguments, "{s:s}", "file", &s) == 0) {
+        if(g_ctx->pcap.filename_optarg) {
+            g_ctx->pcap.filename_optarg = false;
+        } else if(g_ctx->pcap.filename) {
+            free(g_ctx->pcap.filename);
+        }
+        g_ctx->pcap.filename = strdup(s);
+    }
+
+    if(!g_ctx->pcap.filename) {
+        return bbl_ctrl_status(fd, "error", 400, "PCAP file not defined");
+    }
+
+    /* Start PCAP */
+    pcapng_init();
+    if(g_ctx->pcap.write_buf) {
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "error", 400, "failed to start PCAP");
+    }
+}
+
+int
+pcapng_ctrl_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    if(g_ctx->pcap.write_buf) {
+        pcapng_free();
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

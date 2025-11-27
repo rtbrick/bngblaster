@@ -88,6 +88,7 @@
 #define NB_ETH_TYPE_MPLS                   0x8847
 #endif
 
+#define BBL_ETH_VLAN_LEN                4
 #define BBL_ETH_VLAN_ID_MAX             4095
 #define BBL_ETH_VLAN_PBIT_MAX           7
 

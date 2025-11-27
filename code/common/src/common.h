@@ -25,6 +25,9 @@
 /* Common Definitions */
 
 #define ETH_ADDR_LEN                6
+#define ETH_SRC_DST_ADDR_LEN        12
+#define ETH_HDR_LEN                 14
+
 #define IPV4_ADDR_LEN               4
 #define IPV6_ADDR_LEN               16
 #define ISO_ADDR_LEN                20

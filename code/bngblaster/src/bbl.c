@@ -439,6 +439,7 @@ main(int argc, char *argv[])
                 exit(0);
             case 'P':
                 g_ctx->pcap.filename = optarg;
+                g_ctx->pcap.filename_optarg = true;
                 break;
             case 'j':
                 if(strcmp("sessions", optarg) == 0) {
