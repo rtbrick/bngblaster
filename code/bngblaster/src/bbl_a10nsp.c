@@ -631,6 +631,92 @@ bbl_a10nsp_ipv6_handler(bbl_a10nsp_interface_s *interface,
     }
 }
 
+/**
+ * bbl_a10nsp_dynamic
+ * 
+ * Dynamically changes the A10NSP TX interface for downstream traffic streams.
+ * Required when A10NSP is dynamically selected.
+ * 
+ * This feature is disabled by default and operates only on interfaces 
+ * without multithreading enabled.
+ * 
+ * See GitHub Issue (#343) for details. 
+ */
+static void
+bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
+                   bbl_session_s *session )
+{
+    bbl_stream_s *stream = session->streams.head;
+    bbl_stream_s *stream_next = NULL;
+    bbl_stream_s *stream_prev = NULL;
+
+    bbl_lag_s *lag;
+    bbl_lag_member_s *member;
+    uint8_t key;
+
+    while(stream) {
+        if(stream->direction == BBL_DIRECTION_DOWN && 
+           stream->tx_a10nsp_interface && 
+           stream->tx_a10nsp_interface != interface) {
+            if(stream->threaded || (interface->interface && interface->interface->io.tx && interface->interface->io.tx->thread)) {
+                LOG(ERROR, "A10NSP (ID: %u) Failed to change TX interface of stream %lu from %s to %s\n",
+                    session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
+            } else {
+                LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %lu from %s to %s\n",
+                    session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
+
+                stream->tx_a10nsp_interface = interface;
+                stream->io->update_streams = true;
+                stream->update_pps = true;
+
+                if(stream->lag) {
+                    /* Remove stream from LAG interface */
+                    lag = stream->tx_a10nsp_interface->interface->lag;
+                    stream_next = lag->stream_head;
+                    stream_prev = NULL;
+                    while(stream_next) {
+                        if(stream_next == stream) {
+                            lag->stream_count--;
+                            if(stream_prev) {
+                                stream_prev->lag_next = stream->lag_next;
+                            } else {
+                                lag->stream_head = stream_next;
+                            }
+                            stream->lag = false;
+                            stream->lag_next = NULL;
+                            stream_next = NULL;
+                        } else {
+                            stream_prev = stream_next;
+                            stream_next = stream_next->lag_next;
+                        }
+                    }
+                }
+
+                /* Move stream */
+                if(interface->interface->type == LAG_INTERFACE) {
+                    lag = interface->interface->lag;
+                    stream->lag = true;
+                    stream->lag_next = lag->stream_head;
+                    lag->stream_head = stream;
+                    lag->stream_count++;
+                    if(lag->active_count) {
+                        key = stream->flow_id % lag->active_count;
+                        member = lag->active_list[key];
+                    } else {
+                        member = CIRCLEQ_FIRST(&lag->lag_member_qhead);
+                    }
+                    stream->io = member->interface->io.tx;
+                    stream->tx_interface = member->interface;
+                } else {
+                    stream->io = interface->interface->io.tx;
+                    stream->tx_interface = interface->interface;
+                }
+            }
+        }
+        stream = stream->session_next;
+    }
+}
+
 static void
 bbl_a10nsp_session_init(bbl_a10nsp_interface_s *interface,
                         bbl_session_s *session,
@@ -658,7 +744,12 @@ bbl_a10nsp_session_init(bbl_a10nsp_interface_s *interface,
     } else {
         LOG(DEBUG, "A10NSP (ID: %u) Session created on interface %s with S-VLAN %d\n",
             session->session_id, interface->name, eth->vlan_outer);
+
+        if(g_ctx->config.a10nsp_dynamic) {
+            bbl_a10nsp_dynamic(interface, session);
+        }
     }
+
     session->a10nsp_session = a10nsp_session;
     return;
 }

@@ -3992,7 +3992,7 @@ json_parse_config(json_t *root)
             "io-mode", "io-slots", "io-burst", "qdisc-bypass",
             "tx-interval", "rx-interval", "tx-threads",
             "rx-threads", "capture-include-streams", "mac-modifier",
-            "lag", "network", "access", "a10nsp", "links"
+            "lag", "network", "access", "a10nsp", "links", "a10nsp-dynamic"
         };
         if(!schema_validate(section, "interfaces", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -4059,7 +4059,10 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.mac_modifier = json_number_value(value);
         }
-
+        JSON_OBJ_GET_BOOL(section, value, "interfaces", "a10nsp-dynamic");
+        if(value) {
+            g_ctx->config.a10nsp_dynamic = json_boolean_value(value);
+        }
         /* LAG Configuration Section */
         sub = json_object_get(section, "lag");
         if(json_is_array(sub)) {
