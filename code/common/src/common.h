@@ -11,6 +11,7 @@
 #define __COMMON_H__
 
 #include <errno.h>
+#include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -59,6 +60,10 @@
 
 #define IO_BUF_REMAINING(_buf) (_buf->size - _buf->idx)
 
+
+#ifndef uint
+typedef unsigned int uint;
+#endif
 
 /* Key-Value structure. */
 typedef struct keyval_ {
