@@ -174,7 +174,8 @@ typedef struct bbl_stream_
     uint64_t flow_seq;
     uint64_t max_packets;
 
-    time_t tx_first_epoch;
+    uint64_t tx_first_seq;
+    time_t   tx_first_epoch;
 
     struct timespec wait_start;
 

@@ -1452,7 +1452,9 @@ bbl_stream_io_send(bbl_stream_s *stream)
 
     if(unlikely(stream->reset)) {
         stream->reset = false;
-        stream->flow_seq = 1;
+        stream->tx_first_epoch = 0;
+        stream->tx_first_seq = stream->flow_seq;
+        stream->rx_last_seq = 0;
         if(stream->max_packets) {
             stream->max_packets = stream->tx_packets + stream->config->max_packets;
         }
@@ -1532,7 +1534,7 @@ bbl_stream_io_send(bbl_stream_s *stream)
     } else if(g_ctx->config.stream_udp_checksum) {
         bbl_stream_update_udp(stream);
     }
-    if(stream->flow_seq == 1) {
+    if(!stream->tx_first_epoch) {
         stream->tx_first_epoch = io->timestamp.tv_sec;
     }
     return PROTOCOL_SUCCESS;
@@ -1807,6 +1809,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream_up->endpoint = &g_endpoint;
         stream_up->flow_id = g_ctx->flow_id++;
         stream_up->flow_seq = 1;
+        stream_up->tx_first_seq = 1;
         stream_up->config = config;
         stream_up->pps = config->pps_upstream;
         stream_up->type = BBL_TYPE_UNICAST;
@@ -1853,6 +1856,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream_down->endpoint = &g_endpoint;
         stream_down->flow_id = g_ctx->flow_id++;
         stream_down->flow_seq = 1;
+        stream_down->tx_first_seq = 1;
         stream_down->config = config;
         stream_down->pps = config->pps;
         stream_down->type = BBL_TYPE_UNICAST;
@@ -2011,6 +2015,7 @@ bbl_stream_init() {
                 stream->endpoint = &g_endpoint;
                 stream->flow_id = g_ctx->flow_id++;
                 stream->flow_seq = 1;
+                stream->tx_first_seq = 1;
                 stream->config = config;
                 stream->pps = config->pps;
                 stream->type = BBL_TYPE_UNICAST;
@@ -2089,6 +2094,7 @@ bbl_stream_init() {
             stream->endpoint = &(g_ctx->multicast_endpoint);
             stream->flow_id = g_ctx->flow_id++;
             stream->flow_seq = 1;
+            stream->tx_first_seq = 1;
             stream->config = config;
             stream->pps = config->pps;
             stream->type = BBL_TYPE_MULTICAST;
@@ -2221,6 +2227,7 @@ void
 bbl_stream_reset(bbl_stream_s *stream)
 {
     if(!stream) return;
+    stream->tx_first_seq = UINT64_MAX;
 
     stream->reset_packets_tx = stream->tx_packets;
     stream->reset_packets_rx = stream->rx_packets;
@@ -2331,6 +2338,9 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
             }
         } else {
             /* Verify stream ... */
+            if(flow_seq < stream->tx_first_seq) {
+                return NULL;
+            }
             stream->rx_len = eth->length;
             stream->rx_priority = eth->tos;
             stream->rx_ttl = eth->ttl;
@@ -2608,7 +2618,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI si si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI sI sI si si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -2625,6 +2635,8 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "tx-interface", tx_interface,
             "tx-interface-state", tx_interface_state,
             "rx-interface", rx_interface,
+            "tx-seq", stream->flow_seq,
+            "tx-first-seq", stream->tx_first_seq,
             "rx-first-seq", stream->rx_first_seq,
             "rx-last-seq", stream->rx_last_seq,
             "rx-tos-tc", stream->rx_priority,
@@ -2724,7 +2736,6 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         json_object_set_new(root, "debug-lag", json_boolean(stream->lag));
         json_object_set_new(root, "debug-tx-pps-config", json_real(stream->pps));
         json_object_set_new(root, "debug-tx-packets-real", json_integer(stream->tx_packets));
-        json_object_set_new(root, "debug-tx-seq", json_integer(stream->flow_seq));
         json_object_set_new(root, "debug-max-packets", json_integer(stream->max_packets));
         json_object_set_new(root, "debug-tcp-flags", json_integer(stream->tcp_flags));
         json_object_set_new(root, "debug-expired", json_integer(stream->expired));
