@@ -189,6 +189,9 @@ bbl_print_version (void)
     } else {
         printf("Version: DEV\n");
     }
+    if(sizeof(BUILD_OS)-1) {
+        printf("Build OS: %s\n", BUILD_OS);
+    } 
     if(sizeof(COMPILER_ID)-1 + sizeof(COMPILER_VERSION)-1) {
         printf("Compiler: %s (%s)\n", COMPILER_ID, COMPILER_VERSION);
     }
