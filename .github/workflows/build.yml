@@ -11,9 +11,10 @@ env:
   BUILD_TYPE: RelWithDebInfo
 
 jobs:
-  build:
+  ubuntu:
     name: Build ${{matrix.os}}
     runs-on: ${{matrix.os}}
+
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
@@ -23,15 +24,75 @@ jobs:
 
     - name: Download RtBrick libdict
       shell: bash
-      run: wget https://github.com/rtbrick/libdict/releases/download/1.0.4/libdict-${{matrix.os}}.zip
+      run: wget https://github.com/rtbrick/libdict/releases/download/1.0.5/libdict-${{matrix.os}}.zip
 
     - name: Install RtBrick libdict
       shell: bash
-      run: unzip libdict-${{matrix.os}}.zip; sudo dpkg -i libdict_1.0.4_amd64.deb; sudo dpkg -i libdict-dev_1.0.4_amd64.deb
+      run: unzip libdict-${{matrix.os}}.zip; sudo dpkg -i libdict_1.0.5_amd64.deb; sudo dpkg -i libdict-dev_1.0.5_amd64.deb
 
     - name: Install Dependencies
       shell: bash
       run: sudo apt install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+
+    - name: Set export SOURCE_DATE_EPOCH to git commit time
+      run: |
+          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> $GITHUB_ENV
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DGIT_REF=$GITHUB_REF -DGIT_SHA=$GITHUB_SHA -DBNGBLASTER_TESTS=ON -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_OS=${{matrix.os}}
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: ctest -C $BUILD_TYPE
+
+    - name: Package
+      working-directory: ${{github.workspace}}/build
+      shell: bash
+      run: cpack -G DEB
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bngblaster-${{matrix.os}}
+        path: ${{ github.workspace }}/build/*.deb
+
+  debian:
+    name: Build ${{matrix.os}}
+    runs-on: ubuntu-latest
+    container: 
+      image: debian:${{matrix.os}}
+      volumes:
+        - ${{github.workspace}}:${{github.workspace}}
+
+    strategy:
+      matrix:
+        os: [bookworm, trixie]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      shell: bash
+      run: apt update && apt install build-essential cmake wget unzip libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev --yes
+
+    - name: Download RtBrick libdict
+      shell: bash
+      run: wget https://github.com/rtbrick/libdict/releases/download/1.0.5/libdict-${{matrix.os}}.zip
+
+    - name: Install RtBrick libdict
+      shell: bash
+      run: unzip libdict-${{matrix.os}}.zip; dpkg -i libdict_1.0.5_amd64.deb; dpkg -i libdict-dev_1.0.5_amd64.deb
 
     - name: Set export SOURCE_DATE_EPOCH to git commit time
       run: |
