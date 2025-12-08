@@ -92,7 +92,7 @@ jobs:
         asset_name: bngblaster-${{ steps.ref_name.outputs.SOURCE_TAG }}-${{ matrix.os }}_amd64.deb
         tag: ${{ steps.ref_name.outputs.SOURCE_TAG }}
 
-  debiab:
+  debian:
     name: Build Release ${{matrix.os}}
     needs: [release]
     runs-on: ubuntu-latest
@@ -118,7 +118,7 @@ jobs:
 
     - name: Install RtBrick libdict
       shell: bash
-      run: unzip libdict-${{matrix.os}}.zip; sudo dpkg -i libdict_1.0.5_amd64.deb; sudo dpkg -i libdict-dev_1.0.5_amd64.deb
+      run: unzip libdict-${{matrix.os}}.zip; dpkg -i libdict_1.0.5_amd64.deb; dpkg -i libdict-dev_1.0.5_amd64.deb
 
     - name: Get Ref Names
       id: ref_name
