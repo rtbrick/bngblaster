@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -6,20 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Installation &mdash; BNG Blaster 0.9 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=049aceee"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=049aceee"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -105,13 +102,13 @@
   <section id="installation">
 <span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
 <p>The BNG Blaster should run on any modern Linux distribution
-but is primarily tested on Ubuntu 22.04 LTS.</p>
+but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.</p>
 <section id="install-ubuntu">
 <h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Link to this heading"></a></h2>
 <p>Install dependencies:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Ubuntu 18.04 and 20.04
 sudo apt install -y libssl1.1 libncurses5 libjansson4
-# Ubuntu 22.04 and newer
+# Debian Bookworm, Ubuntu 22.04 and newer
 sudo apt install -y libssl3 libncurses6 libjansson4
 </pre></div>
 </div>
@@ -133,14 +130,17 @@ and the following standard dependencies:</p>
 # install libdict for Ubuntu 18.04 LTS
 wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
 unzip libdict-debian.zip
-sudo dpkg -i libdict_1.0.1_amd64.deb
-sudo dpkg -i libdict-dev_1.0.1_amd64.deb
 
 # install libdict for Ubuntu 22.04 LTS
-wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-ubuntu-22.04.zip
+wget https://github.com/rtbrick/libdict/releases/download/1.0.5/libdict-ubuntu-22.04.zip
 unzip libdict-ubuntu-22.04.zip
-sudo dpkg -i libdict_1.0.3_amd64.deb
-sudo dpkg -i libdict-dev_1.0.3_amd64.deb
+
+# install libdict for Debian Bookworm
+wget https://github.com/rtbrick/libdict/releases/download/1.0.5/libdict-bookworm.zip
+unzip libdict-bookworm.zip
+
+sudo dpkg -i libdict_1.0.5_amd64.deb
+sudo dpkg -i libdict-dev_1.0.5_amd64.deb
 
 # install other dependencies
 sudo apt install -y cmake \
