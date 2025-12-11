@@ -327,10 +327,17 @@ bbl_ctrl_job(timer_s *timer)
          * outstanding and setup rate. Sessions started will be removed
          * from idle list. */
         bbl_stats_update_cps();
-	if(g_ctx->sessions_start_credits < g_ctx->config.sessions_start_period_ns)
+        if(g_ctx->sessions_start_credits < g_ctx->config.sessions_start_period_ns) {
             g_ctx->sessions_start_credits += ctrl_job_period_ns;
+        }
         while(!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
             session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
+            if(session->session_state != BBL_IDLE) {
+                CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+                CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
+                CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+                continue;
+            }
             if(g_ctx->sessions_start_credits >= g_ctx->config.sessions_start_period_ns) {
                 g_ctx->sessions_start_credits -= g_ctx->config.sessions_start_period_ns;
                 if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
