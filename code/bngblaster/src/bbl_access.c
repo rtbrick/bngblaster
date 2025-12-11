@@ -694,7 +694,6 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
 
     switch(ipv4->protocol) {
         case PROTOCOL_IPV4_IGMP:
-            session->stats.igmp_rx++;
             interface->stats.igmp_rx++;
             bbl_igmp_rx(session, ipv4);
             return;

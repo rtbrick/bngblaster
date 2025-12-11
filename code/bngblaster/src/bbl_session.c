@@ -473,6 +473,7 @@ bbl_session_reset(bbl_session_s *session) {
     bbl_stream_reset(session->session_traffic.ipv6pd_down);
 
     /* Reset session stats */
+    session->stats.igmp_rx_wrong_state = 0;
     session->stats.igmp_rx = 0;
     session->stats.igmp_tx = 0;
     session->stats.min_join_delay = 0;
@@ -1335,7 +1336,7 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si so* so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si so* so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1374,6 +1375,7 @@ bbl_session_json(bbl_session_s *session)
             "tx-accounting-bytes", session->stats.accounting_bytes_tx,
             "rx-accounting-bytes", session->stats.accounting_bytes_rx,
             "tx-igmp", session->stats.igmp_tx,
+            "rx-igmp-wrong-state", session->stats.igmp_rx_wrong_state,
             "rx-igmp", session->stats.igmp_rx,
             "tx-icmp", session->stats.icmp_tx,
             "rx-icmp", session->stats.icmp_rx,

@@ -32,6 +32,16 @@ bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
         val2key(igmp_msg_names, igmp->type));
 #endif
 
+
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(session->ipcp_state != BBL_PPP_OPENED) {
+            session->stats.igmp_rx_wrong_state++;
+            return;
+        }
+    }
+    session->stats.igmp_rx++;
+
+
     if(igmp->type == IGMP_TYPE_QUERY) {
 
         if(igmp->robustness) {

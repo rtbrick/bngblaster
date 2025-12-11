@@ -300,6 +300,7 @@ typedef struct bbl_session_
         uint64_t accounting_bytes_tx;
         uint64_t accounting_bytes_rx;
 
+        uint32_t igmp_rx_wrong_state;
         uint32_t igmp_rx;
         uint32_t igmp_tx;
 
