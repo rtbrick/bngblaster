@@ -46,3 +46,13 @@
 |                                   | | ``session-id``                                                     |
 |                                   | | ``session-group-id`` (ignored if session-id is present)            |
 +-----------------------------------+----------------------------------------------------------------------+
+| **session-update**                | | Update session configuration.                                      |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id`` Mandatory                                           |
+|                                   | | ``username`` update username                                       |
+|                                   | | ``password`` update password                                       |
+|                                   | | ``agent-remote-id`` update agent-remote-id                         |
+|                                   | | ``agent-circuit-id`` update agent-circuit-id                       |
+|                                   | | ``ipv6-link-local`` update IPv6 link-local address                 |
++-----------------------------------+----------------------------------------------------------------------+

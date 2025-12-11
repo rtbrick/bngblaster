@@ -1986,6 +1986,22 @@ bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments)
         }
         memcpy(&session->link_local_ipv6_address, &ipv6, sizeof(ipv6addr_t));
     }
+    if(json_unpack(arguments, "{s:s}", "username", &s) == 0) {
+        if(session->username) free(session->username);
+        session->username = strdup(s);
+    }
+    if(json_unpack(arguments, "{s:s}", "password", &s) == 0) {
+        if(session->password) free(session->password);
+        session->password = strdup(s);
+    }
+    if(json_unpack(arguments, "{s:s}", "agent-remote-id", &s) == 0) {
+        if(session->agent_remote_id) free(session->agent_remote_id);
+        session->agent_remote_id = strdup(s);
+    }
+    if(json_unpack(arguments, "{s:s}", "agent-circuit-id", &s) == 0) {
+        if(session->agent_circuit_id) free(session->agent_circuit_id);
+        session->agent_circuit_id = strdup(s);
+    }
 
     session->version++;
     return bbl_ctrl_status(fd, "ok", 200, NULL);

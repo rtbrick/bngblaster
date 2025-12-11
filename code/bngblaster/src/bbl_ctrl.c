@@ -37,6 +37,7 @@ const char *schema_all_args[] = {
     "group", "group-iter", "group-count", "source1", "source2", "source3",
     "local-ipv4-address", "peer-ipv4-address",
     "local-ipv6-address", "peer-ipv6-address",  "ipv6-link-local",
+    "username", "password", "agent-remote-id", "agent-circuit-id",
     "instance", "level", "pdu", "lsa",
     "tunnel-id", "sessions", "priority",
     "result-code", "error-code", "error-message",
