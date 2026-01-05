@@ -137,9 +137,10 @@ io_socket_open(io_handle_s *io) {
     if(io->direction == IO_INGRESS) {
         int one=1;
         if(setsockopt(io->fd, SOL_PACKET, PACKET_IGNORE_OUTGOING, &one, sizeof(one)) == -1) {
-            LOG(ERROR, "Failed to set PACKET_IGNORE_OUTGOING for interface %s - %s (%d)\n",
+            LOG(ERROR, 
+                "Warning: Failed to set PACKET_IGNORE_OUTGOING for interface %s RX socket - %s (%d)."
+                "TX packets might be seen on RX. Kernel < 4.20?\n",
                 io->interface->name, strerror(errno), errno);
-            return false;
         }
     }
     if(io->direction == IO_EGRESS && interface->config->qdisc_bypass) {
