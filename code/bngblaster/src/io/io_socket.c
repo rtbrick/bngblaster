@@ -137,10 +137,15 @@ io_socket_open(io_handle_s *io) {
     if(io->direction == IO_INGRESS) {
         int one=1;
         if(setsockopt(io->fd, SOL_PACKET, PACKET_IGNORE_OUTGOING, &one, sizeof(one)) == -1) {
-            LOG(ERROR, 
-                "Warning: Failed to set PACKET_IGNORE_OUTGOING for interface %s RX socket - %s (%d)."
-                "TX packets might be seen on RX. Kernel < 4.20?\n",
-                io->interface->name, strerror(errno), errno);
+            kernel_version_s kv = get_kernel_version();
+            const char *hint = "";
+            if((kv.major < 4) || (kv.major == 4 && kv.minor < 20)) {
+                hint = " Unsupported on linux kernel below 4.20.";
+            }
+            LOG(ERROR,
+                "Warning: Failed to set PACKET_IGNORE_OUTGOING for interface %s RX socket - %s (%d).%s"
+                " TX packets might be seen on RX.\n",
+                io->interface->name, strerror(errno), errno, hint);
         }
     }
     if(io->direction == IO_EGRESS && interface->config->qdisc_bypass) {

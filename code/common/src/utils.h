@@ -11,6 +11,15 @@
 #define __COMMON_UTILS_H__
 #include "common.h"
 
+typedef struct kernel_version_
+{
+    uint32_t major;
+    uint32_t minor;
+    uint32_t patch;
+} kernel_version_s;
+
+kernel_version_s get_kernel_version(void);
+
 uint64_t read_be_uint(uint8_t *data, size_t length);
 bool write_be_uint(uint8_t *data, size_t length, uint64_t value);
 bool inc_be_uint(uint8_t *data, size_t length);
