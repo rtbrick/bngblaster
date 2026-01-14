@@ -61,6 +61,8 @@ typedef struct timer_
     bool delete; /* timer has been deleted */
     bool on_change_list; /* node is on change list */
     char name[32];
+    time_t sec;
+    long nsec;
 } timer_s;
 
 /* Public API */

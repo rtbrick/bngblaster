@@ -13,10 +13,10 @@
  * Set timer expiration.
  */
 static void
-timer_set_expire(timer_s *timer, time_t sec, long nsec)
+timer_set_expire(timer_s *timer)
 {
-    timer->expire.tv_sec += sec;
-    timer->expire.tv_nsec += nsec;
+    timer->expire.tv_sec += timer->sec;
+    timer->expire.tv_nsec += timer->nsec;
 
     /* Handle nsec overflow. */
     if(timer->expire.tv_nsec >= 1e9) {
@@ -84,7 +84,6 @@ timespec_add(struct timespec *result, struct timespec *x, struct timespec *y)
 void
 timespec_sub(struct timespec *result, struct timespec *x, struct timespec *y)
 {
-
     if(x->tv_sec < y->tv_sec) {
         result->tv_sec = 0;
         result->tv_nsec = 0;
@@ -144,13 +143,13 @@ timer_change(timer_s *timer)
 }
 
 static void
-timer_enqueue_bucket(timer_root_s *root, timer_s *timer, time_t sec, long nsec)
+timer_enqueue_bucket(timer_root_s *root, timer_s *timer)
 {
     timer_bucket_s *timer_bucket;
 
     /* Find the bucket for insertion. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
-        if(timer_bucket->sec != sec ||  timer_bucket->nsec != nsec) {
+        if(timer_bucket->sec != timer->sec ||  timer_bucket->nsec != timer->nsec) {
             continue;
         }
         /* Found it! */
@@ -166,8 +165,8 @@ timer_enqueue_bucket(timer_root_s *root, timer_s *timer, time_t sec, long nsec)
 
     CIRCLEQ_INSERT_TAIL(&root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
     CIRCLEQ_INIT(&timer_bucket->timer_qhead);
-    timer_bucket->sec = sec;
-    timer_bucket->nsec = nsec;
+    timer_bucket->sec = timer->sec;
+    timer_bucket->nsec = timer->nsec;
     timer_bucket->timer_root = root;
     root->buckets++;
 
@@ -214,7 +213,7 @@ timer_dequeue_bucket(timer_s *timer)
 }
 
 static void
-timer_requeue(timer_s *timer, time_t sec, long nsec)
+timer_requeue(timer_s *timer)
 {
     timer_root_s *timer_root;
     timer_bucket_s *timer_bucket;
@@ -222,23 +221,23 @@ timer_requeue(timer_s *timer, time_t sec, long nsec)
     timer_bucket = timer->timer_bucket;
     timer_root = timer_bucket->timer_root;
 
-    timer_set_expire(timer, sec, nsec);
+    timer_set_expire(timer);
 
     /* If the expiration {sec,nsec} matches the bucket, then simply
      * timer dequeue and enqueue to keep correct temporal ordering.
      * If there is no match, do a slightly more expensive
      * bucket dequeue and enqueue. */
-    if(timer_bucket->sec == sec && timer_bucket->nsec == nsec) {
+    if(timer_bucket->sec == timer->sec && timer_bucket->nsec == timer->nsec) {
         CIRCLEQ_REMOVE(&timer_bucket->timer_qhead, timer, timer_qnode);
         CIRCLEQ_INSERT_TAIL(&timer_bucket->timer_qhead, timer, timer_qnode);
     } else {
         timer_dequeue_bucket(timer);
-        timer_enqueue_bucket(timer_root, timer, sec, nsec);
+        timer_enqueue_bucket(timer_root, timer);
     }
 
 #ifdef BNGBLASTER_TIMER_LOGGING
     LOG(TIMER_DETAIL, "  Reset %s timer, expire in %lu.%06lus\n", 
-        timer->name, sec, nsec/1000);
+        timer->name, timer->sec, timer->nsec/1000);
 #endif
 
 }
@@ -354,17 +353,12 @@ timer_del(timer_s *timer)
  * Deferred processing of all timers.
  */
 static void
-timer_process_changes(timer_root_s *root)
+timer_process_changes(timer_root_s *root, struct timespec *now)
 {
     timer_s *timer;
-    timer_bucket_s *timer_bucket;
-
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
 
     while(!CIRCLEQ_EMPTY(&root->timer_change_qhead)) {
         timer = CIRCLEQ_FIRST(&root->timer_change_qhead);
-        timer_bucket = timer->timer_bucket;
 
         /* Changes are only processed once.
          * Take this timer off the change list. */
@@ -377,16 +371,15 @@ timer_process_changes(timer_root_s *root)
             continue;
         }
 
-        if(timer->periodic) {
-            /* Requeue. */
-            if(timer->reset) {
-                /* Reset timer start time. */
-                timer->expire.tv_sec = now.tv_sec;
-                timer->expire.tv_nsec = now.tv_nsec;
-            }
-            timer_requeue(timer, timer_bucket->sec, timer_bucket->nsec);
-            continue;
+        /* Handle Periodic or Rescheduled Timers */
+        /* If it's periodic, we might need to reset start time */
+        if(timer->periodic && timer->reset) {
+            /* Reset timer start time. */
+            timer->expire.tv_sec = now->tv_sec;
+            timer->expire.tv_nsec = now->tv_nsec;
         }
+
+        timer_requeue(timer);
     }
 }
 
@@ -404,7 +397,7 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
     /* This timer already is enqueued. Requeue. */
     if(timer) {
         clock_gettime(CLOCK_MONOTONIC, &timer->expire);
-        timer_requeue(timer, sec, nsec);
+
         /* Update data and cb if there was a change.
          * Do the reformatting of name only during a change. */
         if(timer->data != data || timer->cb != cb) {
@@ -412,6 +405,13 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
             timer->data = data;
             timer->cb = cb;
         }
+        timer->expired = false;
+        timer->periodic = false;
+        timer->reset = false;
+        timer->delete = false;
+        timer->sec = sec;
+        timer->nsec = nsec;
+        timer_change(timer);
         return;
     }
 
@@ -434,13 +434,15 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
     strncpy(timer->name, name, sizeof(timer->name)-1);
     timer->data = data;
     timer->cb = cb;
+    timer->sec = sec;
+    timer->nsec = nsec;
     clock_gettime(CLOCK_MONOTONIC, &timer->expire);
-    timer_set_expire(timer, sec, nsec);
+    timer_set_expire(timer);
     timer->ptimer = ptimer;
     *ptimer = timer;
 
     /* Enqueue it into the correct timer bucket. */
-    timer_enqueue_bucket(root, timer, sec, nsec);
+    timer_enqueue_bucket(root, timer);
 
 #ifdef BNGBLASTER_TIMER_LOGGING
     LOG(TIMER, "Add %s timer, expire in %lu.%06lus\n", timer->name, sec, nsec/1000);
@@ -508,6 +510,11 @@ timer_walk(timer_root_s *root)
                 break;
             }
 
+            /* Skip timers on change list. */
+            if(timer->on_change_list) {
+                continue;
+            }
+
             /* Everything from here one is expired. */
             timer->expired = true;
 
@@ -532,16 +539,11 @@ timer_walk(timer_root_s *root)
     }
 
     /* Process all changes from the last timer run. */
-    timer_process_changes(root);
+    timer_process_changes(root, &now);
 
     /* Second pass. Figure out min sleep time. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
         CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
-
-            /* Ignore deleted timers that wait for change processing. */
-            if(timer->delete) {
-                continue;
-            }
 
             /* First timer in the queue becomes the actual minimum. */
             if(min.tv_sec == 0 && min.tv_nsec == 0) {
@@ -558,6 +560,7 @@ timer_walk(timer_root_s *root)
                     timer->name, min.tv_sec, min.tv_nsec / 1000);
 #endif
             }
+
             /* Hitting the first non-expired timer means
              * we're done processing this buckets queue. */
             if(timespec_compare(&timer->expire, &now) == 1) {
@@ -613,6 +616,8 @@ timer_flush_root(timer_root_s *timer_root)
 {
     timer_s *timer;
     timer_bucket_s *timer_bucket;
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
 
     /* First step. Walk all timers and move them onto the GC thread. */
     CIRCLEQ_FOREACH(timer_bucket, &timer_root->timer_bucket_qhead, timer_bucket_qnode) {
@@ -620,7 +625,7 @@ timer_flush_root(timer_root_s *timer_root)
             timer_del(timer);
         }
     }
-    timer_process_changes(timer_root);
+    timer_process_changes(timer_root, &now);
 
     /* Second step. Run the GC queue. */
     while(!CIRCLEQ_EMPTY(&timer_root->timer_gc_qhead)) {
