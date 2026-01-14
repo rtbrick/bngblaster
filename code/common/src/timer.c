@@ -339,20 +339,34 @@ timer_del(timer_s *timer)
 }
 
 /**
+ * Delete a timer bucket
+ */
+void
+timer_del_bucket(timer_root_s *root, timer_bucket_s *timer_bucket)
+{
+    CIRCLEQ_REMOVE(&root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
+
+#ifdef BNGBLASTER_TIMER_LOGGING
+    LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
+	timer_bucket->sec, timer_bucket->nsec/1000);
+#endif
+
+    free(timer_bucket);
+    root->buckets--;
+}
+
+/**
  * Deferred processing of all timers.
  */
 static void
 timer_process_changes(timer_root_s *root)
 {
     timer_s *timer;
-    timer_bucket_s *timer_bucket, *timer_bucket_next;
+    timer_bucket_s *timer_bucket;
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    /*
-     * First work the chnaged timer list.
-     */
     while(!CIRCLEQ_EMPTY(&root->timer_change_qhead)) {
         timer = CIRCLEQ_FIRST(&root->timer_change_qhead);
         timer_bucket = timer->timer_bucket;
@@ -378,27 +392,6 @@ timer_process_changes(timer_root_s *root)
             timer_requeue(timer, timer_bucket->sec, timer_bucket->nsec);
             continue;
         }
-    }
-
-    /*
-     * Some buckets may be empty by now.
-     * Trash them here where it is safe.
-     */
-    CIRCLEQ_FOREACH_SAFE(timer_bucket, &root->timer_bucket_qhead,
-			 timer_bucket_qnode, timer_bucket_next) {
-
-	/* If the bucket is empty, remove it. */
-	if(!timer_bucket->timers) {
-	    CIRCLEQ_REMOVE(&root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
-
-#ifdef BNGBLASTER_TIMER_LOGGING
-	    LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
-		timer_bucket->sec, timer_bucket->nsec/1000);
-#endif
-
-	    free(timer_bucket);
-	    root->buckets--;
-	}
     }
 }
 
@@ -484,7 +477,7 @@ void
 timer_walk(timer_root_s *root)
 {
     timer_s *timer;
-    timer_bucket_s *timer_bucket;
+    timer_bucket_s *timer_bucket, *timer_bucket_next;
     struct timespec now, min, sleep, rem;
     int res;
 
@@ -504,7 +497,8 @@ timer_walk(timer_root_s *root)
     min.tv_nsec = 0;
 
     /* Walk all buckets. */
-    CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
+    CIRCLEQ_FOREACH_SAFE(timer_bucket, &root->timer_bucket_qhead,
+			 timer_bucket_qnode, timer_bucket_next) {
 
 #ifdef BNGBLASTER_TIMER_LOGGING
         LOG(TIMER_DETAIL, "  Checking timer bucket %lu.%06lus\n",
@@ -541,6 +535,11 @@ timer_walk(timer_root_s *root)
                 timer_del(timer);
             }
         }
+
+	/* If the bucket is empty, remove it. */
+	if(!timer_bucket->timers) {
+	    timer_del_bucket(root, timer_bucket);
+	}
     }
 
     /* Process all changes from the last timer run. */
