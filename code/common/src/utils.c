@@ -11,15 +11,16 @@
 #include <sys/utsname.h>
 
 /*
- * Get linux kernel version major,minor and patch number.
+ * Get linux kernel version major, minor and patch number.
  */
-kernel_version_s get_kernel_version(void)
+kernel_version_s
+get_kernel_version(void)
 {
     struct utsname buffer;
     kernel_version_s kv = {0, 0, 0};
 
     if (uname(&buffer) != 0) {
-        return kv;  // returns zeros on failure
+        return kv; // returns zeros on failure
     }
 
     sscanf(buffer.release, "%u.%u.%u",

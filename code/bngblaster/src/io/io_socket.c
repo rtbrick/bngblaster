@@ -132,8 +132,8 @@ io_socket_open(io_handle_s *io) {
             io->interface->name, strerror(errno), errno);
         return false;
     }
-    /* Ignore outgoing packets if socket is used for RX. 
-     * PACKET_IGNORE_OUTGOING option is supported since linux 4.20. */
+    /* Ignore outgoing packets if socket is used for RX (IO_INGRESS). 
+     * The PACKET_IGNORE_OUTGOING option is supported since Linux kernel 4.20. */
     if(io->direction == IO_INGRESS) {
         int one=1;
         if(setsockopt(io->fd, SOL_PACKET, PACKET_IGNORE_OUTGOING, &one, sizeof(one)) == -1) {
