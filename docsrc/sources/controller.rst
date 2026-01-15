@@ -35,7 +35,7 @@ Installation
 ------------
 
 The BNG Blaster controller should run on any modern Linux distribution
-but is primarily tested on Ubuntu 22.04 LTS and Ubuntu 24.04 LTS.
+but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.
 
 Download and install Debian package: https://github.com/rtbrick/bngblaster-controller/releases
 

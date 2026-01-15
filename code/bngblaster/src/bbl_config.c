@@ -4,7 +4,7 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -685,7 +685,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
         "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
         "cfm-cc", "cfm-level", "cfm-ma-id", "cfm-ma-name", "cfm-seq",
-        "ldp-instance-id"
+        "ldp-instance-id", "a10nsp", "a10nsp-tx-label"
     };
     if(!schema_validate(network_interface, "network", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -890,6 +890,14 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         return false;
     }
 
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "a10nsp");
+    if(value) {
+        network_config->a10nsp = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "a10nsp-tx-label", 0, 1048575);
+    if(value) {
+        network_config->a10nsp_tx_label = json_number_value(value);
+    }
     return true;
 }
 
@@ -912,7 +920,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "inner-vlan", "inner-vlan-min", "inner-vlan-max",
         "inner-vlan-step", "third-vlan", "ppp-mru",
         "address", "address-iter", "gateway", "gateway-iter", 
-        "ipv6-link-local",
+        "ipv6-link-local", "address-ipv6", "gateway-ipv6",
         "username", "password", "authentication-protocol", 
         "agent-circuit-id", "agent-remote-id",
         "access-aggregation-circuit-id",
@@ -1114,6 +1122,20 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     if(json_unpack(access_interface, "{s:s}", "ipv6-link-local", &s) == 0) {
         if(!inet_pton(AF_INET6, s, &access_config->static_ip6_ll)) {
             fprintf(stderr, "JSON config error: Invalid value for access->ipv6-link-local\n");
+            return false;
+        }
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "address-ipv6", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &access_config->static_ip6)) {
+            fprintf(stderr, "JSON config error: Invalid value for access->address-ipv6\n");
+            return false;
+        }
+    }
+
+    if(json_unpack(access_interface, "{s:s}", "gateway-ipv6", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &access_config->static_gateway6)) {
+            fprintf(stderr, "JSON config error: Invalid value for access->gateway-ipv6\n");
             return false;
         }
     }
@@ -3168,11 +3190,11 @@ json_parse_config(json_t *root)
         }
         JSON_OBJ_GET_NUMBER(section, value, "sessions", "start-rate", 1, 65535);
         if(value) {
-            g_ctx->config.sessions_start_rate = json_number_value(value);
+            g_ctx->config.sessions_start_period_ns = SEC / json_number_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "sessions", "stop-rate", 1, 65535);
         if(value) {
-            g_ctx->config.sessions_stop_rate = json_number_value(value);
+            g_ctx->config.sessions_stop_period_ns = SEC / json_number_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "sessions", "iterate-vlan-outer");
         if(value) {
@@ -3259,12 +3281,12 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "pppoe", "start-rate", 1, 65535);
         if(value) {
             fprintf(stderr, "JSON config warning: Deprecated configuration pppoe->start-rate\n");
-            g_ctx->config.sessions_start_rate = json_number_value(value);
+            g_ctx->config.sessions_start_period_ns = SEC / json_number_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "pppoe", "stop-rate", 1, 65535);
         if(value) {
             fprintf(stderr, "JSON config warning: Deprecated configuration pppoe->stop-rate\n");
-            g_ctx->config.sessions_stop_rate = json_number_value(value);
+            g_ctx->config.sessions_stop_period_ns = SEC / json_number_value(value);
         }
         /* ... Deprecated */
     
@@ -3531,7 +3553,7 @@ json_parse_config(json_t *root)
 
         const char *schema[] = {
             "enable", "ldra", "ia-na", "timeout",
-            "ia-pd", "rapid-commit",
+            "ia-pd", "rapid-commit", "ia-separate",
             "retry", "access-line"
         };
         if(!schema_validate(section, "dhcpv6", schema, 
@@ -3558,6 +3580,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "dhcpv6", "rapid-commit");
         if(value) {
             g_ctx->config.dhcpv6_rapid_commit = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "dhcpv6", "ia-separate");
+        if(value) {
+            g_ctx->config.dhcpv6_ia_separate = json_boolean_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "dhcpv6", "timeout", 1, 65535);
         if(value) {
@@ -3846,34 +3872,6 @@ json_parse_config(json_t *root)
         }
     }
 
-    /* BGP Configuration */
-    sub = json_object_get(root, "bgp");
-    if(json_is_array(sub)) {
-        /* Config is provided as array (multiple BGP sessions) */
-        size = json_array_size(sub);
-        for(i = 0; i < size; i++) {
-            if(!bgp_config) {
-                g_ctx->config.bgp_config = calloc(1, sizeof(bgp_config_s));
-                bgp_config = g_ctx->config.bgp_config;
-            } else {
-                bgp_config->next = calloc(1, sizeof(bgp_config_s));
-                bgp_config = bgp_config->next;
-            }
-            if(!json_parse_bgp_config(json_array_get(sub, i), bgp_config)) {
-                return false;
-            }
-        }
-    } else if(json_is_object(sub)) {
-        /* Config is provided as object (single BGP session) */
-        bgp_config = calloc(1, sizeof(bgp_config_s));
-        if(!g_ctx->config.bgp_config) {
-            g_ctx->config.bgp_config = bgp_config;
-        }
-        if(!json_parse_bgp_config(sub, bgp_config)) {
-            return false;
-        }
-    }
-
     /* Pre-Load BGP RAW update files */
     sub = json_object_get(root, "bgp-raw-update-files");
     if(json_is_array(sub)) {
@@ -3994,7 +3992,7 @@ json_parse_config(json_t *root)
             "io-mode", "io-slots", "io-burst", "qdisc-bypass",
             "tx-interval", "rx-interval", "tx-threads",
             "rx-threads", "capture-include-streams", "mac-modifier",
-            "lag", "network", "access", "a10nsp", "links"
+            "lag", "network", "access", "a10nsp", "links", "a10nsp-dynamic"
         };
         if(!schema_validate(section, "interfaces", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -4061,7 +4059,10 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.mac_modifier = json_number_value(value);
         }
-
+        JSON_OBJ_GET_BOOL(section, value, "interfaces", "a10nsp-dynamic");
+        if(value) {
+            g_ctx->config.a10nsp_dynamic = json_boolean_value(value);
+        }
         /* LAG Configuration Section */
         sub = json_object_get(section, "lag");
         if(json_is_array(sub)) {
@@ -4204,6 +4205,34 @@ json_parse_config(json_t *root)
     } else {
         fprintf(stderr, "JSON config error: Missing interfaces section\n");
         return false;
+    }
+
+    /* BGP Configuration */
+    sub = json_object_get(root, "bgp");
+    if(json_is_array(sub)) {
+        /* Config is provided as array (multiple BGP sessions) */
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!bgp_config) {
+                g_ctx->config.bgp_config = calloc(1, sizeof(bgp_config_s));
+                bgp_config = g_ctx->config.bgp_config;
+            } else {
+                bgp_config->next = calloc(1, sizeof(bgp_config_s));
+                bgp_config = bgp_config->next;
+            }
+            if(!json_parse_bgp_config(json_array_get(sub, i), bgp_config)) {
+                return false;
+            }
+        }
+    } else if(json_is_object(sub)) {
+        /* Config is provided as object (single BGP session) */
+        bgp_config = calloc(1, sizeof(bgp_config_s));
+        if(!g_ctx->config.bgp_config) {
+            g_ctx->config.bgp_config = bgp_config;
+        }
+        if(!json_parse_bgp_config(sub, bgp_config)) {
+            return false;
+        }
     }
 
     /* L2TP Server Configuration (LNS) */
@@ -4514,8 +4543,8 @@ bbl_config_init_defaults()
     g_ctx->config.qdisc_bypass = true;
     g_ctx->config.sessions = 1;
     g_ctx->config.sessions_max_outstanding = 800;
-    g_ctx->config.sessions_start_rate = 400;
-    g_ctx->config.sessions_stop_rate = 400;
+    g_ctx->config.sessions_start_period_ns = 2500000; /* 400/s */
+    g_ctx->config.sessions_stop_period_ns = 2500000; /* 400/s */
     g_ctx->config.sessions_autostart = true;
     g_ctx->config.monkey_autostart = true;
     g_ctx->config.pppoe_discovery_timeout = 5;

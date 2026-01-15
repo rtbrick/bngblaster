@@ -4,10 +4,32 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "utils.h"
+#include <sys/utsname.h>
+
+/*
+ * Get linux kernel version major, minor and patch number.
+ */
+kernel_version_s
+get_kernel_version(void)
+{
+    struct utsname buffer;
+    kernel_version_s kv = {0, 0, 0};
+
+    if (uname(&buffer) != 0) {
+        return kv; // returns zeros on failure
+    }
+
+    sscanf(buffer.release, "%u.%u.%u",
+           &kv.major,
+           &kv.minor,
+           &kv.patch);
+
+    return kv;
+}
 
 /*
  * Simple big endian reader.

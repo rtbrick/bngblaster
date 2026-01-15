@@ -4,7 +4,7 @@
  *
  * Hannes Gredler, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -46,5 +46,14 @@ pcapng_free();
 void
 pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
                           uint32_t ifindex, uint32_t direction);
+
+void
+pcapng_push_packet_header_tphdr(struct timespec *ts, struct tpacket2_hdr *tphdr, uint32_t ifindex);
+
+int
+pcapng_ctrl_start(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+pcapng_ctrl_stop(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
 #endif

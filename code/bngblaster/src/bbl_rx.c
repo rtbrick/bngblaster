@@ -4,7 +4,7 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -102,6 +102,15 @@ bbl_rx_handler(bbl_interface_s *interface,
 
     if(interface->type == LAG_MEMBER_INTERFACE) {
         bbl_rx_handler(interface->lag->interface, eth);
+        return;
+    }
+
+    /* Traffic for emulated A10NSP switches (over network interfaces). */
+    if(interface->a10nsp && eth->mpls && eth->type == ETH_TYPE_ETH) {
+        ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
+        if(!bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next)) {
+            bbl_a10nsp_rx_handler(interface->a10nsp, (bbl_ethernet_header_s*)eth->next);
+        }
         return;
     }
 

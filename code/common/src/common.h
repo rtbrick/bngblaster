@@ -4,13 +4,14 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
 #include <errno.h>
+#include <endian.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -25,6 +26,9 @@
 /* Common Definitions */
 
 #define ETH_ADDR_LEN                6
+#define ETH_SRC_DST_ADDR_LEN        12
+#define ETH_HDR_LEN                 14
+
 #define IPV4_ADDR_LEN               4
 #define IPV6_ADDR_LEN               16
 #define ISO_ADDR_LEN                20
@@ -56,6 +60,10 @@
 
 #define IO_BUF_REMAINING(_buf) (_buf->size - _buf->idx)
 
+
+#ifndef uint
+typedef unsigned int uint;
+#endif
 
 /* Key-Value structure. */
 typedef struct keyval_ {

@@ -3,7 +3,7 @@
  *
  * Christian Giese, August 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -563,7 +563,9 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_access_rx_established_ipoe(interface, session, eth);
-                bbl_access_icmpv6_ns(session, eth, ipv6, icmpv6);
+                if(bbl_access_icmpv6_ns(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
+                    return true;
+                }
             } else if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
                 if(icmpv6->flags & (ICMPV6_FLAGS_MANAGED|ICMPV6_FLAGS_OTHER_CONFIG)) {
                     bbl_dhcpv6_start(session);
@@ -586,6 +588,20 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
     } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         if(bbl_access_icmpv6_echo_reply(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
             return true;
+        }
+    } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
+        if(ipv6_addr_not_zero(&session->icmpv6_ns_request) && 
+           memcmp(icmpv6->prefix.address, session->icmpv6_ns_request, IPV6_ADDR_LEN) == 0) {
+            memset(session->icmpv6_ns_request, 0x0, IPV6_ADDR_LEN);
+            if(memcmp(icmpv6->prefix.address, session->access_config->static_gateway6, IPV6_ADDR_LEN) == 0) {
+                if(!session->icmpv6_ra_received) {
+                    session->icmpv6_ra_received = true;
+                }
+                if(!session->arp_resolved) {
+                    memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
+                }
+                bbl_access_rx_established_ipoe(interface, session, eth);
+            }
         }
     }
     return false;
@@ -678,7 +694,6 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
 
     switch(ipv4->protocol) {
         case PROTOCOL_IPV4_IGMP:
-            session->stats.igmp_rx++;
             interface->stats.igmp_rx++;
             bbl_igmp_rx(session, ipv4);
             return;
@@ -1449,7 +1464,11 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             }
             if(lcp->auth || session->access_config->authentication_protocol) {
                 /* Negotiate authentication protocol */
-                session->auth_protocol = lcp->auth;
+                if(lcp->auth == PROTOCOL_CHAP && lcp->alg != PROTOCOL_CHAP_ALG_MD5) {
+                    session->auth_protocol = 0;
+                } else {
+                    session->auth_protocol = lcp->auth;
+                }
                 if(session->access_config->authentication_protocol) {
                     if(session->access_config->authentication_protocol != lcp->auth) {
                         lcp->auth = session->access_config->authentication_protocol;
@@ -1464,7 +1483,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                         session->lcp_options[0] = 3;
                         session->lcp_options[1] = 5;
                         *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_CHAP);
-                        session->lcp_options[4] = 5;
+                        session->lcp_options[4] = PROTOCOL_CHAP_ALG_MD5;
                         session->lcp_options_len = 5;
                     } else {
                         session->lcp_options[0] = 3;
@@ -1606,6 +1625,11 @@ bbl_access_rx_session(bbl_access_interface_s *interface,
     bbl_pppoe_session_s *pppoes;
 
     pppoes = (bbl_pppoe_session_s*)eth->next;
+    if(pppoes->session_id != session->pppoe_session_id ||
+       memcmp(session->server_mac, eth->src, ETH_ADDR_LEN) != 0) {
+        return;
+    }
+
     switch(pppoes->protocol) {
         case PROTOCOL_LCP:
             bbl_access_rx_lcp(interface, session, eth);
@@ -1741,14 +1765,18 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                     }
                 } else {
                     LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADS\n", session->session_id);
-                    return;
                 }
             }
             break;
         case PPPOE_PADT:
             interface->stats.padt_rx++;
-            bbl_session_update_state(session, BBL_TERMINATED);
-            session->send_requests = 0;
+            if(pppoed->session_id == session->pppoe_session_id &&
+               memcmp(eth->src, session->server_mac, ETH_ADDR_LEN) == 0) {
+                bbl_session_update_state(session, BBL_TERMINATED);
+                session->send_requests = 0;
+            } else {
+                LOG(PPPOE, "PPPoE Error (ID: %u) Invalid PADT with wrong session-id or source MAC\n", session->session_id);
+            }
             break;
         default:
             interface->stats.unknown++;
@@ -1762,7 +1790,6 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
                   bbl_ethernet_header_s *eth)
 {
     bbl_arp_s *arp = (bbl_arp_s*)eth->next;
-
     if(arp->sender_ip == session->peer_ip_address) {
         if(arp->code == ARP_REQUEST) {
             if(arp->target_ip == session->ip_address) {
@@ -1780,6 +1807,22 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
                     timer_del(session->timer_arp);
                 }
             }
+        }
+    } else if(arp->code == ARP_REQUEST && 
+              arp->target_ip == session->ip_address) {
+        eth->dst = eth->src;
+        eth->src = session->client_mac;
+        eth->qinq = session->access_config->qinq;
+        eth->vlan_outer = session->vlan_key.outer_vlan_id;
+        eth->vlan_inner = session->vlan_key.inner_vlan_id;
+        eth->vlan_three = session->access_third_vlan;
+        arp->code = ARP_REPLY;
+        arp->target = arp->sender;
+        arp->target_ip = arp->sender_ip;
+        arp->sender = session->client_mac;
+        arp->sender_ip = session->ip_address;
+        if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+            session->access_interface->stats.arp_tx++;
         }
     }
     bbl_arp_client_rx(session, arp);

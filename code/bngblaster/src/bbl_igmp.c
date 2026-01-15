@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -31,6 +31,16 @@ bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
         session->session_id,
         val2key(igmp_msg_names, igmp->type));
 #endif
+
+
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        if(session->ipcp_state != BBL_PPP_OPENED) {
+            session->stats.igmp_rx_wrong_state++;
+            return;
+        }
+    }
+    session->stats.igmp_rx++;
+
 
     if(igmp->type == IGMP_TYPE_QUERY) {
 

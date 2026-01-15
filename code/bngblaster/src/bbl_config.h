@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __BBL_CONFIG_H__
@@ -62,7 +62,9 @@ typedef struct bbl_access_config_
     uint32_t static_gateway;
     uint32_t static_gateway_iter;
 
+    ipv6addr_t static_ip6;
     ipv6addr_t static_ip6_ll;
+    ipv6addr_t static_gateway6;
 
     /* Authentication */
     const char *username;
@@ -152,6 +154,10 @@ typedef struct bbl_network_config_
     uint8_t  ospfv3_type;
 
     uint16_t ldp_instance_id;
+
+    /* A10NSP switch emulation */
+    bool a10nsp;
+    uint32_t a10nsp_tx_label;
 
     /* CFM CC */
     bool cfm_cc;

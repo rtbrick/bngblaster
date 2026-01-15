@@ -3,7 +3,7 @@
  *
  * Christian Giese, November 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "ldp.h"
@@ -147,6 +147,8 @@ ldp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     const char *s;
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
     int ldp_instance_id = 0;
 
     /* Unpack further arguments */
@@ -159,6 +161,16 @@ ldp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     if(json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "local-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_local_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv6-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "peer-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_peer_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv6-address");
         }
     }
 
@@ -175,6 +187,14 @@ ldp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                 continue;
             }
             if(ipv4_peer_address && ldp_session->peer.ipv4_address != ipv4_peer_address) {
+                ldp_session = ldp_session->next;
+                continue;
+            }
+            if(ipv6_addr_not_zero(&ipv6_local_address) && memcmp(&ldp_session->local.ipv6_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+                ldp_session = ldp_session->next;
+                continue;
+            }
+            if(ipv6_addr_not_zero(&ipv6_peer_address) && memcmp(&ldp_session->peer.ipv6_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
                 ldp_session = ldp_session->next;
                 continue;
             }
@@ -227,6 +247,8 @@ ldp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
 
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
     int ldp_instance_id = 0;
 
     /* Unpack further arguments */
@@ -244,7 +266,16 @@ ldp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
         }
     }
-
+    if(json_unpack(arguments, "{s:s}", "local-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_local_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv6-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "peer-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_peer_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv6-address");
+        }
+    }
     /* Load file. */
     raw_update = ldp_raw_update_load(file_path, true);
     if(!raw_update) {
@@ -265,6 +296,16 @@ ldp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
                 continue;
             }
             if(ipv4_peer_address && ldp_session->peer.ipv4_address != ipv4_peer_address) {
+                ldp_session = ldp_session->next;
+                filtered++;
+                continue;
+            }
+            if(ipv6_addr_not_zero(&ipv6_local_address) && memcmp(&ldp_session->local.ipv6_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+                ldp_session = ldp_session->next;
+                filtered++;
+                continue;
+            }
+            if(ipv6_addr_not_zero(&ipv6_peer_address) && memcmp(&ldp_session->peer.ipv6_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
                 ldp_session = ldp_session->next;
                 filtered++;
                 continue;

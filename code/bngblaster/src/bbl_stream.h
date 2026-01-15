@@ -3,7 +3,7 @@
  *
  * Christian Giese, Match 2021
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __BBL_STREAM_H__
@@ -174,7 +174,8 @@ typedef struct bbl_stream_
     uint64_t flow_seq;
     uint64_t max_packets;
 
-    __time_t tx_first_epoch;
+    uint64_t tx_first_seq;
+    time_t   tx_first_epoch;
 
     struct timespec wait_start;
 
@@ -193,10 +194,10 @@ typedef struct bbl_stream_
     uint64_t rx_first_seq;
     uint64_t rx_last_seq;
 
-    __time_t rx_first_epoch;
-    __time_t rx_last_epoch;
+    time_t   rx_first_epoch;
+    time_t   rx_last_epoch;
 
-    __time_t rx_interface_changed_epoch;
+    time_t   rx_interface_changed_epoch;
     uint8_t  rx_interface_changes;
 
     uint8_t  rx_fragments;

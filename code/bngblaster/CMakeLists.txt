@@ -11,7 +11,7 @@ endforeach()
 add_executable(bngblaster ${COMMON_SOURCES} ${BBL_SOURCES})
 
 set(PLATFORM_SPECIFIC_LIBS "-lpthread")
-string(APPEND CMAKE_C_FLAGS "-pthread")
+string(APPEND CMAKE_C_FLAGS "-pthread -Wno-error=sequence-point")
 
 # Add curses support
 

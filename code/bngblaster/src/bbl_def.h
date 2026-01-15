@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __BBL_DEF_H__
@@ -216,13 +216,17 @@ typedef enum {
  * of the DHCP FSM.
  */
 typedef enum {
-    BBL_DHCP_DISABLED       = 0,
-    BBL_DHCP_INIT           = 1,
-    BBL_DHCP_SELECTING      = 2,
-    BBL_DHCP_REQUESTING     = 3,
-    BBL_DHCP_BOUND          = 4,
-    BBL_DHCP_RENEWING       = 5,
-    BBL_DHCP_RELEASE        = 6,
+    BBL_DHCP_DISABLED           = 0,
+    BBL_DHCP_INIT               = 1,
+    BBL_DHCP_SELECTING          = 2,
+    BBL_DHCP_SELECTING_IA_NA    = 3,
+    BBL_DHCP_SELECTING_IA_PD    = 4,
+    BBL_DHCP_REQUESTING         = 5,
+    BBL_DHCP_REQUESTING_IA_NA   = 6,
+    BBL_DHCP_REQUESTING_IA_PD   = 7,
+    BBL_DHCP_BOUND              = 8,
+    BBL_DHCP_RENEWING           = 9,
+    BBL_DHCP_RELEASE            = 10,
     BBL_DHCP_MAX
 } __attribute__ ((__packed__)) dhcp_state_t;
 

@@ -57,7 +57,6 @@ Following is a basic PPPoE configuration example.
         },
         "sessions": {
             "count": 1000,
-            "session-time": 0,
             "max-outstanding": 800,
             "start-rate": 400,
             "stop-rate": 400

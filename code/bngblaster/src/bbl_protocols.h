@@ -3,7 +3,7 @@
  *
  * Christian Giese, July 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -46,6 +46,7 @@
 #define ETH_TYPE_CFM                    0x8902
 #define ETH_TYPE_MPLS                   0x8847
 #define ETH_TYPE_LACP                   0x8809
+#define ETH_TYPE_ETH                    0xfffe
 #define ETH_TYPE_RAW                    0xffff
 
 #define SLOW_PROTOCOLS_LACP             0x01
@@ -87,6 +88,7 @@
 #define NB_ETH_TYPE_MPLS                   0x8847
 #endif
 
+#define BBL_ETH_VLAN_LEN                4
 #define BBL_ETH_VLAN_ID_MAX             4095
 #define BBL_ETH_VLAN_PBIT_MAX           7
 
@@ -125,6 +127,7 @@
 #define PROTOCOL_IPV6                   0x0057
 #define PROTOCOL_PAP                    0xc023 /* Password Authentication Protocol */
 #define PROTOCOL_CHAP                   0xc223 /* Challenge Handshake Authentication Protocol */
+#define PROTOCOL_CHAP_ALG_MD5           0x05
 #define PROTOCOL_IPV4_ICMP              0x01
 #define PROTOCOL_IPV4_IGMP              0x02
 #define PROTOCOL_IPV4_TCP               0x06
@@ -703,6 +706,7 @@ typedef struct bbl_lcp_ {
     uint8_t     options_len;
     uint16_t    mru;
     uint16_t    auth;
+    uint8_t     alg;
     uint16_t    protocol;
     uint32_t    magic;
     uint8_t     vendor_oui[OUI_LEN];

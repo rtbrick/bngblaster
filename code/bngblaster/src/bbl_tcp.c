@@ -3,7 +3,7 @@
  * 
  * Christian Giese, February 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl_tcp.h"
@@ -822,6 +822,11 @@ bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t
 void
 bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4) {
     struct pbuf *pbuf;
+    bbl_tcp_s *tcp;
+    ldp_instance_s *instance;
+    ldp_session_s *ldp_session;
+    bgp_session_s *bgp_session;
+
     UNUSED(eth);
 
     if(!g_ctx->tcp) {
@@ -830,13 +835,42 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     }
     interface->stats.tcp_rx++;
 
+    tcp = (bbl_tcp_s*)ipv4->next;
+
 #if BNGBLASTER_TCP_DEBUG
-    bbl_tcp_s *tcp = (bbl_tcp_s*)ipv4->next;
     LOG(DEBUG, "TCP (%s %s:%u - %s:%u) packet received\n",
         interface->name,
         format_ipv4_address(&ipv4->dst), tcp->dst,
         format_ipv4_address(&ipv4->src), tcp->src);
 #endif
+
+    if(tcp->dst == BGP_PORT || tcp->src == BGP_PORT) {
+        bgp_session = g_ctx->bgp_sessions;
+        while(bgp_session) {
+            if(bgp_session->ipv4_local_address == ipv4->dst && 
+               bgp_session->ipv4_peer_address == ipv4->src) {
+                interface = bgp_session->interface;
+                break;
+            }
+            bgp_session = bgp_session->next;
+        }
+    }
+    if(tcp->dst == LDP_PORT || tcp->src == LDP_PORT) {
+        instance = g_ctx->ldp_instances;
+        while(instance) {
+            ldp_session = instance->sessions;
+            instance = instance->next;
+            while(ldp_session) {
+                if(ldp_session->local.ipv4_address == ipv4->dst && 
+                   ldp_session->peer.ipv4_address == ipv4->src) {
+                    interface = ldp_session->interface;
+                    instance = NULL;
+                    break;
+                }
+                ldp_session = ldp_session->next;
+            }
+        }
+    }
 
     ip_data.current_netif = &interface->netif;
     ip_data.current_input_netif = &interface->netif;
@@ -897,6 +931,11 @@ void
 bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6)
 {
     struct pbuf *pbuf;
+    bbl_tcp_s *tcp;
+    ldp_instance_s *instance;
+    ldp_session_s *ldp_session;
+    bgp_session_s *bgp_session;
+
     UNUSED(eth);
 
     if(!g_ctx->tcp) {
@@ -905,13 +944,44 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     }
     interface->stats.tcp_rx++;
 
+    tcp = (bbl_tcp_s*)ipv6->next;
+
 #if BNGBLASTER_TCP_DEBUG
-    bbl_tcp_s *tcp = (bbl_tcp_s*)ipv6->next;
     LOG(DEBUG, "TCP (%s [%s]:%u - [%s]:%u) packet received\n",
         interface->name,
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
         format_ipv6_address((ipv6addr_t*)ipv6->src), tcp->src);
 #endif
+
+    if(tcp->dst == BGP_PORT || tcp->src == BGP_PORT) {
+        bgp_session = g_ctx->bgp_sessions;
+        while(bgp_session) {
+            if(bgp_session->ipv6_local_address && 
+               bgp_session->ipv6_peer_address &&
+                memcpy(bgp_session->ipv6_local_address, ipv6->dst, IPV6_ADDR_LEN) == 0 && 
+                memcpy(bgp_session->ipv6_peer_address, ipv6->src, IPV6_ADDR_LEN) == 0) {
+                interface = bgp_session->interface;
+                break;
+            }
+            bgp_session = bgp_session->next;
+        }
+    }
+    if(tcp->dst == LDP_PORT || tcp->src == LDP_PORT) {
+        instance = g_ctx->ldp_instances;
+        while(instance) {
+            ldp_session = instance->sessions;
+            instance = instance->next;
+            while(ldp_session) {
+                if(memcpy(&ldp_session->local.ipv6_address, ipv6->dst, IPV6_ADDR_LEN) == 0 && 
+                   memcpy(&ldp_session->peer.ipv6_address, ipv6->src, IPV6_ADDR_LEN) == 0) {
+                    interface = ldp_session->interface;
+                    instance = NULL;
+                    break;
+                }
+                ldp_session = ldp_session->next;
+            }            
+        }
+    }
 
     pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
     interface->netif.input(pbuf, &interface->netif);

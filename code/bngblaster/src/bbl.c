@@ -8,7 +8,7 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -18,6 +18,8 @@
 #include "bbl_stream.h"
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
+
+static unsigned int ctrl_job_period_ns = MSEC100;
 
 /* Global Context */
 bbl_ctx_s *g_ctx = NULL;
@@ -187,6 +189,9 @@ bbl_print_version (void)
     } else {
         printf("Version: DEV\n");
     }
+    if(sizeof(BUILD_OS)-1) {
+        printf("Build OS: %s\n", BUILD_OS);
+    } 
     if(sizeof(COMPILER_ID)-1 + sizeof(COMPILER_VERSION)-1) {
         printf("Compiler: %s (%s)\n", COMPILER_ID, COMPILER_VERSION);
     }
@@ -235,7 +240,6 @@ bbl_ctrl_job(timer_s *timer)
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
 
-    int rate = 0;
     uint32_t i;
 
     struct timespec timestamp;
@@ -292,11 +296,13 @@ bbl_ctrl_job(timer_s *timer)
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */
-            rate = g_ctx->config.sessions_stop_rate;
+            if(g_ctx->sessions_stop_credits < g_ctx->config.sessions_stop_period_ns)
+		        g_ctx->sessions_stop_credits += ctrl_job_period_ns;
             while(!CIRCLEQ_EMPTY(&g_ctx->sessions_teardown_qhead)) {
                 session = CIRCLEQ_FIRST(&g_ctx->sessions_teardown_qhead);
-                if(rate > 0) {
-                    if(session->session_state != BBL_IDLE) rate--;
+                if(g_ctx->sessions_stop_credits >= g_ctx->config.sessions_stop_period_ns) {
+                    if(session->session_state != BBL_IDLE)
+                        g_ctx->sessions_stop_credits -= g_ctx->config.sessions_stop_period_ns;
                     bbl_session_clear(session);
                     /* Remove from teardown queue. */
                     CIRCLEQ_REMOVE(&g_ctx->sessions_teardown_qhead, session, session_teardown_qnode);
@@ -321,11 +327,19 @@ bbl_ctrl_job(timer_s *timer)
          * outstanding and setup rate. Sessions started will be removed
          * from idle list. */
         bbl_stats_update_cps();
-        rate = g_ctx->config.sessions_start_rate;
+        if(g_ctx->sessions_start_credits < g_ctx->config.sessions_start_period_ns) {
+            g_ctx->sessions_start_credits += ctrl_job_period_ns;
+        }
         while(!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
             session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
-            if(rate > 0) {
-                rate--;
+            if(session->session_state != BBL_IDLE) {
+                CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+                CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
+                CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+                continue;
+            }
+            if(g_ctx->sessions_start_credits >= g_ctx->config.sessions_start_period_ns) {
+                g_ctx->sessions_start_credits -= g_ctx->config.sessions_start_period_ns;
                 if(g_ctx->sessions_outstanding < g_ctx->config.sessions_max_outstanding) {
                     g_ctx->sessions_outstanding++;
                     /* Start session */
@@ -356,7 +370,12 @@ bbl_ctrl_job(timer_s *timer)
                                     bbl_dhcpv6_start(session);
                                 } else {
                                     /* Start IPoE session by sending RS. */
-                                    session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                    if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {
+                                        memcpy(&session->icmpv6_ns_request, &session->access_config->static_gateway6, sizeof(ipv6addr_t));
+                                        session->send_requests |= BBL_SEND_ICMPV6_NS;
+                                    } else {
+                                        session->send_requests |= BBL_SEND_ICMPV6_RS;
+                                    }
                                 }
                             }
                             break;
@@ -430,6 +449,7 @@ main(int argc, char *argv[])
                 exit(0);
             case 'P':
                 g_ctx->pcap.filename = optarg;
+                g_ctx->pcap.filename_optarg = true;
                 break;
             case 'j':
                 if(strcmp("sessions", optarg) == 0) {
@@ -597,7 +617,7 @@ main(int argc, char *argv[])
 
     /* Setup control job. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 
-                       1, 0, g_ctx, &bbl_ctrl_job);
+                       0, ctrl_job_period_ns, g_ctx, &bbl_ctrl_job);
 
     /* Setup control socket and job */
     if(g_ctx->ctrl_socket_path) {

@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __BBL_CONTEXT_H__
@@ -27,6 +27,9 @@ typedef struct bbl_ctx_
     struct timespec timestamp_stop;
     struct timespec timestamp_resolved;
     struct timespec timestamp_established;
+
+    uint32_t sessions_start_credits;
+    uint32_t sessions_stop_credits;
 
     uint32_t interfaces;
     uint32_t sessions;
@@ -107,6 +110,7 @@ typedef struct bbl_ctx_
         char *filename;
         uint8_t *write_buf;
         uint32_t write_idx;
+        bool filename_optarg;
         bool wrote_header;
         bool include_streams;
     } pcap;
@@ -149,6 +153,7 @@ typedef struct bbl_ctx_
         uint16_t io_max_stream_len;
 
         bool qdisc_bypass;
+        bool a10nsp_dynamic;
 
         uint64_t tx_interval; /* TX interval in nsec */
         uint64_t rx_interval; /* RX interval in nsec */
@@ -213,8 +218,8 @@ typedef struct bbl_ctx_
         /* Global Session Settings */
         uint32_t sessions;
         uint32_t sessions_max_outstanding;
-        uint16_t sessions_start_rate;
-        uint16_t sessions_stop_rate;
+        uint32_t sessions_start_period_ns;
+        uint32_t sessions_stop_period_ns;
         uint16_t sessions_start_delay;
         bool sessions_reconnect;
         bool sessions_autostart;
@@ -307,6 +312,7 @@ typedef struct bbl_ctx_
         bool dhcpv6_ldra;
         bool dhcpv6_ia_na;
         bool dhcpv6_ia_pd;
+        bool dhcpv6_ia_separate;
         bool dhcpv6_rapid_commit;
         bool dhcpv6_access_line;
         uint16_t dhcpv6_timeout;

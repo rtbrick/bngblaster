@@ -3,7 +3,7 @@
  *
  * Christian Giese, September 2021
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -21,6 +21,10 @@ typedef struct bbl_a10nsp_interface_
 
     /* parent */
     bbl_interface_s *interface; 
+
+    /* A10NSP interface is emulate over network interface */
+    bbl_network_interface_s *network_interface;
+    uint32_t tx_label;
 
     bbl_txq_s *txq;
 
@@ -80,6 +84,7 @@ typedef struct bbl_a10nsp_session_
     bool qinq_received;
 
     uint32_t ipv4_address;
+    uint32_t label;
 
     char *pppoe_ari;
     char *pppoe_aci;
@@ -94,6 +99,9 @@ typedef struct bbl_a10nsp_session_
     } stats;
 
 } bbl_a10nsp_session_s;
+
+void
+bbl_a10nsp_interface_rate_job(timer_s *timer);
 
 bool
 bbl_a10nsp_interfaces_add();

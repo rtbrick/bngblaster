@@ -3,7 +3,7 @@
  *
  * Christian Giese, March 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bgp.h"
@@ -90,6 +90,8 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     const char *s;
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
@@ -100,6 +102,16 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     if(json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "local-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_local_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv6-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "peer-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_peer_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv6-address");
         }
     }
 
@@ -113,6 +125,15 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
             bgp_session = bgp_session->next;
             continue;
         }
+        if(ipv6_addr_not_zero(&ipv6_local_address) && bgp_session->ipv6_local_address && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+            bgp_session = bgp_session->next;
+            continue;
+        }
+        if(ipv6_addr_not_zero(&ipv6_peer_address) && bgp_session->ipv6_peer_address && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
+            bgp_session = bgp_session->next;
+            continue;
+        }
+
 
         session = bgp_ctrl_session_json(bgp_session);
         if(session) {
@@ -160,6 +181,8 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
 
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:s}", "file", &file_path) != 0) {
@@ -173,6 +196,16 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
     if(json_unpack(arguments, "{s:s}", "peer-ipv4-address", &s) == 0) {
         if(!inet_pton(AF_INET, s, &ipv4_peer_address)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "local-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_local_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv6-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "peer-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_peer_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv6-address");
         }
     }
 
@@ -189,6 +222,16 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
             continue;
         }
         if(ipv4_peer_address && bgp_session->ipv4_peer_address != ipv4_peer_address) {
+            bgp_session = bgp_session->next;
+            filtered++;
+            continue;
+        }
+        if(ipv6_addr_not_zero(&ipv6_local_address) && bgp_session->ipv6_local_address && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+            bgp_session = bgp_session->next;
+            filtered++;
+            continue;
+        }
+        if(ipv6_addr_not_zero(&ipv6_peer_address) && bgp_session->ipv6_peer_address && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             filtered++;
             continue;
@@ -276,6 +319,8 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
 
     uint32_t ipv4_local_address = 0;
     uint32_t ipv4_peer_address = 0;
+    ipv6addr_t ipv6_local_address = {0};
+    ipv6addr_t ipv6_peer_address = {0};
 
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:s}", "local-ipv4-address", &s) == 0) {
@@ -288,6 +333,16 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
             return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv4-address");
         }
     }
+    if(json_unpack(arguments, "{s:s}", "local-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_local_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid local-ipv6-address");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "peer-ipv6-address", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6_peer_address)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid peer-ipv6-address");
+        }
+    }
 
     while(bgp_session) {
         if(ipv4_local_address && bgp_session->ipv4_local_address != ipv4_local_address) {
@@ -296,6 +351,16 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
             continue;
         }
         if(ipv4_peer_address && bgp_session->ipv4_peer_address != ipv4_peer_address) {
+            bgp_session = bgp_session->next;
+            filtered++;
+            continue;
+        }
+        if(ipv6_addr_not_zero(&ipv6_local_address) && bgp_session->ipv6_local_address && memcmp(bgp_session->ipv6_local_address, ipv6_local_address, sizeof(ipv6addr_t)) != 0) {
+            bgp_session = bgp_session->next;
+            filtered++;
+            continue;
+        }
+        if(ipv6_addr_not_zero(&ipv6_peer_address) && bgp_session->ipv6_peer_address && memcmp(bgp_session->ipv6_peer_address, ipv6_peer_address, sizeof(ipv6addr_t)) != 0) {
             bgp_session = bgp_session->next;
             filtered++;
             continue;

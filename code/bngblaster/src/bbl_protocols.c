@@ -3,7 +3,7 @@
  *
  * Christian Giese, July 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl_def.h"
@@ -1504,11 +1504,24 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
             if(lcp->auth) {
                 *buf = PPP_LCP_OPTION_AUTH;
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 4;
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint16_t*)buf = htobe16(lcp->auth);
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-                lcp_len += 4;
+                if(lcp->auth == PROTOCOL_CHAP) {
+                    *buf = 5;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint16_t*)buf = htobe16(lcp->auth);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+                    if(lcp->alg) {
+                        *buf = lcp->alg;
+                    } else {
+                        *buf = PROTOCOL_CHAP_ALG_MD5;
+                    }
+                    lcp_len += 5;
+                } else {
+                    *buf = 4;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint16_t*)buf = htobe16(lcp->auth);
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+                    lcp_len += 4;
+                }
             }
             if(lcp->magic) {
                 *buf = PPP_LCP_OPTION_MAGIC;
@@ -2345,6 +2358,9 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
                 *(buf+2) |= 0x1; /* set BOS bit*/
             }
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+        }
+        if(eth->type == ETH_TYPE_ETH) {
+            return encode_ethernet(buf, len, (bbl_ethernet_header_s*)eth->next);
         }
     } else if(eth->type == ISIS_PROTOCOL_IDENTIFIER) {
         /* Remember ethernet length field position */
@@ -4100,19 +4116,22 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
                 }
                 switch (lcp_option_type) {
                     case PPP_LCP_OPTION_MRU:
-                        if(lcp_len < sizeof(uint16_t)) {
+                        if(lcp_option_len < sizeof(uint16_t)) {
                             return DECODE_ERROR;
                         }
                         lcp->mru = be16toh(*(uint16_t*)buf);
                         break;
                     case PPP_LCP_OPTION_AUTH:
-                        if(lcp_len < sizeof(uint16_t)) {
+                        if(lcp_option_len < sizeof(uint16_t)) {
                             return DECODE_ERROR;
                         }
                         lcp->auth = be16toh(*(uint16_t*)buf);
+                        if(lcp_option_len > sizeof(uint16_t)) {
+                            lcp->alg = *(buf+sizeof(uint16_t));
+                        }
                         break;
                     case PPP_LCP_OPTION_MAGIC:
-                        if(lcp_len < sizeof(uint32_t)) {
+                        if(lcp_option_len < sizeof(uint32_t)) {
                             return DECODE_ERROR;
                         }
                         lcp->magic = *(uint32_t*)buf;
@@ -4691,7 +4710,13 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 eth->type = NB_ETH_TYPE_IPV6; 
                 break;
             default: 
-                return UNKNOWN_PROTOCOL;
+                /* Try to decode as ethernet */
+                if(decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&eth->next) == PROTOCOL_SUCCESS) {
+                    eth->type = ETH_TYPE_ETH;
+                    return PROTOCOL_SUCCESS;
+                } else {
+                    return UNKNOWN_PROTOCOL;
+                }
         }
     }
 

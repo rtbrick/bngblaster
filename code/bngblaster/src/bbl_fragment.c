@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2024
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -24,20 +24,20 @@ bbl_fragment_free(bbl_fragment_s *ipv4_fragment)
 
 /**
  * bbl_fragment_rx
- * 
- * This function stores incoming IPv4 fragments in fragmentation buffers, 
- * which are organized as a doubly-linked list. A cleanup job periodically 
- * removes outdated buffers. Once all fragments of a single packet have been received, 
- * the packet is reassembled and processed. 
- * 
+ *
+ * This function stores incoming IPv4 fragments in fragmentation buffers,
+ * which are organized as a doubly-linked list. A cleanup job periodically
+ * removes outdated buffers. Once all fragments of a single packet have been received,
+ * the packet is reassembled and processed.
+ *
  * Currently, this function supports BBL stream traffic only!
- * 
+ *
  * @param access_interface pointer to access interface on which packet was received
  * @param network_interface pointer to network interface on which packet was received
  * @param eth pointer to ethernet header structure of received packet
  * @param ipv4 pointer to IPv4 header structure of received packet
  */
-void 
+void
 bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl_network_interface_s *network_interface,
                 bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
@@ -53,8 +53,8 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     uint16_t offset;
 
     while(fragment) {
-        if(fragment->id == ipv4->id && 
-           fragment->src == ipv4->src && 
+        if(fragment->id == ipv4->id &&
+           fragment->src == ipv4->src &&
            fragment->dst == ipv4->dst) {
             break;
         }
@@ -90,17 +90,17 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     fragment->timestamp = eth->timestamp.tv_sec;
 
     memcpy(fragment->buf+offset, ipv4->payload, ipv4->payload_len);
-    fragment->recived += ipv4->payload_len;
+    fragment->received += ipv4->payload_len;
 
     if(!(ipv4->offset & IPV4_MF)) {
         /* Last fragment recieved. */
         fragment->expected = offset + ipv4->payload_len;
     }
-    if(fragment->recived == fragment->expected) {
+    if(fragment->received == fragment->expected) {
         /* All fragments received. */
-        if(packet_is_bbl(fragment->buf, fragment->recived)) {
+        if(packet_is_bbl(fragment->buf, fragment->received)) {
             /* Currently, we support only the reassembly of BBL stream packets. */
-            bbl_start = fragment->buf + (fragment->recived-BBL_HEADER_LEN);
+            bbl_start = fragment->buf + (fragment->received-BBL_HEADER_LEN);
             bbl.type = *(bbl_start+8);
             bbl.sub_type = *(bbl_start+9);
             bbl.direction = *(bbl_start+10);
@@ -111,10 +111,10 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl.outer_vlan_id = *(uint16_t*)(bbl_start+20);
                 bbl.inner_vlan_id = *(uint16_t*)(bbl_start+22);
                 bbl.mc_source = 0;
-                bbl.mc_source = 0;
+                bbl.mc_group = 0;
             } else {
                 bbl.mc_source = *(uint32_t*)(bbl_start+16);
-                bbl.mc_source = *(uint32_t*)(bbl_start+20);
+                bbl.mc_group = *(uint32_t*)(bbl_start+20);
                 bbl.ifindex = 0;
                 bbl.outer_vlan_id = 0;
                 bbl.inner_vlan_id = 0;
@@ -169,7 +169,7 @@ bbl_fragment_cleanup_job(timer_s *timer)
         next = fragment->next;
         if(fragment->timestamp < timestamp) {
             bbl_fragment_free(fragment);
-        } 
+        }
     }
 }
 
@@ -178,7 +178,7 @@ bbl_fragment_init()
 {
     if(!g_ctx->config.traffic_reassemble_fragments) return;
 
-    timer_add_periodic(&g_ctx->timer_root, &g_ctx->fragmentation_timer, 
+    timer_add_periodic(&g_ctx->timer_root, &g_ctx->fragmentation_timer,
                        "FRAGMENT", 3, 0, NULL,
                        &bbl_fragment_cleanup_job);
 }

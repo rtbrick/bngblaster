@@ -4,7 +4,7 @@ Installation
 ============
 
 The BNG Blaster should run on any modern Linux distribution
-but is primarily tested on Ubuntu 22.04 LTS.
+but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.
 
 Install Ubuntu
 --------------
@@ -15,7 +15,7 @@ Install dependencies:
 
     # Ubuntu 18.04 and 20.04
     sudo apt install -y libssl1.1 libncurses5 libjansson4
-    # Ubuntu 22.04 and newer
+    # Debian Bookworm, Ubuntu 22.04 and newer
     sudo apt install -y libssl3 libncurses6 libjansson4
 
 
@@ -44,14 +44,17 @@ and the following standard dependencies:
     # install libdict for Ubuntu 18.04 LTS
     wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
     unzip libdict-debian.zip
-    sudo dpkg -i libdict_1.0.1_amd64.deb
-    sudo dpkg -i libdict-dev_1.0.1_amd64.deb
 
     # install libdict for Ubuntu 22.04 LTS
-    wget https://github.com/rtbrick/libdict/releases/download/1.0.3/libdict-ubuntu-22.04.zip
+    wget https://github.com/rtbrick/libdict/releases/download/1.0.5/libdict-ubuntu-22.04.zip
     unzip libdict-ubuntu-22.04.zip
-    sudo dpkg -i libdict_1.0.3_amd64.deb
-    sudo dpkg -i libdict-dev_1.0.3_amd64.deb
+
+    # install libdict for Debian Bookworm
+    wget https://github.com/rtbrick/libdict/releases/download/1.0.5/libdict-bookworm.zip
+    unzip libdict-bookworm.zip
+
+    sudo dpkg -i libdict_1.0.5_amd64.deb
+    sudo dpkg -i libdict-dev_1.0.5_amd64.deb
 
     # install other dependencies
     sudo apt install -y cmake \

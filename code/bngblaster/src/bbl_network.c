@@ -3,7 +3,7 @@
  *
  * Christian Giese, August 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -40,6 +40,7 @@ bbl_network_interfaces_add()
 {
     bbl_network_config_s *network_config = g_ctx->config.network_config;
     bbl_network_interface_s *network_interface;
+    bbl_a10nsp_interface_s *a10nsp;
     bbl_interface_s *interface;
     isis_instance_s *isis;
     ldp_instance_s *ldp;
@@ -222,6 +223,33 @@ bbl_network_interfaces_add()
             network_interface->cfm->cfm_ma_name = network_config->cfm_ma_name;
             network_interface->cfm->network_interface = network_interface;
             bbl_cfm_cc_start(network_interface->cfm);
+        }
+
+        /* Init A10NSP switch emulation */
+        if(network_config->a10nsp) {
+            a10nsp = calloc(1, sizeof(bbl_a10nsp_interface_s));
+            network_interface->a10nsp = a10nsp;
+            interface->a10nsp = a10nsp;
+
+            a10nsp->network_interface = network_interface;
+            a10nsp->name = network_interface->name;
+            a10nsp->interface = network_interface->interface;
+            a10nsp->ifindex = network_interface->ifindex;
+            a10nsp->txq = network_interface->txq;
+            a10nsp->tx_label = network_config->a10nsp_tx_label;
+            memcpy(a10nsp->mac, network_interface->mac, ETH_ADDR_LEN);
+
+            CIRCLEQ_INSERT_TAIL(&g_ctx->a10nsp_interface_qhead, a10nsp, a10nsp_interface_qnode);
+
+            /* TX list init */
+            CIRCLEQ_INIT(&a10nsp->session_tx_qhead);
+
+            /* Timer to compute periodic rates */
+            timer_add_periodic(&g_ctx->timer_root, &network_interface->a10nsp->rate_job, "Rate Computation", 1, 0, 
+                               network_interface->a10nsp, &bbl_a10nsp_interface_rate_job);
+            network_interface->a10nsp->rate_job->reset = false;
+
+            LOG(DEBUG, "Added a10nsp switch to network network interface %s\n", ifname);
         }
 
         /* TX list init */

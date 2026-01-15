@@ -3,7 +3,7 @@
  *
  * Christian Giese, January 2021
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <stdio.h>
@@ -36,6 +36,8 @@ const char *schema_all_args[] = {
     "flow-id", "id", "name", "file", "reset", "timer", "pps",
     "group", "group-iter", "group-count", "source1", "source2", "source3",
     "local-ipv4-address", "peer-ipv4-address",
+    "local-ipv6-address", "peer-ipv6-address",  "ipv6-link-local",
+    "username", "password", "agent-remote-id", "agent-circuit-id",
     "instance", "level", "pdu", "lsa",
     "tunnel-id", "sessions", "priority",
     "result-code", "error-code", "error-message",
@@ -226,9 +228,9 @@ struct action actions[] = {
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
     {"session-info", bbl_session_ctrl_info, schema_all_args, true},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
-    {"session-start", bbl_session_ctrl_start, schema_all_args, true},
-    {"session-stop", bbl_session_ctrl_stop, schema_all_args, true},
-    {"session-restart", bbl_session_ctrl_restart, schema_all_args, true},
+    {"session-start", bbl_session_ctrl_start, schema_all_args, false},
+    {"session-stop", bbl_session_ctrl_stop, schema_all_args, false},
+    {"session-restart", bbl_session_ctrl_restart, schema_all_args, false},
     {"session-streams", bbl_stream_ctrl_session, schema_all_args, true},
     {"igmp-join", bbl_igmp_ctrl_join, schema_all_args, false},
     {"igmp-join-iter", bbl_igmp_ctrl_join_iter, schema_all_args, false},
@@ -292,6 +294,9 @@ struct action actions[] = {
     {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_all_args, false},
     {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_all_args, true},
     {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_all_args, true},
+    {"session-update", bbl_session_ctrl_update, schema_all_args, false},
+    {"pcap-start", pcapng_ctrl_start, schema_all_args, false},
+    {"pcap-stop", pcapng_ctrl_stop, schema_no_args, false},
     /* DEPRECATED */
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_all_args, true},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_all_args, true},

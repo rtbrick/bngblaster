@@ -48,7 +48,6 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <string.h>
-#include <sys/signal.h>
 #include <sys/types.h>
 
 #ifndef LWIP_HAVE_SLIPIF

@@ -3,7 +3,7 @@
  *
  * Christian Giese, August 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -21,6 +21,9 @@ typedef struct bbl_network_interface_
 
     /* next network interface with same parent */
     struct bbl_network_interface_ *next;
+
+    /* A10NSP interface emulate over network interface */
+    bbl_a10nsp_interface_s *a10nsp;
 
     bbl_txq_s *txq;
 

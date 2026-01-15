@@ -12,6 +12,7 @@
 #define GIT_REF ""
 #define GIT_SHA ""
 
+#define BUILD_OS ""
 #define COMPILER_ID "GNU"
 #define COMPILER_VERSION "11.4.0"
 

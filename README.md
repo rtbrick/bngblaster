@@ -57,7 +57,7 @@ See the LICENSE file for more details.
 
 ## Copyright
 
-Copyright (C) 2020-2025, RtBrick, Inc.
+Copyright (C) 2020-2026, RtBrick, Inc.
 
 ## Contact
 

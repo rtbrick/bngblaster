@@ -4,12 +4,21 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #ifndef __COMMON_UTILS_H__
 #define __COMMON_UTILS_H__
 #include "common.h"
+
+typedef struct kernel_version_
+{
+    uint32_t major;
+    uint32_t minor;
+    uint32_t patch;
+} kernel_version_s;
+
+kernel_version_s get_kernel_version(void);
 
 uint64_t read_be_uint(uint8_t *data, size_t length);
 bool write_be_uint(uint8_t *data, size_t length, uint64_t value);

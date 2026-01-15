@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -196,6 +196,7 @@ typedef struct bbl_session_
     /* IPv6 */
     bool        icmpv6_nd_resolved;
     bool        icmpv6_ra_received;
+    ipv6addr_t  icmpv6_ns_request;
     ipv6addr_t  link_local_ipv6_address;
     ipv6_prefix ipv6_prefix;
     ipv6addr_t  ipv6_address;
@@ -299,6 +300,7 @@ typedef struct bbl_session_
         uint64_t accounting_bytes_tx;
         uint64_t accounting_bytes_rx;
 
+        uint32_t igmp_rx_wrong_state;
         uint32_t igmp_rx;
         uint32_t igmp_tx;
 
@@ -435,5 +437,8 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused
 
 int
 bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments);
 
 #endif

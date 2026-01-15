@@ -4,7 +4,7 @@
  * Hannes Gredler, July 2020
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -422,6 +422,63 @@ bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
 }
 
 void
+bbl_icmpv6_ns_timeout(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    if(ipv6_addr_not_zero(&session->icmpv6_ns_request)) {
+        session->send_requests |= BBL_SEND_ICMPV6_NS;
+        bbl_session_tx_qnode_insert(session);
+    }
+}
+
+static protocol_error_t
+bbl_tx_encode_packet_icmpv6_ns(bbl_session_s *session)
+{
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_icmpv6_s icmpv6 = {0};
+    uint8_t mac[ETH_ADDR_LEN];
+
+    ipv6addr_t ipv6_dst;
+
+    if(!(session->access_type == ACCESS_TYPE_IPOE && ipv6_addr_not_zero(&session->icmpv6_ns_request))) {
+        return WRONG_PROTOCOL_STATE;
+    }
+
+    eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.vlan_three = session->access_third_vlan;
+
+    memcpy((uint8_t*)&ipv6_dst, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
+    ((uint8_t*)ipv6_dst)[13] = ((uint8_t*)session->icmpv6_ns_request)[13];
+    ((uint8_t*)ipv6_dst)[14] = ((uint8_t*)session->icmpv6_ns_request)[14];
+    ((uint8_t*)ipv6_dst)[15] = ((uint8_t*)session->icmpv6_ns_request)[15];
+
+    ipv6_multicast_mac(ipv6_dst, mac);
+    eth.dst = mac;
+
+    eth.type = ETH_TYPE_IPV6;
+    eth.next = &ipv6;
+    ipv6.dst = (void*)ipv6_dst;
+    ipv6.src = (void*)session->link_local_ipv6_address;
+    ipv6.ttl = 255;
+    ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+    ipv6.next = &icmpv6;
+    icmpv6.type = IPV6_ICMPV6_NEIGHBOR_SOLICITATION;
+    memcpy(icmpv6.prefix.address, session->icmpv6_ns_request, IPV6_ADDR_LEN);
+    icmpv6.mac = session->client_mac;
+
+    timer_add(&g_ctx->timer_root, &session->timer_icmpv6, "NS", 
+              5, 0, session, &bbl_icmpv6_ns_timeout);
+
+    session->stats.icmpv6_tx++;
+    session->access_interface->stats.icmpv6_tx++;
+    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+}
+
+void
 bbl_tx_dhcpv6_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
@@ -555,6 +612,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     dhcpv6.oro = true;
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
+        case BBL_DHCP_SELECTING_IA_NA:
+        case BBL_DHCP_SELECTING_IA_PD:
             dhcpv6.type = DHCPV6_MESSAGE_SOLICIT;
             session->stats.dhcpv6_tx_solicit++;
             dhcpv6.rapid = g_ctx->config.dhcpv6_rapid_commit;
@@ -568,6 +627,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             }
             break;
         case BBL_DHCP_REQUESTING:
+        case BBL_DHCP_REQUESTING_IA_NA:
+        case BBL_DHCP_REQUESTING_IA_PD:
             dhcpv6.type = DHCPV6_MESSAGE_REQUEST;
             session->stats.dhcpv6_tx_request++;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Request send\n", session->session_id);
@@ -585,6 +646,23 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             break;
         default:
             return IGNORED;
+    }
+
+    switch (session->dhcpv6_state) {
+        case BBL_DHCP_SELECTING_IA_NA:
+        case BBL_DHCP_REQUESTING_IA_NA:
+            dhcpv6.ia_pd_iaid = 0;
+            dhcpv6.ia_pd_option = NULL;
+            dhcpv6.ia_pd_option_len = 0;
+            break;
+        case BBL_DHCP_SELECTING_IA_PD:
+        case BBL_DHCP_REQUESTING_IA_PD:
+            dhcpv6.ia_na_iaid = 0;
+            dhcpv6.ia_na_option = NULL;
+            dhcpv6.ia_na_option_len = 0;
+            break;
+        default:
+            break;
     }
 
     timer_add(&g_ctx->timer_root, &session->timer_dhcpv6, "DHCPv6",
@@ -1464,6 +1542,9 @@ bbl_tx_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len)
     } else if(session->send_requests & BBL_SEND_ICMPV6_RS) {
         result = bbl_tx_encode_packet_icmpv6_rs(session);
         session->send_requests &= ~BBL_SEND_ICMPV6_RS;
+    } else if(session->send_requests & BBL_SEND_ICMPV6_NS) {
+        result = bbl_tx_encode_packet_icmpv6_ns(session);
+        session->send_requests &= ~BBL_SEND_ICMPV6_NS;
     } else if(session->send_requests & BBL_SEND_DHCPV6_REQUEST) {
         result = bbl_tx_encode_packet_dhcpv6_request(session);
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;

@@ -3,7 +3,7 @@
  *
  * Christian Giese, May 2021
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -100,7 +100,11 @@ bbl_dhcpv6_start(bbl_session_s *session)
         g_ctx->dhcpv6_requested++;
 
         /* Init DHCPv6 */
-        session->dhcpv6_state = BBL_DHCP_SELECTING;
+        if(g_ctx->config.dhcpv6_ia_separate) {
+            session->dhcpv6_state = BBL_DHCP_SELECTING_IA_NA;
+        } else {
+            session->dhcpv6_state = BBL_DHCP_SELECTING;
+        }
         session->dhcpv6_xid = rand() & 0xffffff;
 
         if(g_ctx->config.dhcpv6_ia_na && 
@@ -162,26 +166,46 @@ bbl_dhcpv6_s2(timer_s *timer)
 static bool
 bbl_dhcpv6_validate_ia(bbl_session_s *session, bbl_dhcpv6_s *dhcpv6)
 {
-    if(dhcpv6->ia_na_status_code) {
+    bool ia_na = false;
+    bool ia_pd = false;
+    switch (session->dhcpv6_state) {
+        case BBL_DHCP_SELECTING:
+        case BBL_DHCP_REQUESTING:
+            ia_na = true;
+            ia_pd = true;
+            break;
+        case BBL_DHCP_SELECTING_IA_NA:
+        case BBL_DHCP_REQUESTING_IA_NA:
+            ia_na = true;
+            break;
+        case BBL_DHCP_SELECTING_IA_PD:
+        case BBL_DHCP_REQUESTING_IA_PD:
+            ia_pd = true;
+            break;
+        default:
+            break;
+    }
+
+    if(ia_na && dhcpv6->ia_na_status_code) {
         LOG(DHCP, "DHCPv6 (ID: %u) IA_NA received with status code %u (%s)\n", 
             session->session_id, dhcpv6->ia_na_status_code, 
             bbl_dhcpv6_status_code_string(dhcpv6->ia_na_status_code));
         return false;
     }
 
-    if(session->dhcpv6_ia_na_iaid && !dhcpv6->ia_na_address) {
+    if(ia_na && session->dhcpv6_ia_na_iaid && !dhcpv6->ia_na_address) {
         LOG(DHCP, "DHCPv6 (ID: %u) missing IA_NA address\n", session->session_id);
         return false;
     }
 
-    if(dhcpv6->ia_pd_status_code) {
+    if(ia_pd && dhcpv6->ia_pd_status_code) {
         LOG(DHCP, "DHCPv6 (ID: %u) IA_PD received with status code %u (%s)\n", 
             session->session_id, dhcpv6->ia_pd_status_code, 
             bbl_dhcpv6_status_code_string(dhcpv6->ia_pd_status_code));
         return false;
     }
 
-    if(session->dhcpv6_ia_pd_iaid && !(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len)) {
+    if(ia_pd && session->dhcpv6_ia_pd_iaid && !(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len)) {
         LOG(DHCP, "DHCPv6 (ID: %u) missing IA_PD prefix\n", session->session_id);
         return false;
     }
@@ -218,6 +242,11 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
 
     /* Ignore packets with wrong transaction identifier */
     if(dhcpv6->xid != session->dhcpv6_xid) {
+        return;
+    }
+
+    if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE && 
+       session->dhcpv6_state >= BBL_DHCP_REQUESTING) {
         return;
     }
 
@@ -259,17 +288,19 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             if(g_ctx->dhcpv6_established > g_ctx->dhcpv6_established_max) {
                 g_ctx->dhcpv6_established_max = g_ctx->dhcpv6_established;
             }
-            if(dhcpv6->dns1) {
-                memcpy(&session->dhcpv6_dns1, dhcpv6->dns1, IPV6_ADDR_LEN);
-                if(dhcpv6->dns2) {
-                    memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
-                }
+        }
+        if(dhcpv6->dns1) {
+            memcpy(&session->dhcpv6_dns1, dhcpv6->dns1, IPV6_ADDR_LEN);
+            if(dhcpv6->dns2) {
+                memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
             }
-            if(session->access_type == ACCESS_TYPE_IPOE && dhcpv6->ia_na_address) {
-                /* IA_NA */
-                if(dhcpv6->ia_na_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_na_valid_lifetime;
-                if(dhcpv6->ia_na_t1) session->dhcpv6_t1 = dhcpv6->ia_na_t1;
-                if(dhcpv6->ia_na_t2) session->dhcpv6_t2 = dhcpv6->ia_na_t2;
+        }
+        if(session->access_type == ACCESS_TYPE_IPOE && dhcpv6->ia_na_address) {
+            /* IA_NA */
+            if(dhcpv6->ia_na_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_na_valid_lifetime;
+            if(dhcpv6->ia_na_t1) session->dhcpv6_t1 = dhcpv6->ia_na_t1;
+            if(dhcpv6->ia_na_t2) session->dhcpv6_t2 = dhcpv6->ia_na_t2;
+            if(memcmp(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t)) != 0) {
                 memcpy(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 memcpy(&session->ipv6_prefix.address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 session->ipv6_prefix.len = 128;
@@ -277,26 +308,36 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_NA address %s/128\n", session->session_id,
                     format_ipv6_address(&session->ipv6_address));
             }
-            if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len) {
-                /* IA_PD */
-                if(dhcpv6->ia_pd_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_pd_valid_lifetime;
-                if(dhcpv6->ia_pd_t1) session->dhcpv6_t1 = dhcpv6->ia_pd_t1;
-                if(dhcpv6->ia_pd_t2) session->dhcpv6_t2 = dhcpv6->ia_pd_t2;
+        }
+        if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len) {
+            /* IA_PD */
+            if(dhcpv6->ia_pd_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_pd_valid_lifetime;
+            if(dhcpv6->ia_pd_t1) session->dhcpv6_t1 = dhcpv6->ia_pd_t1;
+            if(dhcpv6->ia_pd_t2) session->dhcpv6_t2 = dhcpv6->ia_pd_t2;
+            if(memcmp(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix)) != 0) {
                 memcpy(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
                 session->delegated_ipv6_address[15] = 0x01;
+                session->version++;
                 if(session->access_type == ACCESS_TYPE_PPPOE) {
                     ACTIVATE_ENDPOINT(session->endpoint.ipv6pd);
                 }
-                session->version++;
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
             }
         }
+
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
         session->dhcpv6_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
         session->dhcpv6_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
-        session->dhcpv6_state = BBL_DHCP_BOUND;
+
+        if(session->dhcpv6_state == BBL_DHCP_SELECTING_IA_NA || 
+           session->dhcpv6_state == BBL_DHCP_REQUESTING_IA_NA) {
+            session->dhcpv6_state = BBL_DHCP_SELECTING_IA_PD;
+        } else {
+            session->dhcpv6_state = BBL_DHCP_BOUND;
+        }
+
         if(session->dhcpv6_t1) {
             timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t1, "DHCPv6 T1", 
                       session->dhcpv6_t1, 0, session, &bbl_dhcpv6_s1);
@@ -307,7 +348,12 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         }
         if(session->access_type == ACCESS_TYPE_IPOE) {
             bbl_access_rx_established_ipoe(interface, session, eth);
-            session->send_requests |= BBL_SEND_ICMPV6_RS;
+            if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {
+                memcpy(&session->icmpv6_ns_request, &session->access_config->static_gateway6, sizeof(ipv6addr_t));
+                session->send_requests |= BBL_SEND_ICMPV6_NS;
+            } else {
+                session->send_requests |= BBL_SEND_ICMPV6_RS;
+            }
             bbl_session_tx_qnode_insert(session);
         }
     } else if(dhcpv6->type == DHCPV6_MESSAGE_ADVERTISE) {
@@ -319,7 +365,16 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             return;
         }
 
-        session->dhcpv6_state = BBL_DHCP_REQUESTING;
+        if(session->dhcpv6_state == BBL_DHCP_SELECTING_IA_NA || 
+           session->dhcpv6_state == BBL_DHCP_REQUESTING_IA_NA) {
+            session->dhcpv6_state = BBL_DHCP_REQUESTING_IA_NA;
+        } else if (session->dhcpv6_state == BBL_DHCP_SELECTING_IA_PD || 
+           session->dhcpv6_state == BBL_DHCP_REQUESTING_IA_PD){
+            session->dhcpv6_state = BBL_DHCP_REQUESTING_IA_PD;
+        } else {
+            session->dhcpv6_state = BBL_DHCP_REQUESTING;
+        }
+
         session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
         bbl_session_tx_qnode_insert(session);

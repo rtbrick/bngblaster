@@ -3,7 +3,7 @@
  *
  * Christian Giese, October 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
@@ -70,7 +70,11 @@ dhcp_state_string(uint32_t state)
         case BBL_DHCP_DISABLED: return "Disabled";
         case BBL_DHCP_INIT: return "Init";
         case BBL_DHCP_SELECTING: return "Selecting";
+        case BBL_DHCP_SELECTING_IA_NA: return "Selecting (IA_NA)";
+        case BBL_DHCP_SELECTING_IA_PD: return "Selecting (IA_PD)";
         case BBL_DHCP_REQUESTING: return "Requesting";
+        case BBL_DHCP_REQUESTING_IA_NA: return "Requesting (IA_NA)";
+        case BBL_DHCP_REQUESTING_IA_PD: return "Requesting (IA_PD)";
         case BBL_DHCP_BOUND: return "Bound";
         case BBL_DHCP_RENEWING: return "Renewing";
         case BBL_DHCP_RELEASE: return "Releasing";
@@ -419,7 +423,10 @@ bbl_session_reset(bbl_session_s *session) {
     session->dhcpv6_established = false;
     session->dhcpv6_ia_na_option_len = 0;
     session->dhcpv6_ia_pd_option_len = 0;
-    memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+
+    if(!ipv6_addr_not_zero(&session->access_config->static_ip6)) {
+        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+    }
     memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
     memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
     memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
@@ -466,6 +473,7 @@ bbl_session_reset(bbl_session_s *session) {
     bbl_stream_reset(session->session_traffic.ipv6pd_down);
 
     /* Reset session stats */
+    session->stats.igmp_rx_wrong_state = 0;
     session->stats.igmp_rx = 0;
     session->stats.igmp_tx = 0;
     session->stats.min_join_delay = 0;
@@ -619,7 +627,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 if(session->ip6cp_state > BBL_PPP_DISABLED) {
                     session->ip6cp_state = BBL_PPP_CLOSED;
                 }
-            }
+            } 
             ENABLE_ENDPOINT(session->endpoint.ipv4);
             ENABLE_ENDPOINT(session->endpoint.ipv6);
             ENABLE_ENDPOINT(session->endpoint.ipv6pd);
@@ -636,6 +644,11 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 session->stats.flapped++;
                 g_ctx->sessions_flapped++;
 
+                if(session->access_type == ACCESS_TYPE_IPOE) {
+                    if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {
+                        memcpy(&session->icmpv6_ns_request, &session->access_config->static_gateway6, sizeof(ipv6addr_t));
+                    }
+                }
                 /* Reconnect */
                 if(!session->reconnect_disabled && 
                    ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
@@ -725,9 +738,13 @@ bbl_session_clear(bbl_session_s *session)
         }
         switch(session->dhcpv6_state) {
             case BBL_DHCP_SELECTING:
+            case BBL_DHCP_SELECTING_IA_NA:
+            case BBL_DHCP_SELECTING_IA_PD:
                 session->dhcpv6_state = BBL_DHCP_INIT;
                 break;
             case BBL_DHCP_REQUESTING:
+            case BBL_DHCP_REQUESTING_IA_NA:
+            case BBL_DHCP_REQUESTING_IA_PD:
             case BBL_DHCP_BOUND:
             case BBL_DHCP_RENEWING:
                 new_state = BBL_TERMINATING;
@@ -1025,6 +1042,12 @@ bbl_sessions_init()
                     session->dhcpv6_state = BBL_DHCP_INIT;
                     session->endpoint.ipv6pd = ENDPOINT_ENABLED;
                 }
+                if(ipv6_addr_not_zero(&access_config->static_gateway6)) {
+                    memcpy(&session->icmpv6_ns_request, &access_config->static_gateway6, sizeof(ipv6addr_t));
+                }
+                if(ipv6_addr_not_zero(&access_config->static_ip6)) {
+                    memcpy(&session->ipv6_address, &access_config->static_ip6, sizeof(ipv6addr_t));
+                }
             }
         }
         session->access_interface = access_config->access_interface;
@@ -1179,6 +1202,7 @@ bbl_session_json(bbl_session_s *session)
     const char *dns2 = NULL;
     const char *ipv6 = NULL;
     const char *ipv6pd = NULL;
+    const char *ipv6ll = NULL;
     const char *ipv6_dns1 = NULL;
     const char *ipv6_dns2 = NULL;
     const char *dhcpv6_dns1 = NULL;
@@ -1216,6 +1240,9 @@ bbl_session_json(bbl_session_s *session)
     }
     if(session->delegated_ipv6_prefix.len) {
         ipv6pd = format_ipv6_prefix(&session->delegated_ipv6_prefix);
+    }
+    if(*(uint64_t*)session->link_local_ipv6_address) {
+        ipv6ll = format_ipv6_address(&session->link_local_ipv6_address);
     }
     if(*(uint64_t*)session->ipv6_dns1) {
         ipv6_dns1 = format_ipv6_address(&session->ipv6_dns1);
@@ -1309,7 +1336,7 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si so* so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si so* so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1348,6 +1375,7 @@ bbl_session_json(bbl_session_s *session)
             "tx-accounting-bytes", session->stats.accounting_bytes_tx,
             "rx-accounting-bytes", session->stats.accounting_bytes_rx,
             "tx-igmp", session->stats.igmp_tx,
+            "rx-igmp-wrong-state", session->stats.igmp_rx_wrong_state,
             "rx-igmp", session->stats.igmp_rx,
             "tx-icmp", session->stats.icmp_tx,
             "rx-icmp", session->stats.icmp_rx,
@@ -1373,7 +1401,7 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1393,6 +1421,7 @@ bbl_session_json(bbl_session_s *session)
             "ipv4-dns2", dns2,
             "ipv6-prefix", ipv6,
             "ipv6-delegated-prefix", ipv6pd,
+            "ipv6-link-local", ipv6ll,
             "ipv6-dns1", ipv6_dns1,
             "ipv6-dns2", ipv6_dns2,
             "dhcp-state", dhcp_state_string(session->dhcp_state),
@@ -1936,4 +1965,46 @@ bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused
         json_decref(root);
     }
     return result;
+}
+
+int
+bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments)
+{
+    ipv6addr_t ipv6;
+    bbl_session_s *session;
+    const char *s = NULL;
+
+    if(!session_id) {
+        return bbl_ctrl_status(fd, "warning", 400, "missing session-id");
+    }
+    session = bbl_session_get(session_id);
+    if(!session) {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+
+    if(json_unpack(arguments, "{s:s}", "ipv6-link-local", &s) == 0) {
+        if(!inet_pton(AF_INET6, s, &ipv6)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid ipv6-link-local");
+        }
+        memcpy(&session->link_local_ipv6_address, &ipv6, sizeof(ipv6addr_t));
+    }
+    if(json_unpack(arguments, "{s:s}", "username", &s) == 0) {
+        if(session->username) free(session->username);
+        session->username = strdup(s);
+    }
+    if(json_unpack(arguments, "{s:s}", "password", &s) == 0) {
+        if(session->password) free(session->password);
+        session->password = strdup(s);
+    }
+    if(json_unpack(arguments, "{s:s}", "agent-remote-id", &s) == 0) {
+        if(session->agent_remote_id) free(session->agent_remote_id);
+        session->agent_remote_id = strdup(s);
+    }
+    if(json_unpack(arguments, "{s:s}", "agent-circuit-id", &s) == 0) {
+        if(session->agent_circuit_id) free(session->agent_circuit_id);
+        session->agent_circuit_id = strdup(s);
+    }
+
+    session->version++;
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
