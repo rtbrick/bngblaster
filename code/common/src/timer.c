@@ -196,9 +196,7 @@ timer_dequeue_bucket(timer_s *timer)
     timer_bucket->timers--;
     timer->timer_bucket = NULL;
 
-    /*
-     * Defer deleting empty buckets to timer_walk().
-     */
+    /* Defer deleting empty buckets to timer_walk(). */
 }
 
 static void
@@ -341,14 +339,14 @@ timer_del(timer_s *timer)
 /**
  * Delete a timer bucket
  */
-void
+static void
 timer_del_bucket(timer_root_s *root, timer_bucket_s *timer_bucket)
 {
     CIRCLEQ_REMOVE(&root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
 
 #ifdef BNGBLASTER_TIMER_LOGGING
     LOG(TIMER_DETAIL, "  Delete timer bucket %lu.%06lus\n",
-	timer_bucket->sec, timer_bucket->nsec/1000);
+        timer_bucket->sec, timer_bucket->nsec/1000);
 #endif
 
     free(timer_bucket);
@@ -398,7 +396,7 @@ timer_process_changes(timer_root_s *root)
     /* Some buckets may be empty by now.
      * Trash them here where it is safe. */
     CIRCLEQ_FOREACH_SAFE(timer_bucket, &root->timer_bucket_qhead,
-			             timer_bucket_qnode, timer_bucket_next) {
+                         timer_bucket_qnode, timer_bucket_next) {
         /* If the bucket is empty, remove it. */
         if(!timer_bucket->timers) {
             CIRCLEQ_REMOVE(&root->timer_bucket_qhead, timer_bucket, timer_bucket_qnode);
@@ -515,7 +513,7 @@ timer_walk(timer_root_s *root)
 
     /* Walk all buckets. */
     CIRCLEQ_FOREACH_SAFE(timer_bucket, &root->timer_bucket_qhead,
-			 timer_bucket_qnode, timer_bucket_next) {
+                         timer_bucket_qnode, timer_bucket_next) {
 
 #ifdef BNGBLASTER_TIMER_LOGGING
         LOG(TIMER_DETAIL, "  Checking timer bucket %lu.%06lus\n",
@@ -553,10 +551,10 @@ timer_walk(timer_root_s *root)
             }
         }
 
-	/* If the bucket is empty, remove it. */
-	if(!timer_bucket->timers) {
-	    timer_del_bucket(root, timer_bucket);
-	}
+        /* If the bucket is empty, remove it. */
+        if(!timer_bucket->timers) {
+            timer_del_bucket(root, timer_bucket);
+        }
     }
 
     /* Process all changes from the last timer run. */
