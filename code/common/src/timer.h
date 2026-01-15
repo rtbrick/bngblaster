@@ -23,6 +23,14 @@
          (var)   = (tvar))
 #endif
 
+#ifndef CIRCLEQ_FOREACH_SAFE
+#define CIRCLEQ_FOREACH_SAFE(var, head, field, tvar)                      \
+    for ((var) = CIRCLEQ_FIRST((head));                                   \
+        (var) != (void *)(head) &&                                        \
+        ((tvar) = CIRCLEQ_NEXT((var), field), 1);                         \
+        (var) = (tvar))
+#endif
+
 /*  Top level data structure for timers. */
 typedef struct timer_root_
 {
