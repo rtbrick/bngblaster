@@ -197,7 +197,7 @@ timer_dequeue_bucket(timer_s *timer)
     timer->timer_bucket = NULL;
 
     /*
-     * Defer deleting empty buckets to timer_process_changes().
+     * Defer deleting empty buckets to timer_walk().
      */
 }
 
