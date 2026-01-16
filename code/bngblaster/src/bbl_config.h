@@ -101,7 +101,9 @@ typedef struct bbl_access_config_
     bool cfm_cc;
     bool cfm_seq;
     uint8_t cfm_level;
+    uint8_t cfm_interval;
     uint16_t cfm_ma_id;
+    char *cfm_md_name;
     char *cfm_ma_name;
     uint8_t cfm_vlan_priority;
 
@@ -164,7 +166,9 @@ typedef struct bbl_network_config_
     bool cfm_cc;
     bool cfm_seq;
     uint8_t cfm_level;
+    uint8_t cfm_interval;
     uint16_t cfm_ma_id;
+    char *cfm_md_name;
     char *cfm_ma_name;
     uint8_t cfm_vlan_priority;
 

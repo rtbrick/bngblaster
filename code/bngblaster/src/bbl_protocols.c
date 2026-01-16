@@ -2195,8 +2195,8 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_s *cfm)
     *buf = cfm->type; /* CFM OpCode */
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
 
-    /* Set CFM CC interval fixed to 1s (4) */
-    *buf = 4;
+    /* Set CFM CC interval */
+    *buf = cfm->ccm_interval;
     if(cfm->rdi) {
         /* Set RDI bit */
         *buf |= 128;
