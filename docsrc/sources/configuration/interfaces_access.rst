@@ -79,10 +79,22 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name**                   | | Set EOAM CFM maintenance domain name (string).                     |
 +-----------------------------------+----------------------------------------------------------------------+
+| **cfm-md-name-format**            | | Set EOAM CFM MD name format.                                       |
+|                                   | | 1=none, 2=DNS, 3=MAC/uint16, 4=string                              |
+|                                   | | For format 3 use: ``aa:bb:cc:dd:ee:ff/123``                         |
+|                                   | | Default: 4 (MD name not encoded unless this key is set)            |
++-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-id**                     | | Set EOAM CFM maintenance association identifier.                   |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name**                   | | Set EOAM CFM maintenance association short name (string).          |
++-----------------------------------+----------------------------------------------------------------------+
+| **cfm-ma-name-format**            | | Set EOAM CFM MA name format.                                       |
+|                                   | | 1=VLAN ID, 2=string, 3=uint16, 4=VPN ID, 32=ICC                     |
+|                                   | | For format 1/3 use integer in ``cfm-ma-name``                       |
+|                                   | | For format 4 use 14 hex digits in ``cfm-ma-name``                   |
+|                                   | | For format 32 use 13 ASCII chars in ``cfm-ma-name``                 |
+|                                   | | Default: 2                                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-seq**                       | | Enable EOAM CFM CC sequence numbers.                               |
 |                                   | | Default: true                                                      |

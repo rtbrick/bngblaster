@@ -277,8 +277,15 @@
 
 #define CFM_TYPE_CCM                    1
 #define CMF_MD_NAME_FORMAT_NONE         1
+#define CMF_MD_NAME_FORMAT_DNS          2
+#define CMF_MD_NAME_FORMAT_MAC_INT      3
 #define CMF_MD_NAME_FORMAT_STRING       4
+
+#define CMF_MA_NAME_FORMAT_VLAN         1
 #define CMF_MA_NAME_FORMAT_STRING       2
+#define CMF_MA_NAME_FORMAT_UINT16       3
+#define CMF_MA_NAME_FORMAT_VPN_ID       4
+#define CMF_MA_NAME_FORMAT_ICC          32
 
 #define TCP_HDR_LEN_MIN                 20
 #define UDP_HDR_LEN                     8

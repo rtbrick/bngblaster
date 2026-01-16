@@ -12,6 +12,229 @@
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
 
+static bool
+bbl_cfm_is_display_string(const char *s, size_t len)
+{
+    size_t i;
+
+    if(!s || len == 0) {
+        return false;
+    }
+    for(i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)s[i];
+        if(c < 32 || c > 126) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool
+bbl_cfm_parse_hex_bytes(const char *s, uint8_t *out, size_t out_len, size_t expected_len)
+{
+    size_t count = 0;
+    int high = -1;
+
+    if(out_len < expected_len || !s) {
+        return false;
+    }
+
+    for(; *s; s++) {
+        int val;
+
+        if(*s >= '0' && *s <= '9') {
+            val = *s - '0';
+        } else if(*s >= 'a' && *s <= 'f') {
+            val = *s - 'a' + 10;
+        } else if(*s >= 'A' && *s <= 'F') {
+            val = *s - 'A' + 10;
+        } else {
+            continue;
+        }
+
+        if(high < 0) {
+            high = val;
+        } else {
+            if(count >= expected_len) {
+                return false;
+            }
+            out[count++] = (uint8_t)((high << 4) | val);
+            high = -1;
+        }
+    }
+
+    return (high < 0 && count == expected_len);
+}
+
+static bool
+bbl_cfm_parse_mac_int(const char *s, uint8_t *out, size_t out_len)
+{
+    unsigned int mac[6];
+    unsigned long value;
+    char mac_str[32];
+    char *slash;
+    char *end;
+    uint16_t value_be;
+
+    if(!s || out_len < 8) {
+        return false;
+    }
+    slash = strchr(s, '/');
+    if(!slash) {
+        return false;
+    }
+    if((size_t)(slash - s) >= sizeof(mac_str)) {
+        return false;
+    }
+    memcpy(mac_str, s, (size_t)(slash - s));
+    mac_str[slash - s] = 0;
+    if(sscanf(mac_str, "%x:%x:%x:%x:%x:%x",
+              &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) < 6) {
+        return false;
+    }
+    value = strtoul(slash + 1, &end, 10);
+    if(end == slash + 1 || *end) {
+        return false;
+    }
+    if(value > 65535) {
+        return false;
+    }
+    out[0] = (uint8_t)mac[0];
+    out[1] = (uint8_t)mac[1];
+    out[2] = (uint8_t)mac[2];
+    out[3] = (uint8_t)mac[3];
+    out[4] = (uint8_t)mac[4];
+    out[5] = (uint8_t)mac[5];
+    value_be = htobe16((uint16_t)value);
+    memcpy(out + 6, &value_be, sizeof(value_be));
+    return true;
+}
+
+static bool
+bbl_cfm_parse_uint16(const char *s, uint16_t max_value, uint16_t *out)
+{
+    unsigned long value;
+    char *end;
+
+    if(!s) {
+        return false;
+    }
+    value = strtoul(s, &end, 10);
+    if(end == s || *end) {
+        return false;
+    }
+    if(value > max_value) {
+        return false;
+    }
+    *out = (uint16_t)value;
+    return true;
+}
+
+static bool
+bbl_cfm_build_names(bbl_cfm_session_s *cfm, bbl_cfm_s *cfm_hdr,
+                    uint8_t *md_buf, size_t md_buf_len,
+                    uint8_t *ma_buf, size_t ma_buf_len)
+{
+    size_t len;
+    uint16_t value;
+
+    cfm_hdr->md_name_format = cfm->cfm_md_name_format;
+    cfm_hdr->md_name_len = 0;
+    cfm_hdr->md_name = NULL;
+
+    if(!cfm->cfm_md_name_format_set &&
+       cfm_hdr->md_name_format == CMF_MD_NAME_FORMAT_STRING) {
+        cfm_hdr->md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    }
+
+    switch(cfm_hdr->md_name_format) {
+        case CMF_MD_NAME_FORMAT_NONE:
+            break;
+        case CMF_MD_NAME_FORMAT_DNS:
+        case CMF_MD_NAME_FORMAT_STRING:
+            if(!cfm->cfm_md_name) {
+                return false;
+            }
+            len = strlen(cfm->cfm_md_name);
+            if(len > 32 || !bbl_cfm_is_display_string(cfm->cfm_md_name, len)) {
+                return false;
+            }
+            memcpy(md_buf, cfm->cfm_md_name, len);
+            cfm_hdr->md_name_len = len;
+            cfm_hdr->md_name = md_buf;
+            break;
+        case CMF_MD_NAME_FORMAT_MAC_INT:
+            if(!bbl_cfm_parse_mac_int(cfm->cfm_md_name, md_buf, md_buf_len)) {
+                return false;
+            }
+            cfm_hdr->md_name_len = 8;
+            cfm_hdr->md_name = md_buf;
+            break;
+        default:
+            return false;
+    }
+
+    cfm_hdr->ma_name_format = cfm->cfm_ma_name_format;
+    cfm_hdr->ma_name_len = 0;
+    cfm_hdr->ma_name = NULL;
+
+    switch(cfm_hdr->ma_name_format) {
+        case CMF_MA_NAME_FORMAT_VLAN:
+            if(!bbl_cfm_parse_uint16(cfm->cfm_ma_name, 4094, &value)) {
+                return false;
+            }
+            value = htobe16(value);
+            memcpy(ma_buf, &value, sizeof(value));
+            cfm_hdr->ma_name_len = 2;
+            cfm_hdr->ma_name = ma_buf;
+            break;
+        case CMF_MA_NAME_FORMAT_STRING:
+            if(!cfm->cfm_ma_name) {
+                return false;
+            }
+            len = strlen(cfm->cfm_ma_name);
+            if(len > ma_buf_len || !bbl_cfm_is_display_string(cfm->cfm_ma_name, len)) {
+                return false;
+            }
+            memcpy(ma_buf, cfm->cfm_ma_name, len);
+            cfm_hdr->ma_name_len = len;
+            cfm_hdr->ma_name = ma_buf;
+            break;
+        case CMF_MA_NAME_FORMAT_UINT16:
+            if(!bbl_cfm_parse_uint16(cfm->cfm_ma_name, 65535, &value)) {
+                return false;
+            }
+            value = htobe16(value);
+            memcpy(ma_buf, &value, sizeof(value));
+            cfm_hdr->ma_name_len = 2;
+            cfm_hdr->ma_name = ma_buf;
+            break;
+        case CMF_MA_NAME_FORMAT_VPN_ID:
+            if(!bbl_cfm_parse_hex_bytes(cfm->cfm_ma_name, ma_buf, ma_buf_len, 7)) {
+                return false;
+            }
+            cfm_hdr->ma_name_len = 7;
+            cfm_hdr->ma_name = ma_buf;
+            break;
+        case CMF_MA_NAME_FORMAT_ICC:
+            if(!cfm->cfm_ma_name) {
+                return false;
+            }
+            len = strlen(cfm->cfm_ma_name);
+            if(len != 13 || !bbl_cfm_is_display_string(cfm->cfm_ma_name, len)) {
+                return false;
+            }
+            memcpy(ma_buf, cfm->cfm_ma_name, len);
+            cfm_hdr->ma_name_len = len;
+            cfm_hdr->ma_name = ma_buf;
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+}
+
 void
 bbl_tx_igmp_timeout(timer_s *timer)
 {
@@ -1427,6 +1650,8 @@ bbl_tx_encode_packet_cfm_cc_session(bbl_session_s *session)
     bbl_ethernet_header_s eth = {0};
     bbl_cfm_s cfm_hdr = {0}; 
     bbl_cfm_session_s *cfm = session->cfm;
+    uint8_t md_name_buf[32];
+    uint8_t ma_name_buf[45];
 
     uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x30 };
     
@@ -1451,16 +1676,13 @@ bbl_tx_encode_packet_cfm_cc_session(bbl_session_s *session)
     cfm_hdr.rdi = cfm->cfm_rdi;
     cfm_hdr.md_level = cfm->cfm_level;
     cfm_hdr.ccm_interval = cfm->cfm_interval;
-    if(cfm->cfm_md_name) {
-        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_STRING;
-        cfm_hdr.md_name_len = strlen(cfm->cfm_md_name);
-        cfm_hdr.md_name = (uint8_t*)cfm->cfm_md_name;
-    } else {
-        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    if(!bbl_cfm_build_names(cfm, &cfm_hdr, md_name_buf, sizeof(md_name_buf),
+                            ma_name_buf, sizeof(ma_name_buf))) {
+        return ENCODE_ERROR;
     }
     cfm_hdr.ma_id = cfm->cfm_ma_id;
-    cfm_hdr.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
-    if(session->cfm->cfm_ma_name) {
+    if(session->cfm->cfm_ma_name && cfm_hdr.ma_name_len == 0 &&
+       cfm_hdr.ma_name_format == CMF_MA_NAME_FORMAT_STRING) {
         cfm_hdr.ma_name_len = strlen(cfm->cfm_ma_name);
         cfm_hdr.ma_name = (uint8_t*)cfm->cfm_ma_name;
     }
@@ -1476,6 +1698,8 @@ bbl_tx_encode_packet_cfm_cc(bbl_network_interface_s *interface,
     protocol_error_t result;
     bbl_cfm_s cfm_hdr = {0}; 
     bbl_cfm_session_s *cfm = interface->cfm;
+    uint8_t md_name_buf[32];
+    uint8_t ma_name_buf[45];
 
     uint8_t mac[ETH_ADDR_LEN] = { 0x01, 0x80, 0xC2, 0x00, 0x00, 0x30 };
     
@@ -1494,16 +1718,13 @@ bbl_tx_encode_packet_cfm_cc(bbl_network_interface_s *interface,
     cfm_hdr.rdi = cfm->cfm_rdi;
     cfm_hdr.md_level = cfm->cfm_level;
     cfm_hdr.ccm_interval = cfm->cfm_interval;
-    if(cfm->cfm_md_name) {
-        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_STRING;
-        cfm_hdr.md_name_len = strlen(cfm->cfm_md_name);
-        cfm_hdr.md_name = (uint8_t*)cfm->cfm_md_name;
-    } else {
-        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    if(!bbl_cfm_build_names(cfm, &cfm_hdr, md_name_buf, sizeof(md_name_buf),
+                            ma_name_buf, sizeof(ma_name_buf))) {
+        return ENCODE_ERROR;
     }
     cfm_hdr.ma_id = cfm->cfm_ma_id;
-    cfm_hdr.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
-    if(cfm->cfm_ma_name) {
+    if(cfm->cfm_ma_name && cfm_hdr.ma_name_len == 0 &&
+       cfm_hdr.ma_name_format == CMF_MA_NAME_FORMAT_STRING) {
         cfm_hdr.ma_name_len = strlen(cfm->cfm_ma_name);
         cfm_hdr.ma_name = (uint8_t*)cfm->cfm_ma_name;
     }
