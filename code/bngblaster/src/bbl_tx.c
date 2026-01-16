@@ -1450,7 +1450,14 @@ bbl_tx_encode_packet_cfm_cc_session(bbl_session_s *session)
     }
     cfm_hdr.rdi = cfm->cfm_rdi;
     cfm_hdr.md_level = cfm->cfm_level;
-    cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    cfm_hdr.ccm_interval = cfm->cfm_interval;
+    if(cfm->cfm_md_name) {
+        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_STRING;
+        cfm_hdr.md_name_len = strlen(cfm->cfm_md_name);
+        cfm_hdr.md_name = (uint8_t*)cfm->cfm_md_name;
+    } else {
+        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    }
     cfm_hdr.ma_id = cfm->cfm_ma_id;
     cfm_hdr.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
     if(session->cfm->cfm_ma_name) {
@@ -1486,7 +1493,14 @@ bbl_tx_encode_packet_cfm_cc(bbl_network_interface_s *interface,
     }
     cfm_hdr.rdi = cfm->cfm_rdi;
     cfm_hdr.md_level = cfm->cfm_level;
-    cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    cfm_hdr.ccm_interval = cfm->cfm_interval;
+    if(cfm->cfm_md_name) {
+        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_STRING;
+        cfm_hdr.md_name_len = strlen(cfm->cfm_md_name);
+        cfm_hdr.md_name = (uint8_t*)cfm->cfm_md_name;
+    } else {
+        cfm_hdr.md_name_format = CMF_MD_NAME_FORMAT_NONE;
+    }
     cfm_hdr.ma_id = cfm->cfm_ma_id;
     cfm_hdr.ma_name_format = CMF_MA_NAME_FORMAT_STRING;
     if(cfm->cfm_ma_name) {

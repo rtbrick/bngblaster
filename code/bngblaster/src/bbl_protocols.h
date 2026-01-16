@@ -1014,6 +1014,7 @@ typedef struct bbl_cfm_ {
     uint32_t    seq;
     bool        rdi;
     uint8_t     md_level;
+    uint8_t     ccm_interval;
     uint8_t     md_name_format;
     uint8_t     md_name_len;
     uint8_t    *md_name;

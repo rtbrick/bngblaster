@@ -219,7 +219,9 @@ bbl_network_interfaces_add()
             network_interface->cfm->cfm_cc = true;
             if(network_config->cfm_seq) network_interface->cfm->cfm_seq = 1;
             network_interface->cfm->cfm_level = network_config->cfm_level;
+            network_interface->cfm->cfm_interval = network_config->cfm_interval;
             network_interface->cfm->cfm_ma_id = network_config->cfm_ma_id;
+            network_interface->cfm->cfm_md_name = network_config->cfm_md_name;
             network_interface->cfm->cfm_ma_name = network_config->cfm_ma_name;
             network_interface->cfm->vlan_priority = network_config->cfm_vlan_priority;
             network_interface->cfm->network_interface = network_interface;

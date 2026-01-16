@@ -30,14 +30,27 @@ bbl_cfm_cc_interface_job(timer_s *timer)
 void
 bbl_cfm_cc_start(bbl_cfm_session_s *cfm)
 {
-    /* Start CFM CC (currently fixed set to 1s) */
+    time_t interval_sec = 1;
+    long interval_nsec = 0;
+
+    switch(cfm->cfm_interval) {
+        case 0: interval_sec = 0; interval_nsec = 3333333; break; /* 3.3ms */
+        case 1: interval_sec = 0; interval_nsec = 10000000; break; /* 10ms */
+        case 2: interval_sec = 0; interval_nsec = 100000000; break; /* 100ms */
+        case 3: interval_sec = 1; interval_nsec = 0; break; /* 1s */
+        case 4: interval_sec = 10; interval_nsec = 0; break; /* 10s */
+        case 5: interval_sec = 60; interval_nsec = 0; break; /* 1min */
+        case 6: interval_sec = 600; interval_nsec = 0; break; /* 10min */
+        default: interval_sec = 1; interval_nsec = 0; break;
+    }
+
     if(cfm->session) {
         timer_add_periodic(&g_ctx->timer_root, &cfm->timer_cfm_cc, "CFM-CC", 
-                           1, 0, cfm->session, &bbl_cfm_cc_session_job);
+                           interval_sec, interval_nsec, cfm->session, &bbl_cfm_cc_session_job);
 
     } else if(cfm->network_interface) {
         timer_add_periodic(&g_ctx->timer_root, &cfm->timer_cfm_cc, "CFM-CC", 
-                           1, 0, cfm->network_interface, &bbl_cfm_cc_interface_job);
+                           interval_sec, interval_nsec, cfm->network_interface, &bbl_cfm_cc_interface_job);
     }
 }
 
