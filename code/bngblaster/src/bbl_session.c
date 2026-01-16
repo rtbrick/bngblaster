@@ -961,7 +961,11 @@ bbl_sessions_init()
             session->cfm->cfm_interval = access_config->cfm_interval;
             session->cfm->cfm_ma_id = access_config->cfm_ma_id;
             update_strings(&session->cfm->cfm_md_name, access_config->cfm_md_name, NULL, NULL);
+            session->cfm->cfm_md_name_format = access_config->cfm_md_name_format;
+            session->cfm->cfm_md_name_format_set = access_config->cfm_md_name_format_set;
             update_strings(&session->cfm->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);
+            session->cfm->cfm_ma_name_format = access_config->cfm_ma_name_format;
+            session->cfm->cfm_ma_name_format_set = access_config->cfm_ma_name_format_set;
             session->cfm->vlan_priority = access_config->cfm_vlan_priority;
             session->cfm->session = session;
         }

@@ -104,7 +104,11 @@ typedef struct bbl_access_config_
     uint8_t cfm_interval;
     uint16_t cfm_ma_id;
     char *cfm_md_name;
+    uint8_t cfm_md_name_format;
+    bool cfm_md_name_format_set;
     char *cfm_ma_name;
+    uint8_t cfm_ma_name_format;
+    bool cfm_ma_name_format_set;
     uint8_t cfm_vlan_priority;
 
     /* Iterator */
@@ -169,7 +173,11 @@ typedef struct bbl_network_config_
     uint8_t cfm_interval;
     uint16_t cfm_ma_id;
     char *cfm_md_name;
+    uint8_t cfm_md_name_format;
+    bool cfm_md_name_format_set;
     char *cfm_ma_name;
+    uint8_t cfm_ma_name_format;
+    bool cfm_ma_name_format_set;
     uint8_t cfm_vlan_priority;
 
     void *next; /* pointer to next network config element */
