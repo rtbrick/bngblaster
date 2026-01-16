@@ -103,6 +103,7 @@ typedef struct bbl_access_config_
     uint8_t cfm_level;
     uint16_t cfm_ma_id;
     char *cfm_ma_name;
+    uint8_t cfm_vlan_priority;
 
     /* Iterator */
     uint32_t i1;
@@ -165,6 +166,7 @@ typedef struct bbl_network_config_
     uint8_t cfm_level;
     uint16_t cfm_ma_id;
     char *cfm_ma_name;
+    uint8_t cfm_vlan_priority;
 
     void *next; /* pointer to next network config element */
     bbl_network_interface_s *network_interface;

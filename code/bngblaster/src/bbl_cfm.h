@@ -22,6 +22,7 @@ typedef struct bbl_cfm_session_
     uint8_t cfm_level;
     uint16_t cfm_ma_id;
     char *cfm_ma_name;
+    uint8_t vlan_priority;
 
     struct timer_ *timer_cfm_cc;
 
