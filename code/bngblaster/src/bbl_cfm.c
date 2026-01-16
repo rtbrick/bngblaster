@@ -34,13 +34,13 @@ bbl_cfm_cc_start(bbl_cfm_session_s *cfm)
     long interval_nsec = 0;
 
     switch(cfm->cfm_interval) {
-        case 0: interval_sec = 0; interval_nsec = 3333333; break; /* 3.3ms */
-        case 1: interval_sec = 0; interval_nsec = 10000000; break; /* 10ms */
-        case 2: interval_sec = 0; interval_nsec = 100000000; break; /* 100ms */
-        case 3: interval_sec = 1; interval_nsec = 0; break; /* 1s */
-        case 4: interval_sec = 10; interval_nsec = 0; break; /* 10s */
-        case 5: interval_sec = 60; interval_nsec = 0; break; /* 1min */
-        case 6: interval_sec = 600; interval_nsec = 0; break; /* 10min */
+        case 1: interval_sec = 0; interval_nsec = 3333333; break; /* 3.33ms */
+        case 2: interval_sec = 0; interval_nsec = 10000000; break; /* 10ms */
+        case 3: interval_sec = 0; interval_nsec = 100000000; break; /* 100ms */
+        case 4: interval_sec = 1; interval_nsec = 0; break; /* 1s */
+        case 5: interval_sec = 10; interval_nsec = 0; break; /* 10s */
+        case 6: interval_sec = 60; interval_nsec = 0; break; /* 1min */
+        case 7: interval_sec = 600; interval_nsec = 0; break; /* 10min */
         default: interval_sec = 1; interval_nsec = 0; break;
     }
 
