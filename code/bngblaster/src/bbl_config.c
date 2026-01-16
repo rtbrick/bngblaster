@@ -880,11 +880,11 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     if(value) {
         network_config->cfm_level = json_number_value(value);
     }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-interval", 0, 6);
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-interval", 1, 7);
     if(value) {
         network_config->cfm_interval = json_number_value(value);
     } else {
-        network_config->cfm_interval = 3;
+        network_config->cfm_interval = 4;
     }
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-ma-id", 0, 65535);
     if(value) {
@@ -1337,11 +1337,11 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     if(value) {
         access_config->cfm_level = json_number_value(value);
     }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-interval", 0, 6);
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-interval", 1, 7);
     if(value) {
         access_config->cfm_interval = json_number_value(value);
     } else {
-        access_config->cfm_interval = 3;
+        access_config->cfm_interval = 4;
     }
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-ma-id", 0, 65535);
     if(value) {
