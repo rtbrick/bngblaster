@@ -14,6 +14,6 @@
 
 #define BUILD_OS ""
 #define COMPILER_ID "GNU"
-#define COMPILER_VERSION "11.4.0"
+#define COMPILER_VERSION "13.3.0"
 
 #endif

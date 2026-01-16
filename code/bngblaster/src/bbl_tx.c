@@ -1439,6 +1439,8 @@ bbl_tx_encode_packet_cfm_cc_session(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = cfm->vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_CFM;
     eth.next = &cfm_hdr;
     cfm_hdr.type = CFM_TYPE_CCM;
@@ -1473,6 +1475,8 @@ bbl_tx_encode_packet_cfm_cc(bbl_network_interface_s *interface,
     if(!cfm) return IGNORED;
     mac[ETH_ADDR_LEN-1] |= cfm->cfm_level;
     eth->dst = mac;
+    eth->vlan_outer_priority = cfm->vlan_priority;
+    eth->vlan_inner_priority = eth->vlan_outer_priority;
     eth->type = ETH_TYPE_CFM;
     eth->next = &cfm_hdr;
     cfm_hdr.type = CFM_TYPE_CCM;

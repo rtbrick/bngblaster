@@ -960,6 +960,7 @@ bbl_sessions_init()
             session->cfm->cfm_level = access_config->cfm_level;
             session->cfm->cfm_ma_id = access_config->cfm_ma_id;
             update_strings(&session->cfm->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);
+            session->cfm->vlan_priority = access_config->cfm_vlan_priority;
             session->cfm->session = session;
         }
 

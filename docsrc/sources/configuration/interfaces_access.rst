@@ -81,6 +81,9 @@
 | **cfm-seq**                       | | Enable EOAM CFM CC sequence numbers.                               |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
+| **cfm-vlan-priority**             | | Set EOAM CFM CC VLAN priority (PCP).                               |
+|                                   | | Default: 0 Range: 0 - 7                                            |
++-----------------------------------+----------------------------------------------------------------------+
 | **username**                      | | Overwrite the username from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **password**                      | | Overwrite the password from the authentication section.            |
