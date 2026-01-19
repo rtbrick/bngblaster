@@ -3,7 +3,7 @@
  *
  * Christian Giese, August 2022
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
@@ -131,6 +131,22 @@ io_socket_open(io_handle_s *io) {
         LOG(ERROR, "Failed to bind socket for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
         return false;
+    }
+    /* Ignore outgoing packets if socket is used for RX (IO_INGRESS). 
+     * The PACKET_IGNORE_OUTGOING option is supported since Linux kernel 4.20. */
+    if(io->direction == IO_INGRESS) {
+        int one=1;
+        if(setsockopt(io->fd, SOL_PACKET, PACKET_IGNORE_OUTGOING, &one, sizeof(one)) == -1) {
+            kernel_version_s kv = get_kernel_version();
+            const char *hint = "";
+            if((kv.major < 4) || (kv.major == 4 && kv.minor < 20)) {
+                hint = " Unsupported on linux kernel below 4.20.";
+            }
+            LOG(ERROR,
+                "Warning: Failed to set PACKET_IGNORE_OUTGOING for interface %s RX socket - %s (%d).%s"
+                " TX packets might be seen on RX.\n",
+                io->interface->name, strerror(errno), errno, hint);
+        }
     }
     if(io->direction == IO_EGRESS && interface->config->qdisc_bypass) {
         if(!set_qdisc_bypass(io)) {

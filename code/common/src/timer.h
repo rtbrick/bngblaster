@@ -3,7 +3,7 @@
  *
  * Hannes Gredler, July 2020
  *
- * Copyright (C) 2020-2025, RtBrick, Inc.
+ * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
@@ -14,6 +14,14 @@
 #define MSEC    1000000UL       /* 1 million nanoseconds == 1 milliseconds */
 #define MSEC100 100000000UL     /* 100 million nanoseconds == 100 milliseconds */
 #define SEC     1000000000UL    /* 1 billion nanoseconds == 1 second */
+
+#ifndef CIRCLEQ_FOREACH_SAFE
+#define CIRCLEQ_FOREACH_SAFE(var, head, field, tvar) \
+    for ((var)   = CIRCLEQ_FIRST((head)); \
+         (var)  != (void *)(head) && \
+         ((tvar) = CIRCLEQ_NEXT((var), field), 1); \
+         (var)   = (tvar))
+#endif
 
 /*  Top level data structure for timers. */
 typedef struct timer_root_
