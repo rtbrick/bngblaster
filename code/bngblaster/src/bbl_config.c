@@ -3338,7 +3338,8 @@ json_parse_config(json_t *root)
     if(json_is_object(section)) {
 
         const char *schema[] = {
-            "ipv6", "ipv4", "arp-timeout", "arp-interval"
+            "ipv6", "ipv4", "arp-timeout", "arp-interval",
+            "vlan-priority"
         };
         if(!schema_validate(section, "ipoe", schema, 
            sizeof(schema)/sizeof(schema[0]))) {
@@ -3360,6 +3361,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "ipoe", "arp-interval", 0, 65535);
         if(value) {
             g_ctx->config.arp_interval = json_number_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(section, value, "ipoe", "vlan-priority", 0, 7);
+        if(value) {
+            g_ctx->config.ipoe_vlan_priority = json_number_value(value);
         }
     }
 
@@ -3669,7 +3674,7 @@ json_parse_config(json_t *root)
         const char *schema[] = {
             "enable", "ldra", "ia-na", "timeout",
             "ia-pd", "rapid-commit", "ia-separate",
-            "retry", "access-line"
+            "retry", "access-line", "vlan-priority"
         };
         if(!schema_validate(section, "dhcpv6", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -3711,6 +3716,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "dhcpv6", "access-line");
         if(value) {
             g_ctx->config.dhcpv6_access_line = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(section, value, "dhcpv6", "vlan-priority", 0, 7);
+        if(value) {
+            g_ctx->config.dhcpv6_vlan_priority = json_number_value(value);
         }
     }
 

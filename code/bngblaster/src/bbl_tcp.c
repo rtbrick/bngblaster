@@ -1108,10 +1108,9 @@ bbl_tcp_netif_output_ipv4_session(struct netif *netif, struct pbuf *p, const ip4
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
+        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.next = &pppoe;
         pppoe.session_id = session->pppoe_session_id;
         pppoe.protocol = PROTOCOL_IPV4;
@@ -1120,9 +1119,11 @@ bbl_tcp_netif_output_ipv4_session(struct netif *netif, struct pbuf *p, const ip4
     } else {
         /* IPoE */
         eth.type = ETH_TYPE_IPV4;
+        eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
         eth.lwip = true;
         eth.next = p;
     }
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     if(bbl_txq_to_buffer(session->access_interface->txq, &eth) != BBL_TXQ_OK) {
         return ERR_IF;
@@ -1176,10 +1177,9 @@ bbl_tcp_netif_output_ipv6_session(struct netif *netif, struct pbuf *p, const ip6
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         eth.type = ETH_TYPE_PPPOE_SESSION;
+        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.next = &pppoe;
         pppoe.session_id = session->pppoe_session_id;
         pppoe.protocol = PROTOCOL_IPV6;
@@ -1188,9 +1188,11 @@ bbl_tcp_netif_output_ipv6_session(struct netif *netif, struct pbuf *p, const ip6
     } else {
         /* IPoE */
         eth.type = ETH_TYPE_IPV6;
+        eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
         eth.lwip = true;
         eth.next = p;
     }
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     if(bbl_txq_to_buffer(session->access_interface->txq, &eth) != BBL_TXQ_OK) {
         return ERR_IF;

@@ -109,6 +109,7 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
         ipv4_multicast_mac(IPV4_MC_IGMP, mac);
         eth.dst = mac;
         eth.type = ETH_TYPE_IPV4;
+        eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
         eth.next = &ipv4;
     }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
@@ -391,8 +392,8 @@ bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
             return WRONG_PROTOCOL_STATE;
         }
         eth.dst = session->server_mac;
-        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.type = ETH_TYPE_PPPOE_SESSION;
+        eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
         eth.next = &pppoe;
 
         pppoe.session_id = session->pppoe_session_id;
@@ -403,6 +404,7 @@ bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
         ipv6_multicast_mac(ipv6_multicast_all_routers, mac);
         eth.dst = mac;
         eth.type = ETH_TYPE_IPV6;
+        eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
         eth.next = &ipv6;
     }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
@@ -571,7 +573,10 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         /* IPoE */
         ipv6_multicast_mac(ipv6_multicast_all_dhcp, mac);
         eth.dst = mac;
-        eth.vlan_outer_priority = g_ctx->config.dhcpv6_vlan_priority;
+        eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
+        if(g_ctx->config.dhcpv6_vlan_priority) {
+            eth.vlan_outer_priority = g_ctx->config.dhcpv6_vlan_priority;
+        }
         eth.type = ETH_TYPE_IPV6;
         eth.next = &ipv6;
     }
@@ -1209,9 +1214,11 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.dhcp_vlan_priority;
+    eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
+    if(g_ctx->config.dhcp_vlan_priority) {
+        eth.vlan_outer_priority = g_ctx->config.dhcp_vlan_priority;
+    }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
-
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.src = session->ip_address;

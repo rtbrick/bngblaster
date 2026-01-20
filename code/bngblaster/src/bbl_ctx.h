@@ -285,6 +285,9 @@ typedef struct bbl_ctx_
         uint16_t ip6cp_conf_request_timeout;
         uint8_t  ip6cp_conf_request_retry;
 
+        /* IPoE */
+        uint8_t  ipoe_vlan_priority;
+
         /* IPv4 (IPoE) */
         bool ipoe_ipv4_enable;
 
