@@ -663,8 +663,8 @@ bbl_interactive_window_job(timer_s *timer)
             if(session->ip_address) {
                 wprintw(stats_win, "      IPv4: %s \n", format_ipv4_address(&session->ip_address));
             }
-            if(session->ipv6_prefix.len) {
-                wprintw(stats_win, "      IPv6: %s \n", format_ipv6_address(&session->ipv6_prefix.address));
+            if(*(uint64_t*)&session->ipv6_address) {
+                wprintw(stats_win, "      IPv6: %s \n", format_ipv6_address(&session->ipv6_address));
             }
             if(session->delegated_ipv6_prefix.len) {
                 wprintw(stats_win, "   IPv6 PD: %s \n", format_ipv6_prefix(&session->delegated_ipv6_prefix));
