@@ -171,6 +171,135 @@ get_isis_config_by_id(uint16_t id)
 }
 
 static bool
+json_parse_cfm_config(json_t *config, bbl_cfm_config_s *cfm)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    JSON_OBJ_GET_BOOL(config, value, "access/network", "cfm-cc");
+    if(value) {
+        cfm->cc = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_BOOL(config, value, "access/network", "cfm-seq");
+    if(value) {
+        cfm->seq = json_boolean_value(value);
+    } else {
+        cfm->seq = true;
+    }
+    JSON_OBJ_GET_NUMBER(config, value, "access/network", "cfm-level", 0, 7);
+    if(value) {
+        cfm->level = json_number_value(value);
+    }
+
+    value = json_object_get(config, "cfm-interval");
+    if(value) {
+        if(!strcmp(json_string_value(value), "3.33ms")){
+           cfm->interval = 1;
+           cfm->interval_sec = 0;
+           cfm->interval_nsec = 3333333;
+        } else if(!strcmp(json_string_value(value), "10ms")){
+           cfm->interval = 2;
+           cfm->interval_sec = 0;
+           cfm->interval_nsec = 10 * MSEC;
+        } else if(!strcmp(json_string_value(value), "100ms")){
+           cfm->interval = 3;
+           cfm->interval_sec = 0;
+           cfm->interval_nsec = 100 * MSEC;
+        } else if(!strcmp(json_string_value(value), "1s")){
+           cfm->interval = 4;
+           cfm->interval_sec = 1;
+           cfm->interval_nsec = 0;
+        } else if(!strcmp(json_string_value(value), "10s")){
+           cfm->interval = 5;
+           cfm->interval_sec = 10;
+           cfm->interval_nsec = 0;
+        } else if(!strcmp(json_string_value(value), "1min")){
+           cfm->interval = 6;
+           cfm->interval_sec = 60;
+           cfm->interval_nsec = 0;
+        } else if(!strcmp(json_string_value(value), "10min")){
+           cfm->interval = 7;
+           cfm->interval_sec = 600;
+           cfm->interval_nsec = 0;
+        } else{
+            fprintf(stderr, "JSON config error: Invalid value for access/network->cfm-interval\n");
+            return false;
+        }
+    } else{
+        cfm->interval = 4;
+        cfm->interval_sec = 1;
+        cfm->interval_nsec = 0;
+    }
+
+    JSON_OBJ_GET_NUMBER(config, value, "access/network", "cfm-ma-id", 0, 65535);
+    if(value) {
+        cfm->ma_id = json_number_value(value);
+    }
+
+    
+    if(json_unpack(config, "{s:s}", "cfm-md-name", &s) == 0) {
+        cfm->md_name = strdup(s);
+    }
+
+    value = json_object_get(config, "cfm-md-name-format");
+    if(value) {
+        if(!strcmp(json_string_value(value), "NONE")){
+           cfm->md_name_format = CFM_MD_NAME_FORMAT_NONE;
+        } else if(!strcmp(json_string_value(value), "DNS")){
+           cfm->md_name_format = CFM_MD_NAME_FORMAT_DNS;
+        } else if(!strcmp(json_string_value(value), "MAC_INT")){
+           cfm->md_name_format = CFM_MD_NAME_FORMAT_MAC_INT;
+        } else if(!strcmp(json_string_value(value), "STRING")){
+           cfm->md_name_format = CFM_MD_NAME_FORMAT_STRING;
+        } else{
+            fprintf(stderr, "JSON config error: Invalid value for access/network->cfm-md-name-format\n");
+            return false;
+        }
+    } else{
+        cfm->md_name_format = CFM_MD_NAME_FORMAT_NONE;
+    }
+
+    if(!(cfm->md_name || cfm->md_name_format == CFM_MD_NAME_FORMAT_NONE)) {
+        fprintf(stderr, "JSON config error: Missing access/network->cfm-md-name\n");
+        return false;
+    }
+
+    if(json_unpack(config, "{s:s}", "cfm-ma-name", &s) == 0) {
+        cfm->ma_name = strdup(s);
+    } else {
+        fprintf(stderr, "JSON config error: Missing access/network->cfm-ma-name\n");
+        return false;
+    }
+
+    value = json_object_get(config, "cfm-ma-name-format");
+    if(value) {
+        if(!strcmp(json_string_value(value), "VLAN")){
+           cfm->ma_name_format = CFM_MA_NAME_FORMAT_VLAN;
+        } else if(!strcmp(json_string_value(value), "STRING")){
+           cfm->ma_name_format = CFM_MA_NAME_FORMAT_STRING;
+        } else if(!strcmp(json_string_value(value), "UINT16")){
+           cfm->ma_name_format = CFM_MA_NAME_FORMAT_UINT16;
+        } else if(!strcmp(json_string_value(value), "VPN_ID")){
+           cfm->ma_name_format = CFM_MA_NAME_FORMAT_VPN_ID;
+        } else if(!strcmp(json_string_value(value), "ICC")){
+           cfm->ma_name_format = CFM_MA_NAME_FORMAT_ICC;
+        } else{
+            fprintf(stderr, "JSON config error: Invalid value for access/network->cfm-ma-name-format\n");
+            return false;
+        }
+    } else{
+        cfm->ma_name_format = CFM_MA_NAME_FORMAT_STRING;
+    }
+
+    JSON_OBJ_GET_NUMBER(config, value, "access/network", "cfm-vlan-priority", 0, 7);
+    if(value) {
+        cfm->vlan_priority = json_number_value(value);
+    }
+
+    return true;
+}
+
+static bool
 json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profile)
 {
     json_t *value = NULL;
@@ -868,67 +997,11 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     }
 
     JSON_OBJ_GET_BOOL(network_interface, value, "network", "cfm-cc");
-    if(value) {
-        network_config->cfm_cc = json_boolean_value(value);
-    }
-    JSON_OBJ_GET_BOOL(network_interface, value, "network", "cfm-seq");
-    if(value) {
-        network_config->cfm_seq = json_boolean_value(value);
-    } else {
-        network_config->cfm_seq = true;
-    }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-level", 0, 7);
-    if(value) {
-        network_config->cfm_level = json_number_value(value);
-    }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-interval", 1, 7);
-    if(value) {
-        network_config->cfm_interval = json_number_value(value);
-    } else {
-        network_config->cfm_interval = 4;
-    }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-ma-id", 0, 65535);
-    if(value) {
-        network_config->cfm_ma_id = json_number_value(value);
-    }
-    if(json_unpack(network_interface, "{s:s}", "cfm-md-name", &s) == 0) {
-        network_config->cfm_md_name = strdup(s);
-    }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-md-name-format", 1, 4);
-    if(value) {
-        network_config->cfm_md_name_format = json_number_value(value);
-        network_config->cfm_md_name_format_set = true;
-    } else {
-        network_config->cfm_md_name_format = CMF_MD_NAME_FORMAT_STRING;
-        network_config->cfm_md_name_format_set = false;
-    }
-    if(network_config->cfm_md_name_format_set &&
-       network_config->cfm_md_name_format != CMF_MD_NAME_FORMAT_NONE &&
-       !network_config->cfm_md_name) {
-        fprintf(stderr, "JSON config error: Missing network->cfm-md-name\n");
-        return false;
-    }
-    if(json_unpack(network_interface, "{s:s}", "cfm-ma-name", &s) == 0) {
-        network_config->cfm_ma_name = strdup(s);
-    } else if(network_config->cfm_cc) {
-        fprintf(stderr, "JSON config error: Missing network->cfm-ma-name\n");
-        return false;
-    }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-ma-name-format", 1, 32);
-    if(value) {
-        network_config->cfm_ma_name_format = json_number_value(value);
-        network_config->cfm_ma_name_format_set = true;
-        if(network_config->cfm_ma_name_format > 4 && network_config->cfm_ma_name_format != CMF_MA_NAME_FORMAT_ICC) {
-            fprintf(stderr, "JSON config error: Invalid value for network->cfm-ma-name-format\n");
+    if(value && json_boolean_value(value)) {
+        network_config->cfm = calloc(1, sizeof(bbl_cfm_config_s));
+        if(!json_parse_cfm_config(network_interface, network_config->cfm)) {
             return false;
         }
-    } else {
-        network_config->cfm_ma_name_format = CMF_MA_NAME_FORMAT_STRING;
-        network_config->cfm_ma_name_format_set = false;
-    }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "cfm-vlan-priority", 0, 7);
-    if(value) {
-        network_config->cfm_vlan_priority = json_number_value(value);
     }
 
     JSON_OBJ_GET_BOOL(network_interface, value, "network", "a10nsp");
@@ -1351,68 +1424,12 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->arp_client_group_id = json_number_value(value);
     }
 
-    JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
-    if(value) {
-        access_config->cfm_cc = json_boolean_value(value);
-    }
-    JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-seq");
-    if(value) {
-        access_config->cfm_seq = json_boolean_value(value);
-    } else {
-        access_config->cfm_seq = true;
-    }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-level", 0, 7);
-    if(value) {
-        access_config->cfm_level = json_number_value(value);
-    }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-interval", 1, 7);
-    if(value) {
-        access_config->cfm_interval = json_number_value(value);
-    } else {
-        access_config->cfm_interval = 4;
-    }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-ma-id", 0, 65535);
-    if(value) {
-        access_config->cfm_ma_id = json_number_value(value);
-    }
-    if(json_unpack(access_interface, "{s:s}", "cfm-md-name", &s) == 0) {
-        access_config->cfm_md_name = strdup(s);
-    }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-md-name-format", 1, 4);
-    if(value) {
-        access_config->cfm_md_name_format = json_number_value(value);
-        access_config->cfm_md_name_format_set = true;
-    } else {
-        access_config->cfm_md_name_format = CMF_MD_NAME_FORMAT_STRING;
-        access_config->cfm_md_name_format_set = false;
-    }
-    if(access_config->cfm_md_name_format_set &&
-       access_config->cfm_md_name_format != CMF_MD_NAME_FORMAT_NONE &&
-       !access_config->cfm_md_name) {
-        fprintf(stderr, "JSON config error: Missing access->cfm-md-name\n");
-        return false;
-    }
-    if(json_unpack(access_interface, "{s:s}", "cfm-ma-name", &s) == 0) {
-        access_config->cfm_ma_name = strdup(s);
-    } else if(access_config->cfm_cc) {
-        fprintf(stderr, "JSON config error: Missing access->cfm-ma-name\n");
-        return false;
-    }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-ma-name-format", 1, 32);
-    if(value) {
-        access_config->cfm_ma_name_format = json_number_value(value);
-        access_config->cfm_ma_name_format_set = true;
-        if(access_config->cfm_ma_name_format > 4 && access_config->cfm_ma_name_format != CMF_MA_NAME_FORMAT_ICC) {
-            fprintf(stderr, "JSON config error: Invalid value for access->cfm-ma-name-format\n");
+    JSON_OBJ_GET_BOOL(access_interface, value, "network", "cfm-cc");
+    if(value && json_boolean_value(value)) {
+        access_config->cfm = calloc(1, sizeof(bbl_cfm_config_s));
+        if(!json_parse_cfm_config(access_interface, access_config->cfm)) {
             return false;
         }
-    } else {
-        access_config->cfm_ma_name_format = CMF_MA_NAME_FORMAT_STRING;
-        access_config->cfm_ma_name_format_set = false;
-    }
-    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "cfm-vlan-priority", 0, 7);
-    if(value) {
-        access_config->cfm_vlan_priority = json_number_value(value);
     }
 
     if(access_config->access_type == ACCESS_TYPE_PPPOE) {

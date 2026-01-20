@@ -2219,7 +2219,7 @@ encode_cfm(uint8_t *buf, uint16_t *len, bbl_cfm_s *cfm)
     /* MD Name */
     *buf = cfm->md_name_format;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-    if(cfm->md_name_format != CMF_MD_NAME_FORMAT_NONE) {
+    if(cfm->md_name_format != CFM_MD_NAME_FORMAT_NONE) {
         if(cfm->md_name_len > 32) cfm->md_name_len = 32;
         *buf = cfm->md_name_len;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));

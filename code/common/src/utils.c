@@ -548,6 +548,59 @@ scan_iso_prefix(const char *str, iso_prefix *iso)
 }
 
 /**
+ * Parses a hex string into binary bytes (uint8_t array), returns written bytes.
+ * Supports lowercase/uppercase hex digits (0-9a-fA-F), ignores non-hex chars.
+ * Stops at out_len (no partial bytes on overflow).
+ *
+ * @param s Input hex string (e.g., "1a2b3c", "1 A 2 B  cc")
+ * @param data Output buffer for parsed bytes
+ * @param length Max bytes to write (>=1)
+ * @return Number of bytes written (>=0) on success and -1 on error
+ */
+int
+scan_hex_string(const char *str, uint8_t *data, size_t length)
+{
+    size_t count = 0;
+    int high = -1;
+    int val;
+
+    if (!str || !data || !length) {
+        return -1;
+    }
+
+    for(; *str; str++) {
+        /* Decode hex digit */
+        if(*str >= '0' && *str <= '9') {
+            val = *str - '0';
+        } else if(*str >= 'a' && *str <= 'f') {
+            val = *str - 'a' + 10;
+        } else if(*str >= 'A' && *str <= 'F') {
+            val = *str - 'A' + 10;
+        } else {
+            /* Skip whitespace/non-hex */
+            continue;
+        }
+        /* State machine: high nibble -> low nibble -> byte */
+        if(high < 0) {
+            high = val;
+        } else {
+            if (count >= length) {
+                return -1;  // Buffer overflow
+            }
+            data[count++] = (uint8_t)((high << 4) | val);
+            high = -1;
+        }
+    }
+
+    /* Fail if trailing high nibble (odd hex count). */
+    if(high >= 0) {
+        return -1;
+    }
+
+    return (int)count;  // Success: bytes written
+}
+
+/**
  * ipv4_multicast_mac
  *
  * @param ipv4 IPv4 multicast address

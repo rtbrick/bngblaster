@@ -46,7 +46,7 @@ bool  scan_ipv4_address(const char *str, uint32_t *ipv4);
 bool  scan_ipv6_prefix(const char *str, ipv6_prefix *ipv6);
 bool  scan_ipv6_address(const char *str, ipv6addr_t *ipv6);
 bool  scan_iso_prefix(const char *str, iso_prefix *iso);
-
+int   scan_hex_string(const char *str, uint8_t *data, size_t length);
 void  ipv4_multicast_mac(const uint32_t ipv4, uint8_t* mac);
 void  ipv6_multicast_mac(const uint8_t *ipv6, uint8_t* mac);
 

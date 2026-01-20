@@ -214,21 +214,18 @@ bbl_network_interfaces_add()
         }
 
         /* Init CFM */
-        if(network_config->cfm_cc) {
+        if(network_config->cfm) {
             network_interface->cfm = calloc(1, sizeof(bbl_cfm_session_s));
-            network_interface->cfm->cfm_cc = true;
-            if(network_config->cfm_seq) network_interface->cfm->cfm_seq = 1;
-            network_interface->cfm->cfm_level = network_config->cfm_level;
-            network_interface->cfm->cfm_interval = network_config->cfm_interval;
-            network_interface->cfm->cfm_ma_id = network_config->cfm_ma_id;
-            network_interface->cfm->cfm_md_name = network_config->cfm_md_name;
-            network_interface->cfm->cfm_md_name_format = network_config->cfm_md_name_format;
-            network_interface->cfm->cfm_md_name_format_set = network_config->cfm_md_name_format_set;
-            network_interface->cfm->cfm_ma_name = network_config->cfm_ma_name;
-            network_interface->cfm->cfm_ma_name_format = network_config->cfm_ma_name_format;
-            network_interface->cfm->cfm_ma_name_format_set = network_config->cfm_ma_name_format_set;
-            network_interface->cfm->vlan_priority = network_config->cfm_vlan_priority;
+            network_interface->cfm->config = network_config->cfm;
+            network_interface->cfm->cc = network_config->cfm->cc;
+            if(network_config->cfm->seq) network_interface->cfm->seq = 1;
+            network_interface->cfm->md_name = network_config->cfm->md_name;
+            network_interface->cfm->ma_name = network_config->cfm->ma_name;
             network_interface->cfm->network_interface = network_interface;
+            if(!bbl_cfm_init(network_interface->cfm)) {
+                LOG(ERROR, "Failed to enable CFM for network interface %s\n", ifname);
+                return false;
+            }
             bbl_cfm_cc_start(network_interface->cfm);
         }
 

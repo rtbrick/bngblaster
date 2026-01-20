@@ -309,6 +309,73 @@ test_ipv4_addr_in_network(void **unused) {
     assert_false(ipv4_addr_in_network(address, &network));
 }
 
+static void 
+test_scan_hex_string_valid(void **unused) {
+    (void) unused;
+    uint8_t buf[10] = {0};
+    int res;
+
+    res = scan_hex_string("1a2b3c", buf, sizeof(buf));
+    assert_int_equal(res, 3);
+    assert_int_equal(buf[0], 0x1A);
+    assert_int_equal(buf[1], 0x2B);
+    assert_int_equal(buf[2], 0x3C);
+
+    res = scan_hex_string("1 A 2 B 3 C", buf, sizeof(buf));  /* Ignore spaces */
+    assert_int_equal(res, 3);
+    assert_int_equal(buf[0], 0x1A);
+    assert_int_equal(buf[1], 0x2B);
+    assert_int_equal(buf[2], 0x3C);
+
+    res = scan_hex_string("FF ff FF", buf, sizeof(buf));  /* Mixed case */
+    assert_int_equal(res, 3);
+    assert_int_equal(buf[0], 0xFF);
+    assert_int_equal(buf[1], 0xFF);
+    assert_int_equal(buf[2], 0xFF);
+
+    res = scan_hex_string("deadbeefcafe", buf, 6);
+    assert_int_equal(res, 6);
+}
+
+static void 
+test_scan_hex_string_errors(void **unused) {
+    (void) unused;
+    uint8_t buf[10];
+
+    // NULL/zero args
+    assert_int_equal(scan_hex_string(NULL, buf, 10), -1);
+    assert_int_equal(scan_hex_string("1a", NULL, 10), -1);
+    assert_int_equal(scan_hex_string("1a", buf, 0), -1);
+
+    // Trailing nibble (odd hex count)
+    assert_int_equal(scan_hex_string("1a2b3", buf, 10), -1);
+    assert_int_equal(scan_hex_string("1", buf, 10), -1);
+
+    // Overflow
+    assert_int_equal(scan_hex_string("1a2b3c4d", buf, 2), -1);  // Wants 4 bytes >2
+}
+
+static void 
+test_scan_hex_string_edge_cases(void **unused) {
+    (void)unused;
+
+    uint8_t buf[10];
+
+    // Empty string -> 0 bytes
+    assert_int_equal(scan_hex_string("", buf, 10), 0);
+
+    // Only whitespace/non-hex
+    assert_int_equal(scan_hex_string("   \txyz", buf, 10), 0);
+
+    // Exact buffer size
+    assert_int_equal(scan_hex_string("ab cd", buf, 2), 2);
+
+    // Max nibble values
+    assert_int_equal(scan_hex_string("fF0 9", buf, 2), 2);
+    assert_int_equal(buf[0], 0xFF);
+    assert_int_equal(buf[1], 0x09);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_val2key),
@@ -332,7 +399,9 @@ int main() {
         cmocka_unit_test(test_ipv4_mask_to_len),
         cmocka_unit_test(test_ipv4_len_to_mask),
         cmocka_unit_test(test_ipv4_addr_in_network),
-
+        cmocka_unit_test(test_scan_hex_string_valid),
+        cmocka_unit_test(test_scan_hex_string_errors),
+        cmocka_unit_test(test_scan_hex_string_edge_cases)
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -64,6 +64,19 @@
 #define LACP_STATE_FLAG_DEFAULTED       0x40
 #define LACP_STATE_FLAG_EXPIRED         0x80
 
+#define CFM_TYPE_CCM                    1
+#define CFM_MD_NAME_FORMAT_NONE         1
+#define CFM_MD_NAME_FORMAT_DNS          2
+#define CFM_MD_NAME_FORMAT_MAC_INT      3
+#define CFM_MD_NAME_FORMAT_STRING       4
+#define CFM_MD_MAC_INT_LEN              8
+#define CFM_MA_NAME_FORMAT_VLAN         1
+#define CFM_MA_NAME_FORMAT_STRING       2
+#define CFM_MA_NAME_FORMAT_UINT16       3
+#define CFM_MA_NAME_FORMAT_VPN_ID       4
+#define CFM_MA_NAME_FORMAT_ICC          32
+#define CFM_MA_VLAN_LEN                 2
+#define CFM_MA_VPN_ID_LEN               7
 
 /* Ethernet types in network byte order */
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -274,18 +287,6 @@
 #define L2TP_NH_TYPE_VALUE              18
 
 #define QMX_LI_UDP_PORT                 49152
-
-#define CFM_TYPE_CCM                    1
-#define CMF_MD_NAME_FORMAT_NONE         1
-#define CMF_MD_NAME_FORMAT_DNS          2
-#define CMF_MD_NAME_FORMAT_MAC_INT      3
-#define CMF_MD_NAME_FORMAT_STRING       4
-
-#define CMF_MA_NAME_FORMAT_VLAN         1
-#define CMF_MA_NAME_FORMAT_STRING       2
-#define CMF_MA_NAME_FORMAT_UINT16       3
-#define CMF_MA_NAME_FORMAT_VPN_ID       4
-#define CMF_MA_NAME_FORMAT_ICC          32
 
 #define TCP_HDR_LEN_MIN                 20
 #define UDP_HDR_LEN                     8

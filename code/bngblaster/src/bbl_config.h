@@ -21,6 +21,22 @@ typedef struct bbl_secondary_ip6_
     void *next;
 } bbl_secondary_ip6_s;
 
+typedef struct bbl_cfm_config_
+{
+    bool     cc;
+    bool     seq;
+    uint8_t  level;
+    uint16_t ma_id;
+    char    *md_name;
+    uint8_t  md_name_format;
+    char    *ma_name;
+    uint8_t  ma_name_format;
+    uint8_t  vlan_priority;
+    uint8_t  interval;
+    time_t   interval_sec;
+    long     interval_nsec;
+} bbl_cfm_config_s;
+
 typedef struct bbl_access_config_
 {
     bool exhausted;
@@ -97,19 +113,8 @@ typedef struct bbl_access_config_
     bool igmp_autostart;
     uint8_t igmp_version;
 
-    /* CFM CC */
-    bool cfm_cc;
-    bool cfm_seq;
-    uint8_t cfm_level;
-    uint8_t cfm_interval;
-    uint16_t cfm_ma_id;
-    char *cfm_md_name;
-    uint8_t cfm_md_name_format;
-    bool cfm_md_name_format_set;
-    char *cfm_ma_name;
-    uint8_t cfm_ma_name_format;
-    bool cfm_ma_name_format_set;
-    uint8_t cfm_vlan_priority;
+    /* CFM */
+    bbl_cfm_config_s *cfm;
 
     /* Iterator */
     uint32_t i1;
@@ -166,19 +171,8 @@ typedef struct bbl_network_config_
     bool a10nsp;
     uint32_t a10nsp_tx_label;
 
-    /* CFM CC */
-    bool cfm_cc;
-    bool cfm_seq;
-    uint8_t cfm_level;
-    uint8_t cfm_interval;
-    uint16_t cfm_ma_id;
-    char *cfm_md_name;
-    uint8_t cfm_md_name_format;
-    bool cfm_md_name_format_set;
-    char *cfm_ma_name;
-    uint8_t cfm_ma_name_format;
-    bool cfm_ma_name_format_set;
-    uint8_t cfm_vlan_priority;
+    /* CFM */
+    bbl_cfm_config_s *cfm;
 
     void *next; /* pointer to next network config element */
     bbl_network_interface_s *network_interface;

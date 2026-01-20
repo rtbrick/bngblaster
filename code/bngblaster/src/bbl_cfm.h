@@ -12,29 +12,31 @@
 
 typedef struct bbl_cfm_session_
 {
-    bool cfm_cc;
-    bool cfm_rdi;
+    bool cc;
+    bool rdi;
 
-    uint32_t cfm_cc_tx;
-    uint32_t cfm_cc_rx;
+    uint32_t cc_tx;
+    uint32_t cc_rx;
 
-    uint32_t cfm_seq;
-    uint8_t cfm_level;
-    uint8_t cfm_interval;
-    uint16_t cfm_ma_id;
-    char *cfm_md_name;
-    uint8_t cfm_md_name_format;
-    bool cfm_md_name_format_set;
-    char *cfm_ma_name;
-    uint8_t cfm_ma_name_format;
-    bool cfm_ma_name_format_set;
-    uint8_t vlan_priority;
+    uint32_t seq;
+
+    char    *md_name;
+    uint8_t *md_name_buf;
+    uint16_t md_name_len;
+    char    *ma_name;
+    uint8_t *ma_name_buf;
+    uint16_t ma_name_len;
 
     struct timer_ *timer_cfm_cc;
+
+    bbl_cfm_config_s *config;
 
     bbl_session_s *session;
     bbl_network_interface_s *network_interface;
 } bbl_cfm_session_s;
+
+bool
+bbl_cfm_init(bbl_cfm_session_s *cfm);
 
 void
 bbl_cfm_cc_start(bbl_cfm_session_s *session);

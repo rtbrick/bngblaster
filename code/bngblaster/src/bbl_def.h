@@ -257,6 +257,7 @@ typedef struct bbl_http_server_config_ bbl_http_server_config_s;
 typedef struct bbl_http_server_ bbl_http_server_s;
 typedef struct bbl_http_server_connection_ bbl_http_server_connection_s;
 typedef struct bbl_fragment_ bbl_fragment_s;
+typedef struct bbl_cfm_config_ bbl_cfm_config_s;
 typedef struct bbl_cfm_session_ bbl_cfm_session_s;
 
 #endif

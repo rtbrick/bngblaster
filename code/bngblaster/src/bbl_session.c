@@ -953,21 +953,18 @@ bbl_sessions_init()
         update_strings(&session->dhcp_vendor_class_id, access_config->dhcp_vendor_class_id, NULL, NULL);
 
         /* Update CFM */
-        if(access_config->cfm_cc) {
+        if(access_config->cfm) {
             session->cfm = calloc(1, sizeof(bbl_cfm_session_s));
-            session->cfm->cfm_cc = true;
-            if(access_config->cfm_seq) session->cfm->cfm_seq = 1;
-            session->cfm->cfm_level = access_config->cfm_level;
-            session->cfm->cfm_interval = access_config->cfm_interval;
-            session->cfm->cfm_ma_id = access_config->cfm_ma_id;
-            update_strings(&session->cfm->cfm_md_name, access_config->cfm_md_name, NULL, NULL);
-            session->cfm->cfm_md_name_format = access_config->cfm_md_name_format;
-            session->cfm->cfm_md_name_format_set = access_config->cfm_md_name_format_set;
-            update_strings(&session->cfm->cfm_ma_name, access_config->cfm_ma_name, NULL, NULL);
-            session->cfm->cfm_ma_name_format = access_config->cfm_ma_name_format;
-            session->cfm->cfm_ma_name_format_set = access_config->cfm_ma_name_format_set;
-            session->cfm->vlan_priority = access_config->cfm_vlan_priority;
+            session->cfm->config = access_config->cfm;
+            session->cfm->cc = access_config->cfm->cc;
+            if(access_config->cfm->seq) session->cfm->seq = 1;
+            update_strings(&session->cfm->md_name, access_config->cfm->md_name, NULL, NULL);
+            update_strings(&session->cfm->ma_name, access_config->cfm->ma_name, NULL, NULL);
             session->cfm->session = session;
+            if(!bbl_cfm_init(session->cfm)) {
+                LOG(ERROR, "Failed to create session %u due CFM config!\n", i);
+                return false;
+            }
         }
 
         /* Update access rates ... */
