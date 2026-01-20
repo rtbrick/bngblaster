@@ -43,7 +43,7 @@ Variables
 ---------
 
 Some configuration attributes like **username**, **password**, **agent-remote-id**, 
-**agent-circuit-id**, or **cfm-ma-name** support variable substitution. 
+**agent-circuit-id**, **cfm-md-name** or **cfm-ma-name** support variable substitution. 
 The variable **{session-global}** will be replaced with the actual session-id 
 starting from 1 and incremented for every new session. The variable **{session}** 
 is incremented per-interface section. The variables **{outer-vlan}** and **{inner-vlan}** 

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -8,15 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>&lt;no title&gt; &mdash; BNG Blaster 0.9 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=411f5019" />
 
   
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=049aceee"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=049aceee"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -270,16 +273,59 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-ma-id</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM CCM interval (IEEE 802.1Q encoding).</div>
+<div class="line">Values: <cite>3.33ms</cite>, <cite>10ms</cite>, <cite>100ms</cite>, <cite>1s</cite>, <cite>10s</cite>, <cite>1min</cite>, <cite>10min</cite></div>
+<div class="line">Default: <cite>1s</cite></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>cfm-md-name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM maintenance domain name (string).</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>cfm-md-name-format</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM MD name format.</div>
+<div class="line">Default: <code class="docutils literal notranslate"><span class="pre">NONE</span></code></div>
+<div class="line">Values:</div>
+<div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">NONE</span></code> (1) NONE</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">DNS</span></code> (2) STRING</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">MAC_INT</span></code> (3) <code class="docutils literal notranslate"><span class="pre">aa:bb:cc:dd:ee:ff/123</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">STRING</span></code> (4) STRING</div>
+</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>cfm-ma-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance association identifier.</div>
 <div class="line">Default: 0 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-ma-name</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-ma-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance association short name (string).</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>cfm-ma-name-format</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM MA name format.</div>
+<div class="line">Default: <code class="docutils literal notranslate"><span class="pre">STRING</span></code></div>
+<div class="line">Values:</div>
+<div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">VLAN</span></code> (1) VLAN</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">STRING</span></code> (2) STRING</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">UINT16</span></code> (3) Number</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">VPN_ID</span></code> (4) 14 hex digits</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">ICC</span></code> (32) 13 ASCII chars</div>
+</div>
 </div>
 </td>
 </tr>
@@ -290,14 +336,21 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>a10nsp</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set EOAM CFM CC VLAN priority (PCP).</div>
+<div class="line">Default: 0 Range: 0 - 7</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>a10nsp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable A10NSP switch emulation (experimental).</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>a10nsp-tx-label</strong></p></td>
+<tr class="row-odd"><td><p><strong>a10nsp-tx-label</strong></p></td>
 <td><div class="line-block">
 <div class="line">Transport label used for A10NSP services in dowstream direction.</div>
 <div class="line">Default: 0</div>
@@ -315,7 +368,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2020-2025, RtBrick, Inc..</p>
+    <p>&#169; Copyright 2020-2026, RtBrick, Inc..</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

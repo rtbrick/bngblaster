@@ -73,13 +73,39 @@
 | **cfm-level**                     | | Set EOAM CFM maintenance domain level.                             |
 |                                   | | Default: 0 Range: 0 - 7                                            |
 +-----------------------------------+----------------------------------------------------------------------+
+| **cfm-interval**                  | | Set EOAM CFM CCM interval (IEEE 802.1Q encoding).                  |
+|                                   | | Values: `3.33ms`, `10ms`, `100ms`, `1s`, `10s`, `1min`, `10min`    |
+|                                   | | Default: `1s`                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **cfm-md-name**                   | | Set EOAM CFM maintenance domain name (string).                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **cfm-md-name-format**            | | Set EOAM CFM MD name format.                                       |
+|                                   | | Default: ``NONE``                                                  |
+|                                   | | Values:                                                            |
+|                                   | |  ``NONE`` (1) NONE                                                 |
+|                                   | |  ``DNS`` (2) STRING                                                |
+|                                   | |  ``MAC_INT`` (3) ``aa:bb:cc:dd:ee:ff/123``                         |
+|                                   | |  ``STRING`` (4) STRING                                             |
++-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-id**                     | | Set EOAM CFM maintenance association identifier.                   |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name**                   | | Set EOAM CFM maintenance association short name (string).          |
 +-----------------------------------+----------------------------------------------------------------------+
+| **cfm-ma-name-format**            | | Set EOAM CFM MA name format.                                       |
+|                                   | | Default: ``STRING``                                                |
+|                                   | | Values:                                                            |
+|                                   | |  ``VLAN`` (1) VLAN                                                 |
+|                                   | |  ``STRING`` (2) STRING                                             |
+|                                   | |  ``UINT16`` (3) Number                                             |
+|                                   | |  ``VPN_ID`` (4) 14 hex digits (7 bytes)                            |
+|                                   | |  ``ICC`` (32) 13 ASCII chars                                       |
++-----------------------------------+----------------------------------------------------------------------+
 | **cfm-seq**                       | | Enable EOAM CFM CC sequence numbers.                               |
 |                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **cfm-vlan-priority**             | | Set EOAM CFM CC VLAN priority (PCP).                               |
+|                                   | | Default: 0 Range: 0 - 7                                            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **username**                      | | Overwrite the username from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
