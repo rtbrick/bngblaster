@@ -193,6 +193,10 @@ json_parse_cfm_config(json_t *config, bbl_cfm_config_s *cfm)
 
     value = json_object_get(config, "cfm-interval");
     if(value) {
+        if(!json_is_string(value)) {
+            fprintf(stderr, "JSON config error: Invalid value for access/network->cfm-interval (string expected)\n");
+            return false;
+        }
         if(!strcmp(json_string_value(value), "3.33ms")){
            cfm->interval = 1;
            cfm->interval_sec = 0;
@@ -243,6 +247,10 @@ json_parse_cfm_config(json_t *config, bbl_cfm_config_s *cfm)
 
     value = json_object_get(config, "cfm-md-name-format");
     if(value) {
+        if(!json_is_string(value)) {
+            fprintf(stderr, "JSON config error: Invalid value for access/network->cfm-md-name-format (string expected)\n");
+            return false;
+        }
         if(!strcmp(json_string_value(value), "NONE")){
            cfm->md_name_format = CFM_MD_NAME_FORMAT_NONE;
         } else if(!strcmp(json_string_value(value), "DNS")){
@@ -273,6 +281,10 @@ json_parse_cfm_config(json_t *config, bbl_cfm_config_s *cfm)
 
     value = json_object_get(config, "cfm-ma-name-format");
     if(value) {
+        if(!json_is_string(value)) {
+            fprintf(stderr, "JSON config error: Invalid value for access/network->cfm-ma-name-format (string expected)\n");
+            return false;
+        }
         if(!strcmp(json_string_value(value), "VLAN")){
            cfm->ma_name_format = CFM_MA_NAME_FORMAT_VLAN;
         } else if(!strcmp(json_string_value(value), "STRING")){
@@ -331,12 +343,16 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
 
     value = json_object_get(config, "pon-access-line-version");
     if(value) {
+        if(!json_is_string(value)) {
+            fprintf(stderr, "JSON config error: Invalid value for access-line-profiles->pon-access-line-version (string expected)\n");
+            return false;
+        }
         if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-00")){
            profile->pon_access_line_version = DRAFT_LIHAWI_00;
         } else if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-04")){
             profile->pon_access_line_version = DRAFT_LIHAWI_04;
         } else{
-            fprintf(stderr, "JSON config error: Invalid value for pon-access-line-version\n");
+            fprintf(stderr, "JSON config error: Invalid value for access-line-profiles->pon-access-line-version\n");
             return false;
         }
     } else{
