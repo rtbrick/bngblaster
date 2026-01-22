@@ -53,7 +53,7 @@ bbl_cfm_init(bbl_cfm_session_s *cfm)
         case CFM_MA_NAME_FORMAT_VLAN:
             cfm->ma_name_buf = malloc(CFM_MA_VLAN_LEN);
             cfm->ma_name_len = CFM_MA_VLAN_LEN;
-            if(!sscanf(cfm->ma_name, "%hu", &u16)) {
+            if(sscanf(cfm->ma_name, "%hu", &u16) != 1) {
                 LOG(ERROR, "Invalid CFM MA name (%s) for fomat VLAN (example: '1000')\n", cfm->ma_name);
                 return false;
             }
@@ -71,7 +71,7 @@ bbl_cfm_init(bbl_cfm_session_s *cfm)
         case CFM_MA_NAME_FORMAT_UINT16:
             cfm->ma_name_buf = malloc(CFM_MA_VLAN_LEN);
             cfm->ma_name_len = CFM_MA_VLAN_LEN;
-            if(!sscanf(cfm->ma_name, "%hu", &u16)) {
+            if(sscanf(cfm->ma_name, "%hu", &u16) != 1) {
                 LOG(ERROR, "Invalid CFM MA name (%s) for fomat UINT16 (example: '1000')\n", cfm->ma_name);
                 return false;
             }
