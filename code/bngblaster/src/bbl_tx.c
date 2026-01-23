@@ -1297,13 +1297,18 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
         case BBL_DHCP_REQUESTING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
             session->stats.dhcp_tx_request++;
-            LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
+            if(session->dhcp_server_identifier > 0) {
+                LOG(DHCP, "DHCP (ID: %u) DHCP-Request (selecting) send\n", session->session_id);
+                dhcp.option_server_identifier = true;
+                dhcp.server_identifier = session->dhcp_server_identifier;
+            } else {
+                LOG(DHCP, "DHCP (ID: %u) DHCP-Request (init-reboot) send\n", session->session_id);
+                dhcp.option_server_identifier = false;
+            }
             eth.dst = (uint8_t*)broadcast_mac;
             ipv4.dst = IPV4_BROADCAST;
             dhcp.option_address = true;
             dhcp.address = session->dhcp_address;
-            dhcp.option_server_identifier = true;
-            dhcp.server_identifier = session->dhcp_server_identifier;
             dhcp.parameter_request_list = true;
             dhcp.option_netmask = true;
             dhcp.option_dns1 = true;
@@ -1315,7 +1320,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
         case BBL_DHCP_RENEWING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
             session->stats.dhcp_tx_request++;
-            LOG(DHCP, "DHCP (ID: %u) DHCP-Request send\n", session->session_id);
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Request (renewing) send\n", session->session_id);
             eth.dst = session->dhcp_server_mac;
             ipv4.dst = session->dhcp_server_identifier;
             header.ciaddr = session->ip_address;

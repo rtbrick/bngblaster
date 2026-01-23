@@ -3619,7 +3619,7 @@ json_parse_config(json_t *root)
             "enable", "broadcast", "timeout",
             "retry", "release-interval", "release-retry",
             "tos", "vlan-priority", "access-line",
-            "vendor-class-id",
+            "vendor-class-id", "cache"
         };
         if(!schema_validate(section, "dhcp", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -3646,9 +3646,13 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.dhcp_release_interval = json_number_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "dhcp", "release-retry", 1, 255);
+        JSON_OBJ_GET_NUMBER(section, value, "dhcp", "release-retry", 0, 255);
         if(value) {
             g_ctx->config.dhcp_release_retry = json_number_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "dhcp", "cache");
+        if(value) {
+            g_ctx->config.dhcp_cache_enable = json_boolean_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "dhcp", "tos", 0, 255);
         if(value) {
@@ -4699,6 +4703,7 @@ bbl_config_init_defaults()
     g_ctx->config.dhcp_retry = 10;
     g_ctx->config.dhcp_release_interval = 1;
     g_ctx->config.dhcp_release_retry = 3;
+    g_ctx->config.dhcp_cache_enable = false;
     g_ctx->config.dhcpv6_enable = true;
     g_ctx->config.dhcpv6_ia_na = true;
     g_ctx->config.dhcpv6_ia_pd = true;

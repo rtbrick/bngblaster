@@ -618,6 +618,24 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             timer_del(session->timer_session);
             timer_del(session->timer_reconnect);
 
+            /* Reset DHCPv4 state
+             * If caching is enabled and release was not sent, prepare for init-reboot  */
+            if(g_ctx->config.dhcp_cache_enable && g_ctx->config.dhcp_release_retry == 0) {
+                session->dhcp_server_identifier = 0;
+                session->dhcp_server = 0;
+            } else {
+                session->dhcp_address = 0;
+                session->dhcp_lease_time = 0;
+                session->dhcp_t1 = 0;
+                session->dhcp_t2 = 0;
+                session->dhcp_server = 0;
+                session->dhcp_server_identifier = 0;
+                session->dhcp_lease_timestamp.tv_sec = 0;
+                session->dhcp_lease_timestamp.tv_nsec = 0;
+                session->dhcp_request_timestamp.tv_sec = 0;
+                session->dhcp_request_timestamp.tv_nsec = 0;
+            }
+
             /* Reset all states */
             if(session->access_type == ACCESS_TYPE_PPPOE) {
                 session->lcp_state = BBL_PPP_CLOSED;
@@ -721,14 +739,20 @@ bbl_session_clear(bbl_session_s *session)
             case BBL_DHCP_REQUESTING:
             case BBL_DHCP_BOUND:
             case BBL_DHCP_RENEWING:
-                new_state = BBL_TERMINATING;
-                session->dhcp_state = BBL_DHCP_RELEASE;
-                session->dhcp_xid = rand();
                 session->dhcp_request_timestamp.tv_sec = 0;
                 session->dhcp_request_timestamp.tv_nsec = 0;
-                session->dhcp_retry = 0;
-                session->send_requests |= BBL_SEND_DHCP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
+                if(g_ctx->config.dhcp_release_retry < 1) {
+                    new_state = BBL_TERMINATED;
+                    session->dhcp_state = BBL_DHCP_INIT;
+                    
+                } else {
+                    new_state = BBL_TERMINATING;
+                    session->dhcp_state = BBL_DHCP_RELEASE;
+                    session->dhcp_xid = rand();
+                    session->dhcp_retry = 0;
+                    session->send_requests |= BBL_SEND_DHCP_REQUEST;
+                    bbl_session_tx_qnode_insert(session);
+                }
                 break;
             case BBL_DHCP_RELEASE:
                 new_state = BBL_TERMINATING;

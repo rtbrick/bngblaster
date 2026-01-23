@@ -90,7 +90,13 @@ bbl_dhcp_start(bbl_session_s *session)
         g_ctx->dhcp_requested++;
 
         /* Init DHCP */
-        session->dhcp_state = BBL_DHCP_SELECTING;
+        if(session->dhcp_address > 0) {
+            /* init-reboot */
+            session->dhcp_state = BBL_DHCP_REQUESTING;
+        }
+        else {
+            session->dhcp_state = BBL_DHCP_SELECTING;
+        }
         session->dhcp_xid = rand();
         session->dhcp_request_timestamp.tv_sec = 0;
         session->dhcp_request_timestamp.tv_nsec = 0;
@@ -211,6 +217,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 session->dhcp_address = dhcp->header->yiaddr;
                 session->dhcp_server = dhcp->header->siaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
+                memcpy(session->dhcp_server_mac, eth->src, ETH_ADDR_LEN);
                 session->dhcp_lease_time = dhcp->lease_time;
                 session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
                 session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;

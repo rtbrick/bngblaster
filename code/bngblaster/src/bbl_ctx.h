@@ -302,6 +302,7 @@ typedef struct bbl_ctx_
         bool dhcp_enable;
         bool dhcp_broadcast;
         bool dhcp_access_line;
+        bool dhcp_cache_enable;
         uint16_t dhcp_timeout;
         uint8_t dhcp_retry;
         uint8_t dhcp_release_interval;
