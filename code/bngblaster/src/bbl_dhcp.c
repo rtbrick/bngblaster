@@ -18,7 +18,7 @@
  * @param session session
  */
 void
-bbl_dhcp_stop(bbl_session_s *session)
+bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
 {
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
@@ -45,7 +45,9 @@ bbl_dhcp_stop(bbl_session_s *session)
     timer_del(session->timer_dhcp_retry);
     timer_del(session->timer_dhcp_t1);
     timer_del(session->timer_dhcp_t2);
-    session->dhcp_address = 0;
+    if(!keep_address) {
+        session->dhcp_address = 0;
+    }
     session->dhcp_lease_time = 0;
     session->dhcp_t1 = 0;
     session->dhcp_t2 = 0;
@@ -120,7 +122,7 @@ bbl_dhcp_start(bbl_session_s *session)
 void
 bbl_dhcp_restart(bbl_session_s *session)
 {
-    bbl_dhcp_stop(session);
+    bbl_dhcp_stop(session, false);
     bbl_dhcp_start(session);
     bbl_session_tx_qnode_insert(session);
 }

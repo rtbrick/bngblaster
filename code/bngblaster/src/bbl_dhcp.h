@@ -11,7 +11,7 @@
 #define __BBL_DHCP_H__
 
 void
-bbl_dhcp_stop(bbl_session_s *session);
+bbl_dhcp_stop(bbl_session_s *session, bool keep_address);
 
 void
 bbl_dhcp_start(bbl_session_s *session);

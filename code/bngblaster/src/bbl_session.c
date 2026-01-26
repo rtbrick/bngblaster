@@ -621,19 +621,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             /* Reset DHCPv4 state
              * If caching is enabled and release was not sent, prepare for init-reboot  */
             if(g_ctx->config.dhcp_cache_enable && g_ctx->config.dhcp_release_retry == 0) {
-                session->dhcp_server_identifier = 0;
-                session->dhcp_server = 0;
+                bbl_dhcp_stop(session, true);
             } else {
-                session->dhcp_address = 0;
-                session->dhcp_lease_time = 0;
-                session->dhcp_t1 = 0;
-                session->dhcp_t2 = 0;
-                session->dhcp_server = 0;
-                session->dhcp_server_identifier = 0;
-                session->dhcp_lease_timestamp.tv_sec = 0;
-                session->dhcp_lease_timestamp.tv_nsec = 0;
-                session->dhcp_request_timestamp.tv_sec = 0;
-                session->dhcp_request_timestamp.tv_nsec = 0;
+                bbl_dhcp_stop(session, false);
             }
 
             /* Reset all states */
