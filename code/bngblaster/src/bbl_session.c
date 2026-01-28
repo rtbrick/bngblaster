@@ -731,10 +731,8 @@ bbl_session_clear(bbl_session_s *session)
             case BBL_DHCP_RENEWING:
                 session->dhcp_request_timestamp.tv_sec = 0;
                 session->dhcp_request_timestamp.tv_nsec = 0;
-                if(g_ctx->config.dhcp_release_retry < 1) {
-                    new_state = BBL_TERMINATED;
-                    session->dhcp_state = BBL_DHCP_INIT;
-                    
+                if(!g_ctx->config.dhcp_release_retry) {
+                    session->dhcp_state = BBL_DHCP_INIT;                    
                 } else {
                     new_state = BBL_TERMINATING;
                     session->dhcp_state = BBL_DHCP_RELEASE;

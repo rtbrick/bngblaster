@@ -485,7 +485,7 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
     UNUSED(interface);
 
     if(session->access_config->ipv4_enable) {
-        if(!session->arp_resolved ||
+        if(!session->arp_resolved || session->dhcp_state == BBL_DHCP_RELEASE ||
            (session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND)) {
             ipv4 = false;
         } else {
@@ -495,7 +495,7 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
         }
     }
     if(session->access_config->ipv6_enable) {
-        if(!session->icmpv6_ra_received ||
+        if(!session->icmpv6_ra_received || session->dhcp_state == BBL_DHCP_RELEASE ||
            (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND)) {
             ipv6 = false;
         } else {

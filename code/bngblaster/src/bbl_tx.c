@@ -1178,7 +1178,7 @@ bbl_dhcp_timeout(timer_s *timer)
             bbl_session_tx_qnode_insert(session);
         } else {
             if(session->dhcp_state == BBL_DHCP_RELEASE) {
-                session->dhcp_state = BBL_DHCP_INIT;
+                bbl_dhcp_stop(session, false);
                 if(session->session_state == BBL_TERMINATING) {
                     bbl_session_clear(session);
                 }
@@ -1297,7 +1297,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
         case BBL_DHCP_REQUESTING:
             dhcp.type = DHCP_MESSAGE_REQUEST;
             session->stats.dhcp_tx_request++;
-            if(session->dhcp_server_identifier > 0) {
+            if(session->dhcp_server_identifier) {
                 LOG(DHCP, "DHCP (ID: %u) DHCP-Request (selecting) send\n", session->session_id);
                 dhcp.option_server_identifier = true;
                 dhcp.server_identifier = session->dhcp_server_identifier;
@@ -1345,7 +1345,7 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             timer_add(&g_ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 
                       g_ctx->config.dhcp_release_interval, 0, session, &bbl_dhcp_timeout);
         } else {
-            session->dhcp_state = BBL_DHCP_INIT;
+            bbl_dhcp_stop(session, false);
             if(session->session_state == BBL_TERMINATING) {
                 bbl_session_clear(session);
             }

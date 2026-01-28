@@ -45,7 +45,7 @@ const char *schema_all_args[] = {
     "disconnect-direction", "disconnect-message",
     "ldp-instance-id", "tcp-flags", "debug", "detail",
     "verified-only", "bidirectional-verified-only",
-    "network-interface",
+    "network-interface", "keep-address",
     NULL
 };
 
@@ -198,7 +198,7 @@ struct action {
     bool thread_safe;
 };
 
-struct action actions[] = {
+static const struct action actions[] = {
     {"test-info", bbl_ctrl_test_info, schema_no_args, true},
     {"test-stop", bbl_ctrl_test_stop, schema_no_args, true},
     {"terminate", bbl_ctrl_terminate, schema_all_args, false},
@@ -297,6 +297,9 @@ struct action actions[] = {
     {"session-update", bbl_session_ctrl_update, schema_all_args, false},
     {"pcap-start", pcapng_ctrl_start, schema_all_args, false},
     {"pcap-stop", pcapng_ctrl_stop, schema_no_args, false},
+    {"dhcp-start", bbl_dhcp_ctrl_start, schema_all_args, false},
+    {"dhcp-stop", bbl_dhcp_ctrl_stop, schema_all_args, false},
+    {"dhcp-release", bbl_dhcp_ctrl_release, schema_all_args, false},
     /* DEPRECATED */
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_all_args, true},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_all_args, true},

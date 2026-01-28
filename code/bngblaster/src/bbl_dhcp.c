@@ -22,6 +22,8 @@ bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
 {
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
+    session->dhcp_state = BBL_DHCP_INIT;
+
     /* Reset session IP configuration */
     ENABLE_ENDPOINT(session->endpoint.ipv4);
     session->version++;
@@ -78,6 +80,41 @@ bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
 }
 
 /**
+ * bbl_dhcp_release
+ *
+ * This function releases a DHCP binding.
+ *
+ * @param session session
+ */
+void
+bbl_dhcp_release(bbl_session_s *session)
+{
+    switch(session->dhcp_state) {
+        case BBL_DHCP_SELECTING:
+            bbl_dhcp_stop(session, false);
+            break;
+        case BBL_DHCP_REQUESTING:
+        case BBL_DHCP_BOUND:
+        case BBL_DHCP_RENEWING:
+            session->dhcp_request_timestamp.tv_sec = 0;
+            session->dhcp_request_timestamp.tv_nsec = 0;
+            if(!g_ctx->config.dhcp_release_retry) {
+                bbl_dhcp_stop(session, false);
+            } else {
+                LOG(DHCP, "DHCP (ID: %u) Release DHCP\n", session->session_id);
+                session->dhcp_state = BBL_DHCP_RELEASE;
+                session->dhcp_xid = rand();
+                session->dhcp_retry = 0;
+                session->send_requests |= BBL_SEND_DHCP_REQUEST;
+                bbl_session_tx_qnode_insert(session);
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+/**
  * bbl_dhcp_start
  *
  * This function starts the DHCP negotiation.
@@ -92,7 +129,7 @@ bbl_dhcp_start(bbl_session_s *session)
         g_ctx->dhcp_requested++;
 
         /* Init DHCP */
-        if(session->dhcp_address > 0) {
+        if(session->dhcp_address) {
             /* init-reboot */
             session->dhcp_state = BBL_DHCP_REQUESTING;
         }
@@ -331,4 +368,90 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
             break;
     }
     return;
+}
+
+static bool
+bbl_dhcp_action(bbl_session_s *session, dhcp_ctrl_action action, bool keep_address)
+{
+    if(session->access_type != ACCESS_TYPE_IPOE || 
+       session->dhcp_state == BBL_DHCP_DISABLED) {
+        return false;
+    }
+    switch(action) {
+        case DHCP_ACTION_START:
+            bbl_dhcp_start(session);
+            bbl_session_tx_qnode_insert(session);
+            break;
+        case DHCP_ACTION_STOP:
+            bbl_dhcp_stop(session, keep_address);
+            break;
+        case DHCP_ACTION_RELEASE:
+            bbl_dhcp_release(session);
+            break;        
+        default:
+            return false;
+    }
+    return true;
+}
+
+static int
+bbl_dhcp_ctrl_action(int fd, uint32_t session_id, json_t *arguments, dhcp_ctrl_action action)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    int session_group_id = -1;
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
+    bool keep_address = false;
+    json_unpack(arguments, "{s:b}", "keep-address", &keep_address);
+
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            if(session->access_type != ACCESS_TYPE_IPOE) {
+                return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type IPoE");
+            }
+            if(session->dhcp_state == BBL_DHCP_DISABLED) {
+                return bbl_ctrl_status(fd, "warning", 400, "matching session is DHCP disabled");
+            }
+            bbl_dhcp_action(session, action, keep_address);
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                /* Skip sessions with wrong session-group-id if present. */
+                continue;
+            }
+            bbl_dhcp_action(session, action, keep_address);
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
+int
+bbl_dhcp_ctrl_start(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_dhcp_ctrl_action(fd, session_id, arguments, DHCP_ACTION_START);
+}
+
+int
+bbl_dhcp_ctrl_stop(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_dhcp_ctrl_action(fd, session_id, arguments, DHCP_ACTION_STOP);
+}
+
+int
+bbl_dhcp_ctrl_release(int fd, uint32_t session_id, json_t *arguments)
+{
+    return bbl_dhcp_ctrl_action(fd, session_id, arguments, DHCP_ACTION_RELEASE);
 }
