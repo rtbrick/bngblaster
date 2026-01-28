@@ -20,7 +20,7 @@
 | **release-interval**              | | DHCP release interval.                                             |
 |                                   | | Default: 1                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
-| **release-retry**                 | | DHCP release retry.                                                |
+| **release-retry**                 | | DHCP release retry (0 means disabled/stop witout release message). |
 |                                   | | Default: 3                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tos**                           | | IPv4 TOS for all DHCP control traffic.                             |
@@ -33,4 +33,8 @@
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vendor-class-id**               | | Add DHCP vendor class id/option 60.                                |
++-----------------------------------+----------------------------------------------------------------------+
+| **cache**                         | | Emualtes init-reboot on stop if enabled together with              |
+|                                   | | release-retry set to zero (disabled).                              |
+|                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+

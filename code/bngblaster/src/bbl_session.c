@@ -619,7 +619,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             timer_del(session->timer_reconnect);
 
             /* Reset DHCPv4 state
-             * If caching is enabled and release was not sent, prepare for init-reboot  */
+             * If caching is enabled and release was not sent, prepare for init-reboot. */
             if(g_ctx->config.dhcp_cache_enable && g_ctx->config.dhcp_release_retry == 0) {
                 bbl_dhcp_stop(session, true);
             } else {
