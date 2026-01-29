@@ -550,10 +550,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             }
             bbl_tun_session_down(session);
         }
-        
+
         /* Update outstanding session count. */
         if(old_state > BBL_IDLE && old_state < BBL_ESTABLISHED && new_state >= BBL_ESTABLISHED) {
-            assert(g_ctx->sessions_outstanding);
             if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
         }
         

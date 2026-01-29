@@ -144,6 +144,9 @@ bbl_dhcp_start(bbl_session_s *session)
 
         LOG(DHCP, "DHCP (ID: %u) Start DHCP\n", session->session_id);
         if(session->access_type == ACCESS_TYPE_IPOE) {
+            if(session->session_state == BBL_ESTABLISHED) {
+                g_ctx->sessions_outstanding++;
+            }
             bbl_session_update_state(session, BBL_IPOE_SETUP);
         }
     }
