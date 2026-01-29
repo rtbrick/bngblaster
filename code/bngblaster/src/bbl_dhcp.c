@@ -16,6 +16,7 @@
  * This function stops the DHCP negotiation.
  *
  * @param session session
+ * @param keep_address do not reset DHCP address if true
  */
 void
 bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
