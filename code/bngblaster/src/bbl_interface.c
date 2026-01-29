@@ -83,8 +83,13 @@ bbl_interface_lock(char *interface_name)
         return false;
     }
     fprintf(lock_file, "%d", lock_pid);
+    {
+        int fd = fileno(lock_file);
+        if(fd >= 0) {
+            fchmod(fd, 0666);
+        }
+    }
     fclose(lock_file);
-    chmod(lock_path, 0666);
     return true;
 }
 
