@@ -414,6 +414,11 @@ bbl_dhcp_ctrl_action(int fd, uint32_t session_id, json_t *arguments, dhcp_ctrl_a
     bool keep_address = false;
     json_unpack(arguments, "{s:b}", "keep-address", &keep_address);
 
+    if(action == DHCP_ACTION_RELEASE && g_ctx->config.dhcp_release_retry == 0) {
+        return bbl_ctrl_status(fd, "error", 400, 
+            "dhcp-release not possible with release-retry configuration set to 0");
+    }
+
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {
