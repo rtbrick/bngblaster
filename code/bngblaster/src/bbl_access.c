@@ -1332,7 +1332,8 @@ bbl_access_lcp_echo(timer_s *timer)
     bbl_session_s *session = timer->data;
     bbl_access_interface_s *interface = session->access_interface;
 
-    if(session->session_state == BBL_ESTABLISHED) {
+    if(session->session_state > BBL_PPP_LINK && 
+       session->session_state <= BBL_ESTABLISHED) {
         if(session->lcp_retries) {
             interface->stats.lcp_echo_timeout++;
         }
