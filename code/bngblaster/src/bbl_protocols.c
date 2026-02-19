@@ -904,7 +904,7 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
             case IPV6_ICMPV6_ROUTER_ADVERTISEMENT:
                 *buf = 64; /* Hop Limit */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 0; /* Flags */
+                *buf = icmp->flags; /* Flags */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *(uint16_t*)buf = htobe16(30); /* Router lifetime */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -918,6 +918,25 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 memcpy(buf, icmp->mac, ETH_ADDR_LEN);
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
+                if(icmp->prefix.len) {
+                    /* Prefix information option (RFC4861, 32 bytes) */
+                    *buf = ICMPV6_OPTION_PREFIX;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 4; /* Length in units of 8 octets */
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = icmp->prefix.len;
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 0xc0; /* L-bit + A-bit */
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *(uint32_t*)buf = htobe32(1800); /* Valid lifetime */
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    *(uint32_t*)buf = htobe32(900); /* Preferred lifetime */
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    *(uint32_t*)buf = 0; /* Reserved */
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+                    memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
+                    BUMP_WRITE_BUFFER(buf, len, IPV6_ADDR_LEN);
+                }
                 break;
             case IPV6_ICMPV6_NEIGHBOR_SOLICITATION:
                 *(uint32_t*)buf = 0; /* Reserved */
