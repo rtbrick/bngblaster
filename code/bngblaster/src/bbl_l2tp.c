@@ -939,6 +939,31 @@ bbl_l2tp_cdn_rx(bbl_network_interface_s *interface,
 }
 
 static void
+bbl_l2tp_send_ra(bbl_l2tp_session_s *l2tp_session, uint8_t *dst)
+{
+    bbl_ipv6_s ipv6 = {0};
+    bbl_icmpv6_s icmpv6 = {0};
+
+    ipv6.src = (void*)ipv6_link_local_address;
+    if(dst) {
+        ipv6.dst = dst;
+    } else {
+        ipv6.dst = (void*)ipv6_multicast_all_nodes;
+    }
+    ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+    ipv6.ttl = 255;
+    ipv6.next = &icmpv6;
+
+    icmpv6.type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
+    icmpv6.code = 0;
+    icmpv6.flags = ICMPV6_FLAGS_MANAGED | ICMPV6_FLAGS_OTHER_CONFIG;
+    icmpv6.mac = l2tp_session->tunnel->interface->mac;
+    memcpy(&icmpv6.prefix, &mock_l2tp_ipv6_ra_prefix, sizeof(ipv6_prefix));
+
+    bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV6, &ipv6);
+}
+
+static void
 bbl_l2tp_data_ipv6_icmpv6_rx(bbl_l2tp_session_s *l2tp_session, bbl_ipv6_s *ipv6)
 {
     bbl_icmpv6_s *icmpv6 = (bbl_icmpv6_s*)ipv6->next;
@@ -946,16 +971,7 @@ bbl_l2tp_data_ipv6_icmpv6_rx(bbl_l2tp_session_s *l2tp_session, bbl_ipv6_s *ipv6)
 
     switch(icmpv6->type) {
         case IPV6_ICMPV6_ROUTER_SOLICITATION:
-            icmpv6->type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
-            icmpv6->code = 0;
-            icmpv6->flags = ICMPV6_FLAGS_MANAGED | ICMPV6_FLAGS_OTHER_CONFIG;
-            icmpv6->mac = l2tp_session->tunnel->interface->mac;
-            icmpv6->data_len = 0;
-            memcpy(&icmpv6->prefix, &mock_l2tp_ipv6_ra_prefix, sizeof(ipv6_prefix));
-            ipv6->dst = ipv6->src;
-            ipv6->src = (void*)ipv6_link_local_address;
-            ipv6->ttl = 255;
-            bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV6, ipv6);
+            bbl_l2tp_send_ra(l2tp_session, ipv6->src);
             break;
         default:
             break;
@@ -1150,6 +1166,8 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                 ip6cp_rx->code = PPP_CODE_CONF_ACK;
                 if(l2tp_session->ip6cp_state == BBL_PPP_LOCAL_ACK) {
                     l2tp_session->ip6cp_state = BBL_PPP_OPENED;
+                    /* Send unsolicited RA to speed up IPv6 start on dual-stack PPP. */
+                    bbl_l2tp_send_ra(l2tp_session, NULL);
                 } else {
                     l2tp_session->ip6cp_state = BBL_PPP_PEER_ACK;
                     ip6cp_tx.code = PPP_CODE_CONF_REQUEST;
@@ -1161,6 +1179,8 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
             } else if(ip6cp_rx->code == PPP_CODE_CONF_ACK) {
                 if(l2tp_session->ip6cp_state == BBL_PPP_PEER_ACK) {
                     l2tp_session->ip6cp_state = BBL_PPP_OPENED;
+                    /* Send unsolicited RA to speed up IPv6 start on dual-stack PPP. */
+                    bbl_l2tp_send_ra(l2tp_session, NULL);
                 } else {
                     l2tp_session->ip6cp_state = BBL_PPP_LOCAL_ACK;
                     ip6cp_tx.code = PPP_CODE_CONF_REQUEST;
