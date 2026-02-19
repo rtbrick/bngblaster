@@ -763,19 +763,6 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
 }
 
 static void
-bbl_access_l2tp_stream_force_verified(bbl_session_s *session, bbl_stream_s *stream)
-{
-    if(stream && stream->verified == false) {
-        stream->verified = true;
-        session->session_traffic.flows_verified++;
-        g_ctx->stats.session_traffic_flows_verified++;
-        if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
-            LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
-        }
-    }
-}
-
-static void
 bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_message_len)
 {
     l2tp_key_t key = {0};
@@ -804,12 +791,6 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
                 session->l2tp_session->pppoe_session = session;
                 LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
                     session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
-                /* Currently we do not support IPv6 session traffic for L2TP sessions, 
-                 * therefore if created, we mark them as verified. */
-                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6_up);
-                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6_down);
-                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6pd_up);
-                bbl_access_l2tp_stream_force_verified(session, session->session_traffic.ipv6pd_down);
                 return;
             }
         }
