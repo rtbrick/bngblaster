@@ -892,12 +892,9 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     bbl_udp_s l2tp_udp = {0};
     bbl_l2tp_s l2tp = {0};
     bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
     bbl_udp_s udp = {0};
     bbl_bbl_s bbl = {0};
-
-    if(stream->sub_type != BBL_SUB_TYPE_IPV4) {
-        return false;
-    }
 
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
@@ -918,23 +915,8 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     l2tp.type = L2TP_MESSAGE_DATA;
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
-    l2tp.protocol = PROTOCOL_IPV4;
     l2tp.with_length = l2tp_tunnel->server->data_length;
     l2tp.with_offset = l2tp_tunnel->server->data_offset;
-    l2tp.next = &ipv4;
-    ipv4.dst = session->ip_address;
-    ipv4.src = MOCK_IP_LOCAL;
-    if(config->ipv4_df) {
-        ipv4.offset = IPV4_DF;
-    }
-    ipv4.ttl = config->ttl;
-    ipv4.tos = config->priority;
-    if(stream->tcp) {
-        ipv4.protocol = PROTOCOL_IPV4_TCP;
-    } else {
-        ipv4.protocol = PROTOCOL_IPV4_UDP;
-    }
-    ipv4.next = &udp;
     if(stream->reverse) {
         udp.src = config->dst_port;
         udp.dst = config->src_port;
@@ -945,7 +927,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST;
-    bbl.sub_type = BBL_SUB_TYPE_IPV4;
+    bbl.sub_type = stream->sub_type;
     bbl.session_id = session->session_id;
     bbl.ifindex = session->vlan_key.ifindex;
     bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
@@ -953,15 +935,70 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     bbl.flow_id = stream->flow_id;
     bbl.tos = config->priority;
     bbl.direction = BBL_DIRECTION_DOWN;
-    if(config->length > 76) {
-        bbl.padding = config->length - 76;
+
+    switch(stream->sub_type) {
+        case BBL_SUB_TYPE_IPV4:
+            l2tp.protocol = PROTOCOL_IPV4;
+            l2tp.next = &ipv4;
+            ipv4.dst = session->ip_address;
+            ipv4.src = MOCK_IP_LOCAL;
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
+            }
+            ipv4.ttl = config->ttl;
+            ipv4.tos = config->priority;
+            if(stream->tcp) {
+                ipv4.protocol = PROTOCOL_IPV4_TCP;
+            } else {
+                ipv4.protocol = PROTOCOL_IPV4_UDP;
+            }
+            ipv4.next = &udp;
+            if(config->length > 76) {
+                bbl.padding = config->length - 76;
+            }
+            break;
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
+            l2tp.protocol = PROTOCOL_IPV6;
+            l2tp.next = &ipv6;
+            if(*(uint64_t*)config->ipv6_network_address) {
+                ipv6.src = config->ipv6_network_address;
+            } else if(*(uint64_t*)network_interface->ip6.address) {
+                ipv6.src = network_interface->ip6.address;
+            } else {
+                ipv6.src = (void*)ipv6_link_local_address;
+            }
+            if(*(uint64_t*)config->ipv6_destination_address) {
+                ipv6.dst = config->ipv6_destination_address;
+            } else if(stream->sub_type == BBL_SUB_TYPE_IPV6) {
+                ipv6.dst = session->ipv6_address;
+            } else {
+                ipv6.dst = session->delegated_ipv6_address;
+            }
+            ipv6.ttl = config->ttl;
+            ipv6.tos = config->priority;
+            if(stream->tcp) {
+                ipv6.protocol = IPV6_NEXT_HEADER_TCP;
+            } else {
+                ipv6.protocol = IPV6_NEXT_HEADER_UDP;
+            }
+            ipv6.next = &udp;
+            if(config->length > 96) {
+                bbl.padding = config->length - 96;
+            }
+            break;
+        default:
+            return false;
     }
+
     buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     stream->tx_bbl_hdr_len = bbl.padding+BBL_HEADER_LEN;
     stream->ipv4_src = ipv4.src;
     stream->ipv4_dst = ipv4.dst;
+    stream->ipv6_src = ipv6.src;
+    stream->ipv6_dst = ipv6.dst;
     if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
@@ -1172,7 +1209,7 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
                 network_interface->stats.l2tp_data_rx += packets;
                 session->l2tp_session->tunnel->stats.data_rx += packets;
                 session->l2tp_session->stats.data_rx += packets;
-                if(stream->type == BBL_SUB_TYPE_IPV4) {
+                if(stream->sub_type == BBL_SUB_TYPE_IPV4) {
                     session->l2tp_session->stats.data_ipv4_rx += packets;
                 }
             }
