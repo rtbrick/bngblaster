@@ -1045,10 +1045,8 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                    if(session->l2tp == false) {
-                        session->send_requests |= BBL_SEND_ICMPV6_RS;
-                        bbl_session_tx_qnode_insert(session);
-                    }
+                    session->send_requests |= BBL_SEND_ICMPV6_RS;
+                    bbl_session_tx_qnode_insert(session);
                     break;
                 default:
                     break;
@@ -1079,10 +1077,8 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                    if(session->l2tp == false) {
-                        session->send_requests |= BBL_SEND_ICMPV6_RS;
-                        bbl_session_tx_qnode_insert(session);
-                    }
+                    session->send_requests |= BBL_SEND_ICMPV6_RS;
+                    bbl_session_tx_qnode_insert(session);
                     break;
                 default:
                     break;
