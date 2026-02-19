@@ -906,20 +906,23 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                 *buf = icmp->flags; /* Flags */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *(uint16_t*)buf = htobe16(30); /* Router lifetime */
+                *(uint16_t*)buf = htobe16(icmp->lifetime); /* Router lifetime */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
                 *(uint32_t*)buf = 0; /* Reachable time */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 *(uint32_t*)buf = 0; /* Retrans time */
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-                *buf = 1; /* Source link-layer address */
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                *buf = 1; /* Length (1 = 8 byte) */
-                BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
-                memcpy(buf, icmp->mac, ETH_ADDR_LEN);
-                BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
+                if(icmp->mac) {
+                    /* Source link-layer address */
+                    *buf = ICMPV6_OPTION_SOURCE_LINK_LAYER; 
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    *buf = 1; /* Length in units of 8 octets */
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
+                    memcpy(buf, icmp->mac, ETH_ADDR_LEN);
+                    BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
+                }
                 if(icmp->prefix.len) {
-                    /* Prefix information option (RFC4861, 32 bytes) */
+                    /* Prefix Information */
                     *buf = ICMPV6_OPTION_PREFIX;
                     BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     *buf = 4; /* Length in units of 8 octets */

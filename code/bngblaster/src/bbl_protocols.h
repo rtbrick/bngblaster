@@ -241,6 +241,7 @@
 
 #define ICMPV6_FLAGS_MANAGED            0x80
 #define ICMPV6_FLAGS_OTHER_CONFIG       0x40
+#define ICMPV6_OPTION_SOURCE_LINK_LAYER 1
 #define ICMPV6_OPTION_DEST_LINK_LAYER   2
 #define ICMPV6_OPTION_PREFIX            3
 #define ICMPV6_OPTION_DNS               25
@@ -881,6 +882,7 @@ typedef struct bbl_icmpv6_ {
     uint8_t      type;
     uint8_t      code;
     uint8_t      flags;
+    uint16_t     lifetime;
     ipv6_prefix  prefix;
     uint8_t     *mac;
     uint8_t     *data;

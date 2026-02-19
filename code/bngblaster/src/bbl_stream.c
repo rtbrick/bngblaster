@@ -940,8 +940,12 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
         case BBL_SUB_TYPE_IPV4:
             l2tp.protocol = PROTOCOL_IPV4;
             l2tp.next = &ipv4;
-            ipv4.dst = session->ip_address;
             ipv4.src = MOCK_IP_LOCAL;
+            if(stream->config->ipv4_destination_address) {
+                ipv4.dst = stream->config->ipv4_destination_address;
+            } else {
+                ipv4.dst = session->ip_address;
+            }
             if(config->ipv4_df) {
                 ipv4.offset = IPV4_DF;
             }
@@ -956,6 +960,8 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
             if(config->length > 76) {
                 bbl.padding = config->length - 76;
             }
+            stream->ipv4_src = ipv4.src;
+            stream->ipv4_dst = ipv4.dst;
             break;
         case BBL_SUB_TYPE_IPV6:
         case BBL_SUB_TYPE_IPV6PD:
@@ -966,7 +972,7 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
             } else if(*(uint64_t*)network_interface->ip6.address) {
                 ipv6.src = network_interface->ip6.address;
             } else {
-                ipv6.src = (void*)ipv6_link_local_address;
+                ipv6.src = (void*)mock_ipv6_local;
             }
             if(*(uint64_t*)config->ipv6_destination_address) {
                 ipv6.dst = config->ipv6_destination_address;
@@ -986,6 +992,8 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
             if(config->length > 96) {
                 bbl.padding = config->length - 96;
             }
+            stream->ipv6_src = ipv6.src;
+            stream->ipv6_dst = ipv6.dst;
             break;
         default:
             return false;
@@ -995,10 +1003,6 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);
     stream->tx_bbl_hdr_len = bbl.padding+BBL_HEADER_LEN;
-    stream->ipv4_src = ipv4.src;
-    stream->ipv4_dst = ipv4.dst;
-    stream->ipv6_src = ipv6.src;
-    stream->ipv6_dst = ipv6.dst;
     if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
         free(stream->tx_buf);
         stream->tx_buf = NULL;
