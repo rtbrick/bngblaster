@@ -948,10 +948,11 @@ bbl_l2tp_data_ipv6_icmpv6_rx(bbl_l2tp_session_s *l2tp_session, bbl_ipv6_s *ipv6)
         case IPV6_ICMPV6_ROUTER_SOLICITATION:
             icmpv6->type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
             icmpv6->code = 0;
+            icmpv6->flags = ICMPV6_FLAGS_MANAGED | ICMPV6_FLAGS_OTHER_CONFIG;
             icmpv6->mac = l2tp_session->tunnel->interface->mac;
             icmpv6->data_len = 0;
             memcpy(&icmpv6->prefix, &mock_l2tp_ipv6_ra_prefix, sizeof(ipv6_prefix));
-            ipv6->dst = (void*)ipv6_multicast_all_nodes;
+            ipv6->dst = ipv6->src;
             ipv6->src = (void*)ipv6_link_local_address;
             ipv6->ttl = 255;
             bbl_l2tp_send_data(l2tp_session, PROTOCOL_IPV6, ipv6);
