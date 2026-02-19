@@ -193,6 +193,42 @@ bbl_a10nsp_tx(bbl_a10nsp_interface_s *interface,
 }
 
 static void
+bbl_a10nsp_pppoe_send_ra(bbl_a10nsp_interface_s *interface,
+                         bbl_session_s *session,
+                         bbl_ethernet_header_s *eth,
+                         uint8_t *dst)
+{
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
+    bbl_ipv6_s ipv6 = {0};
+    bbl_icmpv6_s icmpv6 = {0};
+    uint8_t mac[ETH_ADDR_LEN];
+
+    pppoes->protocol = PROTOCOL_IPV6;
+    pppoes->next = &ipv6;
+
+    if(dst) {
+        ipv6.dst = dst;
+    } else {
+        ipv6_multicast_mac(ipv6_multicast_all_nodes, mac);
+        eth->dst = mac;
+        ipv6.dst = (void*)ipv6_multicast_all_nodes;
+    }
+    ipv6.src = (void*)ipv6_link_local_address;
+    ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+    ipv6.ttl = 255;
+    ipv6.next = &icmpv6;
+
+    icmpv6.type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
+    icmpv6.code = 0;
+    icmpv6.flags = ICMPV6_FLAGS_MANAGED | ICMPV6_FLAGS_OTHER_CONFIG;
+    icmpv6.mac = interface->mac;
+    memcpy(&icmpv6.prefix, &mock_l2tp_ipv6_ra_prefix, sizeof(ipv6_prefix));
+
+    bbl_a10nsp_tx(interface, a10nsp_session, eth);
+}
+
+static void
 bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
                           bbl_session_s *session,
                           bbl_ethernet_header_s *eth)
@@ -366,9 +402,94 @@ bbl_a10nsp_ip6cp_handler(bbl_a10nsp_interface_s *interface,
             ip6cp_request.ipv6_identifier = 1;
             pppoes->next = &ip6cp_request;
             bbl_a10nsp_tx(interface, a10nsp_session, eth);
+            bbl_a10nsp_pppoe_send_ra(interface, session, eth, NULL);
+            break;
+        case PPP_CODE_CONF_ACK:
+            bbl_a10nsp_pppoe_send_ra(interface, session, eth, NULL);
             break;
         case PPP_CODE_TERM_REQUEST:
             ip6cp->code = PPP_CODE_TERM_ACK;
+            bbl_a10nsp_tx(interface, a10nsp_session, eth);
+            break;
+        default:
+            break;
+    }
+}
+
+static void
+bbl_a10nsp_pppoe_ipv6_handler(bbl_a10nsp_interface_s *interface,
+                              bbl_session_s *session,
+                              bbl_ethernet_header_s *eth)
+{
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    bbl_pppoe_session_s *pppoes = (bbl_pppoe_session_s*)eth->next;
+    bbl_ipv6_s *ipv6 = (bbl_ipv6_s*)pppoes->next;
+    bbl_icmpv6_s *icmpv6;
+    bbl_udp_s *udp;
+    bbl_dhcpv6_s *dhcpv6;
+
+    if(!ipv6) {
+        return;
+    }
+
+    switch(ipv6->protocol) {
+        case IPV6_NEXT_HEADER_ICMPV6:
+            icmpv6 = (bbl_icmpv6_s*)ipv6->next;
+            if(icmpv6 && icmpv6->type == IPV6_ICMPV6_ROUTER_SOLICITATION) {
+                bbl_a10nsp_pppoe_send_ra(interface, session, eth, ipv6->src);
+            }
+            break;
+        case IPV6_NEXT_HEADER_UDP:
+            udp = (bbl_udp_s*)ipv6->next;
+            if(!udp || udp->dst != DHCPV6_UDP_SERVER) {
+                return;
+            }
+            dhcpv6 = (bbl_dhcpv6_s*)udp->next;
+            if(!dhcpv6) {
+                return;
+            }
+
+            switch(dhcpv6->type) {
+                case DHCPV6_MESSAGE_SOLICIT:
+                    dhcpv6->type = dhcpv6->rapid ? DHCPV6_MESSAGE_REPLY : DHCPV6_MESSAGE_ADVERTISE;
+                    break;
+                case DHCPV6_MESSAGE_REQUEST:
+                case DHCPV6_MESSAGE_RENEW:
+                case DHCPV6_MESSAGE_RELEASE:
+                    dhcpv6->type = DHCPV6_MESSAGE_REPLY;
+                    break;
+                default:
+                    return;
+            }
+
+            ipv6->dst = ipv6->src;
+            ipv6->src = (void*)ipv6_link_local_address;
+            ipv6->ttl = 255;
+            udp->src = DHCPV6_UDP_SERVER;
+            udp->dst = DHCPV6_UDP_CLIENT;
+
+            dhcpv6->server_duid = (void*)mock_dhcpv6_server_duid;
+            dhcpv6->server_duid_len = sizeof(mock_dhcpv6_server_duid);
+            dhcpv6->rapid = false;
+            dhcpv6->oro = false;
+            dhcpv6->dns1 = NULL;
+            dhcpv6->dns2 = NULL;
+            if(dhcpv6->ia_na_iaid) {
+                dhcpv6->ia_na_option_len = 0;
+                dhcpv6->ia_na_address = (void*)&mock_l2tp_ipv6_ia_na;
+                dhcpv6->ia_na_t1 = 300;
+                dhcpv6->ia_na_t2 = 600;
+                dhcpv6->ia_na_preferred_lifetime = 900;
+                dhcpv6->ia_na_valid_lifetime = 1800;
+            }
+            if(dhcpv6->ia_pd_iaid) {
+                dhcpv6->ia_pd_option_len = 0;
+                dhcpv6->ia_pd_prefix = (void*)&mock_l2tp_ipv6_ia_pd;
+                dhcpv6->ia_pd_t1 = 300;
+                dhcpv6->ia_pd_t2 = 600;
+                dhcpv6->ia_pd_preferred_lifetime = 900;
+                dhcpv6->ia_pd_valid_lifetime = 1800;
+            }
             bbl_a10nsp_tx(interface, a10nsp_session, eth);
             break;
         default:
@@ -394,6 +515,9 @@ bbl_a10nsp_pppoes_handler(bbl_a10nsp_interface_s *interface,
             break;
         case PROTOCOL_IP6CP:
             bbl_a10nsp_ip6cp_handler(interface, session, eth);
+            break;
+        case PROTOCOL_IPV6:
+            bbl_a10nsp_pppoe_ipv6_handler(interface, session, eth);
             break;
         default:
             break;
@@ -575,7 +699,9 @@ bbl_a10nsp_icmpv6_handler(bbl_a10nsp_interface_s *interface,
     switch(icmpv6->type) {
         case IPV6_ICMPV6_ROUTER_SOLICITATION:
             icmpv6->type = IPV6_ICMPV6_ROUTER_ADVERTISEMENT;
+            icmpv6->flags = ICMPV6_FLAGS_MANAGED | ICMPV6_FLAGS_OTHER_CONFIG;
             icmpv6->mac = interface->mac;
+            memcpy(&icmpv6->prefix, &mock_l2tp_ipv6_ra_prefix, sizeof(ipv6_prefix));
             icmpv6->data_len = 0;
             break;
         default:
