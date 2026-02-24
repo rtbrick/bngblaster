@@ -542,15 +542,20 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
             /* The first RA received ... */
             session->icmpv6_ra_received = true;
             if(icmpv6->prefix.len) {
-                memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
-                *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
-                *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                if(session->access_type == ACCESS_TYPE_PPPOE) {
-                    ACTIVATE_ENDPOINT(session->endpoint.ipv6);
+                if(icmpv6->prefix_flags & ICMPV6_PREFIX_FLAGS_AUTONOMOUS) {
+                    memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
+                    *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
+                    *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
+                    if(session->access_type == ACCESS_TYPE_PPPOE) {
+                        ACTIVATE_ENDPOINT(session->endpoint.ipv6);
+                    }
+                    session->version++;
+                    LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d\n",
+                        session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
+                } else {
+                    LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d ignored because of missing autonomous flag\n",
+                        session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
                 }
-                session->version++;
-                LOG(IP, "IPv6 (ID: %u) ICMPv6 RA prefix %s/%d\n",
-                    session->session_id, format_ipv6_address(&session->ipv6_prefix.address), session->ipv6_prefix.len);
                 if(icmpv6->dns1) {
                     memcpy(&session->ipv6_dns1, icmpv6->dns1, IPV6_ADDR_LEN);
                     if(icmpv6->dns2) {

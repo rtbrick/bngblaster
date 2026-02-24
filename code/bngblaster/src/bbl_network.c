@@ -422,10 +422,10 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
         if(memcmp(icmpv6->prefix.address, interface->gateway6, IPV6_ADDR_LEN) == 0) {
             interface->icmpv6_nd_resolved = true;
             if(memcmp(interface->gateway6_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) == 0) {
-                if(icmpv6->dst_mac == NULL) {
+                if(icmpv6->mac == NULL) {
                     gw_mac = eth->src;
                 } else {
-                    gw_mac = icmpv6->dst_mac;
+                    gw_mac = icmpv6->mac;
                 }
                 memcpy(interface->gateway6_mac, gw_mac, ETH_ADDR_LEN);
             }

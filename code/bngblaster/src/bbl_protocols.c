@@ -2608,6 +2608,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                         return DECODE_ERROR;
                     }
                     icmpv6->prefix.len = *buf;
+                    icmpv6->prefix_flags = *(buf+1);
                     memcpy(&icmpv6->prefix.address, buf+14, IPV6_ADDR_LEN);
                 } else if(option == ICMPV6_OPTION_DNS) {
                     if(option_len >= 24) {
@@ -2647,7 +2648,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                         // Maleformed ICMPv6 packet
                         return DECODE_ERROR;
                     }
-                    icmpv6->dst_mac = buf;
+                    icmpv6->mac = buf;
                     break;
                 }
                 BUMP_BUFFER(buf, len, option_len-2);
