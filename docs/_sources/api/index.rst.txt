@@ -186,6 +186,10 @@ IGMP
 ----
 .. include:: igmp.rst
 
+DHCP
+----
+.. include:: dhcp.rst
+
 Traffic
 -------
 .. include:: traffic.rst

@@ -20,7 +20,7 @@
 | **release-interval**              | | DHCP release interval.                                             |
 |                                   | | Default: 1                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
-| **release-retry**                 | | DHCP release retry (0 means disabled/stop witout release message). |
+| **release-retry**                 | | DHCP release retry.                                                |
 |                                   | | Default: 3                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tos**                           | | IPv4 TOS for all DHCP control traffic.                             |
