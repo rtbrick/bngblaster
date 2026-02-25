@@ -976,7 +976,6 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             } else if(strcmp(s, "broadcast") == 0) {
                 network_config->ospfv2_type = OSPF_INTERFACE_BROADCAST;
             } else {
-
                 return false;
             }
         } else {
@@ -2016,7 +2015,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         for(i = 0; i < isis_config->sr_algo_count; i++) {
             sub = json_array_get(value, i);
             if(json_is_number(sub)) {
-            isis_config->sr_algo[i] = json_number_value(sub);
+                isis_config->sr_algo[i] = json_number_value(sub);
             }
         }
     } else if(json_is_number(value)) {
