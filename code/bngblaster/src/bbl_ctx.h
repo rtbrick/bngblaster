@@ -161,6 +161,7 @@ typedef struct bbl_ctx_
         uint8_t tx_threads;
         uint8_t rx_threads;
 
+        char *tun_name;
         char *json_report_filename;
         bool json_report_sessions; /* Include sessions */
         bool json_report_streams; /* Include streams */

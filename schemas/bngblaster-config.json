@@ -72,6 +72,10 @@
                     "minimum": 0,
                     "maximum": 255
                 },
+                "tun-name": {
+                    "type": "string",
+                    "description": "TUN interface name prefix"
+                },
                 "links": {
                     "oneOf": [
                         {

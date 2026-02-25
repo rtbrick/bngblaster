@@ -217,7 +217,7 @@ bbl_tun_session_init(bbl_session_s *session)
     char dev[IFNAMSIZ];
     if(!session->access_config->tun) return true;
 
-    snprintf(dev, sizeof(dev), "bbl%d", session->session_id);
+    snprintf(dev, sizeof(dev), "%s%d", g_ctx->config.tun_name, session->session_id);
     session->tun_dev = strdup(dev);
     session->tun_fd = bbl_tun_add(session->tun_dev, IFF_TUN|IFF_NO_PI);
 

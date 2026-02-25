@@ -4117,7 +4117,7 @@ json_parse_config(json_t *root)
 
         const char *schema[] = {
             "io-mode", "io-slots", "io-burst", "qdisc-bypass",
-            "tx-interval", "rx-interval", "tx-threads",
+            "tx-interval", "rx-interval", "tx-threads", "tun-name",
             "rx-threads", "capture-include-streams", "mac-modifier",
             "lag", "network", "access", "a10nsp", "links", "a10nsp-dynamic"
         };
@@ -4189,6 +4189,13 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "interfaces", "a10nsp-dynamic");
         if(value) {
             g_ctx->config.a10nsp_dynamic = json_boolean_value(value);
+        }
+        if(json_unpack(section, "{s:s}", "tun-name", &s) == 0) {
+            if(strlen(s) > 10) {
+                fprintf(stderr, "JSON config error: Invalid value for interfaces->tun-name (string length > 10)\n");
+                return false;
+            }
+            g_ctx->config.tun_name = strdup(s);
         }
         /* LAG Configuration Section */
         sub = json_object_get(section, "lag");
@@ -4668,6 +4675,7 @@ bbl_config_init_defaults()
     g_ctx->config.io_burst = 256;
     g_ctx->config.io_max_stream_len = 9000;
     g_ctx->config.qdisc_bypass = true;
+    g_ctx->config.tun_name = "bbl";
     g_ctx->config.sessions = 1;
     g_ctx->config.sessions_max_outstanding = 800;
     g_ctx->config.sessions_start_period_ns = 2500000; /* 400/s */
