@@ -159,8 +159,10 @@ void
 bbl_dhcpv6_s2(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    LOG(DHCP, "DHCPv6 (ID: %u) Lease expired\n", session->session_id);
-    bbl_dhcpv6_restart(session);
+    if(session->dhcpv6_state > BBL_DHCP_INIT && session->dhcpv6_state < BBL_DHCP_RELEASE) {
+        LOG(DHCP, "DHCPv6 (ID: %u) Lease expired\n", session->session_id);
+        bbl_dhcpv6_restart(session);
+    }
 }
 
 static bool
