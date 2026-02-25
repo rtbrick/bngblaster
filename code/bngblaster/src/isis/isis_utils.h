@@ -31,7 +31,7 @@ bool
 isis_str_to_area(const char *str, isis_area_s *area);
 
 char *
-isis_area_so_str(isis_area_s *area);
+isis_area_to_str(isis_area_s *area);
 
 bool
 isis_str_to_system_id(const char *str, uint8_t *system_id);

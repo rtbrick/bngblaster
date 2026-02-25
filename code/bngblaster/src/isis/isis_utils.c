@@ -129,7 +129,7 @@ isis_str_to_area(const char *str, isis_area_s *area)
 }
 
 /**
- * isis_area_so_str
+ * isis_area_to_str
  * 
  * Format an IS-IS area as string 
  * in one of 4 static buffers.
@@ -138,7 +138,7 @@ isis_str_to_area(const char *str, isis_area_s *area)
  * @return IS-IS area string
  */
 char *
-isis_area_so_str(isis_area_s *area)
+isis_area_to_str(isis_area_s *area)
 {
     static char buffer[4][ISIS_MAX_AREA_STR_LEN];
     static int idx = 0;
