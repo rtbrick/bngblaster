@@ -10,6 +10,6 @@
 | **qinq**                          | | Set outer VLAN ethertype to QinQ (0x88a8).                         |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **mac**                           | | Optional set gateway interface address manually.                   |
+| **mac**                           | | Overwrite the A10NSP MAC address.                                  |
 |                                   | | Default: `parent interface/link MAC address`                       |
 +-----------------------------------+----------------------------------------------------------------------+
