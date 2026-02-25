@@ -1,0 +1,3250 @@
+{
+    "$schema": "https://json-schema.org/draft/2019-09/schema#",
+    "title": "BNG Blaster Configuration",
+    "description": "JSON schema for BNG Blaster configuration files",
+    "type": "object",
+    "properties": {
+        "interfaces": {
+            "type": "object",
+            "description": "Interface configuration (network, access, a10nsp, links, lag)",
+            "properties": {
+                "io-mode": {
+                    "type": "string",
+                    "description": "IO mode",
+                    "default": "packet_mmap_raw"
+                },
+                "io-slots": {
+                    "type": "integer",
+                    "description": "IO slots (ring size)",
+                    "default": 4096,
+                    "minimum": 32,
+                    "maximum": 65535
+                },
+                "io-burst": {
+                    "type": "integer",
+                    "description": "IO burst (packets)",
+                    "default": 256,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "qdisc-bypass": {
+                    "type": "boolean",
+                    "description": "Bypass the kernel's qdisc layer",
+                    "default": true
+                },
+                "tx-interval": {
+                    "type": "number",
+                    "description": "TX polling interval in milliseconds",
+                    "default": 0.1,
+                    "minimum": 0.0001,
+                    "maximum": 1000
+                },
+                "rx-interval": {
+                    "type": "number",
+                    "description": "RX polling interval in milliseconds",
+                    "default": 0.1,
+                    "minimum": 0.0001,
+                    "maximum": 1000
+                },
+                "tx-threads": {
+                    "type": "integer",
+                    "description": "Number of TX threads per interface link",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "rx-threads": {
+                    "type": "integer",
+                    "description": "Number of RX threads per interface link",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "capture-include-streams": {
+                    "type": "boolean",
+                    "description": "Include traffic streams in the capture",
+                    "default": false
+                },
+                "mac-modifier": {
+                    "type": "integer",
+                    "description": "Third byte of access session MAC address (0-255)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "links": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/link"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/link"
+                            }
+                        }
+                    ]
+                },
+                "lag": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/lagInterface"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/lagInterface"
+                            }
+                        }
+                    ]
+                },
+                "network": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/networkInterface"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/networkInterface"
+                            }
+                        }
+                    ]
+                },
+                "access": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/accessInterface"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/accessInterface"
+                            }
+                        }
+                    ]
+                },
+                "a10nsp": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/a10nspInterface"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/a10nspInterface"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "sessions": {
+            "type": "object",
+            "description": "Session configuration",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "description": "Sessions (PPPoE + IPoE)",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 10000000
+                },
+                "max-outstanding": {
+                    "type": "integer",
+                    "description": "Max outstanding sessions",
+                    "default": 800,
+                    "minimum": 1,
+                    "maximum": 10000000
+                },
+                "start-rate": {
+                    "type": "integer",
+                    "description": "Setup request rate in sessions per second",
+                    "default": 400,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "stop-rate": {
+                    "type": "integer",
+                    "description": "Teardown request rate in sessions per second",
+                    "default": 400,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "start-delay": {
+                    "type": "integer",
+                    "description": "Wait N seconds after all interfaces are resolved before starting sessions",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "reconnect": {
+                    "type": "boolean",
+                    "description": "Automatically reconnect sessions",
+                    "default": false
+                },
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Start sessions automatically",
+                    "default": true
+                },
+                "monkey-autostart": {
+                    "type": "boolean",
+                    "description": "Start monkey testing automatically if enabled",
+                    "default": true
+                },
+                "iterate-vlan-outer": {
+                    "type": "boolean",
+                    "description": "Iterate on outer VLAN first",
+                    "default": false
+                }
+            }
+        },
+        "ipoe": {
+            "type": "object",
+            "description": "IPoE configuration",
+            "properties": {
+                "ipv6": {
+                    "type": "boolean",
+                    "description": "Enable/disable IPv6",
+                    "default": true
+                },
+                "ipv4": {
+                    "type": "boolean",
+                    "description": "Enable/disable IPv4",
+                    "default": true
+                },
+                "arp-timeout": {
+                    "type": "integer",
+                    "description": "Initial ARP timeout/retry interval in seconds",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "arp-interval": {
+                    "type": "integer",
+                    "description": "Periodic ARP interval in seconds (0 means disabled)",
+                    "default": 300,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "vlan-priority": {
+                    "type": "integer",
+                    "description": "VLAN PBIT for all IPoE control traffic.",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                }
+            }
+        },
+        "pppoe": {
+            "type": "object",
+            "description": "PPPoE configuration",
+            "properties": {
+                "session-time": {
+                    "type": "integer",
+                    "description": "Max PPPoE session time in seconds (0 = infinity)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 31536000
+                },
+                "reconnect": {
+                    "type": "boolean",
+                    "description": "Automatically reconnect sessions if terminated",
+                    "default": false
+                },
+                "discovery-timeout": {
+                    "type": "integer",
+                    "description": "PPPoE discovery (PADI and PADR) timeout in seconds",
+                    "default": 5,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "discovery-retry": {
+                    "type": "integer",
+                    "description": "PPPoE discovery (PADI and PADR) max retry",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "service-name": {
+                    "type": "string",
+                    "description": "PPPoE discovery service name"
+                },
+                "host-uniq": {
+                    "type": "boolean",
+                    "description": "PPPoE discovery host-uniq",
+                    "default": false
+                },
+                "max-payload": {
+                    "type": "integer",
+                    "description": "PPP-Max-Payload (RFC4638)",
+                    "default": 0,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "vlan-priority": {
+                    "type": "integer",
+                    "description": "VLAN PBIT for all PPPoE/PPP control traffic",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                }
+            }
+        },
+        "ppp": {
+            "type": "object",
+            "description": "PPP configuration",
+            "properties": {
+                "mru": {
+                    "type": "integer",
+                    "description": "Maximum receive unit",
+                    "default": 1492,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "authentication": {
+                    "type": "object",
+                    "description": "PPP authentication configuration",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "description": "Username (supports variables: {session-global}, {session}, {outer-vlan}, {inner-vlan}, {i1}, {i2})",
+                            "default": "user{session-global}@rtbrick.com"
+                        },
+                        "password": {
+                            "type": "string",
+                            "description": "Password",
+                            "default": "test"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Authentication request timeout in seconds",
+                            "default": 5,
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "retry": {
+                            "type": "integer",
+                            "description": "Authentication request max retry",
+                            "default": 30,
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "protocol": {
+                            "type": "string",
+                            "description": "Authentication protocol (PAP, CHAP)",
+                            "default": "allow both PAP and CHAP",
+                            "enum": [
+                                "PAP",
+                                "CHAP"
+                            ]
+                        }
+                    }
+                },
+                "lcp": {
+                    "type": "object",
+                    "description": "PPP LCP configuration",
+                    "properties": {
+                        "conf-request-timeout": {
+                            "type": "integer",
+                            "description": "LCP configuration request timeout in seconds",
+                            "default": 5,
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "conf-request-retry": {
+                            "type": "integer",
+                            "description": "LCP configuration request max retry",
+                            "default": 10,
+                            "minimum": 0,
+                            "maximum": 255
+                        },
+                        "keepalive-interval": {
+                            "type": "integer",
+                            "description": "LCP echo request interval in seconds (0 = disabled)",
+                            "default": 30,
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "keepalive-retry": {
+                            "type": "integer",
+                            "description": "PPP LCP echo request max retry",
+                            "default": 3,
+                            "minimum": 0,
+                            "maximum": 255
+                        },
+                        "start-delay": {
+                            "type": "integer",
+                            "description": "PPP LCP initial request delay in milliseconds",
+                            "default": 0,
+                            "minimum": 0,
+                            "maximum": 999
+                        },
+                        "ignore-vendor-specific": {
+                            "type": "boolean",
+                            "description": "Ignore LCP vendor-specific requests",
+                            "default": false
+                        },
+                        "connection-status-message": {
+                            "type": "boolean",
+                            "description": "Accept LCP connection status messages",
+                            "default": false
+                        }
+                    }
+                },
+                "ipcp": {
+                    "type": "object",
+                    "description": "PPP IPCP configuration",
+                    "properties": {
+                        "enable": {
+                            "type": "boolean",
+                            "description": "Enable IPCP protocol",
+                            "default": true
+                        },
+                        "request-ip": {
+                            "type": "boolean",
+                            "description": "Include IP-Address with 0.0.0.0 in initial IPCP request",
+                            "default": true
+                        },
+                        "request-dns1": {
+                            "type": "boolean",
+                            "description": "Request primary DNS server address (option 129)",
+                            "default": true
+                        },
+                        "request-dns2": {
+                            "type": "boolean",
+                            "description": "Request secondary DNS server address (option 131)",
+                            "default": true
+                        },
+                        "conf-reject-ignore": {
+                            "type": "boolean",
+                            "description": "Ignore configuration reject messages",
+                            "default": false
+                        },
+                        "conf-request-timeout": {
+                            "type": "integer",
+                            "description": "IPCP configuration request timeout in seconds",
+                            "default": 5,
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "conf-request-retry": {
+                            "type": "integer",
+                            "description": "IPCP configuration request max retry",
+                            "default": 10,
+                            "minimum": 0,
+                            "maximum": 255
+                        }
+                    }
+                },
+                "ip6cp": {
+                    "type": "object",
+                    "description": "PPP IP6CP configuration",
+                    "properties": {
+                        "enable": {
+                            "type": "boolean",
+                            "description": "Enable IP6CP protocol",
+                            "default": true
+                        },
+                        "conf-request-timeout": {
+                            "type": "integer",
+                            "description": "IP6CP configuration request timeout in seconds",
+                            "default": 5,
+                            "minimum": 0,
+                            "maximum": 65535
+                        },
+                        "conf-request-retry": {
+                            "type": "integer",
+                            "description": "IP6CP configuration request max retry",
+                            "default": 10,
+                            "minimum": 0,
+                            "maximum": 255
+                        }
+                    }
+                }
+            }
+        },
+        "dhcp": {
+            "type": "object",
+            "description": "DHCP configuration",
+            "properties": {
+                "enable": {
+                    "type": "boolean",
+                    "description": "Enable DHCP",
+                    "default": true
+                },
+                "broadcast": {
+                    "type": "boolean",
+                    "description": "DHCP broadcast flag",
+                    "default": false
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "DHCP timeout in seconds",
+                    "default": 5,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "retry": {
+                    "type": "integer",
+                    "description": "DHCP retry",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "release-interval": {
+                    "type": "integer",
+                    "description": "DHCP release interval",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "release-retry": {
+                    "type": "integer",
+                    "description": "DHCP release retry",
+                    "default": 3,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "keep-address": {
+                    "type": "boolean",
+                    "description": "Emulates init-reboot on stop if enabled together with release-retry set to zero (disabled)",
+                    "default": false
+                },
+                "tos": {
+                    "type": "integer",
+                    "description": "IPv4 TOS for all DHCP control traffic",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "vlan-priority": {
+                    "type": "integer",
+                    "description": "VLAN PBIT for all DHCP control traffic",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "access-line": {
+                    "type": "boolean",
+                    "description": "Add access-line attributes like Agent-Remote/Circuit-Id",
+                    "default": true
+                },
+                "vendor-class-identifier": {
+                    "type": "string",
+                    "description": "Add DHCP vendor class id/option 60"
+                }
+            }
+        },
+        "dhcpv6": {
+            "type": "object",
+            "description": "DHCPv6 configuration",
+            "properties": {
+                "enable": {
+                    "type": "boolean",
+                    "description": "Enable DHCPv6",
+                    "default": true
+                },
+                "ia-na": {
+                    "type": "boolean",
+                    "description": "Enable DHCPv6 IA_NA",
+                    "default": true
+                },
+                "ia-pd": {
+                    "type": "boolean",
+                    "description": "Enable DHCPv6 IA_PD",
+                    "default": true
+                },
+                "ia-separate": {
+                    "type": "boolean",
+                    "description": "Seperate requests for IA_NA and IA_PD",
+                    "default": true
+                },
+                "rapid-commit": {
+                    "type": "boolean",
+                    "description": "DHCPv6 rapid commit (2-way handshake)",
+                    "default": true
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "DHCPv6 timeout in seconds",
+                    "default": 5,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "retry": {
+                    "type": "integer",
+                    "description": "DHCPv6 retry",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "vlan-priority": {
+                    "type": "integer",
+                    "description": "VLAN PBIT for all DHCPv6 control traffic",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "access-line": {
+                    "type": "boolean",
+                    "description": "Add access-line attributes",
+                    "default": true
+                },
+                "ldra": {
+                    "type": "boolean",
+                    "description": "Enable LDRA (Lightweight DHCPv6 Relay Agent)",
+                    "default": false
+                }
+            }
+        },
+        "igmp": {
+            "type": "object",
+            "description": "IGMP configuration",
+            "properties": {
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Automatically join after the session is established",
+                    "default": true
+                },
+                "start-delay": {
+                    "type": "integer",
+                    "description": "Delay between session established and initial IGMP join in seconds",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "version": {
+                    "type": "integer",
+                    "description": "IGMP protocol version",
+                    "default": 3,
+                    "enum": [
+                        1,
+                        2,
+                        3
+                    ]
+                },
+                "combined-leave-join": {
+                    "type": "boolean",
+                    "description": "Combine leave and join records in single IGMPv3 report",
+                    "default": false
+                },
+                "group": {
+                    "type": "string",
+                    "description": "Multicast group base address (e.g. 239.0.0.1)",
+                    "format": "ipv4",
+                    "default": "0.0.0.0"
+                },
+                "group-iter": {
+                    "type": "string",
+                    "description": "Multicast group iterator",
+                    "format": "ipv4",
+                    "default": "0.0.0.1"
+                },
+                "group-count": {
+                    "type": "integer",
+                    "description": "Multicast group count",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "source": {
+                    "type": "string",
+                    "description": "Multicast source address (0.0.0.0 = ASM)",
+                    "format": "ipv4",
+                    "default": "0.0.0.0"
+                },
+                "zapping-interval": {
+                    "type": "integer",
+                    "description": "IGMP channel zapping interval in seconds (0 = disabled)",
+                    "default": 0,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "zapping-count": {
+                    "type": "integer",
+                    "description": "Number of channel changes before starting view duration (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "zapping-wait": {
+                    "type": "boolean",
+                    "description": "Wait for multicast traffic before zapping to next channel",
+                    "default": false
+                },
+                "zapping-view-duration": {
+                    "type": "integer",
+                    "description": "View duration in seconds (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "max-join-delay": {
+                    "type": "integer",
+                    "description": "Maximum join delay in milliseconds (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "robustness-interval": {
+                    "type": "integer",
+                    "description": "IGMP robustness interval in milliseconds",
+                    "default": 1000,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "send-multicast-traffic": {
+                    "type": "boolean",
+                    "description": "Generate multicast traffic on network interface",
+                    "default": false
+                },
+                "multicast-traffic-autostart": {
+                    "type": "boolean",
+                    "description": "Multicast traffic autostart",
+                    "default": true
+                },
+                "multicast-traffic-length": {
+                    "type": "integer",
+                    "description": "Multicast traffic IP length",
+                    "default": 0,
+                    "minimum": 128,
+                    "maximum": 1500
+                },
+                "multicast-traffic-tos": {
+                    "type": "integer",
+                    "description": "Multicast traffic TOS priority",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "multicast-traffic-pps": {
+                    "type": "integer",
+                    "description": "Multicast traffic PPS per group",
+                    "default": 1000,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "network-interface": {
+                    "type": "string",
+                    "description": "Multicast traffic source interface"
+                }
+            }
+        },
+        "access-line": {
+            "type": "object",
+            "description": "Access line configuration (Broadband Forum attributes)",
+            "properties": {
+                "agent-circuit-id": {
+                    "type": "string",
+                    "description": "Agent-Circuit-Id (supports variables: {session-global}, {session}, {outer-vlan}, {inner-vlan}, {i1}, {i2})"
+                },
+                "agent-remote-id": {
+                    "type": "string",
+                    "description": "Agent-Remote-Id (supports variables: {session-global}, {session}, {outer-vlan}, {inner-vlan}, {i1}, {i2})"
+                },
+                "access-aggregation-circuit-id": {
+                    "type": "string",
+                    "description": "Access-Aggregation-Circuit-ID-ASCII (supports variables)"
+                },
+                "rate-up": {
+                    "type": "integer",
+                    "description": "Actual Data Rate Upstream (0 = not sent)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "rate-down": {
+                    "type": "integer",
+                    "description": "Actual Data Rate Downstream (0 = not sent)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "dsl-type": {
+                    "type": "integer",
+                    "description": "DSL-Type (0 = not sent)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                }
+            }
+        },
+        "access-line-profiles": {
+            "type": "array",
+            "description": "Access line profile configurations",
+            "items": {
+                "type": "object",
+                "required": [
+                    "access-line-profile-id"
+                ],
+                "properties": {
+                    "access-line-profile-id": {
+                        "type": "integer",
+                        "description": "Access line profile identifier",
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "act-up": {
+                        "type": "integer",
+                        "description": "Actual Data Rate Upstream (overwritten by rate-up)",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "act-down": {
+                        "type": "integer",
+                        "description": "Actual Data Rate Downstream (overwritten by rate-down)",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "min-up": {
+                        "type": "integer",
+                        "description": "Minimum Data Rate Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "min-down": {
+                        "type": "integer",
+                        "description": "Minimum Data Rate Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "att-up": {
+                        "type": "integer",
+                        "description": "Attainable DataRate Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "att-down": {
+                        "type": "integer",
+                        "description": "Attainable DataRate Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "max-up": {
+                        "type": "integer",
+                        "description": "Maximum Data Rate Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "max-down": {
+                        "type": "integer",
+                        "description": "Maximum Data Rate Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "min-up-low": {
+                        "type": "integer",
+                        "description": "Min Data Rate Upstream in low power state",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "min-down-low": {
+                        "type": "integer",
+                        "description": "Min Data Rate Downstream in low power state",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "max-interl-delay-up": {
+                        "type": "integer",
+                        "description": "Max Interleaving Delay Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "act-interl-delay-up": {
+                        "type": "integer",
+                        "description": "Actual Interleaving Delay Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "max-interl-delay-down": {
+                        "type": "integer",
+                        "description": "Max Interleaving Delay Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "act-interl-delay-down": {
+                        "type": "integer",
+                        "description": "Actual Interleaving Delay Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "data-link-encaps": {
+                        "type": "integer",
+                        "description": "Data Link Encapsulation",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "dsl-type": {
+                        "type": "integer",
+                        "description": "DSL Type",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "pon-type": {
+                        "type": "integer",
+                        "description": "PON Access Type",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "etr-up": {
+                        "type": "integer",
+                        "description": "Expected Throughput (ETR) Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "etr-down": {
+                        "type": "integer",
+                        "description": "Expected Throughput (ETR) Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "attetr-up": {
+                        "type": "integer",
+                        "description": "Attainable Expected Throughput (ATTETR) Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "attetr-down": {
+                        "type": "integer",
+                        "description": "Attainable Expected Throughput (ATTETR) Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "gdr-up": {
+                        "type": "integer",
+                        "description": "Gamma Data Rate (GDR) Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "gdr-down": {
+                        "type": "integer",
+                        "description": "Gamma Data Rate (GDR) Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "attgdr-up": {
+                        "type": "integer",
+                        "description": "Attainable Gamma Data Rate (ATTGDR) Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "attgdr-down": {
+                        "type": "integer",
+                        "description": "Attainable Gamma Data Rate (ATTGDR) Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "ont-onu-avg-down": {
+                        "type": "integer",
+                        "description": "ONT/ONU Average Data Rate Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "ont-onu-peak-down": {
+                        "type": "integer",
+                        "description": "ONT/ONU Peak Data Rate Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "ont-onu-max-up": {
+                        "type": "integer",
+                        "description": "ONT/ONU Maximum Data Rate Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "ont-onu-assured-up": {
+                        "type": "integer",
+                        "description": "ONT/ONU Assured Data Rate Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "pon-tree-max-up": {
+                        "type": "integer",
+                        "description": "PON Tree Maximum Data Rate Upstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "pon-tree-max-down": {
+                        "type": "integer",
+                        "description": "PON Tree Maximum Data Rate Downstream",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 4294967295
+                    },
+                    "pon-access-line-version": {
+                        "type": "string",
+                        "description": "RFC draft version",
+                        "enum": [
+                            "DRAFT-LIHAWI-00",
+                            "DRAFT-LIHAWI-04"
+                        ],
+                        "default": "DRAFT-LIHAWI-04"
+                    }
+                }
+            }
+        },
+        "session-traffic": {
+            "type": "object",
+            "description": "Session traffic configuration",
+            "properties": {
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Automatically start session traffic",
+                    "default": true
+                },
+                "ipv4-pps": {
+                    "type": "number",
+                    "description": "Bidirectional IPv4 traffic PPS (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "ipv4-label": {
+                    "type": "integer",
+                    "description": "Downstream IPv4 traffic MPLS label (0 = unlabeled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "ipv4-address": {
+                    "type": "string",
+                    "description": "Overwrite network interface IPv4 address",
+                    "format": "ipv4"
+                },
+                "ipv6-pps": {
+                    "type": "number",
+                    "description": "Bidirectional IPv6 traffic PPS (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "ipv6-label": {
+                    "type": "integer",
+                    "description": "Downstream IPv6 traffic MPLS label (0 = unlabeled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "ipv6-address": {
+                    "type": "string",
+                    "description": "Overwrite network interface IPv6 address",
+                    "format": "ipv6"
+                },
+                "ipv6pd-pps": {
+                    "type": "number",
+                    "description": "Bidirectional IPv6PD traffic PPS (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                }
+            }
+        },
+        "traffic": {
+            "type": "object",
+            "description": "Global traffic configuration",
+            "properties": {
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Automatically start traffic globally",
+                    "default": true
+                },
+                "stop-verified": {
+                    "type": "boolean",
+                    "description": "Automatically stop traffic streams if verified",
+                    "default": false
+                },
+                "stream-autostart": {
+                    "type": "boolean",
+                    "description": "Enable stream autostart",
+                    "default": true
+                },
+                "stream-rate-calculation": {
+                    "type": "boolean",
+                    "description": "Enable stream rate calculation",
+                    "default": true
+                },
+                "stream-delay-calculation": {
+                    "type": "boolean",
+                    "description": "Enable stream delay calculation",
+                    "default": true
+                },
+                "stream-burst-ms": {
+                    "type": "integer",
+                    "description": "Maximum burst size per stream in milliseconds",
+                    "default": 100,
+                    "minimum": 1,
+                    "maximum": 1000
+                },
+                "multicast-autostart": {
+                    "type": "boolean",
+                    "description": "Automatically start multicast traffic",
+                    "default": true
+                },
+                "udp-checksum": {
+                    "type": "boolean",
+                    "description": "Enable UDP checksums",
+                    "default": false
+                },
+                "reassemble-fragments": {
+                    "type": "boolean",
+                    "description": "Enable reassembly of fragmented IPv4 stream packets",
+                    "default": false
+                }
+            }
+        },
+        "streams": {
+            "type": "array",
+            "description": "Traffic stream definitions",
+            "items": {
+                "$ref": "#/definitions/stream"
+            }
+        },
+        "l2tp-server": {
+            "type": "array",
+            "description": "L2TPv2 Server (LNS) configuration",
+            "items": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "address"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "L2TP LNS server hostname (AVP 7)"
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "L2TP server address",
+                        "format": "ipv4"
+                    },
+                    "secret": {
+                        "type": "string",
+                        "description": "Tunnel secret"
+                    },
+                    "receive-window": {
+                        "type": "integer",
+                        "description": "Control messages receive window size",
+                        "default": 16,
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "max-retry": {
+                        "type": "integer",
+                        "description": "Control messages max retry",
+                        "default": 5,
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "congestion-mode": {
+                        "type": "string",
+                        "description": "Control messages congestion mode",
+                        "enum": [
+                            "default",
+                            "slow",
+                            "aggressive"
+                        ],
+                        "default": "default"
+                    },
+                    "hello-interval": {
+                        "type": "integer",
+                        "description": "Hello interval",
+                        "default": 30,
+                        "minimum": 0,
+                        "maximum": 65535
+                    },
+                    "data-control-priority": {
+                        "type": "boolean",
+                        "description": "Set priority bit for non-IP data packets",
+                        "default": false
+                    },
+                    "data-length": {
+                        "type": "boolean",
+                        "description": "Set length bit for all data packets",
+                        "default": false
+                    },
+                    "data-offset": {
+                        "type": "boolean",
+                        "description": "Set offset bit with zero for all data packets",
+                        "default": false
+                    },
+                    "control-tos": {
+                        "type": "integer",
+                        "description": "L2TP control traffic TOS priority",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 255
+                    },
+                    "data-control-tos": {
+                        "type": "integer",
+                        "description": "L2TP tunnel TOS for non-IP data packets",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 255
+                    },
+                    "lcp-padding": {
+                        "type": "integer",
+                        "description": "Add fixed padding to LCP packets from LNS",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 65535
+                    },
+                    "client-auth-id": {
+                        "type": "string",
+                        "description": "Optional check for client-auth-id"
+                    }
+                }
+            }
+        },
+        "isis": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/isisConfig"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/isisConfig"
+                    }
+                }
+            ]
+        },
+        "ospf": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/ospfConfig"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ospfConfig"
+                    }
+                }
+            ]
+        },
+        "ldp": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/ldpConfig"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ldpConfig"
+                    }
+                }
+            ]
+        },
+        "ldp-raw-update-files": {
+            "type": "array",
+            "description": "Pre-Load LDP RAW update files",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+        },
+        "bgp": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/bgpConfig"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bgpConfig"
+                    }
+                }
+            ]
+        },
+        "bgp-raw-update-files": {
+            "type": "array",
+            "description": "Pre-Load BGP RAW update files",
+            "items": {
+                "type": "string"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+        },
+        "http-client": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/httpClient"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/httpClient"
+                    }
+                }
+            ]
+        },
+        "http-server": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/httpServer"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/httpServer"
+                    }
+                }
+            ]
+        },
+        "icmp-client": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/icmpClient"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/icmpClient"
+                    }
+                }
+            ]
+        },
+        "arp-client": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/arpClient"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/arpClient"
+                    }
+                }
+            ]
+        }
+    },
+    "definitions": {
+        "networkInterface": {
+            "type": "object",
+            "required": [
+                "interface"
+            ],
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "description": "Parent interface/link name (e.g. eth0)"
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Local IPv4 address (e.g. 10.0.0.1/24)"
+                },
+                "gateway": {
+                    "type": "string",
+                    "description": "Default gateway IPv4 address",
+                    "format": "ipv4"
+                },
+                "address-ipv6": {
+                    "type": "string",
+                    "description": "Local IPv6 address (e.g. fc66::1/64)"
+                },
+                "gateway-ipv6": {
+                    "type": "string",
+                    "description": "Default gateway IPv6 address",
+                    "format": "ipv6"
+                },
+                "ipv6-router-advertisement": {
+                    "type": "boolean",
+                    "description": "Send IPv6 router advertisements (ICMPv6 RA)",
+                    "default": true
+                },
+                "mtu": {
+                    "type": "integer",
+                    "description": "MTU size",
+                    "default": 1500,
+                    "minimum": 64,
+                    "maximum": 9000
+                },
+                "vlan": {
+                    "type": "integer",
+                    "description": "Network interface VLAN (0 = untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "gateway-mac": {
+                    "type": "string",
+                    "description": "Optional gateway MAC address (resolved via ARP/ND by default)",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                },
+                "gateway-resolve-wait": {
+                    "type": "boolean",
+                    "description": "Wait until gateways are resolved before starting sessions",
+                    "default": true
+                },
+                "isis-instance-id": {
+                    "type": "integer",
+                    "description": "Assign interface to ISIS instance",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "isis-level": {
+                    "type": "integer",
+                    "description": "ISIS interface level",
+                    "default": 3,
+                    "minimum": 1,
+                    "maximum": 3
+                },
+                "isis-p2p": {
+                    "type": "boolean",
+                    "description": "ISIS P2P interface",
+                    "default": true
+                },
+                "isis-l1-metric": {
+                    "type": "integer",
+                    "description": "ISIS level 1 interface metric",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "isis-l2-metric": {
+                    "type": "integer",
+                    "description": "ISIS level 2 interface metric",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "isis-l1-priority": {
+                    "type": "integer",
+                    "description": "ISIS level 1 interface priority",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 127
+                },
+                "isis-l2-priority": {
+                    "type": "integer",
+                    "description": "ISIS level 2 interface priority",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 127
+                },
+                "ospfv2-instance-id": {
+                    "type": "integer",
+                    "description": "Assign interface to OSPFv2 instance",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "ospfv2-type": {
+                    "type": "string",
+                    "description": "OSPFv2 interface type",
+                    "enum": [
+                        "p2p",
+                        "broadcast"
+                    ],
+                    "default": "broadcast"
+                },
+                "ospfv2-metric": {
+                    "type": "integer",
+                    "description": "OSPFv2 interface metric",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "ospfv3-instance-id": {
+                    "type": "integer",
+                    "description": "Assign interface to OSPFv3 instance",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "ospfv3-type": {
+                    "type": "string",
+                    "description": "OSPFv3 interface type",
+                    "enum": [
+                        "p2p",
+                        "broadcast"
+                    ],
+                    "default": "broadcast"
+                },
+                "ospfv3-metric": {
+                    "type": "integer",
+                    "description": "OSPFv3 interface metric",
+                    "default": 10,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "ldp-instance-id": {
+                    "type": "integer",
+                    "description": "Assign interface to LDP instance",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "cfm-cc": {
+                    "type": "boolean",
+                    "description": "Enable EOAM CFM CC",
+                    "default": false
+                },
+                "cfm-level": {
+                    "type": "integer",
+                    "description": "EOAM CFM maintenance domain level",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "cfm-interval": {
+                    "type": "string",
+                    "description": "EOAM CFM CCM interval",
+                    "enum": [
+                        "3.33ms",
+                        "10ms",
+                        "100ms",
+                        "1s",
+                        "10s",
+                        "1min",
+                        "10min"
+                    ],
+                    "default": "1s"
+                },
+                "cfm-md-name": {
+                    "type": "string",
+                    "description": "EOAM CFM maintenance domain name"
+                },
+                "cfm-md-name-format": {
+                    "type": "string",
+                    "description": "EOAM CFM MD name format",
+                    "enum": [
+                        "NONE",
+                        "DNS",
+                        "MAC_INT",
+                        "STRING"
+                    ],
+                    "default": "NONE"
+                },
+                "cfm-ma-id": {
+                    "type": "integer",
+                    "description": "EOAM CFM maintenance association identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "cfm-ma-name": {
+                    "type": "string",
+                    "description": "EOAM CFM maintenance association short name"
+                },
+                "cfm-ma-name-format": {
+                    "type": "string",
+                    "description": "EOAM CFM MA name format",
+                    "enum": [
+                        "VLAN",
+                        "STRING",
+                        "UINT16",
+                        "VPN_ID",
+                        "ICC"
+                    ],
+                    "default": "STRING"
+                },
+                "cfm-cc-seq": {
+                    "type": "boolean",
+                    "description": "Enable EOAM CFM CC sequence numbers",
+                    "default": true
+                },
+                "cfm-cc-vlan-priority": {
+                    "type": "integer",
+                    "description": "EOAM CFM CC VLAN priority (PCP)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "a10nsp": {
+                    "type": "boolean",
+                    "description": "Enable A10NSP switch emulation (experimental)",
+                    "default": false
+                },
+                "a10nsp-tx-label": {
+                    "type": "integer",
+                    "description": "Transport label for A10NSP services in downstream direction",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                }
+            }
+        },
+        "accessInterface": {
+            "type": "object",
+            "required": [
+                "interface"
+            ],
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "description": "Parent interface/link name (e.g. eth0)"
+                },
+                "network-interface": {
+                    "type": "string",
+                    "description": "Select corresponding network interface for sessions"
+                },
+                "a10nsp-interface": {
+                    "type": "string",
+                    "description": "Select corresponding A10NSP interface for sessions"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Access type",
+                    "enum": [
+                        "pppoe",
+                        "ipoe"
+                    ],
+                    "default": "pppoe"
+                },
+                "vlan-mode": {
+                    "type": "string",
+                    "description": "VLAN mode",
+                    "enum": [
+                        "1:1",
+                        "N:1"
+                    ],
+                    "default": "1:1"
+                },
+                "qinq": {
+                    "type": "boolean",
+                    "description": "Set outer VLAN ethertype to QinQ (0x88a8)",
+                    "default": false
+                },
+                "outer-vlan-min": {
+                    "type": "integer",
+                    "description": "Outer VLAN minimum value (0 = untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4094
+                },
+                "outer-vlan-max": {
+                    "type": "integer",
+                    "description": "Outer VLAN maximum value (0 = untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4094
+                },
+                "outer-vlan-step": {
+                    "type": "integer",
+                    "description": "Outer VLAN step (iterator)",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "outer-vlan": {
+                    "type": "integer",
+                    "description": "Set outer-vlan-min/max equally",
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "inner-vlan-min": {
+                    "type": "integer",
+                    "description": "Inner VLAN minimum value (0 = untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "inner-vlan-max": {
+                    "type": "integer",
+                    "description": "Inner VLAN maximum value (0 = untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "inner-vlan-step": {
+                    "type": "integer",
+                    "description": "Inner VLAN step (iterator)",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "inner-vlan": {
+                    "type": "integer",
+                    "description": "Set inner-vlan-min/max equally",
+                    "minimum": 0,
+                    "maximum": 4094
+                },
+                "third-vlan": {
+                    "type": "integer",
+                    "description": "Static third VLAN (most inner, 0 = untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4094
+                },
+                "ipv4": {
+                    "type": "boolean",
+                    "description": "Enable IPv4",
+                    "default": true
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Static IPv4 base address (IPoE only)",
+                    "format": "ipv4"
+                },
+                "address-iter": {
+                    "type": "string",
+                    "description": "Static IPv4 address iterator (IPoE only)",
+                    "format": "ipv4",
+                    "default": "0.0.0.0"
+                },
+                "gateway": {
+                    "type": "string",
+                    "description": "Static IPv4 gateway address (IPoE only)",
+                    "format": "ipv4"
+                },
+                "gateway-iter": {
+                    "type": "string",
+                    "description": "Static IPv4 gateway iterator (IPoE only)",
+                    "format": "ipv4",
+                    "default": "0.0.0.0"
+                },
+                "ipv6": {
+                    "type": "boolean",
+                    "description": "Enable IPv6",
+                    "default": true
+                },
+                "ipv6-link-local": {
+                    "type": "string",
+                    "description": "Static IPv6 link-local address (IPoE only)",
+                    "format": "ipv6"
+                },
+                "address-ipv6": {
+                    "type": "string",
+                    "description": "Static IPv6 address (IPoE only)",
+                    "format": "ipv6"
+                },
+                "gateway-ipv6": {
+                    "type": "string",
+                    "description": "Static IPv6 gateway address (IPoE only)",
+                    "format": "ipv6"
+                },
+                "cfm-cc": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "cfm-level": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "cfm-interval": {
+                    "type": "string",
+                    "enum": [
+                        "3.33ms",
+                        "10ms",
+                        "100ms",
+                        "1s",
+                        "10s",
+                        "1min",
+                        "10min"
+                    ],
+                    "default": "1s"
+                },
+                "cfm-md-name": {
+                    "type": "string"
+                },
+                "cfm-md-name-format": {
+                    "type": "string",
+                    "enum": [
+                        "NONE",
+                        "DNS",
+                        "MAC_INT",
+                        "STRING"
+                    ],
+                    "default": "NONE"
+                },
+                "cfm-ma-id": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "cfm-ma-name": {
+                    "type": "string"
+                },
+                "cfm-ma-name-format": {
+                    "type": "string",
+                    "enum": [
+                        "VLAN",
+                        "STRING",
+                        "UINT16",
+                        "VPN_ID",
+                        "ICC"
+                    ],
+                    "default": "STRING"
+                },
+                "cfm-cc-seq": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "cfm-vlan-priority": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "username": {
+                    "type": "string",
+                    "description": "Overwrite username (supports variables)"
+                },
+                "password": {
+                    "type": "string",
+                    "description": "Overwrite password"
+                },
+                "authentication-protocol": {
+                    "type": "string",
+                    "description": "Authentication protocol",
+                    "enum": [
+                        "PAP",
+                        "CHAP"
+                    ]
+                },
+                "agent-circuit-id": {
+                    "type": "string",
+                    "description": "Overwrite agent-circuit-id (supports variables)"
+                },
+                "agent-remote-id": {
+                    "type": "string",
+                    "description": "Overwrite agent-remote-id (supports variables)"
+                },
+                "access-aggregation-circuit-id": {
+                    "type": "string",
+                    "description": "Overwrite access-aggregation-circuit-id"
+                },
+                "rate-up": {
+                    "type": "integer",
+                    "description": "Overwrite rate-up",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "rate-down": {
+                    "type": "integer",
+                    "description": "Overwrite rate-down",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "dsl-type": {
+                    "type": "integer",
+                    "description": "Overwrite dsl-type",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "ppp-mru": {
+                    "type": "integer",
+                    "description": "Overwrite PPP MRU (PPPoE only)",
+                    "minimum": 64,
+                    "maximum": 9000
+                },
+                "ipcp": {
+                    "type": "boolean",
+                    "description": "Overwrite PPP IPCP enable (PPPoE only)"
+                },
+                "ip6cp": {
+                    "type": "boolean",
+                    "description": "Overwrite PPP IP6CP enable (PPPoE only)"
+                },
+                "dhcp": {
+                    "type": "boolean",
+                    "description": "Overwrite DHCP enable"
+                },
+                "dhcp-vendor-class-id": {
+                    "type": "string",
+                    "description": "Overwrite DHCP vendor class id/option 60"
+                },
+                "dhcpv6": {
+                    "type": "boolean",
+                    "description": "Overwrite DHCPv6 enable"
+                },
+                "dhcpv6-ldra": {
+                    "type": "boolean",
+                    "description": "Overwrite DHCPv6 LDRA"
+                },
+                "igmp-autostart": {
+                    "type": "boolean",
+                    "description": "Overwrite IGMP autostart"
+                },
+                "igmp-version": {
+                    "type": "integer",
+                    "description": "Overwrite IGMP protocol version",
+                    "enum": [
+                        1,
+                        2,
+                        3
+                    ]
+                },
+                "access-line-profile-id": {
+                    "type": "integer",
+                    "description": "Access-line-profile identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "i1-start": {
+                    "type": "integer",
+                    "description": "Iterator {i1} start value",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "i1-step": {
+                    "type": "integer",
+                    "description": "Iterator {i1} step per session",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "i2-start": {
+                    "type": "integer",
+                    "description": "Iterator {i2} start value",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "i2-step": {
+                    "type": "integer",
+                    "description": "Iterator {i2} step per session",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "monkey": {
+                    "type": "boolean",
+                    "description": "Enable monkey testing",
+                    "default": false
+                },
+                "session-limit": {
+                    "type": "integer",
+                    "description": "Limit sessions per access interface",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 10000000
+                },
+                "session-traffic-autostart": {
+                    "type": "boolean",
+                    "description": "Overwrite session-traffic autostart"
+                },
+                "session-group-id": {
+                    "type": "integer",
+                    "description": "Session group identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "stream-group-id": {
+                    "type": "integer",
+                    "description": "Stream group identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "arp-client-group-id": {
+                    "type": "integer",
+                    "description": "ARP client group identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "icmp-client-group-id": {
+                    "type": "integer",
+                    "description": "ICMP client group identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "http-client-group-id": {
+                    "type": "integer",
+                    "description": "HTTP client group identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "tun": {
+                    "type": "boolean",
+                    "description": "Create dedicated TUN interface for each session",
+                    "default": false
+                }
+            }
+        },
+        "a10nspInterface": {
+            "type": "object",
+            "required": [
+                "interface"
+            ],
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "description": "Parent interface/link name (e.g. eth0)"
+                },
+                "qinq": {
+                    "type": "boolean",
+                    "description": "Set outer VLAN ethertype to QinQ (0x88a8)",
+                    "default": false
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "Overwrite the A10NSP MAC address",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                }
+            }
+        },
+        "lagInterface": {
+            "type": "object",
+            "required": [
+                "interface"
+            ],
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "description": "LAG interface name (e.g. lag0)"
+                },
+                "lacp": {
+                    "type": "boolean",
+                    "description": "Enable LACP",
+                    "default": false
+                },
+                "lacp-timeout-short": {
+                    "type": "boolean",
+                    "description": "Enable LACP short timeout (3x1s)",
+                    "default": false
+                },
+                "lacp-system-priority": {
+                    "type": "integer",
+                    "description": "LACP system priority",
+                    "default": 32768,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "lacp-system-id": {
+                    "type": "string",
+                    "description": "LACP system identifier",
+                    "default": "02:ff:ff:ff:ff:00",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                },
+                "lacp-min-active-links": {
+                    "type": "integer",
+                    "description": "Minimum number of active links",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "lacp-max-active-links": {
+                    "type": "integer",
+                    "description": "Maximum number of active links",
+                    "default": 255,
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "LAG interface MAC address",
+                    "default": "02:ff:ff:ff:ff:<interface-id>",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                }
+            }
+        },
+        "link": {
+            "type": "object",
+            "required": [
+                "interface"
+            ],
+            "properties": {
+                "interface": {
+                    "type": "string",
+                    "description": "Interface name (e.g. eth0)"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Interface description"
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "Overwrite the MAC address",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                },
+                "lag-interface": {
+                    "type": "string",
+                    "description": "Add interface/link to LAG group"
+                },
+                "lacp-priority": {
+                    "type": "integer",
+                    "description": "LACP interface priority",
+                    "default": 32768,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "tx-cpuset": {
+                    "type": "array",
+                    "description": "Pin TX threads to CPU cores (cpuset)",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4095
+                    },
+                    "uniqueItems": true,
+                    "minItems": 1
+                },
+                "rx-cpuset": {
+                    "type": "array",
+                    "description": "Pin RX threads to CPU cores (cpuset)",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 4095
+                    },
+                    "uniqueItems": true,
+                    "minItems": 1
+                },
+                "io-mode": {
+                    "type": "string",
+                    "description": "Overwrite the IO mode"
+                },
+                "io-burst": {
+                    "type": "integer",
+                    "description": "Overwrite the IO burst (packets)",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "io-slots": {
+                    "type": "integer",
+                    "description": "Overwrite the IO slots (ring size)",
+                    "minimum": 32,
+                    "maximum": 65535
+                },
+                "io-slots-tx": {
+                    "type": "integer",
+                    "description": "Overwrite the TX IO slots (ring size)",
+                    "minimum": 32,
+                    "maximum": 65535
+                },
+                "io-slots-rx": {
+                    "type": "integer",
+                    "description": "Overwrite the RX IO slots (ring size)",
+                    "minimum": 32,
+                    "maximum": 65535
+                },
+                "qdisc-bypass": {
+                    "type": "boolean",
+                    "description": "Overwrite the kernel’s qdisc layer configuration"
+                },
+                "tx-interval": {
+                    "type": "number",
+                    "description": "Overwrite the TX polling interval in milliseconds",
+                    "minimum": 0.0001,
+                    "maximum": 1000
+                },
+                "rx-interval": {
+                    "type": "number",
+                    "description": "Overwrite the RX polling interval in milliseconds",
+                    "minimum": 0.0001,
+                    "maximum": 1000
+                },
+                "tx-threads": {
+                    "type": "integer",
+                    "description": "Overwrite the number of TX threads per interface link",
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "rx-threads": {
+                    "type": "integer",
+                    "description": "Overwrite the number of RX threads per interface link",
+                    "minimum": 0,
+                    "maximum": 255
+                }
+            }
+        },
+        "stream": {
+            "type": "object",
+            "required": [
+                "name",
+                "type"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Stream name"
+                },
+                "stream-group-id": {
+                    "type": "integer",
+                    "description": "Stream group identifier (0 = raw)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Stream type",
+                    "enum": [
+                        "ipv4",
+                        "ipv6",
+                        "ipv6pd"
+                    ]
+                },
+                "direction": {
+                    "type": "string",
+                    "description": "Stream direction",
+                    "enum": [
+                        "upstream",
+                        "downstream",
+                        "both"
+                    ],
+                    "default": "both"
+                },
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Enable stream autostart",
+                    "default": true
+                },
+                "source-port": {
+                    "type": "integer",
+                    "description": "Source port",
+                    "default": 65056,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "destination-port": {
+                    "type": "integer",
+                    "description": "Destination port",
+                    "default": 65056,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "ipv4-df": {
+                    "type": "boolean",
+                    "description": "Set IPv4 DF bit",
+                    "default": true
+                },
+                "priority": {
+                    "type": "integer",
+                    "description": "IPv4 TOS / IPv6 TC",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "vlan-priority": {
+                    "type": "integer",
+                    "description": "VLAN priority",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "inner-vlan-priority": {
+                    "type": "integer",
+                    "description": "Inner VLAN priority",
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "length": {
+                    "type": "integer",
+                    "description": "Layer 3 traffic length (IP header + payload)",
+                    "default": 128,
+                    "minimum": 76,
+                    "maximum": 9000
+                },
+                "ttl": {
+                    "type": "integer",
+                    "description": "TTL",
+                    "default": 64,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "pps": {
+                    "type": "number",
+                    "description": "Stream traffic rate in packets per second",
+                    "default": 1,
+                    "minimum": 0
+                },
+                "bps": {
+                    "type": "number",
+                    "description": "Stream traffic rate in bits per second (layer 3)"
+                },
+                "Kbps": {
+                    "type": "number",
+                    "description": "Stream rate in Kbps",
+                    "minimum": 0
+                },
+                "Mbps": {
+                    "type": "number",
+                    "description": "Stream rate in Mbps",
+                    "minimum": 0
+                },
+                "Gbps": {
+                    "type": "number",
+                    "description": "Stream rate in Gbps",
+                    "minimum": 0
+                },
+                "pps-upstream": {
+                    "type": "number",
+                    "description": "Overwrite PPS in upstream for bidirectional streams",
+                    "minimum": 0
+                },
+                "bps-upstream": {
+                    "type": "number",
+                    "description": "Overwrite bps in upstream for bidirectional streams",
+                    "minimum": 0
+                },
+                "setup-interval": {
+                    "type": "integer",
+                    "description": "Setup interval in seconds (0 = disabled)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 900
+                },
+                "a10nsp-interface": {
+                    "type": "string",
+                    "description": "Select corresponding A10NSP interface for stream"
+                },
+                "network-interface": {
+                    "type": "string",
+                    "description": "Select corresponding network interface for stream"
+                },
+                "network-ipv4-address": {
+                    "type": "string",
+                    "description": "Overwrite network interface IPv4 address",
+                    "format": "ipv4"
+                },
+                "network-ipv6-address": {
+                    "type": "string",
+                    "description": "Overwrite network interface IPv6 address",
+                    "format": "ipv6"
+                },
+                "destination-ipv4-address": {
+                    "type": "string",
+                    "description": "Overwrite IPv4 destination address",
+                    "format": "ipv4"
+                },
+                "destination-ipv6-address": {
+                    "type": "string",
+                    "description": "Overwrite IPv6 destination address",
+                    "format": "ipv6"
+                },
+                "access-ipv4-source-address": {
+                    "type": "string",
+                    "description": "Overwrite access IPv4 source address (client)",
+                    "format": "ipv4"
+                },
+                "access-ipv6-source-address": {
+                    "type": "string",
+                    "description": "Overwrite access IPv6 source address (client)",
+                    "format": "ipv6"
+                },
+                "max-packets": {
+                    "type": "integer",
+                    "description": "Send N packets and stop (0 = infinity)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "start-delay": {
+                    "type": "integer",
+                    "description": "Wait N seconds after session established before starting",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "tx-label1": {
+                    "type": "integer",
+                    "description": "MPLS send label (outer)",
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "tx-label1-exp": {
+                    "type": "integer",
+                    "description": "EXP bits of outer label",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "tx-label1-ttl": {
+                    "type": "integer",
+                    "description": "TTL of outer label",
+                    "default": 255,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "tx-label2": {
+                    "type": "integer",
+                    "description": "MPLS send label (inner)",
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "tx-label2-exp": {
+                    "type": "integer",
+                    "description": "EXP bits of inner label",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                },
+                "tx-label2-ttl": {
+                    "type": "integer",
+                    "description": "TTL of inner label",
+                    "default": 255,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "rx-label1": {
+                    "type": "integer",
+                    "description": "Expected receive MPLS label (outer)",
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "rx-label2": {
+                    "type": "integer",
+                    "description": "Expected receive MPLS label (inner)",
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "ldp-ipv4-lookup-address": {
+                    "type": "string",
+                    "description": "Dynamically resolve outer label",
+                    "format": "ipv4"
+                },
+                "ldp-ipv6-lookup-address": {
+                    "type": "string",
+                    "description": "Dynamically resolve outer label",
+                    "format": "ipv6"
+                },
+                "nat": {
+                    "type": "boolean",
+                    "description": "Enable NAT support",
+                    "default": false
+                },
+                "raw-tcp": {
+                    "type": "boolean",
+                    "description": "Send RAW TCP traffic",
+                    "default": false
+                }
+            }
+        },
+        "isisConfig": {
+            "type": "object",
+            "required": [
+                "instance-id"
+            ],
+            "properties": {
+                "instance-id": {
+                    "type": "integer",
+                    "description": "ISIS instance identifier",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "level": {
+                    "type": "integer",
+                    "description": "ISIS level",
+                    "default": 3,
+                    "minimum": 1,
+                    "maximum": 3
+                },
+                "protocol-ipv4": {
+                    "type": "boolean",
+                    "description": "Enable IPv4 routing",
+                    "default": true
+                },
+                "protocol-ipv6": {
+                    "type": "boolean",
+                    "description": "Enable IPv6 routing",
+                    "default": true
+                },
+                "level1-auth-key": {
+                    "type": "string",
+                    "description": "Level 1 authentication key"
+                },
+                "level1-auth-type": {
+                    "type": "string",
+                    "description": "Level 1 authentication type",
+                    "enum": [
+                        "simple",
+                        "md5"
+                    ]
+                },
+                "level1-auth-hello": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "level1-auth-csnp": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "level1-auth-psnp": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "level2-auth-key": {
+                    "type": "string",
+                    "description": "Level 2 authentication key"
+                },
+                "level2-auth-type": {
+                    "type": "string",
+                    "description": "Level 2 authentication type",
+                    "enum": [
+                        "simple",
+                        "md5"
+                    ]
+                },
+                "level2-auth-hello": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "level2-auth-csnp": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "level2-auth-psnp": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "hello-interval": {
+                    "type": "integer",
+                    "description": "Hello interval in seconds",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "hello-padding": {
+                    "type": "boolean",
+                    "description": "Enable hello padding",
+                    "default": false
+                },
+                "hold-time": {
+                    "type": "integer",
+                    "description": "Hold time in seconds",
+                    "default": 30,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "lsp-buffer-size": {
+                    "type": "integer",
+                    "description": "LSPBufferSize in bytes",
+                    "default": 1492,
+                    "minimum": 128,
+                    "maximum": 9192
+                },
+                "lsp-lifetime": {
+                    "type": "integer",
+                    "description": "LSP lifetime in seconds",
+                    "default": 65535,
+                    "minimum": 330,
+                    "maximum": 65535
+                },
+                "lsp-refresh-interval": {
+                    "type": "integer",
+                    "description": "LSP refresh interval in seconds",
+                    "default": 300,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "lsp-retry-interval": {
+                    "type": "integer",
+                    "description": "LSP retry interval in seconds",
+                    "default": 5,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "lsp-tx-interval": {
+                    "type": "integer",
+                    "description": "LSP TX interval in ms",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "lsp-tx-window-size": {
+                    "type": "integer",
+                    "description": "LSP TX window size",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "csnp-interval": {
+                    "type": "integer",
+                    "description": "CSNP interval in seconds",
+                    "default": 30,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "hostname": {
+                    "type": "string",
+                    "description": "ISIS hostname",
+                    "default": "bngblaster"
+                },
+                "router-id": {
+                    "type": "string",
+                    "description": "ISIS router identifier",
+                    "format": "ipv4",
+                    "default": "10.10.10.10"
+                },
+                "system-id": {
+                    "type": "string",
+                    "description": "ISIS system identifier",
+                    "default": "0100.1001.0010",
+                    "pattern": "^[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}$"
+                },
+                "area": {
+                    "type": "array",
+                    "description": "ISIS area(s)",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sr-algo": {
+                    "type": "array",
+                    "description": "ISIS SR algorithm(s)",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 255
+                    }
+                },
+                "sr-base": {
+                    "type": "integer",
+                    "description": "ISIS SR base",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "sr-range": {
+                    "type": "integer",
+                    "description": "ISIS SR range",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "sr-node-sid": {
+                    "type": "integer",
+                    "description": "ISIS SR node SID",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "adjacency-sid-base": {
+                    "type": "integer",
+                    "description": "Adjacency SID base",
+                    "minimum": 256,
+                    "maximum": 4096
+                },
+                "teardown-time": {
+                    "type": "integer",
+                    "description": "ISIS teardown time in seconds",
+                    "default": 5,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "external": {
+                    "type": "object",
+                    "properties": {
+                        "purge": {
+                            "type": "boolean",
+                            "description": "Automatically purge all external LSP during teardown",
+                            "default": true
+                        },
+                        "auto-refresh": {
+                            "type": "boolean",
+                            "description": "Automatically refresh all external LSP",
+                            "default": false
+                        },
+                        "mrt-file": {
+                            "type": "string",
+                            "description": "MRT file"
+                        },
+                        "connections": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": [
+                                    "system-id"
+                                ],
+                                "properties": {
+                                    "system-id": {
+                                        "type": "string",
+                                        "description": "ISIS system identifier",
+                                        "pattern": "^[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}$"
+                                    },
+                                    "l1-metric": {
+                                        "type": "integer",
+                                        "description": "Level 1 interface metric",
+                                        "default": 10
+                                    },
+                                    "l2-metric": {
+                                        "type": "integer",
+                                        "description": "Level 2 interface metric",
+                                        "default": 10
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ospfConfig": {
+            "type": "object",
+            "required": [
+                "instance-id"
+            ],
+            "properties": {
+                "instance-id": {
+                    "type": "integer",
+                    "description": "OSPF instance identifier",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "version": {
+                    "type": "integer",
+                    "description": "OSPF version",
+                    "default": 2,
+                    "enum": [
+                        2,
+                        3
+                    ]
+                },
+                "auth-key": {
+                    "type": "string",
+                    "description": "OSPF authentication key"
+                },
+                "auth-type": {
+                    "type": "string",
+                    "description": "OSPF authentication type",
+                    "enum": [
+                        "simple",
+                        "md5"
+                    ]
+                },
+                "hello-interval": {
+                    "type": "integer",
+                    "description": "Hello interval in seconds",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "dead-interval": {
+                    "type": "integer",
+                    "description": "Dead interval in seconds",
+                    "default": 40,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "lsa-retry-interval": {
+                    "type": "integer",
+                    "description": "LSA retry interval in seconds",
+                    "default": 5,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "hostname": {
+                    "type": "string",
+                    "description": "OSPF hostname",
+                    "default": "bngblaster"
+                },
+                "router-id": {
+                    "type": "string",
+                    "description": "OSPF router identifier",
+                    "format": "ipv4",
+                    "default": "10.10.10.10"
+                },
+                "router-priority": {
+                    "type": "integer",
+                    "description": "OSPF router priority",
+                    "default": 64,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "area": {
+                    "type": "string",
+                    "description": "OSPF area",
+                    "format": "ipv4",
+                    "default": "0.0.0.0"
+                },
+                "sr-base": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "sr-range": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "sr-node-sid": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 1048575
+                },
+                "teardown-time": {
+                    "type": "integer",
+                    "description": "OSPF teardown time in seconds",
+                    "default": 5,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "external": {
+                    "type": "object",
+                    "properties": {
+                        "purge": {
+                            "type": "boolean",
+                            "default": true
+                        },
+                        "mrt-file": {
+                            "type": "string",
+                            "description": "OSPF MRT file"
+                        },
+                        "connections": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": [
+                                    "router-id"
+                                ],
+                                "properties": {
+                                    "router-id": {
+                                        "type": "string",
+                                        "format": "ipv4"
+                                    },
+                                    "metric": {
+                                        "type": "integer",
+                                        "default": 10,
+                                        "minimum": 0,
+                                        "maximum": 4294967295
+                                    },
+                                    "local-ipv4-address": {
+                                        "type": "string",
+                                        "format": "ipv4"
+                                    },
+                                    "local-interface-id": {
+                                        "type": "integer",
+                                        "default": 1,
+                                        "minimum": 0,
+                                        "maximum": 4294967295
+                                    },
+                                    "neighbor-interface-id": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 4294967295
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ldpConfig": {
+            "type": "object",
+            "required": [
+                "instance-id"
+            ],
+            "properties": {
+                "instance-id": {
+                    "type": "integer",
+                    "description": "LDP instance identifier",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "keepalive-time": {
+                    "type": "integer",
+                    "description": "Session keepalive time in seconds",
+                    "default": 15,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "hold-time": {
+                    "type": "integer",
+                    "description": "Hello hold time in seconds",
+                    "default": 15,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "teardown-time": {
+                    "type": "integer",
+                    "description": "Teardown time in seconds",
+                    "default": 5,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "hostname": {
+                    "type": "string",
+                    "description": "LDP hostname",
+                    "default": "bngblaster"
+                },
+                "lsr-id": {
+                    "type": "string",
+                    "description": "LDP LSR identifier",
+                    "format": "ipv4",
+                    "default": "10.10.10.10"
+                },
+                "ipv6-transport-address": {
+                    "type": "string",
+                    "description": "LDP transport IPv6 address",
+                    "format": "ipv6"
+                },
+                "ipv4-transport-address": {
+                    "type": "string",
+                    "description": "LDP transport IPv4 address",
+                    "format": "ipv4"
+                },
+                "no-ipv4-transport": {
+                    "type": "boolean",
+                    "description": "Disable IPv4 LDP hello messages",
+                    "default": false
+                },
+                "prefer-ipv4-transport": {
+                    "type": "boolean",
+                    "description": "Prefer IPv4 transport over IPv6",
+                    "default": false
+                },
+                "raw-update-file": {
+                    "type": "string",
+                    "description": "LDP RAW update file"
+                },
+                "tos": {
+                    "type": "integer",
+                    "description": "LDP TOS/TC",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                }
+            }
+        },
+        "bgpConfig": {
+            "type": "object",
+            "required": [
+                "peer-address"
+            ],
+            "properties": {
+                "network-interface": {
+                    "type": "string",
+                    "description": "BGP local interface"
+                },
+                "local-address": {
+                    "type": "string",
+                    "description": "BGP local IPv4/6 address"
+                },
+                "local-as": {
+                    "type": "integer",
+                    "description": "BGP local AS",
+                    "default": 65000,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "peer-address": {
+                    "type": "string",
+                    "description": "BGP peer IPv4/6 address"
+                },
+                "peer-as": {
+                    "type": "integer",
+                    "description": "BGP peer AS",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "hold-time": {
+                    "type": "integer",
+                    "description": "BGP hold-time in seconds",
+                    "default": 90,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "id": {
+                    "type": "string",
+                    "description": "BGP identifier",
+                    "format": "ipv4",
+                    "default": "1.2.3.4"
+                },
+                "tos": {
+                    "type": "integer",
+                    "description": "BGP IP TOS",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "ttl": {
+                    "type": "integer",
+                    "description": "BGP IP TTL",
+                    "default": 255,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "reconnect": {
+                    "type": "boolean",
+                    "description": "Reconnect BGP session automatically",
+                    "default": true
+                },
+                "start-traffic": {
+                    "type": "boolean",
+                    "description": "Start traffic after RAW update finished",
+                    "default": false
+                },
+                "teardown-time": {
+                    "type": "integer",
+                    "description": "BGP teardown time in seconds",
+                    "default": 5,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "raw-update-file": {
+                    "type": "string",
+                    "description": "BGP RAW update file"
+                },
+                "family": {
+                    "type": "array",
+                    "description": "BGP families",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "ipv4-unicast",
+                            "ipv6-unicast",
+                            "ipv4-multicast",
+                            "ipv6-multicast",
+                            "ipv4-labeled-unicast",
+                            "ipv6-labeled-unicast",
+                            "ipv4-vpn-unicast",
+                            "ipv6-vpn-unicast",
+                            "ipv4-vpn-multicast",
+                            "ipv6-vpn-multicast",
+                            "ipv4-flow",
+                            "ipv6-flow",
+                            "evpn"
+                        ]
+                    }
+                },
+                "extended-nexthop": {
+                    "type": "array",
+                    "description": "BGP extended-nexthop families",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "ipv4-unicast",
+                            "ipv4-vpn-unicast"
+                        ]
+                    }
+                }
+            }
+        },
+        "httpClient": {
+            "type": "object",
+            "required": [
+                "name",
+                "http-client-group-id",
+                "url"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "HTTP client name"
+                },
+                "http-client-group-id": {
+                    "type": "integer",
+                    "description": "HTTP client identifier",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "url": {
+                    "type": "string",
+                    "description": "HTTP request URL"
+                },
+                "destination-port": {
+                    "type": "integer",
+                    "description": "TCP destination port",
+                    "default": 80,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Autostart",
+                    "default": true
+                },
+                "start-delay": {
+                    "type": "integer",
+                    "description": "Start delay in seconds",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "destination-ipv4-address": {
+                    "type": "string",
+                    "format": "ipv4"
+                },
+                "destination-ipv6-address": {
+                    "type": "string",
+                    "format": "ipv6"
+                }
+            }
+        },
+        "httpServer": {
+            "type": "object",
+            "required": [
+                "name",
+                "network-interface"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "HTTP server name"
+                },
+                "network-interface": {
+                    "type": "string",
+                    "description": "Network interface"
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "Local TCP port",
+                    "default": 80,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "ipv4-address": {
+                    "type": "string",
+                    "format": "ipv4"
+                },
+                "ipv6-address": {
+                    "type": "string",
+                    "format": "ipv6"
+                }
+            }
+        },
+        "icmpClient": {
+            "type": "object",
+            "properties": {
+                "icmp-client-group-id": {
+                    "type": "integer",
+                    "description": "ICMP client identifier",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "network-interface": {
+                    "type": "string",
+                    "description": "Network interface"
+                },
+                "destination-address": {
+                    "type": "string",
+                    "description": "Destination IPv4 address",
+                    "format": "ipv4"
+                },
+                "source-address": {
+                    "type": "string",
+                    "description": "Source IPv4 address",
+                    "format": "ipv4"
+                },
+                "size": {
+                    "type": "integer",
+                    "description": "ICMP data size",
+                    "default": 8,
+                    "minimum": 0,
+                    "maximum": 65507
+                },
+                "interval": {
+                    "type": "number",
+                    "description": "Send interval in seconds",
+                    "default": 1.0,
+                    "minimum": 0
+                },
+                "count": {
+                    "type": "integer",
+                    "description": "Requests to send (0 = infinity)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "results": {
+                    "type": "integer",
+                    "description": "Request count to track results for",
+                    "default": 3,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "ttl": {
+                    "type": "integer",
+                    "description": "IPv4 TTL",
+                    "default": 64,
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "tos": {
+                    "type": "integer",
+                    "description": "IPv4 TOS",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "df": {
+                    "type": "boolean",
+                    "description": "IPv4 DF bit",
+                    "default": false
+                },
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Autostart after session reconnects",
+                    "default": true
+                },
+                "start-delay": {
+                    "type": "integer",
+                    "description": "Start delay in seconds",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                }
+            }
+        },
+        "arpClient": {
+            "type": "object",
+            "required": [
+                "arp-client-group-id",
+                "target-ip"
+            ],
+            "properties": {
+                "arp-client-group-id": {
+                    "type": "integer",
+                    "description": "ARP client identifier",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "target-ip": {
+                    "type": "string",
+                    "description": "IPv4 address to resolve",
+                    "format": "ipv4"
+                },
+                "interval": {
+                    "type": "number",
+                    "description": "ARP request interval in seconds",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "vlan-priority": {
+                    "type": "integer",
+                    "description": "VLAN priority",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 7
+                }
+            }
+        }
+    }
+}
