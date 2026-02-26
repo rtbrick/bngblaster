@@ -124,8 +124,8 @@ bbl_stream_build_access_pppoe_packet(bbl_stream_s *stream)
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
-    udp.src = config->src_port;
-    udp.dst = config->dst_port;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = stream->type;
@@ -294,21 +294,12 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
         eth.src = session->client_mac;
         eth.qinq = session->access_config->qinq;
         eth.vlan_outer = session->vlan_key.outer_vlan_id;
-        udp.src = config->src_port;
-        udp.dst = config->dst_port;
     } else {
         bbl.direction = BBL_DIRECTION_DOWN;
         eth.dst = session->client_mac;
         eth.src = session->server_mac;
         eth.qinq = a10nsp_interface->qinq;
         eth.vlan_outer = a10nsp_session->s_vlan;
-        if(stream->reverse) {
-            udp.src = config->dst_port;
-            udp.dst = config->src_port;
-        } else {
-            udp.src = config->src_port;
-            udp.dst = config->dst_port;
-        }
     }
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
@@ -318,6 +309,8 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
     eth.next = &pppoe;
     pppoe.session_id = session->pppoe_session_id;
     udp.protocol = UDP_PROTOCOL_BBL;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.next = &bbl;
     bbl.type = stream->type;
     bbl.sub_type = stream->sub_type;
@@ -437,27 +430,20 @@ bbl_stream_build_a10nsp_ipoe_packet(bbl_stream_s *stream)
         eth.src = session->client_mac;
         eth.qinq = session->access_config->qinq;
         eth.vlan_outer = session->vlan_key.outer_vlan_id;
-        udp.src = config->src_port;
-        udp.dst = config->dst_port;
     } else {
         bbl.direction = BBL_DIRECTION_DOWN;
         eth.dst = session->client_mac;
         eth.src = session->server_mac;
         eth.qinq = a10nsp_interface->qinq;
         eth.vlan_outer = a10nsp_session->s_vlan;
-        if(stream->reverse) {
-            udp.src = config->dst_port;
-            udp.dst = config->src_port;
-        } else {
-            udp.src = config->src_port;
-            udp.dst = config->dst_port;
-        }
     }
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner_priority = config->vlan_inner_priority;
     udp.protocol = UDP_PROTOCOL_BBL;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.next = &bbl;
     bbl.type = stream->type;
     bbl.sub_type = stream->sub_type;
@@ -589,9 +575,8 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner_priority = config->vlan_inner_priority;
-
-    udp.src = config->src_port;
-    udp.dst = config->dst_port;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = stream->type;
@@ -742,16 +727,9 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             mpls2.ttl = config->tx_mpls2_ttl;
         }
     }
-
-    if(stream->reverse) {
-        udp.src = config->dst_port;
-        udp.dst = config->src_port;
-    } else {
-        udp.src = config->src_port;
-        udp.dst = config->dst_port;
-    }
-
     udp.protocol = UDP_PROTOCOL_BBL;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.next = &bbl;
     bbl.type = stream->type;
     bbl.sub_type = stream->sub_type;
@@ -917,14 +895,9 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     l2tp.session_id = l2tp_session->peer_session_id;
     l2tp.with_length = l2tp_tunnel->server->data_length;
     l2tp.with_offset = l2tp_tunnel->server->data_offset;
-    if(stream->reverse) {
-        udp.src = config->dst_port;
-        udp.dst = config->src_port;
-    } else {
-        udp.src = config->src_port;
-        udp.dst = config->dst_port;
-    }
     udp.protocol = UDP_PROTOCOL_BBL;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST;
     bbl.sub_type = stream->sub_type;
@@ -1961,10 +1934,30 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             LOG(ERROR, "Failed to add stream %s (downstream) because of missing interface\n", config->name);
             return false;
         }
-        if(stream_up && stream_down) {
-            stream_up->reverse = stream_down;
-            stream_down->reverse = stream_up;
-        }
+    }
+    if(stream_up) {
+        stream_up->src_port = config->src_port;
+        stream_up->dst_port = config->dst_port;
+    }
+    if(stream_up && stream_down) {
+        stream_up->reverse = stream_down;
+        stream_down->reverse = stream_up;
+        stream_down->src_port = stream_up->dst_port;
+        stream_down->dst_port = stream_up->src_port;
+    } else if(stream_down) {
+        stream_down->src_port = config->src_port;
+        stream_down->dst_port = config->dst_port;
+    }
+    /* Iterate layer 4 ports */
+    if((config->src_port_max - config->src_port_step) < config->src_port) {
+        config->src_port = config->src_port_min;
+    } else {
+        config->src_port += config->src_port_step;
+    }
+    if((config->dst_port_max - config->dst_port_step) < config->dst_port) {
+        config->dst_port = config->dst_port_min;
+    } else {
+        config->dst_port += config->dst_port_step;
     }
     return true;
 }
@@ -2017,8 +2010,10 @@ bbl_stream_session_init(bbl_session_s *session)
         config = g_ctx->config.stream_config;
         while(config) {
             if(config->stream_group_id == session->streams.group_id) {
-                if(!bbl_stream_session_add(config, session)) {
-                    return false;
+                for(int i=0; i < config->count; i++) {
+                    if(!bbl_stream_session_add(config, session)) {
+                        return false;
+                    }
                 }
             }
             config = config->next;
@@ -2051,45 +2046,63 @@ bbl_stream_init() {
             }
 
             if(config->direction & BBL_DIRECTION_DOWN) {
-                stream = calloc(1, sizeof(bbl_stream_s));
-                stream->enabled = config->autostart;
-                stream->endpoint = &g_endpoint;
-                stream->flow_id = g_ctx->flow_id++;
-                stream->flow_seq = 1;
-                stream->tx_first_seq = 1;
-                stream->config = config;
-                stream->pps = config->pps;
-                stream->type = BBL_TYPE_UNICAST;
-                stream->sub_type = config->type;
-                if(config->type == BBL_SUB_TYPE_IPV4) {
-                    /* All IPv4 multicast addresses start with 1110 */
-                    if((config->ipv4_destination_address & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
-                        stream->enabled = true;
-                        stream->endpoint = &(g_ctx->multicast_endpoint);
-                        stream->type = BBL_TYPE_MULTICAST;
+                for(int i=0; i < config->count; i++) {
+                    stream = calloc(1, sizeof(bbl_stream_s));
+                    stream->enabled = config->autostart;
+                    stream->endpoint = &g_endpoint;
+                    stream->flow_id = g_ctx->flow_id++;
+                    stream->flow_seq = 1;
+                    stream->tx_first_seq = 1;
+                    stream->config = config;
+                    stream->pps = config->pps;
+                    stream->type = BBL_TYPE_UNICAST;
+                    stream->sub_type = config->type;
+                    if(config->type == BBL_SUB_TYPE_IPV4) {
+                        /* All IPv4 multicast addresses start with 1110 */
+                        if((config->ipv4_destination_address & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
+                            stream->enabled = true;
+                            stream->endpoint = &(g_ctx->multicast_endpoint);
+                            stream->type = BBL_TYPE_MULTICAST;
+                        }
                     }
+                    stream->direction = BBL_DIRECTION_DOWN;
+                    stream->tx_network_interface = network_interface;
+                    stream->tx_interface = network_interface->interface;
+                    if(network_interface->ldp_adjacency && 
+                    (config->ipv4_ldp_lookup_address || 
+                        *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
+                        stream->ldp_lookup = true;
+                    }
+                    if(config->raw_tcp) {
+                        stream->tcp = true;
+                    }
+
+                    stream->src_port = config->src_port;
+                    stream->dst_port = config->dst_port;
+
+                    /* Iterate layer 4 ports */
+                    if((config->src_port_max-config->src_port_step) < config->src_port) {
+                        config->src_port = config->src_port_min;
+                    } else {
+                        config->src_port += config->src_port_step;
+                    }
+                    if((config->dst_port_max-config->dst_port_step) < config->dst_port) {
+                        config->dst_port = config->dst_port_min;
+                    } else {
+                        config->dst_port += config->dst_port_step;
+                    }
+
+                    bbl_stream_add(stream);
+                    if(stream->type == BBL_TYPE_MULTICAST) {
+                        LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %0.2lf PPS\n", 
+                            config->name, network_interface->name, stream->pps);
+                    } else {
+                        g_ctx->stats.stream_traffic_flows++;
+                        LOG(DEBUG, "RAW traffic stream %s added to %s with %0.2lf PPS\n", 
+                            config->name, network_interface->name, stream->pps);
+                    }
+                    g_ctx->stats.raw_traffic_flows++;
                 }
-                stream->direction = BBL_DIRECTION_DOWN;
-                stream->tx_network_interface = network_interface;
-                stream->tx_interface = network_interface->interface;
-                if(network_interface->ldp_adjacency && 
-                   (config->ipv4_ldp_lookup_address || 
-                    *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
-                    stream->ldp_lookup = true;
-                }
-                if(config->raw_tcp) {
-                    stream->tcp = true;
-                }
-                bbl_stream_add(stream);
-                if(stream->type == BBL_TYPE_MULTICAST) {
-                    LOG(DEBUG, "RAW multicast traffic stream %s added to %s with %0.2lf PPS\n", 
-                        config->name, network_interface->name, stream->pps);
-                } else {
-                    g_ctx->stats.stream_traffic_flows++;
-                    LOG(DEBUG, "RAW traffic stream %s added to %s with %0.2lf PPS\n", 
-                        config->name, network_interface->name, stream->pps);
-                }
-                g_ctx->stats.raw_traffic_flows++;
             }
         }
         config = config->next;
@@ -2616,7 +2629,6 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     char *rx_interface = NULL;
     char *src_address = NULL;
     char *dst_address = NULL;
-    uint16_t src_port = 0;
     uint16_t dst_port = 0;
 
     if(!stream) {
@@ -2635,14 +2647,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         rx_interface = stream->rx_a10nsp_interface->name;
     }
 
-    if (stream->direction == BBL_DIRECTION_DOWN && stream->reverse) {
-        src_port = stream->config->dst_port;
-        dst_port = stream->config->src_port;
-    } else {
-        src_port = stream->config->src_port;
-        dst_port = stream->config->dst_port;
-    }
-
+    dst_port = stream->dst_port;
     if(stream->ipv6_src && stream->ipv6_dst) {
         src_address = format_ipv6_address((ipv6addr_t*)stream->ipv6_src);
         dst_address = format_ipv6_address((ipv6addr_t*)stream->ipv6_dst);
@@ -2669,7 +2674,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
             "verified", stream->verified,
             "source-address", src_address,
-            "source-port", src_port,
+            "source-port", stream->src_port,
             "destination-address", dst_address,
             "destination-port", dst_port,
             "protocol", stream->tcp ? "tcp" : "udp",
@@ -2706,8 +2711,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-mbps-l3", (double)(stream->rate_packets_rx.avg * stream->config->length * 8) / 1000000.0,
             "tx-first-epoch", stream->tx_first_epoch,
             "rx-first-epoch", stream->rx_first_epoch,
-            "rx-last-epoch", stream->rx_last_epoch
-            );
+            "rx-last-epoch", stream->rx_last_epoch);
 
         if(stream->rx_interface_changes) { 
             json_object_set_new(root, "rx-interface-changes", json_integer(stream->rx_interface_changes));

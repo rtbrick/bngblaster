@@ -33,8 +33,16 @@ typedef struct bbl_stream_config_
     uint32_t start_delay;
     uint32_t setup_interval;
 
+    uint16_t count;
     uint16_t src_port;
+    uint16_t src_port_min;
+    uint16_t src_port_step;
+    uint16_t src_port_max;
+
     uint16_t dst_port;
+    uint16_t dst_port_min;
+    uint16_t dst_port_step;
+    uint16_t dst_port_max;
 
     uint16_t length;
     uint8_t  priority; /* IPv4 TOS or IPv6 TC */
@@ -130,14 +138,17 @@ typedef struct bbl_stream_
     bool lag;
     bool ldp_lookup;
 
+    double pps;
+    uint64_t expired;
+
     uint32_t session_version;
     uint32_t ldp_entry_version;
 
     uint32_t ipv4_src;
     uint32_t ipv4_dst;
 
-    double pps;
-    uint64_t expired;
+    uint16_t src_port;
+    uint16_t dst_port;
 
     uint16_t tx_len; /* TX length */
     uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
