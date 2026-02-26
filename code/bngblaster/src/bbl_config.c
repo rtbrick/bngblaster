@@ -2478,9 +2478,10 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     const char *schema[] = {
         "name", "stream-group-id", "type", "autostart",
         "direction", "network-interface", "a10nsp-interface",
-        "source-port", "destination-port", "length", "ttl",
+        "source-port", "source-port-max", "source-port-step",
+        "destination-port", "destination-port-max", "destination-port-step",
         "priority", "vlan-priority", "inner-vlan-priority",
-        "pps", "bps", "Kbps", "Mbps",
+        "pps", "bps", "Kbps", "Mbps", "length", "ttl", "count",
         "pps-upstream", "bps-upstream", "Kbps-upstream", "Mbps-upstream",
         "Gbps", "max-packets", "start-delay",
         "ldp-ipv4-lookup-address", "ldp-ipv6-lookup-address", 
@@ -2567,11 +2568,32 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         return false;
     }
 
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "count", 1, 65535);
+    if(value) {
+        stream_config->count = json_number_value(value);
+    } else {
+        stream_config->count = 1;
+    }
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "source-port", 0, 65535);
     if(value) {
         stream_config->src_port = json_number_value(value);
     } else {
         stream_config->src_port = BBL_UDP_PORT;
+    }
+    stream_config->src_port_min = stream_config->src_port;
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "source-port-step", 0, 65535);
+    if(value) {
+        stream_config->src_port_step = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "source-port-max", 0, 65535);
+    if(value) {
+        stream_config->src_port_max = json_number_value(value);
+    } else {
+        stream_config->src_port_max = 65535;
+    }
+    if(stream_config->src_port_min > stream_config->src_port_max) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->source-port (source-port > source-port-max)\n");
+        return false;
     }
 
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "destination-port", 0, 65535);
@@ -2579,6 +2601,21 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->dst_port = json_number_value(value);
     } else {
         stream_config->dst_port = BBL_UDP_PORT;
+    }
+    stream_config->dst_port_min = stream_config->dst_port;
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "destination-port-step", 0, 65535);
+    if(value) {
+        stream_config->dst_port_step = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "destination-port-max", 0, 65535);
+    if(value) {
+        stream_config->dst_port_max = json_number_value(value);
+    } else {
+        stream_config->dst_port_max = 65535;
+    }
+    if(stream_config->dst_port_min > stream_config->dst_port_max) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->destination-port (destination-port > destination-port-max)\n");
+        return false;
     }
 
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "length", 76, 9000);
