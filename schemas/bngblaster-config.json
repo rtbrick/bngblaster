@@ -11,7 +11,13 @@
                 "io-mode": {
                     "type": "string",
                     "description": "IO mode",
-                    "default": "packet_mmap_raw"
+                    "default": "packet_mmap_raw",
+                    "enum": [
+                        "packet_mmap_raw",
+                        "packet_mmap",
+                        "raw",
+                        "dpdk"
+                    ]
                 },
                 "io-slots": {
                     "type": "integer",
