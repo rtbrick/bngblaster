@@ -35,8 +35,9 @@
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 
-#define NUM_MBUFS 8192
 #define MBUF_CACHE_SIZE 256
+#define NUM_MBUFS_RX 131072
+#define NUM_MBUFS_TX 8192
 #define BURST_SIZE_RX 256
 #define BURST_SIZE_TX 32
 
@@ -45,7 +46,13 @@ extern bool g_traffic;
 
 static struct rte_eth_conf port_conf = {
     .rxmode = {
-        .mq_mode = 0,
+        .mq_mode = RTE_ETH_MQ_RX_RSS,
+    },
+    .rx_adv_conf = {
+        .rss_conf = {
+            .rss_key = NULL,
+            .rss_hf = RTE_ETH_RSS_ETH|RTE_ETH_RSS_IP|RTE_ETH_RSS_TCP|RTE_ETH_RSS_UDP,
+        },
     },
     .txmode = {
         .mq_mode = RTE_ETH_MQ_TX_NONE,
@@ -128,14 +135,21 @@ io_dpdk_init()
         return true;
     }
 
-    char *dpdk_args[2];
+    char *dpdk_args[64];
     char **argv=dpdk_args;
-
+    int argc = 2;
     dpdk_args[0] = "bngblaster";
     dpdk_args[1] = "-v";
 
+    bbl_link_config_s *link_config = g_ctx->config.link_config;
+    while(link_config && argc < 62) {
+        dpdk_args[argc++] = "-a";
+        dpdk_args[argc++] = link_config->interface;
+        link_config = link_config->next;
+    }
+    
     LOG_NOARG(DPDK, "DPDK: init the EAL\n");
-    rte_eal_init(2, argv);
+    rte_eal_init(argc, argv);
     LOG(DPDK, "DPDK: version %s\n", rte_version());
 
     dpdk_ports = rte_eth_dev_count_avail();
@@ -156,7 +170,10 @@ io_dpdk_init()
                 dev_info.device->name, port_id, dev_info.driver_name);
         }
         LOG(DPDK, "DPDK: interface %s (%u) max queues rx %u tx %u\n",
-                dev_info.device->name, port_id, dev_info.max_rx_queues, dev_info.max_tx_queues);
+            dev_info.device->name, port_id, dev_info.max_rx_queues, dev_info.max_tx_queues);
+
+        LOG(DPDK, "DPDK: interface %s (%u) RSS offload capa: 0x%lx\n",
+            dev_info.device->name, port_id, dev_info.flow_type_rss_offloads);
     }
 
     return true;
@@ -377,14 +394,11 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
     assert(io->direction == IO_INGRESS);
     assert(io->thread);
 
-    struct timespec sleep, rem;
-    sleep.tv_sec = 0;
-    sleep.tv_nsec = 10;
-
     while(thread->active) {
         nb_rx = rte_eth_rx_burst(port_id, io->queue, pkts_burst, BURST_SIZE_RX);
         if(nb_rx == 0) {
-            nanosleep(&sleep, &rem);
+            /* rte_pause() optimizes CPU pipeline without context switching */
+            rte_pause();
             continue;
         }
         /* Get RX timestamp */
@@ -423,8 +437,6 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
-
-
     while(thread->active) {
         nanosleep(&sleep, &rem);
         if(io->update_streams) {
@@ -443,6 +455,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
             }
             /* Transmit the packet. */
             io->mbuf->data_len = slot->packet_len;
+            io->mbuf->pkt_len = slot->packet_len;
             memcpy(io->buf, slot->packet, slot->packet_len);
             if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
                 io->stats.packets++;
@@ -475,6 +488,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                 }
                 /* Transmit the packet. */
                 io->mbuf->data_len = stream->tx_len;
+                io->mbuf->pkt_len = stream->tx_len;
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
                 if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
                     stream->tx_packets++;
@@ -494,9 +508,8 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
     }
 }
 
-
-bool
-io_dpdk_add_mbuf_pool(io_handle_s *io)
+static bool
+io_dpdk_add_mbuf_pool(io_handle_s *io, unsigned int num_mbufs)
 {
     struct rte_mempool *mbuf_pool;
     char buf[16] = {0};
@@ -507,8 +520,8 @@ io_dpdk_add_mbuf_pool(io_handle_s *io)
     name = strdup(buf);
     if(!name) return false; /* very unlikely... */
 
-    mbuf_pool = rte_pktmbuf_pool_create(name,
-            NUM_MBUFS, MBUF_CACHE_SIZE, 0,
+    mbuf_pool = rte_pktmbuf_pool_create(name, num_mbufs, 
+            MBUF_CACHE_SIZE, 0,
             RTE_MBUF_DEFAULT_BUF_SIZE, 
             rte_eth_dev_socket_id(io->interface->port_id));
     if(!mbuf_pool) {
@@ -624,7 +637,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                                config->rx_interval, io, &io_dpdk_rx_job);
         }
         io->queue = queue;
-        if(!io_dpdk_add_mbuf_pool(io)) {
+        if(!io_dpdk_add_mbuf_pool(io, NUM_MBUFS_RX)) {
             LOG(ERROR, "DPDK: interface %s (%u) failed to create RX mbuf pool for queue %u\n",
                 interface->name, port_id, queue);
             return false;
@@ -663,7 +676,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                 config->tx_interval, io, &io_dpdk_tx_job);
         }
         io->queue = queue;
-        if(!io_dpdk_add_mbuf_pool(io)) {
+        if(!io_dpdk_add_mbuf_pool(io, NUM_MBUFS_TX)) {
             LOG(ERROR, "DPDK: interface %s (%u) failed to create TX mbuf pool for queue %u\n",
                 interface->name, port_id, queue);
             return false;
