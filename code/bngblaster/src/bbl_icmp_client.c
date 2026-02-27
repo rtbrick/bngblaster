@@ -632,7 +632,6 @@ bbl_icmp_client_ctrl(int fd, uint32_t session_id, json_t *arguments)
     /* Unpack further arguments */
     json_unpack(arguments, "{s:b}", "detail", &detail);
 
-
     if(session_id) {
         session = bbl_session_get(session_id);
         if(session) {

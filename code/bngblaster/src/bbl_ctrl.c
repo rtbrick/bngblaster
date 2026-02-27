@@ -30,24 +30,75 @@
 extern volatile bool g_monkey;
 
 const char *schema_no_args[] = { NULL };
-const char *schema_all_args[] = {
+const char *schema_other_args[] = {
     "interface", "outer-vlan", "inner-vlan",
     "session-id", "session-group-id", "direction", "reconnect-delay", 
-    "flow-id", "id", "name", "file", "reset", "timer", "pps",
+    "flow-id", "id", "name", "file", "reset", "pps",
     "group", "group-iter", "group-count", "source1", "source2", "source3",
+    "username", "password", "agent-remote-id", "agent-circuit-id",
+    "network-interface", "ipv6-link-local",
+    NULL
+};
+const char *schema_file[] = {
+    "file", NULL
+};
+const char *schema_interface[] = {
+    "interface", NULL
+};
+const char *schema_session_id[] = {
+    "session-id", "session-group-id", NULL
+};
+const char *schema_session_terminate[] = {
+    "session-id", "session-group-id", "reconnect-delay", NULL
+};
+const char *schema_session_direction[] = {
+    "session-id", "session-group-id", "direction", NULL
+};
+const char *schema_stream[] = {
+    "interface", "outer-vlan", "inner-vlan",
+    "session-id", "session-group-id", "direction",
+    "flow-id", "name", "pps", "tcp-flags", "debug", "detail",
+    "verified-only", "bidirectional-verified-only",
+    "network-interface",
+    "flows", "flow-id-min", "flow-id-max",
+    NULL
+};
+const char *schema_bgp[] = {
     "local-ipv4-address", "peer-ipv4-address",
     "local-ipv6-address", "peer-ipv6-address",  "ipv6-link-local",
-    "username", "password", "agent-remote-id", "agent-circuit-id",
-    "instance", "level", "pdu", "lsa",
-    "tunnel-id", "sessions", "priority",
+    "file",
+    NULL
+};
+const char *schema_isis[] = {
+    "instance", "level", "file", "interface", 
+    "priority", "timer", "id", "pdu",
+    NULL
+};
+const char *schema_ospf[] = {
+    "instance", "level", "file", "lsa", "pdu",
+    NULL
+};
+const char *schema_ldp[] = {
+    "ldp-instance-id",
+    "local-ipv4-address", "peer-ipv4-address",
+    "local-ipv6-address", "peer-ipv6-address",
+    "file",
+    NULL
+};
+const char *schema_l2tp[] = {
+    "tunnel-id", "session-id", "sessions",
     "result-code", "error-code", "error-message",
     "disconnect-code", "disconnect-protocol", 
     "disconnect-direction", "disconnect-message",
-    "ldp-instance-id", "tcp-flags", "debug", "detail",
-    "verified-only", "bidirectional-verified-only",
-    "network-interface", "keep-address",
     NULL
 };
+const char *schema_icmp[] = {
+    "session-id", "detail", NULL
+};
+const char *schema_dhcp[] = {
+    "session-id", "session-group-id", "keep-address", NULL
+};
+
 
 static bool
 bbl_ctrl_schema(json_t *arguments, const char *const schema[])
@@ -198,118 +249,161 @@ struct action {
     bool thread_safe;
 };
 
+static int bbl_ctrl_commands(int fd, uint32_t session_id, json_t *arguments);
+
 static const struct action actions[] = {
     {"test-info", bbl_ctrl_test_info, schema_no_args, true},
     {"test-stop", bbl_ctrl_test_stop, schema_no_args, true},
-    {"terminate", bbl_ctrl_terminate, schema_all_args, false},
-    {"traffic-start", bbl_ctrl_traffic_start, schema_all_args, false},
-    {"traffic-stop", bbl_ctrl_traffic_stop, schema_all_args, false},
-    {"stream-start", bbl_stream_ctrl_start, schema_all_args, true},
-    {"stream-stop", bbl_stream_ctrl_stop, schema_all_args, true},
-    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_all_args, true},
-    {"stream-update", bbl_stream_ctrl_update, schema_all_args, true},
-    {"session-traffic-start", bbl_session_ctrl_traffic_start, schema_all_args, true},
-    {"session-traffic-stop", bbl_session_ctrl_traffic_stop, schema_all_args, true},
-    {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start, schema_all_args, false},
-    {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop, schema_all_args, false},
-    {"stream-info", bbl_stream_ctrl_info, schema_all_args, true},
-    {"stream-stats", bbl_stream_ctrl_stats, schema_all_args, true},
-    {"stream-reset", bbl_stream_ctrl_reset, schema_all_args, false},
-    {"stream-summary", bbl_stream_ctrl_summary, schema_all_args, true},
+    {"terminate", bbl_ctrl_terminate, schema_session_terminate, false},
+    {"traffic-start", bbl_ctrl_traffic_start, schema_no_args, false},
+    {"traffic-stop", bbl_ctrl_traffic_stop, schema_no_args, false},
+    {"stream-start", bbl_stream_ctrl_start, schema_stream, true},
+    {"stream-stop", bbl_stream_ctrl_stop, schema_stream, true},
+    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_stream, true},
+    {"stream-update", bbl_stream_ctrl_update, schema_stream, true},
+    {"session-traffic-start", bbl_session_ctrl_traffic_start, schema_session_direction, true},
+    {"session-traffic-stop", bbl_session_ctrl_traffic_stop, schema_session_direction, true},
+    {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start, schema_no_args, false},
+    {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop, schema_no_args, false},
+    {"stream-info", bbl_stream_ctrl_info, schema_other_args, true},
+    {"stream-stats", bbl_stream_ctrl_stats, schema_other_args, true},
+    {"stream-reset", bbl_stream_ctrl_reset, schema_other_args, false},
+    {"stream-summary", bbl_stream_ctrl_summary, schema_other_args, true},
     {"streams-pending", bbl_stream_ctrl_pending, schema_no_args, true},
-    {"session-traffic", bbl_session_ctrl_traffic_stats, schema_all_args, true},
-    {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_all_args, false},
+    {"session-traffic", bbl_session_ctrl_traffic_stats, schema_other_args, true},
+    {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_other_args, false},
     {"interfaces", bbl_interface_ctrl, schema_no_args, true},
     {"access-interfaces", bbl_access_ctrl_interfaces, schema_no_args, true},
     {"network-interfaces", bbl_network_ctrl_interfaces, schema_no_args, true},
     {"a10nsp-interfaces", bbl_a10nsp_ctrl_interfaces, schema_no_args, true},
-    {"interface-enable", bbl_interface_ctrl_enable, schema_all_args, false},
-    {"interface-disable", bbl_interface_ctrl_disable, schema_all_args, false},
+    {"interface-enable", bbl_interface_ctrl_enable, schema_interface, false},
+    {"interface-disable", bbl_interface_ctrl_disable, schema_interface, false},
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
-    {"session-info", bbl_session_ctrl_info, schema_all_args, true},
+    {"session-info", bbl_session_ctrl_info, schema_session_id, true},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
-    {"session-start", bbl_session_ctrl_start, schema_all_args, false},
-    {"session-stop", bbl_session_ctrl_stop, schema_all_args, false},
-    {"session-restart", bbl_session_ctrl_restart, schema_all_args, false},
-    {"session-streams", bbl_stream_ctrl_session, schema_all_args, true},
-    {"igmp-join", bbl_igmp_ctrl_join, schema_all_args, false},
-    {"igmp-join-iter", bbl_igmp_ctrl_join_iter, schema_all_args, false},
-    {"igmp-leave", bbl_igmp_ctrl_leave, schema_all_args, false},
-    {"igmp-leave-all", bbl_igmp_ctrl_leave_all, schema_all_args, false},
-    {"igmp-info", bbl_igmp_ctrl_info, schema_all_args, true},
-    {"zapping-start", bbl_igmp_ctrl_zapping_start, schema_all_args, true},
-    {"zapping-stop", bbl_igmp_ctrl_zapping_stop, schema_all_args, false},
-    {"zapping-stats", bbl_igmp_ctrl_zapping_stats, schema_all_args, true},
-    {"li-flows", bbl_li_ctrl_flows, schema_all_args, true},
-    {"l2tp-tunnels", bbl_l2tp_ctrl_tunnels, schema_all_args, true},
-    {"l2tp-sessions", bbl_l2tp_ctrl_sessions, schema_all_args, true},
-    {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_all_args, false},
-    {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_all_args, false},
-    {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_all_args, false},
-    {"ipcp-open", bbl_session_ctrl_ipcp_open, schema_all_args, false},
-    {"ipcp-close", bbl_session_ctrl_ipcp_close, schema_all_args, false},
-    {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_all_args, false},
-    {"ip6cp-close", bbl_session_ctrl_ip6cp_close, schema_all_args, false},
-    {"isis-adjacencies", isis_ctrl_adjacencies, schema_all_args, true},
-    {"isis-database", isis_ctrl_database, schema_all_args, true},
-    {"isis-load-mrt", isis_ctrl_load_mrt, schema_all_args, false},
-    {"isis-lsp-update", isis_ctrl_lsp_update, schema_all_args, false},
-    {"isis-lsp-purge", isis_ctrl_lsp_purge, schema_all_args, false},
-    {"isis-lsp-flap", isis_ctrl_lsp_flap, schema_all_args, false},
-    {"isis-teardown", isis_ctrl_teardown, schema_all_args, false},
-    {"isis-update-priority", isis_ctrl_update_priority, schema_all_args, false},
-    {"ospf-interfaces", ospf_ctrl_interfaces, schema_all_args, true},
-    {"ospf-neighbors", ospf_ctrl_neighbors, schema_all_args, true},
-    {"ospf-database", ospf_ctrl_database, schema_all_args, true},
-    {"ospf-load-mrt", ospf_ctrl_load_mrt, schema_all_args, false},
-    {"ospf-lsa-update", ospf_ctrl_lsa_update, schema_all_args, false},
-    {"ospf-pdu-update", ospf_ctrl_pdu_update, schema_all_args, false},
-    {"ospf-teardown", ospf_ctrl_teardown, schema_all_args, false},
-    {"bgp-sessions", bgp_ctrl_sessions, schema_all_args, true},
-    {"bgp-disconnect", bgp_ctrl_disconnect, schema_all_args, false},
-    {"bgp-teardown", bgp_ctrl_teardown, schema_all_args, true},
-    {"bgp-raw-update-list", bgp_ctrl_raw_update_list, schema_all_args, true},
-    {"bgp-raw-update", bgp_ctrl_raw_update, schema_all_args, false},
-    {"ldp-adjacencies", ldp_ctrl_adjacencies, schema_all_args, true},
-    {"ldp-sessions", ldp_ctrl_sessions, schema_all_args, true},
-    {"ldp-database", ldb_ctrl_database, schema_all_args, true},
-    {"ldp-disconnect", ldp_ctrl_disconnect, schema_all_args, false},
-    {"ldp-teardown", ldp_ctrl_teardown, schema_all_args, true},
-    {"ldp-raw-update-list", ldp_ctrl_raw_update_list, schema_all_args, true},
-    {"ldp-raw-update", ldp_ctrl_raw_update, schema_all_args, false},
-    {"monkey-start", bbl_ctrl_monkey_start, schema_all_args, false},
-    {"monkey-stop", bbl_ctrl_monkey_stop, schema_all_args, false},
-    {"lag-info", bbl_lag_ctrl_info, schema_all_args, true},
-    {"icmp-clients", bbl_icmp_client_ctrl, schema_all_args, true},
-    {"icmp-clients-start", bbl_icmp_client_ctrl_start, schema_all_args, false},
-    {"icmp-clients-stop", bbl_icmp_client_ctrl_stop, schema_all_args, false},
-    {"http-clients", bbl_http_client_ctrl, schema_all_args, true},
-    {"http-clients-start", bbl_http_client_ctrl_start, schema_all_args, false},
-    {"http-clients-stop", bbl_http_client_ctrl_stop, schema_all_args, false},
-    {"arp-clients", bbl_arp_client_ctrl, schema_all_args, true},
-    {"arp-clients-reset", bbl_arp_client_ctrl_reset, schema_all_args, false},
-    {"cfm-cc-start", bbl_cfm_ctrl_cc_start, schema_all_args, false},
-    {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_all_args, false},
-    {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_all_args, false},
-    {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_all_args, false},
-    {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_all_args, true},
-    {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_all_args, true},
-    {"session-update", bbl_session_ctrl_update, schema_all_args, false},
-    {"pcap-start", pcapng_ctrl_start, schema_all_args, false},
+    {"session-start", bbl_session_ctrl_start, schema_session_id, false},
+    {"session-stop", bbl_session_ctrl_stop, schema_session_id, false},
+    {"session-restart", bbl_session_ctrl_restart, schema_session_terminate, false},
+    {"session-streams", bbl_stream_ctrl_session, schema_session_id, true},
+    {"igmp-join", bbl_igmp_ctrl_join, schema_other_args, false},
+    {"igmp-join-iter", bbl_igmp_ctrl_join_iter, schema_other_args, false},
+    {"igmp-leave", bbl_igmp_ctrl_leave, schema_other_args, false},
+    {"igmp-leave-all", bbl_igmp_ctrl_leave_all, schema_other_args, false},
+    {"igmp-info", bbl_igmp_ctrl_info, schema_other_args, true},
+    {"zapping-start", bbl_igmp_ctrl_zapping_start, schema_other_args, true},
+    {"zapping-stop", bbl_igmp_ctrl_zapping_stop, schema_other_args, false},
+    {"zapping-stats", bbl_igmp_ctrl_zapping_stats, schema_other_args, true},
+    {"li-flows", bbl_li_ctrl_flows, schema_no_args, true},
+    {"l2tp-tunnels", bbl_l2tp_ctrl_tunnels, schema_other_args, true},
+    {"l2tp-sessions", bbl_l2tp_ctrl_sessions, schema_other_args, true},
+    {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_other_args, false},
+    {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_other_args, false},
+    {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_other_args, false},
+    {"ipcp-open", bbl_session_ctrl_ipcp_open, schema_session_id, false},
+    {"ipcp-close", bbl_session_ctrl_ipcp_close, schema_session_id, false},
+    {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_session_id, false},
+    {"ip6cp-close", bbl_session_ctrl_ip6cp_close, schema_session_id, false},
+    {"isis-adjacencies", isis_ctrl_adjacencies, schema_isis, true},
+    {"isis-database", isis_ctrl_database, schema_isis, true},
+    {"isis-load-mrt", isis_ctrl_load_mrt, schema_isis, false},
+    {"isis-lsp-update", isis_ctrl_lsp_update, schema_isis, false},
+    {"isis-lsp-purge", isis_ctrl_lsp_purge, schema_isis, false},
+    {"isis-lsp-flap", isis_ctrl_lsp_flap, schema_isis, false},
+    {"isis-teardown", isis_ctrl_teardown, schema_isis, false},
+    {"isis-update-priority", isis_ctrl_update_priority, schema_isis, false},
+    {"ospf-interfaces", ospf_ctrl_interfaces, schema_ospf, true},
+    {"ospf-neighbors", ospf_ctrl_neighbors, schema_ospf, true},
+    {"ospf-database", ospf_ctrl_database, schema_ospf, true},
+    {"ospf-load-mrt", ospf_ctrl_load_mrt, schema_ospf, false},
+    {"ospf-lsa-update", ospf_ctrl_lsa_update, schema_ospf, false},
+    {"ospf-pdu-update", ospf_ctrl_pdu_update, schema_ospf, false},
+    {"ospf-teardown", ospf_ctrl_teardown, schema_ospf, false},
+    {"bgp-sessions", bgp_ctrl_sessions, schema_bgp, true},
+    {"bgp-disconnect", bgp_ctrl_disconnect, schema_bgp, false},
+    {"bgp-teardown", bgp_ctrl_teardown, schema_bgp, true},
+    {"bgp-raw-update-list", bgp_ctrl_raw_update_list, schema_bgp, true},
+    {"bgp-raw-update", bgp_ctrl_raw_update, schema_bgp, false},
+    {"ldp-adjacencies", ldp_ctrl_adjacencies, schema_ldp, true},
+    {"ldp-sessions", ldp_ctrl_sessions, schema_ldp, true},
+    {"ldp-database", ldb_ctrl_database, schema_ldp, true},
+    {"ldp-disconnect", ldp_ctrl_disconnect, schema_ldp, false},
+    {"ldp-teardown", ldp_ctrl_teardown, schema_ldp, true},
+    {"ldp-raw-update-list", ldp_ctrl_raw_update_list, schema_ldp, true},
+    {"ldp-raw-update", ldp_ctrl_raw_update, schema_ldp, false},
+    {"monkey-start", bbl_ctrl_monkey_start, schema_no_args, false},
+    {"monkey-stop", bbl_ctrl_monkey_stop, schema_no_args, false},
+    {"lag-info", bbl_lag_ctrl_info, schema_interface, true},
+    {"icmp-clients", bbl_icmp_client_ctrl, schema_icmp, true},
+    {"icmp-clients-start", bbl_icmp_client_ctrl_start, schema_icmp, false},
+    {"icmp-clients-stop", bbl_icmp_client_ctrl_stop, schema_icmp, false},
+    {"http-clients", bbl_http_client_ctrl, schema_other_args, true},
+    {"http-clients-start", bbl_http_client_ctrl_start, schema_other_args, false},
+    {"http-clients-stop", bbl_http_client_ctrl_stop, schema_other_args, false},
+    {"arp-clients", bbl_arp_client_ctrl, schema_other_args, true},
+    {"arp-clients-reset", bbl_arp_client_ctrl_reset, schema_other_args, false},
+    {"cfm-cc-start", bbl_cfm_ctrl_cc_start, schema_other_args, false},
+    {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_other_args, false},
+    {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_other_args, false},
+    {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_other_args, false},
+    {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_session_id, true},
+    {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_session_id, true},
+    {"session-update", bbl_session_ctrl_update, schema_other_args, false},
+    {"pcap-start", pcapng_ctrl_start, schema_file, false},
     {"pcap-stop", pcapng_ctrl_stop, schema_no_args, false},
-    {"dhcp-start", bbl_dhcp_ctrl_start, schema_all_args, false},
-    {"dhcp-stop", bbl_dhcp_ctrl_stop, schema_all_args, false},
-    {"dhcp-release", bbl_dhcp_ctrl_release, schema_all_args, false},
-    /* DEPRECATED */
-    {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_all_args, true},
-    {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_all_args, true},
-    {"stream-traffic-enabled", bbl_stream_ctrl_start, schema_all_args, true},
-    {"stream-traffic-start", bbl_stream_ctrl_start, schema_all_args, true},
-    {"stream-traffic-disabled", bbl_stream_ctrl_stop, schema_all_args, true},
-    {"stream-traffic-stop", bbl_stream_ctrl_stop, schema_all_args, true},
+    {"dhcp-start", bbl_dhcp_ctrl_start, schema_dhcp, false},
+    {"dhcp-stop", bbl_dhcp_ctrl_stop, schema_dhcp, false},
+    {"dhcp-release", bbl_dhcp_ctrl_release, schema_dhcp, false},
+    /* DEPRECATED/HIDDERN COMMANDS */
+    {"commands", bbl_ctrl_commands, schema_no_args, true},
+    {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_session_direction, true},
+    {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_session_direction, true},
+    {"stream-traffic-enabled", bbl_stream_ctrl_start, schema_stream, true},
+    {"stream-traffic-start", bbl_stream_ctrl_start, schema_stream, true},
+    {"stream-traffic-disabled", bbl_stream_ctrl_stop, schema_stream, true},
+    {"stream-traffic-stop", bbl_stream_ctrl_stop, schema_stream, true},
     /* END */
     {NULL, NULL, NULL, false},
 };
+
+int
+bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
+{
+    int result = 0;
+    json_t *jobj;
+    json_t *jobj_c_array = json_array();
+    json_t *jobj_a_array = json_array();
+    const char **schema;
+
+    int i = 0;
+    int i2;
+    while(actions[i].name != NULL && strcmp(actions[i].name, "commands") != 0) {
+        schema = actions[i].schema;
+        jobj_a_array = json_array();
+        i2 = 0;
+        while(schema[i2] != NULL) {
+            json_array_append_new(jobj_a_array, json_string(schema[i2++]));
+        }
+        jobj = json_pack("{ss* so*}", 
+            "command", actions[i].name,
+            "arguments", jobj_a_array
+        );
+        if(jobj) {
+            json_array_append_new(jobj_c_array, jobj);
+        }
+        i++;
+    }
+    json_t *root = json_pack("{ss si so*}",
+        "status", "ok",
+        "code", 200,
+        "commands", jobj_c_array);
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+    return result;
+}
 
 static void
 bbl_ctrl_socket_main(bbl_ctrl_thread_s *ctrl)
