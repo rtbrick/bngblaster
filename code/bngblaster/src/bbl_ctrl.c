@@ -30,15 +30,6 @@
 extern volatile bool g_monkey;
 
 const char *schema_no_args[] = { NULL };
-const char *schema_other_args[] = {
-    "interface", "outer-vlan", "inner-vlan",
-    "session-id", "session-group-id", "direction", "reconnect-delay", 
-    "flow-id", "id", "name", "file", "reset", "pps",
-    "group", "group-iter", "group-count", "source1", "source2", "source3",
-    "username", "password", "agent-remote-id", "agent-circuit-id",
-    "network-interface", "ipv6-link-local",
-    NULL
-};
 const char *schema_file[] = {
     "file", NULL
 };
@@ -46,6 +37,9 @@ const char *schema_interface[] = {
     "interface", NULL
 };
 const char *schema_session_id[] = {
+    "session-id", NULL
+};
+const char *schema_session_group_id[] = {
     "session-id", "session-group-id", NULL
 };
 const char *schema_session_terminate[] = {
@@ -54,14 +48,33 @@ const char *schema_session_terminate[] = {
 const char *schema_session_direction[] = {
     "session-id", "session-group-id", "direction", NULL
 };
-const char *schema_stream[] = {
-    "interface", "outer-vlan", "inner-vlan",
-    "session-id", "session-group-id", "direction",
-    "flow-id", "name", "pps", "tcp-flags", "debug", "detail",
-    "verified-only", "bidirectional-verified-only",
-    "network-interface",
-    "flows", "flow-id-min", "flow-id-max",
+const char *schema_session_update[] = {
+    "session-id", "username", "password", 
+    "agent-remote-id", "agent-circuit-id", "ipv6-link-local"
     NULL
+};
+const char *schema_session_summary[] = {
+    "session-id", "sessions", "session-id-min", "session-id-max",
+    NULL
+};
+const char *schema_stream_info[] = {
+    "flow-id", "debug", NULL
+};
+const char *schema_stream_summary[] = {
+    "session-group-id",
+    "flows", "flow-id-min", "flow-id-max",
+    "name", "interface", "direction",
+    NULL
+};
+const char *schema_stream_start_stop[] = {
+    "flow-id", "session-id", "session-group-id",
+    "flows", "flow-id-min", "flow-id-max",
+    "name", "interface", "direction",
+    "verified-only", "bidirectional-verified-only",
+    NULL
+};
+const char *schema_stream_update[] = {
+    "flow-id", "tcp-flags", "pps", NULL
 };
 const char *schema_bgp[] = {
     "local-ipv4-address", "peer-ipv4-address",
@@ -97,6 +110,14 @@ const char *schema_icmp[] = {
 };
 const char *schema_dhcp[] = {
     "session-id", "session-group-id", "keep-address", NULL
+};
+const char *schema_cfm[] = {
+    "session-id", "network-interface", NULL
+};
+const char *schema_igmp[] = {
+    "session-id", "group", "group-iter", "group-count", 
+    "source1", "source2", "source3", "reset", 
+    NULL
 };
 
 
@@ -257,21 +278,21 @@ static const struct action actions[] = {
     {"terminate", bbl_ctrl_terminate, schema_session_terminate, false},
     {"traffic-start", bbl_ctrl_traffic_start, schema_no_args, false},
     {"traffic-stop", bbl_ctrl_traffic_stop, schema_no_args, false},
-    {"stream-start", bbl_stream_ctrl_start, schema_stream, true},
-    {"stream-stop", bbl_stream_ctrl_stop, schema_stream, true},
-    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_stream, true},
-    {"stream-update", bbl_stream_ctrl_update, schema_stream, true},
+    {"stream-start", bbl_stream_ctrl_start, schema_stream_start_stop, true},
+    {"stream-stop", bbl_stream_ctrl_stop, schema_stream_start_stop, true},
+    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_stream_start_stop, true},
+    {"stream-update", bbl_stream_ctrl_update, schema_stream_update, true},
     {"session-traffic-start", bbl_session_ctrl_traffic_start, schema_session_direction, true},
     {"session-traffic-stop", bbl_session_ctrl_traffic_stop, schema_session_direction, true},
     {"multicast-traffic-start", bbl_ctrl_multicast_traffic_start, schema_no_args, false},
     {"multicast-traffic-stop", bbl_ctrl_multicast_traffic_stop, schema_no_args, false},
-    {"stream-info", bbl_stream_ctrl_info, schema_other_args, true},
-    {"stream-stats", bbl_stream_ctrl_stats, schema_other_args, true},
-    {"stream-reset", bbl_stream_ctrl_reset, schema_other_args, false},
-    {"stream-summary", bbl_stream_ctrl_summary, schema_other_args, true},
+    {"stream-info", bbl_stream_ctrl_info, schema_stream_info, true},
+    {"stream-stats", bbl_stream_ctrl_stats, schema_no_args, true},
+    {"stream-reset", bbl_stream_ctrl_reset, schema_no_args, false},
+    {"stream-summary", bbl_stream_ctrl_summary, schema_stream_summary, true},
     {"streams-pending", bbl_stream_ctrl_pending, schema_no_args, true},
-    {"session-traffic", bbl_session_ctrl_traffic_stats, schema_other_args, true},
-    {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_other_args, false},
+    {"session-traffic", bbl_session_ctrl_traffic_stats, schema_no_args, true},
+    {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_session_group_id, false},
     {"interfaces", bbl_interface_ctrl, schema_no_args, true},
     {"access-interfaces", bbl_access_ctrl_interfaces, schema_no_args, true},
     {"network-interfaces", bbl_network_ctrl_interfaces, schema_no_args, true},
@@ -281,28 +302,29 @@ static const struct action actions[] = {
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
     {"session-info", bbl_session_ctrl_info, schema_session_id, true},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
-    {"session-start", bbl_session_ctrl_start, schema_session_id, false},
-    {"session-stop", bbl_session_ctrl_stop, schema_session_id, false},
+    {"session-start", bbl_session_ctrl_start, schema_session_group_id, false},
+    {"session-stop", bbl_session_ctrl_stop, schema_session_group_id, false},
     {"session-restart", bbl_session_ctrl_restart, schema_session_terminate, false},
     {"session-streams", bbl_stream_ctrl_session, schema_session_id, true},
-    {"igmp-join", bbl_igmp_ctrl_join, schema_other_args, false},
-    {"igmp-join-iter", bbl_igmp_ctrl_join_iter, schema_other_args, false},
-    {"igmp-leave", bbl_igmp_ctrl_leave, schema_other_args, false},
-    {"igmp-leave-all", bbl_igmp_ctrl_leave_all, schema_other_args, false},
-    {"igmp-info", bbl_igmp_ctrl_info, schema_other_args, true},
-    {"zapping-start", bbl_igmp_ctrl_zapping_start, schema_other_args, true},
-    {"zapping-stop", bbl_igmp_ctrl_zapping_stop, schema_other_args, false},
-    {"zapping-stats", bbl_igmp_ctrl_zapping_stats, schema_other_args, true},
+    {"session-summary", bbl_session_ctrl_summary, schema_session_summary, true},
+    {"igmp-join", bbl_igmp_ctrl_join, schema_igmp, false},
+    {"igmp-join-iter", bbl_igmp_ctrl_join_iter, schema_igmp, false},
+    {"igmp-leave", bbl_igmp_ctrl_leave, schema_igmp, false},
+    {"igmp-leave-all", bbl_igmp_ctrl_leave_all, schema_igmp, false},
+    {"igmp-info", bbl_igmp_ctrl_info, schema_igmp, true},
+    {"zapping-start", bbl_igmp_ctrl_zapping_start, schema_igmp, true},
+    {"zapping-stop", bbl_igmp_ctrl_zapping_stop, schema_igmp, false},
+    {"zapping-stats", bbl_igmp_ctrl_zapping_stats, schema_igmp, true},
     {"li-flows", bbl_li_ctrl_flows, schema_no_args, true},
-    {"l2tp-tunnels", bbl_l2tp_ctrl_tunnels, schema_other_args, true},
-    {"l2tp-sessions", bbl_l2tp_ctrl_sessions, schema_other_args, true},
-    {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_other_args, false},
-    {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_other_args, false},
-    {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_other_args, false},
-    {"ipcp-open", bbl_session_ctrl_ipcp_open, schema_session_id, false},
-    {"ipcp-close", bbl_session_ctrl_ipcp_close, schema_session_id, false},
-    {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_session_id, false},
-    {"ip6cp-close", bbl_session_ctrl_ip6cp_close, schema_session_id, false},
+    {"l2tp-tunnels", bbl_l2tp_ctrl_tunnels, schema_l2tp, true},
+    {"l2tp-sessions", bbl_l2tp_ctrl_sessions, schema_l2tp, true},
+    {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_l2tp, false},
+    {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_l2tp, false},
+    {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_l2tp, false},
+    {"ipcp-open", bbl_session_ctrl_ipcp_open, schema_session_group_id, false},
+    {"ipcp-close", bbl_session_ctrl_ipcp_close, schema_session_group_id, false},
+    {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_session_group_id, false},
+    {"ip6cp-close", bbl_session_ctrl_ip6cp_close, schema_session_group_id, false},
     {"isis-adjacencies", isis_ctrl_adjacencies, schema_isis, true},
     {"isis-database", isis_ctrl_database, schema_isis, true},
     {"isis-load-mrt", isis_ctrl_load_mrt, schema_isis, false},
@@ -336,18 +358,18 @@ static const struct action actions[] = {
     {"icmp-clients", bbl_icmp_client_ctrl, schema_icmp, true},
     {"icmp-clients-start", bbl_icmp_client_ctrl_start, schema_icmp, false},
     {"icmp-clients-stop", bbl_icmp_client_ctrl_stop, schema_icmp, false},
-    {"http-clients", bbl_http_client_ctrl, schema_other_args, true},
-    {"http-clients-start", bbl_http_client_ctrl_start, schema_other_args, false},
-    {"http-clients-stop", bbl_http_client_ctrl_stop, schema_other_args, false},
-    {"arp-clients", bbl_arp_client_ctrl, schema_other_args, true},
-    {"arp-clients-reset", bbl_arp_client_ctrl_reset, schema_other_args, false},
-    {"cfm-cc-start", bbl_cfm_ctrl_cc_start, schema_other_args, false},
-    {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_other_args, false},
-    {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_other_args, false},
-    {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_other_args, false},
-    {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_session_id, true},
-    {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_session_id, true},
-    {"session-update", bbl_session_ctrl_update, schema_other_args, false},
+    {"http-clients", bbl_http_client_ctrl, schema_session_id, true},
+    {"http-clients-start", bbl_http_client_ctrl_start, schema_session_id, false},
+    {"http-clients-stop", bbl_http_client_ctrl_stop, schema_session_id, false},
+    {"arp-clients", bbl_arp_client_ctrl, schema_session_id, true},
+    {"arp-clients-reset", bbl_arp_client_ctrl_reset, schema_session_id, false},
+    {"cfm-cc-start", bbl_cfm_ctrl_cc_start, schema_cfm, false},
+    {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_cfm, false},
+    {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_cfm, false},
+    {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_cfm, false},
+    {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_session_group_id, true},
+    {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_session_group_id, true},
+    {"session-update", bbl_session_ctrl_update, schema_session_update, false},
     {"pcap-start", pcapng_ctrl_start, schema_file, false},
     {"pcap-stop", pcapng_ctrl_stop, schema_no_args, false},
     {"dhcp-start", bbl_dhcp_ctrl_start, schema_dhcp, false},
@@ -357,10 +379,10 @@ static const struct action actions[] = {
     {"commands", bbl_ctrl_commands, schema_no_args, true},
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_session_direction, true},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_session_direction, true},
-    {"stream-traffic-enabled", bbl_stream_ctrl_start, schema_stream, true},
-    {"stream-traffic-start", bbl_stream_ctrl_start, schema_stream, true},
-    {"stream-traffic-disabled", bbl_stream_ctrl_stop, schema_stream, true},
-    {"stream-traffic-stop", bbl_stream_ctrl_stop, schema_stream, true},
+    {"stream-traffic-enabled", bbl_stream_ctrl_start, schema_stream_start_stop, true},
+    {"stream-traffic-start", bbl_stream_ctrl_start, schema_stream_start_stop, true},
+    {"stream-traffic-disabled", bbl_stream_ctrl_stop, schema_stream_start_stop, true},
+    {"stream-traffic-stop", bbl_stream_ctrl_stop, schema_stream_start_stop, true},
     /* END */
     {NULL, NULL, NULL, false},
 };

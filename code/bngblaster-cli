@@ -39,36 +39,32 @@ Examples:
     sys.exit(1)
 
 
-def main():
-    """main function"""
+def build_request(argv):
     request = {}
-    if(len(sys.argv)) < 3:
-        usage()
-
-    socket_path = sys.argv[1]
-
-    request["command"] = sys.argv[2]
-    if(len(sys.argv)) > 4:
+    request["command"] = argv[2]
+    if(len(argv)) > 4:
         request["arguments"] = {}
-        for i in range(3, len(sys.argv), 2):
-            arg = sys.argv[i+1]
+        for i in range(3, len(argv), 2):
+            arg = argv[i+1]
             try:
                 # integer arguments like "session-id 1"
-                request["arguments"][sys.argv[i]] = int(arg)
+                request["arguments"][argv[i]] = int(arg)
             except:
                 try:
                     # list arguments like "sessions [1,2]""
-                    request["arguments"][sys.argv[i]] = ast.literal_eval(arg)
+                    request["arguments"][argv[i]] = ast.literal_eval(arg)
                 except:
                     # string arguments like "group 239.0.0.1"
-                    request["arguments"][sys.argv[i]] = arg
-        #print(json.dumps(request).encode('utf-8'))
+                    request["arguments"][argv[i]] = arg
+    return request
+
+
+def send_request(socket_path, request):
     if os.path.exists(socket_path):
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             client.connect(socket_path)
             client.send(json.dumps(request).encode('utf-8'))
-
             data = ""
             while True:
                 junk = client.recv(1024)
@@ -76,13 +72,33 @@ def main():
                     data += junk.decode('utf-8')
                 else:
                     break
-            print(json.dumps(json.loads(data), indent=4))
+            return json.loads(data)
         except Exception as e:
             error(e)
         finally:
             client.close()
     else:
         error("socket %s not found" % socket_path)
+
+
+def main():
+    """main function"""
+    if(len(sys.argv)) < 3:
+        usage()
+    if sys.argv[2] == "help":
+        usage()
+
+    socket_path = sys.argv[1]
+    request = build_request(sys.argv)
+    #print(json.dumps(request).encode('utf-8'))
+    data = send_request(socket_path, request)
+
+    if sys.argv[2] == "commands":
+        for cmd in data["commands"]: 
+            print("%s %s" % (cmd["command"], str(cmd["arguments"]).replace("', '", "|").replace("'", "")))
+    else:
+        print(json.dumps(data, indent=4))
+
 
 if __name__ == "__main__":
     main()
