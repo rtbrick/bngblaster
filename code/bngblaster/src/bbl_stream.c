@@ -2581,7 +2581,7 @@ bbl_stream_summary_json(bbl_stream_s *stream)
 {
     json_t *jobj;
 
-    jobj = json_pack("{si ss* ss ss ss sb sb sb ss*}",
+    jobj = json_pack("{si ss* ss ss ss sb sb sb ss* sI sI sI}",
         "flow-id", stream->flow_id,
         "name", stream->config->name,
         "type", stream_type_string(stream),
@@ -2590,7 +2590,10 @@ bbl_stream_summary_json(bbl_stream_s *stream)
         "enabled", stream->enabled,
         "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
         "verified", stream->verified,
-        "interface", stream->tx_interface->name);
+        "interface", stream->tx_interface->name,
+        "rx-loss", stream->rx_loss - stream->reset_loss,
+        "rx-pps", stream->rate_packets_rx.avg,
+        "tx-pps", stream->rate_packets_tx.avg);
     if(jobj && stream->session) {
         json_object_set_new(jobj, "session-id", json_integer(stream->session->session_id));
         json_object_set_new(jobj, "session-traffic", json_boolean(stream->session_traffic));
@@ -2864,12 +2867,6 @@ bbl_stream_ctrl_summary_filter(int fd, uint32_t session_id, json_t *arguments)
     json_unpack(arguments, "{s:s}", "name", &name);
     json_unpack(arguments, "{s:s}", "interface", &interface);
 
-    if(json_unpack(arguments, "{s:i}", "flow-id-start", &session_group_id) == 0) {
-        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
-            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
-        }
-    }
-
     if(session_id) {
         session = bbl_session_get(session_id);
         if(!session) {
@@ -2937,7 +2934,7 @@ bbl_stream_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
     flows = json_object_get(arguments, "flows");
     if(flows) {
        if(!json_is_array(flows)) {
-            return bbl_ctrl_status(fd, "error", 400, "flows must be of type array e.g. [1, 2, 3]");
+            return bbl_ctrl_status(fd, "error", 400, "flows must be of type array e.g. [1,2,3]");
        }
     } else {
         if(json_unpack(arguments, "{s:i}", "flow-id-min", &flow_id_min) != 0) {
