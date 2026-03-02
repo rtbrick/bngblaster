@@ -1496,6 +1496,57 @@ bbl_session_json(bbl_session_s *session)
     return root;
 }
 
+json_t *
+bbl_session_summary_json(bbl_session_s *session)
+{
+    json_t *root = NULL;
+
+    if(!session) {
+        return NULL;
+    }
+
+    if(session->access_type == ACCESS_TYPE_PPPOE) {
+        root = json_pack("{ss si ss* ss* si ss* si si ss* ss* ss* ss* ss* ss* ss* ss* sI sI}",
+            "type", "pppoe",
+            "session-id", session->session_id,
+            "session-state", session_state_string(session->session_state),
+            "session-substate", bbl_session_substate_pppoe(session),
+            "flapped", session->stats.flapped,
+            "interface", session->access_interface->name,
+            "outer-vlan", session->vlan_key.outer_vlan_id,
+            "inner-vlan", session->vlan_key.inner_vlan_id,
+            "mac", format_mac_address(session->client_mac),
+            "username", session->username,
+            "agent-circuit-id", session->agent_circuit_id,
+            "agent-remote-id", session->agent_remote_id,
+            "lcp-state", ppp_state_string(session->lcp_state),
+            "ipcp-state", ppp_state_string(session->ipcp_state),
+            "ip6cp-state", ppp_state_string(session->ip6cp_state),
+            "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
+            "tx-packets", session->stats.packets_tx,
+            "rx-packets", session->stats.packets_rx);
+    } else {
+        root = json_pack("{ss si ss* ss* si ss* si si ss* ss* ss* ss* ss* sI sI}",
+            "type", "ipoe",
+            "session-id", session->session_id,
+            "session-state", session_state_string(session->session_state),
+            "session-substate", bbl_session_substate_ipoe(session),
+            "flapped", session->stats.flapped,
+            "interface", session->access_interface->name,
+            "outer-vlan", session->vlan_key.outer_vlan_id,
+            "inner-vlan", session->vlan_key.inner_vlan_id,
+            "mac", format_mac_address(session->client_mac),
+            "agent-circuit-id", session->agent_circuit_id,
+            "agent-remote-id", session->agent_remote_id,
+            "dhcp-state", dhcp_state_string(session->dhcp_state),
+            "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
+            "tx-packets", session->stats.packets_tx,
+            "rx-packets", session->stats.packets_rx);
+    }
+    return root;
+}
+
+
 /* Control Socket Commands */
 
 int
@@ -1929,7 +1980,7 @@ bbl_session_ctrl_traffic_stop(int fd, uint32_t session_id, json_t *arguments)
 }
 
 int
-bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id, json_t *arguments)
 {
     bbl_session_s *session;
     uint32_t i;
@@ -1942,14 +1993,9 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused
         }
     }
 
-    /* Iterate over all sessions */
-    for(i = 0; i < g_ctx->sessions; i++) {
-        session = &g_ctx->session_list[i];
+    if(session_id) {
+        session = bbl_session_get(session_id);
         if(session) {
-            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
-                /* Skip sessions with wrong session-group-id if present. */
-                continue;
-            }
             if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
                 g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
             }
@@ -1960,8 +2006,31 @@ bbl_session_ctrl_traffic_reset(int fd, uint32_t session_id __attribute__((unused
             bbl_stream_reset(session->session_traffic.ipv6_down);
             bbl_stream_reset(session->session_traffic.ipv6pd_up);
             bbl_stream_reset(session->session_traffic.ipv6pd_down);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
-    }   
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session) {
+                if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                    /* Skip sessions with wrong session-group-id if present. */
+                    continue;
+                }
+                if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
+                    g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
+                }
+                session->session_traffic.flows_verified = 0;
+                bbl_stream_reset(session->session_traffic.ipv4_up);
+                bbl_stream_reset(session->session_traffic.ipv4_down);
+                bbl_stream_reset(session->session_traffic.ipv6_up);
+                bbl_stream_reset(session->session_traffic.ipv6_down);
+                bbl_stream_reset(session->session_traffic.ipv6pd_up);
+                bbl_stream_reset(session->session_traffic.ipv6pd_down);
+            }
+        }
+    }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
@@ -2022,4 +2091,86 @@ bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments)
 
     session->version++;
     return bbl_ctrl_status(fd, "ok", 200, NULL);
+}
+
+int
+bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
+{
+    int result = 0;
+
+    int session_id_min = 0;
+    int session_id_max = 0;
+    int size, i;
+
+    json_t *jobj, *jobj_array, *sessions;
+    bbl_session_s *session;
+
+    sessions = json_object_get(arguments, "sessions");
+    if(sessions) {
+       if(!json_is_array(sessions)) {
+            return bbl_ctrl_status(fd, "error", 400, "sessions must be of type array e.g. [1,2,3]");
+       }
+    } else {
+        if(json_unpack(arguments, "{s:i}", "session-id-min", &session_id_min) != 0) {
+            return bbl_stream_ctrl_summary_filter(fd, session_id, arguments);
+        }
+        if(json_unpack(arguments, "{s:i}", "session-id-max", &session_id_max) != 0) {
+            return bbl_ctrl_status(fd, "error", 400, "session-id-max missing");
+        }
+        if(session_id_min > session_id_max) {
+            return bbl_ctrl_status(fd, "error", 400, "session-id-min > max");
+        }
+    }
+
+    jobj_array = json_array();
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            jobj = bbl_session_summary_json(session);
+            if(jobj) {
+                json_array_append_new(jobj_array, jobj);
+            }
+        }
+    }
+    if(sessions) {
+        size = json_array_size(sessions);
+        for (i = 0; i < size; i++) {
+            jobj = json_array_get(sessions, i);
+            if(json_is_number(jobj)) {
+                session = bbl_session_get(json_number_value(jobj));
+                if(session) {
+                    jobj = bbl_session_summary_json(session);
+                    if(jobj) {
+                        json_array_append_new(jobj_array, jobj);
+                    }
+                }
+            }
+        }
+    } else {
+        while(session_id_min <= session_id_max) {
+            session_id = session_id_min;
+            session = bbl_session_get(session_id);
+            if(session) {
+                jobj = bbl_session_summary_json(session);
+                if(jobj) {
+                    json_array_append_new(jobj_array, jobj);
+                }
+            }
+            session_id_min++;
+        }
+    }
+
+    json_t *root = json_pack("{ss si so*}",
+        "status", "ok",
+        "code", 200,
+        "session-summary", jobj_array);
+
+    if(root) {
+        result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(jobj_array);
+    }
+    return result;
 }
