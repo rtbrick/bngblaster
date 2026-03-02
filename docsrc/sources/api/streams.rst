@@ -6,7 +6,8 @@
 | **stream-info**                   | | Display stream/flow information.                                     |
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
-|                                   | | ``flow-id``                                                          |
+|                                   | | ``flow-id`` Mandatory                                                |
+|                                   | | ``debug``                                                            |
 +-----------------------------------+------------------------------------------------------------------------+
 | **stream-summary**                | | Display stream/flow summary information.                             |
 |                                   | |                                                                      |
@@ -15,6 +16,9 @@
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
+|                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``).                          |
+|                                   | | ``flow-id-min`` flow range                                           |
+|                                   | | ``flow-id-max``                                                      |
 +-----------------------------------+------------------------------------------------------------------------+
 | **stream-reset**                  | | Reset all traffic streams.                                           |
 +-----------------------------------+------------------------------------------------------------------------+
@@ -40,7 +44,7 @@
 | **stream-update**                 | | Update stream/flow configuration.                                    |
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
-|                                   | | ``flow-id``                                                          |
+|                                   | | ``flow-id`` Mandatory                                                |
 |                                   | | ``tcp-flags`` [ack, fin, fin-ack, syn, syn-ack, rst, push, push-ack] |
 |                                   | | ``pps``                                                              |
 +-----------------------------------+------------------------------------------------------------------------+
