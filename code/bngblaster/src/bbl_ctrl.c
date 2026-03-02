@@ -50,7 +50,7 @@ const char *schema_session_direction[] = {
 };
 const char *schema_session_update[] = {
     "session-id", "username", "password", 
-    "agent-remote-id", "agent-circuit-id", "ipv6-link-local"
+    "agent-remote-id", "agent-circuit-id", "ipv6-link-local",
     NULL
 };
 const char *schema_session_summary[] = {

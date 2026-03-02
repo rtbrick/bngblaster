@@ -2112,7 +2112,7 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
        }
     } else {
         if(json_unpack(arguments, "{s:i}", "session-id-min", &session_id_min) != 0) {
-            return bbl_stream_ctrl_summary_filter(fd, session_id, arguments);
+            return bbl_ctrl_status(fd, "error", 400, "sessions or session-id-min/max required");
         }
         if(json_unpack(arguments, "{s:i}", "session-id-max", &session_id_max) != 0) {
             return bbl_ctrl_status(fd, "error", 400, "session-id-max missing");
