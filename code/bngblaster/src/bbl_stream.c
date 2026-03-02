@@ -251,9 +251,12 @@ bbl_stream_encode_a10nsp_mpls(bbl_a10nsp_interface_s *interface,
     if(interface->tx_label) {
         mpls_transport.label = interface->tx_label;
         mpls_transport.ttl = 64;
+        mpls_transport.exp = stream->config->tx_mpls1_exp;
+        mpls_service.exp = stream->config->tx_mpls2_exp;
         mpls_transport.next = &mpls_service;
         eth_mpls.mpls = &mpls_transport;
     } else {
+        mpls_service.exp = stream->config->tx_mpls1_exp;
         eth_mpls.mpls = &mpls_service;
     }
     if(encode_ethernet(stream->tx_buf, &tx_len, &eth_mpls) != PROTOCOL_SUCCESS) {
