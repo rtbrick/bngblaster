@@ -452,6 +452,8 @@ bbl_tx_encode_packet_icmpv6_ns(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
 
     memcpy((uint8_t*)&ipv6_dst, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
     ((uint8_t*)ipv6_dst)[13] = ((uint8_t*)session->icmpv6_ns_request)[13];
@@ -1385,6 +1387,8 @@ bbl_tx_encode_packet_arp_request(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_ARP;
     eth.next = &arp;
     arp.code = ARP_REQUEST;
@@ -1421,6 +1425,8 @@ bbl_tx_encode_packet_arp_reply(bbl_session_s *session)
     eth.vlan_outer = session->vlan_key.outer_vlan_id;
     eth.vlan_inner = session->vlan_key.inner_vlan_id;
     eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = g_ctx->config.ipoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
     eth.type = ETH_TYPE_ARP;
     eth.next = &arp;
     arp.code = ARP_REPLY;
