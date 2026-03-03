@@ -27,6 +27,7 @@
 |                                   | | Default: 10                                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vlan-priority**                 | | VLAN PBIT for all DHCPv6 control traffic.                          |
+|                                   | | Overrides **ipoe.vlan-priority** for DHCPv6 packets only.          |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **access-line**                   | | Add access-line attributes like Agent-Remote/Circuit-Id.           |
@@ -39,4 +40,3 @@
 |                                   | | Agent-Circuit-Id should be used with LDRA enabled only.            |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-
