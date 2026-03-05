@@ -54,27 +54,29 @@ const char *schema_session_update[] = {
     NULL
 };
 const char *schema_session_summary[] = {
-    "session-id", "sessions", "session-id-min", "session-id-max",
+    "session-id", "session-group-id", 
+    "sessions", "session-id-min", "session-id-max",
     NULL
 };
 const char *schema_stream_info[] = {
     "flow-id", "debug", NULL
 };
-const char *schema_stream_summary[] = {
-    "session-group-id",
-    "flows", "flow-id-min", "flow-id-max",
-    "name", "interface", "direction",
-    NULL
-};
-const char *schema_stream_start_stop[] = {
-    "flow-id", "session-id", "session-group-id",
-    "flows", "flow-id-min", "flow-id-max",
+const char *schema_stream_args[] = {
+    "session-id", "session-group-id",
+    "flows", "flow-id", "flow-id-min", "flow-id-max",
     "name", "interface", "direction",
     "verified-only", "bidirectional-verified-only",
+    "pending-only",
     NULL
 };
 const char *schema_stream_update[] = {
-    "flow-id", "tcp-flags", "pps", NULL
+    "session-id", "session-group-id",
+    "flows", "flow-id", "flow-id-min", "flow-id-max",
+    "name", "interface", "direction",
+    "verified-only", "bidirectional-verified-only",
+    "pending-only",
+    "tcp-flags", "pps", 
+    NULL
 };
 const char *schema_bgp[] = {
     "local-ipv4-address", "peer-ipv4-address",
@@ -278,9 +280,9 @@ static const struct action actions[] = {
     {"terminate", bbl_ctrl_terminate, schema_session_terminate, false},
     {"traffic-start", bbl_ctrl_traffic_start, schema_no_args, false},
     {"traffic-stop", bbl_ctrl_traffic_stop, schema_no_args, false},
-    {"stream-start", bbl_stream_ctrl_start, schema_stream_start_stop, true},
-    {"stream-stop", bbl_stream_ctrl_stop, schema_stream_start_stop, true},
-    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_stream_start_stop, true},
+    {"stream-start", bbl_stream_ctrl_start, schema_stream_args, true},
+    {"stream-stop", bbl_stream_ctrl_stop, schema_stream_args, true},
+    {"stream-stop-verified", bbl_stream_ctrl_stop_verified, schema_stream_args, true},
     {"stream-update", bbl_stream_ctrl_update, schema_stream_update, true},
     {"session-traffic-start", bbl_session_ctrl_traffic_start, schema_session_direction, true},
     {"session-traffic-stop", bbl_session_ctrl_traffic_stop, schema_session_direction, true},
@@ -289,7 +291,7 @@ static const struct action actions[] = {
     {"stream-info", bbl_stream_ctrl_info, schema_stream_info, true},
     {"stream-stats", bbl_stream_ctrl_stats, schema_no_args, true},
     {"stream-reset", bbl_stream_ctrl_reset, schema_no_args, false},
-    {"stream-summary", bbl_stream_ctrl_summary, schema_stream_summary, true},
+    {"stream-summary", bbl_stream_ctrl_summary, schema_stream_args, true},
     {"streams-pending", bbl_stream_ctrl_pending, schema_no_args, true},
     {"session-traffic", bbl_session_ctrl_traffic_stats, schema_no_args, true},
     {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_session_group_id, false},
@@ -379,10 +381,10 @@ static const struct action actions[] = {
     {"commands", bbl_ctrl_commands, schema_no_args, true},
     {"session-traffic-enabled", bbl_session_ctrl_traffic_start, schema_session_direction, true},
     {"session-traffic-disabled", bbl_session_ctrl_traffic_stop, schema_session_direction, true},
-    {"stream-traffic-enabled", bbl_stream_ctrl_start, schema_stream_start_stop, true},
-    {"stream-traffic-start", bbl_stream_ctrl_start, schema_stream_start_stop, true},
-    {"stream-traffic-disabled", bbl_stream_ctrl_stop, schema_stream_start_stop, true},
-    {"stream-traffic-stop", bbl_stream_ctrl_stop, schema_stream_start_stop, true},
+    {"stream-traffic-enabled", bbl_stream_ctrl_start, schema_stream_args, true},
+    {"stream-traffic-start", bbl_stream_ctrl_start, schema_stream_args, true},
+    {"stream-traffic-disabled", bbl_stream_ctrl_stop, schema_stream_args, true},
+    {"stream-traffic-stop", bbl_stream_ctrl_stop, schema_stream_args, true},
     /* END */
     {NULL, NULL, NULL, false},
 };

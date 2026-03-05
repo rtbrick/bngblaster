@@ -12,13 +12,18 @@
 | **stream-summary**                | | Display stream/flow summary information.                             |
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
+|                                   | | ``flow-id``                                                          |
+|                                   | | ``flow-id-min`` flow range                                           |
+|                                   | | ``flow-id-max``                                                      |
+|                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
+|                                   | | ``session-id``                                                       |
 |                                   | | ``session-group-id``                                                 |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
-|                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``).                          |
-|                                   | | ``flow-id-min`` flow range                                           |
-|                                   | | ``flow-id-max``                                                      |
+|                                   | | ``verified-only`` streams verified                                   |
+|                                   | | ``bidirectional-verified-only`` streams verified in both directions  |
+|                                   | | ``pending-only`` streams not verified                                |
 +-----------------------------------+------------------------------------------------------------------------+
 | **stream-reset**                  | | Reset all traffic streams.                                           |
 +-----------------------------------+------------------------------------------------------------------------+
@@ -33,18 +38,35 @@
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
 |                                   | | ``flow-id``                                                          |
+|                                   | | ``flow-id-min`` flow range                                           |
+|                                   | | ``flow-id-max``                                                      |
+|                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id`` (ignored if session-id is present)              |
+|                                   | | ``session-group-id``                                                 |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
+|                                   | | ``verified-only`` streams verified                                   |
+|                                   | | ``bidirectional-verified-only`` streams verified in both directions  |
+|                                   | | ``pending-only`` streams not verified                                |
 +-----------------------------------+------------------------------------------------------------------------+
 | **streams-pending**               | | List flow-id of all pending (not verified) traffic streams.          |
 +-----------------------------------+------------------------------------------------------------------------+
 | **stream-update**                 | | Update stream/flow configuration.                                    |
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
-|                                   | | ``flow-id`` Mandatory                                                |
+|                                   | | ``flow-id``                                                          |
+|                                   | | ``flow-id-min`` flow range                                           |
+|                                   | | ``flow-id-max``                                                      |
+|                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
+|                                   | | ``session-id``                                                       |
+|                                   | | ``session-group-id``                                                 |
+|                                   | | ``name`` stream name                                                 |
+|                                   | | ``interface`` TX interface name                                      |
+|                                   | | ``direction`` [both(default), upstream, downstream]                  |
+|                                   | | ``verified-only`` streams verified                                   |
+|                                   | | ``bidirectional-verified-only`` streams verified in both directions  |
+|                                   | | ``pending-only`` streams not verified                                |
 |                                   | | ``tcp-flags`` [ack, fin, fin-ack, syn, syn-ack, rst, push, push-ack] |
 |                                   | | ``pps``                                                              |
 +-----------------------------------+------------------------------------------------------------------------+

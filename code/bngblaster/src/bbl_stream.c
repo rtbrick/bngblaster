@@ -1853,8 +1853,12 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         }
         stream_up->tx_access_interface = access_interface;
         stream_up->tx_interface = access_interface->interface;
-        stream_up->session_next = session->streams.head;
-        session->streams.head = stream_up;
+        if(session->streams.tail) {
+            session->streams.tail->session_next = stream_up;
+        } else {
+            session->streams.head = stream_up;
+        }
+        session->streams.tail = stream_up;
         bbl_stream_add(stream_up);
         if(stream_up->session_traffic) {
             g_ctx->stats.session_traffic_flows++;
@@ -1898,8 +1902,12 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             stream_down->tcp = true;
         }
         stream_down->session_traffic = config->session_traffic;
-        stream_down->session_next = session->streams.head;
-        session->streams.head = stream_down;
+        if(session->streams.tail) {
+            session->streams.tail->session_next = stream_down;
+        } else {
+            session->streams.head = stream_down;
+        }
+        session->streams.tail = stream_down;
         if(network_interface) {
             stream_down->tx_network_interface = network_interface;
             stream_down->tx_interface = network_interface->interface;
@@ -2479,106 +2487,6 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
     }
 }
 
-/**
- * This function enables or disabled all
- * streams except session-traffic and multicast 
- * of the given session, optionally 
- * filtered by name!
- * 
- * @param enabled true (start) / false (stop)
- * @param session session object
- * @param name optionally filter by name
- * @param direction optionally filter by direction
- * @param state optionally filter by state
- */
-static void
-bbl_stream_enable_session(bool enabled, bbl_session_s *session, 
-                          const char *name, uint8_t direction,
-                          stream_state_t state)
-{
-    bbl_stream_s *stream = session->streams.head;
-    while(stream) {
-        if(state == STREAM_STATE_VERIFIED || state == STREAM_STATE_BIVERIFIED) {
-            if((stream->verified == false) || 
-               (state == STREAM_STATE_BIVERIFIED && stream->reverse && stream->reverse->verified == false)) {
-                stream = stream->session_next; continue;
-            }
-        }
-        if(stream->session_traffic == false &&
-           stream->type != BBL_TYPE_MULTICAST && 
-           stream->direction & direction) {
-            if(name) {
-                if(strcmp(name, stream->config->name) == 0) {
-                    stream->enabled = enabled;
-                }
-            } else {
-                stream->enabled = enabled;
-            }
-        }
-        stream = stream->session_next;
-    }
-}
-
-/**
- * This function enables or disabled all
- * streams except session-traffic and multicast
- * optionally filtered by session-group-id 
- * and name! The session-group-id must be set to -1
- * to not filter based on session-group-id. If set
- * to 0 will match all streams belonging to 
- * session of the default session-group-id 0. 
- * 
- * @param enabled true (start) / false (stop)
- * @param session_group_id session-group-id
- * @param name optionally filter by name
- * @param direction optionally filter by direction
- * @param verified_only optionally match verified streams only
- * @param state optionally filter by state
- */
-static void
-bbl_streams_enable_filter(bool enabled, int session_group_id, 
-                          const char *name, const char *interface, uint8_t direction, 
-                          stream_state_t state)
-{
-    bbl_stream_s *stream = g_ctx->stream_head;
-    bbl_session_s *session;
-    uint32_t i;
-
-    if(session_group_id < 0) {
-        while(stream) {
-            if(state == STREAM_STATE_VERIFIED || state == STREAM_STATE_BIVERIFIED) {
-                if((stream->verified == false) || 
-                   (state == STREAM_STATE_BIVERIFIED && stream->reverse && stream->reverse->verified == false)) {
-                    stream = stream->next; continue;
-                }
-            }
-            if(stream->session_traffic == false &&
-               stream->type != BBL_TYPE_MULTICAST && 
-               stream->direction & direction) {
-                if(interface) {
-                    if(strcmp(interface, stream->tx_interface->name) != 0) {
-                        stream = stream->next; continue;
-                    }
-                }
-                if(name) {
-                    if(strcmp(name, stream->config->name) != 0) {
-                        stream = stream->next; continue;
-                    }
-                }
-                stream->enabled = enabled;
-            }
-            stream = stream->next;
-        }
-    } else {
-        for(i = 0; i < g_ctx->sessions; i++) {
-            session = &g_ctx->session_list[i];
-            if(session && session->session_group_id == session_group_id) {
-                bbl_stream_enable_session(enabled, session, name, direction, state);
-            }
-        }
-    }
-}
-
 static json_t *
 bbl_stream_summary_json(bbl_stream_s *stream)
 {
@@ -2775,16 +2683,155 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
 
 /* Control Socket Commands */
 
+/**
+ * bbl_stream_ctrl_args
+ *
+ * Parse common control command arguments used by stream commands 
+ * to select or filter streams.
+ */
+static int
+bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_args_s *args)
+{
+    const char *s = NULL;
+    int intv;
+
+    /* Init defaults */
+    args->session_group_id = -1;
+    args->flow_id_max = UINT64_MAX;
+    args->direction = BBL_DIRECTION_BOTH;
+
+    if(session_id) {
+        args->session = bbl_session_get(session_id);
+        if(!args->session) {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    }
+
+    if(json_unpack(arguments, "{s:i}", "flow-id", &intv) == 0) {
+        if(intv < 0) {
+            return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id");
+        }
+        args->flow_id = intv;
+        args->stream = bbl_stream_index_get(args->flow_id);
+        if(args->stream) return 0;
+        return bbl_ctrl_status(fd, "warning", 404, "stream not found");
+    }
+
+    args->flows = json_object_get(arguments, "flows");
+    if(args->flows) {
+        if(json_is_array(args->flows)) {
+            args->flows_array_len = json_array_size(args->flows);
+            return 0;
+        }
+        return bbl_ctrl_status(fd, "error", 400, "flows must be of type array e.g. [1,2,3]");
+    }
+    
+    if(json_unpack(arguments, "{s:i}", "flow-id-min", &intv) == 0) {
+        if(intv < 0) {
+            return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id-min");
+        }
+        args->flow_id_min = intv;
+    }
+
+    if(json_unpack(arguments, "{s:i}", "flow-id-max", &intv) == 0) {
+        if(intv < 0) {
+            return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id-max");
+        }
+        args->flow_id_max = intv;
+        if(args->flow_id_min > args->flow_id_max) {
+            return bbl_ctrl_status(fd, "warning", 400, "flow-id-min > max");
+        }
+    }
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &intv) == 0) {
+        if(intv < 0 || intv > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+        args->session_group_id = intv;
+    }
+
+    if(json_unpack(arguments, "{s:s}", "direction", &s) == 0) {
+        if(strcmp(s, "upstream") == 0) {
+            args->direction = BBL_DIRECTION_UP;
+        } else if(strcmp(s, "downstream") == 0) {
+            args->direction = BBL_DIRECTION_DOWN;
+        } else if(strcmp(s, "both") == 0) {
+            args->direction = BBL_DIRECTION_BOTH;
+        } else {
+            return bbl_ctrl_status(fd, "error", 400, "invalid direction");
+        }
+    } 
+
+    json_unpack(arguments, "{s:s}", "name", &args->name);
+    json_unpack(arguments, "{s:s}", "interface", &args->interface);
+
+    intv = 0;
+    json_unpack(arguments, "{s:b}", "verified-only", &intv);
+    if(intv) args->state = STREAM_STATE_VERIFIED;
+
+    intv = 0;
+    json_unpack(arguments, "{s:b}", "bidirectional-verified-only", &intv);
+    if(intv) args->state = STREAM_STATE_BIVERIFIED;
+
+    intv = 0;
+    json_unpack(arguments, "{s:b}", "pending-only", &intv);
+    if(intv) args->state = STREAM_STATE_PENDING;
+
+    return 1;
+}
+
+/**
+ * bbl_stream_ctrl_args_match
+ */
+static bool
+bbl_stream_ctrl_args_match(bbl_stream_s *stream, bbl_stream_args_s *args)
+{
+    if(stream->flow_id < args->flow_id_min ||
+       stream->flow_id > args->flow_id_max) {
+        return false;
+    }
+
+    if(args->session_group_id >= 0 && stream->session &&
+       stream->session->session_group_id != args->session_group_id) {
+        return false;
+    }
+    if(args->interface && strcmp(args->interface, stream->tx_interface->name) != 0) {
+        return false;
+    }
+    if(args->name && strcmp(args->name, stream->config->name) != 0) {
+        return false;
+    }
+    if(!(stream->direction & args->direction)) {
+        return false;
+    }
+
+    switch(args->state) {
+        case STREAM_STATE_VERIFIED: 
+            if(!stream->verified) return false;
+            break;
+        case STREAM_STATE_BIVERIFIED: 
+            if(!stream->verified || (stream->reverse && !stream->reverse->verified)) return false;
+            break;
+        case STREAM_STATE_PENDING: 
+            if(stream->verified) return false;
+            break;
+        default:
+            break;
+    }
+    return true;
+}
+
 int
 bbl_stream_ctrl_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
-    json_t *root = json_pack("{ss si s{si si}}",
+    json_t *root = json_pack("{ss si s{si si sf}}",
                              "status", "ok",
                              "code", 200,
                              "stream-stats",
                              "total-flows", g_ctx->stats.stream_traffic_flows,
-                             "verified-flows", g_ctx->stats.stream_traffic_flows_verified);
+                             "verified-flows", g_ctx->stats.stream_traffic_flows_verified,
+                             "total-pps", g_ctx->total_pps);
     if(root) {
         result = json_dumpfd(root, fd, 0);
         json_decref(root);
@@ -2796,24 +2843,19 @@ int
 bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     int result = 0;
+    int debug = 0;
 
     json_t *root;
     json_t *json_stream = NULL;
 
     bbl_stream_s *stream;
-
-    int number = 0;
-    int debug = 0;
-
-    uint64_t flow_id;
-
+    json_int_t flow_id;
+    
     /* Unpack further arguments */
-    if(json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
+    if(json_unpack(arguments, "{s:i}", "flow-id", &flow_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
-    }    
+    }
     json_unpack(arguments, "{s:b}", "debug", &debug);
-
-    flow_id = number;
     stream = bbl_stream_index_get(flow_id);
     if(stream) {
         json_stream = bbl_stream_json(stream, debug);
@@ -2834,149 +2876,52 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     }
 }
 
-static int
-bbl_stream_ctrl_summary_filter(int fd, uint32_t session_id, json_t *arguments)
-{
-    int result = 0;
-
-    const char *name = NULL;
-    const char *interface = NULL;
-    const char *s = NULL;
-
-    int session_group_id = -1;
-
-    uint8_t direction = BBL_DIRECTION_BOTH;
-
-    json_t *jobj, *jobj_array;
-    bbl_stream_s *stream = g_ctx->stream_head;
-    bbl_session_s *session;
-
-    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
-        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
-            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
-        }
-    }
-    if(json_unpack(arguments, "{s:s}", "direction", &s) == 0) {
-        if(strcmp(s, "upstream") == 0) {
-            direction = BBL_DIRECTION_UP;
-        } else if(strcmp(s, "downstream") == 0) {
-            direction = BBL_DIRECTION_DOWN;
-        } else if(strcmp(s, "both") == 0) {
-            direction = BBL_DIRECTION_BOTH;
-        } else {
-            return bbl_ctrl_status(fd, "error", 400, "invalid direction");
-        }
-    }
-    json_unpack(arguments, "{s:s}", "name", &name);
-    json_unpack(arguments, "{s:s}", "interface", &interface);
-
-    if(session_id) {
-        session = bbl_session_get(session_id);
-        if(!session) {
-            return bbl_ctrl_status(fd, "warning", 404, "session not found");
-        }
-        stream = session->streams.head;
-    }
-
-    jobj_array = json_array();
-    while(stream) {
-        if(session_group_id >= 0) {
-            if(!(stream->session && stream->session->session_group_id == session_group_id)) goto NEXT;
-        }
-        if(name) {
-            if(!strcmp(name, stream->config->name) == 0) goto NEXT;
-        }
-        if(interface) {
-            if(!strcmp(interface, stream->tx_interface->name) == 0) goto NEXT;
-        }
-        if(!(stream->direction & direction)) goto NEXT;
-
-        jobj = bbl_stream_summary_json(stream);
-        if(jobj) {
-            json_array_append_new(jobj_array, jobj);
-        } else {
-            json_decref(jobj_array);
-            return bbl_ctrl_status(fd, "error", 500, "internal error");
-        }
-NEXT:
-        if(session) {
-            stream = stream->session_next;
-        } else {
-            stream = stream->next;
-        }
-    }
-
-    json_t *root = json_pack("{ss si so*}",
-        "status", "ok",
-        "code", 200,
-        "stream-summary", jobj_array);
-
-    if(root) {
-        result = json_dumpfd(root, fd, 0);
-        json_decref(root);
-    } else {
-        result = bbl_ctrl_status(fd, "error", 500, "internal error");
-        json_decref(jobj_array);
-    }
-    return result;
-}
-
 int
 bbl_stream_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
 {
     int result = 0;
 
-    int flow_id_min = 0;
-    int flow_id_max = 0;
-    int size, i;
-    uint64_t flow_id;
-
-    json_t *jobj, *jobj_array, *flows;
+    json_t *jobj, *jobj_array;
     bbl_stream_s *stream;
 
-    flows = json_object_get(arguments, "flows");
-    if(flows) {
-       if(!json_is_array(flows)) {
-            return bbl_ctrl_status(fd, "error", 400, "flows must be of type array e.g. [1,2,3]");
-       }
-    } else {
-        if(json_unpack(arguments, "{s:i}", "flow-id-min", &flow_id_min) != 0) {
-            return bbl_stream_ctrl_summary_filter(fd, session_id, arguments);
-        }
-        if(json_unpack(arguments, "{s:i}", "flow-id-max", &flow_id_max) != 0) {
-            return bbl_ctrl_status(fd, "error", 400, "flow-id-max missing");
-        }
-        if(flow_id_min > flow_id_max) {
-            return bbl_ctrl_status(fd, "error", 400, "flow-id-min > max");
-        }
-    }
+    bbl_stream_args_s args = {0};
+    result = bbl_stream_ctrl_args(fd, session_id, arguments, &args);
+    if(result != 1) return result;
 
     jobj_array = json_array();
-    if(flows) {
-        size = json_array_size(flows);
-        for (i = 0; i < size; i++) {
-            jobj = json_array_get(flows, i);
+
+    if(args.stream) {
+        jobj = bbl_stream_summary_json(args.stream);
+        if(jobj) json_array_append_new(jobj_array, jobj);
+    } else if(args.flows) {
+        for(int i = 0; i < args.flows_array_len; i++) {
+            jobj = json_array_get(args.flows, i);
             if(json_is_number(jobj)) {
                 stream = bbl_stream_index_get(json_number_value(jobj));
                 if(stream) {
                     jobj = bbl_stream_summary_json(stream);
-                    if(jobj) {
-                        json_array_append_new(jobj_array, jobj);
-                    }
+                    if(jobj) json_array_append_new(jobj_array, jobj);
                 }
             }
         }
     } else {
-        while(flow_id_min <= flow_id_max) {
-            flow_id = flow_id_min;
-            stream = bbl_stream_index_get(flow_id);
-            if(stream) {
+        if(args.session) {
+            stream = args.session->streams.head;
+        } else if(args.flow_id_min) {
+            stream = bbl_stream_index_get(args.flow_id_min);
+        } else {
+            stream = g_ctx->stream_head;
+        }
+        while(stream && stream->flow_id <= args.flow_id_max) {
+            if(bbl_stream_ctrl_args_match(stream, &args)) {
                 jobj = bbl_stream_summary_json(stream);
-                if(jobj) {
-                    json_array_append_new(jobj_array, jobj);
-                }
+                if(jobj) json_array_append_new(jobj_array, jobj);
             }
-            flow_id_min++;
+            if(args.session) {
+                stream = stream->session_next;
+            } else {
+                stream = stream->next;
+            }
         }
     }
 
@@ -3103,65 +3048,53 @@ static int
 bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments, 
                         bool enabled, stream_state_t state)
 {
-    bbl_stream_s *stream = g_ctx->stream_head;
-    bbl_session_s *session;
-    const char *name = NULL;
-    const char *interface = NULL;
-    const char *s = NULL;
+    int result = 0;
 
-    int session_group_id = -1;
-    int number = 0;
-    int arg = 0;
-    uint64_t flow_id = 0;
-    uint8_t direction = BBL_DIRECTION_BOTH;
+    bbl_stream_s *stream;
+    json_t *jobj;
 
-    if(json_unpack(arguments, "{s:i}", "flow-id", &number) == 0) {
-        flow_id = number;
-        stream = bbl_stream_index_get(flow_id);
-        if(stream) {
-            stream->enabled = enabled;
-        } else {
-            return bbl_ctrl_status(fd, "warning", 404, "stream not found");
-        }
-        return bbl_ctrl_status(fd, "ok", 200, NULL);
-    }
-    
-    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
-        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
-            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
-        }
-    }
-    if(json_unpack(arguments, "{s:s}", "direction", &s) == 0) {
-        if(strcmp(s, "upstream") == 0) {
-            direction = BBL_DIRECTION_UP;
-        } else if(strcmp(s, "downstream") == 0) {
-            direction = BBL_DIRECTION_DOWN;
-        } else if(strcmp(s, "both") == 0) {
-            direction = BBL_DIRECTION_BOTH;
-        } else {
-            return bbl_ctrl_status(fd, "error", 400, "invalid direction");
-        }
-    }
-    json_unpack(arguments, "{s:s}", "name", &name);
-    json_unpack(arguments, "{s:s}", "interface", &interface);
+    bbl_stream_args_s args = {0};
+    result = bbl_stream_ctrl_args(fd, session_id, arguments, &args);
+    if(result != 1) return result;
 
-    arg = 0;
-    json_unpack(arguments, "{s:b}", "verified-only", &arg);
-    if(arg) state = STREAM_STATE_VERIFIED;
+    if(state) args.state = state;
 
-    arg = 0;
-    json_unpack(arguments, "{s:b}", "bidirectional-verified-only", &arg);
-    if(arg) state = STREAM_STATE_BIVERIFIED;
-
-    if(session_id) {
-        session = bbl_session_get(session_id);
-        if(session) {
-            bbl_stream_enable_session(enabled, session, name, direction, state);
-        } else {
-            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    if(args.stream) {
+        if(stream->session_traffic == false && 
+           stream->type != BBL_TYPE_MULTICAST) {
+            args.stream->enabled = enabled;
+        } 
+    } else if(args.flows) {
+        for(int i = 0; i < args.flows_array_len; i++) {
+            jobj = json_array_get(args.flows, i);
+            if(json_is_number(jobj)) {
+                stream = bbl_stream_index_get(json_number_value(jobj));
+                if(stream && stream->session_traffic == false && 
+                   stream->type != BBL_TYPE_MULTICAST) {
+                    args.stream->enabled = enabled;
+                }
+            }
         }
     } else {
-        bbl_streams_enable_filter(enabled, session_group_id, name, interface, direction, state);
+        if(args.session) {
+            stream = args.session->streams.head;
+        } else if(args.flow_id_min) {
+            stream = bbl_stream_index_get(args.flow_id_min);
+        } else {
+            stream = g_ctx->stream_head;
+        }
+        while(stream && stream->flow_id <= args.flow_id_max) {
+            if(stream->session_traffic == false && 
+               stream->type != BBL_TYPE_MULTICAST && 
+               bbl_stream_ctrl_args_match(stream, &args)) {
+                args.stream->enabled = enabled;
+            }
+            if(args.session) {
+                stream = stream->session_next;
+            } else {
+                stream = stream->next;
+            }
+        }
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
@@ -3184,23 +3117,34 @@ bbl_stream_ctrl_stop_verified(int fd, uint32_t session_id, json_t *arguments)
     return bbl_stream_ctrl_enabled(fd, session_id, arguments, false, STREAM_STATE_VERIFIED);
 }
 
+static void
+bbl_stream_ctrl_update_stream(bbl_stream_s *stream, uint8_t tcp_flags, double pps)
+{
+    if(tcp_flags) {
+        stream->tcp_flags = tcp_flags;
+    }
+    if(pps) {
+        stream->update_pps = true;
+        stream->pps = pps;
+        stream->io->update_streams = true;
+    }
+}
+
 int
 bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     bbl_stream_s *stream;
-    json_t *value = NULL;
+    json_t *jobj;
 
     const char *s = NULL;
+    int result = 0;
 
-    int number = 0;
-    uint64_t flow_id;
-
-    /* Unpack further arguments */
-    if(json_unpack(arguments, "{s:i}", "flow-id", &number) != 0) {
-        return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
-    }
-
+    double pps = 0;
     uint8_t tcp_flags = 0;
+
+    bbl_stream_args_s args = {0};
+    result = bbl_stream_ctrl_args(fd, session_id, arguments, &args);
+    if(result != 1) return result;
 
     if(json_unpack(arguments, "{s:s}", "tcp-flags", &s) == 0) {
         if(strcmp(s, "ack") == 0) {
@@ -3223,23 +3167,37 @@ bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json
             return bbl_ctrl_status(fd, "error", 400, "invalid tcp-flags (ack|fin|fin-ack|syn|syn-ack|rst|push|push-ack)");
         }
     }
-    double pps = 0;
-    value = json_object_get(arguments, "pps");
-    if(value) pps = json_number_value(value);
+    jobj = json_object_get(arguments, "pps");
+    if(jobj) pps = json_number_value(jobj);
 
-    flow_id = number;
-    stream = bbl_stream_index_get(flow_id);
-    if(stream) {
-        if(tcp_flags) {
-            stream->tcp_flags = tcp_flags;
-        }
-        if(pps) {
-            stream->update_pps = true;
-            stream->pps = pps;
-            stream->io->update_streams = true;
+    if(args.stream) {
+        bbl_stream_ctrl_update_stream(args.stream, tcp_flags, pps);
+    } else if(args.flows) {
+        for(int i = 0; i < args.flows_array_len; i++) {
+            jobj = json_array_get(args.flows, i);
+            if(json_is_number(jobj)) {
+                stream = bbl_stream_index_get(json_number_value(jobj));
+                if(stream) bbl_stream_ctrl_update_stream(stream, tcp_flags, pps);
+            }
         }
     } else {
-        return bbl_ctrl_status(fd, "warning", 404, "stream not found");
+        if(args.session) {
+            stream = args.session->streams.head;
+        } else if(args.flow_id_min) {
+            stream = bbl_stream_index_get(args.flow_id_min);
+        } else {
+            stream = g_ctx->stream_head;
+        }
+        while(stream && stream->flow_id <= args.flow_id_max) {
+            if(bbl_stream_ctrl_args_match(stream, &args)) {
+                bbl_stream_ctrl_update_stream(stream, tcp_flags, pps);
+            }
+            if(args.session) {
+                stream = stream->session_next;
+            } else {
+                stream = stream->next;
+            }
+        }
     }
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

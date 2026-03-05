@@ -271,6 +271,7 @@ typedef struct bbl_session_
     struct {
         uint16_t group_id;
         bbl_stream_s *head;
+        bbl_stream_s *tail;
     } streams;
 
     struct {

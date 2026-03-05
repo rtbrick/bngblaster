@@ -2097,10 +2097,12 @@ int
 bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
 {
     int result = 0;
+    int session_group_id = -1;
+    int size;
+    int intv;
 
-    int session_id_min = 0;
-    int session_id_max = 0;
-    int size, i;
+    uint32_t session_id_min = 1;
+    uint32_t session_id_max = g_ctx->sessions;
 
     json_t *jobj, *jobj_array, *sessions;
     bbl_session_s *session;
@@ -2111,14 +2113,25 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
             return bbl_ctrl_status(fd, "error", 400, "sessions must be of type array e.g. [1,2,3]");
        }
     } else {
-        if(json_unpack(arguments, "{s:i}", "session-id-min", &session_id_min) != 0) {
-            return bbl_ctrl_status(fd, "error", 400, "sessions or session-id-min/max required");
+        if(json_unpack(arguments, "{s:i}", "session-id-min", &intv) == 0) {
+            if(intv < 1 || (uint32_t)intv > UINT32_MAX) {
+                return bbl_ctrl_status(fd, "warning", 400, "invalid session-id-min");
+            }
+            session_id_min = intv;
         }
-        if(json_unpack(arguments, "{s:i}", "session-id-max", &session_id_max) != 0) {
-            return bbl_ctrl_status(fd, "error", 400, "session-id-max missing");
+        if(json_unpack(arguments, "{s:i}", "session-id-max", &intv) == 0) {
+            if(intv < 0 || (uint32_t)intv > UINT32_MAX) {
+                return bbl_ctrl_status(fd, "warning", 400, "invalid session-id-max");
+            }
+            if((uint32_t)intv < g_ctx->sessions) session_id_max = intv;
         }
         if(session_id_min > session_id_max) {
             return bbl_ctrl_status(fd, "error", 400, "session-id-min > max");
+        }
+    }
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
         }
     }
 
@@ -2134,7 +2147,7 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
     }
     if(sessions) {
         size = json_array_size(sessions);
-        for (i = 0; i < size; i++) {
+        for(int i = 0; i < size; i++) {
             jobj = json_array_get(sessions, i);
             if(json_is_number(jobj)) {
                 session = bbl_session_get(json_number_value(jobj));
@@ -2150,7 +2163,7 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
         while(session_id_min <= session_id_max) {
             session_id = session_id_min;
             session = bbl_session_get(session_id);
-            if(session) {
+            if(session && (session_group_id < 0 || session->session_group_id == session_group_id)) {
                 jobj = bbl_session_summary_json(session);
                 if(jobj) {
                     json_array_append_new(jobj_array, jobj);
