@@ -1983,37 +1983,37 @@ bbl_stream_session_init(bbl_session_s *session)
         if(!bbl_stream_session_add(g_ctx->config.stream_config_session_ipv4_up, session)) {
             return false;
         }
-        session->session_traffic.ipv4_up = session->streams.head;
+        session->session_traffic.ipv4_up = session->streams.tail;
     }
     if(g_ctx->config.stream_config_session_ipv4_down && session->endpoint.ipv4) {
         if(!bbl_stream_session_add(g_ctx->config.stream_config_session_ipv4_down, session)) {
             return false;
         }
-        session->session_traffic.ipv4_down = session->streams.head;
+        session->session_traffic.ipv4_down = session->streams.tail;
     }
     if(g_ctx->config.stream_config_session_ipv6_up && session->endpoint.ipv6) {
         if(!bbl_stream_session_add(g_ctx->config.stream_config_session_ipv6_up, session)) {
             return false;
         }
-        session->session_traffic.ipv6_up = session->streams.head;
+        session->session_traffic.ipv6_up = session->streams.tail;
     }
     if(g_ctx->config.stream_config_session_ipv6_down && session->endpoint.ipv6) {
         if(!bbl_stream_session_add(g_ctx->config.stream_config_session_ipv6_down, session)) {
             return false;
         }
-        session->session_traffic.ipv6_down = session->streams.head;
+        session->session_traffic.ipv6_down = session->streams.tail;
     }
     if(g_ctx->config.stream_config_session_ipv6pd_up && session->endpoint.ipv6pd) {
         if(!bbl_stream_session_add(g_ctx->config.stream_config_session_ipv6pd_up, session)) {
             return false;
         }
-        session->session_traffic.ipv6pd_up = session->streams.head;
+        session->session_traffic.ipv6pd_up = session->streams.tail;
     }
     if(g_ctx->config.stream_config_session_ipv6pd_down && session->endpoint.ipv6pd) {
         if(!bbl_stream_session_add(g_ctx->config.stream_config_session_ipv6pd_down, session)) {
             return false;
         }
-        session->session_traffic.ipv6pd_down = session->streams.head;
+        session->session_traffic.ipv6pd_down = session->streams.tail;
     }
 
     /** Add streams of corresponding stream-group-id */
