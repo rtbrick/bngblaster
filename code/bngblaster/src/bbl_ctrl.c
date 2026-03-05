@@ -142,6 +142,16 @@ bbl_ctrl_schema(json_t *arguments, const char *const schema[])
         if(valid) {
             continue;
         }
+        /* Deprecated!
+         * For backward compatibility with version 0.4.X, we still
+         * support per session commands using VLAN index instead of
+         * new session-id. */
+        if(strcmp(key, "outer-vlan") == 0 || 
+           strcmp(key, "inner-vlan") == 0 || 
+           strcmp(key, "interface") == 0  || 
+           strcmp(key, "ifindex") == 0) {
+            continue;
+        }
         return false;
     }
     return true;
