@@ -3060,9 +3060,10 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
     if(state) args.state = state;
 
     if(args.stream) {
+        stream = args.stream;
         if(stream->session_traffic == false && 
            stream->type != BBL_TYPE_MULTICAST) {
-            args.stream->enabled = enabled;
+            stream->enabled = enabled;
         } 
     } else if(args.flows) {
         for(int i = 0; i < args.flows_array_len; i++) {
