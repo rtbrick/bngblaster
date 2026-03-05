@@ -20,6 +20,8 @@ const char g_default_system_id[] = "0100.1001.0010";
 const char g_default_area[] = "49.0001/24";
 const char g_default_ospf_area[] = "0.0.0.0";
 
+extern uint16_t g_li_udp_port;
+
 #define JSON_OBJ_GET_BOOL(_json, _val, _section, _key) \
     do { \
         _val = json_object_get(_json, _key); \
@@ -3938,7 +3940,8 @@ json_parse_config(json_t *root)
             "stream-burst-ms",
             "reassemble-fragments",
             "multicast-autostart",
-            "udp-checksum"
+            "udp-checksum",
+            "li-udp-port"
         };
         if(!schema_validate(section, "traffic", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
@@ -3980,6 +3983,10 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_BOOL(section, value, "traffic", "udp-checksum");
         if(value) {
             g_ctx->config.stream_udp_checksum = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(section, value, "traffic", "li-udp-port", 0, 65535);
+        if(value) {
+            g_li_udp_port = json_number_value(value);
         }
     }
 
