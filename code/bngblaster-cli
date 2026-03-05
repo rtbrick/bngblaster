@@ -89,7 +89,10 @@ def main():
         usage()
 
     socket_path = sys.argv[1]
-    request = build_request(sys.argv)
+    try:
+        request = build_request(sys.argv)
+    except Exception as e:
+        error("invalid command")
     #print(json.dumps(request).encode('utf-8'))
     data = send_request(socket_path, request)
 
