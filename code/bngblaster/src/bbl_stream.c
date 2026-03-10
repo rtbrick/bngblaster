@@ -2693,7 +2693,8 @@ static int
 bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_args_s *args)
 {
     const char *s = NULL;
-    int intv;
+    json_int_t number;
+    int value;
 
     /* Init defaults */
     args->session_group_id = -1;
@@ -2707,13 +2708,15 @@ bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_
         }
     }
 
-    if(json_unpack(arguments, "{s:i}", "flow-id", &intv) == 0) {
-        if(intv < 0) {
+    if(json_unpack(arguments, "{s:I}", "flow-id", &number) == 0) {
+        if(number < 1) {
             return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id");
         }
-        args->flow_id = intv;
+        args->flow_id = number;
         args->stream = bbl_stream_index_get(args->flow_id);
-        if(args->stream) return 0;
+        if(args->stream) {
+            return 1;
+        }
         return bbl_ctrl_status(fd, "warning", 404, "stream not found");
     }
 
@@ -2721,33 +2724,33 @@ bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_
     if(args->flows) {
         if(json_is_array(args->flows)) {
             args->flows_array_len = json_array_size(args->flows);
-            return 0;
+            return 1;
         }
         return bbl_ctrl_status(fd, "error", 400, "flows must be of type array e.g. [1,2,3]");
     }
     
-    if(json_unpack(arguments, "{s:i}", "flow-id-min", &intv) == 0) {
-        if(intv < 0) {
+    if(json_unpack(arguments, "{s:I}", "flow-id-min", &number) == 0) {
+        if(number < 0) {
             return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id-min");
         }
-        args->flow_id_min = intv;
+        args->flow_id_min = number;
     }
 
-    if(json_unpack(arguments, "{s:i}", "flow-id-max", &intv) == 0) {
-        if(intv < 0) {
+    if(json_unpack(arguments, "{s:I}", "flow-id-max", &number) == 0) {
+        if(number < 0) {
             return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id-max");
         }
-        args->flow_id_max = intv;
+        args->flow_id_max = number;
         if(args->flow_id_min > args->flow_id_max) {
             return bbl_ctrl_status(fd, "warning", 400, "flow-id-min > max");
         }
     }
 
-    if(json_unpack(arguments, "{s:i}", "session-group-id", &intv) == 0) {
-        if(intv < 0 || intv > UINT16_MAX) {
+    if(json_unpack(arguments, "{s:I}", "session-group-id", &number) == 0) {
+        if(number < 0 || number > UINT16_MAX) {
             return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
         }
-        args->session_group_id = intv;
+        args->session_group_id = number;
     }
 
     if(json_unpack(arguments, "{s:s}", "direction", &s) == 0) {
@@ -2765,17 +2768,17 @@ bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_
     json_unpack(arguments, "{s:s}", "name", &args->name);
     json_unpack(arguments, "{s:s}", "interface", &args->interface);
 
-    intv = 0;
-    json_unpack(arguments, "{s:b}", "verified-only", &intv);
-    if(intv) args->state = STREAM_STATE_VERIFIED;
+    value = 0;
+    json_unpack(arguments, "{s:b}", "verified-only", &value);
+    if(value) args->state = STREAM_STATE_VERIFIED;
 
-    intv = 0;
-    json_unpack(arguments, "{s:b}", "bidirectional-verified-only", &intv);
-    if(intv) args->state = STREAM_STATE_BIVERIFIED;
+    value = 0;
+    json_unpack(arguments, "{s:b}", "bidirectional-verified-only", &value);
+    if(value) args->state = STREAM_STATE_BIVERIFIED;
 
-    intv = 0;
-    json_unpack(arguments, "{s:b}", "pending-only", &intv);
-    if(intv) args->state = STREAM_STATE_PENDING;
+    value = 0;
+    json_unpack(arguments, "{s:b}", "pending-only", &value);
+    if(value) args->state = STREAM_STATE_PENDING;
 
     return 1;
 }
@@ -2849,13 +2852,19 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     json_t *json_stream = NULL;
 
     bbl_stream_s *stream;
-    json_int_t flow_id;
-    
+    json_int_t number;
+    uint64_t flow_id;
+
     /* Unpack further arguments */
-    if(json_unpack(arguments, "{s:i}", "flow-id", &flow_id) != 0) {
+    json_unpack(arguments, "{s:b}", "debug", &debug);
+    if(json_unpack(arguments, "{s:I}", "flow-id", &number) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
     }
-    json_unpack(arguments, "{s:b}", "debug", &debug);
+    if(number < 1) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid flow-id");
+    }
+    flow_id = number;
+
     stream = bbl_stream_index_get(flow_id);
     if(stream) {
         json_stream = bbl_stream_json(stream, debug);
