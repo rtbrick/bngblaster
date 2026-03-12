@@ -1086,6 +1086,8 @@ bbl_sessions_init()
         g_ctx->sessions++;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             g_ctx->sessions_pppoe++;
+        } else if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            g_ctx->sessions_pppol2tp++;
         } else {
             g_ctx->sessions_ipoe++;
         }
@@ -1603,12 +1605,13 @@ int
 bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
-    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
+    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
                              "status", "ok",
                              "code", 200,
                              "session-counters",
                              "sessions", g_ctx->config.sessions,
                              "sessions-pppoe", g_ctx->sessions_pppoe,
+                             "sessions-pppol2tp", g_ctx->sessions_pppol2tp,
                              "sessions-ipoe", g_ctx->sessions_ipoe,
                              "sessions-established", g_ctx->sessions_established,
                              "sessions-established-max", g_ctx->sessions_established_max,
