@@ -314,7 +314,8 @@ bbl_interactive_window_job(timer_s *timer)
 
     if(g_view_selected == UI_VIEW_DEFAULT) {
         VISIBLE((g_ctx->sessions)) {
-            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u IPoE)\n", g_ctx->sessions, g_ctx->sessions_pppoe, g_ctx->sessions_ipoe);
+            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u PPPoL2TP / %u IPoE)\n",
+                    g_ctx->sessions, g_ctx->sessions_pppoe, g_ctx->sessions_pppol2tp, g_ctx->sessions_ipoe);
 
             /* Progress bar established sessions */
             wprintw(stats_win, "  Established %10u [", g_ctx->sessions_established);

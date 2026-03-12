@@ -28,6 +28,16 @@ bbl_session_traffic_enable(bool enabled, bbl_session_s *session, uint8_t directi
     }
 }
 
+static const char *
+session_access_type_string(bbl_session_s *session)
+{
+    switch(session->access_type) {
+        case ACCESS_TYPE_PPPOE: return "pppoe";
+        case ACCESS_TYPE_PPPOL2TP: return "pppol2tp";
+        default: return "ipoe";
+    }
+}
+
 const char *
 session_state_string(uint32_t state)
 {
@@ -1110,6 +1120,8 @@ bbl_sessions_init()
         g_ctx->sessions++;
         if(session->access_type == ACCESS_TYPE_PPPOE) {
             g_ctx->sessions_pppoe++;
+        } else if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            g_ctx->sessions_pppol2tp++;
         } else {
             g_ctx->sessions_ipoe++;
         }
@@ -1384,9 +1396,10 @@ bbl_session_json(bbl_session_s *session, bool debug)
         l2tp_session = l2tp_session_json(session->l2tp_session);
     }
 
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOE ||
+       session->access_type == ACCESS_TYPE_PPPOL2TP) {
         root = json_pack("{ss si si ss ss* si si ss si si ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si so* so* so*}",
-            "type", "pppoe",
+            "type", session_access_type_string(session),
             "session-id", session->session_id,
             "pppoe-session-id", session->pppoe_session_id,
             "session-state", session_state_string(session->session_state),
@@ -1436,6 +1449,11 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "a10nsp", a10nsp_session,
             "l2tp", l2tp_session);
 
+        if(root && session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            /* There is no PPPoE server in front of a PPPoL2TP session. */
+            json_object_del(root, "pppoe-session-id");
+            json_object_del(root, "server-mac");
+        }
     } else {
         clock_gettime(CLOCK_MONOTONIC, &now);
         if(session->dhcp_lease_timestamp.tv_sec && now.tv_sec > session->dhcp_lease_timestamp.tv_sec) {
@@ -1568,9 +1586,10 @@ bbl_session_summary_json(bbl_session_s *session)
         ipv4 = format_ipv4_address(&session->ip_address);
     }
 
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOE ||
+       session->access_type == ACCESS_TYPE_PPPOL2TP) {
         root = json_pack("{ss si si ss* ss* si ss* si si ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI}",
-            "type", "pppoe",
+            "type", session_access_type_string(session),
             "session-id", session->session_id,
             "pppoe-session-id", session->pppoe_session_id,
             "session-state", session_state_string(session->session_state),
@@ -1591,6 +1610,12 @@ bbl_session_summary_json(bbl_session_s *session)
             "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx);
+
+        if(root && session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            /* There is no PPPoE server in front of a PPPoL2TP session. */
+            json_object_del(root, "pppoe-session-id");
+            json_object_del(root, "server-mac");
+        }
     } else {
         root = json_pack("{ss si ss* ss* si ss* si si ss* ss* ss* ss* ss* ss* ss* sI sI}",
             "type", "ipoe",
@@ -1662,12 +1687,13 @@ int
 bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
-    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
+    json_t *root = json_pack("{ss si s{si si si si si si si si si si si si si si si si sf sf sf sf si si si si}}",
                              "status", "ok",
                              "code", 200,
                              "session-counters",
                              "sessions", g_ctx->sessions,
                              "sessions-pppoe", g_ctx->sessions_pppoe,
+                             "sessions-pppol2tp", g_ctx->sessions_pppol2tp,
                              "sessions-ipoe", g_ctx->sessions_ipoe,
                              "sessions-established", g_ctx->sessions_established,
                              "sessions-established-max", g_ctx->sessions_established_max,
