@@ -147,6 +147,10 @@ L2TPv2 Server (LNS)
 -------------------
 .. include:: lns.rst
 
+L2TPv2 Client (LAC)
+-------------------
+.. include:: lac.rst
+
 Traffic
 -------
 .. include:: traffic.rst

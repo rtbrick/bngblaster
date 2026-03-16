@@ -91,6 +91,38 @@ typedef struct bbl_l2tp_server_
     CIRCLEQ_HEAD(tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
 } bbl_l2tp_server_s;
 
+/* L2TP Client Configuration (LAC) */
+typedef struct bbl_l2tp_client_
+{
+    uint16_t group_id;   /* l2tp-client-group-id: ties this entry to access interfaces */
+    uint32_t server_ip;      /* LNS address used for outer L2TP/UDP packets */
+    uint32_t client_address; /* LAC address used for outer L2TP/UDP packets */
+    uint16_t hello_interval;
+    uint16_t receive_window;
+    uint16_t max_retry;
+    uint16_t lcp_padding;
+
+    bool data_control_priority;
+    bool data_length;
+    bool data_offset;
+
+    uint8_t control_tos;
+    uint8_t data_control_tos;
+
+    l2tp_congestion_mode_t congestion_mode;
+
+    char *name;
+    char *secret;
+    char *network_interface;
+    char *calling_number; /* Optional ICRQ Calling Number (AVP 22) */
+    char *called_number;  /* Optional ICRQ Called Number (AVP 21) */
+
+    void *next; /* Pointer to next L2TP client configuration */
+
+    /* List of L2TP tunnel instances for the corresponding client */
+    CIRCLEQ_HEAD(client_tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
+} bbl_l2tp_client_s;
+
 /* L2TP Session Key */
 typedef struct l2tp_key_ {
     uint16_t tunnel_id;

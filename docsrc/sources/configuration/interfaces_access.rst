@@ -176,6 +176,12 @@
 | **arp-client-group-id**           | | Set ARP group identifier.                                          |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
+| **l2tp-client-group-id**          | | Set L2TP client group identifier (LAC mode, requires              |
+|                                   | | ``"type": "pppol2tp"``).  Sessions on this access interface are   |
+|                                   | | spread evenly across all ``l2tp-client`` entries with the same   |
+|                                   | | ``group-id``.                                                     |
+|                                   | | Default: 0 Range: 0 - 65535                                        |
++-----------------------------------+----------------------------------------------------------------------+
 | **icmp-client-group-id",**        | | Set ICMP group identifier.                                         |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+

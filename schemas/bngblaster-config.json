@@ -1238,6 +1238,124 @@
                 }
             }
         },
+        "l2tp-client": {
+            "type": "array",
+            "description": "L2TPv2 Client (LAC) configuration",
+            "items": {
+                "type": "object",
+                "required": [
+                    "group-id",
+                    "name",
+                    "network-interface",
+                    "server-address"
+                ],
+                "properties": {
+                    "group-id": {
+                        "type": "integer",
+                        "description": "L2TP client group identifier, matched against l2tp-client-group-id in access interfaces",
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "L2TP LAC tunnel name (AVP 7)"
+                    },
+                    "network-interface": {
+                        "type": "string",
+                        "description": "Network interface used for L2TP tunnel"
+                    },
+                    "server-address": {
+                        "type": "string",
+                        "description": "L2TP server (LNS) address",
+                        "format": "ipv4"
+                    },
+                    "client-address": {
+                        "type": "string",
+                        "description": "L2TP client source address (defaults to network interface address)",
+                        "format": "ipv4"
+                    },
+                    "secret": {
+                        "type": "string",
+                        "description": "Tunnel secret"
+                    },
+                    "receive-window-size": {
+                        "type": "integer",
+                        "description": "Control messages receive window size",
+                        "default": 16,
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "max-retry": {
+                        "type": "integer",
+                        "description": "Maximum number of tunnel setup retries",
+                        "default": 5,
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "congestion-mode": {
+                        "type": "string",
+                        "description": "Congestion control mode",
+                        "enum": [
+                            "default",
+                            "slow",
+                            "aggressive"
+                        ],
+                        "default": "default"
+                    },
+                    "data-control-priority": {
+                        "type": "boolean",
+                        "description": "Set priority bit for non-IP data packets",
+                        "default": false
+                    },
+                    "data-length": {
+                        "type": "boolean",
+                        "description": "Set length bit for all data packets",
+                        "default": false
+                    },
+                    "data-offset": {
+                        "type": "boolean",
+                        "description": "Set offset bit with zero for all data packets",
+                        "default": false
+                    },
+                    "control-tos": {
+                        "type": "integer",
+                        "description": "L2TP control traffic TOS priority",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 255
+                    },
+                    "data-control-tos": {
+                        "type": "integer",
+                        "description": "L2TP tunnel TOS for non-IP data packets",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 255
+                    },
+                    "hello-interval": {
+                        "type": "integer",
+                        "description": "Hello (keepalive) interval in seconds",
+                        "default": 30,
+                        "minimum": 0,
+                        "maximum": 65535
+                    },
+                    "lcp-padding": {
+                        "type": "integer",
+                        "description": "Add fixed padding to LCP packets",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 65535
+                    },
+                    "calling-number": {
+                        "type": "string",
+                        "description": "Calling number AVP value"
+                    },
+                    "called-number": {
+                        "type": "string",
+                        "description": "Called number AVP value"
+                    }
+                }
+            }
+        },
         "isis": {
             "oneOf": [
                 {

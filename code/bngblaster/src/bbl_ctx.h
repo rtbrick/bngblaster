@@ -374,6 +374,9 @@ typedef struct bbl_ctx_
 
         /* L2TP Server Config (LNS) */
         bbl_l2tp_server_s *l2tp_server;
+
+        /* L2TP Client Config (LAC) */
+        struct bbl_l2tp_client_ *l2tp_client;
     } config;
 } bbl_ctx_s;
 

@@ -1066,7 +1066,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "http-client-group-id", "icmp-client-group-id",
         "cfm-cc", "cfm-level", "cfm-interval", "cfm-md-name", "cfm-md-name-format",
         "cfm-ma-id", "cfm-ma-name", "cfm-ma-name-format", "cfm-seq",
-        "cfm-vlan-priority"
+        "cfm-vlan-priority", "l2tp-client-group-id"
     };
     if(!schema_validate(access_interface, "access", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1447,6 +1447,11 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         if(!json_parse_cfm_config(access_interface, access_config->cfm)) {
             return false;
         }
+    }
+
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "l2tp-client-group-id", 0, 65535);
+    if(value) {
+        access_config->l2tp_client_group_id = json_number_value(value);
     }
 
     if(access_config->access_type == ACCESS_TYPE_PPPOE) {
@@ -3281,6 +3286,7 @@ json_parse_config(json_t *root)
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
+    bbl_l2tp_client_s           *l2tp_client            = NULL;
 
     bbl_lag_config_s            *lag_config             = NULL;
     bbl_link_config_s           *link_config            = NULL;
@@ -3311,7 +3317,7 @@ json_parse_config(json_t *root)
         "isis", "ospf",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
-        "l2tp-server", "icmp-client",
+        "l2tp-server", "l2tp-client", "icmp-client",
         "http-client", "http-server",
         "arp-client"
     };
@@ -4526,6 +4532,143 @@ json_parse_config(json_t *root)
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+    }
+
+    /* L2TP Client Configuration (LAC) */
+    section = json_object_get(root, "l2tp-client");
+    if(json_is_array(section)) {
+        if(!g_ctx->config.network_config) {
+            fprintf(stderr, "JSON config error: Failed to add L2TP client because of missing or incomplete network interface config\n");
+            return false;
+        }
+        size = json_array_size(section);
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(section, i);
+
+            const char *schema[] = {
+                "group-id", "name", "secret", "server-address", "client-address",
+                "network-interface", "receive-window-size", "max-retry", "congestion-mode",
+                "data-control-priority", "data-length", "data-offset", "control-tos",
+                "data-control-tos", "hello-interval", "lcp-padding", "calling-number",
+                "called-number"
+            };
+            if(!schema_validate(sub, "l2tp-client", schema, sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+
+            if(!l2tp_client) {
+                g_ctx->config.l2tp_client = calloc(1, sizeof(bbl_l2tp_client_s));
+                l2tp_client = g_ctx->config.l2tp_client;
+            } else {
+                l2tp_client->next = calloc(1, sizeof(bbl_l2tp_client_s));
+                l2tp_client = l2tp_client->next;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "group-id", 1, 65535);
+            if(value) {
+                l2tp_client->group_id = json_number_value(value);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->group-id\n");
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
+                l2tp_client->name = strdup(s);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->name\n");
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "network-interface", &s) == 0) {
+                l2tp_client->network_interface = strdup(s);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->network-interface\n");
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "client-address", &s) == 0) {
+                if(!inet_pton(AF_INET, s, &ipv4)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->client-address\n");
+                    return false;
+                }
+                l2tp_client->client_address = ipv4;
+            }
+            if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
+                l2tp_client->secret = strdup(s);
+            }
+            if(json_unpack(sub, "{s:s}", "server-address", &s) == 0) {
+                if(!inet_pton(AF_INET, s, &ipv4)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->server-address\n");
+                    return false;
+                }
+                l2tp_client->server_ip = ipv4;
+                CIRCLEQ_INIT(&l2tp_client->tunnel_qhead);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->server-address\n");
+                return false;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "receive-window-size", 1, 65535);
+            if(value) {
+                l2tp_client->receive_window = json_number_value(value);
+            } else {
+                l2tp_client->receive_window = 16;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "max-retry", 1, 65535);
+            if(value) {
+                l2tp_client->max_retry = json_number_value(value);
+            } else {
+                l2tp_client->max_retry = 5;
+            }
+            if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
+                if(strcmp(s, "default") == 0) {
+                    l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+                } else if(strcmp(s, "slow") == 0) {
+                    l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
+                } else if(strcmp(s, "aggressive") == 0) {
+                    l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
+                } else {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->congestion-mode\n");
+                    return false;
+                }
+            } else {
+                l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "data-control-priority");
+            if(value) {
+                l2tp_client->data_control_priority = json_boolean_value(value);
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "data-length");
+            if(value) {
+                l2tp_client->data_length = json_boolean_value(value);
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "data-offset");
+            if(value) {
+                l2tp_client->data_offset = json_boolean_value(value);
+            }
+
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "control-tos", 0, 255);
+            if(value) {
+                l2tp_client->control_tos = json_number_value(value);
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "data-control-tos", 0, 255);
+            if(value) {
+                l2tp_client->data_control_tos = json_number_value(value);
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "hello-interval", 0, 65535);
+            if(value) {
+                l2tp_client->hello_interval = json_number_value(value);
+            } else {
+                l2tp_client->hello_interval = 30;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "lcp-padding", 0, 65535);
+            if(value) {
+                l2tp_client->lcp_padding = json_number_value(value);
+            }
+            if(json_unpack(sub, "{s:s}", "calling-number", &s) == 0) {
+                l2tp_client->calling_number = strdup(s);
+            }
+            if(json_unpack(sub, "{s:s}", "called-number", &s) == 0) {
+                l2tp_client->called_number = strdup(s);
+            }
+        }
+    } else if(json_is_object(section)) {
+        fprintf(stderr, "JSON config error: List expected in L2TP client configuration but dictionary found\n");
     }
 
     /* ARP Client Configuration */
