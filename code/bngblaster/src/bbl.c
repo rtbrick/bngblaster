@@ -239,6 +239,7 @@ bbl_ctrl_job(timer_s *timer)
     bbl_session_s *session;
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
+    bbl_l2tp_client_s *l2tp_client = g_ctx->config.l2tp_client;
 
     uint32_t i;
 
@@ -270,6 +271,13 @@ bbl_ctrl_job(timer_s *timer)
         g_init_phase = false;
         LOG_NOARG(INFO, "All network interfaces resolved\n");
         clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_resolved);
+
+        /* Init L2TP client tunnels. */
+        while(l2tp_client) {
+            bbl_l2tp_client_connect(l2tp_client);
+            l2tp_client = l2tp_client->next;
+        }
+
     }
 
     if(g_teardown) {
