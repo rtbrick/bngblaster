@@ -168,8 +168,11 @@ typedef struct bbl_l2tp_tunnel_
     /* Pointer to corresponding network interface */
     bbl_network_interface_s *interface;
 
-    /* Pointer to L2TP server configuration */
+    bool is_lac;
+    /* Pointer to L2TP server configuration (LNS mode) */
     bbl_l2tp_server_s *server;
+    /* Pointer to L2TP client configuration (LAC mode) */
+    bbl_l2tp_client_s *client;
 
     /* RFC5515 CSURQ */
     uint16_t *csurq_requests;

@@ -751,6 +751,83 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
     bbl_l2tp_avp_encode(&buf, len, &avp);
 
     switch (l2tp_type) {
+        case L2TP_MESSAGE_SCCRQ:
+        {
+            /* Protocol Version */
+            v16 = 256;
+            avp.m = true;
+            avp.type = L2TP_AVP_PROTOCOL_VERSION;
+            avp.len = 2;
+            avp.value_type = L2TP_AVP_VALUE_UINT16;
+            avp.value = (void*)&v16;
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Framing Capabilities */
+            v32 = 3; /* A + S */
+            avp.m = true;
+            avp.type = L2TP_AVP_FRAMING_CAPABILITIES;
+            avp.len = 4;
+            avp.value_type = L2TP_AVP_VALUE_UINT32;
+            avp.value = (void*)&v32;
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Bearer Capabilities */
+            v32 = 3; /* A + D */
+            avp.m = true;
+            avp.type = L2TP_AVP_BEARER_CAPABILITIES;
+            avp.len = 4;
+            avp.value_type = L2TP_AVP_VALUE_UINT32;
+            avp.value = (void*)&v32;
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Firmware Revision */
+            v16 = 1;
+            avp.m = false;
+            avp.type = L2TP_AVP_FIRMWARE_REVISION;
+            avp.len = 2;
+            avp.value_type = L2TP_AVP_VALUE_UINT16;
+            avp.value = (void*)&v16;
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Host Name */
+            avp.m = true;
+            avp.type = L2TP_AVP_HOST_NAME;
+            avp.len = strlen(l2tp_tunnel_hostname(l2tp_tunnel));
+            avp.value_type = L2TP_AVP_VALUE_BYTES;
+            avp.value = (void*)l2tp_tunnel_hostname(l2tp_tunnel);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Vendor Name */
+            avp.m = false;
+            avp.type = L2TP_AVP_VENDOR_NAME;
+            avp.len = sizeof("bngblaster") - 1;
+            avp.value_type = L2TP_AVP_VALUE_BYTES;
+            avp.value = (void*)"bngblaster";
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Assigned Tunnel ID */
+            avp.m = true;
+            avp.type = L2TP_AVP_ASSIGNED_TUNNEL_ID;
+            avp.len = 2;
+            avp.value_type = L2TP_AVP_VALUE_UINT16;
+            avp.value = (void*)(&l2tp_tunnel->tunnel_id);
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Receive Window Size */
+            v16 = 4;
+            if(l2tp_tunnel->client->receive_window) {
+                v16 = l2tp_tunnel->client->receive_window;
+            }
+            avp.m = true;
+            avp.type = L2TP_AVP_RECEIVE_WINDOW_SIZE;
+            avp.len = 2;
+            avp.value_type = L2TP_AVP_VALUE_UINT16;
+            avp.value = (void*)&v16;
+            bbl_l2tp_avp_encode(&buf, len, &avp);
+            /* Challenge */
+            if(l2tp_tunnel->challenge_len) {
+                avp.m = true;
+                avp.type = L2TP_AVP_CHALLENGE;
+                avp.len = l2tp_tunnel->challenge_len;
+                avp.value_type = L2TP_AVP_VALUE_BYTES;
+                avp.value = l2tp_tunnel->challenge;
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+            }
+            break;
+        }
         case L2TP_MESSAGE_SCCRP:
             /* Protocol Version */
             v16 = 256;
@@ -835,6 +912,17 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
                 bbl_l2tp_avp_encode(&buf, len, &avp);
             }
             break;
+        case L2TP_MESSAGE_SCCCN:
+            /* Challenge Response */
+            if(l2tp_tunnel->challenge_response_len) {
+                avp.m = true;
+                avp.type = L2TP_AVP_CHALLENGE_RESPONSE;
+                avp.len = l2tp_tunnel->challenge_response_len;
+                avp.value_type = L2TP_AVP_VALUE_BYTES;
+                avp.value = l2tp_tunnel->challenge_response;
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+            }
+            break;
         case L2TP_MESSAGE_STOPCCN:
             /* Assigned Tunnel ID  */
             avp.m = true;
@@ -849,6 +937,51 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
                                             l2tp_tunnel->error_code,
                                             l2tp_tunnel->error_message);
             break;
+        case L2TP_MESSAGE_ICRQ:
+            /* Assigned Session ID */
+            if(l2tp_session) {
+                avp.m = true;
+                avp.type = L2TP_AVP_ASSIGNED_SESSION_ID;
+                avp.len = 2;
+                avp.value_type = L2TP_AVP_VALUE_UINT16;
+                avp.value = (void*)(&l2tp_session->key.session_id);
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* Call Serial Number */
+                v32 = l2tp_session->key.session_id;
+                avp.m = true;
+                avp.type = L2TP_AVP_CALL_SERIAL_NUMBER;
+                avp.len = 4;
+                avp.value_type = L2TP_AVP_VALUE_UINT32;
+                avp.value = (void*)&v32;
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* Bearer Type */
+                v32 = 2; /* Analog */
+                avp.m = true;
+                avp.type = L2TP_AVP_BEARER_TYPE;
+                avp.len = 4;
+                avp.value_type = L2TP_AVP_VALUE_UINT32;
+                avp.value = (void*)&v32;
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* Calling Number (optional, AVP 22) */
+                if(l2tp_tunnel->client && l2tp_tunnel->client->calling_number) {
+                    avp.m = false;
+                    avp.type = L2TP_AVP_CALLING_NUMBER;
+                    avp.len = strlen(l2tp_tunnel->client->calling_number);
+                    avp.value_type = L2TP_AVP_VALUE_BYTES;
+                    avp.value = (void*)l2tp_tunnel->client->calling_number;
+                    bbl_l2tp_avp_encode(&buf, len, &avp);
+                }
+                /* Called Number (optional, AVP 21) */
+                if(l2tp_tunnel->client && l2tp_tunnel->client->called_number) {
+                    avp.m = false;
+                    avp.type = L2TP_AVP_CALLED_NUMBER;
+                    avp.len = strlen(l2tp_tunnel->client->called_number);
+                    avp.value_type = L2TP_AVP_VALUE_BYTES;
+                    avp.value = (void*)l2tp_tunnel->client->called_number;
+                    bbl_l2tp_avp_encode(&buf, len, &avp);
+                }
+            }
+            break;
         case L2TP_MESSAGE_ICRP:
             /* Assigned Session ID  */
             if(l2tp_session) {
@@ -857,6 +990,26 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
                 avp.len = 2;
                 avp.value_type = L2TP_AVP_VALUE_UINT16;
                 avp.value = (void*)(&l2tp_session->key.session_id);
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+            }
+            break;
+        case L2TP_MESSAGE_ICCN:
+            /* TX Connect Speed */
+            if(l2tp_session) {
+                v32 = 100000000;
+                avp.m = true;
+                avp.type = L2TP_AVP_TX_CONNECT_SPEED;
+                avp.len = 4;
+                avp.value_type = L2TP_AVP_VALUE_UINT32;
+                avp.value = (void*)&v32;
+                bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* Framing Type */
+                v32 = 1; /* Synchronous */
+                avp.m = true;
+                avp.type = L2TP_AVP_FRAMING_TYPE;
+                avp.len = 4;
+                avp.value_type = L2TP_AVP_VALUE_UINT32;
+                avp.value = (void*)&v32;
                 bbl_l2tp_avp_encode(&buf, len, &avp);
             }
             break;
