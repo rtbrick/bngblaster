@@ -32,6 +32,8 @@ for interactive communication with the BNG Blaster.
 
 Examples:
     {c} run.sock session-info session-id 1
+    {c} run.sock interface-topology
+    {c} run.sock interface-topology interface eth0
     {c} run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
     {c} run.sock igmp-info session-id 1
     {c} run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
@@ -99,6 +101,22 @@ def main():
     if sys.argv[2] == "commands":
         for cmd in data["commands"]: 
             print("%s %s" % (cmd["command"], str(cmd["arguments"]).replace("', '", "|").replace("'", "")))
+    elif sys.argv[2] == "interface-topology":
+        for interface in data["interfaces"]:
+            print("interface: %s" % interface["name"])
+            print("  io-mode: %s" % interface["io-mode"])
+            print("  numa-node: %s" % interface["numa-node"])
+            print("  local-cpuset: %s" % interface["local-cpuset"])
+            print("  rx-auto-cpuset: %s" % interface["rx-auto-cpuset"])
+            for thread in interface["rx-threads"]:
+                print("  rx-thread id=%s cpu=%s source=%s queue=%s active=%s stopped=%s" % (
+                    thread["id"], thread["selected-cpu"], thread["cpu-source"],
+                    thread.get("queue", "-"), thread["thread-active"], thread["thread-stopped"]))
+            print("  tx-auto-cpuset: %s" % interface["tx-auto-cpuset"])
+            for thread in interface["tx-threads"]:
+                print("  tx-thread id=%s cpu=%s source=%s queue=%s active=%s stopped=%s" % (
+                    thread["id"], thread["selected-cpu"], thread["cpu-source"],
+                    thread.get("queue", "-"), thread["thread-active"], thread["thread-stopped"]))
     else:
         print(json.dumps(data, indent=4))
 

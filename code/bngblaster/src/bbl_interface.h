@@ -19,6 +19,9 @@ typedef struct bbl_interface_
     uint32_t ifindex; /* internal interface index */
     uint32_t kernel_index; /* kernel interface index  */
     uint16_t port_id; /* DPDK port identifier */
+    int numa_node; /* local NUMA node if known */
+    uint16_t *local_cpuset; /* auto-discovered local CPU list */
+    uint16_t local_cpuset_count;
 
     bbl_link_config_s *config;
 
@@ -67,5 +70,8 @@ bbl_interface_ctrl_disable(int fd, uint32_t session_id __attribute__((unused)), 
 
 int
 bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_interface_ctrl_topology(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 #endif

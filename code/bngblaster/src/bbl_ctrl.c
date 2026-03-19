@@ -309,6 +309,7 @@ static const struct action actions[] = {
     {"session-traffic", bbl_session_ctrl_traffic_stats, schema_no_args, true},
     {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_session_group_id, false},
     {"interfaces", bbl_interface_ctrl, schema_no_args, true},
+    {"interface-topology", bbl_interface_ctrl_topology, schema_interface, true},
     {"access-interfaces", bbl_access_ctrl_interfaces, schema_no_args, true},
     {"network-interfaces", bbl_network_ctrl_interfaces, schema_no_args, true},
     {"a10nsp-interfaces", bbl_a10nsp_ctrl_interfaces, schema_no_args, true},

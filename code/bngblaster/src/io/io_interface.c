@@ -9,6 +9,246 @@
 #include "io.h"
 #include "ifaddrs.h"
 
+#define BBL_CPU_ID_MAX 4096
+
+static bool
+read_first_line(const char *path, char *buf, size_t len)
+{
+    FILE *fp;
+
+    fp = fopen(path, "r");
+    if(!fp) {
+        return false;
+    }
+    if(!fgets(buf, len, fp)) {
+        fclose(fp);
+        return false;
+    }
+    fclose(fp);
+    return true;
+}
+
+static bool
+read_cpu_topology_int(uint16_t cpu, const char *leaf, int *value)
+{
+    char path[256];
+    char buf[64];
+
+    snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%u/topology/%s", cpu, leaf);
+    if(!read_first_line(path, buf, sizeof(buf))) {
+        return false;
+    }
+    *value = atoi(buf);
+    return true;
+}
+
+static bool
+parse_cpuset(char *input, uint16_t **cpuset, uint16_t *count)
+{
+    long max_cpu;
+    char *buf;
+    char *token;
+    char *saveptr = NULL;
+    uint16_t *list;
+    uint16_t list_count = 0;
+    unsigned int first;
+    unsigned int last;
+    unsigned int cpu;
+
+    max_cpu = sysconf(_SC_NPROCESSORS_CONF);
+    if(max_cpu <= 0) {
+        max_cpu = 1024;
+    }
+
+    buf = strdup(input);
+    list = calloc(max_cpu, sizeof(uint16_t));
+    if(!(buf && list)) {
+        free(buf);
+        free(list);
+        return false;
+    }
+
+    token = strtok_r(buf, ", \t\r\n", &saveptr);
+    while(token) {
+        if(sscanf(token, "%u-%u", &first, &last) == 2) {
+            if(last < first) {
+                free(buf);
+                free(list);
+                return false;
+            }
+        } else if(sscanf(token, "%u", &first) == 1) {
+            last = first;
+        } else {
+            free(buf);
+            free(list);
+            return false;
+        }
+
+        for(cpu = first; cpu <= last; cpu++) {
+            if(list_count >= max_cpu) {
+                free(buf);
+                free(list);
+                return false;
+            }
+            list[list_count++] = cpu;
+        }
+        token = strtok_r(NULL, ", \t\r\n", &saveptr);
+    }
+
+    free(buf);
+    if(!list_count) {
+        free(list);
+        return false;
+    }
+
+    *cpuset = list;
+    *count = list_count;
+    return true;
+}
+
+static bool
+cpu_in_list(const uint16_t *cpuset, uint16_t count, uint16_t cpu)
+{
+    uint16_t i;
+    for(i = 0; i < count; i++) {
+        if(cpuset[i] == cpu) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool
+append_cpu(uint16_t *cpuset, uint16_t *count, uint16_t max, uint16_t cpu)
+{
+    if(*count >= max || cpu_in_list(cpuset, *count, cpu)) {
+        return false;
+    }
+    cpuset[(*count)++] = cpu;
+    return true;
+}
+
+static void
+order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
+{
+    uint16_t *ordered;
+    uint16_t ordered_count = 0;
+    uint16_t i;
+    uint16_t j;
+    int package_id;
+    int core_id;
+    int seen_package[BBL_CPU_ID_MAX];
+    int seen_core[BBL_CPU_ID_MAX];
+    uint16_t seen_count = 0;
+    bool sibling_added;
+
+    if(count < 2) {
+        return;
+    }
+
+    ordered = calloc(count, sizeof(uint16_t));
+    if(!ordered) {
+        return;
+    }
+
+    for(i = 0; i < count; i++) {
+        if(!read_cpu_topology_int((*cpuset)[i], "physical_package_id", &package_id) ||
+           !read_cpu_topology_int((*cpuset)[i], "core_id", &core_id)) {
+            continue;
+        }
+        sibling_added = false;
+        for(j = 0; j < seen_count; j++) {
+            if(seen_package[j] == package_id && seen_core[j] == core_id) {
+                sibling_added = true;
+                break;
+            }
+        }
+        if(!sibling_added) {
+            append_cpu(ordered, &ordered_count, count, (*cpuset)[i]);
+            if(seen_count < BBL_CPU_ID_MAX) {
+                seen_package[seen_count] = package_id;
+                seen_core[seen_count] = core_id;
+                seen_count++;
+            }
+        }
+    }
+
+    for(i = 0; i < count; i++) {
+        append_cpu(ordered, &ordered_count, count, (*cpuset)[i]);
+    }
+
+    if(ordered_count == count) {
+        memcpy(*cpuset, ordered, count * sizeof(uint16_t));
+    }
+    free(ordered);
+}
+
+bool
+io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
+{
+    char path[256];
+    char buf[256];
+    uint16_t *cpuset = NULL;
+    uint16_t count = 0;
+    int numa_node = -1;
+    bool use_online = false;
+
+    if(numa_node_hint >= -1) {
+        numa_node = numa_node_hint;
+    }
+
+    if(interface->config->io_mode == IO_MODE_DPDK) {
+        snprintf(path, sizeof(path), "/sys/bus/pci/devices/%s/local_cpulist", interface->name);
+    } else {
+        snprintf(path, sizeof(path), "/sys/class/net/%s/device/local_cpulist", interface->name);
+    }
+    if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
+        goto SUCCESS;
+    }
+
+    if(numa_node < 0) {
+        if(interface->config->io_mode == IO_MODE_DPDK) {
+            snprintf(path, sizeof(path), "/sys/bus/pci/devices/%s/numa_node", interface->name);
+        } else {
+            snprintf(path, sizeof(path), "/sys/class/net/%s/device/numa_node", interface->name);
+        }
+        if(read_first_line(path, buf, sizeof(buf))) {
+            numa_node = atoi(buf);
+        }
+    }
+
+    if(numa_node >= 0) {
+        snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/cpulist", numa_node);
+        if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
+            goto SUCCESS;
+        }
+    }
+
+    use_online = true;
+    if(read_first_line("/sys/devices/system/cpu/online", buf, sizeof(buf)) &&
+       parse_cpuset(buf, &cpuset, &count)) {
+        goto SUCCESS;
+    }
+    return false;
+
+SUCCESS:
+    order_cpuset_physical_first(&cpuset, count);
+    interface->numa_node = numa_node;
+    interface->local_cpuset = cpuset;
+    interface->local_cpuset_count = count;
+    if(use_online) {
+        LOG(INFO, "Auto CPU placement for interface %s uses system online CPUs (%u entries)\n",
+            interface->name, count);
+    } else if(numa_node >= 0) {
+        LOG(INFO, "Auto CPU placement for interface %s uses NUMA node %d (%u CPUs)\n",
+            interface->name, numa_node, count);
+    } else {
+        LOG(INFO, "Auto CPU placement for interface %s uses local CPU list (%u entries)\n",
+            interface->name, count);
+    }
+    return true;
+}
+
 static bool
 set_kernel_info(bbl_interface_s *interface)
 {
@@ -218,6 +458,13 @@ io_interface_init(bbl_interface_s *interface)
         address_warning(interface);
         if(!set_kernel_info(interface)) {
             return false;
+        }
+        if((config->rx_auto_cpuset && !config->rx_cpuset_count) ||
+           (config->tx_auto_cpuset && !config->tx_cpuset_count)) {
+            if(!io_interface_init_topology(interface, -2)) {
+                LOG(ERROR, "Failed to discover local CPU topology for interface %s\n", interface->name);
+                return false;
+            }
         }
         if(!set_promisc(interface)) {
             return false;
