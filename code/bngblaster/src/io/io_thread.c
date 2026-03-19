@@ -8,6 +8,10 @@
  */
 #include "io.h"
 
+#define BBL_CPU_ID_MAX 4096
+
+static bool g_io_cpu_reserved[BBL_CPU_ID_MAX];
+
 /** 
  * This function redirects the packet in the
  * IO buffer to the main thread via the TXQ 
@@ -218,6 +222,54 @@ io_thread_main(void *thread_data)
     return NULL;
 }
 
+static bool
+io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io)
+{
+    bbl_interface_s *interface = io->interface;
+    bbl_link_config_s *config = interface->config;
+    uint16_t *cursor = NULL;
+    uint16_t start;
+    uint16_t index;
+    uint16_t cpu;
+
+    if(!interface->local_cpuset_count) {
+        return false;
+    }
+
+    if(io->direction == IO_INGRESS) {
+        if(!(config->rx_auto_cpuset && !config->rx_cpuset_count)) {
+            return false;
+        }
+        cursor = &config->rx_cpuset_cur;
+    } else {
+        if(!(config->tx_auto_cpuset && !config->tx_cpuset_count)) {
+            return false;
+        }
+        cursor = &config->tx_cpuset_cur;
+    }
+
+    thread->set_cpu_affinity = true;
+    CPU_ZERO(&thread->cpuset);
+
+    start = *cursor % interface->local_cpuset_count;
+    for(index = 0; index < interface->local_cpuset_count; index++) {
+        cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
+        if(cpu < BBL_CPU_ID_MAX && !g_io_cpu_reserved[cpu]) {
+            CPU_SET(cpu, &thread->cpuset);
+            thread->selected_cpu = cpu;
+            g_io_cpu_reserved[cpu] = true;
+            *cursor = (start + index + 1) % interface->local_cpuset_count;
+            return true;
+        }
+    }
+
+    cpu = interface->local_cpuset[start];
+    CPU_SET(cpu, &thread->cpuset);
+    thread->selected_cpu = cpu;
+    *cursor = (start + 1) % interface->local_cpuset_count;
+    return true;
+}
+
 bool
 io_thread_init(io_handle_s *io)
 {
@@ -280,7 +332,8 @@ io_thread_init(io_handle_s *io)
     if(io->direction == IO_INGRESS && config->rx_cpuset_count) {
         thread->set_cpu_affinity = true;
         CPU_ZERO(&thread->cpuset);
-        CPU_SET(config->rx_cpuset[config->rx_cpuset_cur++], &thread->cpuset);
+        thread->selected_cpu = config->rx_cpuset[config->rx_cpuset_cur++];
+        CPU_SET(thread->selected_cpu, &thread->cpuset);
         if(config->rx_cpuset_cur >= config->rx_cpuset_count) {
             config->rx_cpuset_cur = 0;
         }
@@ -288,10 +341,14 @@ io_thread_init(io_handle_s *io)
     if(io->direction == IO_EGRESS && config->tx_cpuset_count) {
         thread->set_cpu_affinity = true;
         CPU_ZERO(&thread->cpuset);
-        CPU_SET(config->tx_cpuset[config->tx_cpuset_cur++], &thread->cpuset);
+        thread->selected_cpu = config->tx_cpuset[config->tx_cpuset_cur++];
+        CPU_SET(thread->selected_cpu, &thread->cpuset);
         if(config->tx_cpuset_cur >= config->tx_cpuset_count) {
             config->tx_cpuset_cur = 0;
         }
+    }
+    if(!thread->set_cpu_affinity) {
+        io_thread_auto_affinity(thread, io);
     }
     return true;
 }

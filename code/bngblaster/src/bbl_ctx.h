@@ -162,6 +162,8 @@ typedef struct bbl_ctx_
 
         uint8_t tx_threads;
         uint8_t rx_threads;
+        bool tx_auto_cpuset;
+        bool rx_auto_cpuset;
 
         char *tun_name;
         char *json_report_filename;

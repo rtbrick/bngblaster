@@ -9,6 +9,59 @@
 #include "bbl.h"
 #include <sys/stat.h>
 
+static json_t *
+bbl_interface_ctrl_topology_cpuset(uint16_t *cpuset, uint16_t count)
+{
+    uint16_t i;
+    json_t *jarray = json_array();
+
+    if(!jarray) {
+        return NULL;
+    }
+    for(i = 0; i < count; i++) {
+        json_array_append_new(jarray, json_integer(cpuset[i]));
+    }
+    return jarray;
+}
+
+static json_t *
+bbl_interface_ctrl_topology_threads(io_handle_s *io, bool auto_cpuset, bool manual_cpuset)
+{
+    json_t *jarray = json_array();
+    json_t *jobj;
+    const char *source;
+
+    if(!jarray) {
+        return NULL;
+    }
+    while(io) {
+        if(io->thread) {
+            source = "none";
+            if(manual_cpuset) {
+                source = "manual";
+            } else if(auto_cpuset) {
+                source = "auto";
+            }
+            jobj = json_pack("{si ss sb sb si}",
+                             "id", io->id,
+                             "cpu-source", source,
+                             "thread-active", io->thread->active,
+                             "thread-stopped", io->thread->stopped,
+                             "selected-cpu", io->thread->selected_cpu);
+#ifdef BNGBLASTER_DPDK
+            if(jobj && io->mode == IO_MODE_DPDK) {
+                json_object_set_new(jobj, "queue", json_integer(io->queue));
+            }
+#endif
+            if(jobj) {
+                json_array_append_new(jarray, jobj);
+            }
+        }
+        io = io->next;
+    }
+    return jarray;
+}
+
 const char *
 interface_type_string(interface_type_t type)
 {
@@ -29,6 +82,19 @@ interface_state_string(interface_state_t state)
         case INTERFACE_DOWN: return "Down";
         case INTERFACE_STANDBY: return "Standby";
         default: return "N/A";
+    }
+}
+
+static const char *
+interface_io_mode_string(io_mode_t mode)
+{
+    switch(mode) {
+        case IO_MODE_PACKET_MMAP_RAW: return "packet_mmap_raw";
+        case IO_MODE_PACKET_MMAP: return "packet_mmap";
+        case IO_MODE_RAW: return "raw";
+        case IO_MODE_DPDK: return "dpdk";
+        case IO_MODE_AF_XDP: return "af_xdp";
+        default: return "disabled";
     }
 }
 
@@ -337,6 +403,67 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
 
     if(root) {
         result = json_dumpfd(root, fd, 0);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+    }
+    return result;
+}
+
+int
+bbl_interface_ctrl_topology(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+    const char *name = NULL;
+    bbl_interface_s *interface;
+    json_t *root;
+    json_t *jobj;
+    json_t *jobj_array = json_array();
+    json_t *jcpuset;
+    json_t *jrx_threads;
+    json_t *jtx_threads;
+
+    if(arguments) {
+        json_unpack(arguments, "{s?s}", "interface", &name);
+    }
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if(name && strcmp(name, interface->name) != 0) {
+            continue;
+        }
+
+        jcpuset = bbl_interface_ctrl_topology_cpuset(interface->local_cpuset, interface->local_cpuset_count);
+        jrx_threads = bbl_interface_ctrl_topology_threads(interface->io.rx,
+                                                          interface->config->rx_auto_cpuset,
+                                                          interface->config->rx_cpuset_count != 0);
+        jtx_threads = bbl_interface_ctrl_topology_threads(interface->io.tx,
+                                                          interface->config->tx_auto_cpuset,
+                                                          interface->config->tx_cpuset_count != 0);
+        jobj = json_pack("{ss ss si so so so sb sb}",
+                         "name", interface->name,
+                         "io-mode", interface_io_mode_string(interface->config->io_mode),
+                         "numa-node", interface->numa_node,
+                         "local-cpuset", jcpuset,
+                         "rx-threads", jrx_threads,
+                         "tx-threads", jtx_threads,
+                         "rx-auto-cpuset", interface->config->rx_auto_cpuset,
+                         "tx-auto-cpuset", interface->config->tx_auto_cpuset);
+        if(jobj) {
+            json_array_append_new(jobj_array, jobj);
+        }
+    }
+
+    if(name && json_array_size(jobj_array) == 0) {
+        json_decref(jobj_array);
+        return bbl_ctrl_status(fd, "warning", 404, "interface not found");
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "interfaces", jobj_array);
+    if(root) {
+        result = json_dumpfd(root, fd, JSON_INDENT(4));
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
