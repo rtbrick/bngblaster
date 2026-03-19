@@ -118,6 +118,7 @@ typedef struct io_thread_ {
     volatile bool stopped;
     
     bool set_cpu_affinity;
+    int selected_cpu;
     cpu_set_t cpuset;
 
     io_thread_cb_fn setup_fn;

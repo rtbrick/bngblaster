@@ -622,6 +622,8 @@ link_add(char *interface_name)
     link_config->rx_interval = g_ctx->config.rx_interval;
     link_config->tx_threads = g_ctx->config.tx_threads;
     link_config->rx_threads = g_ctx->config.rx_threads;
+    link_config->tx_auto_cpuset = g_ctx->config.tx_auto_cpuset;
+    link_config->rx_auto_cpuset = g_ctx->config.rx_auto_cpuset;
     link_config->next = g_ctx->config.link_config;
     g_ctx->config.link_config = link_config;
 }
@@ -640,6 +642,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         "qdisc-bypass", 
         "tx-interval","rx-interval", 
         "tx-threads", "rx-threads",
+        "tx-auto-cpuset", "rx-auto-cpuset",
         "rx-cpuset", "tx-cpuset", 
         "lag-interface", "lacp-priority"
     };
@@ -748,6 +751,18 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->rx_threads = json_number_value(value);
     } else {
         link_config->rx_threads = g_ctx->config.rx_threads;
+    }
+    JSON_OBJ_GET_BOOL(link, value, "links", "rx-auto-cpuset");
+    if(value) {
+        link_config->rx_auto_cpuset = json_boolean_value(value);
+    } else {
+        link_config->rx_auto_cpuset = g_ctx->config.rx_auto_cpuset;
+    }
+    JSON_OBJ_GET_BOOL(link, value, "links", "tx-auto-cpuset");
+    if(value) {
+        link_config->tx_auto_cpuset = json_boolean_value(value);
+    } else {
+        link_config->tx_auto_cpuset = g_ctx->config.tx_auto_cpuset;
     }
 
     value = json_object_get(link, "rx-cpuset");
@@ -4155,7 +4170,8 @@ json_parse_config(json_t *root)
         const char *schema[] = {
             "io-mode", "io-slots", "io-burst", "qdisc-bypass",
             "tx-interval", "rx-interval", "tx-threads", "tun-name",
-            "rx-threads", "capture-include-streams", "mac-modifier",
+            "rx-threads", "tx-auto-cpuset", "rx-auto-cpuset",
+            "capture-include-streams", "mac-modifier",
             "lag", "network", "access", "a10nsp", "links", "a10nsp-dynamic"
         };
         if(!schema_validate(section, "interfaces", schema, 
@@ -4214,6 +4230,14 @@ json_parse_config(json_t *root)
         JSON_OBJ_GET_NUMBER(section, value, "interfaces", "rx-threads", 0, 255);
         if(value) {
             g_ctx->config.rx_threads = json_number_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "interfaces", "tx-auto-cpuset");
+        if(value) {
+            g_ctx->config.tx_auto_cpuset = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_BOOL(section, value, "interfaces", "rx-auto-cpuset");
+        if(value) {
+            g_ctx->config.rx_auto_cpuset = json_boolean_value(value);
         }
         JSON_OBJ_GET_BOOL(section, value, "interfaces", "capture-include-streams");
         if(value) {
