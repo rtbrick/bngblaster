@@ -427,8 +427,8 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         printf("  Flows:        %10lu\n", dict_count(g_ctx->li_flow_dict));
         printf("  RX Packets:   %10lu\n", stats->li_rx);
     }
-    if(g_ctx->config.l2tp_server) {
-        printf("\nL2TP LNS Statistics:");
+    if(g_ctx->config.l2tp_server || g_ctx->config.l2tp_client) {
+        printf("\nL2TP LNS/LAC Statistics:");
         printf("\n------------------------------------------------------------------------------\n");
         printf("  Tunnels:      %10u\n", g_ctx->l2tp_tunnels_max);
         printf("  Established:  %10u\n", g_ctx->l2tp_tunnels_established_max);
@@ -840,7 +840,7 @@ bbl_stats_json(bbl_stats_s * stats)
         json_object_set_new(jobj_sub, "rx-packets", json_integer(stats->li_rx));
         json_object_set_new(jobj, "li-statistics", jobj_sub);
     }
-    if(g_ctx->config.l2tp_server) {
+    if(g_ctx->config.l2tp_server || g_ctx->config.l2tp_client) {
         jobj_sub = json_object();
         json_object_set_new(jobj_sub, "tunnels", json_integer(g_ctx->l2tp_tunnels_max));
         json_object_set_new(jobj_sub, "tunnels-established", json_integer(g_ctx->l2tp_tunnels_established_max));

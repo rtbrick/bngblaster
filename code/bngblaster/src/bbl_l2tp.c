@@ -1998,6 +1998,7 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
     json_t *root, *tunnels, *tunnel;
 
     bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_client_s *l2tp_client = g_ctx->config.l2tp_client;
     bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     tunnels = json_array();
@@ -2025,6 +2026,31 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
             json_array_append_new(tunnels, tunnel);
         }
         l2tp_server = l2tp_server->next;
+    }
+
+    while(l2tp_client) {
+        CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
+
+            tunnel = json_pack("{ss ss ss si si ss ss ss ss si si si si si sI sI}",
+                                "state", l2tp_tunnel_state_string(l2tp_tunnel->state),
+                                "client-name", l2tp_client->name,
+                                "server-address", format_ipv4_address(&l2tp_client->server_ip),
+                                "tunnel-id", l2tp_tunnel->tunnel_id,
+                                "peer-tunnel-id", l2tp_tunnel->peer_tunnel_id,
+                                "peer-name", string_or_na(l2tp_tunnel->peer_name),
+                                "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip),
+                                "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
+                                "secret", string_or_na(l2tp_client->secret),
+                                "control-packets-rx", l2tp_tunnel->stats.control_rx,
+                                "control-packets-rx-dup", l2tp_tunnel->stats.control_rx_dup,
+                                "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
+                                "control-packets-tx", l2tp_tunnel->stats.control_tx,
+                                "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
+                                "data-packets-rx", l2tp_tunnel->stats.data_rx,
+                                "data-packets-tx", l2tp_tunnel->stats.data_tx);
+            json_array_append_new(tunnels, tunnel);
+        }
+        l2tp_client = l2tp_client->next;
     }
 
     root = json_pack("{ss si so}",
