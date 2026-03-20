@@ -17,6 +17,12 @@ void
 bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, l2tp_message_t l2tp_type);
 
 const char*
+l2tp_tunnel_hostname(bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
+    return l2tp_tunnel->server->host_name;
+}
+
+const char*
 l2tp_message_string(l2tp_message_t type)
 {
     switch(type) {
@@ -162,7 +168,7 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
         if(l2tp_session->key.session_id) {
             /* Here we skip the session with ID zero which is the tunnel session. */
             LOG(DEBUG, "L2TP Debug (%s) Tunnel %u Session %u deleted\n",
-                       l2tp_session->tunnel->server->host_name, l2tp_session->tunnel->tunnel_id, l2tp_session->key.session_id);
+                       l2tp_tunnel_hostname(l2tp_session->tunnel), l2tp_session->tunnel->tunnel_id, l2tp_session->key.session_id);
 
             if(g_ctx->l2tp_sessions) g_ctx->l2tp_sessions--;
         }
@@ -205,7 +211,7 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
     if(l2tp_tunnel) {
         if(l2tp_tunnel->tunnel_id) {
             LOG(DEBUG, "L2TP Debug (%s) Tunnel %u deleted\n",
-                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id);
+                    l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id);
         }
         if(g_ctx->l2tp_tunnels) g_ctx->l2tp_tunnels--;
 
@@ -256,7 +262,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t
     if(l2tp_tunnel->state != state) {
         /* State has changed */
         LOG(DEBUG, "L2TP Debug (%s) Tunnel (%u) state changed from %s to %s\n",
-                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                    l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                     l2tp_tunnel_state_string(l2tp_tunnel->state),
                     l2tp_tunnel_state_string(state));
 
@@ -267,7 +273,7 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t
                 g_ctx->l2tp_tunnels_established_max = g_ctx->l2tp_tunnels_established;
             }
             LOG(L2TP, "L2TP Info (%s) Tunnel (%u) with %s (%s) established\n",
-                      l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                      l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                       l2tp_tunnel->peer_name,
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
         } else if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
@@ -340,7 +346,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
                 interface->stats.l2tp_control_retry++;
                 if(q->retries > l2tp_tunnel->server->max_retry) {
                     LOG(ERROR, "L2TP Error (%s) Tunnel (%u) max retry to %s (%s)\n",
-                        l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                        l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                         l2tp_tunnel->peer_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
 
                     l2tp_tunnel->result_code = 2;
@@ -633,15 +639,15 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
             l2tp_tunnel2->peer_tunnel_id == l2tp_tunnel->peer_tunnel_id) {
                 if(l2tp_tunnel2->state > BBL_L2TP_TUNNEL_WAIT_CTR_CONN) {
                     LOG(ERROR, "L2TP Error (%s) Tunnel (%u) SCCRQ in wrong state (%s) received from %s (%s)\n",
-                        l2tp_tunnel2->server->host_name, l2tp_tunnel2->tunnel_id,
-                        l2tp_tunnel_state_string(l2tp_tunnel2->state), 
+                        l2tp_tunnel_hostname(l2tp_tunnel2), l2tp_tunnel2->tunnel_id,
+                        l2tp_tunnel_state_string(l2tp_tunnel2->state),
                         l2tp_tunnel2->peer_name, format_ipv4_address(&ipv4->src));
 
                     bbl_l2tp_tunnel_update_state(l2tp_tunnel2, BBL_L2TP_TUNNEL_TERMINATED);
                 } else {
                     /* Seems to be an SCCRQ retry ... */
                     LOG(PACKET, "L2TP (%s) SCCRQ retry received from %s (%s)\n",
-                        l2tp_tunnel2->server->host_name, l2tp_tunnel2->peer_name,
+                        l2tp_tunnel_hostname(l2tp_tunnel2), l2tp_tunnel2->peer_name,
                         format_ipv4_address(&ipv4->src));
                 }
                 bbl_l2tp_tunnel_delete(l2tp_tunnel);
@@ -655,7 +661,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
 
             l2tp_tunnel->server = l2tp_server;
             LOG(PACKET, "L2TP (%s) SCCRQ received from %s (%s)\n",
-                l2tp_server->host_name, l2tp_tunnel->peer_name,
+                l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->peer_name,
                 format_ipv4_address(&ipv4->src));
 
             /* Add dummy tunnel session, this session is only used
@@ -681,7 +687,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
             result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
             if(!result.inserted) {
                 LOG(ERROR, "L2TP Error (%s) Failed to add tunnel session\n",
-                    l2tp_tunnel->server->host_name);
+                    l2tp_tunnel_hostname(l2tp_tunnel));
                 free(l2tp_session);
                 bbl_l2tp_tunnel_delete(l2tp_tunnel);
                 return;
@@ -707,7 +713,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
                     /* We are not able to setup a session if no challenge
                      * is received but there is a secret configured! */
                     LOG(ERROR, "L2TP Error (%s) Missing challenge in SCCRQ from %s\n",
-                        l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                        l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
                     l2tp_tunnel->result_code = 2;
                     l2tp_tunnel->error_code = 6;
                     l2tp_tunnel->error_message = "missing challenge";
@@ -718,7 +724,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
                     /* We are not able to setup a session if challenge
                      * is received but not secret configured! */
                     LOG(ERROR, "L2TP Error (%s) No secret found but challenge received in SCCRQ from %s\n",
-                        l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                        l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
                     l2tp_tunnel->result_code = 2;
                     l2tp_tunnel->error_code = 6;
                     l2tp_tunnel->error_message = "no challenge expected";
@@ -760,7 +766,7 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface,
     if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_WAIT_CTR_CONN) {
         if(!bbl_l2tp_avp_decode_tunnel(l2tp, l2tp_tunnel)) {
             LOG(ERROR, "L2TP Error (%s) Invalid SCCCN received from %s\n",
-                l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
             l2tp_tunnel->result_code = 2;
             l2tp_tunnel->error_code = 6;
             l2tp_tunnel->error_message = "decode error";
@@ -778,7 +784,7 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface,
                 MD5_Final(digest, &md5_ctx);
                 if(memcmp(digest, l2tp_tunnel->peer_challenge_response, L2TP_MD5_DIGEST_LEN) != 0) {
                     LOG(ERROR, "L2TP Error (%s) Wrong challenge response in SCCCN from %s\n",
-                        l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                        l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
                     l2tp_tunnel->result_code = 2;
                     l2tp_tunnel->error_code = 6;
                     l2tp_tunnel->error_message = "challenge authentication failed";
@@ -788,7 +794,7 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface,
                 }
             } else {
                 LOG(ERROR, "L2TP Error (%s) Missing challenge response in SCCCN from %s\n",
-                    l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                    l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
                 l2tp_tunnel->result_code = 2;
                 l2tp_tunnel->error_code = 6;
                 l2tp_tunnel->error_message = "missing challenge response";
@@ -866,7 +872,7 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
     result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
     if(!result.inserted) {
         LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
-            l2tp_tunnel->server->host_name);
+            l2tp_tunnel_hostname(l2tp_tunnel));
         free(l2tp_session);
         return;
     }
@@ -904,7 +910,7 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
     if(l2tp_session->state == BBL_L2TP_SESSION_WAIT_CONN) {
         l2tp_session->state = BBL_L2TP_SESSION_ESTABLISHED;
         LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) established\n",
-            l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+            l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
             l2tp_tunnel->peer_name,
             format_ipv4_address(&l2tp_tunnel->peer_ip),
             l2tp_session->key.session_id);
@@ -930,7 +936,7 @@ bbl_l2tp_cdn_rx(bbl_network_interface_s *interface,
 
     l2tp_session->state = BBL_L2TP_SESSION_TERMINATED;
     LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) terminated\n",
-        l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+        l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
         l2tp_tunnel->peer_name,
         format_ipv4_address(&l2tp_tunnel->peer_ip),
         l2tp_session->key.session_id);
@@ -1247,7 +1253,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
         if(l2tp_tunnel->nr == l2tp->ns) {
             /* In-Order packet received */
             LOG(PACKET, "L2TP (%s) Tunnel (%u) %s received from %s\n",
-                l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                 l2tp_message_string(l2tp->type),
                 format_ipv4_address(&ipv4->src));
             /* Update tunnel */
@@ -1337,7 +1343,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
             if(L2TP_SEQ_LT(l2tp->ns, l2tp_tunnel->nr)) {
                 /* Duplicate packet received */
                 LOG(DEBUG, "L2TP Debug (%s) Tunnel (%u) Duplicate %s received with Ns. %u (expected %u) from %s\n",
-                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                    l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                     l2tp_message_string(l2tp->type),
                     l2tp->ns, l2tp_tunnel->nr,
                     format_ipv4_address(&ipv4->src));
@@ -1353,7 +1359,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
             } else {
                 /* Out-of-Order packet received */
                 LOG(DEBUG, "L2TP Debug (%s) Tunnel (%u) Out-of-Order %s received with Ns. %u (expected %u) from %s\n",
-                    l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+                    l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                     l2tp_message_string(l2tp->type),
                     l2tp->ns, l2tp_tunnel->nr,
                     format_ipv4_address(&ipv4->src));
