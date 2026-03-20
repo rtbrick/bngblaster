@@ -48,7 +48,7 @@ typedef struct bbl_access_config_
     char *network_interface;
     char *a10nsp_interface;
 
-    access_type_t access_type; /* pppoe or ipoe */
+    access_type_t access_type; /* pppoe, ipoe or pppol2tp */
     vlan_mode_t vlan_mode; /* 1:1 (default) or N:1 */
 
     uint16_t l2tp_client_group_id;

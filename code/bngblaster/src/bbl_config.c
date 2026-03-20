@@ -1128,6 +1128,8 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             access_config->access_type = ACCESS_TYPE_IPOE;
             access_config->ipv4_enable = g_ctx->config.ipoe_ipv4_enable;
             access_config->ipv6_enable = g_ctx->config.ipoe_ipv6_enable;
+        } else if(strcmp(s, "pppol2tp") == 0) {
+            access_config->access_type = ACCESS_TYPE_PPPOL2TP;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for access->type\n");
             return false;

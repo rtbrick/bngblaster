@@ -387,6 +387,9 @@ bbl_ctrl_job(timer_s *timer)
                                 }
                             }
                             break;
+                        case ACCESS_TYPE_PPPOL2TP:
+                            /* later, just silent compiler for now */
+                            break;
                     }
                     bbl_session_tx_qnode_insert(session);
                     /* Remove from idle queue */

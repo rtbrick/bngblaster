@@ -1746,7 +1746,8 @@
                     "description": "Access type",
                     "enum": [
                         "pppoe",
-                        "ipoe"
+                        "ipoe",
+                        "pppol2tp"
                     ],
                     "default": "pppoe"
                 },
@@ -2109,6 +2110,13 @@
                 "http-client-group-id": {
                     "type": "integer",
                     "description": "HTTP client group identifier",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "l2tp-client-group-id": {
+                    "type": "integer",
+                    "description": "L2TP client group identifier (used with type pppol2tp)",
                     "default": 0,
                     "minimum": 0,
                     "maximum": 65535

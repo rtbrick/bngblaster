@@ -135,7 +135,8 @@ typedef enum {
 
 typedef enum {
     ACCESS_TYPE_PPPOE = 0,
-    ACCESS_TYPE_IPOE
+    ACCESS_TYPE_IPOE,
+    ACCESS_TYPE_PPPOL2TP,
 } __attribute__ ((__packed__)) access_type_t;
 
 typedef enum {
