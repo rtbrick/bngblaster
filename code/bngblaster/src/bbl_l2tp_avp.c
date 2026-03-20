@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "bbl.h"
+#include "bbl_l2tp.h"
 #include "bbl_l2tp_avp.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
@@ -191,12 +192,12 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
 
     if(!value) {
         LOG(L2TP, "L2TP Error (%s) Invalid hidden AVP\n",
-            l2tp_tunnel->server->host_name);
+            l2tp_tunnel_hostname(l2tp_tunnel));
         return false;
     }
     if(!(random_vector && l2tp_tunnel->server->secret)) {
         LOG(L2TP, "L2TP Error (%s) Missing random-vector or secret\n",
-            l2tp_tunnel->server->host_name);
+            l2tp_tunnel_hostname(l2tp_tunnel));
         return false;
     }
 
@@ -216,7 +217,7 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
 
     if(len + 2 > avp->len) {
         LOG(L2TP, "L2TP Error (%s) Decrypted length %u > AVP length %u\n",
-            l2tp_tunnel->server->host_name, len, avp->len);
+            l2tp_tunnel_hostname(l2tp_tunnel), len, avp->len);
         return false;
     }
 
@@ -255,7 +256,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
             if(avp.h) {
                 if(!bbl_l2tp_avp_unhide(l2tp_tunnel, &avp, random_vector, random_vector_len)) {
                     LOG(L2TP, "L2TP (%s) Failed to decrypt hidden AVP %u in %s from %s\n",
-                              l2tp_tunnel->server->host_name, avp.type,
+                              l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                               l2tp_message_string(l2tp->type),
                               format_ipv4_address(&l2tp_tunnel->peer_ip));
                     return false;
@@ -269,7 +270,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_ASSIGNED_SESSION_ID:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP assigned session id AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -279,7 +280,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_CALL_SERIAL_NUMBER:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP call serial number AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -289,7 +290,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_FRAMING_TYPE:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP framing type AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -299,7 +300,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_BEARER_TYPE:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP bearer type AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -330,7 +331,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_TX_CONNECT_SPEED:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP tx connect speed AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -340,7 +341,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_RX_CONNECT_SPEED:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP rx connect speed AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -350,7 +351,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_PHYSICAL_CHANNEL_ID:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP physical channel AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -360,7 +361,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_PRIVATE_GROUP_ID:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP private group id AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -378,7 +379,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_PROXY_AUTHEN_TYPE:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP proxy auth type AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -403,7 +404,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_PROXY_AUTHEN_ID:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP proxy auth id AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -436,13 +437,13 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     default:
                         if(avp.m) {
                             LOG(L2TP, "L2TP Error (%s) Mandatory standard AVP with unknown type %u in %s from %s\n",
-                                      l2tp_tunnel->server->host_name, avp.type,
+                                      l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
                         } else {
                             LOG(L2TP, "L2TP Warning (%s) Optional standard AVP with unknown type %u in %s from %s\n",
-                                      l2tp_tunnel->server->host_name, avp.type,
+                                      l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                         }
@@ -467,7 +468,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     default:
                         if(avp.m) {
                             LOG(L2TP, "L2TP Error (%s) Mandatory Broadband Forum AVP with unknown type %u in %s from %s\n",
-                                      l2tp_tunnel->server->host_name, avp.type,
+                                      l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -477,7 +478,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
             } else {
                 if(avp.m) {
                     LOG(L2TP, "L2TP (%s) Mandatory AVP with unknown vendor %u in %s from %s\n",
-                              l2tp_tunnel->server->host_name, avp.vendor,
+                              l2tp_tunnel_hostname(l2tp_tunnel), avp.vendor,
                               l2tp_message_string(l2tp->type),
                               format_ipv4_address(&l2tp_tunnel->peer_ip));
                     return false;
@@ -485,7 +486,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
             }
         } else {
             LOG(L2TP, "L2TP (%s) Failed to decdoe session attributes in %s from %s\n",
-                      l2tp_tunnel->server->host_name,
+                      l2tp_tunnel_hostname(l2tp_tunnel),
                       l2tp_message_string(l2tp->type),
                       format_ipv4_address(&l2tp_tunnel->peer_ip));
             return false;
@@ -509,7 +510,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
             if(avp.h) {
                 if(!bbl_l2tp_avp_unhide(l2tp_tunnel, &avp, random_vector, random_vector_len)) {
                     LOG(L2TP, "L2TP (%s) Failed to decrypt hidden AVP %u in %s from %s\n",
-                              l2tp_tunnel->server->host_name, avp.type,
+                              l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                               l2tp_message_string(l2tp->type),
                               format_ipv4_address(&l2tp_tunnel->peer_ip));
                     return false;
@@ -523,7 +524,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_PROTOCOL_VERSION:
                         if(avp.len != 2 || be16toh(*(uint16_t*)avp.value) != 256) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP protocol version AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -532,7 +533,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_FRAMING_CAPABILITIES:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP framing capabilities AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -542,7 +543,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_BEARER_CAPABILITIES:
                         if(avp.len != 4) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP bearer capabilities AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -552,7 +553,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_FIRMWARE_REVISION:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP firmware revision AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -576,7 +577,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_ASSIGNED_TUNNEL_ID:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP assigned tunnel id AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -586,7 +587,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_RECEIVE_WINDOW_SIZE:
                         if(avp.len != 2) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP receive window size AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -604,7 +605,7 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_CHALLENGE_RESPONSE:
                         if(avp.len != L2TP_MD5_DIGEST_LEN) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP challenge response AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -622,13 +623,13 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     default:
                         if(avp.m) {
                             LOG(L2TP, "L2TP Error (%s) Mandatory standard AVP with unknown type %u in %s from %s\n",
-                                    l2tp_tunnel->server->host_name, avp.type,
+                                    l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                     l2tp_message_string(l2tp->type),
                                     format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
                         } else {
                             LOG(L2TP, "L2TP Warning (%s) Optional standard AVP with unknown type %u in %s from %s\n",
-                                    l2tp_tunnel->server->host_name, avp.type,
+                                    l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                     l2tp_message_string(l2tp->type),
                                     format_ipv4_address(&l2tp_tunnel->peer_ip));
                         }
@@ -637,13 +638,14 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
             } else {
                 if(avp.m) {
                     LOG(L2TP, "L2TP (%s) Mandatory AVP with unknown vendor %u received from %s\n",
-                              l2tp_tunnel->server->host_name, avp.vendor, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                              l2tp_tunnel_hostname(l2tp_tunnel), avp.vendor,
+                              format_ipv4_address(&l2tp_tunnel->peer_ip));
                     return false;
                 }
             }
         } else {
             LOG(L2TP, "L2TP (%s) Failed to decdoe tunnel attributes from %s\n",
-                      l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                      l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
             return false;
         }
     }
@@ -673,7 +675,7 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_CONNECT_SPEED_UPDATE:
                         if(avp.len != 12) {
                             LOG(L2TP, "L2TP Error (%s) Invalid L2TP connect speed update AVP in %s from %s\n",
-                                      l2tp_tunnel->server->host_name,
+                                      l2tp_tunnel_hostname(l2tp_tunnel),
                                       l2tp_message_string(l2tp->type),
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
@@ -691,13 +693,13 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     default:
                         if(avp.m) {
                             LOG(L2TP, "L2TP Error (%s) Mandatory standard AVP with unknown type %u in %s from %s\n",
-                                    l2tp_tunnel->server->host_name, avp.type,
+                                    l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                     l2tp_message_string(l2tp->type),
                                     format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
                         } else {
                             LOG(L2TP, "L2TP Warning (%s) Optional standard AVP with unknown type %u in %s from %s\n",
-                                    l2tp_tunnel->server->host_name, avp.type,
+                                    l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
                                     l2tp_message_string(l2tp->type),
                                     format_ipv4_address(&l2tp_tunnel->peer_ip));
                         }
@@ -706,13 +708,14 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
             } else {
                 if(avp.m) {
                     LOG(L2TP, "L2TP (%s) Mandatory AVP with unknown vendor %u received from %s\n",
-                              l2tp_tunnel->server->host_name, avp.vendor, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                              l2tp_tunnel_hostname(l2tp_tunnel), avp.vendor,
+                              format_ipv4_address(&l2tp_tunnel->peer_ip));
                     return false;
                 }
             }
         } else {
             LOG(L2TP, "L2TP (%s) Failed to decdoe tunnel attributes from %s\n",
-                      l2tp_tunnel->server->host_name, format_ipv4_address(&l2tp_tunnel->peer_ip));
+                      l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
             return false;
         }
     }
@@ -784,9 +787,9 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
             /* Host Name */
             avp.m = true;
             avp.type = L2TP_AVP_HOST_NAME;
-            avp.len = strlen(l2tp_tunnel->server->host_name);
+            avp.len = strlen(l2tp_tunnel_hostname(l2tp_tunnel));
             avp.value_type = L2TP_AVP_VALUE_BYTES;
-            avp.value = (void*)(l2tp_tunnel->server->host_name);
+            avp.value = (void*)l2tp_tunnel_hostname(l2tp_tunnel);
             bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Vendor Name */
             avp.m = false;
