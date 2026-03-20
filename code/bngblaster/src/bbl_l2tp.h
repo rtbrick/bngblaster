@@ -163,6 +163,7 @@ typedef struct bbl_l2tp_tunnel_
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
 
     CIRCLEQ_HEAD(session_, bbl_l2tp_session_) session_qhead;
+    CIRCLEQ_HEAD(pending_session_, bbl_session_) pending_session_qhead;
     CIRCLEQ_HEAD(txq_, bbl_l2tp_queue_) tx_qhead;
 
     /* Pointer to corresponding network interface */
@@ -359,5 +360,11 @@ bbl_l2tp_ctrl_session_terminate(int fd, uint32_t session_id, json_t *arguments);
 
 int
 bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+bbl_l2tp_tunnel_s *
+bbl_l2tp_client_session_get_tunnel(bbl_session_s *session);
+
+void
+bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *session);
 
 #endif

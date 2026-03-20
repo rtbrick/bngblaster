@@ -39,6 +39,7 @@ session_state_string(uint32_t state)
         case BBL_PPP_LINK: return "PPP Link";
         case BBL_PPP_AUTH: return "PPP Authentication";
         case BBL_PPP_NETWORK: return "PPP Network";
+        case BBL_L2TP_WAIT: return "L2TP Wait";
         case BBL_ESTABLISHED: return "Established";
         case BBL_PPP_TERMINATING: return "PPP Terminating";
         case BBL_TERMINATING: return "Terminating";

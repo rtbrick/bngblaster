@@ -1231,15 +1231,20 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
 /**
  * bbl_l2tp_client_session_connect
  *
- * Initiate a new L2TP session within an established LAC tunnel
- * by sending ICRQ.
+ * Initiate a new L2TP session within an established LAC tunnel by sending ICRQ.
  */
-static void
-bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel)
+void
+bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *session)
 {
     bbl_l2tp_session_s *l2tp_session;
     dict_insert_result result;
     void **search;
+
+    if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
+        /* Queue session to pending list */
+        CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
+        return;
+    }
 
     l2tp_session = calloc(1, sizeof(bbl_l2tp_session_s));
     g_ctx->l2tp_sessions++;
@@ -1359,8 +1364,12 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_SCCCN);
     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_ESTABLISHED);
 
-    /* Initiate first session */
-    bbl_l2tp_client_session_connect(l2tp_tunnel);
+    /* Process pending sessions */
+    while(!CIRCLEQ_EMPTY(&l2tp_tunnel->pending_session_qhead)) {
+        bbl_session_s *session = CIRCLEQ_FIRST(&l2tp_tunnel->pending_session_qhead);
+        CIRCLEQ_REMOVE(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
+        bbl_l2tp_client_session_connect(l2tp_tunnel, session);
+    }
 }
 
 /**
@@ -1452,6 +1461,7 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
     g_ctx->l2tp_tunnels++;
     CIRCLEQ_INIT(&l2tp_tunnel->tx_qhead);
     CIRCLEQ_INIT(&l2tp_tunnel->session_qhead);
+    CIRCLEQ_INIT(&l2tp_tunnel->pending_session_qhead);
 
     l2tp_tunnel->is_lac = true;
     l2tp_tunnel->client = l2tp_client;
@@ -1511,6 +1521,11 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
 
     /* Send SCCRQ */
     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_SCCRQ);
+    /* Mark the start of session establishment for setup-time calculation.
+     * Equivalent to PADI in PPPoE: the first outbound control packet. */
+    if(!g_ctx->stats.first_session_tx.tv_sec) {
+        clock_gettime(CLOCK_MONOTONIC, &g_ctx->stats.first_session_tx);
+    }
 
     LOG(L2TP, "L2TP Info (%s) Tunnel (%u) SCCRQ sent to %s\n",
         l2tp_client->name,
@@ -1518,6 +1533,89 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
         format_ipv4_address(&l2tp_client->server_ip));
 
     return l2tp_tunnel;
+}
+
+/**
+ * bbl_l2tp_client_session_get_tunnel
+ *
+ * Return a live LAC tunnel for the session's group-id, creating one per
+ * l2tp-client config entry on demand.  A tunnel is "live" when its state
+ * is below BBL_L2TP_TUNNEL_SEND_STOPCCN; a tearing-down tunnel is not
+ * reused so that reconnecting sessions get a fresh tunnel.
+ */
+bbl_l2tp_tunnel_s *
+bbl_l2tp_client_session_get_tunnel(bbl_session_s *session)
+{
+    bbl_l2tp_client_s *l2tp_client;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+    uint16_t group_id = session->access_config->l2tp_client_group_id;
+    uint32_t tunnel_count = 0;
+    uint32_t target;
+    bool has_live;
+
+    if(!group_id) {
+        LOG(ERROR, "L2TP Error (ID: %u) no L2TP client group-id was specified\n", session->session_id);
+        bbl_session_update_state(session, BBL_TERMINATED);
+        return NULL;
+    }
+
+    /* Ensure every l2tp-client config entry in the group has a live tunnel.
+     * If the entry's tunnel_qhead is empty, or all its tunnels are already
+     * tearing down, create a new one now. */
+    l2tp_client = g_ctx->config.l2tp_client;
+    while(l2tp_client) {
+        if(l2tp_client->group_id == group_id) {
+            has_live = false;
+            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
+                if(l2tp_tunnel->is_lac && l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
+                    has_live = true;
+                    break;
+                }
+            }
+            if(!has_live) {
+                bbl_l2tp_client_connect(l2tp_client);
+            }
+        }
+        l2tp_client = l2tp_client->next;
+    }
+
+    /* First pass: count live LAC tunnels in the group. */
+    l2tp_client = g_ctx->config.l2tp_client;
+    while(l2tp_client) {
+        if(l2tp_client->group_id == group_id) {
+            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
+                if(l2tp_tunnel->is_lac && l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
+                    tunnel_count++;
+                }
+            }
+        }
+        l2tp_client = l2tp_client->next;
+    }
+
+    if(!tunnel_count) {
+        LOG(ERROR, "L2TP Error (ID: %u) no tunnel available for L2TP client group-id %u\n",
+            session->session_id, group_id);
+        bbl_session_update_state(session, BBL_TERMINATED);
+        return NULL;
+    }
+
+    /* Second pass: pick tunnel at index session_id % tunnel_count,
+     * giving an even round-robin distribution without any stored state. */
+    target = session->session_id % tunnel_count;
+    tunnel_count = 0;
+    l2tp_client = g_ctx->config.l2tp_client;
+    while(l2tp_client) {
+        if(l2tp_client->group_id == group_id) {
+            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
+                if(!l2tp_tunnel->is_lac || l2tp_tunnel->state >= BBL_L2TP_TUNNEL_SEND_STOPCCN) continue;
+                if(tunnel_count == target) return l2tp_tunnel;
+                tunnel_count++;
+            }
+        }
+        l2tp_client = l2tp_client->next;
+    }
+
+    return NULL;
 }
 
 /**

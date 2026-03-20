@@ -189,6 +189,7 @@ typedef enum {
     BBL_PPP_LINK,           /* send LCP requests */
     BBL_PPP_AUTH,           /* send authentication requests */
     BBL_PPP_NETWORK,        /* send NCP requests */
+    BBL_L2TP_WAIT,          /* wait for L2TP session */
     BBL_ESTABLISHED,        /* established */
     BBL_PPP_TERMINATING,    /* send LCP terminate requests */
     BBL_TERMINATING,        /* send PADT */
