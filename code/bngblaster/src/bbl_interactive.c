@@ -388,8 +388,8 @@ bbl_interactive_window_job(timer_s *timer)
                 wprintw(stats_win, "  RX Packets                %10lu (%7lu PPS)\n",
                     g_network_if->stats.li_rx, g_network_if->stats.rate_li_rx.avg);
             }
-            VISIBLE((g_ctx->config.l2tp_server)) {
-                wprintw(stats_win, "\nL2TP LNS Statistics\n");
+            VISIBLE((g_ctx->config.l2tp_server  || g_ctx->config.l2tp_client)) {
+                wprintw(stats_win, "\nL2TP LNS/LAC Statistics\n");
                 wprintw(stats_win, "  Tunnels     %10u\n", g_ctx->l2tp_tunnels);
                 wprintw(stats_win, "  Established %10u\n", g_ctx->l2tp_tunnels_established);
                 wprintw(stats_win, "  Sessions    %10u\n", g_ctx->l2tp_sessions);
