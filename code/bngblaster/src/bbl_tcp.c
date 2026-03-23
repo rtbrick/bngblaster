@@ -886,15 +886,13 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 /**
  * bbl_tcp_ipv4_rx_session 
  * 
- * @param eth ethernet packet received
  * @param ipv4 ipv4 header received
  * @param session receiving session
  */
 void
-bbl_tcp_ipv4_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
+bbl_tcp_ipv4_rx_session(bbl_session_s *session, bbl_ipv4_s *ipv4)
 {
     struct pbuf *pbuf;
-    UNUSED(eth);
 
     if(!(g_ctx->tcp && session->netif.state)) {
         /* TCP not enabled! */
@@ -1000,15 +998,13 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 /**
  * bbl_tcp_ipv6_rx_session 
  * 
- * @param eth ethernet packet received
  * @param ipv6 ipv6 header received
  * @param session receiving session
  */
 void
-bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6)
+bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ipv6_s *ipv6)
 {
     struct pbuf *pbuf;
-    UNUSED(eth);
 
     if(!(g_ctx->tcp && session->netif.state)) {
         /* TCP not enabled! */

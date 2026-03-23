@@ -133,11 +133,18 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
 void
 bbl_access_rx_established_pppoe(bbl_access_interface_s *interface, 
                                 bbl_session_s *session, 
-                                bbl_ethernet_header_s *eth);
+                                struct timespec *timestamp);
 
 void
 bbl_access_rx_handler(bbl_access_interface_s *interface, 
                       bbl_ethernet_header_s *eth);
+
+void
+bbl_ppp_rx(bbl_access_interface_s *interface,
+           bbl_session_s *session,
+           bbl_ethernet_header_s *eth,
+           uint16_t protocol,
+           void *next);
 
 int
 bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
