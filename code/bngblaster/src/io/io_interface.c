@@ -191,19 +191,12 @@ io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
     uint16_t *cpuset = NULL;
     uint16_t count = 0;
     int numa_node = -1;
+    bool use_local = false;
+    bool use_numa = false;
     bool use_online = false;
 
     if(numa_node_hint >= -1) {
         numa_node = numa_node_hint;
-    }
-
-    if(interface->config->io_mode == IO_MODE_DPDK) {
-        snprintf(path, sizeof(path), "/sys/bus/pci/devices/%s/local_cpulist", interface->name);
-    } else {
-        snprintf(path, sizeof(path), "/sys/class/net/%s/device/local_cpulist", interface->name);
-    }
-    if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
-        goto SUCCESS;
     }
 
     if(numa_node < 0) {
@@ -217,9 +210,20 @@ io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
         }
     }
 
+    if(interface->config->io_mode == IO_MODE_DPDK) {
+        snprintf(path, sizeof(path), "/sys/bus/pci/devices/%s/local_cpulist", interface->name);
+    } else {
+        snprintf(path, sizeof(path), "/sys/class/net/%s/device/local_cpulist", interface->name);
+    }
+    if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
+        use_local = true;
+        goto SUCCESS;
+    }
+
     if(numa_node >= 0) {
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/cpulist", numa_node);
         if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
+            use_numa = true;
             goto SUCCESS;
         }
     }
@@ -239,12 +243,18 @@ SUCCESS:
     if(use_online) {
         LOG(INFO, "Auto CPU placement for interface %s uses system online CPUs (%u entries)\n",
             interface->name, count);
-    } else if(numa_node >= 0) {
-        LOG(INFO, "Auto CPU placement for interface %s uses NUMA node %d (%u CPUs)\n",
+    } else if(use_local && numa_node >= 0) {
+        LOG(INFO, "Auto CPU placement for interface %s uses local CPU list on NUMA node %d (%u entries)\n",
             interface->name, numa_node, count);
-    } else {
+    } else if(use_local) {
         LOG(INFO, "Auto CPU placement for interface %s uses local CPU list (%u entries)\n",
             interface->name, count);
+    } else if(use_numa) {
+        LOG(INFO, "Auto CPU placement for interface %s uses NUMA node %d (%u CPUs)\n",
+            interface->name, numa_node, count);
+    } else if(numa_node >= 0) {
+        LOG(INFO, "Auto CPU placement for interface %s is associated with NUMA node %d (%u CPUs)\n",
+            interface->name, numa_node, count);
     }
     return true;
 }
