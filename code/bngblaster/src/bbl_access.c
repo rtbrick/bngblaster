@@ -532,6 +532,10 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
 {
     bbl_icmpv6_s *icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
+    if(!eth) {
+        return false;
+    }
+
     if(session->access_type == ACCESS_TYPE_PPPOE &&
        session->ip6cp_state != BBL_PPP_OPENED) {
         return false;
@@ -616,6 +620,11 @@ static bool
 bbl_access_rx_icmp(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
     bbl_icmp_s *icmp = (bbl_icmp_s*)ipv4->next;
+
+    if(!eth) {
+        return false;
+    }
+
     if(session->ip_address && session->ip_address == ipv4->dst) {
         if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
             /* Send ICMP reply... */
@@ -636,10 +645,15 @@ bbl_access_rx_ipv4_mc(bbl_access_interface_s *interface,
                       bbl_session_s *session, 
                       bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
-    bbl_bbl_s *bbl = eth->bbl;
+    bbl_bbl_s *bbl;
     bbl_igmp_group_s *group = NULL;
     uint64_t loss;
     int i;
+
+    if(!eth) {
+        return;
+    }
+    bbl = eth->bbl;
 
     for(i=0; i < IGMP_MAX_GROUPS; i++) {
         group = &session->igmp_groups[i];
@@ -690,7 +704,7 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
 
     if(ipv4->offset & ~IPV4_DF) {
         session->stats.accounting_packets_rx++;
-        session->stats.accounting_bytes_rx += eth->length;
+        session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len;
         session->stats.ipv4_fragmented_rx++;
         interface->stats.ipv4_fragmented_rx++;
         bbl_fragment_rx(interface, NULL, eth, ipv4);
@@ -717,14 +731,14 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
             }
             break;
         case PROTOCOL_IPV4_TCP:
-            bbl_tcp_ipv4_rx_session(session, eth, ipv4);
+            bbl_tcp_ipv4_rx_session(session, ipv4);
             break;
         default:
             break;
     }
 
     session->stats.accounting_packets_rx++;
-    session->stats.accounting_bytes_rx += eth->length;
+    session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len;
 
     /* All IPv4 multicast addresses start with 1110 */
     if((ipv4->dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
@@ -758,13 +772,13 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
             bbl_access_rx_udp_ipv6(interface, session, eth, ipv6);
             return;
         case IPV6_NEXT_HEADER_TCP:
-            bbl_tcp_ipv6_rx_session(session, eth, ipv6);
+            bbl_tcp_ipv6_rx_session(session, ipv6);
             break;
         default:
             break;
     }
     session->stats.accounting_packets_rx++;
-    session->stats.accounting_bytes_rx += eth->length;
+    session->stats.accounting_bytes_rx += eth ? eth->length : ipv6->len;
 }
 
 static void
@@ -812,15 +826,11 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
 static void
 bbl_access_rx_pap(bbl_access_interface_s *interface,
                   bbl_session_s *session, 
-                  bbl_ethernet_header_s *eth)
+                  bbl_pap_s *pap,
+                  struct timespec *timestamp)
 {
-    bbl_pppoe_session_s *pppoes;
-    bbl_pap_s *pap;
-
-    pppoes = (bbl_pppoe_session_s*)eth->next;
-    pap = (bbl_pap_s*)pppoes->next;
-
     UNUSED(interface);
+    UNUSED(timestamp);
 
     if(session->session_state == BBL_PPP_AUTH) {
         switch(pap->code) {
@@ -868,17 +878,13 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
 static void
 bbl_access_rx_chap(bbl_access_interface_s *interface,
                    bbl_session_s *session, 
-                   bbl_ethernet_header_s *eth)
+                   bbl_chap_s *chap,
+                   struct timespec *timestamp)
 {
-    bbl_pppoe_session_s *pppoes;
-    bbl_chap_s *chap;
-
     MD5_CTX md5_ctx;
 
     UNUSED(interface);
-
-    pppoes = (bbl_pppoe_session_s*)eth->next;
-    chap = (bbl_chap_s*)pppoes->next;
+    UNUSED(timestamp);
 
     if(session->session_state == BBL_PPP_AUTH) {
         switch(chap->code) {
@@ -971,12 +977,12 @@ bbl_access_ncp_success(uint8_t state)
  * 
  * @param interface receiving interface
  * @param session corresponding session
- * @param eth received packet
+ * @param timestamp received packet timestamp
  */
 void
 bbl_access_rx_established_pppoe(bbl_access_interface_s *interface, 
                                 bbl_session_s *session, 
-                                bbl_ethernet_header_s *eth)
+                                struct timespec *timestamp)
 {
     UNUSED(interface);
 
@@ -986,8 +992,12 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
     if(ipcp && ip6cp) {
         if(session->session_state != BBL_ESTABLISHED) {
             if(g_ctx->sessions_established_max < g_ctx->sessions) {
-                g_ctx->stats.last_session_established.tv_sec = eth->timestamp.tv_sec;
-                g_ctx->stats.last_session_established.tv_nsec = eth->timestamp.tv_nsec;
+                if(timestamp) {
+                    g_ctx->stats.last_session_established.tv_sec = timestamp->tv_sec;
+                    g_ctx->stats.last_session_established.tv_nsec = timestamp->tv_nsec;
+                } else {
+                    clock_gettime(CLOCK_MONOTONIC, &g_ctx->stats.last_session_established);
+                }
             }
             bbl_session_update_state(session, BBL_ESTABLISHED);
             if(g_ctx->config.pppoe_session_time) {
@@ -1010,10 +1020,10 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
 static void
 bbl_access_rx_ip6cp(bbl_access_interface_s *interface, 
                     bbl_session_s *session,
-                    bbl_ethernet_header_s *eth)
+                    bbl_ip6cp_s *ip6cp,
+                    struct timespec *timestamp)
 {
-    bbl_pppoe_session_s *pppoes;
-    bbl_ip6cp_s *ip6cp;
+    UNUSED(interface);
 
     if(session->lcp_state != BBL_PPP_OPENED) {
         return;
@@ -1031,8 +1041,6 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
         return;
     }
 
-    pppoes = (bbl_pppoe_session_s*)eth->next;
-    ip6cp = (bbl_ip6cp_s*)pppoes->next;
 
     switch(ip6cp->code) {
         case PPP_CODE_CONF_REQUEST:
@@ -1051,7 +1059,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_LOCAL_ACK:
                     session->ip6cp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(interface, session, eth);
+                    bbl_access_rx_established_pppoe(interface, session, timestamp);
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
@@ -1083,7 +1091,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_PEER_ACK:
                     session->ip6cp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(interface, session, eth);
+                    bbl_access_rx_established_pppoe(interface, session, timestamp);
                     session->link_local_ipv6_address[0] = 0xfe;
                     session->link_local_ipv6_address[1] = 0x80;
                     *(uint64_t*)&session->link_local_ipv6_address[8] = session->ip6cp_ipv6_identifier;
@@ -1142,10 +1150,10 @@ bbl_access_rx_ipcp_conf_reject(bbl_session_s *session, bbl_ipcp_s *ipcp)
 static void
 bbl_access_rx_ipcp(bbl_access_interface_s *interface, 
                    bbl_session_s *session, 
-                   bbl_ethernet_header_s *eth)
+                   bbl_ipcp_s *ipcp,
+                   struct timespec *timestamp)
 {
-    bbl_pppoe_session_s *pppoes;
-    bbl_ipcp_s *ipcp;
+    UNUSED(interface);
 
     if(session->lcp_state != BBL_PPP_OPENED) {
         return;
@@ -1163,8 +1171,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
         return;
     }
 
-    pppoes = (bbl_pppoe_session_s*)eth->next;
-    ipcp = (bbl_ipcp_s*)pppoes->next;
+
 
     switch(ipcp->code) {
         case PPP_CODE_CONF_REQUEST:
@@ -1187,7 +1194,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_LOCAL_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(interface, session, eth);
+                    bbl_access_rx_established_pppoe(interface, session, timestamp);
                     ACTIVATE_ENDPOINT(session->endpoint.ipv4);
                     session->version++;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
@@ -1246,7 +1253,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     break;
                 case BBL_PPP_PEER_ACK:
                     session->ipcp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(interface, session, eth);
+                    bbl_access_rx_established_pppoe(interface, session, timestamp);
                     ACTIVATE_ENDPOINT(session->endpoint.ipv4);
                     session->version++;
                     LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
@@ -1468,15 +1475,10 @@ bbl_access_lcp_opened(bbl_session_s *session)
 static void
 bbl_access_rx_lcp(bbl_access_interface_s *interface,
                   bbl_session_s *session, 
-                  bbl_ethernet_header_s *eth)
+                  bbl_lcp_s *lcp,
+                  struct timespec *timestamp)
 {
-    bbl_pppoe_session_s *pppoes;
-    bbl_lcp_s *lcp;
-
     UNUSED(interface);
-
-    pppoes = (bbl_pppoe_session_s*)eth->next;
-    lcp = (bbl_lcp_s*)pppoes->next;
 
     if(session->session_state < BBL_PPP_LINK) {
         return;
@@ -1672,7 +1674,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                 LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol 0x%04x reject  received\n", 
                     session->session_id, lcp->protocol);
             }
-            bbl_access_rx_established_pppoe(interface, session, eth);
+            bbl_access_rx_established_pppoe(interface, session, timestamp);
             break;
         default:
             session->lcp_response_code = PPP_CODE_CODE_REJECT;
@@ -1690,6 +1692,48 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
     }
 }
 
+void
+bbl_ppp_rx(bbl_access_interface_s *interface,
+           bbl_session_s *session,
+           bbl_ethernet_header_s *eth,
+           uint16_t protocol,
+           void *next)
+{
+    struct timespec *timestamp = eth ? &eth->timestamp : NULL;
+
+    switch(protocol) {
+        case PROTOCOL_LCP:
+            bbl_access_rx_lcp(interface, session, (bbl_lcp_s*)next, timestamp);
+            if(interface) interface->stats.lcp_rx++;
+            break;
+        case PROTOCOL_IPCP:
+            bbl_access_rx_ipcp(interface, session, (bbl_ipcp_s*)next, timestamp);
+            if(interface) interface->stats.ipcp_rx++;
+            break;
+        case PROTOCOL_IP6CP:
+            bbl_access_rx_ip6cp(interface, session, (bbl_ip6cp_s*)next, timestamp);
+            if(interface) interface->stats.ip6cp_rx++;
+            break;
+        case PROTOCOL_PAP:
+            bbl_access_rx_pap(interface, session, (bbl_pap_s*)next, timestamp);
+            if(interface) interface->stats.pap_rx++;
+            break;
+        case PROTOCOL_CHAP:
+            bbl_access_rx_chap(interface, session, (bbl_chap_s*)next, timestamp);
+            if(interface) interface->stats.chap_rx++;
+            break;
+        case PROTOCOL_IPV4:
+            bbl_access_rx_ipv4(interface, session, eth, (bbl_ipv4_s*)next);
+            break;
+        case PROTOCOL_IPV6:
+            bbl_access_rx_ipv6(interface, session, eth, (bbl_ipv6_s*)next);
+            break;
+        default:
+            if(interface) interface->stats.unknown++;
+            break;
+    }
+}
+
 static void
 bbl_access_rx_session(bbl_access_interface_s *interface,
                       bbl_session_s *session,
@@ -1703,37 +1747,7 @@ bbl_access_rx_session(bbl_access_interface_s *interface,
         return;
     }
 
-    switch(pppoes->protocol) {
-        case PROTOCOL_LCP:
-            bbl_access_rx_lcp(interface, session, eth);
-            interface->stats.lcp_rx++;
-            break;
-        case PROTOCOL_IPCP:
-            bbl_access_rx_ipcp(interface, session, eth);
-            interface->stats.ipcp_rx++;
-            break;
-        case PROTOCOL_IP6CP:
-            bbl_access_rx_ip6cp(interface, session, eth);
-            interface->stats.ip6cp_rx++;
-            break;
-        case PROTOCOL_PAP:
-            bbl_access_rx_pap(interface, session, eth);
-            interface->stats.pap_rx++;
-            break;
-        case PROTOCOL_CHAP:
-            bbl_access_rx_chap(interface, session, eth);
-            interface->stats.chap_rx++;
-            break;
-        case PROTOCOL_IPV4:
-            bbl_access_rx_ipv4(interface, session, eth, (bbl_ipv4_s*)pppoes->next);
-            break;
-        case PROTOCOL_IPV6:
-            bbl_access_rx_ipv6(interface, session, eth, (bbl_ipv6_s*)pppoes->next);
-            break;
-        default:
-            interface->stats.unknown++;
-            break;
-    }
+    bbl_ppp_rx(interface, session, eth, pppoes->protocol, pppoes->next);
 }
 
 void
