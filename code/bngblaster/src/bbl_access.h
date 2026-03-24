@@ -14,6 +14,7 @@ typedef struct bbl_access_interface_
 {
     char *name; /* interface name */
     uint32_t ifindex; /* interface index */
+    access_type_t access_type; /* pppoe, ipoe or l2tp */
 
     /* parent */
     bbl_interface_s *interface; 

@@ -64,6 +64,7 @@ bbl_access_interfaces_add()
             access_interface->name = access_config->interface;
             access_interface->interface = interface;
             access_interface->ifindex = interface->ifindex;
+            access_interface->access_type = access_config->access_type;
             
             /* Init TXQ */
             access_interface->txq = calloc(1, sizeof(bbl_txq_s));
