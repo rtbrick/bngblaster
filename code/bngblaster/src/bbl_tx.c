@@ -31,6 +31,14 @@
 static protocol_error_t
 bbl_ppp_tx(bbl_session_s *session, uint16_t protocol, void *payload)
 {
+    if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+        if(!session->l2tp_session) {
+            return EMPTY;
+        }
+        bbl_l2tp_send_data(session->l2tp_session, protocol, payload);
+        return PROTOCOL_QUEUED;
+    }
+
     bbl_ethernet_header_s eth  = {0};
     bbl_pppoe_session_s   pppoe = {0};
 
@@ -1373,7 +1381,8 @@ bbl_tx_encode_packet(bbl_session_s *session, uint8_t *buf, uint16_t *len)
     session->write_buf = buf;
     session->write_idx = 0;
 
-    if(session->send_requests & BBL_SEND_DISCOVERY) {
+    if(session->send_requests & BBL_SEND_DISCOVERY &&
+       session->access_type != ACCESS_TYPE_PPPOL2TP) {
         result = bbl_tx_encode_packet_discovery(session);
         session->send_requests &= ~BBL_SEND_DISCOVERY;
         session->pppoe_retries++;
@@ -1667,6 +1676,9 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
                     access_interface->stats.bytes_tx += *len;
                     session->stats.packets_tx++;
                     session->stats.bytes_tx += *len;
+                } else if(result == PROTOCOL_QUEUED) {
+                    /* Packet enqueued in a TX queue (ex: L2TP); nothing to transmit from write_buf. */
+                    result = EMPTY;
                 }
                 /* Remove only from TX queue if all requests are processed! */
                 bbl_session_tx_qnode_remove(session);

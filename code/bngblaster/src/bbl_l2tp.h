@@ -365,6 +365,9 @@ bbl_l2tp_tunnel_s *
 bbl_l2tp_client_session_get_tunnel(bbl_session_s *session);
 
 void
+bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next);
+
+void
 bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *session);
 
 #endif

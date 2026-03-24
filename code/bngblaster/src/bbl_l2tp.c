@@ -551,7 +551,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
  * @param protocol Payload type (IPCP, IPv4, ...).
  * @param next Payload structure.
  */
-static void
+void
 bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next) {
 
     bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
