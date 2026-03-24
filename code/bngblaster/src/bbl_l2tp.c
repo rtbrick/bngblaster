@@ -168,7 +168,10 @@ bbl_l2tp_force_stop(bbl_l2tp_tunnel_s *l2tp_tunnel)
 void
 bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
 {
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
+
     if(l2tp_session) {
+        l2tp_tunnel = l2tp_session->tunnel;
         if(l2tp_session->key.session_id) {
             /* Here we skip the session with ID zero which is the tunnel session. */
             LOG(DEBUG, "L2TP Debug (%s) Tunnel %u Session %u deleted\n",
@@ -184,9 +187,35 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
         /* Remove session from dict */
         dict_remove(g_ctx->l2tp_session_dict, &l2tp_session->key);
 
-        /* Remove session from PPPoE session */
+        /* Remove session from PPPoE/PPPoL2TP session */
         if(l2tp_session->pppoe_session) {
-            l2tp_session->pppoe_session->l2tp_session = NULL;
+            bbl_session_s *session = l2tp_session->pppoe_session;
+            l2tp_session->pppoe_session = NULL;
+            session->l2tp_session = NULL;
+            /* In LAC mode the PPP session lifecycle is tied to the L2TP session:
+             * terminate it so that it can be restarted or counted as terminated. */
+            if(l2tp_session->tunnel->is_lac &&
+               session->session_state != BBL_TERMINATED &&
+               session->session_state != BBL_IDLE) {
+                bbl_session_update_state(session, BBL_TERMINATED);
+            }
+        }
+
+        /* If this was the last real session on an established tunnel, close it.
+         * The only entry left in session_qhead is the dummy tunnel session (id 0). */
+        if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
+            bbl_l2tp_session_s *s;
+            bool has_sessions = false;
+            CIRCLEQ_FOREACH(s, &l2tp_tunnel->session_qhead, session_qnode) {
+                if(s->key.session_id != 0) {
+                    has_sessions = true;
+                    break;
+                }
+            }
+            if(!has_sessions) {
+                bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+                bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+            }
         }
 
         /* Free tunnel memory */
@@ -852,6 +881,12 @@ bbl_l2tp_stopccn_rx(bbl_network_interface_s *interface,
     UNUSED(eth);
     UNUSED(l2tp);
 
+    /* RFC 2661 only requires a ZLB ACK in response to StopCCN, but many
+     * implementations expect a StopCCN back to complete the teardown
+     * immediately rather than waiting for their own timer to expire. */
+    if(l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
+        bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+    }
     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_RCVD_STOPCCN);
 }
 

@@ -634,7 +634,8 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             }
 
             /* Reset all states */
-            if(session->access_type == ACCESS_TYPE_PPPOE) {
+            if(session->access_type == ACCESS_TYPE_PPPOE ||
+               session->access_type == ACCESS_TYPE_PPPOL2TP) {
                 session->lcp_state = BBL_PPP_CLOSED;
                 if(session->ipcp_state > BBL_PPP_DISABLED) {
                     session->ipcp_state = BBL_PPP_CLOSED;
@@ -691,7 +692,27 @@ bbl_session_clear(bbl_session_s *session)
 {
     session_state_t new_state = BBL_TERMINATED;
 
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+        switch(session->session_state) {
+            case BBL_IDLE:
+                bbl_session_update_state(session, BBL_TERMINATED);
+                break;
+            case BBL_PPP_TERMINATING:
+            case BBL_TERMINATING:
+            case BBL_TERMINATED:
+                break;
+            default:
+                bbl_session_update_state(session, BBL_PPP_TERMINATING);
+                if(session->l2tp_session) {
+                    bbl_l2tp_send(session->l2tp_session->tunnel,
+                                  session->l2tp_session, L2TP_MESSAGE_CDN);
+                    bbl_l2tp_session_delete(session->l2tp_session);
+                } else {
+                    bbl_session_update_state(session, BBL_TERMINATED);
+                }
+                return;
+        }
+    } else if(session->access_type == ACCESS_TYPE_PPPOE) {
         switch(session->session_state) {
             case BBL_IDLE:
             case BBL_PPPOE_INIT:
