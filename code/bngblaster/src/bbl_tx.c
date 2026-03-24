@@ -528,7 +528,7 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         return IGNORED;
     }
 
-    if(g_ctx->config.dhcpv6_ldra) {
+    if(session->access_config->dhcpv6_ldra) {
         dhcpv6_relay.type = DHCPV6_MESSAGE_RELAY_FORW;
         dhcpv6_relay.peer_address = (void*)session->link_local_ipv6_address;
         dhcpv6_relay.relay_message = &dhcpv6;
