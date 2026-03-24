@@ -280,6 +280,13 @@ with user-defined start values and steps.</p>
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>tun-name</strong></p></td>
+<td><div class="line-block">
+<div class="line">TUN interface name prefix (<cite>&lt;tun-name&gt;&lt;session-id&gt;</cite>).</div>
+<div class="line">Default: bbl (bbl1, bbl2, …)</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 <section id="links">
@@ -1252,7 +1259,7 @@ forwarding and header enrichment.</p>
 </tr>
 <tr class="row-even"><td><p><strong>mac</strong></p></td>
 <td><div class="line-block">
-<div class="line">Optional set gateway interface address manually.</div>
+<div class="line">Overwrite the A10NSP MAC address.</div>
 <div class="line">Default: <cite>parent interface/link MAC address</cite></div>
 </div>
 </td>
@@ -1391,6 +1398,16 @@ forwarding and header enrichment.</p>
 <td><div class="line-block">
 <div class="line">Periodic ARP interval in seconds (0 means disabled).</div>
 <div class="line">Default: 300</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN PBIT for generic IPoE control traffic.</div>
+<div class="line">Used for ARP and ICMPv6 ND/RS/NS control traffic.</div>
+<div class="line">Default master value for IPoE traffic (including DHCP and DHCPv6)</div>
+<div class="line">unless overridden by protocol-specific settings.</div>
+<div class="line">Default: 0</div>
 </div>
 </td>
 </tr>
@@ -1770,6 +1787,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>vlan-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">VLAN PBIT for all DHCP control traffic.</div>
+<div class="line">Overrides IPoE vlan-priority for DHCP packets only.</div>
 <div class="line">Default: 0</div>
 </div>
 </td>
@@ -1831,24 +1849,39 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rapid-commit</strong></p></td>
+<tr class="row-odd"><td><p><strong>ia-separate</strong></p></td>
+<td><div class="line-block">
+<div class="line">Send seperate requests for IA_NA and IA_PD.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>rapid-commit</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCPv6 rapid commit (2-way handshake).</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>timeout</strong></p></td>
+<tr class="row-odd"><td><p><strong>timeout</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCPv6 timeout in seconds.</div>
 <div class="line">Default: 5</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>retry</strong></p></td>
+<tr class="row-even"><td><p><strong>retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCPv6 retry.</div>
 <div class="line">Default: 10</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN PBIT for all DHCPv6 control traffic.</div>
+<div class="line">Overrides IPoE vlan-priority for DHCPv6 packets only.</div>
+<div class="line">Default: 0</div>
 </div>
 </td>
 </tr>
@@ -1912,7 +1945,7 @@ forwarding and header enrichment.</p>
 <div class="line">reports. This option allows the combination of leave and join</div>
 <div class="line">records within a single IGMPv3 report using multiple group records.</div>
 <div class="line">This option applies to the IGMP version 3 only!</div>
-<div class="line">Default: true</div>
+<div class="line">Default: false</div>
 </div>
 </td>
 </tr>
@@ -1986,7 +2019,14 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>send-multicast-traffic</strong></p></td>
+<tr class="row-odd"><td><p><strong>robustness-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">IGMP robustness interval in milliseconds.</div>
+<div class="line">Default: 1000</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>send-multicast-traffic</strong></p></td>
 <td><div class="line-block">
 <div class="line">If enabled, the BNG Blaster generates multicast traffic on the</div>
 <div class="line">network interface based on the specified  group and source</div>
@@ -1996,11 +2036,18 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>multicast-traffic-autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast traffic autostart.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>multicast-traffic-length</strong></p></td>
 <td><div class="line-block">
 <div class="line">Multicast traffic IP length.</div>
 <div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
-<div class="line">Default: 76</div>
+<div class="line">Default: 0</div>
 </div>
 </td>
 </tr>
@@ -2250,6 +2297,13 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>li-udp-port</strong></p></td>
+<td><div class="line-block">
+<div class="line">Change default UDP port for LI traffic.</div>
+<div class="line">Default: 49152</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -2296,7 +2350,14 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>source-port</strong></p></td>
+<tr class="row-odd"><td><p><strong>count</strong></p></td>
+<td><div class="line-block">
+<div class="line">Increment the source port for each instance of this stream.</div>
+<div class="line">Default: 1 Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>source-port</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the default source port.</div>
 <div class="line">For bidirectional streams (direction <cite>both</cite>), this is applied</div>
@@ -2305,7 +2366,22 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>destination-port</strong></p></td>
+<tr class="row-odd"><td><p><strong>source-port-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Increment the source port for each instance of this stream.</div>
+<div class="line">See chapter Stream Iterators for details.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>source-port-max</strong></p></td>
+<td><div class="line-block">
+<div class="line">Max source port before reset to <cite>destination-port</cite>.</div>
+<div class="line">Default: 65535 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>destination-port</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the default destination port.</div>
 <div class="line">For bidirectional streams (direction <cite>both</cite>), this is applied</div>
@@ -2314,14 +2390,29 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ipv4-df</strong></p></td>
+<tr class="row-even"><td><p><strong>destination-port-step</strong></p></td>
+<td><div class="line-block">
+<div class="line">Increment the destination port for each instance of this</div>
+<div class="line">stream. See chapter Stream Iterators for details.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>destination-port-max</strong>.</p></td>
+<td><div class="line-block">
+<div class="line">Max destination port before reset to <cite>destination-port</cite>.</div>
+<div class="line">Default: 65535 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ipv4-df</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set IPv4 DF bit.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">IPv4 TOS / IPv6 TC.</div>
 <div class="line">For L2TP downstream traffic, the IPv4 TOS is applied</div>
@@ -2330,35 +2421,35 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>vlan-priority</strong></p></td>
+<tr class="row-even"><td><p><strong>vlan-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">VLAN priority.</div>
 <div class="line">Default: 0 Range: 0 - 7</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>inner-vlan-priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>inner-vlan-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">Inner VLAN priority.</div>
 <div class="line">Default: <strong>vlan-priority</strong> Range: 0 - 7</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>length</strong></p></td>
+<tr class="row-even"><td><p><strong>length</strong></p></td>
 <td><div class="line-block">
 <div class="line">Layer 3 (IP header + payload) traffic length.</div>
 <div class="line">Default: 128 Range: 76 - 9000</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ttl</strong></p></td>
+<tr class="row-odd"><td><p><strong>ttl</strong></p></td>
 <td><div class="line-block">
 <div class="line">TTL.</div>
 <div class="line">Default: 64 Range: 0 - 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>pps</strong></p></td>
+<tr class="row-even"><td><p><strong>pps</strong></p></td>
 <td><div class="line-block">
 <div class="line">Stream traffic rate in packets per second.</div>
 <div class="line">This value supports also float numbers like 0.1 or 2.5.</div>
@@ -2367,7 +2458,7 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>bps</strong></p></td>
+<tr class="row-odd"><td><p><strong>bps</strong></p></td>
 <td><div class="line-block">
 <div class="line">Stream traffic rate in bits per second (layer 3).</div>
 <div class="line">PPS has priority over bps where the second is only a helper</div>
@@ -2381,21 +2472,21 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>pps-upstream</strong></p></td>
+<tr class="row-even"><td><p><strong>pps-upstream</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optionally overwrite PPS in upstream to support bidirectional</div>
 <div class="line">streams with different rates for upstream and downstream.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>bps-upstream</strong></p></td>
+<tr class="row-odd"><td><p><strong>bps-upstream</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optionally overwrite bps in upstream to support bidirectional</div>
 <div class="line">streams with different rates for upstream and downstream.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>setup-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>setup-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set optional setup interval in seconds. If set, sent max 1</div>
 <div class="line">packet per setup interval until stream becomes verified.</div>
@@ -2406,43 +2497,43 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>a10nsp-interface</strong></p></td>
+<tr class="row-odd"><td><p><strong>a10nsp-interface</strong></p></td>
 <td><div class="line-block">
 <div class="line">Select the corresponding A10NSP interface for this stream.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>network-interface</strong></p></td>
+<tr class="row-even"><td><p><strong>network-interface</strong></p></td>
 <td><div class="line-block">
 <div class="line">Select the corresponding network interface for this stream.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>network-ipv4-address</strong></p></td>
+<tr class="row-odd"><td><p><strong>network-ipv4-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite network interface IPv4 address.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>network-ipv6-address</strong></p></td>
+<tr class="row-even"><td><p><strong>network-ipv6-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite network interface IPv6 address.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>destination-ipv4-address</strong></p></td>
+<tr class="row-odd"><td><p><strong>destination-ipv4-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the IPv4 destination address.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>destination-ipv6-address</strong></p></td>
+<tr class="row-even"><td><p><strong>destination-ipv6-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the IPv6 destination address.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>access-ipv4-source-address</strong></p></td>
+<tr class="row-odd"><td><p><strong>access-ipv4-source-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the access IPv4 source address (client).</div>
 <div class="line">This option can be used to test the BNG RPF functionality</div>
@@ -2451,7 +2542,7 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>access-ipv6-source-address</strong></p></td>
+<tr class="row-even"><td><p><strong>access-ipv6-source-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the access IPv6 source address (client).</div>
 <div class="line">This option can be used to test the BNG RPF functionality</div>
@@ -2460,14 +2551,14 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>max-packets</strong></p></td>
+<tr class="row-odd"><td><p><strong>max-packets</strong></p></td>
 <td><div class="line-block">
 <div class="line">Send a burst of N packets and stop.</div>
 <div class="line">Default: 0 (infinity)</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>start-delay</strong></p></td>
+<tr class="row-even"><td><p><strong>start-delay</strong></p></td>
 <td><div class="line-block">
 <div class="line">Wait N seconds after the session is established</div>
 <div class="line">before starting the traffic stream.</div>
@@ -2475,78 +2566,78 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-label1</strong></p></td>
+<tr class="row-odd"><td><p><strong>tx-label1</strong></p></td>
 <td><div class="line-block">
 <div class="line">MPLS send (TX) label (outer label).</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>tx-label1-exp</strong></p></td>
+<tr class="row-even"><td><p><strong>tx-label1-exp</strong></p></td>
 <td><div class="line-block">
 <div class="line">EXP bits of the first label (outer label).</div>
 <div class="line">Default: 0</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-label1-ttl</strong></p></td>
+<tr class="row-odd"><td><p><strong>tx-label1-ttl</strong></p></td>
 <td><div class="line-block">
 <div class="line">TTL of the first label (outer label).</div>
 <div class="line">Default: 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>tx-label2</strong></p></td>
+<tr class="row-even"><td><p><strong>tx-label2</strong></p></td>
 <td><div class="line-block">
 <div class="line">MPLS send (TX) label (inner label).</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-label2-exp</strong></p></td>
+<tr class="row-odd"><td><p><strong>tx-label2-exp</strong></p></td>
 <td><div class="line-block">
 <div class="line">EXP bits of the second label (inner label).</div>
 <div class="line">Default: 0</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>tx-label2-ttl</strong></p></td>
+<tr class="row-even"><td><p><strong>tx-label2-ttl</strong></p></td>
 <td><div class="line-block">
 <div class="line">TTL of the second label (inner label).</div>
 <div class="line">Default: 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>rx-label1</strong></p></td>
+<tr class="row-odd"><td><p><strong>rx-label1</strong></p></td>
 <td><div class="line-block">
 <div class="line">Expected receive MPLS label (outer label).</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rx-label2</strong></p></td>
+<tr class="row-even"><td><p><strong>rx-label2</strong></p></td>
 <td><div class="line-block">
 <div class="line">Expected receive MPLS label (inner label).</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ldp-ipv4-lookup-address</strong></p></td>
+<tr class="row-odd"><td><p><strong>ldp-ipv4-lookup-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Dynamically resolve outer label.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ldp-ipv6-lookup-address</strong></p></td>
+<tr class="row-even"><td><p><strong>ldp-ipv6-lookup-address</strong></p></td>
 <td><div class="line-block">
 <div class="line">Dynamically resolve outer label.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>nat</strong></p></td>
+<tr class="row-odd"><td><p><strong>nat</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable NAT support.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>raw-tcp</strong></p></td>
+<tr class="row-even"><td><p><strong>raw-tcp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Send RAW TCP traffic (UDP-like traffic with TCP header).</div>
 <div class="line">Default: false</div>
@@ -3467,18 +3558,18 @@ provided here.</p>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
-<th class="head"><p>Description</p></th>
+<th class="head" colspan="2"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>instance-id</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP instance identifier.</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>keepalive-time</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP session keepalive time in seconds.</div>
 <div class="line">The <strong>keepalive-time</strong> defines the local LDP session</div>
 <div class="line">keepalive timeout. Each LDP peer must calculate the</div>
@@ -3497,35 +3588,35 @@ provided here.</p>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>hold-time</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP hello hold time in seconds.</div>
 <div class="line">Default: 15 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP teardown time in seconds.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>hostname</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP hostname.</div>
 <div class="line">Default: bngblaster</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>lsr-id</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP LSR identifier.</div>
 <div class="line">Default: 10.10.10.10</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>ipv6-transport-address</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP transport IPv6 address.</div>
 <div class="line">Setting a valid IPv6 address here enables LDP IPv6</div>
 <div class="line">hello and transport.</div>
@@ -3533,20 +3624,20 @@ provided here.</p>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>ipv4-transport-address</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP transport IPv4 address.</div>
 <div class="line">Default: <cite>lsr-id</cite></div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>no-ipv4-transport</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">Disable/discard IPv4 LDP hello messages.</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>prefer-ipv4-transport</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">According to RFC7552, IPv6 is preferred over IPv4 which</div>
 <div class="line">can be changed with this option to prefer IPv4 transport</div>
 <div class="line">even if IPv6 is enabled.</div>
@@ -3555,9 +3646,17 @@ provided here.</p>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP RAW update file.</div>
 </div>
+</td>
+</tr>
+<tr class="row-odd"><td colspan="3"><dl>
+<dt><strong>tos</strong>                          | | TOS/TC for all LDP control traffic.</dt><dd><div class="line-block">
+<div class="line">| Default: 0</div>
+</div>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>

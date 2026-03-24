@@ -185,6 +185,64 @@ with the new NAT option to verify NAT TCP streams.
 
 For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
 
+Stream Iterators
+~~~~~~~~~~~~~~~~
+
+The BNG Blaster supports several iterators for traffic streams, such as layer 4 ports.
+
+Source and Destination Ports
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The stream configuration options ``source/destination-port-step`` 
+and ``source/destination-port-max`` enable deterministic port iteration.
+
+The port incrementor operates as a global iterator across all instances of a stream. 
+It does not automatically reset for new sessions unless explicitly configured to do so 
+using the maximum limit.
+
+**Global Scope:** The incrementor applies to every instance of the stream generated, regardless 
+of whether those instances are created via the stream count (multiple streams per session) 
+or across multiple sessions.
+
+**Step Behavior:** For every new stream instance instantiated, the port is increased 
+by the port-step configuraton option.
+
+**Reset Behavior:** The port increments until it exceeds port-max. Once reached, 
+the port iterator resets to the initial port value and resumes incrementing.
+
+**Configuration Parameters:**
+* ``source/destination-port`` (default: 65056): The starting port number.
+* ``source/destination-port-step`` (default: 0):	The value by which to increment the port for each new stream instance.
+* ``source/destination-port-max`` (default: 65535): The upper limit for the port range. When the current port exceeds this value, it wraps back to source-port.
+
+**Examples:**
+Consider a scenario with 10 sessions, where each session generates 10 instances of a specific stream (total stream count = 100). 
+The starting source-port is 1000 and source-port-step is 1.
+
+*Scenario A - Global Unique Ports (Continuous Range):*
+If you want every stream across all sessions to have a unique source port, 
+ensure the source-port-max is high enough to cover the total count.
+
+Config: source-port-max: 65535
+Result: Ports are assigned sequentially from 1000 to 1099.
+
+* Session 1: Ports 1000–1009
+* Session 2: Ports 1010–1019
+* ...
+* Session 10: Ports 1090–1099
+
+*Scenario B - Per-Session Port Reuse (Repeating Range):* 
+If you want each session to use the same set of source ports, you must configure source-port-max to 
+force a reset after the stream count for a single session is reached.
+
+Config: source-port-max: 1009 (Start port 1000 + 9 increments)
+Result: Ports are assigned from 1000 to 1009, then reset.
+
+* Session 1: Ports 1000–1009 (Counter hits max, resets to 1000)
+* Session 2: Ports 1000–1009 (Counter hits max, resets to 1000)
+* ...
+* Session 10: Ports 1000–1009
+
 Stream Commands
 ~~~~~~~~~~~~~~~
 

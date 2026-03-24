@@ -280,6 +280,13 @@ TX:             512
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>tun-name</strong></p></td>
+<td><div class="line-block">
+<div class="line">TUN interface name prefix (<cite>&lt;tun-name&gt;&lt;session-id&gt;</cite>).</div>
+<div class="line">Default: bbl (bbl1, bbl2, …)</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -1567,7 +1574,7 @@ ADSL network reference model from TR-025.</p>
 </tr>
 <tr class="row-even"><td><p><strong>mac</strong></p></td>
 <td><div class="line-block">
-<div class="line">Optional set gateway interface address manually.</div>
+<div class="line">Overwrite the A10NSP MAC address.</div>
 <div class="line">Default: <cite>parent interface/link MAC address</cite></div>
 </div>
 </td>

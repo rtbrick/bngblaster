@@ -94,18 +94,18 @@
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
-<th class="head"><p>Description</p></th>
+<th class="head" colspan="2"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>instance-id</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP instance identifier.</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>keepalive-time</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP session keepalive time in seconds.</div>
 <div class="line">The <strong>keepalive-time</strong> defines the local LDP session</div>
 <div class="line">keepalive timeout. Each LDP peer must calculate the</div>
@@ -124,35 +124,35 @@
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>hold-time</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP hello hold time in seconds.</div>
 <div class="line">Default: 15 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP teardown time in seconds.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>hostname</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP hostname.</div>
 <div class="line">Default: bngblaster</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>lsr-id</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP LSR identifier.</div>
 <div class="line">Default: 10.10.10.10</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>ipv6-transport-address</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP transport IPv6 address.</div>
 <div class="line">Setting a valid IPv6 address here enables LDP IPv6</div>
 <div class="line">hello and transport.</div>
@@ -160,20 +160,20 @@
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>ipv4-transport-address</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP transport IPv4 address.</div>
 <div class="line">Default: <cite>lsr-id</cite></div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>no-ipv4-transport</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">Disable/discard IPv4 LDP hello messages.</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>prefer-ipv4-transport</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">According to RFC7552, IPv6 is preferred over IPv4 which</div>
 <div class="line">can be changed with this option to prefer IPv4 transport</div>
 <div class="line">even if IPv6 is enabled.</div>
@@ -182,9 +182,17 @@
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
-<td><div class="line-block">
+<td colspan="2"><div class="line-block">
 <div class="line">LDP RAW update file.</div>
 </div>
+</td>
+</tr>
+<tr class="row-odd"><td colspan="3"><dl>
+<dt><strong>tos</strong>                          | | TOS/TC for all LDP control traffic.</dt><dd><div class="line-block">
+<div class="line">| Default: 0</div>
+</div>
+</dd>
+</dl>
 </td>
 </tr>
 </tbody>
