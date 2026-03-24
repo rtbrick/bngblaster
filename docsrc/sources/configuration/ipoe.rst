@@ -20,6 +20,6 @@
 | **vlan-priority**                 | | VLAN PBIT for generic IPoE control traffic.                        |
 |                                   | | Used for ARP and ICMPv6 ND/RS/NS control traffic.                  |
 |                                   | | Default master value for IPoE traffic (including DHCP and DHCPv6)  |
-|                                   | | unless overridden by protocol-specific settings.                    |
+|                                   | | unless overridden by protocol-specific settings.                   |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
