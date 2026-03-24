@@ -284,6 +284,7 @@ typedef struct bbl_l2tp_session_
     uint16_t proxy_auth_challenge_len;
     uint16_t proxy_auth_response_len;
 
+    uint8_t lcp_state;
     uint8_t ipcp_state;
     uint8_t ip6cp_state;
 

@@ -1089,6 +1089,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                  bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
 {
     bbl_lcp_s   *lcp_rx;
+    bbl_lcp_s    lcp_tx;
     bbl_pap_s   *pap_rx;
     bbl_pap_s    pap_tx;
     bbl_chap_s  *chap_rx;
@@ -1132,7 +1133,40 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                 l2tp_session->disconnect_direction = 1;
                 bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
                 bbl_l2tp_session_delete(l2tp_session);
-            } 
+            } else if(lcp_rx->code == PPP_CODE_CONF_REQUEST) {
+                /* Accept whatever the peer proposes. */
+                lcp_rx->code = PPP_CODE_CONF_ACK;
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+                if(l2tp_session->lcp_state == BBL_PPP_LOCAL_ACK) {
+                    l2tp_session->lcp_state = BBL_PPP_OPENED;
+                } else if(l2tp_session->lcp_state != BBL_PPP_OPENED) {
+                    memset(&lcp_tx, 0x0, sizeof(bbl_lcp_s));
+                    l2tp_session->lcp_state = BBL_PPP_PEER_ACK;
+                    lcp_tx.code = PPP_CODE_CONF_REQUEST;
+                    lcp_tx.identifier = 1;
+                    lcp_tx.auth = PROTOCOL_PAP;
+                    lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
+                                    l2tp_session->key.session_id;
+                    if(!lcp_tx.magic) lcp_tx.magic = 1;
+                    lcp_tx.padding = l2tp_session->tunnel->server->lcp_padding;
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
+                }
+            } else if(lcp_rx->code == PPP_CODE_CONF_ACK) {
+                if(l2tp_session->lcp_state == BBL_PPP_PEER_ACK) {
+                    l2tp_session->lcp_state = BBL_PPP_OPENED;
+                } else if(l2tp_session->lcp_state != BBL_PPP_OPENED) {
+                    memset(&lcp_tx, 0x0, sizeof(bbl_lcp_s));
+                    l2tp_session->lcp_state = BBL_PPP_LOCAL_ACK;
+                    lcp_tx.code = PPP_CODE_CONF_REQUEST;
+                    lcp_tx.identifier = 1;
+                    lcp_tx.auth = PROTOCOL_PAP;
+                    lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
+                                    l2tp_session->key.session_id;
+                    if(!lcp_tx.magic) lcp_tx.magic = 1;
+                    lcp_tx.padding = l2tp_session->tunnel->server->lcp_padding;
+                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
+                }
+            }
             break;
         case PROTOCOL_PAP:
             memset(&pap_tx, 0x0, sizeof(bbl_pap_s));
