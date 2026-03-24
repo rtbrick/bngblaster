@@ -1042,6 +1042,24 @@ bbl_sessions_init()
             if(g_ctx->config.pppoe_host_uniq) {
                 session->pppoe_host_uniq = htobe64(i);
             }
+        } else if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            session->mru = access_config->ppp_mru;
+            session->magic_number = htobe32(i);
+            session->lcp_state = BBL_PPP_CLOSED;
+            if(access_config->ipv4_enable && access_config->ipcp_enable) {
+                session->ipcp_state = BBL_PPP_CLOSED;
+                session->ipcp_request_dns1 = g_ctx->config.ipcp_request_dns1;
+                session->ipcp_request_dns2 = g_ctx->config.ipcp_request_dns2;
+                session->endpoint.ipv4 = ENDPOINT_ENABLED;
+            }
+            if(access_config->ipv6_enable && access_config->ip6cp_enable) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
+                session->endpoint.ipv6 = ENDPOINT_ENABLED;
+                if(access_config->dhcpv6_enable) {
+                    session->dhcpv6_state = BBL_DHCP_INIT;
+                    session->endpoint.ipv6pd = ENDPOINT_ENABLED;
+                }
+            }
         } else if(session->access_type == ACCESS_TYPE_IPOE) {
             if(access_config->ipv4_enable) {
                 session->endpoint.ipv4 = ENDPOINT_ENABLED;

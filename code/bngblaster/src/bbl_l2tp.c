@@ -1288,6 +1288,9 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
     if(g_ctx->l2tp_sessions > g_ctx->l2tp_sessions_max) {
         g_ctx->l2tp_sessions_max = g_ctx->l2tp_sessions;
     }
+    /* Link the PPP session and the L2TP session to each other. */
+    l2tp_session->pppoe_session = session;
+    session->l2tp_session = l2tp_session;
     bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICRQ);
 }
 
@@ -1418,6 +1421,15 @@ bbl_l2tp_icrp_rx(bbl_network_interface_s *interface,
             l2tp_tunnel->peer_name,
             format_ipv4_address(&l2tp_tunnel->peer_ip),
             l2tp_session->key.session_id);
+        /* Start the PPP state machine for the associated LAC session. */
+        if(l2tp_session->pppoe_session) {
+            bbl_session_s *session = l2tp_session->pppoe_session;
+            bbl_session_update_state(session, BBL_PPP_LINK);
+            session->lcp_state        = BBL_PPP_INIT;
+            session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+            session->send_requests   |= BBL_SEND_LCP_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+        }
     }
 }
 
